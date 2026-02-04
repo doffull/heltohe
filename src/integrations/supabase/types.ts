@@ -14,6 +14,157 @@ export type Database = {
   }
   public: {
     Tables: {
+      addresses: {
+        Row: {
+          address: string
+          address_line2: string | null
+          city: string
+          country: string | null
+          created_at: string
+          customer_id: string
+          first_name: string | null
+          id: string
+          is_default: boolean | null
+          label: string | null
+          last_name: string | null
+          phone: string | null
+          updated_at: string
+          zip: string
+        }
+        Insert: {
+          address: string
+          address_line2?: string | null
+          city: string
+          country?: string | null
+          created_at?: string
+          customer_id: string
+          first_name?: string | null
+          id?: string
+          is_default?: boolean | null
+          label?: string | null
+          last_name?: string | null
+          phone?: string | null
+          updated_at?: string
+          zip: string
+        }
+        Update: {
+          address?: string
+          address_line2?: string | null
+          city?: string
+          country?: string | null
+          created_at?: string
+          customer_id?: string
+          first_name?: string | null
+          id?: string
+          is_default?: boolean | null
+          label?: string | null
+          last_name?: string | null
+          phone?: string | null
+          updated_at?: string
+          zip?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "addresses_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      banners: {
+        Row: {
+          button_text: string | null
+          created_at: string
+          description: string | null
+          ends_at: string | null
+          id: string
+          image: string | null
+          is_active: boolean | null
+          link: string | null
+          position: number | null
+          starts_at: string | null
+          subtitle: string | null
+          title: string | null
+          type: Database["public"]["Enums"]["banner_type"]
+          updated_at: string
+        }
+        Insert: {
+          button_text?: string | null
+          created_at?: string
+          description?: string | null
+          ends_at?: string | null
+          id?: string
+          image?: string | null
+          is_active?: boolean | null
+          link?: string | null
+          position?: number | null
+          starts_at?: string | null
+          subtitle?: string | null
+          title?: string | null
+          type?: Database["public"]["Enums"]["banner_type"]
+          updated_at?: string
+        }
+        Update: {
+          button_text?: string | null
+          created_at?: string
+          description?: string | null
+          ends_at?: string | null
+          id?: string
+          image?: string | null
+          is_active?: boolean | null
+          link?: string | null
+          position?: number | null
+          starts_at?: string | null
+          subtitle?: string | null
+          title?: string | null
+          type?: Database["public"]["Enums"]["banner_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cart_items: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          product_id: string
+          quantity: number
+          size: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          product_id: string
+          quantity?: number
+          size?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          product_id?: string
+          quantity?: number
+          size?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cart_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           created_at: string
@@ -38,6 +189,48 @@ export type Database = {
           sort_order?: number | null
           title?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      customers: {
+        Row: {
+          created_at: string
+          email: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+          loyalty_points: number | null
+          loyalty_tier: Database["public"]["Enums"]["loyalty_tier"] | null
+          phone: string | null
+          total_spent: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          loyalty_points?: number | null
+          loyalty_tier?: Database["public"]["Enums"]["loyalty_tier"] | null
+          phone?: string | null
+          total_spent?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          loyalty_points?: number | null
+          loyalty_tier?: Database["public"]["Enums"]["loyalty_tier"] | null
+          phone?: string | null
+          total_spent?: number | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -170,6 +363,120 @@ export type Database = {
           unit_id_label?: string | null
           unit_id_style?: Json | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      loyalty_rewards: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          points_required: number
+          reward_type: string
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          points_required: number
+          reward_type?: string
+          updated_at?: string
+          value: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          points_required?: number
+          reward_type?: string
+          updated_at?: string
+          value?: number
+        }
+        Relationships: []
+      }
+      loyalty_transactions: {
+        Row: {
+          created_at: string
+          customer_id: string
+          description: string | null
+          id: string
+          order_id: string | null
+          points: number
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          description?: string | null
+          id?: string
+          order_id?: string | null
+          points: number
+          type: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          description?: string | null
+          id?: string
+          order_id?: string | null
+          points?: number
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_transactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      newsletters: {
+        Row: {
+          created_at: string
+          email: string
+          first_name: string | null
+          id: string
+          is_subscribed: boolean | null
+          preferences: Json | null
+          subscribed_at: string
+          unsubscribed_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          first_name?: string | null
+          id?: string
+          is_subscribed?: boolean | null
+          preferences?: Json | null
+          subscribed_at?: string
+          unsubscribed_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          first_name?: string | null
+          id?: string
+          is_subscribed?: boolean | null
+          preferences?: Json | null
+          subscribed_at?: string
+          unsubscribed_at?: string | null
         }
         Relationships: []
       }
@@ -311,6 +618,57 @@ export type Database = {
         }
         Relationships: []
       }
+      promo_codes: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          max_discount: number | null
+          min_purchase: number | null
+          starts_at: string | null
+          type: Database["public"]["Enums"]["promo_type"]
+          updated_at: string
+          usage_count: number | null
+          usage_limit: number | null
+          value: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_discount?: number | null
+          min_purchase?: number | null
+          starts_at?: string | null
+          type?: Database["public"]["Enums"]["promo_type"]
+          updated_at?: string
+          usage_count?: number | null
+          usage_limit?: number | null
+          value: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_discount?: number | null
+          min_purchase?: number | null
+          starts_at?: string | null
+          type?: Database["public"]["Enums"]["promo_type"]
+          updated_at?: string
+          usage_count?: number | null
+          usage_limit?: number | null
+          value?: number
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -332,6 +690,35 @@ export type Database = {
         }
         Relationships: []
       }
+      wishlists: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wishlists_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -347,6 +734,9 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      banner_type: "hero" | "promo" | "popup" | "sidebar"
+      loyalty_tier: "bronze" | "silver" | "gold" | "platinum"
+      promo_type: "percentage" | "fixed_amount" | "free_shipping"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -475,6 +865,9 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      banner_type: ["hero", "promo", "popup", "sidebar"],
+      loyalty_tier: ["bronze", "silver", "gold", "platinum"],
+      promo_type: ["percentage", "fixed_amount", "free_shipping"],
     },
   },
 } as const
