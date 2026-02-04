@@ -314,29 +314,21 @@
 
   /* Left sidebar panel - Glossy Glassmorphism */
   .sidebar-left-panel {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 35%;
-    height: 100vh;
     background-color: rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(var(--glass-blur-strength));
     -webkit-backdrop-filter: blur(var(--glass-blur-strength));
     border-right: 1px solid rgba(255, 255, 255, 0.4);
-    z-index: 50;
     clip-path: polygon(
       0% 0%,
       100% 0%,
       calc(100% - var(--panel-bevel-size)) 100%,
       0% 100%
     );
+    overflow: hidden;
   }
 
   /* Model info label */
   .model-info {
-    position: absolute;
-    bottom: 20px;
-    left: 20px;
     font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
     color: hsl(var(--foreground));
     font-size: 0.8rem;
@@ -344,12 +336,9 @@
 
   /* Size selector */
   .size-selector {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
   }
 
   .size-button {
