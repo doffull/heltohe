@@ -43,11 +43,14 @@ export function MainLayout({ children }: MainLayoutProps) {
       <header className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border shadow-hmp">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-20">
-            {/* Logo - Diamond/Hexagonal container */}
-            <Link to="/" className="relative flex items-center">
-              <div className="w-14 h-14 bg-background border-2 border-foreground flex items-center justify-center transform rotate-45 shadow-hmp">
-                <span className="transform -rotate-45 text-lg font-bold tracking-tight">HMP</span>
+            {/* Logo - Diamond container with brand name */}
+            <Link to="/" className="logo-link relative flex items-center gap-3 group">
+              <div className="w-12 h-12 bg-background border-2 border-foreground flex items-center justify-center transform rotate-45 shadow-hmp transition-all duration-300 group-hover:shadow-hmp-lg">
+                <span className="transform -rotate-45 text-xs font-bold tracking-tight">MP</span>
               </div>
+              <span className="logo-text text-lg font-bold tracking-widest uppercase hidden sm:block">
+                Helvetica-MP
+              </span>
             </Link>
 
             {/* Desktop Navigation - Centered */}
@@ -174,8 +177,19 @@ export function MainLayout({ children }: MainLayoutProps) {
         </div>
       </header>
 
+      {/* Left Sidebar Panel - Decorative */}
+      <div className="sidebar-left-panel fixed left-0 top-20 bottom-0 w-16 lg:w-20 bg-secondary/30 border-r border-border/50 hidden md:flex flex-col items-center py-8 z-30">
+        {/* Decorative grid lines */}
+        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'linear-gradient(to bottom, hsl(var(--border)) 1px, transparent 1px)', backgroundSize: '100% 40px' }} />
+        
+        {/* Vertical label */}
+        <div className="writing-vertical text-[10px] font-mono tracking-[0.3em] text-muted-foreground uppercase rotate-180 mt-auto">
+          Model 0.1.2
+        </div>
+      </div>
+
       {/* Main Content */}
-      <main className="pt-20">
+      <main className="pt-20 md:pl-16 lg:pl-20">
         {children}
       </main>
 
