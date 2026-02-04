@@ -60,6 +60,11 @@
     --hmp-gray-dark: 0 0% 40%;
     --hmp-black: 0 0% 0%;
     --hmp-grid: 0 0% 88%;
+    
+    /* Helvetica-MP Layout Variables */
+    --logo-bevel-size: 30px;
+    --panel-bevel-size: 20px;
+    --glass-blur-strength: 10px;
   }
 
   .dark {
@@ -258,18 +263,117 @@
     box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
   }
 
-  /* Logo container - hexagonal/diamond */
-  .logo-container {
-    @apply relative bg-white;
+  /* Logo wrapper - Beveled octagonal shape */
+  .logo-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100px;
+    width: 180px;
+    background-color: hsl(var(--background));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
     clip-path: polygon(
-      0 50%,
-      25% 0,
-      75% 0,
-      100% 50%,
-      75% 100%,
-      25% 100%
+      0% 0%,
+      calc(100% - var(--logo-bevel-size)) 0%,
+      100% var(--logo-bevel-size),
+      100% 100%,
+      var(--logo-bevel-size) 100%,
+      0% calc(100% - var(--logo-bevel-size))
     );
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .logo-link {
+    text-decoration: none;
+    color: hsl(var(--foreground));
+    font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+    font-weight: bold;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0 10px;
+    transition: opacity 0.2s ease;
+  }
+
+  .logo-link:hover {
+    opacity: 0.7;
+  }
+
+  .logo-text {
+    white-space: nowrap;
+  }
+
+  /* Header container */
+  .header-container {
+    height: 80px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Left sidebar panel - Glossy Glassmorphism */
+  .sidebar-left-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 35%;
+    height: 100vh;
+    background-color: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(var(--glass-blur-strength));
+    -webkit-backdrop-filter: blur(var(--glass-blur-strength));
+    border-right: 1px solid rgba(255, 255, 255, 0.4);
+    z-index: 50;
+    clip-path: polygon(
+      0% 0%,
+      100% 0%,
+      calc(100% - var(--panel-bevel-size)) 100%,
+      0% 100%
+    );
+  }
+
+  /* Model info label */
+  .model-info {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+    color: hsl(var(--foreground));
+    font-size: 0.8rem;
+  }
+
+  /* Size selector */
+  .size-selector {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    gap: 8px;
+  }
+
+  .size-button {
+    background-color: hsl(var(--foreground));
+    color: hsl(var(--background));
+    padding: 12px 18px;
+    font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+    font-weight: bold;
+    font-size: 0.875rem;
+    border: none;
+    cursor: pointer;
+    clip-path: polygon(
+      0% 0%,
+      100% 0%,
+      100% calc(100% - 5px),
+      calc(100% - 5px) 100%,
+      0% 100%
+    );
+    transition: background-color 0.2s ease, transform 0.2s ease;
+  }
+
+  .size-button:hover {
+    background-color: hsl(var(--muted-foreground));
+    transform: scale(1.05);
   }
 
   /* Social icons circular */
