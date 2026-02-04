@@ -2,10 +2,12 @@ import { useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
 import { useCart } from '@/context/CartContext';
+import { useSidebarOptional } from '@/context/SidebarContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { Product } from '@/types';
 import { 
   Search, 
   Filter, 
@@ -29,11 +31,21 @@ export default function Shop() {
   const { toast } = useToast();
   const { data: products = [], isLoading } = useProducts();
   const { addItem } = useCart();
+  const sidebarContext = useSidebarOptional();
 
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'All');
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'newest');
+
+  // Handlers for product hover to update sidebar stats
+  const handleProductHover = (product: Product) => {
+    sidebarContext?.setHoveredProduct(product);
+  };
+
+  const handleProductLeave = () => {
+    sidebarContext?.setHoveredProduct(null);
+  };
 
   const filteredProducts = useMemo(() => {
     let filtered = [...products];
@@ -207,6 +219,8 @@ export default function Shop() {
                 key={product.id}
                 className="group bevel-corners bg-card overflow-hidden border border-border hover:border-foreground transition-all duration-300 shadow-hmp hover:shadow-hmp-lg animate-fade-in"
                 style={{ animationDelay: `${index * 50}ms` }}
+                onMouseEnter={() => handleProductHover(product)}
+                onMouseLeave={handleProductLeave}
               >
                 {/* Image */}
                 <div 
@@ -298,6 +312,8 @@ export default function Shop() {
                 key={product.id}
                 className="bevel-corners-sm bg-card p-6 flex gap-8 border border-border hover:border-foreground transition-all animate-fade-in"
                 style={{ animationDelay: `${index * 50}ms` }}
+                onMouseEnter={() => handleProductHover(product)}
+                onMouseLeave={handleProductLeave}
               >
                 <div 
                   className="w-40 h-48 flex-shrink-0 bevel-corners-sm overflow-hidden cursor-pointer"

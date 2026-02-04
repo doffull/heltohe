@@ -1,10 +1,12 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
+import { useSidebarOptional } from '@/context/SidebarContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { StatBar } from './StatBar';
+import { MannequinHotspots } from './MannequinHotspot';
 import { 
   Search, 
   ShoppingBag, 
@@ -33,7 +35,7 @@ const NAV_ITEMS = [
   { href: '/contact', label: 'Contact' },
 ];
 
-const STATS = [
+const DEFAULT_STATS = [
   { label: 'Durability', value: 85 },
   { label: 'Price', value: 45 },
   { label: 'Fashion', value: 92 },
@@ -43,8 +45,37 @@ export function MainLayout({ children }: MainLayoutProps) {
   const location = useLocation();
   const { user } = useAuth();
   const { itemCount } = useCart();
+  const sidebarContext = useSidebarOptional();
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
+
+  // Parallax scroll effect
+  useEffect(() => {
+    let ticking = false;
+    
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          setScrollY(window.scrollY);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Get stats from context or use defaults
+  const stats = sidebarContext 
+    ? [
+        { label: 'Durability', value: sidebarContext.currentStats.durability },
+        { label: 'Price', value: sidebarContext.currentStats.price },
+        { label: 'Fashion', value: sidebarContext.currentStats.fashion },
+      ]
+    : DEFAULT_STATS;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -210,16 +241,22 @@ export function MainLayout({ children }: MainLayoutProps) {
         lg:translate-x-0
         w-[85%] sm:w-[320px] lg:w-[35%]
       `}>
-        {/* Mannequin Background Image */}
+        {/* Mannequin Background Image with Parallax */}
         <div 
-          className="absolute inset-0 z-0"
+          className="absolute inset-0 z-0 will-change-transform"
           style={{
             backgroundImage: 'url(https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&auto=format&fit=crop&q=60)',
             backgroundSize: 'cover',
             backgroundPosition: 'center top',
             opacity: 0.4,
+            transform: `translateY(${scrollY * 0.15}px)`,
           }}
         />
+        
+        {/* Interactive Hotspots */}
+        <div className="absolute inset-0 z-15">
+          <MannequinHotspots />
+        </div>
         
         {/* Glass Overlay */}
         <div className="absolute inset-0 z-10 bg-white/20 backdrop-blur-sm" />
@@ -244,7 +281,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               <div className="w-8 h-px bg-foreground/30" />
             </div>
             
-            {STATS.map((stat, index) => (
+            {stats.map((stat, index) => (
               <StatBar
                 key={stat.label}
                 label={stat.label}
