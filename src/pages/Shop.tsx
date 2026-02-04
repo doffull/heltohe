@@ -10,19 +10,17 @@ import {
   Search, 
   Filter, 
   Grid3X3, 
-  List,
-  ShoppingCart,
+  LayoutList,
   Heart,
-  ChevronRight,
   SlidersHorizontal
 } from 'lucide-react';
 
-const CATEGORIES = ['Tout', 'Vestes', 'Pantalons', 'Gilets', 'Accessoires'];
+const CATEGORIES = ['All', 'Jackets', 'Pants', 'Vests', 'Accessories'];
 const SORT_OPTIONS = [
-  { value: 'newest', label: 'Plus récents' },
-  { value: 'price-asc', label: 'Prix croissant' },
-  { value: 'price-desc', label: 'Prix décroissant' },
-  { value: 'name', label: 'Nom A-Z' },
+  { value: 'newest', label: 'Newest' },
+  { value: 'price-asc', label: 'Price: Low to High' },
+  { value: 'price-desc', label: 'Price: High to Low' },
+  { value: 'name', label: 'Name A-Z' },
 ];
 
 export default function Shop() {
@@ -34,7 +32,7 @@ export default function Shop() {
 
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
-  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'Tout');
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'All');
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'newest');
 
   const filteredProducts = useMemo(() => {
@@ -51,7 +49,7 @@ export default function Shop() {
     }
 
     // Filter by category
-    if (selectedCategory !== 'Tout') {
+    if (selectedCategory !== 'All') {
       filtered = filtered.filter(p => p.category === selectedCategory);
     }
 
@@ -67,7 +65,6 @@ export default function Shop() {
         filtered.sort((a, b) => a.name.localeCompare(b.name));
         break;
       default:
-        // newest - keep default order
         break;
     }
 
@@ -85,43 +82,43 @@ export default function Shop() {
     });
 
     toast({
-      title: 'Ajouté au panier',
-      description: `${product.name} a été ajouté à votre panier`,
+      title: 'Added to cart',
+      description: `${product.name} has been added to your cart`,
     });
   };
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-12">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold hud-text mb-2">
-            ÉQUIPEMENT TACTIQUE
+        <div className="mb-12 text-center">
+          <h1 className="text-5xl font-bold uppercase tracking-tight mb-4">
+            Shop
           </h1>
           <p className="text-muted-foreground">
-            {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''} disponible{filteredProducts.length > 1 ? 's' : ''}
+            {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''} available
           </p>
         </div>
 
         {/* Filters Bar */}
-        <div className="chamfer-hud bg-card/50 p-4 mb-8">
+        <div className="bg-secondary/50 p-6 mb-8 bevel-corners">
           <div className="flex flex-wrap items-center gap-4">
             {/* Search */}
             <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Rechercher..."
+                placeholder="Search products..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-12 h-12 bg-background border-0"
               />
             </div>
 
             {/* Category Filter */}
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[180px] h-12 bg-background border-0">
                 <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Catégorie" />
+                <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
                 {CATEGORIES.map((cat) => (
@@ -132,9 +129,9 @@ export default function Shop() {
 
             {/* Sort */}
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[180px] h-12 bg-background border-0">
                 <SlidersHorizontal className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Trier par" />
+                <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
                 {SORT_OPTIONS.map((opt) => (
@@ -144,11 +141,11 @@ export default function Shop() {
             </Select>
 
             {/* View Mode Toggle */}
-            <div className="flex border border-border rounded">
+            <div className="flex border border-border">
               <Button
                 variant={viewMode === 'grid' ? 'default' : 'ghost'}
                 size="icon"
-                className="rounded-r-none"
+                className="rounded-none h-12 w-12"
                 onClick={() => setViewMode('grid')}
               >
                 <Grid3X3 className="h-4 w-4" />
@@ -156,23 +153,23 @@ export default function Shop() {
               <Button
                 variant={viewMode === 'list' ? 'default' : 'ghost'}
                 size="icon"
-                className="rounded-l-none"
+                className="rounded-none h-12 w-12"
                 onClick={() => setViewMode('list')}
               >
-                <List className="h-4 w-4" />
+                <LayoutList className="h-4 w-4" />
               </Button>
             </div>
           </div>
 
           {/* Category Pills */}
-          <div className="flex flex-wrap gap-2 mt-4">
+          <div className="flex flex-wrap gap-2 mt-6">
             {CATEGORIES.map((cat) => (
               <Button
                 key={cat}
                 variant={selectedCategory === cat ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSelectedCategory(cat)}
-                className="text-xs"
+                className="uppercase tracking-wider text-xs"
               >
                 {cat}
               </Button>
@@ -182,116 +179,128 @@ export default function Shop() {
 
         {/* Products Grid/List */}
         {isLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="chamfer-hud bg-card/30 animate-pulse h-80" />
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="bevel-corners bg-secondary/30 animate-pulse aspect-[3/4]" />
             ))}
           </div>
         ) : filteredProducts.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="chamfer-hud bg-card/30 inline-block p-12">
+          <div className="text-center py-20">
+            <div className="bevel-corners bg-secondary/30 inline-block p-12">
               <Search className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-              <h2 className="text-xl font-bold mb-2">Aucun produit trouvé</h2>
-              <p className="text-muted-foreground mb-4">
-                Essayez de modifier vos filtres de recherche
+              <h2 className="text-xl font-bold uppercase mb-2">No products found</h2>
+              <p className="text-muted-foreground mb-6">
+                Try adjusting your search or filter criteria
               </p>
               <Button onClick={() => {
                 setSearchQuery('');
-                setSelectedCategory('Tout');
+                setSelectedCategory('All');
               }}>
-                Réinitialiser les filtres
+                Reset Filters
               </Button>
             </div>
           </div>
         ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {filteredProducts.map((product) => (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+            {filteredProducts.map((product, index) => (
               <div 
                 key={product.id}
-                className="group chamfer-hud bg-card/50 overflow-hidden hover:bg-card/70 transition-all duration-300"
+                className="group bevel-corners bg-card overflow-hidden border border-border hover:border-foreground transition-all duration-300 shadow-hmp hover:shadow-hmp-lg animate-fade-in"
+                style={{ animationDelay: `${index * 50}ms` }}
               >
                 {/* Image */}
                 <div 
-                  className="relative aspect-square overflow-hidden cursor-pointer"
+                  className="relative aspect-[3/4] overflow-hidden cursor-pointer"
                   onClick={() => navigate(`/boutique/${product.id}`)}
                 >
                   <img
                     src={product.image}
                     alt={product.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                   />
                   
                   {/* Sale Badge */}
                   {product.salePrice && (
-                    <div className="absolute top-2 left-2 bg-destructive text-destructive-foreground px-2 py-1 text-xs font-bold">
-                      PROMO
+                    <div className="absolute top-4 left-4 bg-foreground text-background px-3 py-1 text-xs font-bold uppercase">
+                      Sale
                     </div>
                   )}
                   
                   {/* Stock Badge */}
                   {product.stock <= 5 && product.stock > 0 && (
-                    <div className="absolute top-2 right-2 bg-warning/90 text-warning-foreground px-2 py-1 text-xs">
-                      Stock limité
+                    <div className="absolute top-4 right-4 bg-destructive text-destructive-foreground px-3 py-1 text-xs uppercase">
+                      Low Stock
                     </div>
                   )}
 
-                  {/* Quick Actions */}
-                  <div className="absolute bottom-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button size="icon" variant="secondary" className="h-8 w-8">
-                      <Heart className="h-4 w-4" />
-                    </Button>
+                  {/* Hover Overlay - Sizes */}
+                  <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                    <div className="text-center">
+                      <p className="text-xs uppercase tracking-wider mb-3">Available Sizes</p>
+                      <div className="flex gap-1.5 justify-center">
+                        {['XS', 'S', 'M', 'L', 'XL'].map((size) => (
+                          <span key={size} className="w-8 h-8 border border-foreground flex items-center justify-center text-xs font-medium">
+                            {size}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Quick Wishlist */}
+                  <button className="absolute bottom-4 right-4 w-10 h-10 bg-background/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background">
+                    <Heart className="h-5 w-5" />
+                  </button>
                 </div>
 
                 {/* Info */}
-                <div className="p-4">
-                  <p className="text-xs text-muted-foreground mb-1">{product.category}</p>
+                <div className="p-5">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{product.category}</p>
                   <h3 
-                    className="font-bold text-sm hud-text line-clamp-1 cursor-pointer hover:text-primary"
+                    className="font-bold uppercase tracking-tight line-clamp-1 cursor-pointer hover:text-muted-foreground transition-colors"
                     onClick={() => navigate(`/boutique/${product.id}`)}
                   >
                     {product.name}
                   </h3>
                   
-                  <div className="flex items-center justify-between mt-3">
-                    <div>
-                      {product.salePrice ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg font-bold text-primary">
-                            {product.salePrice}€
-                          </span>
-                          <span className="text-sm line-through text-muted-foreground">
-                            {product.price}€
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-lg font-bold">{product.price}€</span>
-                      )}
-                    </div>
-                    
-                    <Button
-                      size="icon"
-                      className="h-8 w-8 chamfer-hud-sm"
-                      onClick={() => handleAddToCart(product)}
-                      disabled={product.stock === 0}
-                    >
-                      <ShoppingCart className="h-4 w-4" />
-                    </Button>
+                  <div className="flex items-center gap-3 mt-3">
+                    {product.salePrice ? (
+                      <>
+                        <span className="text-lg font-bold">
+                          {product.salePrice}€
+                        </span>
+                        <span className="text-sm line-through text-muted-foreground">
+                          {product.price}€
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-lg font-bold">{product.price}€</span>
+                    )}
                   </div>
                 </div>
+
+                {/* Add to Cart - Full width */}
+                <button
+                  className="product-card-footer"
+                  onClick={() => handleAddToCart(product)}
+                  disabled={product.stock === 0}
+                >
+                  {product.stock === 0 ? 'Sold Out' : 'Add to Cart'}
+                </button>
               </div>
             ))}
           </div>
         ) : (
           // List View
           <div className="space-y-4">
-            {filteredProducts.map((product) => (
+            {filteredProducts.map((product, index) => (
               <div 
                 key={product.id}
-                className="chamfer-hud bg-card/50 p-4 flex gap-6 hover:bg-card/70 transition-all"
+                className="bevel-corners-sm bg-card p-6 flex gap-8 border border-border hover:border-foreground transition-all animate-fade-in"
+                style={{ animationDelay: `${index * 50}ms` }}
               >
                 <div 
-                  className="w-32 h-32 flex-shrink-0 chamfer-hud-sm overflow-hidden cursor-pointer"
+                  className="w-40 h-48 flex-shrink-0 bevel-corners-sm overflow-hidden cursor-pointer"
                   onClick={() => navigate(`/boutique/${product.id}`)}
                 >
                   <img
@@ -301,45 +310,46 @@ export default function Shop() {
                   />
                 </div>
                 
-                <div className="flex-1">
-                  <p className="text-xs text-muted-foreground mb-1">{product.category}</p>
-                  <h3 
-                    className="font-bold text-lg hud-text cursor-pointer hover:text-primary"
-                    onClick={() => navigate(`/boutique/${product.id}`)}
-                  >
-                    {product.name}
-                  </h3>
-                  <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                    {product.description}
-                  </p>
+                <div className="flex-1 flex flex-col justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{product.category}</p>
+                    <h3 
+                      className="font-bold text-xl uppercase tracking-tight cursor-pointer hover:text-muted-foreground transition-colors"
+                      onClick={() => navigate(`/boutique/${product.id}`)}
+                    >
+                      {product.name}
+                    </h3>
+                    <p className="text-sm text-muted-foreground line-clamp-2 mt-2">
+                      {product.description}
+                    </p>
+                  </div>
                   
                   <div className="flex items-center justify-between mt-4">
                     <div>
                       {product.salePrice ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xl font-bold text-primary">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl font-bold">
                             {product.salePrice}€
                           </span>
-                          <span className="text-sm line-through text-muted-foreground">
+                          <span className="text-base line-through text-muted-foreground">
                             {product.price}€
                           </span>
                         </div>
                       ) : (
-                        <span className="text-xl font-bold">{product.price}€</span>
+                        <span className="text-2xl font-bold">{product.price}€</span>
                       )}
                     </div>
                     
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="icon">
-                        <Heart className="h-4 w-4" />
+                    <div className="flex gap-3">
+                      <Button variant="outline" size="icon" className="h-12 w-12">
+                        <Heart className="h-5 w-5" />
                       </Button>
                       <Button
-                        className="chamfer-hud-sm"
+                        className="h-12 px-8 uppercase tracking-wider"
                         onClick={() => handleAddToCart(product)}
                         disabled={product.stock === 0}
                       >
-                        <ShoppingCart className="h-4 w-4 mr-2" />
-                        Ajouter
+                        Add to Cart
                       </Button>
                     </div>
                   </div>
