@@ -4,13 +4,15 @@ import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { StatBar } from './StatBar';
 import { 
   Search, 
   ShoppingBag, 
   User, 
   Menu,
   X,
-  ChevronRight
+  ChevronRight,
+  PanelLeft
 } from 'lucide-react';
 import {
   Sheet,
@@ -31,11 +33,18 @@ const NAV_ITEMS = [
   { href: '/contact', label: 'Contact' },
 ];
 
+const STATS = [
+  { label: 'Durability', value: 85 },
+  { label: 'Price', value: 45 },
+  { label: 'Fashion', value: 92 },
+];
+
 export function MainLayout({ children }: MainLayoutProps) {
   const location = useLocation();
   const { user } = useAuth();
   const { itemCount } = useCart();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -175,17 +184,82 @@ export function MainLayout({ children }: MainLayoutProps) {
         </div>
       </header>
 
+      {/* Mobile Sidebar Toggle Button */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className="fixed bottom-6 left-6 z-[60] lg:hidden w-12 h-12 bg-foreground text-background flex items-center justify-center transition-all duration-300 hover:scale-105 bevel-corners-sm"
+        aria-label="Toggle Model Interface"
+      >
+        <PanelLeft className={`h-5 w-5 transition-transform duration-300 ${sidebarOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-[45] lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Left Sidebar Panel - Glossy Glassmorphism */}
-      <div className="sidebar-left-panel hidden lg:block">
-        {/* Size Selectors */}
-        <div className="size-selector">
-          <button className="size-button">XS</button>
-          <button className="size-button">XL</button>
-        </div>
+      <div className={`
+        sidebar-left-panel
+        fixed top-0 left-0 h-screen z-50
+        transition-transform duration-500 ease-out
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        lg:translate-x-0
+        w-[85%] sm:w-[320px] lg:w-[35%]
+      `}>
+        {/* Mannequin Background Image */}
+        <div 
+          className="absolute inset-0 z-0"
+          style={{
+            backgroundImage: 'url(https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&auto=format&fit=crop&q=60)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center top',
+            opacity: 0.4,
+          }}
+        />
         
-        {/* Model Info */}
-        <div className="model-info">
-          <span className="font-mono text-xs tracking-[0.2em] uppercase">Model 0.1.2</span>
+        {/* Glass Overlay */}
+        <div className="absolute inset-0 z-10 bg-white/20 backdrop-blur-sm" />
+        
+        {/* Sidebar Content */}
+        <div className="relative z-20 h-full flex flex-col justify-between p-6 pt-28">
+          {/* Size Selectors */}
+          <div className="size-selector relative top-0 left-0 transform-none flex gap-2">
+            <button className="size-button">XS</button>
+            <button className="size-button">S</button>
+            <button className="size-button">M</button>
+            <button className="size-button">L</button>
+            <button className="size-button">XL</button>
+          </div>
+          
+          {/* Stats Section */}
+          <div className="flex-1 flex flex-col justify-center px-2">
+            <div className="mb-6">
+              <h3 className="font-mono text-[11px] tracking-[0.2em] uppercase text-foreground/70 mb-1">
+                Model Interface
+              </h3>
+              <div className="w-8 h-px bg-foreground/30" />
+            </div>
+            
+            {STATS.map((stat, index) => (
+              <StatBar
+                key={stat.label}
+                label={stat.label}
+                value={stat.value}
+                delay={index * 200}
+              />
+            ))}
+          </div>
+          
+          {/* Model Info */}
+          <div className="model-info relative bottom-0 left-0">
+            <span className="font-mono text-xs tracking-[0.2em] uppercase text-foreground/60">
+              Model 0.1.2
+            </span>
+          </div>
         </div>
       </div>
 
@@ -195,7 +269,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       </main>
 
       {/* Footer */}
-      <footer className="bg-secondary border-t border-border py-16 mt-20">
+      <footer className="bg-secondary border-t border-border py-16 mt-20 lg:ml-[35%]">
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-4 gap-12">
             {/* Brand */}
