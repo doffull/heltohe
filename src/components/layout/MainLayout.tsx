@@ -40,18 +40,16 @@ export function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border shadow-hmp">
-        <div className="container mx-auto px-4">
+      {/* Logo Wrapper - Beveled octagonal shape */}
+      <div className="logo-wrapper">
+        <Link to="/" className="logo-link">
+          <span className="logo-text">Helvetica-MP</span>
+        </Link>
+      </div>
+
+      <header className="fixed top-0 left-0 right-0 z-40 bg-background border-b border-border header-container">
+        <div className="container mx-auto px-4 pl-[200px]">
           <div className="flex items-center justify-between h-20">
-            {/* Logo - Diamond container with brand name */}
-            <Link to="/" className="logo-link relative flex items-center gap-3 group">
-              <div className="w-12 h-12 bg-background border-2 border-foreground flex items-center justify-center transform rotate-45 shadow-hmp transition-all duration-300 group-hover:shadow-hmp-lg">
-                <span className="transform -rotate-45 text-xs font-bold tracking-tight">MP</span>
-              </div>
-              <span className="logo-text text-lg font-bold tracking-widest uppercase hidden sm:block">
-                Helvetica-MP
-              </span>
-            </Link>
 
             {/* Desktop Navigation - Centered */}
             <nav className="hidden lg:flex items-center gap-8">
@@ -177,19 +175,22 @@ export function MainLayout({ children }: MainLayoutProps) {
         </div>
       </header>
 
-      {/* Left Sidebar Panel - Decorative */}
-      <div className="sidebar-left-panel fixed left-0 top-20 bottom-0 w-16 lg:w-20 bg-secondary/30 border-r border-border/50 hidden md:flex flex-col items-center py-8 z-30">
-        {/* Decorative grid lines */}
-        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'linear-gradient(to bottom, hsl(var(--border)) 1px, transparent 1px)', backgroundSize: '100% 40px' }} />
+      {/* Left Sidebar Panel - Glossy Glassmorphism */}
+      <div className="sidebar-left-panel hidden lg:block">
+        {/* Size Selectors */}
+        <div className="size-selector">
+          <button className="size-button">XS</button>
+          <button className="size-button">XL</button>
+        </div>
         
-        {/* Vertical label */}
-        <div className="writing-vertical text-[10px] font-mono tracking-[0.3em] text-muted-foreground uppercase rotate-180 mt-auto">
-          Model 0.1.2
+        {/* Model Info */}
+        <div className="model-info">
+          <span className="font-mono text-xs tracking-[0.2em] uppercase">Model 0.1.2</span>
         </div>
       </div>
 
       {/* Main Content */}
-      <main className="pt-20 md:pl-16 lg:pl-20">
+      <main className="pt-20 lg:ml-[35%]">
         {children}
       </main>
 
