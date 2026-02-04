@@ -14,16 +14,339 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      categories: {
+        Row: {
+          created_at: string
+          id: string
+          image: string | null
+          sort_order: number | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image?: string | null
+          sort_order?: number | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image?: string | null
+          sort_order?: number | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      design_settings: {
+        Row: {
+          accent_color: string | null
+          background_media: Json | null
+          background_watermark: string | null
+          click_scale: number | null
+          created_at: string
+          custom_unit_id: string | null
+          glitch_duration: number | null
+          glitch_intensity: number | null
+          gradient_intensity: number | null
+          hero_slides: Json | null
+          home_sections: Json | null
+          hud_buttons: Json | null
+          hud_logo: string | null
+          id: string
+          is_slideshow_active: boolean | null
+          logo_style: Json | null
+          pages: Json | null
+          presets: Json | null
+          schedules: Json | null
+          settings_key: string
+          show_logo: boolean | null
+          show_overlays: boolean | null
+          show_slider_overlay: boolean | null
+          show_stats: boolean | null
+          show_unit_id: boolean | null
+          sidebar_bg: string | null
+          sidebar_gradient: boolean | null
+          slider_auto_play: boolean | null
+          slider_grayscale: boolean | null
+          slider_speed: number | null
+          slideshow_speed: number | null
+          social_display_mode: string | null
+          social_links: Json | null
+          social_style: Json | null
+          stats: Json | null
+          stats_label: string | null
+          stats_style: Json | null
+          stats_sub_label: string | null
+          unit_id_label: string | null
+          unit_id_style: Json | null
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string | null
+          background_media?: Json | null
+          background_watermark?: string | null
+          click_scale?: number | null
+          created_at?: string
+          custom_unit_id?: string | null
+          glitch_duration?: number | null
+          glitch_intensity?: number | null
+          gradient_intensity?: number | null
+          hero_slides?: Json | null
+          home_sections?: Json | null
+          hud_buttons?: Json | null
+          hud_logo?: string | null
+          id?: string
+          is_slideshow_active?: boolean | null
+          logo_style?: Json | null
+          pages?: Json | null
+          presets?: Json | null
+          schedules?: Json | null
+          settings_key?: string
+          show_logo?: boolean | null
+          show_overlays?: boolean | null
+          show_slider_overlay?: boolean | null
+          show_stats?: boolean | null
+          show_unit_id?: boolean | null
+          sidebar_bg?: string | null
+          sidebar_gradient?: boolean | null
+          slider_auto_play?: boolean | null
+          slider_grayscale?: boolean | null
+          slider_speed?: number | null
+          slideshow_speed?: number | null
+          social_display_mode?: string | null
+          social_links?: Json | null
+          social_style?: Json | null
+          stats?: Json | null
+          stats_label?: string | null
+          stats_style?: Json | null
+          stats_sub_label?: string | null
+          unit_id_label?: string | null
+          unit_id_style?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string | null
+          background_media?: Json | null
+          background_watermark?: string | null
+          click_scale?: number | null
+          created_at?: string
+          custom_unit_id?: string | null
+          glitch_duration?: number | null
+          glitch_intensity?: number | null
+          gradient_intensity?: number | null
+          hero_slides?: Json | null
+          home_sections?: Json | null
+          hud_buttons?: Json | null
+          hud_logo?: string | null
+          id?: string
+          is_slideshow_active?: boolean | null
+          logo_style?: Json | null
+          pages?: Json | null
+          presets?: Json | null
+          schedules?: Json | null
+          settings_key?: string
+          show_logo?: boolean | null
+          show_overlays?: boolean | null
+          show_slider_overlay?: boolean | null
+          show_stats?: boolean | null
+          show_unit_id?: boolean | null
+          sidebar_bg?: string | null
+          sidebar_gradient?: boolean | null
+          slider_auto_play?: boolean | null
+          slider_grayscale?: boolean | null
+          slider_speed?: number | null
+          slideshow_speed?: number | null
+          social_display_mode?: string | null
+          social_links?: Json | null
+          social_style?: Json | null
+          stats?: Json | null
+          stats_label?: string | null
+          stats_style?: Json | null
+          stats_sub_label?: string | null
+          unit_id_label?: string | null
+          unit_id_style?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      orders: {
+        Row: {
+          created_at: string
+          customer_address: string
+          customer_city: string
+          customer_country: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string | null
+          customer_zip: string
+          id: string
+          items: Json
+          notes: string | null
+          order_number: string
+          payment_method: string | null
+          payment_status: string
+          shipping_cost: number
+          status: string
+          subtotal: number
+          tax: number
+          total: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_address: string
+          customer_city: string
+          customer_country?: string
+          customer_email: string
+          customer_name: string
+          customer_phone?: string | null
+          customer_zip: string
+          id?: string
+          items?: Json
+          notes?: string | null
+          order_number: string
+          payment_method?: string | null
+          payment_status?: string
+          shipping_cost?: number
+          status?: string
+          subtotal: number
+          tax?: number
+          total: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_address?: string
+          customer_city?: string
+          customer_country?: string
+          customer_email?: string
+          customer_name?: string
+          customer_phone?: string | null
+          customer_zip?: string
+          id?: string
+          items?: Json
+          notes?: string | null
+          order_number?: string
+          payment_method?: string | null
+          payment_status?: string
+          shipping_cost?: number
+          status?: string
+          subtotal?: number
+          tax?: number
+          total?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          attributes: Json | null
+          care_instructions: string | null
+          category: string
+          color_options: Json | null
+          colors: string[] | null
+          created_at: string
+          description: string | null
+          id: string
+          image: string
+          is_active: boolean | null
+          material: string | null
+          name: string
+          price: number
+          sale_price: number | null
+          sizes: string[] | null
+          sku: string
+          stock: number
+          subtitle: string | null
+          updated_at: string
+        }
+        Insert: {
+          attributes?: Json | null
+          care_instructions?: string | null
+          category: string
+          color_options?: Json | null
+          colors?: string[] | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image: string
+          is_active?: boolean | null
+          material?: string | null
+          name: string
+          price: number
+          sale_price?: number | null
+          sizes?: string[] | null
+          sku: string
+          stock?: number
+          subtitle?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attributes?: Json | null
+          care_instructions?: string | null
+          category?: string
+          color_options?: Json | null
+          colors?: string[] | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image?: string
+          is_active?: boolean | null
+          material?: string | null
+          name?: string
+          price?: number
+          sale_price?: number | null
+          sizes?: string[] | null
+          sku?: string
+          stock?: number
+          subtitle?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +473,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+    },
   },
 } as const
