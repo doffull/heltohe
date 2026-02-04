@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
+import { SidebarProvider } from "@/context/SidebarContext";
 
 // Pages
 import Home from "./pages/Home";
@@ -26,29 +27,31 @@ const App = () => (
     <BrowserRouter>
       <AuthProvider>
         <CartProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <Routes>
-              {/* Public routes with main layout */}
-              <Route path="/" element={<MainLayout><Home /></MainLayout>} />
-              <Route path="/boutique" element={<MainLayout><Shop /></MainLayout>} />
-              <Route path="/boutique/:id" element={<MainLayout><ProductDetail /></MainLayout>} />
-              <Route path="/panier" element={<MainLayout><Cart /></MainLayout>} />
-              
-              {/* Auth routes (no layout) */}
-              <Route path="/auth" element={<Auth />} />
-              
-              {/* Account routes (with layout) */}
-              <Route path="/compte/*" element={<MainLayout><Account /></MainLayout>} />
-              
-              {/* Admin routes (custom layout) */}
-              <Route path="/admin/*" element={<Admin />} />
-              
-              {/* Catch-all */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </TooltipProvider>
+          <SidebarProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <Routes>
+                {/* Public routes with main layout */}
+                <Route path="/" element={<MainLayout><Home /></MainLayout>} />
+                <Route path="/boutique" element={<MainLayout><Shop /></MainLayout>} />
+                <Route path="/boutique/:id" element={<MainLayout><ProductDetail /></MainLayout>} />
+                <Route path="/panier" element={<MainLayout><Cart /></MainLayout>} />
+                
+                {/* Auth routes (no layout) */}
+                <Route path="/auth" element={<Auth />} />
+                
+                {/* Account routes (with layout) */}
+                <Route path="/compte/*" element={<MainLayout><Account /></MainLayout>} />
+                
+                {/* Admin routes (custom layout) */}
+                <Route path="/admin/*" element={<Admin />} />
+                
+                {/* Catch-all */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </TooltipProvider>
+          </SidebarProvider>
         </CartProvider>
       </AuthProvider>
     </BrowserRouter>
