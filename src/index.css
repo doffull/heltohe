@@ -345,6 +345,12 @@
   .animation-delay-500 { animation-delay: 500ms; }
   .animation-delay-700 { animation-delay: 700ms; }
   .animation-delay-1000 { animation-delay: 1000ms; }
+
+  /* Writing mode utilities */
+  .writing-vertical {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+  }
 }
 
 /* Keyframe animations */
