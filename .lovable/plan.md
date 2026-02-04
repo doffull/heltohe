@@ -1,131 +1,239 @@
 
-# Plan : Sidebar Responsive avec Toggle, Barres de Stats et Image de Fond
+
+# Plan : Parallax Sidebar, Stats Dynamiques et Hotspots Interactifs
 
 ## Objectif
-Transformer le sidebar gauche en un composant interactif complet avec :
-1. Toggle responsive pour mobile
-2. Barres de statistiques (Durability, Price, Fashion)
-3. Image de mannequin en arrière-plan pour l'effet glassmorphism
+Ajouter trois fonctionnalites avancees au panneau lateral Model Interface :
+1. Effet parallax sur l'image de fond au scroll
+2. Statistiques dynamiques connectees aux produits
+3. Hotspots interactifs sur le mannequin
 
 ---
 
-## Modifications Techniques
+## 1. Effet Parallax sur l'Image de Fond
 
-### 1. Sidebar Responsive avec Toggle Mobile
+### Implementation
+- Utiliser un hook `useEffect` avec un event listener sur le scroll
+- Calculer le deplacement vertical de l'image proportionnel a la position de scroll
+- Appliquer une transformation CSS `translateY` sur l'image de fond
+- Utiliser `will-change: transform` pour optimiser les performances
 
-**Fichier : `src/components/layout/MainLayout.tsx`**
+### Structure Technique
+```text
+MainLayout.tsx
+├── useState: scrollY (position de scroll)
+├── useEffect: scroll listener avec requestAnimationFrame
+└── Background Image: transform: translateY(scrollY * 0.3)
+```
 
-- Ajouter un state `sidebarOpen` pour contrôler la visibilité sur mobile
-- Créer un bouton toggle fixe visible uniquement sur mobile/tablette
-- Utiliser des transitions CSS fluides pour l'ouverture/fermeture
-- Le sidebar sera :
-  - **Desktop (lg+)** : Toujours visible, 35% de largeur
-  - **Mobile/Tablette** : Masqué par défaut, glisse depuis la gauche au clic
+### Code Parallax
+- Multiplicateur parallax : 0.3 (mouvement subtil)
+- Performance : throttling avec requestAnimationFrame
+- Fallback mobile : effet reduit ou desactive
 
-**Bouton Toggle :**
-- Icône `PanelLeft` de lucide-react
-- Position fixe en bas à gauche de l'écran
-- Style cohérent avec le design Helvetica-MP (bevel corners)
+---
 
-### 2. Barres de Statistiques Model Interface
+## 2. Statistiques Dynamiques Connectees aux Produits
 
-**Composant `StatBar` :**
+### Nouveau Contexte : SidebarContext
+Creer un contexte pour gerer l'etat du produit survole/selectionne :
+
+```text
+src/context/SidebarContext.tsx
+├── hoveredProduct: Product | null
+├── setHoveredProduct: (product) => void
+├── currentStats: { durability, price, fashion }
+└── calculateStats: (product) => Stats
+```
+
+### Calcul des Statistiques
+Mapper les attributs produits vers les stats du sidebar :
+- **Durability** : Base sur `attributes.Durabilite` ou `material`
+- **Price** : Inverse du ratio prix (100 - (prix/500)*100)
+- **Fashion** : Score base sur categorie et attributs
+
+### Integration
+- **ProductCard.tsx** : onMouseEnter/onMouseLeave declenchent setHoveredProduct
+- **Shop.tsx** : Wrapper avec SidebarProvider
+- **MainLayout.tsx** : Consomme hoveredProduct et met a jour les stats
+- **StatBar.tsx** : Animation fluide lors du changement de valeur
+
+### Valeurs par Defaut (aucun produit survole)
+```text
+Durability: 85%
+Price: 45%
+Fashion: 92%
+```
+
+---
+
+## 3. Hotspots Interactifs sur le Mannequin
+
+### Composant : MannequinHotspot
+Creer des points cliquables avec tooltips techniques :
+
+```text
+src/components/layout/MannequinHotspot.tsx
+├── Props: x, y, label, details, icon
+├── State: isHovered
+├── Tooltip: position dynamique
+└── Animation: pulse + scale on hover
+```
+
+### Configuration des Hotspots
+```text
+const HOTSPOTS = [
+  {
+    id: 'collar',
+    x: 50%, y: 15%,
+    label: 'COL TECHNIQUE',
+    details: 'Protection coupe-vent integree',
+    icon: Shield
+  },
+  {
+    id: 'pocket',
+    x: 30%, y: 45%,
+    label: 'POCHE TACTIQUE',
+    details: 'Acces rapide securise',
+    icon: Package
+  },
+  {
+    id: 'fabric',
+    x: 70%, y: 60%,
+    label: 'TISSU TECHNIQUE',
+    details: 'Gore-Tex Pro impermeabilite',
+    icon: Layers
+  },
+  {
+    id: 'hem',
+    x: 50%, y: 85%,
+    label: 'OURLET AJUSTABLE',
+    details: 'Cordon elastique integre',
+    icon: Move
+  }
+]
+```
+
+### Style des Hotspots
 ```text
 ┌─────────────────────────────────────┐
-│ DURABILITY                          │
-│ ████████████░░░░░░░  85%            │
-├─────────────────────────────────────┤
-│ PRICE                               │
-│ ██████░░░░░░░░░░░░░  45%            │
-├─────────────────────────────────────┤
-│ FASHION                             │
-│ █████████████████░░  92%            │
+│     ●  ← Point pulse (8x8px)        │
+│    /│\                              │
+│   ┌─────────────────────┐           │
+│   │ COL TECHNIQUE       │ Tooltip   │
+│   │ Protection coupe-   │ apparait  │
+│   │ vent integree       │ au hover  │
+│   └─────────────────────┘           │
 └─────────────────────────────────────┘
 ```
 
-- Barres segmentées horizontales (10 segments)
-- Labels en uppercase avec font monospace
-- Animation de remplissage au chargement
-- Valeurs dynamiques (pourcentage)
+---
 
-### 3. Image de Mannequin en Arrière-plan
+## Fichiers a Modifier/Creer
 
-**Structure :**
-```text
-<div class="sidebar-left-panel">
-  <img class="mannequin-bg" />     ← Image de fond (opacity réduite)
-  <div class="glass-overlay" />    ← Overlay glassmorphism
-  <div class="sidebar-content">    ← Contenu (stats, selectors)
-    ...
-  </div>
-</div>
+### Fichiers a Creer
+1. `src/context/SidebarContext.tsx` - Contexte pour les stats dynamiques
+2. `src/components/layout/MannequinHotspot.tsx` - Composant hotspot
+
+### Fichiers a Modifier
+1. `src/components/layout/MainLayout.tsx`
+   - Ajout du parallax scroll effect
+   - Integration des hotspots
+   - Consommation du SidebarContext
+
+2. `src/components/layout/StatBar.tsx`
+   - Animation smooth lors du changement de valeur
+   - Transition des segments
+
+3. `src/pages/Shop.tsx`
+   - Wrapper SidebarProvider
+   - Handler onMouseEnter/onMouseLeave sur les cartes produit
+
+4. `src/components/products/ProductCard.tsx`
+   - Props pour hover handlers
+   - Declenchement du changement de stats
+
+5. `src/index.css`
+   - Styles pour les hotspots
+   - Animation pulse pour les points
+
+---
+
+## CSS Additions
+
+```css
+/* Hotspot Styles */
+.mannequin-hotspot {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  cursor: pointer;
+  z-index: 30;
+}
+
+.hotspot-point {
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  border: 2px solid white;
+  border-radius: 50%;
+  animation: hotspot-pulse 2s ease-in-out infinite;
+}
+
+@keyframes hotspot-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.2); opacity: 1; }
+}
+
+.hotspot-tooltip {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 12px 16px;
+  font-size: 11px;
+  min-width: 180px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(5px);
+  transition: all 0.3s ease;
+}
+
+.mannequin-hotspot:hover .hotspot-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
 ```
 
-- Image de mannequin/modèle positionnée en absolute
-- Z-index inférieur au contenu
-- Effet de masquage (clip-path) pour sortir du cadre
-- Utilisation d'une image placeholder ou URL externe haute qualité
-
-### 4. CSS Additions
-
-**Fichier : `src/index.css`**
-
-Nouvelles classes :
-- `.sidebar-toggle-btn` : Style du bouton toggle mobile
-- `.stat-bar-container` : Conteneur des barres de stats
-- `.stat-bar-label` : Labels des statistiques
-- `.stat-bar-track` : Fond de la barre
-- `.stat-bar-fill` : Remplissage animé
-- `.mannequin-bg` : Style de l'image de fond
-- `.sidebar-content` : Conteneur du contenu avec z-index élevé
-
 ---
 
-## Structure du Sidebar Mis à Jour
+## Flux de Donnees
 
 ```text
-sidebar-left-panel
-├── mannequin-bg (image de fond)
-├── glass-overlay (effet glassmorphism)
-└── sidebar-content
-    ├── size-selector (XS, XL buttons)
-    ├── stat-bars-section
-    │   ├── StatBar (Durability: 85%)
-    │   ├── StatBar (Price: 45%)
-    │   └── StatBar (Fashion: 92%)
-    └── model-info (MODEL 0.1.2)
+┌──────────────────┐    hover    ┌─────────────────┐
+│  ProductCard     │ ─────────►  │ SidebarContext  │
+└──────────────────┘             │ hoveredProduct  │
+                                 └────────┬────────┘
+                                          │
+                                          ▼
+                                 ┌─────────────────┐
+                                 │   MainLayout    │
+                                 │   (StatBars)    │
+                                 └─────────────────┘
 ```
 
 ---
 
-## Comportement Responsive
+## Comportement Attendu
 
-| Breakpoint | Sidebar | Toggle Button | Main Content |
-|------------|---------|---------------|--------------|
-| < 768px    | Masqué  | Visible       | ml-0         |
-| 768-1024px | Masqué  | Visible       | ml-0         |
-| >= 1024px  | Visible | Masqué        | ml-[35%]     |
+1. **Scroll** : L'image du mannequin se deplace legerement vers le haut/bas creant un effet de profondeur
 
----
+2. **Hover Produit** : 
+   - Survol d'une carte produit dans la boutique
+   - Les barres de stats du sidebar se mettent a jour avec animation
+   - Retour aux valeurs par defaut en quittant le produit
 
-## Animations
+3. **Hotspots** :
+   - Points visibles avec animation pulse
+   - Tooltip apparait au survol avec details techniques
+   - Design coherent avec l'esthetique Helvetica-MP
 
-1. **Toggle Animation** : Slide-in depuis la gauche (transform: translateX)
-2. **Stat Bars** : Remplissage progressif au mount (width animation)
-3. **Hover Effects** : Scale subtil sur les boutons de taille
-
----
-
-## Imports Additionnels
-
-- `PanelLeft` ou `Layers` de lucide-react pour l'icône toggle
-- Hook `useState` pour gérer l'état du sidebar
-
----
-
-## Image de Mannequin
-
-Utilisation d'une image placeholder haute qualité :
-- URL : Image de mode/mannequin en noir et blanc
-- Style minimaliste cohérent avec la marque
-- Opacity réduite (0.3-0.5) pour ne pas dominer le contenu
