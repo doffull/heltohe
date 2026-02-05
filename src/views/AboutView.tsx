@@ -1,6 +1,12 @@
-import { Shield, Zap, Target, Cpu } from 'lucide-react';
+ import { useState } from 'react';
+ import { Shield, Zap, Target, Cpu, Send, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
+ import { supabase } from '@/integrations/supabase/client';
+ import { Input } from '@/components/ui/input';
+ import { Textarea } from '@/components/ui/textarea';
+ import { Button } from '@/components/ui/button';
+ import { useToast } from '@/hooks/use-toast';
 
 const values = [
   {
@@ -35,6 +41,49 @@ const values = [
 
 export function AboutView() {
   const { language } = useApp();
+   const { toast } = useToast();
+   const [formData, setFormData] = useState({ name: '', email: '', message: '' });
+   const [isSending, setIsSending] = useState(false);
+   const [sent, setSent] = useState(false);
+ 
+   const handleSubmit = async (e: React.FormEvent) => {
+     e.preventDefault();
+     if (!formData.name || !formData.email || !formData.message) {
+       toast({
+         title: language === 'FR' ? 'Champs requis' : 'Required fields',
+         description: language === 'FR' ? 'Veuillez remplir tous les champs' : 'Please fill all fields',
+         variant: 'destructive',
+       });
+       return;
+     }
+     
+     setIsSending(true);
+     try {
+       const { error } = await supabase.from('messages').insert({
+         name: formData.name,
+         email: formData.email,
+         message: formData.message,
+       });
+       
+       if (error) throw error;
+       
+       setSent(true);
+       setFormData({ name: '', email: '', message: '' });
+       toast({
+         title: language === 'FR' ? 'Message envoyé' : 'Message sent',
+         description: language === 'FR' ? 'Nous vous répondrons bientôt' : 'We will reply soon',
+       });
+     } catch (err) {
+       console.error(err);
+       toast({
+         title: language === 'FR' ? 'Erreur' : 'Error',
+         description: language === 'FR' ? 'Erreur de liaison. Réessayez.' : 'Connection error. Try again.',
+         variant: 'destructive',
+       });
+     } finally {
+       setIsSending(false);
+     }
+   };
   
   return (
     <div className="min-h-screen py-8">
@@ -138,6 +187,95 @@ export function AboutView() {
           ))}
         </div>
       </section>
+       
+       {/* Contact Form Section */}
+       <section className="px-6 lg:px-12 py-16">
+         <div className="max-w-2xl mx-auto">
+           <div className="mb-8 text-center">
+             <h3 className="hud-text text-xs text-primary tracking-[0.3em] mb-2">
+               // {language === 'FR' ? 'TRANSMISSION DIRECTE' : 'DIRECT TRANSMISSION'}
+             </h3>
+             <h4 className="text-2xl font-bold">
+               {language === 'FR' ? 'CONTACTER LE COMMANDEMENT' : 'CONTACT COMMAND'}
+             </h4>
+             <div className="h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent w-full mt-4" />
+           </div>
+           
+           {sent ? (
+             <div className="text-center p-12 bg-card border border-primary/30 chamfer-hud">
+               <CheckCircle className="h-16 w-16 mx-auto text-primary mb-4 animate-bounce" />
+               <h5 className="text-xl font-bold mb-2">
+                 {language === 'FR' ? 'TRANSMISSION RÉUSSIE' : 'TRANSMISSION SUCCESSFUL'}
+               </h5>
+               <p className="text-sm text-muted-foreground mb-6">
+                 {language === 'FR' ? 'Message transmis au Secteur Alpha' : 'Message transmitted to Alpha Sector'}
+               </p>
+               <Button 
+                 variant="outline" 
+                 onClick={() => setSent(false)}
+                 className="chamfer-hud-sm"
+               >
+                 {language === 'FR' ? 'Nouvelle Transmission' : 'New Transmission'}
+               </Button>
+             </div>
+           ) : (
+             <form onSubmit={handleSubmit} className="space-y-6 p-8 bg-card/50 border border-border/30 chamfer-hud">
+               <div className="space-y-2">
+                 <label className="hud-text text-xs text-muted-foreground tracking-wider">
+                   {language === 'FR' ? 'IDENTIFIANT' : 'IDENTIFIER'}
+                 </label>
+                 <Input
+                   value={formData.name}
+                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                   placeholder={language === 'FR' ? 'VOTRE NOM' : 'YOUR NAME'}
+                   className="bg-background/50 border-border/50 focus:border-primary chamfer-hud-sm uppercase text-xs font-bold tracking-wider"
+                 />
+               </div>
+               
+               <div className="space-y-2">
+                 <label className="hud-text text-xs text-muted-foreground tracking-wider">
+                   {language === 'FR' ? 'LIAISON EMAIL' : 'EMAIL LINK'}
+                 </label>
+                 <Input
+                   type="email"
+                   value={formData.email}
+                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                   placeholder="VOTRE@EMAIL.COM"
+                   className="bg-background/50 border-border/50 focus:border-primary chamfer-hud-sm uppercase text-xs font-bold tracking-wider"
+                 />
+               </div>
+               
+               <div className="space-y-2">
+                 <label className="hud-text text-xs text-muted-foreground tracking-wider">
+                   {language === 'FR' ? 'DONNÉES MESSAGE' : 'MESSAGE DATA'}
+                 </label>
+                 <Textarea
+                   value={formData.message}
+                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                   placeholder={language === 'FR' ? 'VOTRE RAPPORT...' : 'YOUR REPORT...'}
+                   rows={5}
+                   className="bg-background/50 border-border/50 focus:border-primary chamfer-hud-sm uppercase text-xs font-bold tracking-wider resize-none"
+                 />
+               </div>
+               
+               <Button
+                 type="submit"
+                 disabled={isSending}
+                 className="w-full h-14 chamfer-hud text-sm font-black uppercase tracking-[0.3em] group"
+               >
+                 {isSending ? (
+                   'SYNCHRONISATION...'
+                 ) : (
+                   <>
+                     <Send className="h-4 w-4 mr-3 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform" />
+                     {language === 'FR' ? 'ENVOYER RAPPORT' : 'SEND REPORT'}
+                   </>
+                 )}
+               </Button>
+             </form>
+           )}
+         </div>
+       </section>
     </div>
   );
 }

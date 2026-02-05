@@ -16,6 +16,7 @@ import Auth from "./pages/Auth";
 import Account from "./pages/Account";
 import Admin from "./pages/admin/Admin";
 import NotFound from "./pages/NotFound";
+ import About from "./pages/About";
 
 // Layout
 import { MainLayout } from "./components/layout/MainLayout";
@@ -37,6 +38,7 @@ const App = () => (
                 <Route path="/boutique" element={<MainLayout><Shop /></MainLayout>} />
                 <Route path="/boutique/:id" element={<MainLayout><ProductDetail /></MainLayout>} />
                 <Route path="/panier" element={<MainLayout><Cart /></MainLayout>} />
+                 <Route path="/a-propos" element={<MainLayout><About /></MainLayout>} />
                 
                 {/* Auth routes (no layout) */}
                 <Route path="/auth" element={<Auth />} />
