@@ -1,10 +1,40 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
 import { useCart } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { ChevronRight, ArrowRight } from 'lucide-react';
+import { ChevronRight, ArrowRight, ChevronLeft } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+import heroImage1 from '@/assets/hero/hero-1.jpg';
+import heroImage2 from '@/assets/hero/hero-2.jpg';
+import catHomme from '@/assets/categories/cat-homme.jpg';
+import catFemme from '@/assets/categories/cat-femme.jpg';
+import catEnfant from '@/assets/categories/cat-enfant.jpg';
+import catAccessoires from '@/assets/categories/cat-accessoires.jpg';
+
+const HERO_SLIDES = [
+  {
+    image: heroImage1,
+    title: 'COLLECTION\nHIVER 2026',
+    subtitle: 'ÉQUIPEMENT TECHNIQUE PREMIUM',
+    cta: 'Découvrir',
+  },
+  {
+    image: heroImage2,
+    title: 'NOUVELLE\nCOLLECTION',
+    subtitle: 'ÉLÉGANCE & PERFORMANCE',
+    cta: 'Explorer',
+  },
+];
+
+const CATEGORIES = [
+  { title: 'Homme', image: catHomme, href: '/boutique?category=Homme' },
+  { title: 'Femme', image: catFemme, href: '/boutique?category=Femme' },
+  { title: 'Enfant', image: catEnfant, href: '/boutique?category=Enfant' },
+  { title: 'Accessoires', image: catAccessoires, href: '/boutique?category=Accessoires' },
+];
 
 export default function Home() {
   const navigate = useNavigate();
@@ -12,32 +42,34 @@ export default function Home() {
   const { data: products = [] } = useProducts();
   const { addItem } = useCart();
   
-  const heroRef = useRef<HTMLDivElement>(null);
-  const parallaxLayer1 = useRef<HTMLDivElement>(null);
-  const parallaxLayer2 = useRef<HTMLDivElement>(null);
-  const parallaxLayer3 = useRef<HTMLDivElement>(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [scrollY, setScrollY] = useState(0);
 
-  // Multi-layer parallax effect
+  // Parallax scroll
   useEffect(() => {
+    let ticking = false;
     const handleScroll = () => {
-      const scrollY = window.scrollY;
-      
-      if (parallaxLayer1.current) {
-        parallaxLayer1.current.style.transform = `translateY(${scrollY * 0.1}px)`;
-      }
-      if (parallaxLayer2.current) {
-        parallaxLayer2.current.style.transform = `translateY(${scrollY * 0.3}px)`;
-      }
-      if (parallaxLayer3.current) {
-        parallaxLayer3.current.style.transform = `translateY(${scrollY * 0.5}px)`;
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          setScrollY(window.scrollY);
+          ticking = false;
+        });
+        ticking = true;
       }
     };
-
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Scroll reveal animation
+  // Auto-play slider
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide(prev => (prev + 1) % HERO_SLIDES.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Scroll reveal
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -50,15 +82,13 @@ export default function Home() {
       },
       { threshold: 0.1 }
     );
-
     const elements = document.querySelectorAll('.scroll-reveal');
     elements.forEach((el) => observer.observe(el));
-
     return () => observer.disconnect();
-  }, []);
+  }, [products]);
 
-  const featuredProducts = products.slice(0, 3);
-  const newArrivals = products.slice(0, 6);
+  const featuredProducts = products.slice(0, 4);
+  const newArrivals = products.slice(4, 10);
 
   const handleAddToCart = async (product: typeof products[0]) => {
     await addItem({
@@ -69,176 +99,153 @@ export default function Home() {
       image: product.image,
       quantity: 1,
     });
-    
     toast({
-      title: 'Added to cart',
-      description: `${product.name} has been added to your cart`,
+      title: 'Ajouté au panier',
+      description: `${product.name} a été ajouté à votre panier`,
     });
   };
 
+  const slide = HERO_SLIDES[currentSlide];
+
   return (
     <div className="min-h-screen bg-background overflow-hidden">
-      {/* Hero Section with Multi-Layer Parallax */}
-      <section ref={heroRef} className="relative h-screen flex items-center overflow-hidden">
-        {/* Background Layer 1 - Grid pattern (slowest) */}
-        <div 
-          ref={parallaxLayer1}
-          className="absolute inset-0 z-0 grid-lines opacity-50"
-          style={{ willChange: 'transform' }}
-        />
+      {/* ═══════════════ HERO PARALLAX ═══════════════ */}
+      <section className="relative h-[100vh] overflow-hidden">
+        {/* Background images with parallax */}
+        {HERO_SLIDES.map((s, i) => (
+          <div
+            key={i}
+            className={cn(
+              "absolute inset-0 transition-opacity duration-1000",
+              i === currentSlide ? "opacity-100" : "opacity-0"
+            )}
+          >
+            <div
+              className="absolute inset-0 bg-cover bg-center will-change-transform"
+              style={{
+                backgroundImage: `url(${s.image})`,
+                transform: `scale(1.1) translateY(${scrollY * 0.25}px)`,
+              }}
+            />
+          </div>
+        ))}
 
-        {/* Background Layer 2 - Geometric shapes (medium) */}
-        <div 
-          ref={parallaxLayer2}
-          className="absolute inset-0 z-10 pointer-events-none"
-          style={{ willChange: 'transform' }}
-        >
-          {/* Floating geometric shapes */}
-          <div className="absolute top-20 right-20 w-64 h-64 bg-secondary/50 transform rotate-45" />
-          <div className="absolute bottom-32 left-16 w-48 h-48 bg-muted/60 transform rotate-12" />
-          <div className="absolute top-1/3 left-1/4 w-32 h-32 border-2 border-border transform -rotate-12" />
-        </div>
+        {/* Dark overlay gradient */}
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent z-10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background/60 to-transparent z-10" />
 
-        {/* Content Layer (fastest) */}
-        <div 
-          ref={parallaxLayer3}
-          className="relative z-20 container mx-auto px-4"
-          style={{ willChange: 'transform' }}
-        >
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Left side - Text content */}
-            <div className="space-y-8">
-              <div>
-                <p className="font-mono text-xs tracking-widest text-muted-foreground mb-4">
-                  MODEL 0.1.2
-                </p>
-                <h1 className="text-6xl md:text-8xl font-bold uppercase leading-none tracking-tight">
-                  HELVETICA
-                  <br />
-                  <span className="text-muted-foreground">-MP</span>
-                </h1>
-              </div>
-              
-              <p className="text-lg text-muted-foreground max-w-md leading-relaxed">
-                Minimalist design meets functional excellence. Premium quality for the modern individual.
-              </p>
+        {/* Content */}
+        <div className="relative z-20 h-full flex flex-col justify-end pb-24 px-6 lg:px-16">
+          <div className="max-w-3xl space-y-6">
+            <p className="font-mono text-xs tracking-[0.4em] text-muted-foreground uppercase animate-fade-in">
+              {slide.subtitle}
+            </p>
+            <h1 className="text-5xl md:text-7xl xl:text-8xl font-bold uppercase leading-[0.9] tracking-tighter">
+              {slide.title.split('\n').map((line, i) => (
+                <span key={i} className="block">
+                  {i === 1 ? (
+                    <span className="text-muted-foreground">{line}</span>
+                  ) : line}
+                </span>
+              ))}
+            </h1>
+            <Button
+              size="lg"
+              className="h-14 px-10 uppercase tracking-[0.2em] text-sm trapezoid-btn glow-hover"
+              onClick={() => navigate('/boutique')}
+            >
+              {slide.cta}
+              <ArrowRight className="ml-3 h-5 w-5" />
+            </Button>
+          </div>
 
-              {/* Shop Now Button - Trapezoid style with glow */}
-              <Button 
-                size="lg" 
-                className="trapezoid-btn h-14 px-12 text-base uppercase tracking-wider glow-hover"
-                onClick={() => navigate('/boutique')}
-              >
-                Shop Now
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </div>
-
-            {/* Right side - Model Interface Panel */}
-            <div className="hidden lg:block relative">
-              <div className="glass p-8 bevel-corners">
-                {/* Model indicator */}
-                <div className="absolute -top-4 left-8 bg-background px-4 py-2 border border-border">
-                  <span className="font-mono text-xs tracking-widest">SYSTEM STATUS</span>
-                </div>
-
-                {/* Stats bars */}
-                <div className="space-y-6 mt-8">
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm uppercase tracking-wider">Durability</span>
-                      <span className="font-mono text-xs">92%</span>
-                    </div>
-                    <div className="stat-bar-segmented">
-                      {[...Array(10)].map((_, i) => (
-                        <div key={i} className={`stat-segment ${i < 9 ? 'filled' : ''}`} />
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm uppercase tracking-wider">Quality</span>
-                      <span className="font-mono text-xs">88%</span>
-                    </div>
-                    <div className="stat-bar-segmented">
-                      {[...Array(10)].map((_, i) => (
-                        <div key={i} className={`stat-segment ${i < 9 ? 'filled' : ''}`} />
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm uppercase tracking-wider">Design</span>
-                      <span className="font-mono text-xs">95%</span>
-                    </div>
-                    <div className="stat-bar-segmented">
-                      {[...Array(10)].map((_, i) => (
-                        <div key={i} className={`stat-segment ${i < 10 ? 'filled' : ''}`} />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Size selectors */}
-                <div className="flex gap-3 mt-8">
-                  <button className="w-12 h-12 bg-primary text-primary-foreground text-sm font-bold">
-                    XS
-                  </button>
-                  <button className="w-12 h-12 bg-secondary text-secondary-foreground text-sm font-bold hover:bg-primary hover:text-primary-foreground transition-colors">
-                    S
-                  </button>
-                  <button className="w-12 h-12 bg-secondary text-secondary-foreground text-sm font-bold hover:bg-primary hover:text-primary-foreground transition-colors">
-                    M
-                  </button>
-                  <button className="w-12 h-12 bg-secondary text-secondary-foreground text-sm font-bold hover:bg-primary hover:text-primary-foreground transition-colors">
-                    L
-                  </button>
-                  <button className="w-12 h-12 bg-primary text-primary-foreground text-sm font-bold">
-                    XL
-                  </button>
-                </div>
-              </div>
-            </div>
+          {/* Slide indicators */}
+          <div className="absolute bottom-8 right-8 flex items-center gap-3 z-30">
+            <button onClick={() => setCurrentSlide(prev => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length)} className="w-10 h-10 border border-foreground/30 flex items-center justify-center hover:bg-foreground/10 transition-colors">
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="font-mono text-sm tabular-nums">
+              <span className="text-foreground">{String(currentSlide + 1).padStart(2, '0')}</span>
+              <span className="text-muted-foreground mx-1">/</span>
+              <span className="text-muted-foreground">{String(HERO_SLIDES.length).padStart(2, '0')}</span>
+            </span>
+            <button onClick={() => setCurrentSlide(prev => (prev + 1) % HERO_SLIDES.length)} className="w-10 h-10 border border-foreground/30 flex items-center justify-center hover:bg-foreground/10 transition-colors">
+              <ChevronRight className="h-4 w-4" />
+            </button>
           </div>
         </div>
 
         {/* Scroll indicator */}
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30">
-          <div className="w-px h-16 bg-border relative overflow-hidden">
+          <div className="w-px h-16 bg-foreground/20 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1/2 bg-foreground animate-pulse-soft" />
           </div>
         </div>
       </section>
 
-      {/* Featured Products - 3 column grid with beveled cards */}
-      <section className="py-24 bg-secondary/30">
+      {/* ═══════════════ CATEGORIES GRID ═══════════════ */}
+      <section className="py-20 lg:py-28">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between mb-12">
+          <div className="flex items-end justify-between mb-12">
             <div>
-              <h2 className="text-4xl font-bold uppercase tracking-tight">Featured</h2>
-              <p className="text-muted-foreground mt-2">Curated selection</p>
+              <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-2">// COLLECTIONS</p>
+              <h2 className="text-4xl lg:text-5xl font-bold uppercase tracking-tight">Catégories</h2>
             </div>
-            <Button 
-              variant="outline" 
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+            {CATEGORIES.map((cat, index) => (
+              <Link
+                key={cat.title}
+                to={cat.href}
+                className="scroll-reveal opacity-0 translate-y-8 transition-all duration-700 group relative aspect-[3/4] overflow-hidden bevel-corners"
+                style={{ transitionDelay: `${index * 100}ms` }}
+              >
+                <img
+                  src={cat.image}
+                  alt={cat.title}
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/20 to-transparent" />
+                <div className="absolute inset-0 border-2 border-transparent group-hover:border-foreground/40 transition-colors duration-300 bevel-corners" />
+                <div className="absolute bottom-0 left-0 right-0 p-5 lg:p-6">
+                  <h3 className="text-lg lg:text-xl font-bold uppercase tracking-wider text-background group-hover:text-background/80 transition-colors">
+                    {cat.title}
+                  </h3>
+                  <div className="mt-2 h-0.5 w-0 bg-background group-hover:w-12 transition-all duration-500" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════ FEATURED PRODUCTS ═══════════════ */}
+      <section className="py-20 lg:py-28 bg-secondary/30">
+        <div className="container mx-auto px-4">
+          <div className="flex items-end justify-between mb-12">
+            <div>
+              <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-2">// SÉLECTION</p>
+              <h2 className="text-4xl lg:text-5xl font-bold uppercase tracking-tight">En vedette</h2>
+            </div>
+            <Button
+              variant="outline"
               className="hidden md:flex uppercase tracking-wider"
               onClick={() => navigate('/boutique')}
             >
-              View All
+              Tout voir
               <ChevronRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             {featuredProducts.map((product, index) => (
-              <div 
+              <div
                 key={product.id}
-                className="scroll-reveal opacity-0 translate-y-8 transition-all duration-700 group bg-background bevel-corners overflow-hidden shadow-hmp hover:shadow-hmp-lg"
-                style={{ transitionDelay: `${index * 100}ms` }}
+                className="scroll-reveal opacity-0 translate-y-8 transition-all duration-700 group bg-background bevel-corners overflow-hidden border border-border hover:border-foreground hover:shadow-hmp-lg"
+                style={{ transitionDelay: `${index * 80}ms` }}
               >
-                {/* Product Image */}
-                <div 
+                <div
                   className="relative aspect-[3/4] overflow-hidden cursor-pointer"
                   onClick={() => navigate(`/boutique/${product.id}`)}
                 >
@@ -247,83 +254,66 @@ export default function Home() {
                     alt={product.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                   />
-                  
-                  {/* Sale badge */}
                   {product.salePrice && (
-                    <div className="absolute top-4 left-4 bg-foreground text-background px-3 py-1 text-xs font-bold uppercase">
-                      Sale
+                    <div className="absolute top-3 left-3 bg-foreground text-background px-2 py-1 text-[10px] font-bold uppercase">
+                      Promo
                     </div>
                   )}
-
-                  {/* Overlay with sizes on hover */}
-                  <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <div className="text-center">
-                      <p className="text-sm uppercase tracking-wider mb-4">Available Sizes</p>
-                      <div className="flex gap-2 justify-center">
-                        {['XS', 'S', 'M', 'L', 'XL'].map((size) => (
-                          <span key={size} className="w-10 h-10 border border-foreground flex items-center justify-center text-xs font-medium">
-                            {size}
-                          </span>
-                        ))}
-                      </div>
+                  {product.stock <= 5 && product.stock > 0 && (
+                    <div className="absolute top-3 right-3 bg-destructive text-destructive-foreground px-2 py-1 text-[10px] uppercase">
+                      Stock limité
                     </div>
-                  </div>
+                  )}
                 </div>
-
-                {/* Product Info */}
-                <div className="p-6">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
-                    {product.category}
-                  </p>
-                  <h3 className="text-lg font-bold uppercase tracking-tight line-clamp-1">
-                    {product.name}
-                  </h3>
-                  
-                  {/* Price badge aligned left */}
-                  <div className="flex items-center gap-3 mt-3">
+                <div className="p-4">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{product.category}</p>
+                  <h3 className="text-sm font-bold uppercase tracking-tight truncate">{product.name}</h3>
+                  <div className="flex items-center gap-2 mt-2">
                     {product.salePrice ? (
                       <>
-                        <span className="text-xl font-bold">{product.salePrice}€</span>
-                        <span className="text-sm text-muted-foreground line-through">{product.price}€</span>
+                        <span className="text-base font-bold">{product.salePrice}€</span>
+                        <span className="text-xs text-muted-foreground line-through">{product.price}€</span>
                       </>
                     ) : (
-                      <span className="text-xl font-bold">{product.price}€</span>
+                      <span className="text-base font-bold">{product.price}€</span>
                     )}
                   </div>
                 </div>
-
-                {/* Add to Cart - Full width footer button */}
                 <button
-                  className="product-card-footer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAddToCart(product);
-                  }}
+                  className="product-card-footer text-xs"
+                  onClick={() => handleAddToCart(product)}
                 >
-                  Add to Cart
+                  Ajouter au panier
                 </button>
               </div>
             ))}
           </div>
+
+          <div className="text-center mt-10 md:hidden">
+            <Button variant="outline" className="uppercase tracking-wider" onClick={() => navigate('/boutique')}>
+              Voir tous les produits
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </section>
 
-      {/* New Arrivals - Larger grid */}
-      <section className="py-24">
+      {/* ═══════════════ NEW ARRIVALS ═══════════════ */}
+      <section className="py-20 lg:py-28">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold uppercase tracking-tight">New Arrivals</h2>
-            <p className="text-muted-foreground mt-2">Fresh from the collection</p>
+            <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-2">// NOUVEAUTÉS</p>
+            <h2 className="text-4xl lg:text-5xl font-bold uppercase tracking-tight">Dernières arrivées</h2>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6">
             {newArrivals.map((product, index) => (
-              <div 
+              <div
                 key={product.id}
                 className="scroll-reveal opacity-0 translate-y-8 transition-all duration-700 group bg-card bevel-corners-sm overflow-hidden border border-border hover:border-foreground"
-                style={{ transitionDelay: `${index * 50}ms` }}
+                style={{ transitionDelay: `${index * 60}ms` }}
               >
-                <div 
+                <div
                   className="relative aspect-square overflow-hidden cursor-pointer"
                   onClick={() => navigate(`/boutique/${product.id}`)}
                 >
@@ -333,56 +323,53 @@ export default function Home() {
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                 </div>
-                
                 <div className="p-4">
-                  <h3 className="font-bold uppercase text-sm tracking-tight line-clamp-1">{product.name}</h3>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{product.category}</p>
+                  <h3 className="font-bold uppercase text-sm tracking-tight truncate">{product.name}</h3>
                   <p className="text-muted-foreground font-bold mt-1">{product.salePrice || product.price}€</p>
                 </div>
-
-                <button
-                  className="product-card-footer text-xs"
-                  onClick={() => handleAddToCart(product)}
-                >
-                  Add to Cart
+                <button className="product-card-footer text-xs" onClick={() => handleAddToCart(product)}>
+                  Ajouter au panier
                 </button>
               </div>
             ))}
           </div>
 
           <div className="text-center mt-12">
-            <Button 
+            <Button
               size="lg"
               variant="outline"
               className="uppercase tracking-wider"
               onClick={() => navigate('/boutique')}
             >
-              View All Products
+              Voir toute la collection
               <ChevronRight className="ml-2 h-5 w-5" />
             </Button>
           </div>
         </div>
       </section>
 
-      {/* Newsletter CTA */}
+      {/* ═══════════════ NEWSLETTER CTA ═══════════════ */}
       <section className="py-24 bg-foreground text-background">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-4xl font-bold uppercase tracking-tight mb-4">
-            Stay Updated
+          <p className="font-mono text-xs tracking-[0.3em] text-background/50 mb-4">// NEWSLETTER</p>
+          <h2 className="text-4xl lg:text-5xl font-bold uppercase tracking-tight mb-4">
+            Restez informé
           </h2>
-          <p className="text-background/70 mb-8 max-w-md mx-auto">
-            Subscribe to our newsletter for exclusive offers and early access to new collections.
+          <p className="text-background/60 mb-8 max-w-md mx-auto">
+            Inscrivez-vous pour recevoir les nouveautés et offres exclusives en avant-première.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
-            <input 
-              type="email" 
-              placeholder="your@email.com"
+            <input
+              type="email"
+              placeholder="votre@email.com"
               className="flex-1 h-12 px-4 bg-background text-foreground border-0"
             />
-            <Button 
-              size="lg" 
+            <Button
+              size="lg"
               className="h-12 bg-background text-foreground hover:bg-background/90"
             >
-              Subscribe
+              S'inscrire
             </Button>
           </div>
         </div>
