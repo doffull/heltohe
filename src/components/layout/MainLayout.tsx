@@ -267,15 +267,15 @@ export function MainLayout({ children }: MainLayoutProps) {
         lg:translate-x-0
         w-[85%] sm:w-[320px] lg:w-[35%]
       `}>
-        {/* Mannequin Background Image with Parallax */}
+        {/* Mannequin Background Image - Fixed */}
         <div 
-          className="absolute inset-0 z-0 will-change-transform"
+          className="absolute inset-0 z-0"
           style={{
             backgroundImage: `url(${designSettings.sidebarImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&auto=format&fit=crop&q=60'})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center top',
+            backgroundAttachment: 'fixed',
             opacity: 0.4,
-            transform: `translateY(${scrollY * 0.15}px)`,
           }}
         />
         
@@ -284,8 +284,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           <MannequinHotspots />
         </div>
         
-        {/* Glass Overlay */}
-        <div className="absolute inset-0 z-10 bg-white/20 backdrop-blur-sm" />
+        {/* Overlay removed per design choice */}
         
         {/* Sidebar Content */}
         <div className="relative z-20 h-full flex flex-col justify-between p-6 pt-28">

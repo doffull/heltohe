@@ -322,5 +322,6 @@ export const INITIAL_DESIGN_SETTINGS: DesignSettings = {
         }
       ]
     }
-  }
+  },
+  colorDisplayMode: 'swatches',
 };

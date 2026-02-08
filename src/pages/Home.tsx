@@ -198,8 +198,7 @@ export default function Home() {
           </div>
         ))}
 
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent z-10" />
-        <div className="absolute inset-0 bg-gradient-to-r from-background/60 to-transparent z-10" />
+        {/* Overlays removed per design choice */}
 
         <motion.div
           style={{ opacity: heroOpacity }}
