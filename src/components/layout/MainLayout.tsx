@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { useSidebarOptional } from '@/context/SidebarContext';
+import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { StatBar } from './StatBar';
@@ -47,6 +48,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const { user, isAdmin } = useAuth();
   const { itemCount } = useCart();
   const sidebarContext = useSidebarOptional();
+  const { designSettings } = useApp();
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [scrollY, setScrollY] = useState(0);
@@ -261,7 +263,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         <div 
           className="absolute inset-0 z-0 will-change-transform"
           style={{
-            backgroundImage: 'url(https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&auto=format&fit=crop&q=60)',
+            backgroundImage: `url(${designSettings.sidebarImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&auto=format&fit=crop&q=60'})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center top',
             opacity: 0.4,

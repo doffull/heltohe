@@ -263,6 +263,7 @@ export type Database = {
           show_unit_id: boolean | null
           sidebar_bg: string | null
           sidebar_gradient: boolean | null
+          sidebar_image: string | null
           slider_auto_play: boolean | null
           slider_grayscale: boolean | null
           slider_speed: number | null
@@ -306,6 +307,7 @@ export type Database = {
           show_unit_id?: boolean | null
           sidebar_bg?: string | null
           sidebar_gradient?: boolean | null
+          sidebar_image?: string | null
           slider_auto_play?: boolean | null
           slider_grayscale?: boolean | null
           slider_speed?: number | null
@@ -349,6 +351,7 @@ export type Database = {
           show_unit_id?: boolean | null
           sidebar_bg?: string | null
           sidebar_gradient?: boolean | null
+          sidebar_image?: string | null
           slider_auto_play?: boolean | null
           slider_grayscale?: boolean | null
           slider_speed?: number | null

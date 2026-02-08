@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import { SidebarProvider } from "@/context/SidebarContext";
+import { AppProvider } from "@/context/AppContext";
 
 // Pages
 import Home from "./pages/Home";
@@ -29,6 +30,7 @@ const App = () => (
       <AuthProvider>
         <CartProvider>
           <SidebarProvider>
+            <AppProvider>
             <TooltipProvider>
               <Toaster />
               <Sonner />
@@ -53,6 +55,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </TooltipProvider>
+            </AppProvider>
           </SidebarProvider>
         </CartProvider>
       </AuthProvider>
