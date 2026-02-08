@@ -53,8 +53,10 @@ export function SidebarProductHUD() {
     ? activeProduct.sku.split('-').pop()?.replace(/\D/g, '').padStart(3, '0') || '001'
     : '001';
 
-  // Sizes
-  const sizes = activeProduct?.sizes || ['S', 'M', 'L', 'XL'];
+  // Sizes - use admin-configured sizes, fallback to product sizes
+  const sizes = designSettings.sidebarSizes?.length > 0 
+    ? designSettings.sidebarSizes 
+    : (activeProduct?.sizes || ['S', 'M', 'L', 'XL']);
 
   return (
     <div className="relative z-20 h-full flex flex-col justify-between p-6 pt-28">
@@ -92,10 +94,10 @@ export function SidebarProductHUD() {
               </span>
             </div>
             <h3 className="font-bold text-base uppercase tracking-wider text-foreground mb-1">
-              {activeProduct.name}
+              {designSettings.sidebarProductTitle || activeProduct.name}
             </h3>
             <p className="font-mono text-[11px] text-foreground/50 leading-relaxed line-clamp-2">
-              {activeProduct.subtitle || activeProduct.description?.slice(0, 80) || ''}
+              {designSettings.sidebarProductDescription || activeProduct.subtitle || activeProduct.description?.slice(0, 80) || ''}
             </p>
           </div>
         )}

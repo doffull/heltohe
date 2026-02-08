@@ -335,4 +335,10 @@ export const INITIAL_DESIGN_SETTINGS: DesignSettings = {
   },
   colorDisplayMode: 'swatches',
   sliderImageOpacity: 1,
+  sidebarImageOpacity: 1,
+  sidebarSizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'],
+  statBarFilledColor: '#000000',
+  statBarEmptyColor: '#e5e5e5',
+  sidebarProductTitle: '',
+  sidebarProductDescription: '',
 };
