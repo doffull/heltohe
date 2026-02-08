@@ -334,4 +334,5 @@ export const INITIAL_DESIGN_SETTINGS: DesignSettings = {
     }
   },
   colorDisplayMode: 'swatches',
+  sliderImageOpacity: 1,
 };

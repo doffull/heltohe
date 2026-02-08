@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { FileDropZone } from '@/components/admin/FileDropZone';
 import { useApp } from '@/context/AppContext';
-import { HeroSlide, HUDStat } from '@/types';
+import { HeroSlide, HUDStat, HUDButton } from '@/types';
 import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -203,6 +203,16 @@ function HeroSliderTab() {
               onCheckedChange={(v) => updateDesignSettings({ sliderGrayscale: v })}
             />
           </div>
+          <div className="space-y-2">
+            <Label>Opacité des images ({Math.round((designSettings.sliderImageOpacity ?? 1) * 100)}%)</Label>
+            <Slider
+              value={[(designSettings.sliderImageOpacity ?? 1) * 100]}
+              min={10}
+              max={100}
+              step={5}
+              onValueChange={([v]) => updateDesignSettings({ sliderImageOpacity: v / 100 })}
+            />
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -246,6 +256,7 @@ function LogoTab() {
 function SidebarTab() {
   const { designSettings, updateDesignSettings } = useApp();
   const stats = designSettings.stats || [];
+  const hudButtons = designSettings.hudButtons || [];
 
   const updateStat = (index: number, updates: Partial<HUDStat>) => {
     const newStats = [...stats];
@@ -259,6 +270,34 @@ function SidebarTab() {
 
   const removeStat = (index: number) => {
     updateDesignSettings({ stats: stats.filter((_, i) => i !== index) });
+  };
+
+  const addButton = () => {
+    const newBtn: HUDButton = {
+      id: generateId(),
+      label: 'NOUVEAU',
+      url: '/boutique',
+      style: { bg: '#000000', text: '#ffffff', scale: 1, animation: 'none', pos: {}, fontSize: 10 },
+    };
+    updateDesignSettings({ hudButtons: [...hudButtons, newBtn] });
+    toast.success('Bouton ajouté');
+  };
+
+  const updateButton = (index: number, updates: Partial<HUDButton>) => {
+    const newBtns = [...hudButtons];
+    newBtns[index] = { ...newBtns[index], ...updates };
+    updateDesignSettings({ hudButtons: newBtns });
+  };
+
+  const updateButtonStyle = (index: number, styleUpdates: Record<string, any>) => {
+    const newBtns = [...hudButtons];
+    newBtns[index] = { ...newBtns[index], style: { ...newBtns[index].style, ...styleUpdates } };
+    updateDesignSettings({ hudButtons: newBtns });
+  };
+
+  const removeButton = (index: number) => {
+    updateDesignSettings({ hudButtons: hudButtons.filter((_, i) => i !== index) });
+    toast.success('Bouton supprimé');
   };
 
   return (
@@ -401,6 +440,78 @@ function SidebarTab() {
             <p className="text-sm text-muted-foreground text-center py-4">
               Aucune barre configurée
             </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* HUD Buttons */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base">Boutons de la sidebar</CardTitle>
+              <CardDescription>Boutons d'action affichés sur la sidebar</CardDescription>
+            </div>
+            <Button onClick={addButton} size="sm" variant="outline">
+              <Plus className="h-4 w-4 mr-2" /> Ajouter
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {hudButtons.map((btn, index) => (
+            <div key={btn.id} className="p-3 border border-border rounded-lg space-y-3">
+              <div className="flex items-center gap-2">
+                <Input
+                  value={btn.label}
+                  onChange={(e) => updateButton(index, { label: e.target.value })}
+                  placeholder="Label"
+                  className="flex-1"
+                />
+                <Input
+                  value={btn.url}
+                  onChange={(e) => updateButton(index, { url: e.target.value })}
+                  placeholder="URL"
+                  className="flex-1"
+                />
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeButton(index)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs">Fond</Label>
+                  <input
+                    type="color"
+                    value={btn.style.bg}
+                    onChange={(e) => updateButtonStyle(index, { bg: e.target.value })}
+                    className="h-8 w-10 cursor-pointer rounded border border-border"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs">Texte</Label>
+                  <input
+                    type="color"
+                    value={btn.style.text}
+                    onChange={(e) => updateButtonStyle(index, { text: e.target.value })}
+                    className="h-8 w-10 cursor-pointer rounded border border-border"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs">Taille</Label>
+                  <Input
+                    type="number"
+                    value={btn.style.fontSize || 10}
+                    onChange={(e) => updateButtonStyle(index, { fontSize: Number(e.target.value) })}
+                    className="w-16 h-8"
+                    min={8}
+                    max={24}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+          {hudButtons.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">Aucun bouton configuré</p>
           )}
         </CardContent>
       </Card>
