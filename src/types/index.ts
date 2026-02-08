@@ -228,6 +228,9 @@ export interface DesignSettings {
   
   // Catalog display
   colorDisplayMode: 'swatches' | 'images';
+  
+  // Hero image opacity
+  sliderImageOpacity: number;
 }
 
 export interface TranslationStrings {

@@ -8,6 +8,7 @@ import { CartProvider } from "@/context/CartContext";
 import { SidebarProvider } from "@/context/SidebarContext";
 import { AppProvider } from "@/context/AppContext";
 import { AnimatePresence, motion } from "framer-motion";
+import { useEffect } from "react";
 
 // Pages
 import Home from "./pages/Home";
@@ -36,6 +37,12 @@ const pageTransition = {
   ease: [0.22, 1, 0.36, 1] as const,
   duration: 0.45,
 };
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  return null;
+}
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -85,6 +92,7 @@ const App = () => (
               <TooltipProvider>
                 <Toaster />
                 <Sonner />
+                <ScrollToTop />
                 <AnimatedRoutes />
               </TooltipProvider>
             </AppProvider>

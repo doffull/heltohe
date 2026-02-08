@@ -168,7 +168,7 @@ export default function Home() {
           >
             {/* Background Layer (slowest parallax) */}
             {('mediaType' in s && s.mediaType === 'video') ? (
-              <motion.div className="absolute inset-0 will-change-transform" style={{ y: heroY, scale: heroScale }}>
+              <motion.div className="absolute inset-0 will-change-transform" style={{ y: heroY, scale: heroScale, opacity: designSettings.sliderImageOpacity ?? 1 }}>
                 <video src={s.image} autoPlay muted loop playsInline className="w-full h-full object-cover" />
               </motion.div>
             ) : (
@@ -178,6 +178,7 @@ export default function Home() {
                   backgroundImage: `url(${s.image})`,
                   y: heroY,
                   scale: heroScale,
+                  opacity: designSettings.sliderImageOpacity ?? 1,
                 }}
               />
             )}

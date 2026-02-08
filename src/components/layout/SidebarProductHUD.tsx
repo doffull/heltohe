@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
 import { useSidebarOptional } from '@/context/SidebarContext';
 import { Product } from '@/types';
@@ -14,6 +15,7 @@ const DEFAULT_STATS = [
 export function SidebarProductHUD() {
   const { designSettings, selectedProduct, products } = useApp();
   const sidebarContext = useSidebarOptional();
+  const navigate = useNavigate();
   const [galleryIndex, setGalleryIndex] = useState(0);
 
   // Priority: hovered > selected > first product as fallback
@@ -131,8 +133,28 @@ export function SidebarProductHUD() {
         )}
       </div>
 
-      {/* Bottom Zone: Gallery + Info */}
+      {/* Bottom Zone: HUD Buttons + Gallery + Info */}
       <div className="space-y-3">
+        {/* HUD Buttons */}
+        {designSettings.hudButtons && designSettings.hudButtons.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {designSettings.hudButtons.map((btn) => (
+              <button
+                key={btn.id}
+                onClick={() => navigate(btn.url)}
+                className="px-4 py-2 text-[10px] font-bold uppercase tracking-[0.15em] transition-all duration-200 hover:scale-105 bevel-corners-sm"
+                style={{
+                  backgroundColor: btn.style.bg,
+                  color: btn.style.text,
+                  fontSize: btn.style.fontSize ? `${btn.style.fontSize}px` : '10px',
+                }}
+              >
+                {btn.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Mini Gallery */}
         {designSettings.showSidebarGallery && galleryImages.length > 0 && (
           <div className="sidebar-gallery">
@@ -142,7 +164,6 @@ export function SidebarProductHUD() {
                 alt="Preview" 
                 className="w-full h-full object-cover transition-opacity duration-300"
               />
-              {/* Gallery controls */}
               {galleryImages.length > 1 && (
                 <>
                   <button 
@@ -159,7 +180,6 @@ export function SidebarProductHUD() {
                   </button>
                 </>
               )}
-              {/* Counter + Preview label */}
               <div className="absolute bottom-2 left-2 flex items-center gap-2">
                 <span className="font-mono text-[9px] tracking-wider text-background bg-foreground/60 px-2 py-0.5">
                   Preview
