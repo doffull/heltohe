@@ -53,11 +53,9 @@ export default function Admin() {
     return <Navigate to="/auth" replace />;
   }
 
-  // For now, allow access without admin check for development
-  // In production, uncomment this:
-  // if (!isAdmin) {
-  //   return <Navigate to="/" replace />;
-  // }
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-background flex">
