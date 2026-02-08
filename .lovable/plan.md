@@ -1,73 +1,97 @@
 
-# Synchronisation Admin Design -- Site Public
+# Ameliorations visuelles et UX
 
-## Probleme identifie
+## 1. Suppression des overlays sur le Hero Slider
 
-Les modifications faites dans `/admin/design` sont bien sauvegardees dans le contexte `AppContext` (et localStorage), mais la page d'accueil et le layout **n'utilisent pas ces donnees**. Voici les deconnexions :
+**Fichier :** `src/pages/Home.tsx` (lignes 201-202)
 
-1. **Hero Slider** : `Home.tsx` utilise un tableau `HERO_SLIDES` code en dur (images statiques importees depuis `/src/assets/`). Les slides configurees dans l'admin ne sont jamais lues.
-2. **Stats de la sidebar** : `MainLayout.tsx` utilise soit le `SidebarContext` soit un tableau `DEFAULT_STATS` code en dur. Les stats configurees dans l'admin sont ignorees.
-3. **Logo** : Le header affiche le texte "Helvetica-MP" en dur. Le logo uploade dans l'admin n'est pas utilise dans le header.
+Les deux divs de gradient overlay seront supprimees :
+- `bg-gradient-to-t from-background via-background/40 to-transparent`
+- `bg-gradient-to-r from-background/60 to-transparent`
 
-## Ce qui sera corrige
+## 2. Adaptation mobile de la page produit
 
-### 1. Hero Slider sur la page d'accueil (`src/pages/Home.tsx`)
+**Fichier :** `src/pages/ProductDetail.tsx`
 
-- Importer `useApp` et lire `designSettings.heroSlides`
-- Si des slides sont configurees dans l'admin (URL non vide), les utiliser pour le hero
-- Sinon, conserver les slides par defaut comme fallback
-- Appliquer le parallax multi-couches (backgroundMedia, midgroundMedia, foregroundMedia) comme dans le composant `HeroSlider.tsx`
-- Respecter les parametres `sliderAutoPlay`, `sliderSpeed`, `sliderGrayscale`, `showSliderOverlay`
+- La grille `grid lg:grid-cols-2 gap-12` sera adaptee avec un `gap-6` sur mobile et des paddings reduits (`px-4 py-4` au lieu de `py-8`)
+- Le bouton retour sera plus compact sur mobile
 
-### 2. Stats de la sidebar (`src/components/layout/MainLayout.tsx`)
+**Fichier :** `src/components/product/ProductInfo.tsx`
 
-- Lire `designSettings.stats` depuis `useApp()` (deja importe)
-- Utiliser ces stats comme source de verite au lieu de `DEFAULT_STATS` et `SidebarContext`
-- Si `designSettings.stats` est vide, utiliser les valeurs par defaut
+- Le titre passera de `text-4xl` a `text-2xl md:text-4xl`
+- Le prix passera de `text-4xl` a `text-2xl md:text-4xl`
+- La barre de reassurance (livraison, garantie, retours) sera `grid-cols-1 sm:grid-cols-3` au lieu de `grid-cols-3`
 
-### 3. Logo dans le header (`src/components/layout/MainLayout.tsx`)
+**Fichier :** `src/components/product/ProductOptions.tsx`
 
-- Si `designSettings.hudLogo` contient une URL, afficher une balise `<img>` avec ce logo dans le header (a la place du texte "Helvetica-MP")
-- Si `designSettings.showLogo` est false, masquer le logo
-- Conserver le texte "Helvetica-MP" comme fallback si aucun logo n'est configure
+- Les boutons d'action (panier, coeur, partage) seront empiles sur mobile : `flex-col sm:flex-row`
 
-### 4. Image sidebar (deja fonctionnel)
+## 3. Pastilles de couleurs au lieu de texte
 
-L'image du mannequin lit deja `designSettings.sidebarImage` -- pas de changement necessaire.
+**Fichier :** `src/components/product/ProductOptions.tsx`
 
-## Details techniques
-
-### Fichiers modifies
-
-**`src/pages/Home.tsx`**
-- Ajout de `useApp` pour recuperer `designSettings`
-- Remplacement de la constante `HERO_SLIDES` par une logique qui :
-  - Verifie si `designSettings.heroSlides` contient des slides avec des medias valides (URL non vide)
-  - Si oui, utilise ces slides (titre, sous-titre, CTA, 3 couches parallax)
-  - Si non, utilise les slides par defaut existantes
-- Adaptation du rendu hero pour supporter les 3 couches parallax quand disponibles
-- Prise en compte de `sliderSpeed` pour le timer auto-play
-
-**`src/components/layout/MainLayout.tsx`**
-- Remplacement de la logique stats (lignes 74-81) pour utiliser `designSettings.stats` en priorite
-- Modification du bloc logo (lignes 87-91) pour afficher l'image uploadee si disponible
-- Suppression de `DEFAULT_STATS` devenu inutile
-
-### Logique de fallback
+Les boutons couleur qui affichent actuellement le nom de la couleur en texte seront remplaces par des pastilles rondes. Le composant utilisera `product.colorOptions` (qui contient `color` en hex et `label`) s'il est disponible, sinon utilisera `product.colors` avec une correspondance nom-couleur basique.
 
 ```text
-Hero Slides:
-  designSettings.heroSlides (avec media non vide) ?
-    -> OUI : utiliser les slides de l'admin
-    -> NON : utiliser HERO_SLIDES par defaut (images statiques)
-
-Stats:
-  designSettings.stats (tableau non vide) ?
-    -> OUI : utiliser les stats de l'admin
-    -> NON : utiliser DEFAULT_STATS
-
-Logo:
-  designSettings.hudLogo (URL non vide) ?
-    -> OUI : afficher <img src={hudLogo} />
-    -> NON : afficher texte "Helvetica-MP"
+Avant : [Bouton "Noir"] [Bouton "Bleu"] [Bouton "Rouge"]
+Apres : [Cercle #000] [Cercle #00F] [Cercle #F00]
+         (avec bordure de selection + tooltip label)
 ```
+
+## 4. Option admin : couleurs ou images pour les variantes
+
+**Fichier :** `src/types/index.ts`
+
+Ajout d'un champ `colorDisplayMode: 'swatches' | 'images'` dans `DesignSettings`.
+
+**Fichier :** `src/pages/admin/AdminDesign.tsx`
+
+Ajout d'une nouvelle section dans l'onglet existant (ou nouveau sous-onglet) "Catalogue" avec un switch pour choisir entre "Pastilles de couleur" et "Images de variantes".
+
+**Fichier :** `src/components/product/ProductOptions.tsx`
+
+Le composant lira `designSettings.colorDisplayMode` via `useApp()` :
+- Mode `swatches` : pastilles rondes colorees
+- Mode `images` : miniatures des images de `colorOptions[].image`
+
+## 5. Image de fond fixe pour la sidebar (pas de parallax) et pas d'overlay
+
+**Fichier :** `src/components/layout/MainLayout.tsx` (lignes 271-289)
+
+- Suppression du `transform: translateY(${scrollY * 0.15}px)` pour rendre l'image fixe (backgroundAttachment: fixed ou simplement retirer le parallax)
+- Suppression du glass overlay `bg-white/20 backdrop-blur-sm` (ligne 288)
+
+## 6. Animation de transition entre les pages (parallax slide)
+
+**Fichier :** `src/App.tsx`
+
+Ajout d'un composant `AnimatedRoutes` qui enveloppe les `Routes` avec `AnimatePresence` de framer-motion. Chaque page sera enveloppee dans un `motion.div` avec une animation de type parallax-slide :
+
+```text
+Page sortante : glisse vers le haut + opacity -> 0 (rapide)
+Page entrante : glisse depuis le bas + opacity 0 -> 1 (avec un leger delai)
+```
+
+Cela s'appliquera a toutes les transitions de pages, y compris quand on clique sur "Homme", "Femme", "Enfant" dans les categories.
+
+Le composant utilisera `useLocation()` comme cle pour `AnimatePresence`, ce qui declenchera l'animation a chaque changement de route.
+
+```text
+Transition:
+  exit:   { opacity: 0, y: -60 }    duration: 0.3s
+  enter:  { opacity: 0, y: 80 } -> { opacity: 1, y: 0 }   duration: 0.5s
+```
+
+## Details techniques - Fichiers modifies
+
+| Fichier | Modification |
+|---------|-------------|
+| `src/pages/Home.tsx` | Suppression des 2 divs overlay du hero |
+| `src/pages/ProductDetail.tsx` | Classes responsive pour mobile |
+| `src/components/product/ProductInfo.tsx` | Tailles texte responsive, grille features responsive |
+| `src/components/product/ProductOptions.tsx` | Pastilles couleur + lecture designSettings.colorDisplayMode |
+| `src/components/layout/MainLayout.tsx` | Image sidebar fixe, suppression overlay sidebar |
+| `src/types/index.ts` | Ajout `colorDisplayMode` dans DesignSettings |
+| `src/pages/admin/AdminDesign.tsx` | Section choix couleurs/images |
+| `src/App.tsx` | AnimatePresence + transitions de pages |
+| `src/data/initialData.ts` | Valeur par defaut `colorDisplayMode: 'swatches'` |
