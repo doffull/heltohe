@@ -1,65 +1,92 @@
 
-# Activation complete de la Sidebar + Corrections UX
+# Ameliorations Sidebar, Hero et Header
 
-## 1. Suppression de l'overlay blanc de la sidebar
+## Problemes identifies
 
-Le fichier `src/index.css` (classe `.sidebar-left-panel`) applique un fond `rgba(255, 255, 255, 0.15)` avec `backdrop-filter: blur(...)`. Ces proprietes seront supprimees pour obtenir un fond transparent sans effet de verre.
+1. **Overlay sidebar** : L'image de fond de la sidebar a une `opacity: 0.4` (ligne 241 de MainLayout.tsx) qui cree un effet d'image "lavee". Il faut soit la passer a 1, soit ajouter un controle dans l'admin.
+2. **Hero slide 2 transparence** : Le `sliderImageOpacity` est applique globalement a toutes les slides. Sa valeur par defaut est `1` mais si elle a ete changee en admin, toutes les images sont affectees. Il faut s'assurer que l'opacite est bien a 100% par defaut et que chaque slide peut avoir son opacite individuelle si besoin.
+3. **Header deplace** : Le menu de navigation est dans le header avec `pl-[200px]` pour laisser la place au logo, mais il n'est plus centre correctement. Il faut remettre le menu dans la zone blanche du header, bien centre.
+4. **Carte produit info editable** : Actuellement la carte produit affiche les infos du produit survole/selectionne. L'utilisateur veut pouvoir modifier les infos affichees dans la carte depuis l'admin.
+5. **Selecteur de taille XS a XXXL** : L'utilisateur veut pouvoir configurer la liste des tailles disponibles dans l'admin Sidebar.
+6. **Couleurs de la barre de statistiques** : Pouvoir changer la couleur des segments remplis et vides des stat bars.
 
-**Fichier :** `src/index.css` (lignes 316-319)
-- `background-color: rgba(255, 255, 255, 0.15)` sera remplace par `background-color: transparent`
-- `backdrop-filter` et `-webkit-backdrop-filter` seront supprimes
-- `border-right` sera rendu transparent egalement
+## Modifications prevues
 
-## 2. Boutons HUD sur la sidebar (configurables dans l'admin)
+### 1. Suppression de l'overlay sidebar (opacite de l'image de fond)
 
-Les `hudButtons` existent deja dans les types et les donnees initiales mais ne sont pas affiches ni configurables.
-
-**Fichier :** `src/components/layout/SidebarProductHUD.tsx`
-- Ajout d'une section "Boutons HUD" qui lit `designSettings.hudButtons` et les affiche sur la sidebar
-- Chaque bouton sera rendu avec son label, sa couleur de fond, et sera cliquable (navigation vers `button.url`)
-- Position relative dans la sidebar (pas de positionnement absolu complexe)
+**Fichier :** `src/components/layout/MainLayout.tsx` (ligne 241)
+- Remplacer `opacity: 0.4` par une variable configurable depuis l'admin
+- Ajouter un champ `sidebarImageOpacity` dans DesignSettings (defaut: `1`)
 
 **Fichier :** `src/pages/admin/AdminDesign.tsx` (onglet Sidebar)
-- Ajout d'une carte "Boutons de la sidebar" avec :
-  - Liste des boutons existants (label, URL, couleur de fond, couleur de texte)
-  - Bouton "Ajouter" pour creer un nouveau bouton
-  - Bouton "Supprimer" pour chaque bouton
-  - Champs editables : label, URL, couleur de fond, couleur de texte
+- Ajouter un slider "Opacite de l'image de fond" (0% a 100%) dans la section "Image du mannequin"
+- Ajouter un toggle "Afficher l'overlay" avec option on/off
 
-## 3. Activation des tailles sur la sidebar
-
-Les tailles sont deja codees dans `SidebarProductHUD.tsx` et le toggle existe dans l'admin. Elles seront activees par defaut et affichees de maniere plus visible (toutes les tailles du produit actif).
-
-Pas de modification majeure -- verification que `showSidebarSizes` est bien `true` par defaut (deja le cas dans `initialData.ts`).
-
-## 4. Controle de la transparence des images du hero slider
-
-**Fichier :** `src/types/index.ts`
-- Ajout d'un champ `sliderImageOpacity: number` (0 a 1, defaut 1) dans `DesignSettings`
-
-**Fichier :** `src/data/initialData.ts`
-- Valeur par defaut : `sliderImageOpacity: 1`
+### 2. Opacite Hero Slider a 100% par defaut
 
 **Fichier :** `src/pages/Home.tsx`
-- Application de `opacity: designSettings.sliderImageOpacity` sur les couches d'images du hero
+- Verifier que `designSettings.sliderImageOpacity ?? 1` est bien utilise (deja le cas)
+- Le probleme est probablement que la valeur a ete changee dans l'admin. S'assurer que la valeur par defaut dans initialData est `1`.
 
-**Fichier :** `src/pages/admin/AdminDesign.tsx` (onglet Hero Slider)
-- Ajout d'un slider "Opacite des images" (0% a 100%)
+### 3. Repositionnement du header
 
-## 5. Scroll to top lors de la navigation vers les categories
+**Fichier :** `src/components/layout/MainLayout.tsx`
+- La navigation est actuellement dans un `div` avec `pl-[200px]` et `justify-between`
+- Remettre la navigation centree dans le header en utilisant `justify-center` pour la nav et en positionnant les actions a droite avec `ml-auto`
+- Structure : `[espace logo 200px] [--- nav centree ---] [actions a droite]`
 
-**Fichier :** `src/App.tsx`
-- Ajout d'un composant `ScrollToTop` qui ecoute les changements de `location` via `useLocation()` et appelle `window.scrollTo(0, 0)` a chaque navigation
-- Place a l'interieur du `BrowserRouter`
+### 4. Configuration des tailles dans l'admin
 
-## Details techniques - Fichiers modifies
+**Fichier :** `src/types/index.ts`
+- Ajout de `sidebarSizes: string[]` dans DesignSettings (defaut: `['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']`)
+
+**Fichier :** `src/data/initialData.ts`
+- Valeur par defaut : `sidebarSizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']`
+
+**Fichier :** `src/components/layout/SidebarProductHUD.tsx`
+- Utiliser `designSettings.sidebarSizes` au lieu de `activeProduct?.sizes || ['S', 'M', 'L', 'XL']`
+
+**Fichier :** `src/pages/admin/AdminDesign.tsx` (onglet Sidebar)
+- Ajouter une section "Tailles affichees" avec des checkboxes pour chaque taille (XS, S, M, L, XL, XXL, XXXL)
+
+### 5. Couleurs des barres de statistiques
+
+**Fichier :** `src/types/index.ts`
+- Ajout de `statBarFilledColor: string` et `statBarEmptyColor: string` dans DesignSettings
+
+**Fichier :** `src/data/initialData.ts`
+- Valeurs par defaut : `statBarFilledColor: '#000000'`, `statBarEmptyColor: '#e5e5e5'`
+
+**Fichier :** `src/components/layout/StatBar.tsx`
+- Lire les couleurs depuis `designSettings` via `useApp()` et les appliquer aux segments
+
+**Fichier :** `src/pages/admin/AdminDesign.tsx` (onglet Sidebar, section Barres de statistiques)
+- Ajouter deux selecteurs de couleur : "Couleur remplie" et "Couleur vide"
+
+### 6. Carte produit info editable dans l'admin
+
+**Fichier :** `src/types/index.ts`
+- Ajout de `sidebarProductTitle: string` et `sidebarProductDescription: string` dans DesignSettings (valeurs par defaut vides = utilise les infos du produit actif)
+
+**Fichier :** `src/pages/admin/AdminDesign.tsx`
+- Ajouter des champs dans la section "Carte produit" : titre personnalise, description personnalisee (si vides, les infos du produit survole sont utilisees)
+
+**Fichier :** `src/components/layout/SidebarProductHUD.tsx`
+- Si `designSettings.sidebarProductTitle` est defini, l'afficher a la place de `activeProduct.name`
+- Idem pour la description
+
+### 7. Ajout du champ `sidebarImageOpacity` dans les types
+
+**Fichier :** `src/types/index.ts`
+- Ajout de `sidebarImageOpacity: number` (defaut 1)
+
+## Fichiers modifies
 
 | Fichier | Modification |
 |---------|-------------|
-| `src/index.css` | Suppression overlay blanc sidebar-left-panel |
-| `src/components/layout/SidebarProductHUD.tsx` | Ajout rendu des hudButtons |
-| `src/pages/admin/AdminDesign.tsx` | Section admin boutons sidebar + slider opacite hero |
-| `src/types/index.ts` | Ajout `sliderImageOpacity` |
-| `src/data/initialData.ts` | Valeur par defaut `sliderImageOpacity: 1` |
-| `src/pages/Home.tsx` | Application opacite sur images hero |
-| `src/App.tsx` | Composant ScrollToTop pour scroll en haut a chaque navigation |
+| `src/types/index.ts` | Ajout `sidebarImageOpacity`, `sidebarSizes`, `statBarFilledColor`, `statBarEmptyColor`, `sidebarProductTitle`, `sidebarProductDescription` |
+| `src/data/initialData.ts` | Valeurs par defaut pour les nouveaux champs |
+| `src/components/layout/MainLayout.tsx` | Opacite image sidebar configurable + header repositionne |
+| `src/components/layout/SidebarProductHUD.tsx` | Tailles depuis designSettings, titre/description personnalisables |
+| `src/components/layout/StatBar.tsx` | Couleurs configurables |
+| `src/pages/admin/AdminDesign.tsx` | Nouveaux controles : opacite image sidebar, tailles, couleurs stat bars, carte produit |
