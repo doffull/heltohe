@@ -263,6 +263,85 @@ function SidebarTab() {
 
   return (
     <div className="space-y-6">
+      {/* Brand Identity */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Identité de marque</CardTitle>
+          <CardDescription>Textes affichés en haut de la sidebar</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Nom de marque</Label>
+            <Input
+              value={designSettings.sidebarBrandName || ''}
+              onChange={(e) => updateDesignSettings({ sidebarBrandName: e.target.value })}
+              placeholder="LVTK6"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Sous-titre</Label>
+            <Input
+              value={designSettings.sidebarBrandSubtitle || ''}
+              onChange={(e) => updateDesignSettings({ sidebarBrandSubtitle: e.target.value })}
+              placeholder="NEW EDITION"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Texte info (bas de sidebar)</Label>
+            <Input
+              value={designSettings.sidebarInfoText || ''}
+              onChange={(e) => updateDesignSettings({ sidebarInfoText: e.target.value })}
+              placeholder="Model 001"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Visibility Toggles */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Éléments visibles</CardTitle>
+          <CardDescription>Activez ou désactivez les composants de la sidebar</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label>Numéro de produit (badge SKU)</Label>
+            <Switch
+              checked={designSettings.showSidebarProductNumber !== false}
+              onCheckedChange={(v) => updateDesignSettings({ showSidebarProductNumber: v })}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>Carte produit (info)</Label>
+            <Switch
+              checked={designSettings.showSidebarProductCard !== false}
+              onCheckedChange={(v) => updateDesignSettings({ showSidebarProductCard: v })}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>Sélecteurs de taille</Label>
+            <Switch
+              checked={designSettings.showSidebarSizes !== false}
+              onCheckedChange={(v) => updateDesignSettings({ showSidebarSizes: v })}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>Galerie miniature</Label>
+            <Switch
+              checked={designSettings.showSidebarGallery !== false}
+              onCheckedChange={(v) => updateDesignSettings({ showSidebarGallery: v })}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>Barres de statistiques</Label>
+            <Switch
+              checked={designSettings.showSidebarStats !== false}
+              onCheckedChange={(v) => updateDesignSettings({ showSidebarStats: v })}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Mannequin Image */}
       <Card>
         <CardHeader>

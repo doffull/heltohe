@@ -1,13 +1,12 @@
-import { ReactNode, useState, useEffect } from 'react';
+import { ReactNode, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
-import { useSidebarOptional } from '@/context/SidebarContext';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { StatBar } from './StatBar';
 import { MannequinHotspots } from './MannequinHotspot';
+import { SidebarProductHUD } from './SidebarProductHUD';
 import { 
   Search, 
   ShoppingBag, 
@@ -37,50 +36,14 @@ const NAV_ITEMS = [
   { href: '/contact', label: 'Contact' },
 ];
 
-const DEFAULT_STATS = [
-  { label: 'Durability', value: 85 },
-  { label: 'Price', value: 45 },
-  { label: 'Fashion', value: 92 },
-];
 
 export function MainLayout({ children }: MainLayoutProps) {
   const location = useLocation();
   const { user, isAdmin } = useAuth();
   const { itemCount } = useCart();
-  const sidebarContext = useSidebarOptional();
   const { designSettings } = useApp();
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [scrollY, setScrollY] = useState(0);
-
-  // Parallax scroll effect
-  useEffect(() => {
-    let ticking = false;
-    
-    const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          setScrollY(window.scrollY);
-          ticking = false;
-        });
-        ticking = true;
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Get stats from designSettings (admin), fallback to sidebarContext, then defaults
-  const stats = designSettings.stats && designSettings.stats.length > 0
-    ? designSettings.stats.map(s => ({ label: s.label, value: s.value }))
-    : sidebarContext 
-      ? [
-          { label: 'Durability', value: sidebarContext.currentStats.durability },
-          { label: 'Price', value: sidebarContext.currentStats.price },
-          { label: 'Fashion', value: sidebarContext.currentStats.fashion },
-        ]
-      : DEFAULT_STATS;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -286,43 +249,8 @@ export function MainLayout({ children }: MainLayoutProps) {
         
         {/* Overlay removed per design choice */}
         
-        {/* Sidebar Content */}
-        <div className="relative z-20 h-full flex flex-col justify-between p-6 pt-28">
-          {/* Size Selectors */}
-          <div className="size-selector relative top-0 left-0 transform-none flex gap-2">
-            <button className="size-button">XS</button>
-            <button className="size-button">S</button>
-            <button className="size-button">M</button>
-            <button className="size-button">L</button>
-            <button className="size-button">XL</button>
-          </div>
-          
-          {/* Stats Section */}
-          <div className="flex-1 flex flex-col justify-center px-2">
-            <div className="mb-6">
-              <h3 className="font-mono text-[11px] tracking-[0.2em] uppercase text-foreground/70 mb-1">
-                Model Interface
-              </h3>
-              <div className="w-8 h-px bg-foreground/30" />
-            </div>
-            
-            {stats.map((stat, index) => (
-              <StatBar
-                key={stat.label}
-                label={stat.label}
-                value={stat.value}
-                delay={index * 200}
-              />
-            ))}
-          </div>
-          
-          {/* Model Info */}
-          <div className="model-info relative bottom-0 left-0">
-            <span className="font-mono text-xs tracking-[0.2em] uppercase text-foreground/60">
-              Model 0.1.2
-            </span>
-          </div>
-        </div>
+        {/* Sidebar Content - Product Card HUD */}
+        <SidebarProductHUD />
       </div>
 
       {/* Main Content */}

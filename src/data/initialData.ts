@@ -196,6 +196,16 @@ export const INITIAL_DESIGN_SETTINGS: DesignSettings = {
   gradientIntensity: 40,
   hudLogo: 'https://pkxusmhvzcqfozzykjzy.supabase.co/storage/v1/object/sign/LOGO/logo%20runningrtg.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9hZTA1ZTc0OC0yOWIwLTQ2OWQtYTEyNy0yZThlZDYzNDAyZTEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJMT0dPL2xvZ28gcnVubmluZ3J0Zy5wbmciLCJpYXQiOjE3Njk3ODY5MjAsImV4cCI6MTgwMTMyMjkyMH0.oBKyGYVRKMOpBCuZrlGH0EpzyZjGiMZ6pkjQ-tsHUYs',
   
+  // Sidebar Product Card HUD
+  sidebarBrandName: 'LVTK6',
+  sidebarBrandSubtitle: 'NEW EDITION',
+  showSidebarProductNumber: true,
+  showSidebarSizes: true,
+  showSidebarGallery: true,
+  showSidebarProductCard: true,
+  showSidebarStats: true,
+  sidebarInfoText: '',
+  
   backgroundMedia: [
     { id: '1', url: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=1200', type: 'image', isCover: true }
   ],
