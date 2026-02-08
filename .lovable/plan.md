@@ -1,122 +1,73 @@
 
-# Gestion avancee du design dans l'admin
+# Synchronisation Admin Design -- Site Public
 
-## Vue d'ensemble
+## Probleme identifie
 
-Ajout d'une nouvelle page d'administration **"Design"** (`/admin/design`) regroupant la gestion visuelle complete du site : upload drag-and-drop pour les medias, configuration du hero slider parallax multi-plans, gestion du logo, et parametrage de la sidebar (photo mannequin, barres de stats).
+Les modifications faites dans `/admin/design` sont bien sauvegardees dans le contexte `AppContext` (et localStorage), mais la page d'accueil et le layout **n'utilisent pas ces donnees**. Voici les deconnexions :
 
-## Prerequis : Stockage de fichiers
+1. **Hero Slider** : `Home.tsx` utilise un tableau `HERO_SLIDES` code en dur (images statiques importees depuis `/src/assets/`). Les slides configurees dans l'admin ne sont jamais lues.
+2. **Stats de la sidebar** : `MainLayout.tsx` utilise soit le `SidebarContext` soit un tableau `DEFAULT_STATS` code en dur. Les stats configurees dans l'admin sont ignorees.
+3. **Logo** : Le header affiche le texte "Helvetica-MP" en dur. Le logo uploade dans l'admin n'est pas utilise dans le header.
 
-Avant tout, il faut creer un **bucket de stockage** pour heberger les fichiers uploades (images, videos, audio). Une migration SQL creera le bucket `media` avec les politiques RLS appropriees (lecture publique, ecriture admin uniquement).
+## Ce qui sera corrige
 
-## Fonctionnalites detaillees
+### 1. Hero Slider sur la page d'accueil (`src/pages/Home.tsx`)
 
-### 1. Composant Drag & Drop Upload reutilisable
+- Importer `useApp` et lire `designSettings.heroSlides`
+- Si des slides sont configurees dans l'admin (URL non vide), les utiliser pour le hero
+- Sinon, conserver les slides par defaut comme fallback
+- Appliquer le parallax multi-couches (backgroundMedia, midgroundMedia, foregroundMedia) comme dans le composant `HeroSlider.tsx`
+- Respecter les parametres `sliderAutoPlay`, `sliderSpeed`, `sliderGrayscale`, `showSliderOverlay`
 
-Un composant `FileDropZone` sera cree pour etre reutilise partout dans l'admin :
-- Zone de drop visuelle avec indication "Glissez vos fichiers ici"
-- Support des formats image (JPG, PNG, WEBP), video (MP4, WEBM) et audio (MP3, WAV)
-- Preview en temps reel apres upload (miniature image, lecteur video/audio)
-- Barre de progression pendant l'upload
-- Upload vers le bucket de stockage, retourne l'URL publique
+### 2. Stats de la sidebar (`src/components/layout/MainLayout.tsx`)
 
-### 2. Hero Slider Parallax - Gestion multi-plans
+- Lire `designSettings.stats` depuis `useApp()` (deja importe)
+- Utiliser ces stats comme source de verite au lieu de `DEFAULT_STATS` et `SidebarContext`
+- Si `designSettings.stats` est vide, utiliser les valeurs par defaut
 
-La section "Hero Slider" permettra de configurer chaque slide avec 3 couches parallax :
-- **Arriere-plan** (fond) : image/video de fond
-- **Plan intermediaire** : element decoratif optionnel (ex: texture, forme)
-- **Premier plan** : sujet principal (ex: mannequin, produit)
+### 3. Logo dans le header (`src/components/layout/MainLayout.tsx`)
 
-Pour chaque slide existante, on ajoute :
-- Upload drag-and-drop pour chaque couche
-- Champs texte (titre, sous-titre, CTA)
-- Couleur d'accentuation
-- Reordonnancement par drag ou boutons haut/bas
-- Ajout/suppression de slides
+- Si `designSettings.hudLogo` contient une URL, afficher une balise `<img>` avec ce logo dans le header (a la place du texte "Helvetica-MP")
+- Si `designSettings.showLogo` est false, masquer le logo
+- Conserver le texte "Helvetica-MP" comme fallback si aucun logo n'est configure
 
-Le type `HeroSlide` sera etendu avec les champs `backgroundMedia`, `midgroundMedia`, `foregroundMedia`.
+### 4. Image sidebar (deja fonctionnel)
 
-### 3. Gestion du Logo
-
-Section dediee permettant :
-- Upload drag-and-drop du logo
-- Preview en direct
-- Activation/desactivation de l'affichage
-- Parametres de style (taille, position, animation)
-
-### 4. Gestion de la Sidebar (panneau gauche)
-
-Section pour configurer :
-- **Photo du mannequin** : upload de l'image de fond de la sidebar via drag-and-drop
-- **Barres de stats** : modifier les labels (ex: "DURABILITE", "PRIX", "FASHION"), ajuster les valeurs (0-100) via des sliders, ajouter/supprimer des barres
-- Preview en direct des modifications
+L'image du mannequin lit deja `designSettings.sidebarImage` -- pas de changement necessaire.
 
 ## Details techniques
 
-### Fichiers a creer
+### Fichiers modifies
 
-1. **`src/components/admin/FileDropZone.tsx`** : composant drag-and-drop reutilisable utilisant l'API native HTML5 drag & drop + upload vers le stockage
-2. **`src/pages/admin/AdminDesign.tsx`** : page principale avec onglets (Hero Slider, Logo, Sidebar)
-3. **`src/hooks/useFileUpload.ts`** : hook pour gerer l'upload de fichiers vers le bucket storage
+**`src/pages/Home.tsx`**
+- Ajout de `useApp` pour recuperer `designSettings`
+- Remplacement de la constante `HERO_SLIDES` par une logique qui :
+  - Verifie si `designSettings.heroSlides` contient des slides avec des medias valides (URL non vide)
+  - Si oui, utilise ces slides (titre, sous-titre, CTA, 3 couches parallax)
+  - Si non, utilise les slides par defaut existantes
+- Adaptation du rendu hero pour supporter les 3 couches parallax quand disponibles
+- Prise en compte de `sliderSpeed` pour le timer auto-play
 
-### Fichiers a modifier
+**`src/components/layout/MainLayout.tsx`**
+- Remplacement de la logique stats (lignes 74-81) pour utiliser `designSettings.stats` en priorite
+- Modification du bloc logo (lignes 87-91) pour afficher l'image uploadee si disponible
+- Suppression de `DEFAULT_STATS` devenu inutile
 
-1. **`src/pages/admin/Admin.tsx`** : ajouter la route `/admin/design` et l'entree dans la sidebar admin
-2. **`src/types/index.ts`** : etendre `HeroSlide` avec les champs parallax (`backgroundMedia`, `midgroundMedia`, `foregroundMedia`) et ajouter `sidebarImage` a `DesignSettings`
-3. **`src/data/initialData.ts`** : mettre a jour les valeurs par defaut
-4. **`src/components/home/HeroSlider.tsx`** : modifier le rendu pour afficher les 3 couches parallax avec des vitesses de defilement differentes
-5. **`src/components/layout/Sidebar.tsx`** : utiliser `sidebarImage` depuis les design settings au lieu d'une image codee en dur
-6. **`src/context/AppContext.tsx`** : s'assurer que les nouveaux champs sont persistes
-
-### Migration SQL
-
-```text
-1. Creer le bucket storage "media" (public)
-2. Ajouter la politique RLS : lecture publique, ecriture pour les admins
-3. Ajouter la colonne "sidebar_image" a la table design_settings
-```
-
-### Architecture du composant FileDropZone
+### Logique de fallback
 
 ```text
-FileDropZone
-  Props:
-    - accept: string[] (types MIME acceptes)
-    - onUpload: (url: string) => void
-    - currentFile?: string (URL du fichier actuel)
-    - folder: string (sous-dossier dans le bucket)
-  
-  Comportement:
-    1. onDragOver/onDragEnter -> etat visuel "drop zone active"
-    2. onDrop -> extraire le fichier, valider le type
-    3. Upload vers storage bucket "media/{folder}/{filename}"
-    4. Recuperer l'URL publique
-    5. Appeler onUpload(url)
-```
+Hero Slides:
+  designSettings.heroSlides (avec media non vide) ?
+    -> OUI : utiliser les slides de l'admin
+    -> NON : utiliser HERO_SLIDES par defaut (images statiques)
 
-### Structure de la page AdminDesign
+Stats:
+  designSettings.stats (tableau non vide) ?
+    -> OUI : utiliser les stats de l'admin
+    -> NON : utiliser DEFAULT_STATS
 
-```text
-AdminDesign
-  Tabs:
-    [Hero Slider] [Logo] [Sidebar]
-  
-  Hero Slider:
-    - Liste des slides existantes (cards draggables)
-    - Pour chaque slide :
-      - 3 zones de drop (fond, intermediaire, premier plan)
-      - Champs titre, sous-titre, CTA, couleur accent
-    - Bouton "Ajouter une slide"
-  
-  Logo:
-    - Zone de drop pour le logo
-    - Switch afficher/masquer
-    - Sliders position et taille
-  
-  Sidebar:
-    - Zone de drop pour l'image du mannequin
-    - Section "Barres de stats" :
-      - Pour chaque barre : input label + slider valeur
-      - Boutons ajouter/supprimer
-    - Preview miniature
+Logo:
+  designSettings.hudLogo (URL non vide) ?
+    -> OUI : afficher <img src={hudLogo} />
+    -> NON : afficher texte "Helvetica-MP"
 ```
