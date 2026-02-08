@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
 import { useCart } from '@/context/CartContext';
+import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { ChevronRight, ArrowRight, ChevronLeft } from 'lucide-react';
@@ -16,7 +17,7 @@ import catFemme from '@/assets/categories/cat-femme.jpg';
 import catEnfant from '@/assets/categories/cat-enfant.jpg';
 import catAccessoires from '@/assets/categories/cat-accessoires.jpg';
 
-const HERO_SLIDES = [
+const DEFAULT_HERO_SLIDES = [
   {
     image: heroImage1,
     title: 'COLLECTION\nHIVER 2026',
@@ -90,6 +91,25 @@ export default function Home() {
   const { toast } = useToast();
   const { data: products = [] } = useProducts();
   const { addItem } = useCart();
+  const { designSettings } = useApp();
+
+  // Determine slides: use admin-configured slides if they have valid media, otherwise use defaults
+  const adminSlides = designSettings.heroSlides?.filter(s => s.media || s.backgroundMedia);
+  const hasAdminSlides = adminSlides && adminSlides.length > 0;
+  
+  // Build unified slide array
+  const heroSlides = hasAdminSlides 
+    ? adminSlides.map(s => ({
+        image: s.backgroundMedia || s.media,
+        midgroundMedia: s.midgroundMedia,
+        foregroundMedia: s.foregroundMedia,
+        title: s.title || '',
+        subtitle: s.subtitle || '',
+        cta: s.ctaText || 'Découvrir',
+        accentColor: s.accentColor,
+        mediaType: s.mediaType || 'image' as const,
+      }))
+    : DEFAULT_HERO_SLIDES;
 
   const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -97,16 +117,22 @@ export default function Home() {
   const heroRef = useRef(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
   const heroY = useTransform(scrollYProgress, [0, 1], [0, 300]);
+  const heroMgY = useTransform(scrollYProgress, [0, 1], [0, 150]);
+  const heroFgY = useTransform(scrollYProgress, [0, 1], [0, 50]);
   const heroScale = useTransform(scrollYProgress, [0, 1], [1.1, 1.3]);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
 
+  const sliderSpeed = hasAdminSlides ? (designSettings.sliderSpeed || 6000) : 6000;
+  const autoPlay = hasAdminSlides ? designSettings.sliderAutoPlay !== false : true;
+
   // Auto-play slider
   useEffect(() => {
+    if (!autoPlay || heroSlides.length <= 1) return;
     const timer = setInterval(() => {
-      setCurrentSlide(prev => (prev + 1) % HERO_SLIDES.length);
-    }, 6000);
+      setCurrentSlide(prev => (prev + 1) % heroSlides.length);
+    }, sliderSpeed);
     return () => clearInterval(timer);
-  }, []);
+  }, [autoPlay, sliderSpeed, heroSlides.length]);
 
   const featuredProducts = products.slice(0, 4);
   const newArrivals = products.slice(4, 10);
@@ -126,13 +152,13 @@ export default function Home() {
     });
   };
 
-  const slide = HERO_SLIDES[currentSlide];
+  const slide = heroSlides[currentSlide];
 
   return (
     <div className="min-h-screen bg-background overflow-hidden">
       {/* ═══════════════ HERO PARALLAX ═══════════════ */}
-      <section ref={heroRef} className="relative h-[100vh] overflow-hidden">
-        {HERO_SLIDES.map((s, i) => (
+      <section ref={heroRef} className={cn("relative h-[100vh] overflow-hidden", hasAdminSlides && designSettings.sliderGrayscale && "grayscale")}>
+        {heroSlides.map((s, i) => (
           <div
             key={i}
             className={cn(
@@ -140,14 +166,35 @@ export default function Home() {
               i === currentSlide ? "opacity-100" : "opacity-0"
             )}
           >
-            <motion.div
-              className="absolute inset-0 bg-cover bg-center will-change-transform"
-              style={{
-                backgroundImage: `url(${s.image})`,
-                y: heroY,
-                scale: heroScale,
-              }}
-            />
+            {/* Background Layer (slowest parallax) */}
+            {('mediaType' in s && s.mediaType === 'video') ? (
+              <motion.div className="absolute inset-0 will-change-transform" style={{ y: heroY, scale: heroScale }}>
+                <video src={s.image} autoPlay muted loop playsInline className="w-full h-full object-cover" />
+              </motion.div>
+            ) : (
+              <motion.div
+                className="absolute inset-0 bg-cover bg-center will-change-transform"
+                style={{
+                  backgroundImage: `url(${s.image})`,
+                  y: heroY,
+                  scale: heroScale,
+                }}
+              />
+            )}
+            
+            {/* Midground Layer */}
+            {'midgroundMedia' in s && (s as any).midgroundMedia && (
+              <motion.div className="absolute inset-0 z-[1] will-change-transform" style={{ y: heroMgY }}>
+                <img src={(s as any).midgroundMedia} alt="" className="w-full h-full object-cover mix-blend-overlay opacity-60" />
+              </motion.div>
+            )}
+            
+            {/* Foreground Layer */}
+            {'foregroundMedia' in s && (s as any).foregroundMedia && (
+              <motion.div className="absolute inset-0 z-[2] will-change-transform" style={{ y: heroFgY }}>
+                <img src={(s as any).foregroundMedia} alt="" className="w-full h-full object-contain" />
+              </motion.div>
+            )}
           </div>
         ))}
 
@@ -201,15 +248,15 @@ export default function Home() {
           </div>
 
           <div className="absolute bottom-8 right-8 flex items-center gap-3 z-30">
-            <button onClick={() => setCurrentSlide(prev => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length)} className="w-10 h-10 border border-foreground/30 flex items-center justify-center hover:bg-foreground/10 transition-colors">
+            <button onClick={() => setCurrentSlide(prev => (prev - 1 + heroSlides.length) % heroSlides.length)} className="w-10 h-10 border border-foreground/30 flex items-center justify-center hover:bg-foreground/10 transition-colors">
               <ChevronLeft className="h-4 w-4" />
             </button>
             <span className="font-mono text-sm tabular-nums">
               <span className="text-foreground">{String(currentSlide + 1).padStart(2, '0')}</span>
               <span className="text-muted-foreground mx-1">/</span>
-              <span className="text-muted-foreground">{String(HERO_SLIDES.length).padStart(2, '0')}</span>
+              <span className="text-muted-foreground">{String(heroSlides.length).padStart(2, '0')}</span>
             </span>
-            <button onClick={() => setCurrentSlide(prev => (prev + 1) % HERO_SLIDES.length)} className="w-10 h-10 border border-foreground/30 flex items-center justify-center hover:bg-foreground/10 transition-colors">
+            <button onClick={() => setCurrentSlide(prev => (prev + 1) % heroSlides.length)} className="w-10 h-10 border border-foreground/30 flex items-center justify-center hover:bg-foreground/10 transition-colors">
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
