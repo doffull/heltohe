@@ -1,46 +1,42 @@
 
-# Ajout de vidéos dans la galerie produit
+# Ajout du rôle Super Admin pour 6000art@gmail.com
 
-## Objectif
-Permettre d'afficher des vidéos en plus des images dans la galerie de la page detail produit. Les vidéos seront stockees via une nouvelle colonne `video_url` sur la table `products`, et le composant `ProductImageGallery` sera mis a jour pour gerer les deux types de media.
+## Ce qui sera fait
 
-## Etapes
+Une migration SQL sera créée pour insérer ton rôle admin dans la table `user_roles`. Ton compte a été trouvé avec l'ID `956f6ec9-44ce-42fd-afbc-0127a5c2a462`.
 
-### 1. Migration base de donnees
-Ajouter une colonne `video_url` (TEXT, nullable) a la table `products` pour stocker l'URL d'une video externe (YouTube, Vimeo, ou lien MP4 direct).
+## Migration SQL
 
 ```sql
-ALTER TABLE public.products ADD COLUMN video_url TEXT DEFAULT NULL;
+INSERT INTO public.user_roles (user_id, role)
+VALUES ('956f6ec9-44ce-42fd-afbc-0127a5c2a462', 'admin')
+ON CONFLICT (user_id, role) DO NOTHING;
 ```
 
-### 2. Mise a jour du type Product
-Ajouter le champ `videoUrl?: string` dans l'interface `Product` de `src/types/index.ts`.
+## Activation de la verification admin
 
-### 3. Mise a jour du hook useProducts
-- Mapper `video_url` vers `videoUrl` dans `dbToAppProduct`
-- Mapper `videoUrl` vers `video_url` dans `appToDbProduct`
+Actuellement dans `src/pages/admin/Admin.tsx`, la verification admin est commentee pour le developpement. Elle sera reactivee pour securiser l'acces au panneau admin :
 
-### 4. Refonte du composant ProductImageGallery
-Le composant recevra un nouveau prop `videoUrl?: string`. La galerie comportera :
+```typescript
+// Avant (commenté)
+// if (!isAdmin) {
+//   return <Navigate to="/" replace />;
+// }
 
-- **Bande de vignettes** : l'image principale + une vignette video (avec icone Play superposee) si `videoUrl` est fourni
-- **Zone principale** : affiche soit l'image (avec zoom existant), soit la video via un element `<video>` (pour MP4) ou un `<iframe>` (pour YouTube/Vimeo)
-- **Icone Play** sur la vignette video pour distinguer visuellement les deux types de media
-- **Animations framer-motion** : transition AnimatePresence entre image et video
+// Après (actif)
+if (!isAdmin) {
+  return <Navigate to="/" replace />;
+}
+```
 
-### 5. Mise a jour de ProductDetail
-Passer `product.videoUrl` au composant `ProductImageGallery`.
+## Resultat
+
+- Tu auras le role `admin` en base de donnees
+- Le panneau admin (`/admin`) sera protege : seuls les utilisateurs avec le role admin pourront y acceder
+- Tu pourras te deconnecter et te reconnecter pour que le role soit pris en compte
 
 ## Details techniques
 
-- Detection automatique du type de lien video : si l'URL contient "youtube" ou "vimeo", affichage en iframe ; sinon, element `<video>` natif HTML5 avec controles
-- La video se lance au clic sur sa vignette et se met en pause quand on revient a l'image
-- Le zoom n'est actif que sur les images, pas sur la video
-- Aucune video n'est stockee en base : seule l'URL est sauvegardee
-
-## Fichiers modifies
-- `supabase/migrations/` -- nouvelle migration SQL
-- `src/types/index.ts` -- ajout champ videoUrl
-- `src/hooks/useProducts.ts` -- mapping video_url
-- `src/components/product/ProductImageGallery.tsx` -- refonte galerie image+video
-- `src/pages/ProductDetail.tsx` -- passage du prop videoUrl
+**Fichiers modifies :**
+- `supabase/migrations/` -- nouvelle migration pour inserer le role admin
+- `src/pages/admin/Admin.tsx` -- reactivation du guard admin
