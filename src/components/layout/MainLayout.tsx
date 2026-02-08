@@ -14,7 +14,8 @@ import {
   Menu,
   X,
   ChevronRight,
-  PanelLeft
+  PanelLeft,
+  Shield
 } from 'lucide-react';
 import {
   Sheet,
@@ -43,7 +44,7 @@ const DEFAULT_STATS = [
 
 export function MainLayout({ children }: MainLayoutProps) {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { itemCount } = useCart();
   const sidebarContext = useSidebarOptional();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -164,6 +165,15 @@ export function MainLayout({ children }: MainLayoutProps) {
                 </Button>
               </Link>
 
+              {/* Admin */}
+              {isAdmin && (
+                <Link to="/admin">
+                  <Button variant="ghost" size="icon">
+                    <Shield className="h-5 w-5" />
+                  </Button>
+                </Link>
+              )}
+
               {/* Mobile Menu */}
               <Sheet>
                 <SheetTrigger asChild className="lg:hidden">
@@ -206,6 +216,12 @@ export function MainLayout({ children }: MainLayoutProps) {
                         <span className="text-lg font-medium">{user ? 'Account' : 'Sign In'}</span>
                         <ChevronRight className="h-5 w-5" />
                       </Link>
+                      {isAdmin && (
+                        <Link to="/admin" className="flex items-center justify-between py-3">
+                          <span className="text-lg font-medium">Administration</span>
+                          <Shield className="h-5 w-5" />
+                        </Link>
+                      )}
                     </div>
                   </div>
                 </SheetContent>
