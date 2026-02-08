@@ -71,24 +71,32 @@ export function MainLayout({ children }: MainLayoutProps) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Get stats from context or use defaults
-  const stats = sidebarContext 
-    ? [
-        { label: 'Durability', value: sidebarContext.currentStats.durability },
-        { label: 'Price', value: sidebarContext.currentStats.price },
-        { label: 'Fashion', value: sidebarContext.currentStats.fashion },
-      ]
-    : DEFAULT_STATS;
+  // Get stats from designSettings (admin), fallback to sidebarContext, then defaults
+  const stats = designSettings.stats && designSettings.stats.length > 0
+    ? designSettings.stats.map(s => ({ label: s.label, value: s.value }))
+    : sidebarContext 
+      ? [
+          { label: 'Durability', value: sidebarContext.currentStats.durability },
+          { label: 'Price', value: sidebarContext.currentStats.price },
+          { label: 'Fashion', value: sidebarContext.currentStats.fashion },
+        ]
+      : DEFAULT_STATS;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
       {/* Logo Wrapper - Beveled octagonal shape */}
-      <div className="logo-wrapper">
-        <Link to="/" className="logo-link">
-          <span className="logo-text">Helvetica-MP</span>
-        </Link>
-      </div>
+      {designSettings.showLogo !== false && (
+        <div className="logo-wrapper">
+          <Link to="/" className="logo-link">
+            {designSettings.hudLogo ? (
+              <img src={designSettings.hudLogo} alt="Logo" className="h-10 w-auto object-contain" />
+            ) : (
+              <span className="logo-text">Helvetica-MP</span>
+            )}
+          </Link>
+        </div>
+      )}
 
       <header className="fixed top-0 left-0 right-0 z-40 bg-background border-b border-border header-container">
         <div className="container mx-auto px-4 pl-[200px]">
