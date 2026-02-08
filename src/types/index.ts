@@ -115,6 +115,9 @@ export interface HeroSlide {
   ctaText: string;
   ctaUrl: string;
   accentColor?: string;
+  backgroundMedia?: string;
+  midgroundMedia?: string;
+  foregroundMedia?: string;
 }
 
 export interface SocialLink {
@@ -159,6 +162,7 @@ export interface DesignSettings {
   accentColor: string;
   sidebarGradient: boolean;
   gradientIntensity: number;
+  sidebarImage?: string;
   
   // HUD visibility
   showLogo: boolean;

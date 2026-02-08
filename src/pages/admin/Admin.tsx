@@ -11,7 +11,8 @@ import {
   ChevronRight,
   LogOut,
   BarChart3,
-  Image
+  Image,
+  Palette
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -23,6 +24,7 @@ import AdminOrders from './AdminOrders';
 import AdminCustomers from './AdminCustomers';
 import AdminMarketing from './AdminMarketing';
 import AdminSettings from './AdminSettings';
+import AdminDesign from './AdminDesign';
 
 const SIDEBAR_ITEMS = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/admin' },
@@ -31,6 +33,7 @@ const SIDEBAR_ITEMS = [
   { icon: Users, label: 'Clients', href: '/admin/clients' },
   { icon: Megaphone, label: 'Marketing', href: '/admin/marketing' },
   { icon: Image, label: 'Bannières', href: '/admin/bannieres' },
+  { icon: Palette, label: 'Design', href: '/admin/design' },
   { icon: Settings, label: 'Paramètres', href: '/admin/parametres' },
 ];
 
@@ -136,6 +139,7 @@ export default function Admin() {
             <Route path="clients/*" element={<AdminCustomers />} />
             <Route path="marketing/*" element={<AdminMarketing />} />
             <Route path="bannieres/*" element={<AdminMarketing />} />
+            <Route path="design/*" element={<AdminDesign />} />
             <Route path="parametres/*" element={<AdminSettings />} />
           </Routes>
         </div>

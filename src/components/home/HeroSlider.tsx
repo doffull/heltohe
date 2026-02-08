@@ -4,11 +4,19 @@ import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
 import { HeroSlide } from '@/types';
 import { Button } from '@/components/ui/button';
+import { motion, useScroll, useTransform } from 'framer-motion';
 
 export function HeroSlider() {
   const { designSettings, setCurrentView } = useApp();
   const { heroSlides, sliderAutoPlay, sliderSpeed, showSliderOverlay, sliderGrayscale } = designSettings;
   const [currentIndex, setCurrentIndex] = useState(0);
+  const { scrollY } = useScroll();
+  
+  // Parallax transforms for 3 layers
+  const bgY = useTransform(scrollY, [0, 600], [0, 120]);
+  const mgY = useTransform(scrollY, [0, 600], [0, 60]);
+  const fgY = useTransform(scrollY, [0, 600], [0, 20]);
+  const bgScale = useTransform(scrollY, [0, 600], [1, 1.1]);
   
   useEffect(() => {
     if (!sliderAutoPlay || heroSlides.length <= 1) return;
@@ -20,58 +28,77 @@ export function HeroSlider() {
     return () => clearInterval(interval);
   }, [sliderAutoPlay, sliderSpeed, heroSlides.length]);
   
-  const goToSlide = (index: number) => {
-    setCurrentIndex(index);
-  };
-  
-  const goToPrev = () => {
-    setCurrentIndex((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
-  };
-  
-  const goToNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % heroSlides.length);
-  };
+  const goToSlide = (index: number) => setCurrentIndex(index);
+  const goToPrev = () => setCurrentIndex((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
+  const goToNext = () => setCurrentIndex((prev) => (prev + 1) % heroSlides.length);
   
   if (heroSlides.length === 0) return null;
   
   const currentSlide = heroSlides[currentIndex];
+  const bgMedia = currentSlide.backgroundMedia || currentSlide.media;
   
   return (
     <div className="relative h-[70vh] lg:h-[80vh] overflow-hidden">
-      {/* Background */}
-      <div 
+      {/* Background Layer (slowest parallax) */}
+      <motion.div 
         className={cn(
           "absolute inset-0 transition-all duration-1000",
           sliderGrayscale && "grayscale"
         )}
+        style={{ y: bgY, scale: bgScale }}
       >
         {currentSlide.mediaType === 'video' ? (
           <video
-            src={currentSlide.media}
-            autoPlay
-            muted
-            loop
-            playsInline
+            src={bgMedia}
+            autoPlay muted loop playsInline
             className="w-full h-full object-cover"
           />
         ) : (
           <img
-            src={currentSlide.media}
+            src={bgMedia}
             alt={currentSlide.title}
             className="w-full h-full object-cover"
           />
         )}
+      </motion.div>
+
+      {/* Midground Layer */}
+      {currentSlide.midgroundMedia && (
+        <motion.div 
+          className="absolute inset-0 z-[1]"
+          style={{ y: mgY }}
+        >
+          <img
+            src={currentSlide.midgroundMedia}
+            alt=""
+            className="w-full h-full object-cover mix-blend-overlay opacity-60"
+          />
+        </motion.div>
+      )}
+
+      {/* Foreground Layer (fastest parallax) */}
+      {currentSlide.foregroundMedia && (
+        <motion.div 
+          className="absolute inset-0 z-[2]"
+          style={{ y: fgY }}
+        >
+          <img
+            src={currentSlide.foregroundMedia}
+            alt=""
+            className="w-full h-full object-contain"
+          />
+        </motion.div>
+      )}
         
-        {/* Overlay */}
-        <div 
-          className={cn(
-            "absolute inset-0",
-            showSliderOverlay 
-              ? "bg-gradient-to-r from-background via-background/70 to-transparent"
-              : "bg-gradient-to-t from-background via-background/50 to-transparent"
-          )}
-        />
-      </div>
+      {/* Overlay */}
+      <div 
+        className={cn(
+          "absolute inset-0 z-[3]",
+          showSliderOverlay 
+            ? "bg-gradient-to-r from-background via-background/70 to-transparent"
+            : "bg-gradient-to-t from-background via-background/50 to-transparent"
+        )}
+      />
       
       {/* Content */}
       <div className="relative z-10 h-full flex flex-col justify-center px-6 lg:px-16">
