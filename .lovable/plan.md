@@ -1,48 +1,50 @@
 
-
-# Tableau de bord avec donnees reelles
+# Bouton d'accès rapide à l'admin dans le header
 
 ## Ce qui sera fait
 
-Remplacement des donnees fictives (mock data) du dashboard admin par des donnees reelles calculees a partir des commandes et produits stockes en base de donnees.
+Un bouton avec l'icône `Shield` sera ajouté dans le header du site, visible **uniquement** pour les utilisateurs ayant le rôle admin. Il permettra de basculer instantanément vers le panneau d'administration `/admin`.
 
-## Donnees qui seront calculees dynamiquement
+## Emplacement
 
-1. **Graphique "Evolution des ventes"** : Agregation des commandes par mois (total des ventes et nombre de commandes) sur les 12 derniers mois
-2. **Graphique "Produits par categorie"** : Comptage reel des produits par categorie depuis la table `products`
-3. **Indicateurs de variation** : Comparaison mois en cours vs mois precedent pour calculer les vrais pourcentages de changement (chiffre d'affaires, commandes)
+```text
+[Navigation]          [Search] [Cart] [User] [Shield] [Menu mobile]
+                                               ^
+                                         visible uniquement
+                                         si isAdmin === true
+```
 
-## Details techniques
+## Détails techniques
 
-**Fichier modifie :** `src/pages/admin/AdminDashboard.tsx`
+**Fichier modifié :** `src/components/layout/MainLayout.tsx`
 
 ### Changements
 
-- Suppression des constantes `salesData` et `categoryData` en dur
-- Ajout de `useMemo` pour calculer :
-  - `salesData` : regroupement des commandes par mois (`date-fns` pour formater les mois), calcul du total des ventes et du nombre de commandes par mois sur les 12 derniers mois
-  - `categoryData` : `products.reduce()` pour compter les produits par categorie
-  - `revenueChange` : pourcentage de variation entre le mois en cours et le mois precedent
-  - `ordersChange` : idem pour le nombre de commandes
-- Les mois sans commandes apparaitront avec des valeurs a 0 pour garder la continuite du graphique
-- Format des mois en francais (Jan, Fev, Mar, etc.)
+1. **Import** : Ajouter `Shield` depuis `lucide-react`
+2. **Hook** : `useAuth()` est déjà importé — utiliser `isAdmin` en plus de `user`
+3. **Desktop** : Ajouter un `Link` vers `/admin` avec un bouton `ghost` + icône `Shield`, placé entre le bouton utilisateur et le bouton menu mobile
+4. **Mobile** : Ajouter une entrée "Administration" dans le menu Sheet (section du bas), conditionnée par `isAdmin`
+5. **Condition** : Le bouton ne s'affiche que si `isAdmin === true`
 
-### Logique d'agregation
+### Code ajouté (desktop)
 
-```text
-orders --> grouper par mois (YYYY-MM) --> pour chaque mois :
-  - sales = somme des totaux
-  - orders = nombre de commandes
-  
-products --> grouper par categorie --> pour chaque categorie :
-  - count = nombre de produits
+```tsx
+{isAdmin && (
+  <Link to="/admin">
+    <Button variant="ghost" size="icon">
+      <Shield className="h-5 w-5" />
+    </Button>
+  </Link>
+)}
 ```
 
-### Calcul des variations
+### Code ajouté (mobile, dans le Sheet)
 
-```text
-variation = ((valeur_mois_courant - valeur_mois_precedent) / valeur_mois_precedent) * 100
+```tsx
+{isAdmin && (
+  <Link to="/admin" className="flex items-center justify-between py-3">
+    <span className="text-lg font-medium">Administration</span>
+    <Shield className="h-5 w-5" />
+  </Link>
+)}
 ```
-
-Si aucune donnee le mois precedent, afficher "Nouveau" au lieu d'un pourcentage.
-
