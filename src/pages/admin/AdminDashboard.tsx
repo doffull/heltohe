@@ -1,86 +1,98 @@
+import { useMemo } from 'react';
 import { useProducts } from '@/hooks/useProducts';
 import { useOrders } from '@/hooks/useOrders';
+import { format, subMonths, startOfMonth, parseISO } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { 
-  Package, 
-  ShoppingCart, 
-  Users, 
-  TrendingUp,
-  DollarSign,
-  AlertTriangle,
-  ArrowUpRight,
-  ArrowDownRight
+  Package, ShoppingCart, DollarSign, AlertTriangle,
+  ArrowUpRight, ArrowDownRight
 } from 'lucide-react';
 import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  BarChart,
-  Bar
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar
 } from 'recharts';
 
-// Mock data for charts
-const salesData = [
-  { name: 'Jan', sales: 4000, orders: 24 },
-  { name: 'Fév', sales: 3000, orders: 18 },
-  { name: 'Mar', sales: 5000, orders: 30 },
-  { name: 'Avr', sales: 4500, orders: 27 },
-  { name: 'Mai', sales: 6000, orders: 36 },
-  { name: 'Juin', sales: 5500, orders: 33 },
-];
-
-const categoryData = [
-  { name: 'Vestes', count: 12 },
-  { name: 'Pantalons', count: 8 },
-  { name: 'Gilets', count: 6 },
-  { name: 'Accessoires', count: 15 },
-];
+const MONTH_LABELS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
 
 export default function AdminDashboard() {
   const { data: products = [] } = useProducts();
   const { data: orders = [] } = useOrders();
 
-  const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
+  // Aggregate sales by month (last 12 months)
+  const salesData = useMemo(() => {
+    const now = new Date();
+    const months: { key: string; name: string }[] = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = subMonths(now, i);
+      months.push({
+        key: format(d, 'yyyy-MM'),
+        name: MONTH_LABELS[d.getMonth()],
+      });
+    }
+
+    const grouped: Record<string, { sales: number; orders: number }> = {};
+    for (const m of months) grouped[m.key] = { sales: 0, orders: 0 };
+
+    for (const order of orders) {
+      const key = order.date ? format(parseISO(order.date), 'yyyy-MM') : null;
+      if (key && grouped[key]) {
+        grouped[key].sales += order.total;
+        grouped[key].orders += 1;
+      }
+    }
+
+    return months.map(m => ({ name: m.name, sales: Math.round(grouped[m.key].sales), orders: grouped[m.key].orders }));
+  }, [orders]);
+
+  // Products per category
+  const categoryData = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const p of products) {
+      map[p.category] = (map[p.category] || 0) + 1;
+    }
+    return Object.entries(map).map(([name, count]) => ({ name, count }));
+  }, [products]);
+
+  // Variations (current month vs previous)
+  const { revenueChange, ordersChange } = useMemo(() => {
+    const now = new Date();
+    const curKey = format(now, 'yyyy-MM');
+    const prevKey = format(subMonths(now, 1), 'yyyy-MM');
+
+    let curRev = 0, prevRev = 0, curOrd = 0, prevOrd = 0;
+    for (const order of orders) {
+      const key = order.date ? format(parseISO(order.date), 'yyyy-MM') : null;
+      if (key === curKey) { curRev += order.total; curOrd++; }
+      if (key === prevKey) { prevRev += order.total; prevOrd++; }
+    }
+
+    const calcChange = (cur: number, prev: number) => {
+      if (prev === 0) return cur > 0 ? 'Nouveau' : '0%';
+      return `${((cur - prev) / prev * 100).toFixed(1)}%`;
+    };
+    const changeType = (cur: number, prev: number): 'positive' | 'negative' | 'neutral' => {
+      if (prev === 0) return cur > 0 ? 'positive' : 'neutral';
+      return cur >= prev ? 'positive' : 'negative';
+    };
+
+    return {
+      revenueChange: { label: calcChange(curRev, prevRev), type: changeType(curRev, prevRev) },
+      ordersChange: { label: calcChange(curOrd, prevOrd), type: changeType(curOrd, prevOrd) },
+    };
+  }, [orders]);
+
+  const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
   const lowStockProducts = products.filter(p => p.stock <= 5);
-  const pendingOrders = orders.filter(o => o.status === 'Pending');
 
   const stats = [
-    { 
-      label: 'Chiffre d\'affaires', 
-      value: `${totalRevenue.toFixed(2)}€`, 
-      icon: DollarSign,
-      change: '+12.5%',
-      changeType: 'positive' as const
-    },
-    { 
-      label: 'Commandes', 
-      value: orders.length.toString(), 
-      icon: ShoppingCart,
-      change: '+8.2%',
-      changeType: 'positive' as const
-    },
-    { 
-      label: 'Produits', 
-      value: products.length.toString(), 
-      icon: Package,
-      change: '+3',
-      changeType: 'neutral' as const
-    },
-    { 
-      label: 'Stock faible', 
-      value: lowStockProducts.length.toString(), 
-      icon: AlertTriangle,
-      change: lowStockProducts.length > 0 ? 'Attention' : 'OK',
-      changeType: lowStockProducts.length > 0 ? 'negative' as const : 'positive' as const
-    },
+    { label: "Chiffre d'affaires", value: `${totalRevenue.toFixed(2)}€`, icon: DollarSign, change: revenueChange.label, changeType: revenueChange.type },
+    { label: 'Commandes', value: orders.length.toString(), icon: ShoppingCart, change: ordersChange.label, changeType: ordersChange.type },
+    { label: 'Produits', value: products.length.toString(), icon: Package, change: `${categoryData.length} cat.`, changeType: 'neutral' as const },
+    { label: 'Stock faible', value: lowStockProducts.length.toString(), icon: AlertTriangle, change: lowStockProducts.length > 0 ? 'Attention' : 'OK', changeType: lowStockProducts.length > 0 ? 'negative' as const : 'positive' as const },
   ];
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold hud-text">DASHBOARD</h1>
         <p className="text-muted-foreground mt-1">Vue d'ensemble de votre activité</p>
@@ -112,7 +124,6 @@ export default function AdminDashboard() {
 
       {/* Charts */}
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Revenue Chart */}
         <div className="chamfer-hud bg-card/50 p-6">
           <h3 className="text-lg font-bold hud-text mb-6">ÉVOLUTION DES VENTES</h3>
           <div className="h-[300px]">
@@ -127,26 +138,13 @@ export default function AdminDashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))', 
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '0'
-                  }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="sales" 
-                  stroke="hsl(var(--primary))" 
-                  fill="url(#salesGradient)"
-                  strokeWidth={2}
-                />
+                <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '0' }} />
+                <Area type="monotone" dataKey="sales" stroke="hsl(var(--primary))" fill="url(#salesGradient)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Categories Chart */}
         <div className="chamfer-hud bg-card/50 p-6">
           <h3 className="text-lg font-bold hud-text mb-6">PRODUITS PAR CATÉGORIE</h3>
           <div className="h-[300px]">
@@ -155,13 +153,7 @@ export default function AdminDashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))', 
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '0'
-                  }}
-                />
+                <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '0' }} />
                 <Bar dataKey="count" fill="hsl(var(--primary))" />
               </BarChart>
             </ResponsiveContainer>
@@ -171,7 +163,6 @@ export default function AdminDashboard() {
 
       {/* Recent Activity */}
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Recent Orders */}
         <div className="chamfer-hud bg-card/50 p-6">
           <h3 className="text-lg font-bold hud-text mb-6">COMMANDES RÉCENTES</h3>
           {orders.length === 0 ? (
@@ -191,9 +182,7 @@ export default function AdminDashboard() {
                       order.status === 'Shipped' ? 'bg-blue-500/20 text-blue-500' :
                       order.status === 'Pending' ? 'bg-yellow-500/20 text-yellow-500' :
                       'bg-muted text-muted-foreground'
-                    }`}>
-                      {order.status}
-                    </span>
+                    }`}>{order.status}</span>
                   </div>
                 </div>
               ))}
@@ -201,7 +190,6 @@ export default function AdminDashboard() {
           )}
         </div>
 
-        {/* Low Stock Alert */}
         <div className="chamfer-hud bg-card/50 p-6">
           <h3 className="text-lg font-bold hud-text mb-6">ALERTES STOCK</h3>
           {lowStockProducts.length === 0 ? (
@@ -221,9 +209,7 @@ export default function AdminDashboard() {
                     <p className="text-xs text-muted-foreground">{product.sku}</p>
                   </div>
                   <div className="text-right">
-                    <span className={`text-lg font-bold ${product.stock === 0 ? 'text-destructive' : 'text-yellow-500'}`}>
-                      {product.stock}
-                    </span>
+                    <span className={`text-lg font-bold ${product.stock === 0 ? 'text-destructive' : 'text-yellow-500'}`}>{product.stock}</span>
                     <p className="text-xs text-muted-foreground">en stock</p>
                   </div>
                 </div>
