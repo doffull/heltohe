@@ -164,6 +164,16 @@ export interface DesignSettings {
   gradientIntensity: number;
   sidebarImage?: string;
   
+  // Sidebar Product Card HUD
+  sidebarBrandName: string;
+  sidebarBrandSubtitle: string;
+  showSidebarProductNumber: boolean;
+  showSidebarSizes: boolean;
+  showSidebarGallery: boolean;
+  showSidebarProductCard: boolean;
+  showSidebarStats: boolean;
+  sidebarInfoText: string;
+  
   // HUD visibility
   showLogo: boolean;
   showStats: boolean;
