@@ -91,7 +91,7 @@ export default function ProductDetail() {
 
         <div className="grid lg:grid-cols-2 gap-12">
           {/* Left: Image Gallery */}
-          <ProductImageGallery image={product.image} name={product.name} />
+          <ProductImageGallery image={product.image} name={product.name} videoUrl={product.videoUrl} />
 
           {/* Right: Product Details */}
           <div className="space-y-6">

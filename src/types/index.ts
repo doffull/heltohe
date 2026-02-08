@@ -26,6 +26,7 @@ export interface Product {
   colors?: string[];
   colorOptions?: ColorOption[];
   attributes?: Record<string, string>;
+  videoUrl?: string;
 }
 
 export interface OrderItem {
