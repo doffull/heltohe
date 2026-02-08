@@ -1,97 +1,123 @@
 
-# Ameliorations visuelles et UX
+# Refonte de la Sidebar -- Style "Product Card HUD"
 
-## 1. Suppression des overlays sur le Hero Slider
+## Vue d'ensemble
 
-**Fichier :** `src/pages/Home.tsx` (lignes 201-202)
+Transformation complete de la sidebar gauche pour reproduire le design de l'image de reference : une sidebar centree sur le produit actif avec un affichage "fiche technique" immersif. Les fonctionnalites seront entierement configurables depuis l'onglet **Sidebar** de l'admin Design.
 
-Les deux divs de gradient overlay seront supprimees :
-- `bg-gradient-to-t from-background via-background/40 to-transparent`
-- `bg-gradient-to-r from-background/60 to-transparent`
+## Elements identifies dans l'image de reference
 
-## 2. Adaptation mobile de la page produit
+1. **En-tete** : Nom de marque (ex: "SPOPT") + mention "NEW EDITION" en haut a gauche
+2. **Numero produit** : Badge "006" en haut a droite dans une forme biseautee
+3. **Image mannequin** : Photo grand format en fond (deja existant)
+4. **Carte produit** : Icone play + nom de marque, nom du produit, description technique
+5. **Selecteurs de taille** : Badges "Size XS", "Size XL" dans des cadres bordes
+6. **Galerie miniature** : Vignette du produit avec compteur d'images et label "Preview"
+7. **Barre inferieure** : Zone rectangulaire en bas (barre de progression ou info)
 
-**Fichier :** `src/pages/ProductDetail.tsx`
+## Modifications prevues
 
-- La grille `grid lg:grid-cols-2 gap-12` sera adaptee avec un `gap-6` sur mobile et des paddings reduits (`px-4 py-4` au lieu de `py-8`)
-- Le bouton retour sera plus compact sur mobile
+### 1. Sidebar - Nouvelle structure (`src/components/layout/MainLayout.tsx`)
 
-**Fichier :** `src/components/product/ProductInfo.tsx`
+Le contenu de la sidebar (lignes 289-325) sera restructure pour afficher :
 
-- Le titre passera de `text-4xl` a `text-2xl md:text-4xl`
-- Le prix passera de `text-4xl` a `text-2xl md:text-4xl`
-- La barre de reassurance (livraison, garantie, retours) sera `grid-cols-1 sm:grid-cols-3` au lieu de `grid-cols-3`
+**Zone haute :**
+- Texte de marque configurable (ex: "SPOPT") + sous-titre (ex: "NEW EDITION")
+- Badge numero de produit en haut a droite avec forme biseautee
 
-**Fichier :** `src/components/product/ProductOptions.tsx`
+**Zone centrale :**
+- Carte d'information produit avec :
+  - Icone play (triangle) + nom de marque
+  - Nom du produit (titre principal)
+  - Description courte / tagline technique
+- Selecteurs de taille dynamiques bases sur le produit survole/selectionne
+  - Affichage du format "Size XS", "Size XL" (taille min et max disponibles)
 
-- Les boutons d'action (panier, coeur, partage) seront empiles sur mobile : `flex-col sm:flex-row`
+**Zone basse :**
+- Mini galerie : vignette du produit avec compteur d'images et label "Preview"
+- Barre de progression / info (reprend les stat bars existantes mais dans un format barre unique)
 
-## 3. Pastilles de couleurs au lieu de texte
+Quand aucun produit n'est survole, la sidebar affichera les donnees par defaut configurees dans l'admin.
 
-**Fichier :** `src/components/product/ProductOptions.tsx`
+### 2. Integration avec les donnees produit
 
-Les boutons couleur qui affichent actuellement le nom de la couleur en texte seront remplaces par des pastilles rondes. Le composant utilisera `product.colorOptions` (qui contient `color` en hex et `label`) s'il est disponible, sinon utilisera `product.colors` avec une correspondance nom-couleur basique.
+La sidebar lira les donnees depuis `SidebarContext` (produit survole) et `AppContext` (produit selectionne). Les informations affichees seront :
+- `product.name` pour le titre
+- `product.subtitle` ou `product.description` pour la tagline
+- `product.sizes` pour les selecteurs de taille
+- `product.colorOptions` pour la galerie miniature
+- `product.sku` pour le numero de produit
+- `product.image` + `product.colorOptions[].image` pour la galerie avec compteur
 
-```text
-Avant : [Bouton "Noir"] [Bouton "Bleu"] [Bouton "Rouge"]
-Apres : [Cercle #000] [Cercle #00F] [Cercle #F00]
-         (avec bordure de selection + tooltip label)
-```
+### 3. Admin Design - Onglet Sidebar enrichi (`src/pages/admin/AdminDesign.tsx`)
 
-## 4. Option admin : couleurs ou images pour les variantes
+Nouvelles options configurables dans la section Sidebar :
 
-**Fichier :** `src/types/index.ts`
+| Option | Type | Description |
+|--------|------|-------------|
+| Nom de marque sidebar | Texte | Ex: "SPOPT", "LVTK6" |
+| Sous-titre sidebar | Texte | Ex: "NEW EDITION", "COLLECTION 2026" |
+| Afficher numero produit | Switch | Badge SKU en haut a droite |
+| Afficher selecteurs taille | Switch | Afficher/masquer les tailles |
+| Afficher galerie miniature | Switch | Vignettes produit en bas |
+| Afficher carte produit | Switch | Bloc info produit central |
+| Afficher barres de stats | Switch | Conserver ou non les stat bars |
+| Texte de la barre info | Texte | Texte personnalise pour la barre du bas |
 
-Ajout d'un champ `colorDisplayMode: 'swatches' | 'images'` dans `DesignSettings`.
+### 4. Types (`src/types/index.ts`)
 
-**Fichier :** `src/pages/admin/AdminDesign.tsx`
-
-Ajout d'une nouvelle section dans l'onglet existant (ou nouveau sous-onglet) "Catalogue" avec un switch pour choisir entre "Pastilles de couleur" et "Images de variantes".
-
-**Fichier :** `src/components/product/ProductOptions.tsx`
-
-Le composant lira `designSettings.colorDisplayMode` via `useApp()` :
-- Mode `swatches` : pastilles rondes colorees
-- Mode `images` : miniatures des images de `colorOptions[].image`
-
-## 5. Image de fond fixe pour la sidebar (pas de parallax) et pas d'overlay
-
-**Fichier :** `src/components/layout/MainLayout.tsx` (lignes 271-289)
-
-- Suppression du `transform: translateY(${scrollY * 0.15}px)` pour rendre l'image fixe (backgroundAttachment: fixed ou simplement retirer le parallax)
-- Suppression du glass overlay `bg-white/20 backdrop-blur-sm` (ligne 288)
-
-## 6. Animation de transition entre les pages (parallax slide)
-
-**Fichier :** `src/App.tsx`
-
-Ajout d'un composant `AnimatedRoutes` qui enveloppe les `Routes` avec `AnimatePresence` de framer-motion. Chaque page sera enveloppee dans un `motion.div` avec une animation de type parallax-slide :
-
-```text
-Page sortante : glisse vers le haut + opacity -> 0 (rapide)
-Page entrante : glisse depuis le bas + opacity 0 -> 1 (avec un leger delai)
-```
-
-Cela s'appliquera a toutes les transitions de pages, y compris quand on clique sur "Homme", "Femme", "Enfant" dans les categories.
-
-Le composant utilisera `useLocation()` comme cle pour `AnimatePresence`, ce qui declenchera l'animation a chaque changement de route.
+Ajout de champs dans `DesignSettings` :
 
 ```text
-Transition:
-  exit:   { opacity: 0, y: -60 }    duration: 0.3s
-  enter:  { opacity: 0, y: 80 } -> { opacity: 1, y: 0 }   duration: 0.5s
+sidebarBrandName: string        // "SPOPT"
+sidebarBrandSubtitle: string    // "NEW EDITION"
+showSidebarProductNumber: boolean
+showSidebarSizes: boolean
+showSidebarGallery: boolean
+showSidebarProductCard: boolean
+showSidebarStats: boolean
+sidebarInfoText: string
 ```
 
-## Details techniques - Fichiers modifies
+### 5. Valeurs par defaut (`src/data/initialData.ts`)
+
+```text
+sidebarBrandName: 'LVTK6'
+sidebarBrandSubtitle: 'NEW EDITION'
+showSidebarProductNumber: true
+showSidebarSizes: true
+showSidebarGallery: true
+showSidebarProductCard: true
+showSidebarStats: true
+sidebarInfoText: ''
+```
+
+### 6. Styles CSS (`src/index.css`)
+
+Ajout de styles pour :
+- `.sidebar-product-card` : carte glassmorphism avec fond semi-transparent
+- `.sidebar-product-number` : badge biseaute en haut a droite
+- `.sidebar-gallery-thumb` : vignette avec bordure et compteur
+- `.sidebar-size-badge` : selecteur de taille style "Size XS" avec bordure
+
+## Fichiers modifies
 
 | Fichier | Modification |
 |---------|-------------|
-| `src/pages/Home.tsx` | Suppression des 2 divs overlay du hero |
-| `src/pages/ProductDetail.tsx` | Classes responsive pour mobile |
-| `src/components/product/ProductInfo.tsx` | Tailles texte responsive, grille features responsive |
-| `src/components/product/ProductOptions.tsx` | Pastilles couleur + lecture designSettings.colorDisplayMode |
-| `src/components/layout/MainLayout.tsx` | Image sidebar fixe, suppression overlay sidebar |
-| `src/types/index.ts` | Ajout `colorDisplayMode` dans DesignSettings |
-| `src/pages/admin/AdminDesign.tsx` | Section choix couleurs/images |
-| `src/App.tsx` | AnimatePresence + transitions de pages |
-| `src/data/initialData.ts` | Valeur par defaut `colorDisplayMode: 'swatches'` |
+| `src/components/layout/MainLayout.tsx` | Refonte complete du contenu sidebar (lignes 289-325) |
+| `src/pages/admin/AdminDesign.tsx` | Ajout des nouvelles options dans l'onglet Sidebar |
+| `src/types/index.ts` | Ajout des nouveaux champs DesignSettings |
+| `src/data/initialData.ts` | Valeurs par defaut pour les nouveaux champs |
+| `src/index.css` | Nouveaux styles pour les composants sidebar |
+
+## Comportement dynamique
+
+```text
+Produit survole dans la boutique ?
+  -> OUI : Afficher ses infos (nom, tailles, galerie, SKU)
+  -> NON : Produit selectionne (fiche produit) ?
+    -> OUI : Afficher ses infos
+    -> NON : Afficher les donnees par defaut de l'admin
+```
+
+La galerie miniature affichera toutes les images disponibles du produit (image principale + colorOptions images). Un clic sur la miniature fera defiler les images avec un petit compteur "1/3", "2/3", etc. style "Preview".
