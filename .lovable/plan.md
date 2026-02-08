@@ -1,42 +1,48 @@
 
-# Ajout du rôle Super Admin pour 6000art@gmail.com
+
+# Tableau de bord avec donnees reelles
 
 ## Ce qui sera fait
 
-Une migration SQL sera créée pour insérer ton rôle admin dans la table `user_roles`. Ton compte a été trouvé avec l'ID `956f6ec9-44ce-42fd-afbc-0127a5c2a462`.
+Remplacement des donnees fictives (mock data) du dashboard admin par des donnees reelles calculees a partir des commandes et produits stockes en base de donnees.
 
-## Migration SQL
+## Donnees qui seront calculees dynamiquement
 
-```sql
-INSERT INTO public.user_roles (user_id, role)
-VALUES ('956f6ec9-44ce-42fd-afbc-0127a5c2a462', 'admin')
-ON CONFLICT (user_id, role) DO NOTHING;
-```
-
-## Activation de la verification admin
-
-Actuellement dans `src/pages/admin/Admin.tsx`, la verification admin est commentee pour le developpement. Elle sera reactivee pour securiser l'acces au panneau admin :
-
-```typescript
-// Avant (commenté)
-// if (!isAdmin) {
-//   return <Navigate to="/" replace />;
-// }
-
-// Après (actif)
-if (!isAdmin) {
-  return <Navigate to="/" replace />;
-}
-```
-
-## Resultat
-
-- Tu auras le role `admin` en base de donnees
-- Le panneau admin (`/admin`) sera protege : seuls les utilisateurs avec le role admin pourront y acceder
-- Tu pourras te deconnecter et te reconnecter pour que le role soit pris en compte
+1. **Graphique "Evolution des ventes"** : Agregation des commandes par mois (total des ventes et nombre de commandes) sur les 12 derniers mois
+2. **Graphique "Produits par categorie"** : Comptage reel des produits par categorie depuis la table `products`
+3. **Indicateurs de variation** : Comparaison mois en cours vs mois precedent pour calculer les vrais pourcentages de changement (chiffre d'affaires, commandes)
 
 ## Details techniques
 
-**Fichiers modifies :**
-- `supabase/migrations/` -- nouvelle migration pour inserer le role admin
-- `src/pages/admin/Admin.tsx` -- reactivation du guard admin
+**Fichier modifie :** `src/pages/admin/AdminDashboard.tsx`
+
+### Changements
+
+- Suppression des constantes `salesData` et `categoryData` en dur
+- Ajout de `useMemo` pour calculer :
+  - `salesData` : regroupement des commandes par mois (`date-fns` pour formater les mois), calcul du total des ventes et du nombre de commandes par mois sur les 12 derniers mois
+  - `categoryData` : `products.reduce()` pour compter les produits par categorie
+  - `revenueChange` : pourcentage de variation entre le mois en cours et le mois precedent
+  - `ordersChange` : idem pour le nombre de commandes
+- Les mois sans commandes apparaitront avec des valeurs a 0 pour garder la continuite du graphique
+- Format des mois en francais (Jan, Fev, Mar, etc.)
+
+### Logique d'agregation
+
+```text
+orders --> grouper par mois (YYYY-MM) --> pour chaque mois :
+  - sales = somme des totaux
+  - orders = nombre de commandes
+  
+products --> grouper par categorie --> pour chaque categorie :
+  - count = nombre de produits
+```
+
+### Calcul des variations
+
+```text
+variation = ((valeur_mois_courant - valeur_mois_precedent) / valeur_mois_precedent) * 100
+```
+
+Si aucune donnee le mois precedent, afficher "Nouveau" au lieu d'un pourcentage.
+
