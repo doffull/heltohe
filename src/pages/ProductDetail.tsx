@@ -80,16 +80,16 @@ export default function ProductDetail() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-4 md:py-8">
         {/* Back Button */}
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-          <Button variant="ghost" onClick={() => navigate(-1)} className="mb-6">
+          <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4 md:mb-6 h-9 md:h-10 text-sm">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Retour
           </Button>
         </motion.div>
 
-        <div className="grid lg:grid-cols-2 gap-12">
+        <div className="grid lg:grid-cols-2 gap-6 lg:gap-12">
           {/* Left: Image Gallery */}
           <ProductImageGallery image={product.image} name={product.name} videoUrl={product.videoUrl} />
 

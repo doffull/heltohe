@@ -361,13 +361,48 @@ function SidebarTab() {
   );
 }
 
+// ─── Catalogue Tab ───
+function CatalogueTab() {
+  const { designSettings, updateDesignSettings } = useApp();
+  const mode = designSettings.colorDisplayMode || 'swatches';
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Affichage des variantes couleur</CardTitle>
+          <CardDescription>Choisissez comment les couleurs sont affichées sur la fiche produit</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-sm font-medium">Mode d'affichage</Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                {mode === 'swatches' ? 'Pastilles de couleur rondes' : 'Miniatures d\'images produit'}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className={`text-xs font-medium ${mode === 'swatches' ? 'text-foreground' : 'text-muted-foreground'}`}>Pastilles</span>
+              <Switch
+                checked={mode === 'images'}
+                onCheckedChange={(v) => updateDesignSettings({ colorDisplayMode: v ? 'images' : 'swatches' })}
+              />
+              <span className={`text-xs font-medium ${mode === 'images' ? 'text-foreground' : 'text-muted-foreground'}`}>Images</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 // ─── Main Page ───
 export default function AdminDesign() {
   return (
     <div>
       <div className="mb-8">
         <h1 className="text-2xl font-bold">Design & Visuels</h1>
-        <p className="text-muted-foreground mt-1">Gérez le hero slider, le logo et la sidebar</p>
+        <p className="text-muted-foreground mt-1">Gérez le hero slider, le logo, la sidebar et le catalogue</p>
       </div>
 
       <Tabs defaultValue="hero" className="space-y-6">
@@ -375,6 +410,7 @@ export default function AdminDesign() {
           <TabsTrigger value="hero">Hero Slider</TabsTrigger>
           <TabsTrigger value="logo">Logo</TabsTrigger>
           <TabsTrigger value="sidebar">Sidebar</TabsTrigger>
+          <TabsTrigger value="catalogue">Catalogue</TabsTrigger>
         </TabsList>
 
         <TabsContent value="hero">
@@ -385,6 +421,9 @@ export default function AdminDesign() {
         </TabsContent>
         <TabsContent value="sidebar">
           <SidebarTab />
+        </TabsContent>
+        <TabsContent value="catalogue">
+          <CatalogueTab />
         </TabsContent>
       </Tabs>
     </div>

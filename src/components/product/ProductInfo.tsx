@@ -30,7 +30,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
 
       {/* Title */}
       <motion.div {...fadeUp} transition={{ delay: 0.15 }}>
-        <h1 className="text-4xl font-bold hud-text uppercase tracking-wider">{product.name}</h1>
+        <h1 className="text-2xl md:text-4xl font-bold hud-text uppercase tracking-wider">{product.name}</h1>
         {product.subtitle && (
           <p className="text-lg text-muted-foreground mt-1">{product.subtitle}</p>
         )}
@@ -40,7 +40,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
       <motion.div className="flex items-center gap-4" {...fadeUp} transition={{ delay: 0.2 }}>
         {product.salePrice ? (
           <>
-            <span className="text-4xl font-bold text-primary">{product.salePrice}€</span>
+            <span className="text-2xl md:text-4xl font-bold text-primary">{product.salePrice}€</span>
             <span className="text-2xl line-through text-muted-foreground">{product.price}€</span>
             <motion.span
               className="bg-destructive text-destructive-foreground px-3 py-1 text-sm font-bold"
@@ -52,7 +52,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
             </motion.span>
           </>
         ) : (
-          <span className="text-4xl font-bold">{product.price}€</span>
+          <span className="text-2xl md:text-4xl font-bold">{product.price}€</span>
         )}
       </motion.div>
 
@@ -72,7 +72,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
 
       {/* Features bar */}
       <motion.div
-        className="grid grid-cols-3 gap-4 py-6 border-y border-border"
+        className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-6 border-y border-border"
         {...fadeUp}
         transition={{ delay: 0.5 }}
       >

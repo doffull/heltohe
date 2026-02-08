@@ -215,6 +215,9 @@ export interface DesignSettings {
   
   // Page-specific settings
   pages: Record<string, PageSettings>;
+  
+  // Catalog display
+  colorDisplayMode: 'swatches' | 'images';
 }
 
 export interface TranslationStrings {
