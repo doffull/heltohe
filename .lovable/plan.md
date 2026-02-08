@@ -1,123 +1,65 @@
 
-# Refonte de la Sidebar -- Style "Product Card HUD"
+# Activation complete de la Sidebar + Corrections UX
 
-## Vue d'ensemble
+## 1. Suppression de l'overlay blanc de la sidebar
 
-Transformation complete de la sidebar gauche pour reproduire le design de l'image de reference : une sidebar centree sur le produit actif avec un affichage "fiche technique" immersif. Les fonctionnalites seront entierement configurables depuis l'onglet **Sidebar** de l'admin Design.
+Le fichier `src/index.css` (classe `.sidebar-left-panel`) applique un fond `rgba(255, 255, 255, 0.15)` avec `backdrop-filter: blur(...)`. Ces proprietes seront supprimees pour obtenir un fond transparent sans effet de verre.
 
-## Elements identifies dans l'image de reference
+**Fichier :** `src/index.css` (lignes 316-319)
+- `background-color: rgba(255, 255, 255, 0.15)` sera remplace par `background-color: transparent`
+- `backdrop-filter` et `-webkit-backdrop-filter` seront supprimes
+- `border-right` sera rendu transparent egalement
 
-1. **En-tete** : Nom de marque (ex: "SPOPT") + mention "NEW EDITION" en haut a gauche
-2. **Numero produit** : Badge "006" en haut a droite dans une forme biseautee
-3. **Image mannequin** : Photo grand format en fond (deja existant)
-4. **Carte produit** : Icone play + nom de marque, nom du produit, description technique
-5. **Selecteurs de taille** : Badges "Size XS", "Size XL" dans des cadres bordes
-6. **Galerie miniature** : Vignette du produit avec compteur d'images et label "Preview"
-7. **Barre inferieure** : Zone rectangulaire en bas (barre de progression ou info)
+## 2. Boutons HUD sur la sidebar (configurables dans l'admin)
 
-## Modifications prevues
+Les `hudButtons` existent deja dans les types et les donnees initiales mais ne sont pas affiches ni configurables.
 
-### 1. Sidebar - Nouvelle structure (`src/components/layout/MainLayout.tsx`)
+**Fichier :** `src/components/layout/SidebarProductHUD.tsx`
+- Ajout d'une section "Boutons HUD" qui lit `designSettings.hudButtons` et les affiche sur la sidebar
+- Chaque bouton sera rendu avec son label, sa couleur de fond, et sera cliquable (navigation vers `button.url`)
+- Position relative dans la sidebar (pas de positionnement absolu complexe)
 
-Le contenu de la sidebar (lignes 289-325) sera restructure pour afficher :
+**Fichier :** `src/pages/admin/AdminDesign.tsx` (onglet Sidebar)
+- Ajout d'une carte "Boutons de la sidebar" avec :
+  - Liste des boutons existants (label, URL, couleur de fond, couleur de texte)
+  - Bouton "Ajouter" pour creer un nouveau bouton
+  - Bouton "Supprimer" pour chaque bouton
+  - Champs editables : label, URL, couleur de fond, couleur de texte
 
-**Zone haute :**
-- Texte de marque configurable (ex: "SPOPT") + sous-titre (ex: "NEW EDITION")
-- Badge numero de produit en haut a droite avec forme biseautee
+## 3. Activation des tailles sur la sidebar
 
-**Zone centrale :**
-- Carte d'information produit avec :
-  - Icone play (triangle) + nom de marque
-  - Nom du produit (titre principal)
-  - Description courte / tagline technique
-- Selecteurs de taille dynamiques bases sur le produit survole/selectionne
-  - Affichage du format "Size XS", "Size XL" (taille min et max disponibles)
+Les tailles sont deja codees dans `SidebarProductHUD.tsx` et le toggle existe dans l'admin. Elles seront activees par defaut et affichees de maniere plus visible (toutes les tailles du produit actif).
 
-**Zone basse :**
-- Mini galerie : vignette du produit avec compteur d'images et label "Preview"
-- Barre de progression / info (reprend les stat bars existantes mais dans un format barre unique)
+Pas de modification majeure -- verification que `showSidebarSizes` est bien `true` par defaut (deja le cas dans `initialData.ts`).
 
-Quand aucun produit n'est survole, la sidebar affichera les donnees par defaut configurees dans l'admin.
+## 4. Controle de la transparence des images du hero slider
 
-### 2. Integration avec les donnees produit
+**Fichier :** `src/types/index.ts`
+- Ajout d'un champ `sliderImageOpacity: number` (0 a 1, defaut 1) dans `DesignSettings`
 
-La sidebar lira les donnees depuis `SidebarContext` (produit survole) et `AppContext` (produit selectionne). Les informations affichees seront :
-- `product.name` pour le titre
-- `product.subtitle` ou `product.description` pour la tagline
-- `product.sizes` pour les selecteurs de taille
-- `product.colorOptions` pour la galerie miniature
-- `product.sku` pour le numero de produit
-- `product.image` + `product.colorOptions[].image` pour la galerie avec compteur
+**Fichier :** `src/data/initialData.ts`
+- Valeur par defaut : `sliderImageOpacity: 1`
 
-### 3. Admin Design - Onglet Sidebar enrichi (`src/pages/admin/AdminDesign.tsx`)
+**Fichier :** `src/pages/Home.tsx`
+- Application de `opacity: designSettings.sliderImageOpacity` sur les couches d'images du hero
 
-Nouvelles options configurables dans la section Sidebar :
+**Fichier :** `src/pages/admin/AdminDesign.tsx` (onglet Hero Slider)
+- Ajout d'un slider "Opacite des images" (0% a 100%)
 
-| Option | Type | Description |
-|--------|------|-------------|
-| Nom de marque sidebar | Texte | Ex: "SPOPT", "LVTK6" |
-| Sous-titre sidebar | Texte | Ex: "NEW EDITION", "COLLECTION 2026" |
-| Afficher numero produit | Switch | Badge SKU en haut a droite |
-| Afficher selecteurs taille | Switch | Afficher/masquer les tailles |
-| Afficher galerie miniature | Switch | Vignettes produit en bas |
-| Afficher carte produit | Switch | Bloc info produit central |
-| Afficher barres de stats | Switch | Conserver ou non les stat bars |
-| Texte de la barre info | Texte | Texte personnalise pour la barre du bas |
+## 5. Scroll to top lors de la navigation vers les categories
 
-### 4. Types (`src/types/index.ts`)
+**Fichier :** `src/App.tsx`
+- Ajout d'un composant `ScrollToTop` qui ecoute les changements de `location` via `useLocation()` et appelle `window.scrollTo(0, 0)` a chaque navigation
+- Place a l'interieur du `BrowserRouter`
 
-Ajout de champs dans `DesignSettings` :
-
-```text
-sidebarBrandName: string        // "SPOPT"
-sidebarBrandSubtitle: string    // "NEW EDITION"
-showSidebarProductNumber: boolean
-showSidebarSizes: boolean
-showSidebarGallery: boolean
-showSidebarProductCard: boolean
-showSidebarStats: boolean
-sidebarInfoText: string
-```
-
-### 5. Valeurs par defaut (`src/data/initialData.ts`)
-
-```text
-sidebarBrandName: 'LVTK6'
-sidebarBrandSubtitle: 'NEW EDITION'
-showSidebarProductNumber: true
-showSidebarSizes: true
-showSidebarGallery: true
-showSidebarProductCard: true
-showSidebarStats: true
-sidebarInfoText: ''
-```
-
-### 6. Styles CSS (`src/index.css`)
-
-Ajout de styles pour :
-- `.sidebar-product-card` : carte glassmorphism avec fond semi-transparent
-- `.sidebar-product-number` : badge biseaute en haut a droite
-- `.sidebar-gallery-thumb` : vignette avec bordure et compteur
-- `.sidebar-size-badge` : selecteur de taille style "Size XS" avec bordure
-
-## Fichiers modifies
+## Details techniques - Fichiers modifies
 
 | Fichier | Modification |
 |---------|-------------|
-| `src/components/layout/MainLayout.tsx` | Refonte complete du contenu sidebar (lignes 289-325) |
-| `src/pages/admin/AdminDesign.tsx` | Ajout des nouvelles options dans l'onglet Sidebar |
-| `src/types/index.ts` | Ajout des nouveaux champs DesignSettings |
-| `src/data/initialData.ts` | Valeurs par defaut pour les nouveaux champs |
-| `src/index.css` | Nouveaux styles pour les composants sidebar |
-
-## Comportement dynamique
-
-```text
-Produit survole dans la boutique ?
-  -> OUI : Afficher ses infos (nom, tailles, galerie, SKU)
-  -> NON : Produit selectionne (fiche produit) ?
-    -> OUI : Afficher ses infos
-    -> NON : Afficher les donnees par defaut de l'admin
-```
-
-La galerie miniature affichera toutes les images disponibles du produit (image principale + colorOptions images). Un clic sur la miniature fera defiler les images avec un petit compteur "1/3", "2/3", etc. style "Preview".
+| `src/index.css` | Suppression overlay blanc sidebar-left-panel |
+| `src/components/layout/SidebarProductHUD.tsx` | Ajout rendu des hudButtons |
+| `src/pages/admin/AdminDesign.tsx` | Section admin boutons sidebar + slider opacite hero |
+| `src/types/index.ts` | Ajout `sliderImageOpacity` |
+| `src/data/initialData.ts` | Valeur par defaut `sliderImageOpacity: 1` |
+| `src/pages/Home.tsx` | Application opacite sur images hero |
+| `src/App.tsx` | Composant ScrollToTop pour scroll en haut a chaque navigation |
