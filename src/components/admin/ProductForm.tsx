@@ -34,6 +34,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
     colors: [] as string[],
     colorOptions: [] as ColorOption[],
     attributes: {} as Record<string, string>,
+    videoUrl: '',
   });
 
   const [newAttrKey, setNewAttrKey] = useState('');
@@ -59,6 +60,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         colors: product.colors || [],
         colorOptions: product.colorOptions || [],
         attributes: product.attributes || {},
+        videoUrl: product.videoUrl || '',
       });
     }
   }, [product]);
@@ -68,6 +70,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
     const submitData = {
       ...formData,
       salePrice: formData.salePrice || undefined,
+      videoUrl: formData.videoUrl || undefined,
     };
     
     if (product) {
@@ -175,6 +178,17 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
           {formData.image && (
             <img src={formData.image} alt="Preview" className="w-20 h-20 object-cover mt-2 border border-border/30" />
           )}
+        </div>
+
+        <div className="space-y-2">
+          <Label className="hud-text text-xs">URL de la vidéo</Label>
+          <Input
+            value={formData.videoUrl}
+            onChange={(e) => setFormData(prev => ({ ...prev, videoUrl: e.target.value }))}
+            className="bg-secondary/50 border-border/30"
+            placeholder="https://youtube.com/watch?v=... ou lien MP4"
+          />
+          <p className="text-[10px] text-muted-foreground">YouTube, Vimeo ou lien MP4 direct</p>
         </div>
 
         <div className="space-y-2">
