@@ -22,6 +22,7 @@ function dbToAppProduct(db: Record<string, unknown>): Product {
     colors: (db.colors as string[]) || [],
     colorOptions: (db.color_options as ColorOption[]) || [],
     attributes: (db.attributes as Record<string, string>) || {},
+    videoUrl: (db.video_url as string) || undefined,
   };
 }
 
@@ -43,6 +44,7 @@ function appToDbProduct(product: Partial<Product>) {
     colors: product.colors || [],
     color_options: (product.colorOptions || []) as unknown as Json,
     attributes: (product.attributes || {}) as unknown as Json,
+    video_url: product.videoUrl || null,
     is_active: true,
   };
 }

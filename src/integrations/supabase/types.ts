@@ -600,6 +600,7 @@ export type Database = {
           stock: number
           subtitle: string | null
           updated_at: string
+          video_url: string | null
         }
         Insert: {
           attributes?: Json | null
@@ -621,6 +622,7 @@ export type Database = {
           stock?: number
           subtitle?: string | null
           updated_at?: string
+          video_url?: string | null
         }
         Update: {
           attributes?: Json | null
@@ -642,6 +644,7 @@ export type Database = {
           stock?: number
           subtitle?: string | null
           updated_at?: string
+          video_url?: string | null
         }
         Relationships: []
       }
