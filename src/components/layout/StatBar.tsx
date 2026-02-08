@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { useApp } from '@/context/AppContext';
 
 interface StatBarProps {
   label: string;
@@ -7,6 +8,7 @@ interface StatBarProps {
 }
 
 export function StatBar({ label, value, delay = 0 }: StatBarProps) {
+  const { designSettings } = useApp();
   const [animatedValue, setAnimatedValue] = useState(0);
   const [displayValue, setDisplayValue] = useState(0);
   const prevValueRef = useRef(value);
@@ -68,9 +70,12 @@ export function StatBar({ label, value, delay = 0 }: StatBarProps) {
         {Array.from({ length: segments }).map((_, index) => (
           <div
             key={index}
-            className={`stat-segment transition-all duration-300 ease-out ${
-              index < filledSegments ? 'filled' : ''
-            }`}
+            className="stat-segment transition-all duration-300 ease-out"
+            style={{
+              backgroundColor: index < filledSegments
+                ? (designSettings.statBarFilledColor || undefined)
+                : (designSettings.statBarEmptyColor || undefined),
+            }}
           />
         ))}
       </div>

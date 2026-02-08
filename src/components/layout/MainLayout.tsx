@@ -62,8 +62,8 @@ export function MainLayout({ children }: MainLayoutProps) {
       )}
 
       <header className="fixed top-0 left-0 right-0 z-40 bg-background border-b border-border header-container">
-        <div className="container mx-auto px-4 pl-[200px]">
-          <div className="flex items-center justify-between h-20">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center h-20 pl-[180px]">
 
             {/* Desktop Navigation - Centered */}
             <nav className="hidden lg:flex items-center gap-8">
@@ -87,7 +87,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             </nav>
 
             {/* Actions */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 ml-auto">
               {/* Search - Expandable */}
               <div className={`hidden md:flex items-center transition-all duration-300 ${searchOpen ? 'w-64' : 'w-10'}`}>
                 {searchOpen ? (
@@ -238,7 +238,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             backgroundSize: 'cover',
             backgroundPosition: 'center top',
             backgroundAttachment: 'fixed',
-            opacity: 0.4,
+            opacity: designSettings.sidebarImageOpacity ?? 1,
           }}
         />
         

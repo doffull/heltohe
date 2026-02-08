@@ -257,6 +257,8 @@ function SidebarTab() {
   const { designSettings, updateDesignSettings } = useApp();
   const stats = designSettings.stats || [];
   const hudButtons = designSettings.hudButtons || [];
+  const ALL_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+  const currentSizes = designSettings.sidebarSizes || ALL_SIZES;
 
   const updateStat = (index: number, updates: Partial<HUDStat>) => {
     const newStats = [...stats];
@@ -387,7 +389,7 @@ function SidebarTab() {
           <CardTitle className="text-base">Image du mannequin</CardTitle>
           <CardDescription>Photo de fond du panneau latéral gauche</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <FileDropZone
             accept={['image']}
             folder="sidebar"
@@ -395,6 +397,75 @@ function SidebarTab() {
             onUpload={(url) => updateDesignSettings({ sidebarImage: url })}
             label="Glissez l'image du mannequin"
           />
+          <div className="space-y-2">
+            <Label>Opacité de l'image ({Math.round((designSettings.sidebarImageOpacity ?? 1) * 100)}%)</Label>
+            <Slider
+              value={[(designSettings.sidebarImageOpacity ?? 1) * 100]}
+              min={0}
+              max={100}
+              step={5}
+              onValueChange={([v]) => updateDesignSettings({ sidebarImageOpacity: v / 100 })}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Product Card Text */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Carte produit (texte personnalisé)</CardTitle>
+          <CardDescription>Laissez vide pour utiliser les infos du produit actif</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Titre personnalisé</Label>
+            <Input
+              value={designSettings.sidebarProductTitle || ''}
+              onChange={(e) => updateDesignSettings({ sidebarProductTitle: e.target.value })}
+              placeholder="(nom du produit actif)"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Description personnalisée</Label>
+            <Input
+              value={designSettings.sidebarProductDescription || ''}
+              onChange={(e) => updateDesignSettings({ sidebarProductDescription: e.target.value })}
+              placeholder="(sous-titre du produit actif)"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Size Selectors */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Tailles affichées</CardTitle>
+          <CardDescription>Sélectionnez les tailles à afficher sur la sidebar</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-3">
+            {ALL_SIZES.map((size) => {
+              const isActive = currentSizes.includes(size);
+              return (
+                <button
+                  key={size}
+                  onClick={() => {
+                    const newSizes = isActive
+                      ? currentSizes.filter(s => s !== size)
+                      : [...currentSizes, size].sort((a, b) => ALL_SIZES.indexOf(a) - ALL_SIZES.indexOf(b));
+                    updateDesignSettings({ sidebarSizes: newSizes });
+                  }}
+                  className={`px-4 py-2 border text-sm font-bold uppercase transition-colors ${
+                    isActive 
+                      ? 'bg-foreground text-background border-foreground' 
+                      : 'bg-background text-muted-foreground border-border hover:border-foreground'
+                  }`}
+                >
+                  {size}
+                </button>
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
 
@@ -441,6 +512,31 @@ function SidebarTab() {
               Aucune barre configurée
             </p>
           )}
+
+          {/* Stat Bar Colors */}
+          <div className="border-t border-border pt-4 mt-4">
+            <Label className="text-xs font-semibold uppercase tracking-wider mb-3 block">Couleurs des barres</Label>
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <Label className="text-xs">Remplie</Label>
+                <input
+                  type="color"
+                  value={designSettings.statBarFilledColor || '#000000'}
+                  onChange={(e) => updateDesignSettings({ statBarFilledColor: e.target.value })}
+                  className="h-8 w-10 cursor-pointer rounded border border-border"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="text-xs">Vide</Label>
+                <input
+                  type="color"
+                  value={designSettings.statBarEmptyColor || '#e5e5e5'}
+                  onChange={(e) => updateDesignSettings({ statBarEmptyColor: e.target.value })}
+                  className="h-8 w-10 cursor-pointer rounded border border-border"
+                />
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

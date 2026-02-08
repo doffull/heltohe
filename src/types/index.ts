@@ -231,6 +231,20 @@ export interface DesignSettings {
   
   // Hero image opacity
   sliderImageOpacity: number;
+  
+  // Sidebar image opacity
+  sidebarImageOpacity: number;
+  
+  // Configurable sizes for sidebar
+  sidebarSizes: string[];
+  
+  // Stat bar colors
+  statBarFilledColor: string;
+  statBarEmptyColor: string;
+  
+  // Custom product card text
+  sidebarProductTitle: string;
+  sidebarProductDescription: string;
 }
 
 export interface TranslationStrings {
