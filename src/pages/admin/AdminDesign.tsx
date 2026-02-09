@@ -65,15 +65,18 @@ function HeroSliderTab() {
           <CardTitle className="text-base">Presets rapides</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
             {[
-              { id: 'fullscreen', name: 'Plein écran', desc: '100vh, texte en bas à gauche' },
-              { id: 'half', name: 'Demi-écran', desc: '60vh, texte centré' },
-              { id: 'banner', name: 'Bannière', desc: '40vh, compact' },
+              { id: 'fullscreen', name: 'Plein écran', desc: '100vh, texte en bas à gauche', height: '100vh', grayscale: false, speed: 6000 },
+              { id: 'half', name: 'Demi-écran', desc: '60vh, texte centré', height: '60vh', grayscale: false, speed: 6000 },
+              { id: 'banner', name: 'Bannière', desc: '40vh, compact', height: '40vh', grayscale: false, speed: 5000 },
+              { id: 'cinematic', name: 'Cinématique', desc: '80vh, N&B, lent', height: '80vh', grayscale: true, speed: 10000 },
+              { id: 'minimal', name: 'Minimal', desc: '50vh, image seule', height: '50vh', grayscale: false, speed: 8000 },
             ].map((p) => (
               <button
                 key={p.id}
                 onClick={() => {
+                  updateDesignSettings({ sliderHeight: p.height, sliderGrayscale: p.grayscale, sliderSpeed: p.speed } as any);
                   toast.success(`Preset Hero "${p.name}" appliqué`);
                 }}
                 className="border-2 border-border hover:border-primary/50 rounded-lg p-3 text-left transition-all"
@@ -378,17 +381,38 @@ function SidebarTab() {
 
   return (
     <div className="space-y-6">
+      {/* Sidebar Delay */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Délai d'apparition</CardTitle>
+          <CardDescription>Temps avant que la sidebar s'ouvre automatiquement sur la page d'accueil</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <Label>Délai ({((designSettings as any).sidebarDelay || 10000) / 1000}s)</Label>
+          <Slider
+            value={[((designSettings as any).sidebarDelay || 10000) / 1000]}
+            min={1}
+            max={30}
+            step={1}
+            onValueChange={([v]) => updateDesignSettings({ sidebarDelay: v * 1000 } as any)}
+          />
+        </CardContent>
+      </Card>
+
       {/* Sidebar Presets */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Presets Sidebar</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
             {[
               { id: 'classic', name: 'Classique', desc: 'Image + carte produit + hotspots' },
               { id: 'minimal', name: 'Minimal', desc: 'Image seule + bouton CTA' },
               { id: 'catalog', name: 'Catalogue', desc: 'Grille de produits' },
+              { id: 'parallax', name: 'Parallaxe', desc: 'Image fixe + hotspots animés' },
+              { id: 'vitrine', name: 'Vitrine', desc: 'Image + overlay gradient + promo' },
+              { id: 'dark', name: 'Sombre', desc: 'Fond sombre + stats + CTA' },
             ].map((p) => (
               <button
                 key={p.id}
@@ -397,6 +421,12 @@ function SidebarTab() {
                     updateDesignSettings({ showSidebarProductCard: true, showSidebarSizes: true, showSidebarStats: true, showSidebarGallery: true });
                   } else if (p.id === 'minimal') {
                     updateDesignSettings({ showSidebarProductCard: false, showSidebarSizes: false, showSidebarStats: false, showSidebarGallery: false });
+                  } else if (p.id === 'parallax') {
+                    updateDesignSettings({ showSidebarProductCard: true, showSidebarSizes: true, showSidebarStats: true, showSidebarGallery: true, sidebarImageOpacity: 1 });
+                  } else if (p.id === 'vitrine') {
+                    updateDesignSettings({ showSidebarProductCard: false, showSidebarSizes: false, showSidebarStats: false, showSidebarGallery: false, sidebarGradient: true, gradientIntensity: 80 });
+                  } else if (p.id === 'dark') {
+                    updateDesignSettings({ showSidebarProductCard: false, showSidebarSizes: false, showSidebarStats: true, showSidebarGallery: false, sidebarBg: '#0a0a0a', sidebarImageOpacity: 0.3 });
                   }
                   toast.success(`Preset Sidebar "${p.name}" appliqué`);
                 }}
@@ -1002,6 +1032,108 @@ function CatalogueTab() {
   );
 }
 
+// ─── Disposition (Global) Tab ───
+function DispositionTab() {
+  const { updateDesignSettings } = useApp();
+
+  const GLOBAL_PRESETS = [
+    {
+      id: 'luxe-industriel',
+      name: 'Luxe Industriel',
+      desc: 'Hero 100vh, sidebar visible, 4 colonnes portrait, espacement compact',
+      settings: {
+        sliderHeight: '100vh',
+        headerPreset: 'classic',
+        categoryLayout: { preset: 'portrait', columns: 4, aspectRatio: '3/4', gap: 'md' },
+        siteSpacing: 'compact',
+      },
+    },
+    {
+      id: 'boutique-epuree',
+      name: 'Boutique épurée',
+      desc: 'Hero 60vh, 2 colonnes larges, header centré, espacement normal',
+      settings: {
+        sliderHeight: '60vh',
+        headerPreset: 'centered',
+        categoryLayout: { preset: 'wide', columns: 2, aspectRatio: '16/9', gap: 'lg' },
+        siteSpacing: 'normal',
+      },
+    },
+    {
+      id: 'vitrine-minimaliste',
+      name: 'Vitrine minimaliste',
+      desc: 'Hero 100vh, bannières 16:9, header minimal, tout compact',
+      settings: {
+        sliderHeight: '100vh',
+        headerPreset: 'minimal',
+        categoryLayout: { preset: 'banner', columns: 4, aspectRatio: '16/9', gap: 'sm' },
+        siteSpacing: 'compact',
+      },
+    },
+    {
+      id: 'catalogue-dense',
+      name: 'Catalogue dense',
+      desc: 'Hero 40vh, compact 4/3, header fullwidth, sans espacement',
+      settings: {
+        sliderHeight: '40vh',
+        headerPreset: 'fullwidth',
+        categoryLayout: { preset: 'compact', columns: 4, aspectRatio: '4/3', gap: 'sm' },
+        siteSpacing: 'compact',
+      },
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold">Disposition globale</h3>
+        <p className="text-sm text-muted-foreground">Appliquez un style complet au site en un clic</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {GLOBAL_PRESETS.map((preset) => (
+          <button
+            key={preset.id}
+            onClick={() => {
+              updateDesignSettings(preset.settings as any);
+              toast.success(`Disposition "${preset.name}" appliquée`);
+            }}
+            className="border-2 border-border hover:border-primary/50 rounded-lg p-5 text-left transition-all hover:shadow-md"
+          >
+            <p className="text-base font-bold mb-1">{preset.name}</p>
+            <p className="text-sm text-muted-foreground">{preset.desc}</p>
+          </button>
+        ))}
+      </div>
+
+      {/* Manual spacing control */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Espacement des sections</CardTitle>
+          <CardDescription>Contrôlez l'espacement global entre les sections du site</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { id: 'compact', name: 'Compact', desc: 'Espacement minimal' },
+              { id: 'normal', name: 'Normal', desc: 'Espacement standard' },
+              { id: 'spacious', name: 'Aéré', desc: 'Espacement large' },
+            ].map((s) => (
+              <button
+                key={s.id}
+                onClick={() => updateDesignSettings({ siteSpacing: s.id } as any)}
+                className="border-2 border-border hover:border-primary/50 rounded-lg p-3 text-left transition-all"
+              >
+                <p className="text-sm font-bold">{s.name}</p>
+                <p className="text-xs text-muted-foreground">{s.desc}</p>
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 // ─── Main Page ───
 export default function AdminDesign() {
   return (
@@ -1013,6 +1145,7 @@ export default function AdminDesign() {
 
       <Tabs defaultValue="hero" className="space-y-6">
         <TabsList className="flex-wrap">
+          <TabsTrigger value="disposition">Disposition</TabsTrigger>
           <TabsTrigger value="hero">Hero Slider</TabsTrigger>
           <TabsTrigger value="header">Header</TabsTrigger>
           <TabsTrigger value="logo">Logo</TabsTrigger>
@@ -1022,6 +1155,9 @@ export default function AdminDesign() {
           <TabsTrigger value="catalogue">Catalogue</TabsTrigger>
         </TabsList>
 
+        <TabsContent value="disposition">
+          <DispositionTab />
+        </TabsContent>
         <TabsContent value="hero">
           <HeroSliderTab />
         </TabsContent>

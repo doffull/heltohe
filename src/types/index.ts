@@ -268,6 +268,15 @@ export interface DesignSettings {
   headerBgColor?: string;
   headerTextColor?: string;
   headerFixed?: boolean;
+
+  // Sidebar delay (ms)
+  sidebarDelay?: number;
+
+  // Hero slider height
+  sliderHeight?: string;
+
+  // Global site spacing
+  siteSpacing?: string; // 'compact' | 'normal' | 'spacious'
 }
 
 export interface MannequinHotspotConfig {
