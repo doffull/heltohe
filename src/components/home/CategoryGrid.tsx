@@ -1,9 +1,19 @@
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
+import { useCategories } from '@/hooks/useCategories';
 
 export function CategoryGrid() {
   const { designSettings, navigateToCategory, language } = useApp();
-  const { categories } = designSettings;
+  const { data: dbCategories = [] } = useCategories();
+  
+  // Use DB categories if available, fallback to design settings
+  const categories = dbCategories.length > 0 
+    ? dbCategories.filter(c => !c.parentId).map(c => ({
+        id: c.id,
+        title: c.title,
+        image: c.image || '/placeholder.svg',
+      }))
+    : designSettings.categories;
   
   return (
     <section className="py-16">
