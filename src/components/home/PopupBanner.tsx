@@ -13,6 +13,7 @@ interface PopupBannerData {
   image?: string;
   link?: string;
   buttonText?: string;
+  displayDelay: number;
 }
 
 export default function PopupBanner() {
@@ -30,14 +31,15 @@ export default function PopupBanner() {
         .order('position', { ascending: true })
         .limit(1);
       if (error) throw error;
-      return (data || []).map((d): PopupBannerData => ({
-        id: d.id,
-        title: d.title || '',
-        subtitle: d.subtitle || undefined,
-        description: d.description || undefined,
-        image: d.image || undefined,
-        link: d.link || undefined,
-        buttonText: d.button_text || undefined,
+      return (data || []).map((d: Record<string, unknown>): PopupBannerData => ({
+        id: d.id as string,
+        title: (d.title as string) || '',
+        subtitle: (d.subtitle as string) || undefined,
+        description: (d.description as string) || undefined,
+        image: (d.image as string) || undefined,
+        link: (d.link as string) || undefined,
+        buttonText: (d.button_text as string) || undefined,
+        displayDelay: (d.display_delay as number) ?? 2000,
       }));
     },
   });
@@ -47,7 +49,7 @@ export default function PopupBanner() {
       const dismissed = sessionStorage.getItem(`popup-dismissed-${banners[0].id}`);
       if (!dismissed) {
         setBanner(banners[0]);
-        const timer = setTimeout(() => setOpen(true), 2000);
+        const timer = setTimeout(() => setOpen(true), banners[0].displayDelay);
         return () => clearTimeout(timer);
       }
     }

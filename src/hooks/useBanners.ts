@@ -14,6 +14,7 @@ export interface BannerRecord {
   position: number;
   startsAt?: string;
   endsAt?: string;
+  displayDelay?: number;
 }
 
 function dbToBanner(db: Record<string, unknown>): BannerRecord {
@@ -30,6 +31,7 @@ function dbToBanner(db: Record<string, unknown>): BannerRecord {
     position: (db.position as number) || 0,
     startsAt: (db.starts_at as string) || undefined,
     endsAt: (db.ends_at as string) || undefined,
+    displayDelay: (db.display_delay as number) ?? 2000,
   };
 }
 
@@ -63,6 +65,7 @@ export function useCreateBanner() {
         position: banner.position,
         starts_at: banner.startsAt || null,
         ends_at: banner.endsAt || null,
+        display_delay: banner.displayDelay ?? 2000,
       });
       if (error) throw error;
     },
@@ -86,6 +89,7 @@ export function useUpdateBanner() {
         position: banner.position,
         starts_at: banner.startsAt || null,
         ends_at: banner.endsAt || null,
+        display_delay: banner.displayDelay ?? 2000,
       }).eq('id', id);
       if (error) throw error;
     },

@@ -123,6 +123,19 @@ function HeroSliderTab() {
               </div>
             </div>
 
+            {/* Mobile Image */}
+            <div>
+              <Label className="text-xs font-medium mb-2 block">Image mobile (optionnel)</Label>
+              <FileDropZone
+                accept={['image']}
+                folder="hero/mobile"
+                currentFile={(slide as any).mobileImage}
+                onUpload={(url) => updateSlide(index, { mobileImage: url } as any)}
+                label="Image adaptée mobile"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Si vide, l'image desktop sera utilisée</p>
+            </div>
+
             {/* Text Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
