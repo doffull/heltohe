@@ -1,137 +1,124 @@
 
-
-# Plan complet : Import PDF, Espace Media, Bannieres, Categories, Donnees fictives, Commandes avancees
-
-Ce plan est divise en 6 blocs fonctionnels. Chaque bloc est independant mais ils seront tous implementes ensemble.
+# Plan : Popup avance, Dashboard mobile, Header mobile, Colonnes categories, Notifications, Photos mobile
 
 ---
 
-## Bloc 1 : Import en masse de produits via PDF
+## 1. Popup ameliore (delai configurable, pas de bouton visible)
 
-### Principe
-Une edge function recoit le fichier PDF, l'envoie a un modele AI (Lovable AI / Gemini) pour extraire les produits (nom, description, prix, tailles, couleurs, categorie, SKU, stock), puis renvoie un JSON structure. L'interface admin permet de previsualiser les produits extraits avant de les inserer en base.
+### Probleme actuel
+Le popup s'affiche apres un delai fixe de 2 secondes. Il n'y a pas de bouton visible sur la page d'accueil (c'est deja le cas -- le popup s'ouvre automatiquement). Mais l'admin ne peut pas configurer le delai.
 
-### Fichiers concernes
-- **`supabase/functions/parse-products-pdf/index.ts`** (nouveau) : Edge function qui recoit le PDF en base64, appelle Gemini pour extraire les donnees structurees, retourne un tableau de produits
-- **`src/pages/admin/AdminProducts.tsx`** : Ajout d'un bouton "Importer via PDF", zone de drop pour le fichier, dialog de previsualisation des produits extraits avec possibilite de valider/supprimer chaque produit avant insertion en masse
-
-### Logique
-1. L'admin drop un PDF dans la zone
-2. Le fichier est envoye a l'edge function
-3. L'AI extrait les produits et renvoie un JSON
-4. L'admin voit une liste previsualisation et peut editer chaque produit
-5. Clic sur "Importer tout" insere les produits en base via `useCreateProduct`
-
----
-
-## Bloc 2 : Espace Media centralise
-
-### Principe
-Un nouvel onglet "Media" dans l'admin qui liste tous les fichiers du bucket `media` de Lovable Cloud Storage. L'admin peut uploader, supprimer, copier l'URL et previsualiser les fichiers.
-
-### Fichiers concernes
-- **`src/pages/admin/AdminMedia.tsx`** (nouveau) : Page listant les fichiers du bucket `media` (images + videos), avec upload drag-and-drop, suppression, copie d'URL, filtres par type
-- **`src/hooks/useMediaLibrary.ts`** (nouveau) : Hook qui liste les fichiers du bucket storage via `supabase.storage.from('media').list()`
-- **`src/pages/admin/Admin.tsx`** : Ajout de la route `/admin/media` et du lien dans le sidebar admin
-
----
-
-## Bloc 3 : Bannieres visibles sur le site
-
-### Principe
-Les bannieres creees dans Marketing doivent s'afficher sur le site. Il y a 3 types : `hero` (en haut de la page d'accueil sous le slider), `promo` (bandeau horizontal), `popup` (popup modal au premier chargement).
-
-### Fichiers concernes
-- **`src/components/home/PromoBanner.tsx`** (nouveau) : Composant qui affiche les bannieres de type `promo` en bandeau horizontal anime
-- **`src/components/home/PopupBanner.tsx`** (nouveau) : Composant modal popup pour les bannieres de type `popup`, avec fermeture et "ne plus afficher" (sessionStorage)
-- **`src/pages/Home.tsx`** : Integration des composants PromoBanner (entre les sections) et PopupBanner (au chargement)
-- **`src/hooks/useBanners.ts`** : Ajout d'un hook `useActiveBanners` cote public (les politiques RLS existent deja pour la lecture publique des bannieres actives)
-
----
-
-## Bloc 4 : Categories - Taille, disposition, couverture
-
-### Principe
-Dans les parametres admin, on peut deja creer des categories. On ajoute la possibilite de choisir la taille d'affichage (petit/moyen/grand), le mode de couverture de l'image (cover/contain), et la disposition de la grille (2/3/4 colonnes).
-
-### Fichiers concernes
-- **`src/hooks/useCategories.ts`** : Ajout de champs `displaySize` et `coverMode` dans le type `CategoryRecord`
-- **`src/pages/admin/AdminSettings.tsx`** : Ajout de selecteurs de taille (S/M/L) et de mode d'affichage (cover/contain) dans le formulaire de categorie. Ajout d'un selecteur de disposition de grille (2, 3 ou 4 colonnes)
-- **`src/pages/Home.tsx`** : Application dynamique du nombre de colonnes et de la taille des vignettes de categories
+### Solution
+- **Table `banners`** : Ajouter une colonne `display_delay` (integer, defaut 2000, en millisecondes) pour permettre a l'admin de configurer quand le popup apparait.
+- **`AdminMarketing.tsx`** (BannerForm) : Ajouter un champ "Delai d'affichage (secondes)" visible uniquement quand le type est "popup".
+- **`PopupBanner.tsx`** : Lire le `display_delay` depuis la banniere et l'utiliser dans le `setTimeout` au lieu du 2000ms fixe.
+- **`useBanners.ts`** : Mapper le nouveau champ `display_delay`.
 
 ### Migration SQL
-Ajout des colonnes `display_size` (text, defaut 'medium') et `cover_mode` (text, defaut 'cover') sur la table `categories`.
-
----
-
-## Bloc 5 : Donnees fictives (clients + commandes)
-
-### Principe
-Insertion de donnees de demonstration dans les tables `customers` et `orders` via des requetes SQL. Ces donnees permettent de tester le dashboard, les commandes et les clients.
-
-### Donnees inserees
-- **10 clients fictifs** avec differents niveaux de fidelite (bronze, silver, gold, platinum), des noms francais, emails, points et totaux depenses
-- **15 commandes fictives** reparties sur les 3 derniers mois avec differents statuts (Pending, Processing, Shipped, Delivered, Cancelled), methodes de paiement et articles
-
-Les clients fictifs utiliseront l'user_id de l'admin existant (956f6ec9-44ce-42fd-afbc-0127a5c2a462) car la table `customers` a une contrainte `user_id NOT NULL` et des RLS qui exigent un user_id. Alternativement, les commandes seront inserees sans `user_id` (nullable) pour eviter les conflits.
-
----
-
-## Bloc 6 : Commandes avancees (details, factures, livraison, paiement)
-
-### Principe
-Enrichir la page AdminOrders avec un panneau de detail complet pour chaque commande, incluant la gestion du paiement, la generation de factures PDF, et le suivi d'expedition.
-
-### Fichiers concernes
-- **`src/pages/admin/AdminOrders.tsx`** : Refonte avec :
-  - Dialog de detail complet (infos client, liste des articles, adresse de livraison)
-  - Selection du mode de paiement (CB, virement, PayPal) et du statut de paiement
-  - Selection du transporteur (Colissimo, Chronopost, Mondial Relay) avec champ numero de suivi
-  - Bouton "Generer la facture" qui cree un PDF telechargeable (via generation HTML/CSS en blob)
-  - Bouton "Modifier la commande" pour editer les notes et les statuts
-- **`src/hooks/useOrders.ts`** : Ajout de `useUpdateOrder` pour mettre a jour tous les champs (notes, payment_method, payment_status, status)
-
-### Colonnes supplementaires necessaires
-Ajout des colonnes `tracking_number` (text) et `shipping_carrier` (text) sur la table `orders`.
-
----
-
-## Resume des fichiers
-
-| Fichier | Action |
-|---------|--------|
-| `supabase/functions/parse-products-pdf/index.ts` | Nouveau - Edge function parsing PDF via AI |
-| `src/pages/admin/AdminMedia.tsx` | Nouveau - Espace media centralise |
-| `src/hooks/useMediaLibrary.ts` | Nouveau - Hook listing fichiers storage |
-| `src/components/home/PromoBanner.tsx` | Nouveau - Bandeau promo sur le site |
-| `src/components/home/PopupBanner.tsx` | Nouveau - Popup banniere |
-| `src/pages/admin/AdminProducts.tsx` | Modifie - Ajout import PDF |
-| `src/pages/admin/AdminOrders.tsx` | Modifie - Refonte detail commande + facture |
-| `src/pages/admin/AdminSettings.tsx` | Modifie - Taille/disposition categories |
-| `src/pages/admin/Admin.tsx` | Modifie - Route media |
-| `src/pages/Home.tsx` | Modifie - Bannieres + categories dynamiques |
-| `src/hooks/useOrders.ts` | Modifie - useUpdateOrder |
-| `src/hooks/useBanners.ts` | Modifie - useActiveBanners |
-| `src/hooks/useCategories.ts` | Modifie - Nouveaux champs |
-| Migration SQL | Colonnes categories + orders + donnees fictives |
-
-## Details techniques - Migration SQL
-
 ```sql
--- Colonnes categories
-ALTER TABLE categories ADD COLUMN IF NOT EXISTS display_size text DEFAULT 'medium';
-ALTER TABLE categories ADD COLUMN IF NOT EXISTS cover_mode text DEFAULT 'cover';
-
--- Colonnes orders
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS tracking_number text;
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_carrier text;
+ALTER TABLE banners ADD COLUMN IF NOT EXISTS display_delay integer DEFAULT 2000;
 ```
 
-## Details techniques - Edge Function (parse-products-pdf)
+---
 
-L'edge function utilisera l'API Lovable AI (Gemini 2.5 Flash) pour analyser le contenu du PDF et extraire les produits. Le prompt demandera un JSON structure avec les champs : name, subtitle, price, salePrice, category, sizes, colors, description, material, sku, stock.
+## 2. Selecteur de colonnes pour la grille de categories
 
-## Details techniques - Generation de facture
+### Probleme actuel
+La grille des categories est fixe a 4 colonnes (desktop) / 2 colonnes (mobile). L'admin ne peut pas choisir.
 
-La facture sera generee cote client en construisant un document HTML formate, puis converti en blob PDF via `window.print()` ou une iframe cachee. Pas de dependance externe necessaire.
+### Solution
+- **Table `design_settings`** : Ajouter une colonne `category_columns` (integer, defaut 4).
+- **`AdminSettings.tsx`** : Ajouter un selecteur "Nombre de colonnes" (2, 3, 4) dans l'onglet Categories.
+- **`Home.tsx`** : Appliquer dynamiquement le nombre de colonnes via la classe CSS `grid-cols-{n}` en lisant `designSettings.categoryColumns`.
+- **`AppContext.tsx` / `types/index.ts`** : Ajouter `categoryColumns` dans le type `DesignSettings`.
 
+### Migration SQL
+```sql
+ALTER TABLE design_settings ADD COLUMN IF NOT EXISTS category_columns integer DEFAULT 4;
+```
+
+---
+
+## 3. Dashboard admin fonctionnel sur mobile
+
+### Probleme actuel
+La sidebar admin est fixe a 64px de large (`ml-64`) et n'est pas responsive. Le dashboard ne s'adapte pas.
+
+### Solution
+- **`Admin.tsx`** : 
+  - Rendre la sidebar masquee par defaut sur mobile, avec un bouton hamburger pour l'ouvrir (Sheet ou overlay).
+  - Supprimer le `ml-64` fixe sur mobile, utiliser `lg:ml-64` uniquement.
+  - Ajouter un header mobile avec le logo et le bouton menu.
+- **`AdminDashboard.tsx`** : 
+  - Les grilles stats passent a 1 colonne sur mobile (`grid-cols-1 sm:grid-cols-2`).
+  - Les graphiques passent en pleine largeur sur mobile (`grid-cols-1 lg:grid-cols-2`).
+  - Reduire la hauteur des graphiques sur mobile.
+
+---
+
+## 4. Header public fonctionnel sur mobile
+
+### Probleme actuel
+Le header a un `pl-[180px]` pour le logo, ce qui ecrase tout sur petit ecran. La navigation mobile existe via un Sheet mais le layout est rigide.
+
+### Solution
+- **`MainLayout.tsx`** :
+  - Remplacer le `pl-[180px]` par une valeur responsive (`pl-4 lg:pl-[180px]`).
+  - Masquer le logo-wrapper sur mobile ou le rendre plus petit.
+  - Ajuster le spacing pour que les icones (panier, user, menu) soient accessibles sur mobile.
+
+---
+
+## 5. Icone de notification en bas a droite
+
+### Principe
+Ajouter un bouton flottant en bas a droite pour gerer les notifications / messages clients.
+
+### Solution
+- **`MainLayout.tsx`** : Ajouter un bouton flottant `fixed bottom-6 right-6` avec une icone Bell et un badge pour le nombre de messages non lus.
+- **Lecture des messages** : Utiliser la table `messages` existante pour compter les messages non lus (`is_read = false`).
+- **Clic** : Ouvrir un panneau Sheet a droite listant les messages recents avec la possibilite de les marquer comme lus.
+- **Visible uniquement pour les admins** (via `isAdmin` du contexte auth).
+
+---
+
+## 6. Photos adaptees sur mobile (memes images desktop/mobile + option admin)
+
+### Probleme actuel
+Sur mobile, le hero slider montre une image differente (le panneau parallaxe gauche interfere). L'utilisateur veut que ses images soient les memes sur mobile ou pouvoir choisir une version mobile.
+
+### Solution
+- **Table `banners` ou `design_settings.hero_slides`** : Ajouter un champ `mobile_image` dans chaque slide du hero pour permettre a l'admin de specifier une image mobile alternative.
+- **`AdminDesign.tsx`** (section Hero) : Ajouter un champ "Image mobile (optionnel)" dans le formulaire de chaque slide.
+- **`Home.tsx`** : Sur mobile (`useIsMobile()`), utiliser `mobile_image` si defini, sinon l'image desktop standard.
+- **Sidebar gauche** : Sur mobile, la sidebar avec le mannequin est deja masquee par defaut (`-translate-x-full lg:translate-x-0`), donc le hero devrait s'afficher correctement en pleine largeur. Si ce n'est pas le cas, s'assurer que `main` n'a pas de `lg:ml-[35%]` sur mobile.
+
+---
+
+## Resume des fichiers modifies
+
+| Fichier | Modification |
+|---------|-------------|
+| `supabase/migration` | Colonnes `display_delay` (banners) et `category_columns` (design_settings) |
+| `src/components/home/PopupBanner.tsx` | Delai configurable depuis la banniere |
+| `src/pages/admin/AdminMarketing.tsx` | Champ delai dans le formulaire popup |
+| `src/hooks/useBanners.ts` | Mapper `display_delay` |
+| `src/pages/admin/AdminSettings.tsx` | Selecteur nombre de colonnes |
+| `src/pages/Home.tsx` | Colonnes dynamiques + image mobile hero |
+| `src/pages/admin/Admin.tsx` | Sidebar responsive (hamburger mobile) |
+| `src/pages/admin/AdminDashboard.tsx` | Grilles responsive mobile |
+| `src/components/layout/MainLayout.tsx` | Header mobile + bouton notification flottant |
+| `src/types/index.ts` | Ajout `categoryColumns`, `mobileImage` dans types |
+| `src/pages/admin/AdminDesign.tsx` | Champ image mobile dans le formulaire hero |
+
+---
+
+## Ordre d'implementation
+
+1. Migration SQL (colonnes `display_delay` et `category_columns`)
+2. Popup ameliore (delai configurable)
+3. Selecteur colonnes categories
+4. Admin responsive (sidebar mobile + dashboard mobile)
+5. Header public mobile
+6. Bouton notification flottant
+7. Images mobile hero
