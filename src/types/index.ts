@@ -249,6 +249,11 @@ export interface DesignSettings {
   sidebarProductTitle: string;
   sidebarProductDescription: string;
 
+  // Sidebar multi-product slider
+  sidebarSliderEnabled?: boolean;
+  sidebarSliderSpeed?: number; // ms between slides
+  sidebarSliderMaxProducts?: number;
+
   // Mannequin hotspots
   mannequinHotspots: MannequinHotspotConfig[];
 
