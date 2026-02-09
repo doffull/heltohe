@@ -238,6 +238,9 @@ export interface DesignSettings {
   // Sidebar image opacity
   sidebarImageOpacity: number;
   
+  // Mobile sidebar image
+  mobileSidebarImage?: string;
+  
   // Configurable sizes for sidebar
   sidebarSizes: string[];
   
