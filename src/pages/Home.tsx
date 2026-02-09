@@ -32,7 +32,7 @@ const DEFAULT_HERO_SLIDES = [
   },
 ];
 
-const CATEGORIES = [
+const FALLBACK_CATEGORIES = [
   { title: 'Homme', image: catHomme, href: '/boutique?category=Homme' },
   { title: 'Femme', image: catFemme, href: '/boutique?category=Femme' },
   { title: 'Enfant', image: catEnfant, href: '/boutique?category=Enfant' },
@@ -168,7 +168,7 @@ export default function Home() {
           >
             {/* Background Layer (slowest parallax) */}
             {('mediaType' in s && s.mediaType === 'video') ? (
-              <motion.div className="absolute inset-0 will-change-transform" style={{ y: heroY, scale: heroScale, opacity: designSettings.sliderImageOpacity ?? 1 }}>
+              <motion.div className="absolute inset-0 will-change-transform" style={{ y: heroY, scale: heroScale }}>
                 <video src={s.image} autoPlay muted loop playsInline className="w-full h-full object-cover" />
               </motion.div>
             ) : (
@@ -178,7 +178,6 @@ export default function Home() {
                   backgroundImage: `url(${s.image})`,
                   y: heroY,
                   scale: heroScale,
-                  opacity: designSettings.sliderImageOpacity ?? 1,
                 }}
               />
             )}
@@ -186,7 +185,7 @@ export default function Home() {
             {/* Midground Layer */}
             {'midgroundMedia' in s && (s as any).midgroundMedia && (
               <motion.div className="absolute inset-0 z-[1] will-change-transform" style={{ y: heroMgY }}>
-                <img src={(s as any).midgroundMedia} alt="" className="w-full h-full object-cover mix-blend-overlay opacity-60" />
+                <img src={(s as any).midgroundMedia} alt="" className="w-full h-full object-cover" />
               </motion.div>
             )}
             
@@ -290,7 +289,10 @@ export default function Home() {
           </RevealSection>
 
           <StaggerContainer className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-            {CATEGORIES.map((cat) => (
+            {(designSettings.categories?.length > 0
+              ? designSettings.categories.map(c => ({ title: c.title, image: c.image, href: `/boutique?category=${c.title}` }))
+              : FALLBACK_CATEGORIES
+            ).map((cat) => (
               <motion.div key={cat.title} variants={cardVariants}>
                 <Link
                   to={cat.href}

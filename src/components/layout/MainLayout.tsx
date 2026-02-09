@@ -30,10 +30,10 @@ interface MainLayoutProps {
 const NAV_ITEMS = [
   { href: '/', label: 'Home' },
   { href: '/boutique', label: 'Shop' },
-  { href: '/boutique?filter=new', label: 'New Arrivals' },
-  { href: '/boutique?filter=collections', label: 'Collections' },
+  { href: '/boutique?category=Homme', label: 'Homme' },
+  { href: '/boutique?category=Femme', label: 'Femme' },
+  { href: '/boutique?category=Enfant', label: 'Enfant' },
   { href: '/about', label: 'About' },
-  { href: '/contact', label: 'Contact' },
 ];
 
 

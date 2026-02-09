@@ -1,59 +1,30 @@
 import { useState } from 'react';
 import { LucideIcon, Shield, Package, Layers, Move } from 'lucide-react';
+import { useApp } from '@/context/AppContext';
+import { MannequinHotspotConfig } from '@/types';
 
-interface HotspotData {
-  id: string;
-  x: string;
-  y: string;
-  label: string;
-  details: string;
-  Icon: LucideIcon;
-}
+const ICON_MAP: Record<string, LucideIcon> = {
+  Shield,
+  Package,
+  Layers,
+  Move,
+};
 
-const HOTSPOTS: HotspotData[] = [
-  {
-    id: 'collar',
-    x: '50%',
-    y: '15%',
-    label: 'COL TECHNIQUE',
-    details: 'Protection coupe-vent intégrée',
-    Icon: Shield,
-  },
-  {
-    id: 'pocket',
-    x: '30%',
-    y: '45%',
-    label: 'POCHE TACTIQUE',
-    details: 'Accès rapide sécurisé',
-    Icon: Package,
-  },
-  {
-    id: 'fabric',
-    x: '70%',
-    y: '60%',
-    label: 'TISSU TECHNIQUE',
-    details: 'Gore-Tex Pro imperméabilité',
-    Icon: Layers,
-  },
-  {
-    id: 'hem',
-    x: '50%',
-    y: '85%',
-    label: 'OURLET AJUSTABLE',
-    details: 'Cordon élastique intégré',
-    Icon: Move,
-  },
+const DEFAULT_HOTSPOTS: MannequinHotspotConfig[] = [
+  { id: 'collar', x: '50%', y: '15%', label: 'COL TECHNIQUE', details: 'Protection coupe-vent intégrée', icon: 'Shield' },
+  { id: 'pocket', x: '30%', y: '45%', label: 'POCHE TACTIQUE', details: 'Accès rapide sécurisé', icon: 'Package' },
+  { id: 'fabric', x: '70%', y: '60%', label: 'TISSU TECHNIQUE', details: 'Gore-Tex Pro imperméabilité', icon: 'Layers' },
+  { id: 'hem', x: '50%', y: '85%', label: 'OURLET AJUSTABLE', details: 'Cordon élastique intégré', icon: 'Move' },
 ];
 
 interface HotspotProps {
-  hotspot: HotspotData;
+  hotspot: MannequinHotspotConfig;
 }
 
 function Hotspot({ hotspot }: HotspotProps) {
   const [isHovered, setIsHovered] = useState(false);
-  const { Icon } = hotspot;
+  const Icon = ICON_MAP[hotspot.icon] || Shield;
 
-  // Determine tooltip position based on hotspot location
   const xNum = parseInt(hotspot.x);
   const tooltipPosition = xNum > 50 ? 'right' : 'left';
 
@@ -80,9 +51,14 @@ function Hotspot({ hotspot }: HotspotProps) {
 }
 
 export function MannequinHotspots() {
+  const { designSettings } = useApp();
+  const hotspots = designSettings.mannequinHotspots?.length > 0
+    ? designSettings.mannequinHotspots
+    : DEFAULT_HOTSPOTS;
+
   return (
     <>
-      {HOTSPOTS.map((hotspot) => (
+      {hotspots.map((hotspot) => (
         <Hotspot key={hotspot.id} hotspot={hotspot} />
       ))}
     </>
