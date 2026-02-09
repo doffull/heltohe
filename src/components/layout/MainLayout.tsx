@@ -69,13 +69,14 @@ export function MainLayout({ children }: MainLayoutProps) {
   const showSidebar = isHomePage;
   const sidebarActive = showSidebar && desktopSidebarOpen;
 
-  // Auto-open sidebar after 10 seconds on home page
+  // Auto-open sidebar after configurable delay on home page
+  const sidebarDelay = (designSettings as any).sidebarDelay || 10000;
   useEffect(() => {
     if (isHomePage) {
-      const timer = setTimeout(() => setDesktopSidebarOpen(true), 10000);
+      const timer = setTimeout(() => setDesktopSidebarOpen(true), sidebarDelay);
       return () => clearTimeout(timer);
     }
-  }, [isHomePage]);
+  }, [isHomePage, sidebarDelay]);
 
   // Admin notifications - unread messages
   const { data: messages = [] } = useQuery({
@@ -263,7 +264,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
               {/* Mobile Menu */}
               <Sheet>
-                <SheetTrigger asChild className="lg:hidden">
+                <SheetTrigger asChild className={headerPreset === 'minimal' ? '' : 'lg:hidden'}>
                   <Button variant="ghost" size="icon">
                     <Menu className="h-5 w-5" />
                   </Button>
@@ -440,8 +441,8 @@ export function MainLayout({ children }: MainLayoutProps) {
       {/* Main Content */}
       <main className={cn(
         "transition-all duration-500",
-        headerFixed ? "pt-14 lg:pt-20" : "",
-        topBanner.enabled ? "pt-[calc(theme(spacing.14)+2rem)] lg:pt-[calc(theme(spacing.20)+2rem)]" : "",
+        isHomePage ? "" : (headerFixed ? "pt-14 lg:pt-20" : ""),
+        !isHomePage && topBanner.enabled ? "pt-[calc(theme(spacing.14)+2rem)] lg:pt-[calc(theme(spacing.20)+2rem)]" : "",
         sidebarActive ? "lg:ml-[35%]" : "lg:ml-0"
       )}>
         {children}

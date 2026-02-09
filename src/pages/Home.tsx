@@ -97,6 +97,12 @@ export default function Home() {
   const { designSettings } = useApp();
   const isMobile = useIsMobile();
 
+  // Dynamic spacing
+  const siteSpacing = (designSettings as any).siteSpacing || 'compact';
+  const sectionPy = siteSpacing === 'spacious' ? 'py-8 lg:py-20' : siteSpacing === 'normal' ? 'py-4 lg:py-10' : 'py-1 lg:py-4';
+  const titleMb = siteSpacing === 'spacious' ? 'mb-6 lg:mb-10' : siteSpacing === 'normal' ? 'mb-4 lg:mb-8' : 'mb-2 lg:mb-4';
+  const sliderHeight = (designSettings as any).sliderHeight || '100vh';
+
   // Determine slides: use admin-configured slides if they have valid media, otherwise use defaults
   const adminSlides = designSettings.heroSlides?.filter(s => s.media || s.backgroundMedia);
   const hasAdminSlides = adminSlides && adminSlides.length > 0;
@@ -166,7 +172,7 @@ export default function Home() {
       {/* ═══════════════ PROMO BANNER ═══════════════ */}
       <PromoBanner />
       {/* ═══════════════ HERO PARALLAX ═══════════════ */}
-      <section ref={heroRef} className={cn("relative h-[100vh] overflow-hidden", hasAdminSlides && designSettings.sliderGrayscale && "grayscale")}>
+      <section ref={heroRef} className={cn("relative overflow-hidden", hasAdminSlides && designSettings.sliderGrayscale && "grayscale")} style={{ height: sliderHeight }}>
         {heroSlides.map((s, i) => (
           <div
             key={i}
@@ -286,10 +292,10 @@ export default function Home() {
       </section>
 
       {/* ═══════════════ CATEGORIES GRID ═══════════════ */}
-      <section className="py-4 lg:py-16">
+      <section className={sectionPy}>
         <div className="container mx-auto px-4">
           <RevealSection>
-            <div className="flex items-end justify-between mb-4 lg:mb-8">
+            <div className={cn("flex items-end justify-between", titleMb)}>
               <div>
                 <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-2">// COLLECTIONS</p>
                 <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight">Catégories</h2>
@@ -342,10 +348,10 @@ export default function Home() {
       </section>
 
       {/* ═══════════════ FEATURED PRODUCTS ═══════════════ */}
-      <section className="py-4 lg:py-16 bg-secondary/30">
+      <section className={cn(sectionPy, "bg-secondary/30")}>
         <div className="container mx-auto px-4">
           <RevealSection>
-            <div className="flex items-end justify-between mb-4 lg:mb-8">
+            <div className={cn("flex items-end justify-between", titleMb)}>
               <div>
                 <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-2">// SÉLECTION</p>
                 <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight">En vedette</h2>
@@ -423,10 +429,10 @@ export default function Home() {
       </section>
 
       {/* ═══════════════ NEW ARRIVALS ═══════════════ */}
-      <section className="py-4 lg:py-16">
+      <section className={sectionPy}>
         <div className="container mx-auto px-4">
           <RevealSection>
-            <div className="text-center mb-4 lg:mb-8">
+            <div className={cn("text-center", titleMb)}>
               <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-2">// NOUVEAUTÉS</p>
               <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight">Dernières arrivées</h2>
             </div>
@@ -462,7 +468,7 @@ export default function Home() {
             ))}
           </StaggerContainer>
 
-          <RevealSection delay={0.3} className="text-center mt-6 lg:mt-12">
+          <RevealSection delay={0.3} className="text-center mt-4 lg:mt-6">
             <Button
               size="lg"
               variant="outline"
@@ -478,7 +484,7 @@ export default function Home() {
 
       {/* ═══════════════ NEWSLETTER CTA ═══════════════ */}
       <RevealSection>
-        <section className="py-6 lg:py-16 bg-foreground text-background">
+        <section className={cn(sectionPy, "bg-foreground text-background")}>
           <div className="container mx-auto px-4 text-center">
             <p className="font-mono text-xs tracking-[0.3em] text-background/50 mb-4">// NEWSLETTER</p>
             <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight mb-4">
