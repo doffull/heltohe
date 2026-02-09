@@ -3,6 +3,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { useApp } from '@/context/AppContext';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MannequinHotspots } from './MannequinHotspot';
@@ -15,13 +17,17 @@ import {
   X,
   ChevronRight,
   PanelLeft,
-  Shield
+  Shield,
+  Bell,
+  Check
 } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -44,13 +50,39 @@ export function MainLayout({ children }: MainLayoutProps) {
   const { designSettings } = useApp();
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Admin notifications - unread messages
+  const { data: messages = [] } = useQuery({
+    queryKey: ['admin-messages'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!isAdmin,
+  });
+
+  const markRead = useMutation({
+    mutationFn: async (id: string) => {
+      await supabase.from('messages').update({ is_read: true }).eq('id', id);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-messages'] }),
+  });
+
+  const unreadCount = messages.filter(m => !m.is_read).length;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      {/* Logo Wrapper - Beveled octagonal shape */}
+      {/* Logo Wrapper - Beveled octagonal shape - Hidden on mobile */}
       {designSettings.showLogo !== false && (
-        <div className="logo-wrapper">
+        <div className="logo-wrapper hidden lg:flex">
           <Link to="/" className="logo-link">
             {designSettings.hudLogo ? (
               <img src={designSettings.hudLogo} alt="Logo" className="h-10 w-auto object-contain" />
@@ -63,7 +95,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       <header className="fixed top-0 left-0 right-0 z-40 bg-background border-b border-border header-container">
         <div className="container mx-auto px-4">
-          <div className="flex items-center h-20 pl-[180px]">
+          <div className="flex items-center h-16 lg:h-20 pl-0 lg:pl-[180px]">
 
             {/* Desktop Navigation - Centered */}
             <nav className="hidden lg:flex items-center gap-8">
@@ -253,8 +285,53 @@ export function MainLayout({ children }: MainLayoutProps) {
         <SidebarProductHUD />
       </div>
 
+      {/* Admin Notification Bell */}
+      {isAdmin && (
+        <Sheet open={notifOpen} onOpenChange={setNotifOpen}>
+          <SheetTrigger asChild>
+            <button className="fixed bottom-6 right-6 z-[60] w-12 h-12 bg-foreground text-background flex items-center justify-center rounded-full shadow-lg hover:scale-105 transition-transform">
+              <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs w-5 h-5 flex items-center justify-center rounded-full font-bold">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-[360px] bg-background p-0">
+            <div className="p-4 border-b border-border">
+              <h3 className="font-bold text-lg">Messages clients</h3>
+              <p className="text-xs text-muted-foreground">{unreadCount} non lu{unreadCount > 1 ? 's' : ''}</p>
+            </div>
+            <div className="overflow-y-auto max-h-[calc(100vh-80px)]">
+              {messages.length === 0 ? (
+                <p className="text-muted-foreground text-center py-12">Aucun message</p>
+              ) : messages.map((msg) => (
+                <div key={msg.id} className={`p-4 border-b border-border ${!msg.is_read ? 'bg-primary/5' : ''}`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{msg.name}</p>
+                      <p className="text-xs text-muted-foreground">{msg.email}</p>
+                      <p className="text-sm mt-1 line-clamp-2">{msg.message}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {format(new Date(msg.created_at), 'dd MMM yyyy HH:mm', { locale: fr })}
+                      </p>
+                    </div>
+                    {!msg.is_read && (
+                      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => markRead.mutate(msg.id)}>
+                        <Check className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
+
       {/* Main Content */}
-      <main className="pt-20 lg:ml-[35%]">
+      <main className="pt-16 lg:pt-20 lg:ml-[35%]">
         {children}
       </main>
 

@@ -78,6 +78,7 @@ export type Database = {
           button_text: string | null
           created_at: string
           description: string | null
+          display_delay: number | null
           ends_at: string | null
           id: string
           image: string | null
@@ -94,6 +95,7 @@ export type Database = {
           button_text?: string | null
           created_at?: string
           description?: string | null
+          display_delay?: number | null
           ends_at?: string | null
           id?: string
           image?: string | null
@@ -110,6 +112,7 @@ export type Database = {
           button_text?: string | null
           created_at?: string
           description?: string | null
+          display_delay?: number | null
           ends_at?: string | null
           id?: string
           image?: string | null
@@ -245,6 +248,7 @@ export type Database = {
           accent_color: string | null
           background_media: Json | null
           background_watermark: string | null
+          category_columns: number | null
           click_scale: number | null
           created_at: string
           custom_unit_id: string | null
@@ -289,6 +293,7 @@ export type Database = {
           accent_color?: string | null
           background_media?: Json | null
           background_watermark?: string | null
+          category_columns?: number | null
           click_scale?: number | null
           created_at?: string
           custom_unit_id?: string | null
@@ -333,6 +338,7 @@ export type Database = {
           accent_color?: string | null
           background_media?: Json | null
           background_watermark?: string | null
+          category_columns?: number | null
           click_scale?: number | null
           created_at?: string
           custom_unit_id?: string | null

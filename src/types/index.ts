@@ -120,6 +120,7 @@ export interface HeroSlide {
   backgroundMedia?: string;
   midgroundMedia?: string;
   foregroundMedia?: string;
+  mobileImage?: string;
 }
 
 export interface SocialLink {

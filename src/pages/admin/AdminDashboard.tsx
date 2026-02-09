@@ -123,10 +123,10 @@ export default function AdminDashboard() {
       </div>
 
       {/* Charts */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        <div className="chamfer-hud bg-card/50 p-6">
-          <h3 className="text-lg font-bold hud-text mb-6">ÉVOLUTION DES VENTES</h3>
-          <div className="h-[300px]">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="chamfer-hud bg-card/50 p-4 lg:p-6">
+          <h3 className="text-lg font-bold hud-text mb-4 lg:mb-6">ÉVOLUTION DES VENTES</h3>
+          <div className="h-[220px] lg:h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={salesData}>
                 <defs>
@@ -145,9 +145,9 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="chamfer-hud bg-card/50 p-6">
-          <h3 className="text-lg font-bold hud-text mb-6">PRODUITS PAR CATÉGORIE</h3>
-          <div className="h-[300px]">
+        <div className="chamfer-hud bg-card/50 p-4 lg:p-6">
+          <h3 className="text-lg font-bold hud-text mb-4 lg:mb-6">PRODUITS PAR CATÉGORIE</h3>
+          <div className="h-[220px] lg:h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={categoryData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -162,7 +162,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Recent Activity */}
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="chamfer-hud bg-card/50 p-6">
           <h3 className="text-lg font-bold hud-text mb-6">COMMANDES RÉCENTES</h3>
           {orders.length === 0 ? (

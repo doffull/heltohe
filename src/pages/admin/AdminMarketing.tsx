@@ -40,6 +40,7 @@ function BannerForm({ banner, onSubmit, onCancel }: {
     position: banner?.position || 0,
     startsAt: banner?.startsAt?.slice(0, 16) || '',
     endsAt: banner?.endsAt?.slice(0, 16) || '',
+    displayDelay: banner?.displayDelay ?? 2000,
   });
 
   return (
@@ -91,6 +92,19 @@ function BannerForm({ banner, onSubmit, onCancel }: {
           <Label className="text-sm">Active</Label>
         </div>
       </div>
+      {form.type === 'popup' && (
+        <div className="space-y-2">
+          <Label className="hud-text text-xs">Délai d'affichage ({(form.displayDelay / 1000).toFixed(1)}s)</Label>
+          <Input
+            type="number"
+            min={0}
+            step={500}
+            value={form.displayDelay}
+            onChange={(e) => setForm(p => ({ ...p, displayDelay: Number(e.target.value) }))}
+          />
+          <p className="text-xs text-muted-foreground">En millisecondes (2000 = 2 secondes)</p>
+        </div>
+      )}
       <div className="flex justify-end gap-3 pt-4 border-t border-border">
         <Button type="button" variant="outline" onClick={onCancel}>Annuler</Button>
         <Button type="submit">Enregistrer</Button>
