@@ -65,8 +65,7 @@ function FaviconManager() {
   return null;
 }
 
-function SplashScreen({ onDone }: { onDone: () => void }) {
-  const { designSettings } = useApp();
+function SplashScreen({ onDone, logo }: { onDone: () => void; logo?: string }) {
   useEffect(() => {
     const timer = setTimeout(onDone, 1200);
     return () => clearTimeout(timer);
@@ -84,14 +83,19 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 200, damping: 20 }}
       >
-        {designSettings.hudLogo ? (
-          <img src={designSettings.hudLogo} alt="Logo" className="h-16 w-auto object-contain" />
+        {logo ? (
+          <img src={logo} alt="Logo" className="h-16 w-auto object-contain" />
         ) : (
           <span className="text-3xl font-bold tracking-widest uppercase">HMP</span>
         )}
       </motion.div>
     </motion.div>
   );
+}
+
+function SplashScreenWrapper({ onDone }: { onDone: () => void }) {
+  const { designSettings } = useApp();
+  return <SplashScreen onDone={onDone} logo={designSettings.hudLogo} />;
 }
 
 function AnimatedRoutes() {
@@ -138,7 +142,7 @@ function AppInner() {
     <AppProvider>
       <TooltipProvider>
         <AnimatePresence>
-          {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
+          {showSplash && <SplashScreenWrapper onDone={() => setShowSplash(false)} />}
         </AnimatePresence>
         <FaviconManager />
         <Toaster />
