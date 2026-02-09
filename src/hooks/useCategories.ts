@@ -4,22 +4,30 @@ import { supabase } from '@/integrations/supabase/client';
 export interface CategoryRecord {
   id: string;
   title: string;
+  slug?: string;
   image?: string;
   sortOrder: number;
   displaySize: string;
   coverMode: string;
   parentId?: string | null;
+  metaTitle?: string;
+  metaDescription?: string;
+  seoKeywords?: string;
 }
 
 function dbToCat(db: Record<string, unknown>): CategoryRecord {
   return {
     id: db.id as string,
     title: db.title as string,
+    slug: (db.slug as string) || undefined,
     image: (db.image as string) || undefined,
     sortOrder: (db.sort_order as number) || 0,
     displaySize: (db.display_size as string) || 'medium',
     coverMode: (db.cover_mode as string) || 'cover',
     parentId: (db.parent_id as string) || null,
+    metaTitle: (db.meta_title as string) || undefined,
+    metaDescription: (db.meta_description as string) || undefined,
+    seoKeywords: (db.seo_keywords as string) || undefined,
   };
 }
 
@@ -43,11 +51,15 @@ export function useCreateCategory() {
     mutationFn: async (cat: Omit<CategoryRecord, 'id'>) => {
       const { error } = await supabase.from('categories').insert({
         title: cat.title,
+        slug: cat.slug || null,
         image: cat.image || null,
         sort_order: cat.sortOrder,
         display_size: cat.displaySize || 'medium',
         cover_mode: cat.coverMode || 'cover',
         parent_id: cat.parentId || null,
+        meta_title: cat.metaTitle || null,
+        meta_description: cat.metaDescription || null,
+        seo_keywords: cat.seoKeywords || null,
       } as any);
       if (error) throw error;
     },
@@ -61,11 +73,15 @@ export function useUpdateCategory() {
     mutationFn: async ({ id, ...cat }: CategoryRecord) => {
       const { error } = await supabase.from('categories').update({
         title: cat.title,
+        slug: cat.slug || null,
         image: cat.image || null,
         sort_order: cat.sortOrder,
         display_size: cat.displaySize || 'medium',
         cover_mode: cat.coverMode || 'cover',
         parent_id: cat.parentId || null,
+        meta_title: cat.metaTitle || null,
+        meta_description: cat.metaDescription || null,
+        seo_keywords: cat.seoKeywords || null,
       } as any).eq('id', id);
       if (error) throw error;
     },

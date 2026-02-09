@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import Home from "./pages/Home";
 import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
+import BoutiqueRouter from "./pages/BoutiqueRouter";
 import Cart from "./pages/Cart";
 import Auth from "./pages/Auth";
 import Account from "./pages/Account";
@@ -108,7 +109,7 @@ function AnimatedRoutes() {
           {/* Public routes with main layout */}
           <Route path="/" element={<MainLayout><Home /></MainLayout>} />
           <Route path="/boutique" element={<MainLayout><Shop /></MainLayout>} />
-          <Route path="/boutique/:id" element={<MainLayout><ProductDetail /></MainLayout>} />
+          <Route path="/boutique/:slugOrId" element={<MainLayout><BoutiqueRouter /></MainLayout>} />
           <Route path="/panier" element={<MainLayout><Cart /></MainLayout>} />
           <Route path="/a-propos" element={<MainLayout><About /></MainLayout>} />
           

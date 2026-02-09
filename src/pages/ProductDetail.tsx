@@ -11,10 +11,11 @@ import ProductInfo from '@/components/product/ProductInfo';
 import ProductOptions from '@/components/product/ProductOptions';
 
 export default function ProductDetail() {
-  const { id } = useParams<{ id: string }>();
+  const { slugOrId, id } = useParams<{ slugOrId?: string; id?: string }>();
+  const productId = slugOrId || id || '';
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { data: product, isLoading } = useProduct(id || '');
+  const { data: product, isLoading } = useProduct(productId);
   const { addItem } = useCart();
 
   const [selectedSize, setSelectedSize] = useState<string | null>(null);

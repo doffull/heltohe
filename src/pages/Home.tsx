@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
+import { useCategories } from '@/hooks/useCategories';
 import { useCart } from '@/context/CartContext';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
@@ -36,10 +37,10 @@ const DEFAULT_HERO_SLIDES = [
 ];
 
 const FALLBACK_CATEGORIES = [
-  { title: 'Homme', image: catHomme, href: '/boutique?category=Homme' },
-  { title: 'Femme', image: catFemme, href: '/boutique?category=Femme' },
-  { title: 'Enfant', image: catEnfant, href: '/boutique?category=Enfant' },
-  { title: 'Accessoires', image: catAccessoires, href: '/boutique?category=Accessoires' },
+  { title: 'Homme', image: catHomme, href: '/boutique/homme' },
+  { title: 'Femme', image: catFemme, href: '/boutique/femme' },
+  { title: 'Enfant', image: catEnfant, href: '/boutique/enfant' },
+  { title: 'Accessoires', image: catAccessoires, href: '/boutique/accessoires' },
 ];
 
 // Reusable scroll-reveal wrapper
@@ -95,6 +96,7 @@ export default function Home() {
   const { data: products = [] } = useProducts();
   const { addItem } = useCart();
   const { designSettings } = useApp();
+  const { data: dbCategories = [] } = useCategories();
   const isMobile = useIsMobile();
 
   // Dynamic spacing
@@ -314,10 +316,15 @@ export default function Home() {
             ((designSettings as any).categoryLayout?.columns || (designSettings as any).categoryColumns) === 3 ? "grid-cols-2 lg:grid-cols-3" :
             "grid-cols-2 lg:grid-cols-4"
           )}>
-            {(designSettings.categories?.length > 0
-              ? designSettings.categories.map(c => ({ title: c.title, image: c.image, href: `/boutique?category=${c.title}` }))
-              : FALLBACK_CATEGORIES
-            ).map((cat) => {
+            {(() => {
+              const rootCats = dbCategories.filter(c => !c.parentId);
+              const cats = rootCats.length > 0
+                ? rootCats.map(c => ({ title: c.title, image: c.image || '/placeholder.svg', href: `/boutique/${c.slug || encodeURIComponent(c.title.toLowerCase())}` }))
+                : designSettings.categories?.length > 0
+                  ? designSettings.categories.map(c => ({ title: c.title, image: c.image, href: `/boutique/${encodeURIComponent(c.title.toLowerCase())}` }))
+                  : FALLBACK_CATEGORIES;
+              return cats;
+            })().map((cat) => {
               const ar = (designSettings as any).categoryLayout?.aspectRatio || '3/4';
               return (
               <motion.div key={cat.title} variants={cardVariants}>

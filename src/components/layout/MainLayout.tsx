@@ -5,6 +5,7 @@ import { useCart } from '@/context/CartContext';
 import { useApp } from '@/context/AppContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useCategories } from '@/hooks/useCategories';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -38,9 +39,6 @@ interface MainLayoutProps {
 const DEFAULT_NAV_ITEMS = [
   { href: '/', label: 'Accueil' },
   { href: '/boutique', label: 'Boutique' },
-  { href: '/boutique?category=Homme', label: 'Homme' },
-  { href: '/boutique?category=Femme', label: 'Femme' },
-  { href: '/boutique?category=Enfant', label: 'Enfant' },
   { href: '/a-propos', label: 'À Propos' },
 ];
 
@@ -54,6 +52,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const queryClient = useQueryClient();
+  const { data: dbCategories = [] } = useCategories();
 
   const isHomePage = location.pathname === '/';
 
@@ -64,7 +63,24 @@ export function MainLayout({ children }: MainLayoutProps) {
   const topBanner = (designSettings as any).topBanner || { enabled: false, text: '', bgColor: '#000000', textColor: '#ffffff' };
   const footerLogo = (designSettings as any).footerLogo || '';
   const headerNavItems: { label: string; href: string }[] = (designSettings as any).headerNavItems;
-  const navItems = headerNavItems && headerNavItems.length > 0 ? headerNavItems : DEFAULT_NAV_ITEMS;
+
+  // Build dynamic nav items with DB categories
+  const categoryNavItems = dbCategories
+    .filter(c => !c.parentId)
+    .map(c => ({
+      href: `/boutique/${c.slug || encodeURIComponent(c.title.toLowerCase())}`,
+      label: c.title,
+    }));
+
+  const baseNavItems = headerNavItems && headerNavItems.length > 0 ? headerNavItems : DEFAULT_NAV_ITEMS;
+  // Insert category items after "Boutique" if they exist
+  const navItems = categoryNavItems.length > 0
+    ? [
+        ...baseNavItems.filter(i => i.href === '/' || i.href === '/boutique'),
+        ...categoryNavItems,
+        ...baseNavItems.filter(i => i.href !== '/' && i.href !== '/boutique'),
+      ]
+    : baseNavItems;
 
   const showSidebar = isHomePage;
   const sidebarActive = showSidebar && desktopSidebarOpen;
@@ -281,19 +297,49 @@ export function MainLayout({ children }: MainLayoutProps) {
                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     </div>
 
-                    {/* Mobile Nav */}
-                    {navItems.map((item) => (
-                      <Link
-                        key={item.href}
-                        to={item.href}
-                        className={`flex items-center justify-between py-3 text-lg font-medium uppercase tracking-wider border-b border-border ${
-                          location.pathname === item.href ? 'text-foreground' : 'text-muted-foreground'
-                        }`}
-                      >
-                        {item.label}
-                        <ChevronRight className="h-5 w-5" />
-                      </Link>
-                    ))}
+                    {/* Nav Links */}
+                    <Link to="/" className="flex items-center justify-between py-3 text-lg font-medium uppercase tracking-wider border-b border-border text-muted-foreground">
+                      Accueil <ChevronRight className="h-5 w-5" />
+                    </Link>
+                    <Link to="/boutique" className="flex items-center justify-between py-3 text-lg font-medium uppercase tracking-wider border-b border-border text-muted-foreground">
+                      Boutique <ChevronRight className="h-5 w-5" />
+                    </Link>
+
+                    {/* Dynamic Categories with subcategories */}
+                    {dbCategories.filter(c => !c.parentId).map((cat) => {
+                      const subs = dbCategories.filter(c => c.parentId === cat.id);
+                      const catHref = `/boutique/${cat.slug || encodeURIComponent(cat.title.toLowerCase())}`;
+                      return (
+                        <div key={cat.id}>
+                          <Link
+                            to={catHref}
+                            className={`flex items-center justify-between py-3 text-lg font-medium uppercase tracking-wider border-b border-border ${
+                              location.pathname === catHref ? 'text-foreground' : 'text-muted-foreground'
+                            }`}
+                          >
+                            {cat.title}
+                            <ChevronRight className="h-5 w-5" />
+                          </Link>
+                          {subs.length > 0 && (
+                            <div className="pl-4">
+                              {subs.map(sub => (
+                                <Link
+                                  key={sub.id}
+                                  to={`/boutique/${sub.slug || encodeURIComponent(sub.title.toLowerCase())}`}
+                                  className="flex items-center justify-between py-2 text-sm font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                                >
+                                  {sub.title}
+                                </Link>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    <Link to="/a-propos" className="flex items-center justify-between py-3 text-lg font-medium uppercase tracking-wider border-b border-border text-muted-foreground">
+                      À Propos <ChevronRight className="h-5 w-5" />
+                    </Link>
 
                     <div className="mt-4 pt-4 border-t border-border">
                       <Link to="/panier" className="flex items-center justify-between py-3">
