@@ -6,118 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Pencil, Trash2, MoreHorizontal, LayoutGrid, Settings, Paintbrush } from 'lucide-react';
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
+import { CategoryFormDialog } from '@/components/admin/CategoryFormDialog';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-function CategoryForm({ category, categories, onSubmit, onCancel }: {
-  category?: CategoryRecord;
-  categories: CategoryRecord[];
-  onSubmit: (data: Omit<CategoryRecord, 'id'>) => void;
-  onCancel: () => void;
-}) {
-  const [form, setForm] = useState({
-    title: category?.title || '',
-    slug: category?.slug || '',
-    image: category?.image || '',
-    sortOrder: category?.sortOrder || 0,
-    displaySize: category?.displaySize || 'medium',
-    coverMode: category?.coverMode || 'cover',
-    parentId: category?.parentId || '',
-    metaTitle: category?.metaTitle || '',
-    metaDescription: category?.metaDescription || '',
-    seoKeywords: category?.seoKeywords || '',
-  });
-
-  // Only show root categories as potential parents (exclude self and own children)
-  const parentOptions = categories.filter(c => !c.parentId && c.id !== category?.id);
-
-  return (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit({ ...form, parentId: form.parentId || null, slug: form.slug || undefined, metaTitle: form.metaTitle || undefined, metaDescription: form.metaDescription || undefined, seoKeywords: form.seoKeywords || undefined }); }} className="space-y-4">
-      <div className="space-y-2">
-        <Label className="hud-text text-xs">Nom de la catégorie *</Label>
-        <Input value={form.title} onChange={(e) => setForm(p => ({ ...p, title: e.target.value }))} required />
-      </div>
-      <div className="space-y-2">
-        <Label className="hud-text text-xs">Slug URL</Label>
-        <Input value={form.slug} onChange={(e) => setForm(p => ({ ...p, slug: e.target.value }))} placeholder="auto-généré si vide" />
-        <p className="text-[10px] text-muted-foreground">URL propre : /boutique/{form.slug || '...'}</p>
-      </div>
-      <div className="space-y-2">
-        <Label className="hud-text text-xs">Catégorie parente</Label>
-        <select
-          value={form.parentId}
-          onChange={(e) => setForm(p => ({ ...p, parentId: e.target.value }))}
-          className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm"
-        >
-          <option value="">— Aucune (catégorie principale) —</option>
-          {parentOptions.map(c => (
-            <option key={c.id} value={c.id}>{c.title}</option>
-          ))}
-        </select>
-      </div>
-      <div className="space-y-2">
-        <Label className="hud-text text-xs">Image URL</Label>
-        <Input value={form.image} onChange={(e) => setForm(p => ({ ...p, image: e.target.value }))} />
-        {form.image && <img src={form.image} alt="Preview" className="h-20 object-cover border border-border" />}
-      </div>
-      <div className="space-y-2">
-        <Label className="hud-text text-xs">Ordre d'affichage</Label>
-        <Input type="number" value={form.sortOrder} onChange={(e) => setForm(p => ({ ...p, sortOrder: Number(e.target.value) }))} />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label className="hud-text text-xs">Taille d'affichage</Label>
-          <select value={form.displaySize} onChange={e => setForm(p => ({ ...p, displaySize: e.target.value }))} className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm">
-            <option value="small">Petit</option>
-            <option value="medium">Moyen</option>
-            <option value="large">Grand</option>
-          </select>
-        </div>
-        <div className="space-y-2">
-          <Label className="hud-text text-xs">Mode image</Label>
-          <select value={form.coverMode} onChange={e => setForm(p => ({ ...p, coverMode: e.target.value }))} className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm">
-            <option value="cover">Cover</option>
-            <option value="contain">Contain</option>
-          </select>
-        </div>
-      </div>
-
-      {/* SEO Fields */}
-      <div className="pt-4 border-t border-border space-y-3">
-        <p className="hud-text text-xs text-muted-foreground">// SEO & RÉFÉRENCEMENT</p>
-        <div className="space-y-2">
-          <Label className="hud-text text-xs">Titre SEO (meta title)</Label>
-          <Input value={form.metaTitle} onChange={(e) => setForm(p => ({ ...p, metaTitle: e.target.value }))} placeholder="Titre pour les moteurs de recherche" />
-          <p className="text-[10px] text-muted-foreground">{form.metaTitle?.length || 0}/60 caractères</p>
-        </div>
-        <div className="space-y-2">
-          <Label className="hud-text text-xs">Meta description</Label>
-          <textarea
-            value={form.metaDescription}
-            onChange={(e) => setForm(p => ({ ...p, metaDescription: e.target.value }))}
-            placeholder="Description pour les moteurs de recherche"
-            className="w-full h-20 rounded-md border border-border bg-background px-3 py-2 text-sm resize-none"
-          />
-          <p className="text-[10px] text-muted-foreground">{form.metaDescription?.length || 0}/160 caractères</p>
-        </div>
-        <div className="space-y-2">
-          <Label className="hud-text text-xs">Mots-clés SEO</Label>
-          <Input value={form.seoKeywords} onChange={(e) => setForm(p => ({ ...p, seoKeywords: e.target.value }))} placeholder="mot1, mot2, mot3" />
-        </div>
-      </div>
-
-      <div className="flex justify-end gap-3 pt-4 border-t border-border">
-        <Button type="button" variant="outline" onClick={onCancel}>Annuler</Button>
-        <Button type="submit">Enregistrer</Button>
-      </div>
-    </form>
-  );
-}
+// CategoryForm moved to CategoryFormDialog component
 
 export default function AdminSettings() {
   const { toast } = useToast();
@@ -454,15 +349,13 @@ export default function AdminSettings() {
         </TabsContent>
       </Tabs>
 
-      {/* Category Dialog */}
-      <Dialog open={catDialogOpen} onOpenChange={setCatDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="hud-text">{editingCat ? 'MODIFIER LA CATÉGORIE' : 'NOUVELLE CATÉGORIE'}</DialogTitle>
-          </DialogHeader>
-          <CategoryForm category={editingCat || undefined} categories={categories} onSubmit={handleCatSubmit} onCancel={() => setCatDialogOpen(false)} />
-        </DialogContent>
-      </Dialog>
+      <CategoryFormDialog
+        open={catDialogOpen}
+        onOpenChange={(v) => { setCatDialogOpen(v); if (!v) setEditingCat(null); }}
+        category={editingCat || undefined}
+        categories={categories}
+        onSubmit={handleCatSubmit}
+      />
     </div>
   );
 }
