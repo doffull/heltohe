@@ -28,6 +28,7 @@ import { MainLayout } from "./components/layout/MainLayout";
 
 const queryClient = new QueryClient();
 
+
 const pageVariants = {
   initial: { opacity: 0, y: 60 },
   animate: { opacity: 1, y: 0 },
