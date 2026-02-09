@@ -281,6 +281,31 @@ export function HeaderDesignTab() {
               onCheckedChange={(v) => updateTopBanner({ enabled: v })}
             />
           </div>
+          {/* Banner Presets */}
+          {topBanner.enabled && (
+            <div>
+              <Label className="text-xs font-semibold uppercase tracking-wider mb-2 block">Presets bannière</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'promo', name: 'Promo simple', bg: '#f5f5f5', text: '#000000' },
+                  { id: 'urgent', name: 'Urgent', bg: '#dc2626', text: '#ffffff' },
+                  { id: 'elegant', name: 'Élégant', bg: '#000000', text: '#d4a843' },
+                ].map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      updateTopBanner({ bgColor: p.bg, textColor: p.text });
+                      toast.success(`Preset "${p.name}" appliqué`);
+                    }}
+                    className="border border-border hover:border-primary/50 rounded p-2 text-left transition-all"
+                  >
+                    <div className="h-4 rounded mb-1" style={{ backgroundColor: p.bg, border: '1px solid #ddd' }} />
+                    <p className="text-xs font-medium">{p.name}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {topBanner.enabled && (
             <>
               <div className="space-y-2">

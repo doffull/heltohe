@@ -255,6 +255,14 @@ export interface DesignSettings {
   // Category grid columns
   categoryColumns?: number;
 
+  // Category layout preset
+  categoryLayout?: {
+    preset: string;
+    columns: number;
+    aspectRatio: string;
+    gap: string;
+  };
+
   // Header preset
   headerPreset?: string;
   headerBgColor?: string;

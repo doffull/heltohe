@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
@@ -51,7 +51,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const { designSettings, language, setLanguage } = useApp();
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const queryClient = useQueryClient();
 
@@ -68,6 +68,14 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   const showSidebar = isHomePage;
   const sidebarActive = showSidebar && desktopSidebarOpen;
+
+  // Auto-open sidebar after 10 seconds on home page
+  useEffect(() => {
+    if (isHomePage) {
+      const timer = setTimeout(() => setDesktopSidebarOpen(true), 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [isHomePage]);
 
   // Admin notifications - unread messages
   const { data: messages = [] } = useQuery({
@@ -98,7 +106,10 @@ export function MainLayout({ children }: MainLayoutProps) {
       {/* Top Banner */}
       {topBanner.enabled && topBanner.text && (
         <div
-          className="text-center text-xs py-2 px-4 font-medium tracking-wider"
+          className={cn(
+            "text-center text-xs py-2 px-4 font-medium tracking-wider transition-all duration-500",
+            sidebarActive ? "lg:ml-[35%]" : "lg:ml-0"
+          )}
           style={{ backgroundColor: topBanner.bgColor || '#000', color: topBanner.textColor || '#fff' }}
         >
           {topBanner.link ? (
@@ -109,7 +120,10 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Logo Wrapper - Only on home page with sidebar */}
       {designSettings.showLogo !== false && showSidebar && (
-        <div className="logo-wrapper hidden lg:flex">
+        <div className={cn(
+          "logo-wrapper hidden lg:flex transition-all duration-500",
+          sidebarActive ? "lg:ml-[35%]" : "lg:ml-0"
+        )}>
           <Link to="/" className="logo-link">
             {designSettings.hudLogo ? (
               <img src={designSettings.hudLogo} alt="Logo" className="h-10 w-auto object-contain" />
@@ -122,9 +136,10 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       <header
         className={cn(
-          "top-0 left-0 right-0 z-40 border-b border-border header-container transition-all",
+          "top-0 left-0 right-0 z-40 border-b border-border header-container transition-all duration-500",
           headerFixed ? "fixed" : "sticky",
-          headerPreset === 'transparent' ? "bg-transparent border-transparent" : "bg-background"
+          headerPreset === 'transparent' ? "bg-transparent border-transparent" : "bg-background",
+          sidebarActive ? "lg:ml-[35%]" : "lg:ml-0"
         )}
         style={{
           backgroundColor: headerPreset === 'transparent' ? 'transparent' : (headerBgColor || undefined),
@@ -135,7 +150,6 @@ export function MainLayout({ children }: MainLayoutProps) {
           <div className={cn(
             "flex items-center h-14 lg:h-20",
             headerPreset === 'centered' ? "flex-col justify-center gap-1 h-auto py-3 lg:py-4" : "",
-            headerPreset === 'classic' && sidebarActive ? "pl-0 lg:pl-[180px]" : "",
             headerPreset === 'fullwidth' ? "gap-6" : "",
           )}>
             {/* Logo in header - always visible when no sidebar, or on mobile */}
