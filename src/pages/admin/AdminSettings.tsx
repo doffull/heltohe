@@ -22,6 +22,8 @@ function CategoryForm({ category, onSubmit, onCancel }: {
     title: category?.title || '',
     image: category?.image || '',
     sortOrder: category?.sortOrder || 0,
+    displaySize: category?.displaySize || 'medium',
+    coverMode: category?.coverMode || 'cover',
   });
 
   return (
@@ -38,6 +40,23 @@ function CategoryForm({ category, onSubmit, onCancel }: {
       <div className="space-y-2">
         <Label className="hud-text text-xs">Ordre d'affichage</Label>
         <Input type="number" value={form.sortOrder} onChange={(e) => setForm(p => ({ ...p, sortOrder: Number(e.target.value) }))} />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label className="hud-text text-xs">Taille d'affichage</Label>
+          <select value={form.displaySize} onChange={e => setForm(p => ({ ...p, displaySize: e.target.value }))} className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm">
+            <option value="small">Petit</option>
+            <option value="medium">Moyen</option>
+            <option value="large">Grand</option>
+          </select>
+        </div>
+        <div className="space-y-2">
+          <Label className="hud-text text-xs">Mode image</Label>
+          <select value={form.coverMode} onChange={e => setForm(p => ({ ...p, coverMode: e.target.value }))} className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm">
+            <option value="cover">Cover</option>
+            <option value="contain">Contain</option>
+          </select>
+        </div>
       </div>
       <div className="flex justify-end gap-3 pt-4 border-t border-border">
         <Button type="button" variant="outline" onClick={onCancel}>Annuler</Button>

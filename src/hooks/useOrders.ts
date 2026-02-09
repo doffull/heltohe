@@ -26,6 +26,8 @@ function dbToAppOrder(db: Record<string, unknown>): Order {
     paymentStatus: db.payment_status as PaymentStatus,
     paymentMethod: (db.payment_method as string) || undefined,
     notes: (db.notes as string) || undefined,
+    trackingNumber: (db.tracking_number as string) || undefined,
+    shippingCarrier: (db.shipping_carrier as string) || undefined,
   };
 }
 
@@ -90,6 +92,43 @@ export function useUpdatePaymentStatus() {
       const { data, error } = await supabase
         .from('orders')
         .update({ payment_status: paymentStatus })
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return dbToAppOrder(data as Record<string, unknown>);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    },
+  });
+}
+
+export function useUpdateOrder() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, ...fields }: { 
+      id: string; 
+      status?: OrderStatus;
+      paymentStatus?: PaymentStatus;
+      paymentMethod?: string;
+      notes?: string;
+      trackingNumber?: string;
+      shippingCarrier?: string;
+    }) => {
+      const updateData: Record<string, unknown> = {};
+      if (fields.status !== undefined) updateData.status = fields.status;
+      if (fields.paymentStatus !== undefined) updateData.payment_status = fields.paymentStatus;
+      if (fields.paymentMethod !== undefined) updateData.payment_method = fields.paymentMethod;
+      if (fields.notes !== undefined) updateData.notes = fields.notes;
+      if (fields.trackingNumber !== undefined) updateData.tracking_number = fields.trackingNumber;
+      if (fields.shippingCarrier !== undefined) updateData.shipping_carrier = fields.shippingCarrier;
+
+      const { data, error } = await supabase
+        .from('orders')
+        .update(updateData)
         .eq('id', id)
         .select()
         .single();

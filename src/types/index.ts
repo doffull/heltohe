@@ -67,6 +67,8 @@ export interface Order {
   paymentStatus: PaymentStatus;
   paymentMethod?: string;
   notes?: string;
+  trackingNumber?: string;
+  shippingCarrier?: string;
 }
 
 export type AnimationType = 'glitch' | 'pulse' | 'fade' | 'none';

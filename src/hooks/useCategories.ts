@@ -6,6 +6,8 @@ export interface CategoryRecord {
   title: string;
   image?: string;
   sortOrder: number;
+  displaySize: string;
+  coverMode: string;
 }
 
 function dbToCat(db: Record<string, unknown>): CategoryRecord {
@@ -14,6 +16,8 @@ function dbToCat(db: Record<string, unknown>): CategoryRecord {
     title: db.title as string,
     image: (db.image as string) || undefined,
     sortOrder: (db.sort_order as number) || 0,
+    displaySize: (db.display_size as string) || 'medium',
+    coverMode: (db.cover_mode as string) || 'cover',
   };
 }
 
@@ -39,6 +43,8 @@ export function useCreateCategory() {
         title: cat.title,
         image: cat.image || null,
         sort_order: cat.sortOrder,
+        display_size: cat.displaySize || 'medium',
+        cover_mode: cat.coverMode || 'cover',
       });
       if (error) throw error;
     },
@@ -54,6 +60,8 @@ export function useUpdateCategory() {
         title: cat.title,
         image: cat.image || null,
         sort_order: cat.sortOrder,
+        display_size: cat.displaySize || 'medium',
+        cover_mode: cat.coverMode || 'cover',
       }).eq('id', id);
       if (error) throw error;
     },

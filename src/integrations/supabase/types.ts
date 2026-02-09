@@ -167,7 +167,9 @@ export type Database = {
       }
       categories: {
         Row: {
+          cover_mode: string | null
           created_at: string
+          display_size: string | null
           id: string
           image: string | null
           sort_order: number | null
@@ -175,7 +177,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cover_mode?: string | null
           created_at?: string
+          display_size?: string | null
           id?: string
           image?: string | null
           sort_order?: number | null
@@ -183,7 +187,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cover_mode?: string | null
           created_at?: string
+          display_size?: string | null
           id?: string
           image?: string | null
           sort_order?: number | null
@@ -526,11 +532,13 @@ export type Database = {
           order_number: string
           payment_method: string | null
           payment_status: string
+          shipping_carrier: string | null
           shipping_cost: number
           status: string
           subtotal: number
           tax: number
           total: number
+          tracking_number: string | null
           updated_at: string
           user_id: string | null
         }
@@ -549,11 +557,13 @@ export type Database = {
           order_number: string
           payment_method?: string | null
           payment_status?: string
+          shipping_carrier?: string | null
           shipping_cost?: number
           status?: string
           subtotal: number
           tax?: number
           total: number
+          tracking_number?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -572,11 +582,13 @@ export type Database = {
           order_number?: string
           payment_method?: string | null
           payment_status?: string
+          shipping_carrier?: string | null
           shipping_cost?: number
           status?: string
           subtotal?: number
           tax?: number
           total?: number
+          tracking_number?: string | null
           updated_at?: string
           user_id?: string | null
         }
