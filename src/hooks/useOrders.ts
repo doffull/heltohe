@@ -117,6 +117,16 @@ export function useUpdateOrder() {
       notes?: string;
       trackingNumber?: string;
       shippingCarrier?: string;
+      customerName?: string;
+      customerEmail?: string;
+      customerPhone?: string;
+      customerAddress?: string;
+      customerCity?: string;
+      customerZip?: string;
+      customerCountry?: string;
+      items?: OrderItem[];
+      subtotal?: number;
+      total?: number;
     }) => {
       const updateData: Record<string, unknown> = {};
       if (fields.status !== undefined) updateData.status = fields.status;
@@ -125,6 +135,16 @@ export function useUpdateOrder() {
       if (fields.notes !== undefined) updateData.notes = fields.notes;
       if (fields.trackingNumber !== undefined) updateData.tracking_number = fields.trackingNumber;
       if (fields.shippingCarrier !== undefined) updateData.shipping_carrier = fields.shippingCarrier;
+      if (fields.customerName !== undefined) updateData.customer_name = fields.customerName;
+      if (fields.customerEmail !== undefined) updateData.customer_email = fields.customerEmail;
+      if (fields.customerPhone !== undefined) updateData.customer_phone = fields.customerPhone;
+      if (fields.customerAddress !== undefined) updateData.customer_address = fields.customerAddress;
+      if (fields.customerCity !== undefined) updateData.customer_city = fields.customerCity;
+      if (fields.customerZip !== undefined) updateData.customer_zip = fields.customerZip;
+      if (fields.customerCountry !== undefined) updateData.customer_country = fields.customerCountry;
+      if (fields.items !== undefined) updateData.items = fields.items;
+      if (fields.subtotal !== undefined) updateData.subtotal = fields.subtotal;
+      if (fields.total !== undefined) updateData.total = fields.total;
 
       const { data, error } = await supabase
         .from('orders')

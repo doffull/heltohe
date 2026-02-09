@@ -4,21 +4,13 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { 
-  Users, Search, Mail, Phone, Crown, TrendingUp,
-  Eye
+  Users, Search, Mail, Phone, Crown, TrendingUp, Eye
 } from 'lucide-react';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Label } from '@/components/ui/label';
 
@@ -62,16 +54,10 @@ export default function AdminCustomers() {
       <div className="chamfer-hud bg-card/50 p-4">
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Rechercher par nom ou email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+          <Input placeholder="Rechercher par nom ou email..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid sm:grid-cols-4 gap-4">
         {['bronze', 'silver', 'gold', 'platinum'].map(tier => {
           const count = customers.filter(c => c.loyaltyTier === tier).length;
@@ -116,21 +102,22 @@ export default function AdminCustomers() {
                   <tr key={customer.id} className="border-b border-border last:border-0 hover:bg-muted/30">
                     <td className="p-4">
                       <p className="font-medium text-sm">{customer.firstName} {customer.lastName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Depuis {new Date(customer.createdAt).toLocaleDateString('fr-FR')}
-                      </p>
+                      <p className="text-xs text-muted-foreground">Depuis {new Date(customer.createdAt).toLocaleDateString('fr-FR')}</p>
                     </td>
                     <td className="p-4 text-sm">{customer.email}</td>
                     <td className="p-4">
-                      <span className={`text-xs px-2 py-1 rounded uppercase ${TIER_COLORS[customer.loyaltyTier] || ''}`}>
-                        {customer.loyaltyTier}
-                      </span>
+                      <span className={`text-xs px-2 py-1 rounded uppercase ${TIER_COLORS[customer.loyaltyTier] || ''}`}>{customer.loyaltyTier}</span>
                     </td>
                     <td className="p-4 text-right font-bold text-sm">{customer.loyaltyPoints}</td>
                     <td className="p-4 text-right font-bold text-sm">{customer.totalSpent.toFixed(2)}€</td>
-                    <td className="p-4 text-right">
-                      <Button variant="ghost" size="icon" onClick={() => setSelectedCustomer(customer)}>
+                    <td className="p-4 text-right flex gap-1 justify-end">
+                      <Button variant="ghost" size="icon" onClick={() => setSelectedCustomer(customer)} title="Voir">
                         <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" asChild title="Contacter">
+                        <a href={`mailto:${customer.email}`}>
+                          <Mail className="h-4 w-4" />
+                        </a>
                       </Button>
                     </td>
                   </tr>
@@ -166,9 +153,7 @@ export default function AdminCustomers() {
                 )}
                 <div>
                   <Label className="hud-text text-xs">Total dépensé</Label>
-                  <p className="text-sm font-bold flex items-center gap-1">
-                    <TrendingUp className="h-3 w-3" />{selectedCustomer.totalSpent.toFixed(2)}€
-                  </p>
+                  <p className="text-sm font-bold flex items-center gap-1"><TrendingUp className="h-3 w-3" />{selectedCustomer.totalSpent.toFixed(2)}€</p>
                 </div>
               </div>
               <div className="space-y-2">
@@ -192,6 +177,13 @@ export default function AdminCustomers() {
               <div>
                 <Label className="hud-text text-xs">Points de fidélité</Label>
                 <p className="text-2xl font-bold">{selectedCustomer.loyaltyPoints} pts</p>
+              </div>
+              <div className="pt-2 border-t border-border">
+                <Button variant="outline" asChild className="w-full">
+                  <a href={`mailto:${selectedCustomer.email}`}>
+                    <Mail className="h-4 w-4 mr-2" /> Envoyer un email
+                  </a>
+                </Button>
               </div>
             </div>
           )}
