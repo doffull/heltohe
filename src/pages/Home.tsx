@@ -298,19 +298,27 @@ export default function Home() {
           </RevealSection>
 
           <StaggerContainer className={cn(
-            "grid gap-3 lg:gap-6",
-            (designSettings as any).categoryColumns === 2 ? "grid-cols-2" :
-            (designSettings as any).categoryColumns === 3 ? "grid-cols-2 lg:grid-cols-3" :
+            "grid",
+            // Gap
+            (designSettings as any).categoryLayout?.gap === 'sm' ? "gap-2" :
+            (designSettings as any).categoryLayout?.gap === 'lg' ? "gap-6 lg:gap-8" :
+            "gap-3 lg:gap-6",
+            // Columns
+            ((designSettings as any).categoryLayout?.columns || (designSettings as any).categoryColumns) === 2 ? "grid-cols-2" :
+            ((designSettings as any).categoryLayout?.columns || (designSettings as any).categoryColumns) === 3 ? "grid-cols-2 lg:grid-cols-3" :
             "grid-cols-2 lg:grid-cols-4"
           )}>
             {(designSettings.categories?.length > 0
               ? designSettings.categories.map(c => ({ title: c.title, image: c.image, href: `/boutique?category=${c.title}` }))
               : FALLBACK_CATEGORIES
-            ).map((cat) => (
+            ).map((cat) => {
+              const ar = (designSettings as any).categoryLayout?.aspectRatio || '3/4';
+              return (
               <motion.div key={cat.title} variants={cardVariants}>
                 <Link
                   to={cat.href}
-                  className="group relative aspect-[3/4] overflow-hidden bevel-corners block"
+                  className={cn("group relative overflow-hidden bevel-corners block", `aspect-[${ar}]`)}
+                  style={{ aspectRatio: ar }}
                 >
                   <img
                     src={cat.image}
@@ -327,7 +335,8 @@ export default function Home() {
                   </div>
                 </Link>
               </motion.div>
-            ))}
+              );
+            })}
           </StaggerContainer>
         </div>
       </section>

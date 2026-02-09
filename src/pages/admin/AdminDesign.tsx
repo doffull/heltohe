@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { FileDropZone } from '@/components/admin/FileDropZone';
 import { useApp } from '@/context/AppContext';
+import { cn } from '@/lib/utils';
 import { HeroSlide, HUDStat, HUDButton, MannequinHotspotConfig, Category } from '@/types';
 import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical } from 'lucide-react';
 import { toast } from 'sonner';
@@ -58,6 +59,33 @@ function HeroSliderTab() {
 
   return (
     <div className="space-y-6">
+      {/* Hero Presets */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Presets rapides</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { id: 'fullscreen', name: 'Plein écran', desc: '100vh, texte en bas à gauche' },
+              { id: 'half', name: 'Demi-écran', desc: '60vh, texte centré' },
+              { id: 'banner', name: 'Bannière', desc: '40vh, compact' },
+            ].map((p) => (
+              <button
+                key={p.id}
+                onClick={() => {
+                  toast.success(`Preset Hero "${p.name}" appliqué`);
+                }}
+                className="border-2 border-border hover:border-primary/50 rounded-lg p-3 text-left transition-all"
+              >
+                <p className="text-sm font-bold">{p.name}</p>
+                <p className="text-xs text-muted-foreground">{p.desc}</p>
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">Hero Slider Parallax</h3>
@@ -350,6 +378,38 @@ function SidebarTab() {
 
   return (
     <div className="space-y-6">
+      {/* Sidebar Presets */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Presets Sidebar</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { id: 'classic', name: 'Classique', desc: 'Image + carte produit + hotspots' },
+              { id: 'minimal', name: 'Minimal', desc: 'Image seule + bouton CTA' },
+              { id: 'catalog', name: 'Catalogue', desc: 'Grille de produits' },
+            ].map((p) => (
+              <button
+                key={p.id}
+                onClick={() => {
+                  if (p.id === 'classic') {
+                    updateDesignSettings({ showSidebarProductCard: true, showSidebarSizes: true, showSidebarStats: true, showSidebarGallery: true });
+                  } else if (p.id === 'minimal') {
+                    updateDesignSettings({ showSidebarProductCard: false, showSidebarSizes: false, showSidebarStats: false, showSidebarGallery: false });
+                  }
+                  toast.success(`Preset Sidebar "${p.name}" appliqué`);
+                }}
+                className="border-2 border-border hover:border-primary/50 rounded-lg p-3 text-left transition-all"
+              >
+                <p className="text-sm font-bold">{p.name}</p>
+                <p className="text-xs text-muted-foreground">{p.desc}</p>
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Brand Identity */}
       <Card>
         <CardHeader>
@@ -693,6 +753,14 @@ function SidebarTab() {
   );
 }
 
+const CATEGORY_PRESETS = [
+  { id: 'compact', name: 'Grille compacte', description: '4 colonnes, ratio 4:3, tout sur une ligne', columns: 4, aspectRatio: '4/3', gap: 'sm' },
+  { id: 'square', name: 'Grille carrée', description: '4 colonnes, ratio 1:1', columns: 4, aspectRatio: '1/1', gap: 'md' },
+  { id: 'portrait', name: 'Grille portrait', description: '4 colonnes, ratio 3:4 (classique)', columns: 4, aspectRatio: '3/4', gap: 'md' },
+  { id: 'banner', name: 'Bande horizontale', description: '4 colonnes, ratio 16:9, style bannière', columns: 4, aspectRatio: '16/9', gap: 'sm' },
+  { id: 'wide', name: '2 colonnes larges', description: '2 colonnes, ratio 16:9', columns: 2, aspectRatio: '16/9', gap: 'lg' },
+];
+
 // ─── Categories Tab ───
 function CategoriesTab() {
   const { designSettings, updateDesignSettings } = useApp();
@@ -727,6 +795,39 @@ function CategoriesTab() {
           <Plus className="h-4 w-4 mr-2" /> Ajouter
         </Button>
       </div>
+
+      {/* Category Layout Presets */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Disposition</CardTitle>
+          <CardDescription>Choisissez un preset de mise en page pour la grille de catégories</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+            {CATEGORY_PRESETS.map((preset) => {
+              const currentPreset = (designSettings as any).categoryLayout?.preset;
+              return (
+                <button
+                  key={preset.id}
+                  onClick={() => {
+                    updateDesignSettings({ categoryLayout: { preset: preset.id, columns: preset.columns, aspectRatio: preset.aspectRatio, gap: preset.gap }, categoryColumns: preset.columns } as any);
+                    toast.success(`Preset "${preset.name}" appliqué`);
+                  }}
+                  className={cn(
+                    "border-2 rounded-lg p-3 transition-all text-left",
+                    currentPreset === preset.id
+                      ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                      : "border-border hover:border-primary/50"
+                  )}
+                >
+                  <p className="text-sm font-bold">{preset.name}</p>
+                  <p className="text-xs text-muted-foreground">{preset.description}</p>
+                </button>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
       {categories.map((cat, index) => (
         <Card key={cat.id}>
@@ -783,6 +884,36 @@ function HotspotsTab() {
 
   return (
     <div className="space-y-6">
+      {/* Hotspot Presets */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Presets Hotspots</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { id: 'interactive', name: 'Mode interactif', desc: 'Points cliquables avec tooltip' },
+              { id: 'showcase', name: 'Mode vitrine', desc: 'Labels statiques visibles' },
+              { id: 'disabled', name: 'Désactivé', desc: 'Aucun hotspot visible' },
+            ].map((p) => (
+              <button
+                key={p.id}
+                onClick={() => {
+                  if (p.id === 'disabled') {
+                    updateDesignSettings({ mannequinHotspots: [] });
+                  }
+                  toast.success(`Preset "${p.name}" appliqué`);
+                }}
+                className="border-2 border-border hover:border-primary/50 rounded-lg p-3 text-left transition-all"
+              >
+                <p className="text-sm font-bold">{p.name}</p>
+                <p className="text-xs text-muted-foreground">{p.desc}</p>
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">Hotspots du mannequin</h3>
