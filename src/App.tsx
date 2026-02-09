@@ -133,16 +133,18 @@ function AnimatedRoutes() {
 function AppInner() {
   const [showSplash, setShowSplash] = useState(true);
   return (
-    <>
-      <AnimatePresence>
-        {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
-      </AnimatePresence>
-      <FaviconManager />
-      <Toaster />
-      <Sonner />
-      <ScrollToTop />
-      <AnimatedRoutes />
-    </>
+    <AppProvider>
+      <TooltipProvider>
+        <AnimatePresence>
+          {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
+        </AnimatePresence>
+        <FaviconManager />
+        <Toaster />
+        <Sonner />
+        <ScrollToTop />
+        <AnimatedRoutes />
+      </TooltipProvider>
+    </AppProvider>
   );
 }
 
@@ -152,11 +154,7 @@ const App = () => (
       <AuthProvider>
         <CartProvider>
           <SidebarProvider>
-            <AppProvider>
-              <TooltipProvider>
-                <AppInner />
-              </TooltipProvider>
-            </AppProvider>
+            <AppInner />
           </SidebarProvider>
         </CartProvider>
       </AuthProvider>
