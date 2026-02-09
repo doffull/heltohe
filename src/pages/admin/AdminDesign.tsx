@@ -11,6 +11,7 @@ import { useApp } from '@/context/AppContext';
 import { HeroSlide, HUDStat, HUDButton, MannequinHotspotConfig, Category } from '@/types';
 import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical } from 'lucide-react';
 import { toast } from 'sonner';
+import { HeaderDesignTab } from '@/components/admin/HeaderDesignTab';
 
 function generateId() {
   return `id-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
@@ -850,6 +851,7 @@ export default function AdminDesign() {
       <Tabs defaultValue="hero" className="space-y-6">
         <TabsList className="flex-wrap">
           <TabsTrigger value="hero">Hero Slider</TabsTrigger>
+          <TabsTrigger value="header">Header</TabsTrigger>
           <TabsTrigger value="logo">Logo</TabsTrigger>
           <TabsTrigger value="sidebar">Sidebar</TabsTrigger>
           <TabsTrigger value="categories">Catégories</TabsTrigger>
@@ -859,6 +861,9 @@ export default function AdminDesign() {
 
         <TabsContent value="hero">
           <HeroSliderTab />
+        </TabsContent>
+        <TabsContent value="header">
+          <HeaderDesignTab />
         </TabsContent>
         <TabsContent value="logo">
           <LogoTab />

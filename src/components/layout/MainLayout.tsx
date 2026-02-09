@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 import { MannequinHotspots } from './MannequinHotspot';
 import { SidebarProductHUD } from './SidebarProductHUD';
 import { 
@@ -50,8 +51,14 @@ export function MainLayout({ children }: MainLayoutProps) {
   const { designSettings } = useApp();
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
   const [notifOpen, setNotifOpen] = useState(false);
   const queryClient = useQueryClient();
+
+  const headerPreset = (designSettings as any).headerPreset || 'classic';
+  const headerBgColor = (designSettings as any).headerBgColor || '';
+  const headerTextColor = (designSettings as any).headerTextColor || '';
+  const headerFixed = (designSettings as any).headerFixed !== false;
 
   // Admin notifications - unread messages
   const { data: messages = [] } = useQuery({
@@ -93,20 +100,45 @@ export function MainLayout({ children }: MainLayoutProps) {
         </div>
       )}
 
-      <header className="fixed top-0 left-0 right-0 z-40 bg-background border-b border-border header-container">
+      <header
+        className={cn(
+          "top-0 left-0 right-0 z-40 border-b border-border header-container transition-all",
+          headerFixed ? "fixed" : "sticky",
+          headerPreset === 'transparent' ? "bg-transparent border-transparent" : "bg-background"
+        )}
+        style={{
+          backgroundColor: headerPreset === 'transparent' ? 'transparent' : (headerBgColor || undefined),
+          color: headerTextColor || undefined,
+        }}
+      >
         <div className="container mx-auto px-4">
-          <div className="flex items-center h-14 lg:h-20 pl-0 lg:pl-[180px]">
+          <div className={cn(
+            "flex items-center h-14 lg:h-20",
+            headerPreset === 'centered' ? "flex-col justify-center gap-1 h-auto py-3 lg:py-4" : "",
+            headerPreset === 'classic' ? "pl-0 lg:pl-[180px]" : "",
+            headerPreset === 'fullwidth' ? "gap-6" : "",
+          )}>
             {/* Mobile Logo */}
-            <Link to="/" className="lg:hidden flex items-center gap-2 mr-auto">
+            <Link to="/" className={cn(
+              "flex items-center gap-2",
+              headerPreset === 'centered' ? "" : "lg:hidden mr-auto"
+            )}>
               {designSettings.hudLogo ? (
-                <img src={designSettings.hudLogo} alt="Logo" className="h-7 w-auto object-contain" />
+                <img src={designSettings.hudLogo} alt="Logo" className={cn(
+                  "w-auto object-contain",
+                  headerPreset === 'centered' ? "h-8 lg:h-10" : "h-7"
+                )} />
               ) : (
                 <span className="font-bold text-base tracking-wider uppercase">HMP</span>
               )}
             </Link>
 
-            {/* Desktop Navigation - Centered */}
-            <nav className="hidden lg:flex items-center gap-8">
+            {/* Desktop Navigation */}
+            <nav className={cn(
+              "items-center gap-8",
+              headerPreset === 'minimal' ? "hidden" : "hidden lg:flex",
+              headerPreset === 'fullwidth' ? "flex-1 justify-center" : "",
+            )}>
               {NAV_ITEMS.map((item) => (
                 <Link
                   key={item.href}
@@ -118,7 +150,6 @@ export function MainLayout({ children }: MainLayoutProps) {
                   }`}
                 >
                   {item.label}
-                  {/* Underline effect on hover */}
                   <span className={`absolute -bottom-1 left-0 w-full h-px bg-foreground transform origin-left transition-transform duration-300 ${
                     location.pathname === item.href ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
                   }`} />
@@ -261,15 +292,31 @@ export function MainLayout({ children }: MainLayoutProps) {
         />
       )}
 
+      {/* Desktop Sidebar Toggle - Reopen button */}
+      {!desktopSidebarOpen && (
+        <button
+          onClick={() => setDesktopSidebarOpen(true)}
+          className="fixed bottom-6 left-6 z-[60] hidden lg:flex w-12 h-12 bg-foreground text-background items-center justify-center transition-all duration-300 hover:scale-105 bevel-corners-sm"
+          aria-label="Ouvrir le panneau"
+        >
+          <PanelLeft className="h-5 w-5" />
+        </button>
+      )}
+
       {/* Left Sidebar Panel - Glossy Glassmorphism */}
-      <div className={`
-        sidebar-left-panel
-        fixed top-0 left-0 h-screen z-50
-        transition-transform duration-500 ease-out
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:translate-x-0
-        w-[85%] sm:w-[320px] lg:w-[35%]
-      `}>
+      <div className={cn(
+        "sidebar-left-panel fixed top-0 left-0 h-screen z-50 transition-transform duration-500 ease-out w-[85%] sm:w-[320px] lg:w-[35%]",
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full',
+        desktopSidebarOpen ? 'lg:translate-x-0' : 'lg:-translate-x-full'
+      )}>
+        {/* Desktop close button */}
+        <button
+          onClick={() => setDesktopSidebarOpen(false)}
+          className="absolute top-4 right-4 z-30 hidden lg:flex w-8 h-8 bg-background/80 text-foreground items-center justify-center rounded-full hover:bg-background transition-colors"
+          aria-label="Fermer le panneau"
+        >
+          <X className="h-4 w-4" />
+        </button>
         {/* Mannequin Background Image - Fixed */}
         <div 
           className="absolute inset-0 z-0"
@@ -339,12 +386,18 @@ export function MainLayout({ children }: MainLayoutProps) {
       )}
 
       {/* Main Content */}
-      <main className="pt-16 lg:pt-20 lg:ml-[35%]">
+      <main className={cn(
+        "pt-16 lg:pt-20 transition-all duration-500",
+        desktopSidebarOpen ? "lg:ml-[35%]" : "lg:ml-0"
+      )}>
         {children}
       </main>
 
       {/* Footer */}
-      <footer className="bg-secondary border-t border-border py-8 mt-10 lg:py-16 lg:mt-20 lg:ml-[35%]">
+      <footer className={cn(
+        "bg-secondary border-t border-border py-8 mt-4 lg:py-16 lg:mt-10 transition-all duration-500",
+        desktopSidebarOpen ? "lg:ml-[35%]" : "lg:ml-0"
+      )}>
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 lg:gap-12">
             {/* Brand */}

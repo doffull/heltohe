@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { FileDropZone } from '@/components/admin/FileDropZone';
 
 interface ProductFormProps {
   product?: Product;
@@ -167,28 +168,37 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         </div>
 
         <div className="space-y-2">
-          <Label className="hud-text text-xs">URL de l'image *</Label>
+          <Label className="hud-text text-xs">Image du produit *</Label>
+          <FileDropZone
+            accept={['image']}
+            folder="products"
+            currentFile={formData.image}
+            onUpload={(url) => setFormData(prev => ({ ...prev, image: url }))}
+            label="Glissez une image ou cliquez"
+          />
           <Input
             value={formData.image}
             onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.value }))}
             className="bg-secondary/50 border-border/30"
-            placeholder="https://..."
-            required
+            placeholder="Ou collez une URL..."
           />
-          {formData.image && (
-            <img src={formData.image} alt="Preview" className="w-20 h-20 object-cover mt-2 border border-border/30" />
-          )}
         </div>
 
         <div className="space-y-2">
-          <Label className="hud-text text-xs">URL de la vidéo</Label>
+          <Label className="hud-text text-xs">Vidéo du produit</Label>
+          <FileDropZone
+            accept={['video']}
+            folder="products/videos"
+            currentFile={formData.videoUrl}
+            onUpload={(url) => setFormData(prev => ({ ...prev, videoUrl: url }))}
+            label="Glissez une vidéo ou cliquez"
+          />
           <Input
             value={formData.videoUrl}
             onChange={(e) => setFormData(prev => ({ ...prev, videoUrl: e.target.value }))}
             className="bg-secondary/50 border-border/30"
-            placeholder="https://youtube.com/watch?v=... ou lien MP4"
+            placeholder="Ou collez une URL..."
           />
-          <p className="text-[10px] text-muted-foreground">YouTube, Vimeo ou lien MP4 direct</p>
         </div>
 
         <div className="space-y-2">

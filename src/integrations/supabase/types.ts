@@ -175,6 +175,7 @@ export type Database = {
           display_size: string | null
           id: string
           image: string | null
+          parent_id: string | null
           sort_order: number | null
           title: string
           updated_at: string
@@ -185,6 +186,7 @@ export type Database = {
           display_size?: string | null
           id?: string
           image?: string | null
+          parent_id?: string | null
           sort_order?: number | null
           title: string
           updated_at?: string
@@ -195,11 +197,20 @@ export type Database = {
           display_size?: string | null
           id?: string
           image?: string | null
+          parent_id?: string | null
           sort_order?: number | null
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       customers: {
         Row: {
@@ -255,6 +266,10 @@ export type Database = {
           glitch_duration: number | null
           glitch_intensity: number | null
           gradient_intensity: number | null
+          header_bg_color: string | null
+          header_fixed: boolean | null
+          header_preset: string | null
+          header_text_color: string | null
           hero_slides: Json | null
           home_sections: Json | null
           hud_buttons: Json | null
@@ -300,6 +315,10 @@ export type Database = {
           glitch_duration?: number | null
           glitch_intensity?: number | null
           gradient_intensity?: number | null
+          header_bg_color?: string | null
+          header_fixed?: boolean | null
+          header_preset?: string | null
+          header_text_color?: string | null
           hero_slides?: Json | null
           home_sections?: Json | null
           hud_buttons?: Json | null
@@ -345,6 +364,10 @@ export type Database = {
           glitch_duration?: number | null
           glitch_intensity?: number | null
           gradient_intensity?: number | null
+          header_bg_color?: string | null
+          header_fixed?: boolean | null
+          header_preset?: string | null
+          header_text_color?: string | null
           hero_slides?: Json | null
           home_sections?: Json | null
           hud_buttons?: Json | null

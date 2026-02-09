@@ -286,10 +286,10 @@ export default function Home() {
       </section>
 
       {/* ═══════════════ CATEGORIES GRID ═══════════════ */}
-      <section className="py-10 lg:py-28">
+      <section className="py-4 lg:py-16">
         <div className="container mx-auto px-4">
           <RevealSection>
-            <div className="flex items-end justify-between mb-6 lg:mb-12">
+            <div className="flex items-end justify-between mb-4 lg:mb-8">
               <div>
                 <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-2">// COLLECTIONS</p>
                 <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight">Catégories</h2>
@@ -333,10 +333,10 @@ export default function Home() {
       </section>
 
       {/* ═══════════════ FEATURED PRODUCTS ═══════════════ */}
-      <section className="py-10 lg:py-28 bg-secondary/30">
+      <section className="py-4 lg:py-16 bg-secondary/30">
         <div className="container mx-auto px-4">
           <RevealSection>
-            <div className="flex items-end justify-between mb-6 lg:mb-12">
+            <div className="flex items-end justify-between mb-4 lg:mb-8">
               <div>
                 <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-2">// SÉLECTION</p>
                 <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight">En vedette</h2>
@@ -414,10 +414,10 @@ export default function Home() {
       </section>
 
       {/* ═══════════════ NEW ARRIVALS ═══════════════ */}
-      <section className="py-10 lg:py-28">
+      <section className="py-4 lg:py-16">
         <div className="container mx-auto px-4">
           <RevealSection>
-            <div className="text-center mb-6 lg:mb-12">
+            <div className="text-center mb-4 lg:mb-8">
               <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-2">// NOUVEAUTÉS</p>
               <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight">Dernières arrivées</h2>
             </div>
@@ -469,7 +469,7 @@ export default function Home() {
 
       {/* ═══════════════ NEWSLETTER CTA ═══════════════ */}
       <RevealSection>
-        <section className="py-12 lg:py-24 bg-foreground text-background">
+        <section className="py-6 lg:py-16 bg-foreground text-background">
           <div className="container mx-auto px-4 text-center">
             <p className="font-mono text-xs tracking-[0.3em] text-background/50 mb-4">// NEWSLETTER</p>
             <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight mb-4">

@@ -8,6 +8,7 @@ export interface CategoryRecord {
   sortOrder: number;
   displaySize: string;
   coverMode: string;
+  parentId?: string | null;
 }
 
 function dbToCat(db: Record<string, unknown>): CategoryRecord {
@@ -18,6 +19,7 @@ function dbToCat(db: Record<string, unknown>): CategoryRecord {
     sortOrder: (db.sort_order as number) || 0,
     displaySize: (db.display_size as string) || 'medium',
     coverMode: (db.cover_mode as string) || 'cover',
+    parentId: (db.parent_id as string) || null,
   };
 }
 
@@ -45,7 +47,8 @@ export function useCreateCategory() {
         sort_order: cat.sortOrder,
         display_size: cat.displaySize || 'medium',
         cover_mode: cat.coverMode || 'cover',
-      });
+        parent_id: cat.parentId || null,
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-categories'] }),
@@ -62,7 +65,8 @@ export function useUpdateCategory() {
         sort_order: cat.sortOrder,
         display_size: cat.displaySize || 'medium',
         cover_mode: cat.coverMode || 'cover',
-      }).eq('id', id);
+        parent_id: cat.parentId || null,
+      } as any).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-categories'] }),
