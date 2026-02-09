@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
@@ -40,10 +40,16 @@ export default function Shop() {
 
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
-  const initialCategory = searchParams.get('category') || 'Tout';
-  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'Tout');
   const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'newest');
+
+  // Sync category from URL params when they change
+  useEffect(() => {
+    const urlCategory = searchParams.get('category') || 'Tout';
+    setSelectedCategory(urlCategory);
+    setSelectedSubCategory(null);
+  }, [searchParams]);
 
   // Get sub-categories for selected category
   const subCategories = useMemo(() => {

@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   DesignSettings, 
   Product, 
@@ -109,15 +110,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setDesignSettings(prev => ({ ...prev, ...updates }));
   };
 
-  const navigateToCategory = (category: string) => {
+  const navigate = useNavigate();
+
+  const navigateToCategory = useCallback((category: string) => {
     setCurrentCategory(category);
     setCurrentView('Shop');
-  };
+    if (category === 'Tout') {
+      navigate('/boutique');
+    } else {
+      navigate(`/boutique?category=${encodeURIComponent(category)}`);
+    }
+  }, [navigate]);
 
-  const navigateToProduct = (product: Product) => {
+  const navigateToProduct = useCallback((product: Product) => {
     setSelectedProduct(product);
     setCurrentView('ProductDetail');
-  };
+    navigate(`/boutique/${product.id}`);
+  }, [navigate]);
 
   return (
     <AppContext.Provider
