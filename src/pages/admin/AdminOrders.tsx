@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { 
-  Package, Clock, Truck, CheckCircle, XCircle, Eye, FileText, Save, X, Printer
+  Package, Clock, Truck, CheckCircle, XCircle, Eye, FileText, Save, Printer, Mail, ExternalLink, Trash2
 } from 'lucide-react';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -59,11 +59,28 @@ function downloadInvoice(order: Order) {
   const blob = new Blob([html], { type: 'text/html' });
   const url = URL.createObjectURL(blob);
   const win = window.open(url, '_blank');
-  if (win) {
-    win.onload = () => {
-      win.print();
-    };
-  }
+  if (win) { win.onload = () => { win.print(); }; }
+}
+
+function getColissimoUrl(tracking: string) {
+  return `https://www.laposte.fr/outils/suivre-vos-envois?code=${encodeURIComponent(tracking)}`;
+}
+
+interface EditForm {
+  status: OrderStatus;
+  paymentStatus: PaymentStatus;
+  paymentMethod: string;
+  shippingCarrier: string;
+  trackingNumber: string;
+  notes: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  customerAddress: string;
+  customerCity: string;
+  customerZip: string;
+  customerCountry: string;
+  items: OrderItem[];
 }
 
 export default function AdminOrders() {
@@ -71,14 +88,7 @@ export default function AdminOrders() {
   const { data: orders = [], isLoading } = useOrders();
   const updateOrder = useUpdateOrder();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [editForm, setEditForm] = useState<{
-    status: OrderStatus;
-    paymentStatus: PaymentStatus;
-    paymentMethod: string;
-    shippingCarrier: string;
-    trackingNumber: string;
-    notes: string;
-  } | null>(null);
+  const [editForm, setEditForm] = useState<EditForm | null>(null);
 
   const openDetail = (order: Order) => {
     setSelectedOrder(order);
@@ -89,11 +99,38 @@ export default function AdminOrders() {
       shippingCarrier: order.shippingCarrier || '',
       trackingNumber: order.trackingNumber || '',
       notes: order.notes || '',
+      customerName: order.customer.name,
+      customerEmail: order.customer.email,
+      customerPhone: order.customer.phone || '',
+      customerAddress: order.customer.address,
+      customerCity: order.customer.city,
+      customerZip: order.customer.zip,
+      customerCountry: order.customer.country,
+      items: order.items.map(i => ({ ...i })),
     });
+  };
+
+  const recalcTotals = (items: OrderItem[]) => {
+    return items.reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0);
+  };
+
+  const updateItem = (index: number, updates: Partial<OrderItem>) => {
+    if (!editForm) return;
+    const newItems = [...editForm.items];
+    newItems[index] = { ...newItems[index], ...updates };
+    setEditForm({ ...editForm, items: newItems });
+  };
+
+  const removeItem = (index: number) => {
+    if (!editForm) return;
+    setEditForm({ ...editForm, items: editForm.items.filter((_, i) => i !== index) });
   };
 
   const handleSave = async () => {
     if (!selectedOrder || !editForm) return;
+    const subtotal = recalcTotals(editForm.items);
+    const tax = selectedOrder.tax;
+    const total = subtotal + tax + selectedOrder.shippingCost;
     try {
       await updateOrder.mutateAsync({
         id: selectedOrder.id,
@@ -103,6 +140,16 @@ export default function AdminOrders() {
         shippingCarrier: editForm.shippingCarrier || undefined,
         trackingNumber: editForm.trackingNumber || undefined,
         notes: editForm.notes || undefined,
+        customerName: editForm.customerName,
+        customerEmail: editForm.customerEmail,
+        customerPhone: editForm.customerPhone || undefined,
+        customerAddress: editForm.customerAddress,
+        customerCity: editForm.customerCity,
+        customerZip: editForm.customerZip,
+        customerCountry: editForm.customerCountry,
+        items: editForm.items,
+        subtotal,
+        total,
       });
       toast({ title: 'Commande mise à jour' });
       setSelectedOrder(null);
@@ -149,40 +196,36 @@ export default function AdminOrders() {
               <tbody>
                 {orders.map((order) => (
                   <tr key={order.id} className="border-b border-border last:border-0 hover:bg-muted/30">
-                    <td className="p-4">
-                      <code className="text-sm font-bold">{order.orderNumber}</code>
-                    </td>
+                    <td className="p-4"><code className="text-sm font-bold">{order.orderNumber}</code></td>
                     <td className="p-4">
                       <div>
                         <p className="font-medium text-sm">{order.customer.name}</p>
                         <p className="text-xs text-muted-foreground">{order.customer.email}</p>
                       </div>
                     </td>
-                    <td className="p-4 text-sm text-muted-foreground">
-                      {new Date(order.date).toLocaleDateString('fr-FR')}
-                    </td>
-                    <td className="p-4 text-right">
-                      <span className="text-sm font-bold">{order.total.toFixed(2)}€</span>
-                    </td>
+                    <td className="p-4 text-sm text-muted-foreground">{new Date(order.date).toLocaleDateString('fr-FR')}</td>
+                    <td className="p-4 text-right"><span className="text-sm font-bold">{order.total.toFixed(2)}€</span></td>
                     <td className="p-4">
                       <span className={`text-xs font-bold ${getStatusStyle(order.status)}`}>
                         {STATUS_OPTIONS.find(o => o.value === order.status)?.label || order.status}
                       </span>
                     </td>
                     <td className="p-4">
-                      <span className={`text-xs font-bold ${
-                        order.paymentStatus === 'Paid' ? 'text-green-500' : 
-                        order.paymentStatus === 'Failed' ? 'text-destructive' : 'text-yellow-500'
-                      }`}>
+                      <span className={`text-xs font-bold ${order.paymentStatus === 'Paid' ? 'text-green-500' : order.paymentStatus === 'Failed' ? 'text-destructive' : 'text-yellow-500'}`}>
                         {PAYMENT_STATUS_OPTIONS.find(o => o.value === order.paymentStatus)?.label || order.paymentStatus}
                       </span>
                     </td>
                     <td className="p-4 text-right flex gap-1 justify-end">
-                      <Button variant="ghost" size="icon" onClick={() => openDetail(order)}>
+                      <Button variant="ghost" size="icon" onClick={() => openDetail(order)} title="Voir / Modifier">
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => downloadInvoice(order)}>
+                      <Button variant="ghost" size="icon" onClick={() => downloadInvoice(order)} title="Facture">
                         <FileText className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" asChild title="Contacter">
+                        <a href={`mailto:${order.customer.email}?subject=Commande ${order.orderNumber}`}>
+                          <Mail className="h-4 w-4" />
+                        </a>
                       </Button>
                     </td>
                   </tr>
@@ -195,53 +238,108 @@ export default function AdminOrders() {
 
       {/* Order Detail Dialog */}
       <Dialog open={!!selectedOrder} onOpenChange={(open) => { if (!open) setSelectedOrder(null); }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="hud-text">COMMANDE {selectedOrder?.orderNumber}</DialogTitle>
+            <DialogTitle className="hud-text flex items-center gap-3">
+              COMMANDE {selectedOrder?.orderNumber}
+              {selectedOrder && (
+                <a
+                  href={`mailto:${selectedOrder.customer.email}?subject=Commande ${selectedOrder.orderNumber}`}
+                  className="text-sm font-normal text-primary hover:underline flex items-center gap-1"
+                >
+                  <Mail className="h-3 w-3" /> Contacter
+                </a>
+              )}
+            </DialogTitle>
           </DialogHeader>
           {selectedOrder && editForm && (
             <div className="space-y-6">
-              {/* Client Info */}
-              <div className="chamfer-hud bg-muted/30 p-4 space-y-2">
+              {/* Client Info - Editable */}
+              <div className="chamfer-hud bg-muted/30 p-4 space-y-3">
                 <h3 className="text-sm font-bold hud-text">CLIENT</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="font-medium">{selectedOrder.customer.name}</p>
-                    <p className="text-muted-foreground">{selectedOrder.customer.email}</p>
-                    {selectedOrder.customer.phone && <p className="text-muted-foreground">{selectedOrder.customer.phone}</p>}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Nom</Label>
+                    <Input value={editForm.customerName} onChange={e => setEditForm({ ...editForm, customerName: e.target.value })} />
                   </div>
-                  <div>
-                    <p>{selectedOrder.customer.address}</p>
-                    <p>{selectedOrder.customer.zip} {selectedOrder.customer.city}</p>
-                    <p>{selectedOrder.customer.country}</p>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Email</Label>
+                    <Input value={editForm.customerEmail} onChange={e => setEditForm({ ...editForm, customerEmail: e.target.value })} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Téléphone</Label>
+                    <Input value={editForm.customerPhone} onChange={e => setEditForm({ ...editForm, customerPhone: e.target.value })} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Pays</Label>
+                    <Input value={editForm.customerCountry} onChange={e => setEditForm({ ...editForm, customerCountry: e.target.value })} />
+                  </div>
+                  <div className="space-y-1 col-span-2">
+                    <Label className="text-xs">Adresse</Label>
+                    <Input value={editForm.customerAddress} onChange={e => setEditForm({ ...editForm, customerAddress: e.target.value })} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Code postal</Label>
+                    <Input value={editForm.customerZip} onChange={e => setEditForm({ ...editForm, customerZip: e.target.value })} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Ville</Label>
+                    <Input value={editForm.customerCity} onChange={e => setEditForm({ ...editForm, customerCity: e.target.value })} />
                   </div>
                 </div>
               </div>
 
-              {/* Items */}
-              <div className="chamfer-hud bg-muted/30 p-4 space-y-2">
+              {/* Items - Editable */}
+              <div className="chamfer-hud bg-muted/30 p-4 space-y-3">
                 <h3 className="text-sm font-bold hud-text">ARTICLES</h3>
                 <div className="space-y-2">
-                  {selectedOrder.items.map((item, i) => (
-                    <div key={i} className="flex justify-between text-sm py-1 border-b border-border last:border-0">
-                      <span>{item.name || item.productId} × {item.quantity}</span>
-                      <span className="font-bold">{((item.price || 0) * item.quantity).toFixed(2)}€</span>
+                  {editForm.items.map((item, i) => (
+                    <div key={i} className="flex items-center gap-2 text-sm py-2 border-b border-border last:border-0">
+                      <span className="flex-1 truncate">{item.name || item.productId}</span>
+                      <div className="flex items-center gap-1">
+                        <Label className="text-xs">Qté</Label>
+                        <Input
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) => updateItem(i, { quantity: Math.max(1, Number(e.target.value)) })}
+                          className="w-16 h-8"
+                          min={1}
+                        />
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Label className="text-xs">Prix</Label>
+                        <Input
+                          type="number"
+                          value={item.price}
+                          onChange={(e) => updateItem(i, { price: Number(e.target.value) })}
+                          className="w-20 h-8"
+                          min={0}
+                          step={0.01}
+                        />
+                      </div>
+                      <span className="font-bold w-20 text-right">{((item.price || 0) * item.quantity).toFixed(2)}€</span>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive shrink-0" onClick={() => removeItem(i)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
                     </div>
                   ))}
                   <div className="pt-2 space-y-1 text-sm">
-                    <div className="flex justify-between"><span>Sous-total</span><span>{selectedOrder.subtotal.toFixed(2)}€</span></div>
+                    <div className="flex justify-between"><span>Sous-total</span><span>{recalcTotals(editForm.items).toFixed(2)}€</span></div>
                     <div className="flex justify-between"><span>TVA</span><span>{selectedOrder.tax.toFixed(2)}€</span></div>
                     <div className="flex justify-between"><span>Livraison</span><span>{selectedOrder.shippingCost.toFixed(2)}€</span></div>
-                    <div className="flex justify-between font-bold text-base pt-2 border-t border-border"><span>Total</span><span>{selectedOrder.total.toFixed(2)}€</span></div>
+                    <div className="flex justify-between font-bold text-base pt-2 border-t border-border">
+                      <span>Total</span>
+                      <span>{(recalcTotals(editForm.items) + selectedOrder.tax + selectedOrder.shippingCost).toFixed(2)}€</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Editable Fields */}
+              {/* Status & Shipping */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="hud-text text-xs">Statut commande</Label>
-                  <Select value={editForm.status} onValueChange={(v) => setEditForm(p => p ? { ...p, status: v as OrderStatus } : p)}>
+                  <Select value={editForm.status} onValueChange={(v) => setEditForm({ ...editForm, status: v as OrderStatus })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {STATUS_OPTIONS.map(o => (
@@ -254,7 +352,7 @@ export default function AdminOrders() {
                 </div>
                 <div className="space-y-2">
                   <Label className="hud-text text-xs">Statut paiement</Label>
-                  <Select value={editForm.paymentStatus} onValueChange={(v) => setEditForm(p => p ? { ...p, paymentStatus: v as PaymentStatus } : p)}>
+                  <Select value={editForm.paymentStatus} onValueChange={(v) => setEditForm({ ...editForm, paymentStatus: v as PaymentStatus })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {PAYMENT_STATUS_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
@@ -263,7 +361,7 @@ export default function AdminOrders() {
                 </div>
                 <div className="space-y-2">
                   <Label className="hud-text text-xs">Mode de paiement</Label>
-                  <Select value={editForm.paymentMethod || 'none'} onValueChange={(v) => setEditForm(p => p ? { ...p, paymentMethod: v === 'none' ? '' : v } : p)}>
+                  <Select value={editForm.paymentMethod || 'none'} onValueChange={(v) => setEditForm({ ...editForm, paymentMethod: v === 'none' ? '' : v })}>
                     <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Non spécifié</SelectItem>
@@ -273,7 +371,7 @@ export default function AdminOrders() {
                 </div>
                 <div className="space-y-2">
                   <Label className="hud-text text-xs">Transporteur</Label>
-                  <Select value={editForm.shippingCarrier || 'none'} onValueChange={(v) => setEditForm(p => p ? { ...p, shippingCarrier: v === 'none' ? '' : v } : p)}>
+                  <Select value={editForm.shippingCarrier || 'none'} onValueChange={(v) => setEditForm({ ...editForm, shippingCarrier: v === 'none' ? '' : v })}>
                     <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Non spécifié</SelectItem>
@@ -285,12 +383,21 @@ export default function AdminOrders() {
 
               <div className="space-y-2">
                 <Label className="hud-text text-xs">Numéro de suivi</Label>
-                <Input value={editForm.trackingNumber} onChange={e => setEditForm(p => p ? { ...p, trackingNumber: e.target.value } : p)} placeholder="Ex: 6A12345678901" />
+                <div className="flex gap-2">
+                  <Input value={editForm.trackingNumber} onChange={e => setEditForm({ ...editForm, trackingNumber: e.target.value })} placeholder="Ex: 6A12345678901" className="flex-1" />
+                  {editForm.trackingNumber && (editForm.shippingCarrier === 'Colissimo' || editForm.shippingCarrier === 'Chronopost') && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={getColissimoUrl(editForm.trackingNumber)} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-4 w-4 mr-1" /> Suivre
+                      </a>
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">
                 <Label className="hud-text text-xs">Notes</Label>
-                <Textarea value={editForm.notes} onChange={e => setEditForm(p => p ? { ...p, notes: e.target.value } : p)} rows={3} placeholder="Notes internes..." />
+                <Textarea value={editForm.notes} onChange={e => setEditForm({ ...editForm, notes: e.target.value })} rows={3} placeholder="Notes internes..." />
               </div>
 
               <div className="flex gap-3 justify-end pt-4 border-t border-border">

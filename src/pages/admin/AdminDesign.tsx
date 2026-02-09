@@ -241,8 +241,8 @@ function LogoTab() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Logo du site</CardTitle>
-          <CardDescription>Uploadez votre logo pour le sidebar et le header</CardDescription>
+          <CardTitle className="text-base">Logo principal</CardTitle>
+          <CardDescription>Uploadez votre logo (image ou GIF animé) pour le header et la sidebar</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <FileDropZone
@@ -250,7 +250,7 @@ function LogoTab() {
             folder="branding"
             currentFile={designSettings.hudLogo}
             onUpload={(url) => updateDesignSettings({ hudLogo: url })}
-            label="Glissez votre logo ici"
+            label="Glissez votre logo ici (PNG, JPG, GIF, SVG)"
           />
 
           <div className="flex items-center justify-between">
@@ -260,6 +260,38 @@ function LogoTab() {
               onCheckedChange={(v) => updateDesignSettings({ showLogo: v })}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Logo du footer</CardTitle>
+          <CardDescription>Logo affiché dans le pied de page (optionnel, utilise le logo principal par défaut)</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FileDropZone
+            accept={['image']}
+            folder="branding"
+            currentFile={(designSettings as any).footerLogo}
+            onUpload={(url) => updateDesignSettings({ footerLogo: url } as any)}
+            label="Logo du footer (PNG, JPG, GIF, SVG)"
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Favicon</CardTitle>
+          <CardDescription>Icône du site affichée dans l'onglet du navigateur</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FileDropZone
+            accept={['image']}
+            folder="branding"
+            currentFile={(designSettings as any).faviconUrl}
+            onUpload={(url) => updateDesignSettings({ faviconUrl: url } as any)}
+            label="Favicon (PNG, ICO, SVG)"
+          />
         </CardContent>
       </Card>
     </div>

@@ -20,7 +20,8 @@ import {
   PanelLeft,
   Shield,
   Bell,
-  Check
+  Check,
+  Mail as MailIcon
 } from 'lucide-react';
 import {
   Sheet,
@@ -34,31 +35,39 @@ interface MainLayoutProps {
   children: ReactNode;
 }
 
-const NAV_ITEMS = [
-  { href: '/', label: 'Home' },
-  { href: '/boutique', label: 'Shop' },
+const DEFAULT_NAV_ITEMS = [
+  { href: '/', label: 'Accueil' },
+  { href: '/boutique', label: 'Boutique' },
   { href: '/boutique?category=Homme', label: 'Homme' },
   { href: '/boutique?category=Femme', label: 'Femme' },
   { href: '/boutique?category=Enfant', label: 'Enfant' },
-  { href: '/about', label: 'About' },
+  { href: '/a-propos', label: 'À Propos' },
 ];
-
 
 export function MainLayout({ children }: MainLayoutProps) {
   const location = useLocation();
   const { user, isAdmin } = useAuth();
   const { itemCount } = useCart();
-  const { designSettings } = useApp();
+  const { designSettings, language, setLanguage } = useApp();
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
   const [notifOpen, setNotifOpen] = useState(false);
   const queryClient = useQueryClient();
 
+  const isHomePage = location.pathname === '/';
+
   const headerPreset = (designSettings as any).headerPreset || 'classic';
   const headerBgColor = (designSettings as any).headerBgColor || '';
   const headerTextColor = (designSettings as any).headerTextColor || '';
   const headerFixed = (designSettings as any).headerFixed !== false;
+  const topBanner = (designSettings as any).topBanner || { enabled: false, text: '', bgColor: '#000000', textColor: '#ffffff' };
+  const footerLogo = (designSettings as any).footerLogo || '';
+  const headerNavItems: { label: string; href: string }[] = (designSettings as any).headerNavItems;
+  const navItems = headerNavItems && headerNavItems.length > 0 ? headerNavItems : DEFAULT_NAV_ITEMS;
+
+  const showSidebar = isHomePage;
+  const sidebarActive = showSidebar && desktopSidebarOpen;
 
   // Admin notifications - unread messages
   const { data: messages = [] } = useQuery({
@@ -86,9 +95,20 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Header */}
-      {/* Logo Wrapper - Beveled octagonal shape - Hidden on mobile */}
-      {designSettings.showLogo !== false && (
+      {/* Top Banner */}
+      {topBanner.enabled && topBanner.text && (
+        <div
+          className="text-center text-xs py-2 px-4 font-medium tracking-wider"
+          style={{ backgroundColor: topBanner.bgColor || '#000', color: topBanner.textColor || '#fff' }}
+        >
+          {topBanner.link ? (
+            <Link to={topBanner.link} className="hover:underline">{topBanner.text}</Link>
+          ) : topBanner.text}
+        </div>
+      )}
+
+      {/* Logo Wrapper - Only on home page with sidebar */}
+      {designSettings.showLogo !== false && showSidebar && (
         <div className="logo-wrapper hidden lg:flex">
           <Link to="/" className="logo-link">
             {designSettings.hudLogo ? (
@@ -115,21 +135,21 @@ export function MainLayout({ children }: MainLayoutProps) {
           <div className={cn(
             "flex items-center h-14 lg:h-20",
             headerPreset === 'centered' ? "flex-col justify-center gap-1 h-auto py-3 lg:py-4" : "",
-            headerPreset === 'classic' ? "pl-0 lg:pl-[180px]" : "",
+            headerPreset === 'classic' && sidebarActive ? "pl-0 lg:pl-[180px]" : "",
             headerPreset === 'fullwidth' ? "gap-6" : "",
           )}>
-            {/* Mobile Logo */}
+            {/* Logo in header - always visible when no sidebar, or on mobile */}
             <Link to="/" className={cn(
               "flex items-center gap-2",
-              headerPreset === 'centered' ? "" : "lg:hidden mr-auto"
+              headerPreset === 'centered' ? "" : (showSidebar ? "lg:hidden mr-auto" : "mr-auto")
             )}>
-              {designSettings.hudLogo ? (
+              {designSettings.showLogo !== false && designSettings.hudLogo ? (
                 <img src={designSettings.hudLogo} alt="Logo" className={cn(
                   "w-auto object-contain",
                   headerPreset === 'centered' ? "h-8 lg:h-10" : "h-7"
                 )} />
               ) : (
-                <span className="font-bold text-base tracking-wider uppercase">HMP</span>
+                designSettings.showLogo !== false && <span className="font-bold text-base tracking-wider uppercase">HMP</span>
               )}
             </Link>
 
@@ -138,8 +158,9 @@ export function MainLayout({ children }: MainLayoutProps) {
               "items-center gap-8",
               headerPreset === 'minimal' ? "hidden" : "hidden lg:flex",
               headerPreset === 'fullwidth' ? "flex-1 justify-center" : "",
+              headerPreset === 'centered' ? "justify-center" : "",
             )}>
-              {NAV_ITEMS.map((item) => (
+              {navItems.map((item) => (
                 <Link
                   key={item.href}
                   to={item.href}
@@ -165,7 +186,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                   <div className="relative w-full">
                     <Input 
                       type="text" 
-                      placeholder="Search..." 
+                      placeholder="Rechercher..." 
                       className="w-full h-10 pr-10 bg-secondary border-0 focus-visible:ring-1"
                       autoFocus
                       onBlur={() => setSearchOpen(false)}
@@ -218,6 +239,14 @@ export function MainLayout({ children }: MainLayoutProps) {
                 </Link>
               )}
 
+              {/* Language selector */}
+              <button
+                onClick={() => setLanguage(language === 'FR' ? 'EN' : 'FR')}
+                className="text-xs font-bold tracking-wider text-muted-foreground hover:text-foreground transition-colors hidden md:block"
+              >
+                {language}
+              </button>
+
               {/* Mobile Menu */}
               <Sheet>
                 <SheetTrigger asChild className="lg:hidden">
@@ -231,14 +260,14 @@ export function MainLayout({ children }: MainLayoutProps) {
                     <div className="relative">
                       <Input 
                         type="text" 
-                        placeholder="Search products..." 
+                        placeholder="Rechercher..." 
                         className="w-full h-12 pl-12 bg-secondary border-0"
                       />
                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     </div>
 
                     {/* Mobile Nav */}
-                    {NAV_ITEMS.map((item) => (
+                    {navItems.map((item) => (
                       <Link
                         key={item.href}
                         to={item.href}
@@ -253,11 +282,11 @@ export function MainLayout({ children }: MainLayoutProps) {
 
                     <div className="mt-4 pt-4 border-t border-border">
                       <Link to="/panier" className="flex items-center justify-between py-3">
-                        <span className="text-lg font-medium">Cart</span>
+                        <span className="text-lg font-medium">Panier</span>
                         <span className="text-muted-foreground">({itemCount})</span>
                       </Link>
                       <Link to={user ? '/compte' : '/auth'} className="flex items-center justify-between py-3">
-                        <span className="text-lg font-medium">{user ? 'Account' : 'Sign In'}</span>
+                        <span className="text-lg font-medium">{user ? 'Mon Compte' : 'Connexion'}</span>
                         <ChevronRight className="h-5 w-5" />
                       </Link>
                       {isAdmin && (
@@ -266,6 +295,13 @@ export function MainLayout({ children }: MainLayoutProps) {
                           <Shield className="h-5 w-5" />
                         </Link>
                       )}
+                      <button
+                        onClick={() => setLanguage(language === 'FR' ? 'EN' : 'FR')}
+                        className="flex items-center justify-between py-3 w-full"
+                      >
+                        <span className="text-lg font-medium">Langue</span>
+                        <span className="text-muted-foreground">{language}</span>
+                      </button>
                     </div>
                   </div>
                 </SheetContent>
@@ -275,25 +311,27 @@ export function MainLayout({ children }: MainLayoutProps) {
         </div>
       </header>
 
-      {/* Mobile Sidebar Toggle Button */}
-      <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="fixed bottom-6 left-6 z-[60] lg:hidden w-12 h-12 bg-foreground text-background flex items-center justify-center transition-all duration-300 hover:scale-105 bevel-corners-sm"
-        aria-label="Toggle Model Interface"
-      >
-        <PanelLeft className={`h-5 w-5 transition-transform duration-300 ${sidebarOpen ? 'rotate-180' : ''}`} />
-      </button>
+      {/* Mobile Sidebar Toggle Button - Only on home page */}
+      {showSidebar && (
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="fixed bottom-6 left-6 z-[60] lg:hidden w-12 h-12 bg-foreground text-background flex items-center justify-center transition-all duration-300 hover:scale-105 bevel-corners-sm"
+          aria-label="Ouvrir le panneau"
+        >
+          <PanelLeft className={`h-5 w-5 transition-transform duration-300 ${sidebarOpen ? 'rotate-180' : ''}`} />
+        </button>
+      )}
 
       {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
+      {sidebarOpen && showSidebar && (
         <div 
           className="fixed inset-0 bg-black/50 z-[45] lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Desktop Sidebar Toggle - Reopen button */}
-      {!desktopSidebarOpen && (
+      {/* Desktop Sidebar Toggle - Reopen button - Only on home page */}
+      {showSidebar && !desktopSidebarOpen && (
         <button
           onClick={() => setDesktopSidebarOpen(true)}
           className="fixed bottom-6 left-6 z-[60] hidden lg:flex w-12 h-12 bg-foreground text-background items-center justify-center transition-all duration-300 hover:scale-105 bevel-corners-sm"
@@ -303,42 +341,42 @@ export function MainLayout({ children }: MainLayoutProps) {
         </button>
       )}
 
-      {/* Left Sidebar Panel - Glossy Glassmorphism */}
-      <div className={cn(
-        "sidebar-left-panel fixed top-0 left-0 h-screen z-50 transition-transform duration-500 ease-out w-[85%] sm:w-[320px] lg:w-[35%]",
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full',
-        desktopSidebarOpen ? 'lg:translate-x-0' : 'lg:-translate-x-full'
-      )}>
-        {/* Desktop close button */}
-        <button
-          onClick={() => setDesktopSidebarOpen(false)}
-          className="absolute top-4 right-4 z-30 hidden lg:flex w-8 h-8 bg-background/80 text-foreground items-center justify-center rounded-full hover:bg-background transition-colors"
-          aria-label="Fermer le panneau"
-        >
-          <X className="h-4 w-4" />
-        </button>
-        {/* Mannequin Background Image - Fixed */}
-        <div 
-          className="absolute inset-0 z-0"
-          style={{
-            backgroundImage: `url(${designSettings.sidebarImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&auto=format&fit=crop&q=60'})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center top',
-            backgroundAttachment: 'fixed',
-            opacity: designSettings.sidebarImageOpacity ?? 1,
-          }}
-        />
-        
-        {/* Interactive Hotspots */}
-        <div className="absolute inset-0 z-15">
-          <MannequinHotspots />
+      {/* Left Sidebar Panel - Only on home page */}
+      {showSidebar && (
+        <div className={cn(
+          "sidebar-left-panel fixed top-0 left-0 h-screen z-50 transition-transform duration-500 ease-out w-[85%] sm:w-[320px] lg:w-[35%]",
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full',
+          desktopSidebarOpen ? 'lg:translate-x-0' : 'lg:-translate-x-full'
+        )}>
+          {/* Desktop close button */}
+          <button
+            onClick={() => setDesktopSidebarOpen(false)}
+            className="absolute top-4 right-4 z-30 hidden lg:flex w-8 h-8 bg-background/80 text-foreground items-center justify-center rounded-full hover:bg-background transition-colors"
+            aria-label="Fermer le panneau"
+          >
+            <X className="h-4 w-4" />
+          </button>
+          {/* Mannequin Background Image - Fixed */}
+          <div 
+            className="absolute inset-0 z-0"
+            style={{
+              backgroundImage: `url(${designSettings.sidebarImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&auto=format&fit=crop&q=60'})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center top',
+              backgroundAttachment: 'fixed',
+              opacity: designSettings.sidebarImageOpacity ?? 1,
+            }}
+          />
+          
+          {/* Interactive Hotspots */}
+          <div className="absolute inset-0 z-15">
+            <MannequinHotspots />
+          </div>
+          
+          {/* Sidebar Content - Product Card HUD */}
+          <SidebarProductHUD />
         </div>
-        
-        {/* Overlay removed per design choice */}
-        
-        {/* Sidebar Content - Product Card HUD */}
-        <SidebarProductHUD />
-      </div>
+      )}
 
       {/* Admin Notification Bell */}
       {isAdmin && (
@@ -387,8 +425,10 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Main Content */}
       <main className={cn(
-        "pt-16 lg:pt-20 transition-all duration-500",
-        desktopSidebarOpen ? "lg:ml-[35%]" : "lg:ml-0"
+        "transition-all duration-500",
+        headerFixed ? "pt-14 lg:pt-20" : "",
+        topBanner.enabled ? "pt-[calc(theme(spacing.14)+2rem)] lg:pt-[calc(theme(spacing.20)+2rem)]" : "",
+        sidebarActive ? "lg:ml-[35%]" : "lg:ml-0"
       )}>
         {children}
       </main>
@@ -396,34 +436,42 @@ export function MainLayout({ children }: MainLayoutProps) {
       {/* Footer */}
       <footer className={cn(
         "bg-secondary border-t border-border py-8 mt-4 lg:py-16 lg:mt-10 transition-all duration-500",
-        desktopSidebarOpen ? "lg:ml-[35%]" : "lg:ml-0"
+        sidebarActive ? "lg:ml-[35%]" : "lg:ml-0"
       )}>
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 lg:gap-12">
             {/* Brand */}
             <div className="col-span-2 md:col-span-1">
-              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-background border-2 border-foreground flex items-center justify-center transform rotate-45 mb-4 lg:mb-6">
-                <span className="transform -rotate-45 text-xs lg:text-sm font-bold">HMP</span>
-              </div>
+              {footerLogo || designSettings.hudLogo ? (
+                <img 
+                  src={footerLogo || designSettings.hudLogo} 
+                  alt="Logo" 
+                  className="h-10 w-auto object-contain mb-4 lg:mb-6" 
+                />
+              ) : (
+                <div className="w-10 h-10 lg:w-12 lg:h-12 bg-background border-2 border-foreground flex items-center justify-center transform rotate-45 mb-4 lg:mb-6">
+                  <span className="transform -rotate-45 text-xs lg:text-sm font-bold">HMP</span>
+                </div>
+              )}
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Helvetica-MP. Minimalist design meets functional excellence. Premium quality for the modern individual.
+                Helvetica-MP. Design minimaliste et excellence fonctionnelle. Qualité premium pour l'individu moderne.
               </p>
             </div>
             
             {/* Quick Links */}
             <div>
-              <h4 className="font-bold uppercase tracking-wider mb-4 lg:mb-6 text-sm">Quick Links</h4>
+              <h4 className="font-bold uppercase tracking-wider mb-4 lg:mb-6 text-sm">Liens Rapides</h4>
               <ul className="space-y-3 text-sm text-muted-foreground">
-                <li><Link to="/" className="hover:text-foreground transition-colors">Home</Link></li>
-                <li><Link to="/boutique" className="hover:text-foreground transition-colors">Shop</Link></li>
-                <li><Link to="/compte" className="hover:text-foreground transition-colors">Account</Link></li>
-                <li><Link to="/about" className="hover:text-foreground transition-colors">About</Link></li>
+                <li><Link to="/" className="hover:text-foreground transition-colors">Accueil</Link></li>
+                <li><Link to="/boutique" className="hover:text-foreground transition-colors">Boutique</Link></li>
+                <li><Link to="/compte" className="hover:text-foreground transition-colors">Mon Compte</Link></li>
+                <li><Link to="/a-propos" className="hover:text-foreground transition-colors">À Propos</Link></li>
               </ul>
             </div>
             
             {/* Social */}
             <div>
-              <h4 className="font-bold uppercase tracking-wider mb-4 lg:mb-6 text-sm">Follow Us</h4>
+              <h4 className="font-bold uppercase tracking-wider mb-4 lg:mb-6 text-sm">Suivez-nous</h4>
               <div className="flex gap-3">
                 <a href="#" className="social-icon">
                   <span className="text-xs font-bold">FB</span>
@@ -444,24 +492,32 @@ export function MainLayout({ children }: MainLayoutProps) {
             <div className="col-span-2 md:col-span-1">
               <h4 className="font-bold uppercase tracking-wider mb-4 lg:mb-6 text-sm">Newsletter</h4>
               <p className="text-sm text-muted-foreground mb-4">
-                Subscribe for updates and exclusive offers.
+                Inscrivez-vous pour recevoir nos offres exclusives.
               </p>
               <div className="flex">
                 <Input 
                   type="email" 
-                  placeholder="your@email.com"
+                  placeholder="votre@email.com"
                   className="flex-1 h-12 bg-background border-0 rounded-none"
                 />
                 <Button className="h-12 px-6 rounded-none">
-                  Sign up
+                  S'inscrire
                 </Button>
               </div>
             </div>
           </div>
           
           <div className="border-t border-border mt-8 lg:mt-12 pt-6 lg:pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs lg:text-sm text-muted-foreground">
-            <p>© 2026 HELVETICA-MP. All rights reserved.</p>
-            <p className="font-mono text-xs tracking-widest">MODEL 0.1.2</p>
+            <p>© 2026 HELVETICA-MP. Tous droits réservés.</p>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setLanguage(language === 'FR' ? 'EN' : 'FR')}
+                className="text-xs font-bold tracking-wider hover:text-foreground transition-colors"
+              >
+                {language === 'FR' ? '🇫🇷 FR' : '🇬🇧 EN'}
+              </button>
+              <span className="font-mono text-xs tracking-widest">EUR €</span>
+            </div>
           </div>
         </div>
       </footer>

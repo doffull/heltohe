@@ -263,11 +263,14 @@ export type Database = {
           click_scale: number | null
           created_at: string
           custom_unit_id: string | null
+          favicon_url: string | null
+          footer_logo: string | null
           glitch_duration: number | null
           glitch_intensity: number | null
           gradient_intensity: number | null
           header_bg_color: string | null
           header_fixed: boolean | null
+          header_nav_items: Json | null
           header_preset: string | null
           header_text_color: string | null
           hero_slides: Json | null
@@ -300,6 +303,7 @@ export type Database = {
           stats_label: string | null
           stats_style: Json | null
           stats_sub_label: string | null
+          top_banner: Json | null
           unit_id_label: string | null
           unit_id_style: Json | null
           updated_at: string
@@ -312,11 +316,14 @@ export type Database = {
           click_scale?: number | null
           created_at?: string
           custom_unit_id?: string | null
+          favicon_url?: string | null
+          footer_logo?: string | null
           glitch_duration?: number | null
           glitch_intensity?: number | null
           gradient_intensity?: number | null
           header_bg_color?: string | null
           header_fixed?: boolean | null
+          header_nav_items?: Json | null
           header_preset?: string | null
           header_text_color?: string | null
           hero_slides?: Json | null
@@ -349,6 +356,7 @@ export type Database = {
           stats_label?: string | null
           stats_style?: Json | null
           stats_sub_label?: string | null
+          top_banner?: Json | null
           unit_id_label?: string | null
           unit_id_style?: Json | null
           updated_at?: string
@@ -361,11 +369,14 @@ export type Database = {
           click_scale?: number | null
           created_at?: string
           custom_unit_id?: string | null
+          favicon_url?: string | null
+          footer_logo?: string | null
           glitch_duration?: number | null
           glitch_intensity?: number | null
           gradient_intensity?: number | null
           header_bg_color?: string | null
           header_fixed?: boolean | null
+          header_nav_items?: Json | null
           header_preset?: string | null
           header_text_color?: string | null
           hero_slides?: Json | null
@@ -398,6 +409,7 @@ export type Database = {
           stats_label?: string | null
           stats_style?: Json | null
           stats_sub_label?: string | null
+          top_banner?: Json | null
           unit_id_label?: string | null
           unit_id_style?: Json | null
           updated_at?: string
