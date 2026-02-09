@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory, CategoryRecord } from '@/hooks/useCategories';
+import { useApp } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -68,6 +69,7 @@ function CategoryForm({ category, onSubmit, onCancel }: {
 
 export default function AdminSettings() {
   const { toast } = useToast();
+  const { designSettings, updateDesignSettings } = useApp();
 
   // Categories
   const { data: categories = [], isLoading } = useCategories();
@@ -107,7 +109,26 @@ export default function AdminSettings() {
 
         {/* ── CATEGORIES TAB ── */}
         <TabsContent value="categories" className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            {/* Column selector */}
+            <div className="flex items-center gap-3">
+              <Label className="hud-text text-xs whitespace-nowrap">Colonnes :</Label>
+              <div className="flex border border-border rounded overflow-hidden">
+                {[2, 3, 4].map(n => (
+                  <button
+                    key={n}
+                    onClick={() => updateDesignSettings({ categoryColumns: n })}
+                    className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                      (designSettings.categoryColumns ?? 4) === n
+                        ? 'bg-foreground text-background'
+                        : 'bg-background hover:bg-secondary'
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
             <Button onClick={() => { setEditingCat(null); setCatDialogOpen(true); }} className="chamfer-hud-sm">
               <Plus className="h-4 w-4 mr-2" />Nouvelle catégorie
             </Button>

@@ -95,7 +95,15 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       <header className="fixed top-0 left-0 right-0 z-40 bg-background border-b border-border header-container">
         <div className="container mx-auto px-4">
-          <div className="flex items-center h-16 lg:h-20 pl-0 lg:pl-[180px]">
+          <div className="flex items-center h-14 lg:h-20 pl-0 lg:pl-[180px]">
+            {/* Mobile Logo */}
+            <Link to="/" className="lg:hidden flex items-center gap-2 mr-auto">
+              {designSettings.hudLogo ? (
+                <img src={designSettings.hudLogo} alt="Logo" className="h-7 w-auto object-contain" />
+              ) : (
+                <span className="font-bold text-base tracking-wider uppercase">HMP</span>
+              )}
+            </Link>
 
             {/* Desktop Navigation - Centered */}
             <nav className="hidden lg:flex items-center gap-8">
@@ -336,13 +344,13 @@ export function MainLayout({ children }: MainLayoutProps) {
       </main>
 
       {/* Footer */}
-      <footer className="bg-secondary border-t border-border py-16 mt-20 lg:ml-[35%]">
+      <footer className="bg-secondary border-t border-border py-8 mt-10 lg:py-16 lg:mt-20 lg:ml-[35%]">
         <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-12">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 lg:gap-12">
             {/* Brand */}
-            <div>
-              <div className="w-12 h-12 bg-background border-2 border-foreground flex items-center justify-center transform rotate-45 mb-6">
-                <span className="transform -rotate-45 text-sm font-bold">HMP</span>
+            <div className="col-span-2 md:col-span-1">
+              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-background border-2 border-foreground flex items-center justify-center transform rotate-45 mb-4 lg:mb-6">
+                <span className="transform -rotate-45 text-xs lg:text-sm font-bold">HMP</span>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Helvetica-MP. Minimalist design meets functional excellence. Premium quality for the modern individual.
@@ -351,7 +359,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             
             {/* Quick Links */}
             <div>
-              <h4 className="font-bold uppercase tracking-wider mb-6">Quick Links</h4>
+              <h4 className="font-bold uppercase tracking-wider mb-4 lg:mb-6 text-sm">Quick Links</h4>
               <ul className="space-y-3 text-sm text-muted-foreground">
                 <li><Link to="/" className="hover:text-foreground transition-colors">Home</Link></li>
                 <li><Link to="/boutique" className="hover:text-foreground transition-colors">Shop</Link></li>
@@ -362,7 +370,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             
             {/* Social */}
             <div>
-              <h4 className="font-bold uppercase tracking-wider mb-6">Follow Us</h4>
+              <h4 className="font-bold uppercase tracking-wider mb-4 lg:mb-6 text-sm">Follow Us</h4>
               <div className="flex gap-3">
                 <a href="#" className="social-icon">
                   <span className="text-xs font-bold">FB</span>
@@ -380,8 +388,8 @@ export function MainLayout({ children }: MainLayoutProps) {
             </div>
             
             {/* Newsletter */}
-            <div>
-              <h4 className="font-bold uppercase tracking-wider mb-6">Newsletter</h4>
+            <div className="col-span-2 md:col-span-1">
+              <h4 className="font-bold uppercase tracking-wider mb-4 lg:mb-6 text-sm">Newsletter</h4>
               <p className="text-sm text-muted-foreground mb-4">
                 Subscribe for updates and exclusive offers.
               </p>
@@ -398,7 +406,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             </div>
           </div>
           
-          <div className="border-t border-border mt-12 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
+          <div className="border-t border-border mt-8 lg:mt-12 pt-6 lg:pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs lg:text-sm text-muted-foreground">
             <p>© 2026 HELVETICA-MP. All rights reserved.</p>
             <p className="font-mono text-xs tracking-widest">MODEL 0.1.2</p>
           </div>

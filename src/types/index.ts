@@ -251,6 +251,9 @@ export interface DesignSettings {
 
   // Mannequin hotspots
   mannequinHotspots: MannequinHotspotConfig[];
+
+  // Category grid columns
+  categoryColumns?: number;
 }
 
 export interface MannequinHotspotConfig {

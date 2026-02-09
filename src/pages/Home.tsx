@@ -211,7 +211,7 @@ export default function Home() {
 
         <motion.div
           style={{ opacity: heroOpacity }}
-          className="relative z-20 h-full flex flex-col justify-end pb-24 px-6 lg:px-16"
+          className="relative z-20 h-full flex flex-col justify-end pb-16 lg:pb-24 px-4 lg:px-16"
         >
           <div className="max-w-3xl space-y-6">
             <motion.p
@@ -223,7 +223,7 @@ export default function Home() {
             >
               {slide.subtitle}
             </motion.p>
-            <h1 className="text-5xl md:text-7xl xl:text-8xl font-bold uppercase leading-[0.9] tracking-tighter">
+            <h1 className="text-3xl sm:text-5xl md:text-7xl xl:text-8xl font-bold uppercase leading-[0.9] tracking-tighter">
               {slide.title.split('\n').map((line, i) => (
                 <motion.span
                   key={`${currentSlide}-${i}`}
@@ -286,18 +286,23 @@ export default function Home() {
       </section>
 
       {/* ═══════════════ CATEGORIES GRID ═══════════════ */}
-      <section className="py-20 lg:py-28">
+      <section className="py-10 lg:py-28">
         <div className="container mx-auto px-4">
           <RevealSection>
-            <div className="flex items-end justify-between mb-12">
+            <div className="flex items-end justify-between mb-6 lg:mb-12">
               <div>
                 <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-2">// COLLECTIONS</p>
-                <h2 className="text-4xl lg:text-5xl font-bold uppercase tracking-tight">Catégories</h2>
+                <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight">Catégories</h2>
               </div>
             </div>
           </RevealSection>
 
-          <StaggerContainer className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+          <StaggerContainer className={cn(
+            "grid gap-3 lg:gap-6",
+            (designSettings as any).categoryColumns === 2 ? "grid-cols-2" :
+            (designSettings as any).categoryColumns === 3 ? "grid-cols-2 lg:grid-cols-3" :
+            "grid-cols-2 lg:grid-cols-4"
+          )}>
             {(designSettings.categories?.length > 0
               ? designSettings.categories.map(c => ({ title: c.title, image: c.image, href: `/boutique?category=${c.title}` }))
               : FALLBACK_CATEGORIES
@@ -328,13 +333,13 @@ export default function Home() {
       </section>
 
       {/* ═══════════════ FEATURED PRODUCTS ═══════════════ */}
-      <section className="py-20 lg:py-28 bg-secondary/30">
+      <section className="py-10 lg:py-28 bg-secondary/30">
         <div className="container mx-auto px-4">
           <RevealSection>
-            <div className="flex items-end justify-between mb-12">
+            <div className="flex items-end justify-between mb-6 lg:mb-12">
               <div>
                 <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-2">// SÉLECTION</p>
-                <h2 className="text-4xl lg:text-5xl font-bold uppercase tracking-tight">En vedette</h2>
+                <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight">En vedette</h2>
               </div>
               <Button
                 variant="outline"
@@ -399,7 +404,7 @@ export default function Home() {
             ))}
           </StaggerContainer>
 
-          <div className="text-center mt-10 md:hidden">
+          <div className="text-center mt-6 md:hidden">
             <Button variant="outline" className="uppercase tracking-wider" onClick={() => navigate('/boutique')}>
               Voir tous les produits
               <ChevronRight className="ml-2 h-4 w-4" />
@@ -409,12 +414,12 @@ export default function Home() {
       </section>
 
       {/* ═══════════════ NEW ARRIVALS ═══════════════ */}
-      <section className="py-20 lg:py-28">
+      <section className="py-10 lg:py-28">
         <div className="container mx-auto px-4">
           <RevealSection>
-            <div className="text-center mb-12">
+            <div className="text-center mb-6 lg:mb-12">
               <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-2">// NOUVEAUTÉS</p>
-              <h2 className="text-4xl lg:text-5xl font-bold uppercase tracking-tight">Dernières arrivées</h2>
+              <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight">Dernières arrivées</h2>
             </div>
           </RevealSection>
 
@@ -448,7 +453,7 @@ export default function Home() {
             ))}
           </StaggerContainer>
 
-          <RevealSection delay={0.3} className="text-center mt-12">
+          <RevealSection delay={0.3} className="text-center mt-6 lg:mt-12">
             <Button
               size="lg"
               variant="outline"
@@ -464,10 +469,10 @@ export default function Home() {
 
       {/* ═══════════════ NEWSLETTER CTA ═══════════════ */}
       <RevealSection>
-        <section className="py-24 bg-foreground text-background">
+        <section className="py-12 lg:py-24 bg-foreground text-background">
           <div className="container mx-auto px-4 text-center">
             <p className="font-mono text-xs tracking-[0.3em] text-background/50 mb-4">// NEWSLETTER</p>
-            <h2 className="text-4xl lg:text-5xl font-bold uppercase tracking-tight mb-4">
+            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight mb-4">
               Restez informé
             </h2>
             <p className="text-background/60 mb-8 max-w-md mx-auto">
