@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useCategories } from '@/hooks/useCategories';
 import { 
   DesignSettings, 
   Product, 
@@ -111,6 +112,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const navigate = useNavigate();
+  const { data: allCategories = [] } = useCategories();
 
   const navigateToCategory = useCallback((category: string) => {
     setCurrentCategory(category);
@@ -118,9 +120,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (category === 'Tout') {
       navigate('/boutique');
     } else {
-      navigate(`/boutique?category=${encodeURIComponent(category)}`);
+      // Find slug for this category
+      const cat = allCategories.find(c => c.title === category);
+      const slug = cat?.slug || encodeURIComponent(category.toLowerCase());
+      navigate(`/boutique/${slug}`);
     }
-  }, [navigate]);
+  }, [navigate, allCategories]);
 
   const navigateToProduct = useCallback((product: Product) => {
     setSelectedProduct(product);

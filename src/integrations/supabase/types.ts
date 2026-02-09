@@ -175,7 +175,11 @@ export type Database = {
           display_size: string | null
           id: string
           image: string | null
+          meta_description: string | null
+          meta_title: string | null
           parent_id: string | null
+          seo_keywords: string | null
+          slug: string | null
           sort_order: number | null
           title: string
           updated_at: string
@@ -186,7 +190,11 @@ export type Database = {
           display_size?: string | null
           id?: string
           image?: string | null
+          meta_description?: string | null
+          meta_title?: string | null
           parent_id?: string | null
+          seo_keywords?: string | null
+          slug?: string | null
           sort_order?: number | null
           title: string
           updated_at?: string
@@ -197,7 +205,11 @@ export type Database = {
           display_size?: string | null
           id?: string
           image?: string | null
+          meta_description?: string | null
+          meta_title?: string | null
           parent_id?: string | null
+          seo_keywords?: string | null
+          slug?: string | null
           sort_order?: number | null
           title?: string
           updated_at?: string

@@ -25,7 +25,7 @@ const SORT_OPTIONS = [
   { value: 'name', label: 'Nom A-Z' },
 ];
 
-export default function Shop() {
+export default function Shop({ categoryFromSlug }: { categoryFromSlug?: string }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
@@ -40,16 +40,44 @@ export default function Shop() {
 
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
-  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'Tout');
+  const [selectedCategory, setSelectedCategory] = useState(categoryFromSlug || searchParams.get('category') || 'Tout');
   const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'newest');
 
-  // Sync category from URL params when they change
+  // Sync category from slug prop or URL params when they change
   useEffect(() => {
-    const urlCategory = searchParams.get('category') || 'Tout';
-    setSelectedCategory(urlCategory);
-    setSelectedSubCategory(null);
-  }, [searchParams]);
+    if (categoryFromSlug) {
+      setSelectedCategory(categoryFromSlug);
+      setSelectedSubCategory(null);
+    } else {
+      const urlCategory = searchParams.get('category') || 'Tout';
+      setSelectedCategory(urlCategory);
+      setSelectedSubCategory(null);
+    }
+  }, [searchParams, categoryFromSlug]);
+
+  // SEO: Set meta tags for category pages
+  const activeCategory = dbCategories.find(c => c.title === selectedCategory);
+  useEffect(() => {
+    if (activeCategory?.metaTitle) {
+      document.title = activeCategory.metaTitle;
+    } else if (selectedCategory !== 'Tout') {
+      document.title = `${selectedCategory} — Boutique`;
+    } else {
+      document.title = 'Boutique';
+    }
+    const metaDesc = document.querySelector('meta[name="description"]');
+    if (activeCategory?.metaDescription) {
+      if (metaDesc) metaDesc.setAttribute('content', activeCategory.metaDescription);
+      else {
+        const meta = document.createElement('meta');
+        meta.name = 'description';
+        meta.content = activeCategory.metaDescription;
+        document.head.appendChild(meta);
+      }
+    }
+    return () => { document.title = 'LVTK6 Concept'; };
+  }, [activeCategory, selectedCategory]);
 
   // Get sub-categories for selected category
   const subCategories = useMemo(() => {
