@@ -1,5 +1,6 @@
 import { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { useApp } from '@/context/AppContext';
@@ -47,10 +48,12 @@ export function MainLayout({ children }: MainLayoutProps) {
   const { user, isAdmin } = useAuth();
   const { itemCount } = useCart();
   const { designSettings, language, setLanguage } = useApp();
+  const isMobile = useIsMobile();
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(false);
   const [sidebarClosedByUser, setSidebarClosedByUser] = useState(false);
+  const [mobileSidebarClosedByUser, setMobileSidebarClosedByUser] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const queryClient = useQueryClient();
   const { data: dbCategories = [] } = useCategories();
@@ -89,15 +92,27 @@ export function MainLayout({ children }: MainLayoutProps) {
   // Auto-open sidebar after configurable delay on home page
   // sidebarReappearDelay: number (ms) or 0 = OFF
   const sidebarReappearDelay = (designSettings as any).sidebarReappearDelay ?? (designSettings as any).sidebarDelay ?? 10000;
+  // Desktop auto-open
   useEffect(() => {
-    if (isHomePage && sidebarReappearDelay > 0 && !desktopSidebarOpen) {
+    if (!isMobile && isHomePage && sidebarReappearDelay > 0 && !desktopSidebarOpen) {
       const timer = setTimeout(() => {
         setDesktopSidebarOpen(true);
         setSidebarClosedByUser(false);
       }, sidebarClosedByUser ? sidebarReappearDelay : Math.min(sidebarReappearDelay, 3000));
       return () => clearTimeout(timer);
     }
-  }, [isHomePage, sidebarReappearDelay, sidebarClosedByUser, desktopSidebarOpen]);
+  }, [isMobile, isHomePage, sidebarReappearDelay, sidebarClosedByUser, desktopSidebarOpen]);
+
+  // Mobile auto-open
+  useEffect(() => {
+    if (isMobile && isHomePage && sidebarReappearDelay > 0 && !sidebarOpen) {
+      const timer = setTimeout(() => {
+        setSidebarOpen(true);
+        setMobileSidebarClosedByUser(false);
+      }, mobileSidebarClosedByUser ? sidebarReappearDelay : 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isMobile, isHomePage, sidebarReappearDelay, mobileSidebarClosedByUser, sidebarOpen]);
 
   // Admin notifications - unread messages
   const { data: messages = [] } = useQuery({
@@ -380,7 +395,10 @@ export function MainLayout({ children }: MainLayoutProps) {
       {/* Mobile Sidebar Toggle Button - Only on home page */}
       {showSidebar && (
         <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
+          onClick={() => {
+            setSidebarOpen(!sidebarOpen);
+            if (sidebarOpen) setMobileSidebarClosedByUser(true);
+          }}
           className="fixed bottom-6 left-6 z-[60] lg:hidden w-12 h-12 bg-foreground text-background flex items-center justify-center transition-all duration-300 hover:scale-105 bevel-corners-sm"
           aria-label="Ouvrir le panneau"
         >
@@ -392,7 +410,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       {sidebarOpen && showSidebar && (
         <div 
           className="fixed inset-0 bg-black/50 z-[45] lg:hidden"
-          onClick={() => setSidebarOpen(false)}
+          onClick={() => { setSidebarOpen(false); setMobileSidebarClosedByUser(true); }}
         />
       )}
 
@@ -422,14 +440,22 @@ export function MainLayout({ children }: MainLayoutProps) {
           >
             <X className="h-4 w-4" />
           </button>
+          {/* Mobile close button */}
+          <button
+            onClick={() => { setSidebarOpen(false); setMobileSidebarClosedByUser(true); }}
+            className="absolute top-4 right-4 z-30 flex lg:hidden w-8 h-8 bg-background/80 text-foreground items-center justify-center rounded-full hover:bg-background transition-colors"
+            aria-label="Fermer le panneau"
+          >
+            <X className="h-4 w-4" />
+          </button>
           {/* Mannequin Background Image - Fixed */}
           <div 
             className="absolute inset-0 z-0"
             style={{
-              backgroundImage: `url(${designSettings.sidebarImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&auto=format&fit=crop&q=60'})`,
+              backgroundImage: `url(${(isMobile && (designSettings as any).mobileSidebarImage) ? (designSettings as any).mobileSidebarImage : (designSettings.sidebarImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&auto=format&fit=crop&q=60')})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center top',
-              backgroundAttachment: 'fixed',
+              backgroundAttachment: isMobile ? 'scroll' : 'fixed',
               opacity: designSettings.sidebarImageOpacity ?? 1,
             }}
           />

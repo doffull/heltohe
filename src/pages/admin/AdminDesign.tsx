@@ -548,14 +548,28 @@ function SidebarTab() {
           <CardTitle className="text-base">Image du mannequin</CardTitle>
           <CardDescription>Photo de fond du panneau latéral gauche</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <FileDropZone
-            accept={['image']}
-            folder="sidebar"
-            currentFile={designSettings.sidebarImage}
-            onUpload={(url) => updateDesignSettings({ sidebarImage: url })}
-            label="Glissez l'image du mannequin"
-          />
+        <CardContent className="space-y-6">
+          <div>
+            <Label className="text-xs font-medium mb-2 block">Image desktop</Label>
+            <FileDropZone
+              accept={['image']}
+              folder="sidebar"
+              currentFile={designSettings.sidebarImage}
+              onUpload={(url) => updateDesignSettings({ sidebarImage: url })}
+              label="Glissez l'image du mannequin (desktop)"
+            />
+          </div>
+          <div>
+            <Label className="text-xs font-medium mb-2 block">Image mobile (optionnel)</Label>
+            <FileDropZone
+              accept={['image']}
+              folder="sidebar/mobile"
+              currentFile={(designSettings as any).mobileSidebarImage}
+              onUpload={(url) => updateDesignSettings({ mobileSidebarImage: url } as any)}
+              label="Image adaptée mobile"
+            />
+            <p className="text-xs text-muted-foreground mt-1">Si vide, l'image desktop sera utilisée</p>
+          </div>
           <div className="space-y-2">
             <Label>Opacité de l'image ({Math.round((designSettings.sidebarImageOpacity ?? 1) * 100)}%)</Label>
             <Slider
