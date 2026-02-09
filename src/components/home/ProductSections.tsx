@@ -2,7 +2,7 @@ import { useApp } from '@/context/AppContext';
 import { ProductGrid } from '@/components/products/ProductCard';
 
 export function ProductSections() {
-  const { designSettings, products, navigateToProduct, language } = useApp();
+  const { designSettings, products, navigateToProduct, navigateToCategory, language } = useApp();
   const { homeSections } = designSettings;
   
   // Filter products for different sections
@@ -42,7 +42,10 @@ export function ProductSections() {
                     {section.title}
                   </h3>
                 </div>
-                <button className="hud-text text-xs text-muted-foreground hover:text-primary transition-colors chamfer-hud-sm border border-border/30 px-4 py-2 hover:border-primary/30">
+                <button 
+                  className="hud-text text-xs text-muted-foreground hover:text-primary transition-colors chamfer-hud-sm border border-border/30 px-4 py-2 hover:border-primary/30"
+                  onClick={() => navigateToCategory('Tout')}
+                >
                   {language === 'FR' ? 'VOIR TOUT' : 'VIEW ALL'}
                 </button>
               </div>

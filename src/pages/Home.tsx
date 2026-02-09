@@ -231,7 +231,7 @@ export default function Home() {
             >
               {slide.subtitle}
             </motion.p>
-            <h1 className="text-3xl sm:text-5xl md:text-7xl xl:text-8xl font-bold uppercase leading-[0.9] tracking-tighter">
+            <h1 className="text-2xl sm:text-5xl md:text-7xl xl:text-8xl font-bold uppercase leading-[0.9] tracking-tighter">
               {slide.title.split('\n').map((line, i) => (
                 <motion.span
                   key={`${currentSlide}-${i}`}
@@ -500,19 +500,38 @@ export default function Home() {
             <p className="text-background/60 mb-8 max-w-md mx-auto">
               Inscrivez-vous pour recevoir les nouveautés et offres exclusives en avant-première.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
+            <form
+              className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const form = e.currentTarget;
+                const emailInput = form.querySelector('input[type="email"]') as HTMLInputElement;
+                const email = emailInput?.value;
+                if (!email) return;
+                try {
+                  const { supabase } = await import('@/integrations/supabase/client');
+                  await supabase.from('newsletters').insert({ email });
+                  toast({ title: 'Inscription réussie', description: 'Merci pour votre inscription à la newsletter !' });
+                  emailInput.value = '';
+                } catch {
+                  toast({ title: 'Erreur', description: 'Une erreur est survenue.', variant: 'destructive' });
+                }
+              }}
+            >
               <input
                 type="email"
                 placeholder="votre@email.com"
+                required
                 className="flex-1 h-12 px-4 bg-background text-foreground border-0"
               />
               <Button
+                type="submit"
                 size="lg"
                 className="h-12 bg-background text-foreground hover:bg-background/90"
               >
                 S'inscrire
               </Button>
-            </div>
+            </form>
           </div>
         </section>
       </RevealSection>
