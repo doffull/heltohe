@@ -1,163 +1,127 @@
 
-# Plan : Header avance, Sidebar conditionnelle, Footer logo, Top banner, Animation logo, Francisation, Commandes avancees, Communication clients
+
+# Corrections Header/Sidebar + Presets Categories + Sidebar delai 10s
 
 ---
 
-## 1. Header avance : categories centrees, choix des liens, affichage logo configurable
+## Problemes identifies
 
-### Probleme actuel
-Les liens du header sont codes en dur dans `NAV_ITEMS` (Home, Shop, Homme, Femme, Enfant, About). On ne peut pas choisir quelles categories afficher, ni centrer les liens, ni masquer le logo depuis l'admin.
-
-### Solution
-- **`HeaderDesignTab.tsx`** : Ajouter les options suivantes :
-  - **Choix des liens de navigation** : Liste a cocher des categories (depuis la table `categories`) + liens systeme (Accueil, Boutique, A propos). L'admin coche ceux qu'il veut afficher.
-  - **Centrage des categories** : Option pour centrer le texte dans la nav (deja supporte par le preset "centered", mais ajouter un toggle "Centrer la navigation" independant du preset).
-  - **Afficher/masquer le logo dans le header** : Toggle deja partiellement en place via `showLogo`, mais le relier au header specifiquement.
-- **`DesignSettings` (types)** : Ajouter `headerNavItems?: { label: string; href: string }[]` pour stocker les liens choisis.
-- **`MainLayout.tsx`** : Remplacer le `NAV_ITEMS` statique par `designSettings.headerNavItems` (avec fallback sur les liens par defaut).
-
-### Migration SQL
-```sql
-ALTER TABLE design_settings ADD COLUMN IF NOT EXISTS header_nav_items jsonb DEFAULT '[]'::jsonb;
-```
+1. **Header colle au top banner** : Pas d'espace entre le bandeau promo et le header. Le top banner et le header se chevauchent visuellement.
+2. **Header rigide** : Quand la sidebar s'ouvre, le header ne se decale pas. La sidebar passe par-dessus le header et le top banner au lieu de les pousser vers la droite.
+3. **Sidebar doit apparaitre apres 10 secondes** : Le sidebar doit s'ouvrir automatiquement apres un delai de 10 secondes au lieu d'etre ouvert immediatement.
+4. **Categories sur une seule ligne (desktop)** : Les images de categories doivent etre plus petites et tenir sur une seule ligne (4 colonnes) sur desktop, avec la possibilite de changer les dimensions/dispositions dans l'admin.
+5. **Presets manquants** : L'utilisateur veut des presets de disposition pour les categories, la sidebar, le hero slider, les hotspots et les bannieres marketing.
 
 ---
 
-## 2. Sidebar uniquement sur la page d'accueil + adaptation du header
+## 1. Header qui s'adapte a la sidebar
 
-### Probleme actuel
-La sidebar gauche s'affiche sur toutes les pages (Boutique, Produit, Panier, etc.) et decale tout le contenu avec `lg:ml-[35%]`.
+### Fichier : `src/components/layout/MainLayout.tsx`
 
-### Solution
-- **`MainLayout.tsx`** :
-  - Lire `location.pathname` pour determiner si on est sur `/` (page d'accueil).
-  - Afficher la sidebar **uniquement** quand `pathname === '/'`.
-  - Le `main` et `footer` n'utilisent `lg:ml-[35%]` que sur la page d'accueil avec sidebar ouverte.
-  - Sur toutes les autres pages, le layout est standard (pleine largeur, header normal).
-  - Le bouton toggle sidebar n'apparait que sur la page d'accueil.
-  - Le header s'adapte : quand la sidebar est visible, le logo-wrapper reste ; sinon, header classique pleine largeur.
+Le header et le top banner doivent se decaler vers la droite quand la sidebar est ouverte, comme le font deja le `main` et le `footer`.
+
+- **Top banner** : Ajouter `transition-all duration-500` et `sidebarActive ? "lg:ml-[35%]" : "lg:ml-0"`.
+- **Logo wrapper** : Meme traitement.
+- **Header** : Remplacer le `pl-0 lg:pl-[180px]` par un margin-left sur tout le `<header>` : `sidebarActive ? "lg:ml-[35%]" : "lg:ml-0"` avec transition.
+- **Supprimer** la regle `headerPreset === 'classic' && sidebarActive ? "pl-0 lg:pl-[180px]"` qui est insuffisante.
+- Ajouter un petit gap entre le top banner et le header si besoin (border-b suffit normalement).
 
 ---
 
-## 3. Logo dans le footer + logo icone du site + logo anime (GIF)
+## 2. Sidebar avec delai d'apparition de 10 secondes
 
-### Solution
-- **`DesignSettings` (types)** : Ajouter `footerLogo?: string`, `faviconUrl?: string`.
-- **`AdminDesign.tsx` (LogoTab)** : Ajouter 3 sections :
-  - **Logo principal** (deja present) : accepte image et GIF animes.
-  - **Logo footer** : `FileDropZone` pour uploader un logo specifique au footer.
-  - **Favicon** : `FileDropZone` pour uploader l'icone du site (favicon).
-- **`MainLayout.tsx` (footer)** : Remplacer le bloc "HMP" en dur par l'affichage de `designSettings.footerLogo` (ou fallback sur le logo principal).
-- **`index.html`** : Le favicon sera gere dynamiquement via un `useEffect` dans `App.tsx` qui met a jour `document.querySelector('link[rel="icon"]')`.
-- Le composant `FileDropZone` accepte deja les images, il faut juste s'assurer que les GIF passent (MIME `image/gif` deja couvert par `accept={['image']}`).
+### Fichier : `src/components/layout/MainLayout.tsx`
 
----
-
-## 4. Top menu / bandeau promo au-dessus du header
-
-### Solution
-- **`DesignSettings` (types)** : Ajouter `topBanner?: { enabled: boolean; text: string; bgColor: string; textColor: string; link?: string }`.
-- **`HeaderDesignTab.tsx`** : Ajouter une section "Bandeau superieur" avec :
-  - Toggle activer/desactiver
-  - Texte du bandeau (ex: "Livraison gratuite des 50EUR")
-  - Couleur de fond et couleur de texte
-  - Lien optionnel
-- **`MainLayout.tsx`** : Au-dessus du `<header>`, afficher un `<div>` conditionnel avec le bandeau quand active. Ajuster le `pt-` du `<main>` pour compenser la hauteur supplementaire.
-
-### Migration SQL
-```sql
-ALTER TABLE design_settings ADD COLUMN IF NOT EXISTS top_banner jsonb DEFAULT '{"enabled": false, "text": "", "bgColor": "#000000", "textColor": "#ffffff"}'::jsonb;
-ALTER TABLE design_settings ADD COLUMN IF NOT EXISTS footer_logo text DEFAULT '';
-ALTER TABLE design_settings ADD COLUMN IF NOT EXISTS favicon_url text DEFAULT '';
-ALTER TABLE design_settings ADD COLUMN IF NOT EXISTS header_nav_items jsonb DEFAULT '[]'::jsonb;
-```
-
----
-
-## 5. Animation du logo entre les transitions de pages et a l'arrivee
-
-### Solution
-- **`App.tsx`** : Ajouter un composant `LogoTransition` qui s'affiche pendant les transitions de page (entre `exit` et `initial` de framer-motion).
-  - Le logo apparait centre a l'ecran avec une animation de scale + fade pendant 0.3-0.5s.
-  - Utiliser `AnimatePresence` existant et un overlay conditionnel.
-- **Au premier chargement** : Un composant `SplashScreen` qui affiche le logo pendant 1-1.5s avec une animation d'entree (scale + opacity), puis disparait.
-- **Admin (`LogoTab`)** : Ajouter un toggle "Animation du logo aux transitions" et un select du type d'animation (fade, scale, glitch, slide).
-- **`DesignSettings`** : Ajouter `logoAnimation?: { enabled: boolean; type: 'fade' | 'scale' | 'glitch' | 'slide'; duration: number }`.
-
----
-
-## 6. Francisation complete + selecteur de langue discret
-
-### Probleme actuel
-De nombreux textes restent en anglais : "Search...", "Cart", "Account", "Sign In", "Quick Links", "Follow Us", "Newsletter", "Subscribe", "Shop", les labels du footer, etc.
-
-### Solution
-- **`MainLayout.tsx`** : Traduire tous les textes statiques en utilisant le systeme `t()` existant ou directement en francais (langue par defaut). Ex : "Search..." -> "Rechercher...", "Cart" -> "Panier", "Quick Links" -> "Liens rapides", etc.
-- **Ajouter un selecteur de langue** : Un petit bouton discret dans le footer (ou le header) avec un drapeau/code langue (FR/EN). Au clic, bascule la langue via `setLanguage()` du contexte.
-- **`translations`** : Completer le fichier `types/index.ts` avec les traductions manquantes.
-- **Devise** : Ajouter `EUR` comme devise par defaut. Tous les prix sont deja affiches en EUR. Ajouter un selecteur de devise dans le footer (EUR/USD/GBP) qui est stocke dans `designSettings`.
-
----
-
-## 7. Commandes : modification complete + factures + Colissimo + suivi
-
-### Probleme actuel
-La modal de commande permet de modifier le statut, le paiement, le transporteur, le tracking et les notes. Mais on ne peut pas modifier les infos client (nom, email, telephone, adresse) ni les articles de la commande.
-
-### Solution
-- **`AdminOrders.tsx`** : Etendre le formulaire d'edition :
-  - **Infos client editables** : Nom, email, telephone, adresse, ville, code postal, pays -- tous modifiables dans le formulaire.
-  - **Articles editables** : Pouvoir modifier la quantite, supprimer un article, changer le prix.
-  - **Recalcul automatique** du sous-total et total quand on modifie les articles.
-- **`useOrders.ts` (useUpdateOrder)** : Etendre pour accepter les champs client et items :
-  ```typescript
-  customerName?: string;
-  customerEmail?: string;
-  customerPhone?: string;
-  customerAddress?: string;
-  customerCity?: string;
-  customerZip?: string;
-  customerCountry?: string;
-  items?: OrderItem[];
-  subtotal?: number;
-  total?: number;
+- Changer `desktopSidebarOpen` initial de `true` a `false`.
+- Ajouter un `useEffect` qui, uniquement sur la page d'accueil, ouvre la sidebar apres 10 secondes :
   ```
-- **Colissimo** : Ajouter un lien direct vers le suivi Colissimo (`https://www.laposte.fr/outils/suivre-vos-envois?code={trackingNumber}`) affiche a cote du numero de suivi.
-- **Facture** : Deja implementee (`downloadInvoice`). S'assurer qu'elle prend en compte les modifications.
+  useEffect(() => {
+    if (isHomePage) {
+      const timer = setTimeout(() => setDesktopSidebarOpen(true), 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [isHomePage]);
+  ```
+- L'utilisateur peut toujours la fermer avec le bouton X. Le bouton de reouverture reste disponible.
 
 ---
 
-## 8. Communication directe avec les clients (bouton email)
+## 3. Categories : taille reduite + presets de disposition
 
-### Solution
-- **`AdminOrders.tsx`** : Ajouter un bouton "Contacter" dans le detail de la commande qui ouvre un `mailto:{customerEmail}` avec sujet pre-rempli ("Commande {orderNumber}").
-- **`AdminCustomers.tsx`** : Ajouter un bouton email a cote de chaque client.
-- C'est la solution la plus simple et fiable sans integration email tierce. Le `mailto:` ouvre le client mail de l'admin.
+### Fichier : `src/pages/Home.tsx`
+
+- Forcer `aspect-[3/4]` a quelque chose de plus compact sur desktop, par exemple `aspect-[4/3]` ou `aspect-[16/9]`, selon le preset choisi.
+- Lire un nouveau champ `categoryLayout` dans designSettings qui controle le ratio et le nombre de colonnes.
+
+### Fichier : `src/pages/admin/AdminDesign.tsx` (CategoriesTab)
+
+Ajouter des presets de disposition pour les categories :
+- **Grille compacte** : 4 colonnes, ratio 4:3, petites vignettes, tout sur une ligne.
+- **Grille carree** : 4 colonnes, ratio 1:1.
+- **Grille portrait** : 4 colonnes, ratio 3:4 (actuel).
+- **Bande horizontale** : 4+ colonnes, ratio 16:9, style banniere.
+- **2 colonnes larges** : 2 colonnes, ratio 16:9.
+
+Chaque preset stocke : `{ columns: number, aspectRatio: string, gap: string }`.
+
+### Fichier : `src/types/index.ts`
+
+Ajouter dans DesignSettings :
+```typescript
+categoryLayout?: {
+  preset: string;
+  columns: number;
+  aspectRatio: string; // '3/4', '4/3', '1/1', '16/9'
+  gap: string; // 'sm', 'md', 'lg'
+};
+```
 
 ---
 
-## Resume des fichiers modifies
+## 4. Presets pour les autres sections
+
+### Presets Hero Slider (dans HeroSliderTab)
+Ajouter quelques presets rapides en haut de l'onglet Hero :
+- **Plein ecran** : 100vh, texte en bas a gauche (actuel)
+- **Demi-ecran** : 60vh, texte centre
+- **Banniere** : 40vh, texte a gauche, compact
+
+### Presets Sidebar (dans SidebarTab)
+- **Classique** : Image mannequin + carte produit + hotspots
+- **Minimal** : Image seule + bouton CTA
+- **Catalogue** : Grille de produits dans la sidebar
+
+### Presets Hotspots (dans HotspotsTab)
+- **Mode interactif** : Points cliquables (actuel)
+- **Mode vitrine** : Labels statiques
+- **Desactive** : Aucun hotspot visible
+
+### Presets Bannieres Marketing (dans HeaderDesignTab > Top Banner)
+- **Promo simple** : Texte noir sur fond clair
+- **Urgent** : Fond rouge, texte blanc
+- **Elegant** : Fond noir, texte dore
+
+Ces presets seront de simples boutons en haut de chaque section qui appliquent des valeurs predefinies en un clic.
+
+---
+
+## Resume technique des fichiers modifies
 
 | Fichier | Modification |
 |---------|-------------|
-| `supabase/migration` | Colonnes `top_banner`, `footer_logo`, `favicon_url`, `header_nav_items` (design_settings) |
-| `src/types/index.ts` | Ajout `headerNavItems`, `topBanner`, `footerLogo`, `faviconUrl`, `logoAnimation` dans DesignSettings + traductions etendues |
-| `src/components/admin/HeaderDesignTab.tsx` | Choix des nav items, centrage, top banner, affichage logo |
-| `src/components/layout/MainLayout.tsx` | Sidebar conditionnelle (accueil uniquement), header adaptatif, top banner, footer logo, textes en francais, selecteur langue/devise |
-| `src/pages/admin/AdminDesign.tsx` (LogoTab) | Upload logo footer, favicon, animation logo |
-| `src/pages/admin/AdminOrders.tsx` | Edition complete (client + articles), lien Colissimo, bouton contacter |
-| `src/hooks/useOrders.ts` | Etendre useUpdateOrder pour client/items |
-| `src/App.tsx` | Splash screen logo + favicon dynamique |
-| `src/pages/admin/AdminCustomers.tsx` | Bouton email par client |
+| `src/components/layout/MainLayout.tsx` | Header et top banner s'adaptent a la sidebar (margin-left dynamique), sidebar ouvre apres 10s |
+| `src/pages/Home.tsx` | Categories avec aspect ratio dynamique depuis designSettings |
+| `src/types/index.ts` | Ajout `categoryLayout` dans DesignSettings |
+| `src/pages/admin/AdminDesign.tsx` | Presets categories + presets hero + presets sidebar + presets hotspots + presets bannieres |
+| `src/components/admin/HeaderDesignTab.tsx` | Presets bannieres marketing |
 
 ---
 
 ## Ordre d'implementation
 
-1. Migration SQL (top_banner, footer_logo, favicon_url, header_nav_items)
-2. Sidebar conditionnelle (accueil uniquement) + adaptation header
-3. Header avance (nav items configurables, top banner)
-4. Footer logo + favicon dynamique
-5. Francisation complete + selecteur langue/devise
-6. Animation logo (splash + transitions)
-7. Commandes avancees (edition complete + Colissimo + contacter)
+1. Header et top banner adaptatifs (margin-left sidebar) + sidebar delai 10s
+2. Categories : layout dynamique + presets dans l'admin
+3. Presets Hero Slider
+4. Presets Sidebar
+5. Presets Hotspots et Bannieres
+
