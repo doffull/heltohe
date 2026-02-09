@@ -9,6 +9,8 @@ import { ChevronRight, ArrowRight, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, useScroll, useTransform, useInView } from 'framer-motion';
 import { useRef } from 'react';
+import PromoBanner from '@/components/home/PromoBanner';
+import PopupBanner from '@/components/home/PopupBanner';
 
 import heroImage1 from '@/assets/hero/hero-1.jpg';
 import heroImage2 from '@/assets/hero/hero-2.jpg';
@@ -156,6 +158,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background overflow-hidden">
+      {/* ═══════════════ PROMO BANNER ═══════════════ */}
+      <PromoBanner />
       {/* ═══════════════ HERO PARALLAX ═══════════════ */}
       <section ref={heroRef} className={cn("relative h-[100vh] overflow-hidden", hasAdminSlides && designSettings.sliderGrayscale && "grayscale")}>
         {heroSlides.map((s, i) => (
@@ -480,6 +484,9 @@ export default function Home() {
           </div>
         </section>
       </RevealSection>
+
+      {/* ═══════════════ POPUP BANNER ═══════════════ */}
+      <PopupBanner />
     </div>
   );
 }

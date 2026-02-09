@@ -1,1 +1,4 @@
 project_id = "bumfyrfmormisyjletpb"
+
+[functions.parse-products-pdf]
+verify_jwt = false
