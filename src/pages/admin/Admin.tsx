@@ -15,7 +15,8 @@ import {
   Palette,
   FolderOpen,
   Menu,
-  X
+  X,
+  FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -30,15 +31,16 @@ import AdminMarketing from './AdminMarketing';
 import AdminSettings from './AdminSettings';
 import AdminDesign from './AdminDesign';
 import AdminMedia from './AdminMedia';
+import AdminPages from './AdminPages';
 
 const SIDEBAR_ITEMS = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/admin' },
   { icon: Package, label: 'Produits', href: '/admin/produits' },
   { icon: ShoppingCart, label: 'Commandes', href: '/admin/commandes' },
   { icon: Users, label: 'Clients', href: '/admin/clients' },
+  { icon: FileText, label: 'Pages', href: '/admin/pages' },
   { icon: FolderOpen, label: 'Média', href: '/admin/media' },
   { icon: Megaphone, label: 'Marketing', href: '/admin/marketing' },
-  { icon: Image, label: 'Bannières', href: '/admin/bannieres' },
   { icon: Palette, label: 'Design', href: '/admin/design' },
   { icon: Settings, label: 'Paramètres', href: '/admin/parametres' },
 ];
@@ -163,6 +165,7 @@ export default function Admin() {
             <Route path="produits/*" element={<AdminProducts />} />
             <Route path="commandes/*" element={<AdminOrders />} />
             <Route path="clients/*" element={<AdminCustomers />} />
+            <Route path="pages/*" element={<AdminPages />} />
             <Route path="media/*" element={<AdminMedia />} />
             <Route path="marketing/*" element={<AdminMarketing />} />
             <Route path="bannieres/*" element={<AdminMarketing />} />

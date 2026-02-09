@@ -647,6 +647,62 @@ export type Database = {
         }
         Relationships: []
       }
+      pages: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          id: string
+          is_published: boolean | null
+          menu_link: string | null
+          meta_description: string | null
+          meta_title: string | null
+          sections: Json
+          seo_keywords: string | null
+          slug: string
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          id?: string
+          is_published?: boolean | null
+          menu_link?: string | null
+          meta_description?: string | null
+          meta_title?: string | null
+          sections?: Json
+          seo_keywords?: string | null
+          slug: string
+          title: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          id?: string
+          is_published?: boolean | null
+          menu_link?: string | null
+          meta_description?: string | null
+          meta_title?: string | null
+          sections?: Json
+          seo_keywords?: string | null
+          slug?: string
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pages_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           attributes: Json | null
