@@ -151,7 +151,7 @@ export default function Auth() {
             <span className="text-3xl font-bold tracking-wider hud-text">LVTK6</span>
           </div>
           <p className="text-muted-foreground text-sm tracking-wide">
-            SYSTÈME D'AUTHENTIFICATION TACTIQUE
+            CONNEXION À VOTRE ESPACE
           </p>
         </div>
 
@@ -348,7 +348,7 @@ export default function Auth() {
 
         {/* Footer */}
         <p className="text-center text-xs text-muted-foreground mt-6">
-          © 2026 LVTK6 TACTICAL SYSTEMS
+          © 2026 HELVETICA-MP. Tous droits réservés.
         </p>
       </div>
     </div>

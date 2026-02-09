@@ -64,7 +64,7 @@ export default function Cart() {
               <ShoppingCart className="h-20 w-20 mx-auto text-muted-foreground mb-6" />
               <h1 className="text-2xl font-bold hud-text mb-4">PANIER VIDE</h1>
               <p className="text-muted-foreground mb-8">
-                Votre panier tactique ne contient aucun équipement.
+                Votre panier ne contient aucun article.
               </p>
               <Button 
                 onClick={() => navigate('/boutique')}
@@ -96,7 +96,7 @@ export default function Cart() {
             </Button>
             <h1 className="text-3xl font-bold hud-text flex items-center gap-3">
               <ShoppingCart className="h-8 w-8 text-primary" />
-              PANIER TACTIQUE
+              MON PANIER
               <span className="text-sm font-normal text-muted-foreground">
                 ({itemCount} {itemCount > 1 ? 'articles' : 'article'})
               </span>
@@ -142,7 +142,7 @@ export default function Cart() {
                     </p>
                   )}
                   
-                  <div className="flex items-center justify-between mt-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-3">
                     {/* Quantity Controls */}
                     <div className="flex items-center gap-2">
                       <Button
@@ -161,6 +161,16 @@ export default function Cart() {
                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
                       >
                         <Plus className="h-3 w-3" />
+                      </Button>
+                      
+                      {/* Remove - inline on mobile */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:bg-destructive/10 ml-auto sm:ml-0"
+                        onClick={() => removeItem(item.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
 
@@ -181,16 +191,6 @@ export default function Cart() {
                         </span>
                       )}
                     </div>
-
-                    {/* Remove */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                      onClick={() => removeItem(item.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
                   </div>
                 </div>
               </div>
@@ -277,7 +277,12 @@ export default function Cart() {
               {/* Checkout Button */}
               <Button 
                 className="w-full mt-6 chamfer-hud-sm h-12 text-lg"
-                onClick={() => navigate('/checkout')}
+                onClick={() => {
+                  toast({
+                    title: 'Fonctionnalité à venir',
+                    description: 'Le paiement en ligne sera bientôt disponible.',
+                  });
+                }}
               >
                 PASSER COMMANDE
                 <ChevronRight className="ml-2 h-5 w-5" />

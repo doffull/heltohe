@@ -8,9 +8,9 @@ import { StatBar } from './StatBar';
 import { cn } from '@/lib/utils';
 
 const DEFAULT_STATS = [
-  { label: 'Durability', value: 85 },
-  { label: 'Price', value: 45 },
-  { label: 'Fashion', value: 92 },
+  { label: 'Durabilité', value: 85 },
+  { label: 'Rapport qualité/prix', value: 45 },
+  { label: 'Tendance', value: 92 },
 ];
 
 function ProductSlide({ product, designSettings }: { product: Product; designSettings: any }) {
@@ -77,7 +77,7 @@ function ProductSlide({ product, designSettings }: { product: Product; designSet
         <div className="flex flex-wrap gap-2">
           {sizes.map((size: string) => (
             <div key={size} className="sidebar-size-badge">
-              <span className="font-mono text-[10px] tracking-wider text-foreground/60">Size</span>
+              <span className="font-mono text-[10px] tracking-wider text-foreground/60">Taille</span>
               <span className="font-bold text-xs uppercase text-foreground">{size}</span>
             </div>
           ))}
@@ -111,7 +111,7 @@ function ProductSlide({ product, designSettings }: { product: Product; designSet
             )}
             <div className="absolute bottom-2 left-2 flex items-center gap-2">
               <span className="font-mono text-[9px] tracking-wider text-background bg-foreground/60 px-2 py-0.5">
-                Preview
+                Aperçu
               </span>
               <span className="font-mono text-[9px] text-background bg-foreground/40 px-1.5 py-0.5">
                 {safeGalleryIndex + 1}/{galleryImages.length}
@@ -171,9 +171,9 @@ export function SidebarProductHUD() {
     ? designSettings.stats.map(s => ({ label: s.label, value: s.value }))
     : sidebarContext
       ? [
-          { label: 'Durability', value: sidebarContext.currentStats.durability },
-          { label: 'Price', value: sidebarContext.currentStats.price },
-          { label: 'Fashion', value: sidebarContext.currentStats.fashion },
+          { label: 'Durabilité', value: sidebarContext.currentStats.durability },
+          { label: 'Rapport qualité/prix', value: sidebarContext.currentStats.price },
+          { label: 'Tendance', value: sidebarContext.currentStats.fashion },
         ]
       : DEFAULT_STATS;
 
@@ -190,7 +190,7 @@ export function SidebarProductHUD() {
             {designSettings.sidebarBrandName || 'LVTK6'}
           </h2>
           <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-foreground/50">
-            {designSettings.sidebarBrandSubtitle || 'NEW EDITION'}
+            {designSettings.sidebarBrandSubtitle || 'NOUVELLE ÉDITION'}
           </span>
         </div>
 
@@ -236,8 +236,8 @@ export function SidebarProductHUD() {
         {designSettings.showSidebarStats && (
           <div className="mt-4">
             <div className="mb-3">
-              <h3 className="font-mono text-[11px] tracking-[0.2em] uppercase text-foreground/70 mb-1">
-                Model Interface
+            <h3 className="font-mono text-[11px] tracking-[0.2em] uppercase text-foreground/70 mb-1">
+                Caractéristiques
               </h3>
               <div className="w-8 h-px bg-foreground/30" />
             </div>

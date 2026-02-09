@@ -50,6 +50,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(false);
+  const [sidebarClosedByUser, setSidebarClosedByUser] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const queryClient = useQueryClient();
   const { data: dbCategories = [] } = useCategories();
@@ -86,13 +87,17 @@ export function MainLayout({ children }: MainLayoutProps) {
   const sidebarActive = showSidebar && desktopSidebarOpen;
 
   // Auto-open sidebar after configurable delay on home page
-  const sidebarDelay = (designSettings as any).sidebarDelay || 10000;
+  // sidebarReappearDelay: number (ms) or 0 = OFF
+  const sidebarReappearDelay = (designSettings as any).sidebarReappearDelay ?? (designSettings as any).sidebarDelay ?? 10000;
   useEffect(() => {
-    if (isHomePage) {
-      const timer = setTimeout(() => setDesktopSidebarOpen(true), sidebarDelay);
+    if (isHomePage && sidebarReappearDelay > 0 && !desktopSidebarOpen) {
+      const timer = setTimeout(() => {
+        setDesktopSidebarOpen(true);
+        setSidebarClosedByUser(false);
+      }, sidebarClosedByUser ? sidebarReappearDelay : Math.min(sidebarReappearDelay, 3000));
       return () => clearTimeout(timer);
     }
-  }, [isHomePage, sidebarDelay]);
+  }, [isHomePage, sidebarReappearDelay, sidebarClosedByUser, desktopSidebarOpen]);
 
   // Admin notifications - unread messages
   const { data: messages = [] } = useQuery({
@@ -411,7 +416,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         )}>
           {/* Desktop close button */}
           <button
-            onClick={() => setDesktopSidebarOpen(false)}
+             onClick={() => { setDesktopSidebarOpen(false); setSidebarClosedByUser(true); }}
             className="absolute top-4 right-4 z-30 hidden lg:flex w-8 h-8 bg-background/80 text-foreground items-center justify-center rounded-full hover:bg-background transition-colors"
             aria-label="Fermer le panneau"
           >
@@ -443,7 +448,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       {isAdmin && (
         <Sheet open={notifOpen} onOpenChange={setNotifOpen}>
           <SheetTrigger asChild>
-            <button className="fixed bottom-6 right-6 z-[60] w-12 h-12 bg-foreground text-background flex items-center justify-center rounded-full shadow-lg hover:scale-105 transition-transform">
+            <button className="fixed bottom-20 right-6 z-[60] w-12 h-12 bg-foreground text-background flex items-center justify-center rounded-full shadow-lg hover:scale-105 transition-transform">
               <Bell className="h-5 w-5" />
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs w-5 h-5 flex items-center justify-center rounded-full font-bold">
@@ -555,16 +560,26 @@ export function MainLayout({ children }: MainLayoutProps) {
               <p className="text-sm text-muted-foreground mb-4">
                 Inscrivez-vous pour recevoir nos offres exclusives.
               </p>
-              <div className="flex">
+              <form className="flex" onSubmit={async (e) => {
+                e.preventDefault();
+                const emailInput = e.currentTarget.querySelector('input') as HTMLInputElement;
+                const email = emailInput?.value;
+                if (!email) return;
+                try {
+                  await supabase.from('newsletters').insert({ email });
+                  emailInput.value = '';
+                } catch {}
+              }}>
                 <Input 
                   type="email" 
                   placeholder="votre@email.com"
+                  required
                   className="flex-1 h-12 bg-background border-0 rounded-none"
                 />
-                <Button className="h-12 px-6 rounded-none">
+                <Button type="submit" className="h-12 px-6 rounded-none">
                   S'inscrire
                 </Button>
-              </div>
+              </form>
             </div>
           </div>
           

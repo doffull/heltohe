@@ -384,18 +384,41 @@ function SidebarTab() {
       {/* Sidebar Delay */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Délai d'apparition</CardTitle>
-          <CardDescription>Temps avant que la sidebar s'ouvre automatiquement sur la page d'accueil</CardDescription>
+          <CardTitle className="text-base">Réapparition automatique</CardTitle>
+          <CardDescription>Temps avant que la sidebar réapparaisse après fermeture. Désactivez pour qu'elle ne réapparaisse jamais.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-2">
-          <Label>Délai ({((designSettings as any).sidebarDelay || 10000) / 1000}s)</Label>
-          <Slider
-            value={[((designSettings as any).sidebarDelay || 10000) / 1000]}
-            min={1}
-            max={30}
-            step={1}
-            onValueChange={([v]) => updateDesignSettings({ sidebarDelay: v * 1000 } as any)}
-          />
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label>Activée</Label>
+            <Switch
+              checked={((designSettings as any).sidebarReappearDelay ?? 10000) > 0}
+              onCheckedChange={(checked) => updateDesignSettings({ sidebarReappearDelay: checked ? 30000 : 0 } as any)}
+            />
+          </div>
+          {((designSettings as any).sidebarReappearDelay ?? 10000) > 0 && (
+            <div className="space-y-2">
+              <Label>Délai de réapparition</Label>
+              <div className="flex gap-2">
+                {[
+                  { label: '10s', value: 10000 },
+                  { label: '30s', value: 30000 },
+                  { label: '1 min', value: 60000 },
+                ].map(opt => (
+                  <Button
+                    key={opt.value}
+                    size="sm"
+                    variant={((designSettings as any).sidebarReappearDelay ?? 10000) === opt.value ? 'default' : 'outline'}
+                    onClick={() => updateDesignSettings({ sidebarReappearDelay: opt.value } as any)}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Actuellement : {((designSettings as any).sidebarReappearDelay ?? 10000) / 1000}s
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

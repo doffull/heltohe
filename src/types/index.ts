@@ -274,8 +274,11 @@ export interface DesignSettings {
   headerTextColor?: string;
   headerFixed?: boolean;
 
-  // Sidebar delay (ms)
+  // Sidebar delay (ms) - legacy
   sidebarDelay?: number;
+
+  // Sidebar reappearance delay (ms) - 0 = OFF
+  sidebarReappearDelay?: number;
 
   // Hero slider height
   sliderHeight?: string;
