@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
+import { useCategories } from '@/hooks/useCategories';
 import { useCart } from '@/context/CartContext';
 import { useSidebarOptional } from '@/context/SidebarContext';
 import { Button } from '@/components/ui/button';
@@ -17,7 +18,6 @@ import {
   SlidersHorizontal
 } from 'lucide-react';
 
-const CATEGORIES = ['Tout', 'Homme', 'Femme', 'Enfant', 'Accessoires'];
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Nouveautés' },
   { value: 'price-asc', label: 'Prix croissant' },
@@ -32,12 +32,26 @@ export default function Shop() {
   const { data: products = [], isLoading } = useProducts();
   const { addItem } = useCart();
   const sidebarContext = useSidebarOptional();
+  const { data: dbCategories = [] } = useCategories();
+
+  // Build category list from DB
+  const rootCategories = dbCategories.filter(c => !c.parentId);
+  const CATEGORIES = ['Tout', ...rootCategories.map(c => c.title)];
 
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const initialCategory = searchParams.get('category') || 'Tout';
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
+  const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'newest');
+
+  // Get sub-categories for selected category
+  const subCategories = useMemo(() => {
+    if (selectedCategory === 'Tout') return [];
+    const parent = rootCategories.find(c => c.title === selectedCategory);
+    if (!parent) return [];
+    return dbCategories.filter(c => c.parentId === parent.id);
+  }, [selectedCategory, dbCategories, rootCategories]);
 
   const handleProductHover = (product: Product) => {
     sidebarContext?.setHoveredProduct(product);
@@ -151,13 +165,37 @@ export default function Shop() {
                 key={cat}
                 variant={selectedCategory === cat ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setSelectedCategory(cat)}
+                onClick={() => { setSelectedCategory(cat); setSelectedSubCategory(null); }}
                 className="uppercase tracking-wider text-xs"
               >
                 {cat}
               </Button>
             ))}
           </div>
+          {/* Sub-category filters */}
+          {subCategories.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              <Button
+                variant={selectedSubCategory === null ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setSelectedSubCategory(null)}
+                className="text-xs"
+              >
+                Tout {selectedCategory}
+              </Button>
+              {subCategories.map((sub) => (
+                <Button
+                  key={sub.id}
+                  variant={selectedSubCategory === sub.title ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setSelectedSubCategory(sub.title)}
+                  className="text-xs"
+                >
+                  {sub.title}
+                </Button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Products */}

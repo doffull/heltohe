@@ -14,8 +14,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-function CategoryForm({ category, onSubmit, onCancel }: {
+function CategoryForm({ category, categories, onSubmit, onCancel }: {
   category?: CategoryRecord;
+  categories: CategoryRecord[];
   onSubmit: (data: Omit<CategoryRecord, 'id'>) => void;
   onCancel: () => void;
 }) {
@@ -25,13 +26,30 @@ function CategoryForm({ category, onSubmit, onCancel }: {
     sortOrder: category?.sortOrder || 0,
     displaySize: category?.displaySize || 'medium',
     coverMode: category?.coverMode || 'cover',
+    parentId: category?.parentId || '',
   });
 
+  // Only show root categories as potential parents (exclude self and own children)
+  const parentOptions = categories.filter(c => !c.parentId && c.id !== category?.id);
+
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit(form); }} className="space-y-4">
+    <form onSubmit={(e) => { e.preventDefault(); onSubmit({ ...form, parentId: form.parentId || null }); }} className="space-y-4">
       <div className="space-y-2">
         <Label className="hud-text text-xs">Nom de la catégorie *</Label>
         <Input value={form.title} onChange={(e) => setForm(p => ({ ...p, title: e.target.value }))} required />
+      </div>
+      <div className="space-y-2">
+        <Label className="hud-text text-xs">Catégorie parente</Label>
+        <select
+          value={form.parentId}
+          onChange={(e) => setForm(p => ({ ...p, parentId: e.target.value }))}
+          className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm"
+        >
+          <option value="">— Aucune (catégorie principale) —</option>
+          {parentOptions.map(c => (
+            <option key={c.id} value={c.id}>{c.title}</option>
+          ))}
+        </select>
       </div>
       <div className="space-y-2">
         <Label className="hud-text text-xs">Image URL</Label>
@@ -143,17 +161,81 @@ export default function AdminSettings() {
               </div>
             ) : (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-                {categories.map((cat) => (
-                  <div key={cat.id} className="chamfer-hud bg-card border border-border overflow-hidden group">
-                    {cat.image && (
-                      <div className="h-32 overflow-hidden">
-                        <img src={cat.image} alt={cat.title} className="w-full h-full object-cover" />
+                {/* Group: root categories first, then children indented */}
+                {categories.filter(c => !c.parentId).map((cat) => {
+                  const children = categories.filter(c => c.parentId === cat.id);
+                  return (
+                    <div key={cat.id} className="space-y-2">
+                      <div className="chamfer-hud bg-card border border-border overflow-hidden group">
+                        {cat.image && (
+                          <div className="h-32 overflow-hidden">
+                            <img src={cat.image} alt={cat.title} className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                        <div className="p-4 flex items-center justify-between">
+                          <div>
+                            <p className="font-bold text-sm hud-text">{cat.title}</p>
+                            <p className="text-xs text-muted-foreground">Position: {cat.sortOrder}</p>
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => { setEditingCat(cat); setCatDialogOpen(true); }}>
+                                <Pencil className="h-4 w-4 mr-2" />Modifier
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-destructive" onClick={async () => {
+                                if (confirm('Supprimer cette catégorie ?')) {
+                                  await deleteCategory.mutateAsync(cat.id);
+                                  toast({ title: 'Catégorie supprimée' });
+                                }
+                              }}>
+                                <Trash2 className="h-4 w-4 mr-2" />Supprimer
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
-                    )}
+                      {/* Sub-categories */}
+                      {children.map(sub => (
+                        <div key={sub.id} className="ml-4 chamfer-hud bg-card/60 border border-border/50 overflow-hidden">
+                          <div className="p-3 flex items-center justify-between">
+                            <div>
+                              <p className="text-xs text-muted-foreground">↳</p>
+                              <p className="font-medium text-sm hud-text">{sub.title}</p>
+                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-3 w-3" /></Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => { setEditingCat(sub); setCatDialogOpen(true); }}>
+                                  <Pencil className="h-4 w-4 mr-2" />Modifier
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="text-destructive" onClick={async () => {
+                                  if (confirm('Supprimer cette sous-catégorie ?')) {
+                                    await deleteCategory.mutateAsync(sub.id);
+                                    toast({ title: 'Sous-catégorie supprimée' });
+                                  }
+                                }}>
+                                  <Trash2 className="h-4 w-4 mr-2" />Supprimer
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+                {/* Orphan sub-categories (parent deleted) */}
+                {categories.filter(c => c.parentId && !categories.find(p => p.id === c.parentId)).map((cat) => (
+                  <div key={cat.id} className="chamfer-hud bg-card border border-border overflow-hidden group">
                     <div className="p-4 flex items-center justify-between">
                       <div>
                         <p className="font-bold text-sm hud-text">{cat.title}</p>
-                        <p className="text-xs text-muted-foreground">Position: {cat.sortOrder}</p>
+                        <p className="text-xs text-destructive">Parent manquant</p>
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -164,7 +246,7 @@ export default function AdminSettings() {
                             <Pencil className="h-4 w-4 mr-2" />Modifier
                           </DropdownMenuItem>
                           <DropdownMenuItem className="text-destructive" onClick={async () => {
-                            if (confirm('Supprimer cette catégorie ?')) {
+                            if (confirm('Supprimer ?')) {
                               await deleteCategory.mutateAsync(cat.id);
                               toast({ title: 'Catégorie supprimée' });
                             }
@@ -212,7 +294,7 @@ export default function AdminSettings() {
           <DialogHeader>
             <DialogTitle className="hud-text">{editingCat ? 'MODIFIER LA CATÉGORIE' : 'NOUVELLE CATÉGORIE'}</DialogTitle>
           </DialogHeader>
-          <CategoryForm category={editingCat || undefined} onSubmit={handleCatSubmit} onCancel={() => setCatDialogOpen(false)} />
+          <CategoryForm category={editingCat || undefined} categories={categories} onSubmit={handleCatSubmit} onCancel={() => setCatDialogOpen(false)} />
         </DialogContent>
       </Dialog>
     </div>

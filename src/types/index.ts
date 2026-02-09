@@ -254,6 +254,12 @@ export interface DesignSettings {
 
   // Category grid columns
   categoryColumns?: number;
+
+  // Header preset
+  headerPreset?: string;
+  headerBgColor?: string;
+  headerTextColor?: string;
+  headerFixed?: boolean;
 }
 
 export interface MannequinHotspotConfig {
