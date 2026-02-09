@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { FileDropZone } from '@/components/admin/FileDropZone';
 import { useApp } from '@/context/AppContext';
-import { HeroSlide, HUDStat, HUDButton } from '@/types';
+import { HeroSlide, HUDStat, HUDButton, MannequinHotspotConfig, Category } from '@/types';
 import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -647,6 +647,149 @@ function SidebarTab() {
   );
 }
 
+// ─── Categories Tab ───
+function CategoriesTab() {
+  const { designSettings, updateDesignSettings } = useApp();
+  const categories = designSettings.categories || [];
+
+  const updateCategory = (index: number, updates: Partial<Category>) => {
+    const newCats = [...categories];
+    newCats[index] = { ...newCats[index], ...updates };
+    updateDesignSettings({ categories: newCats });
+  };
+
+  const addCategory = () => {
+    updateDesignSettings({
+      categories: [...categories, { id: generateId(), title: 'Nouvelle catégorie', image: '' }],
+    });
+    toast.success('Catégorie ajoutée');
+  };
+
+  const removeCategory = (index: number) => {
+    updateDesignSettings({ categories: categories.filter((_, i) => i !== index) });
+    toast.success('Catégorie supprimée');
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Catégories</h3>
+          <p className="text-sm text-muted-foreground">Vignettes affichées sur la page d'accueil</p>
+        </div>
+        <Button onClick={addCategory} size="sm">
+          <Plus className="h-4 w-4 mr-2" /> Ajouter
+        </Button>
+      </div>
+
+      {categories.map((cat, index) => (
+        <Card key={cat.id}>
+          <CardContent className="pt-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <Input
+                value={cat.title}
+                onChange={(e) => updateCategory(index, { title: e.target.value })}
+                placeholder="Titre"
+                className="flex-1"
+              />
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeCategory(index)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+            <FileDropZone
+              accept={['image']}
+              folder="categories"
+              currentFile={cat.image}
+              onUpload={(url) => updateCategory(index, { image: url })}
+              label="Image de la catégorie"
+            />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+// ─── Hotspots Tab ───
+function HotspotsTab() {
+  const { designSettings, updateDesignSettings } = useApp();
+  const hotspots = designSettings.mannequinHotspots || [];
+
+  const updateHotspot = (index: number, updates: Partial<MannequinHotspotConfig>) => {
+    const newHotspots = [...hotspots];
+    newHotspots[index] = { ...newHotspots[index], ...updates };
+    updateDesignSettings({ mannequinHotspots: newHotspots });
+  };
+
+  const addHotspot = () => {
+    updateDesignSettings({
+      mannequinHotspots: [...hotspots, { id: generateId(), x: '50%', y: '50%', label: 'NOUVEAU', details: 'Description', icon: 'Shield' }],
+    });
+    toast.success('Hotspot ajouté');
+  };
+
+  const removeHotspot = (index: number) => {
+    updateDesignSettings({ mannequinHotspots: hotspots.filter((_, i) => i !== index) });
+    toast.success('Hotspot supprimé');
+  };
+
+  const ICONS = ['Shield', 'Package', 'Layers', 'Move'];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Hotspots du mannequin</h3>
+          <p className="text-sm text-muted-foreground">Points interactifs sur l'image de la sidebar</p>
+        </div>
+        <Button onClick={addHotspot} size="sm">
+          <Plus className="h-4 w-4 mr-2" /> Ajouter
+        </Button>
+      </div>
+
+      {hotspots.map((hs, index) => (
+        <Card key={hs.id}>
+          <CardContent className="pt-6 space-y-3">
+            <div className="flex items-center gap-2">
+              <Input value={hs.label} onChange={(e) => updateHotspot(index, { label: e.target.value })} placeholder="Label" className="flex-1" />
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeHotspot(index)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+            <Input value={hs.details} onChange={(e) => updateHotspot(index, { details: e.target.value })} placeholder="Détails" />
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Position X</Label>
+                <Input value={hs.x} onChange={(e) => updateHotspot(index, { x: e.target.value })} placeholder="50%" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Position Y</Label>
+                <Input value={hs.y} onChange={(e) => updateHotspot(index, { y: e.target.value })} placeholder="50%" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Icône</Label>
+                <select
+                  value={hs.icon}
+                  onChange={(e) => updateHotspot(index, { icon: e.target.value })}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  {ICONS.map(ic => <option key={ic} value={ic}>{ic}</option>)}
+                </select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+
+      {hotspots.length === 0 && (
+        <Card className="border-dashed">
+          <CardContent className="py-8 text-center text-muted-foreground">Aucun hotspot configuré</CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 // ─── Catalogue Tab ───
 function CatalogueTab() {
   const { designSettings, updateDesignSettings } = useApp();
@@ -692,10 +835,12 @@ export default function AdminDesign() {
       </div>
 
       <Tabs defaultValue="hero" className="space-y-6">
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="hero">Hero Slider</TabsTrigger>
           <TabsTrigger value="logo">Logo</TabsTrigger>
           <TabsTrigger value="sidebar">Sidebar</TabsTrigger>
+          <TabsTrigger value="categories">Catégories</TabsTrigger>
+          <TabsTrigger value="hotspots">Hotspots</TabsTrigger>
           <TabsTrigger value="catalogue">Catalogue</TabsTrigger>
         </TabsList>
 
@@ -707,6 +852,12 @@ export default function AdminDesign() {
         </TabsContent>
         <TabsContent value="sidebar">
           <SidebarTab />
+        </TabsContent>
+        <TabsContent value="categories">
+          <CategoriesTab />
+        </TabsContent>
+        <TabsContent value="hotspots">
+          <HotspotsTab />
         </TabsContent>
         <TabsContent value="catalogue">
           <CatalogueTab />

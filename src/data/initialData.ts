@@ -306,9 +306,10 @@ export const INITIAL_DESIGN_SETTINGS: DesignSettings = {
   schedules: [], 
   
   categories: [
-    { id: 'cat-men', title: 'HOMME', image: 'https://images.unsplash.com/photo-1617137968427-85924c800a22?auto=format&fit=crop&q=80&w=800' },
-    { id: 'cat-women', title: 'FEMME', image: 'https://images.unsplash.com/photo-1532453288672-3a27e9be9efd?auto=format&fit=crop&q=80&w=800' },
-    { id: 'cat-children', title: 'ENFANT', image: 'https://images.unsplash.com/photo-1519238263496-6362d74c1123?auto=format&fit=crop&q=80&w=800' }
+    { id: 'cat-men', title: 'Homme', image: 'https://images.unsplash.com/photo-1617137968427-85924c800a22?auto=format&fit=crop&q=80&w=800' },
+    { id: 'cat-women', title: 'Femme', image: 'https://images.unsplash.com/photo-1532453288672-3a27e9be9efd?auto=format&fit=crop&q=80&w=800' },
+    { id: 'cat-children', title: 'Enfant', image: 'https://images.unsplash.com/photo-1519238263496-6362d74c1123?auto=format&fit=crop&q=80&w=800' },
+    { id: 'cat-accessories', title: 'Accessoires', image: 'https://images.unsplash.com/photo-1523170335258-f5ed11844a49?auto=format&fit=crop&q=80&w=800' }
   ],
   homeSections: [
     { id: 'top', title: 'Meilleures Ventes de la Semaine', isVisible: true },
@@ -341,4 +342,10 @@ export const INITIAL_DESIGN_SETTINGS: DesignSettings = {
   statBarEmptyColor: '#e5e5e5',
   sidebarProductTitle: '',
   sidebarProductDescription: '',
+  mannequinHotspots: [
+    { id: 'collar', x: '50%', y: '15%', label: 'COL TECHNIQUE', details: 'Protection coupe-vent intégrée', icon: 'Shield' },
+    { id: 'pocket', x: '30%', y: '45%', label: 'POCHE TACTIQUE', details: 'Accès rapide sécurisé', icon: 'Package' },
+    { id: 'fabric', x: '70%', y: '60%', label: 'TISSU TECHNIQUE', details: 'Gore-Tex Pro imperméabilité', icon: 'Layers' },
+    { id: 'hem', x: '50%', y: '85%', label: 'OURLET AJUSTABLE', details: 'Cordon élastique intégré', icon: 'Move' },
+  ],
 };

@@ -245,6 +245,18 @@ export interface DesignSettings {
   // Custom product card text
   sidebarProductTitle: string;
   sidebarProductDescription: string;
+
+  // Mannequin hotspots
+  mannequinHotspots: MannequinHotspotConfig[];
+}
+
+export interface MannequinHotspotConfig {
+  id: string;
+  x: string;
+  y: string;
+  label: string;
+  details: string;
+  icon: string;
 }
 
 export interface TranslationStrings {
