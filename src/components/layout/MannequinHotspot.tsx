@@ -21,12 +21,20 @@ interface HotspotProps {
   hotspot: MannequinHotspotConfig;
 }
 
+function getMediaType(url: string): 'video' | 'image' {
+  const ext = url.split('.').pop()?.toLowerCase() || '';
+  if (['mp4', 'webm', 'ogg'].includes(ext)) return 'video';
+  return 'image';
+}
+
 function Hotspot({ hotspot }: HotspotProps) {
   const [isHovered, setIsHovered] = useState(false);
   const Icon = ICON_MAP[hotspot.icon] || Shield;
 
   const xNum = parseInt(hotspot.x);
   const tooltipPosition = xNum > 50 ? 'right' : 'left';
+  const hasMedia = !!hotspot.media;
+  const mediaType = hotspot.mediaType || (hotspot.media ? getMediaType(hotspot.media) : 'image');
 
   return (
     <div
@@ -39,7 +47,29 @@ function Hotspot({ hotspot }: HotspotProps) {
       
       <div 
         className={`hotspot-tooltip ${tooltipPosition} ${isHovered ? 'visible' : ''}`}
+        style={hasMedia ? { minWidth: '200px' } : undefined}
       >
+        {/* Media preview */}
+        {hasMedia && isHovered && (
+          <div className="mb-2 rounded overflow-hidden border border-border/30" style={{ width: '180px', height: '120px' }}>
+            {mediaType === 'video' ? (
+              <video
+                src={hotspot.media}
+                className="w-full h-full object-cover"
+                autoPlay
+                muted
+                loop
+                playsInline
+              />
+            ) : (
+              <img
+                src={hotspot.media}
+                alt={hotspot.label}
+                className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+              />
+            )}
+          </div>
+        )}
         <div className="flex items-center gap-2 mb-1">
           <Icon className="w-3 h-3" />
           <span className="font-bold tracking-wider">{hotspot.label}</span>

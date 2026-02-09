@@ -286,6 +286,8 @@ export interface MannequinHotspotConfig {
   label: string;
   details: string;
   icon: string;
+  media?: string; // image or video URL
+  mediaType?: 'image' | 'video';
 }
 
 export interface TranslationStrings {
