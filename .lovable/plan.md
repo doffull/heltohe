@@ -1,97 +1,71 @@
 
-# Plan : Popup avance, Dashboard mobile, Header mobile, Colonnes categories, Notifications, Photos mobile
+# Corrections mobile : Header, Popup, Colonnes categories, Espacement
 
 ---
 
-## 1. Popup ameliore (delai configurable, pas de bouton visible)
+## Problemes identifies
 
-### Probleme actuel
-Le popup s'affiche apres un delai fixe de 2 secondes. Il n'y a pas de bouton visible sur la page d'accueil (c'est deja le cas -- le popup s'ouvre automatiquement). Mais l'admin ne peut pas configurer le delai.
-
-### Solution
-- **Table `banners`** : Ajouter une colonne `display_delay` (integer, defaut 2000, en millisecondes) pour permettre a l'admin de configurer quand le popup apparait.
-- **`AdminMarketing.tsx`** (BannerForm) : Ajouter un champ "Delai d'affichage (secondes)" visible uniquement quand le type est "popup".
-- **`PopupBanner.tsx`** : Lire le `display_delay` depuis la banniere et l'utiliser dans le `setTimeout` au lieu du 2000ms fixe.
-- **`useBanners.ts`** : Mapper le nouveau champ `display_delay`.
-
-### Migration SQL
-```sql
-ALTER TABLE banners ADD COLUMN IF NOT EXISTS display_delay integer DEFAULT 2000;
-```
+1. **Header mobile** : Le logo est masque sur mobile (`hidden lg:flex`) et il n'y a aucune marque visible dans le header mobile. Les icones sont la mais aucun branding.
+2. **Popup persistant** : Le popup utilise `sessionStorage` mais le composant `PopupBanner` fait un query a chaque rendu. Quand on desactive la banniere dans l'admin (`is_active = false`), le query ne retourne plus rien, donc le popup disparait. Le probleme est que l'ancien `banner` state reste en memoire si la page n'est pas rechargee. De plus, le query filtre par `is_active = true`, donc si l'admin l'a bien desactive, ca devrait ne plus rien charger. Il faut s'assurer que le composant reset son state quand les banners changent.
+3. **Selecteur de colonnes categories** : Absent. La colonne `category_columns` existe en base mais le type `DesignSettings` ne contient pas `categoryColumns`, et `AdminSettings` n'a pas de selecteur pour ca.
+4. **Espacement mobile** : Les sections ont des paddings enormes (`py-20 lg:py-28`) qui creent des blancs excessifs sur mobile. Le footer aussi a `py-16 mt-20`.
+5. **Shop page mobile** : Les filtres (selects, boutons) ne s'empilent pas bien, et le titre est trop gros (`text-5xl`).
 
 ---
 
-## 2. Selecteur de colonnes pour la grille de categories
+## 1. Header mobile avec logo
 
-### Probleme actuel
-La grille des categories est fixe a 4 colonnes (desktop) / 2 colonnes (mobile). L'admin ne peut pas choisir.
+**Fichier** : `src/components/layout/MainLayout.tsx`
 
-### Solution
-- **Table `design_settings`** : Ajouter une colonne `category_columns` (integer, defaut 4).
-- **`AdminSettings.tsx`** : Ajouter un selecteur "Nombre de colonnes" (2, 3, 4) dans l'onglet Categories.
-- **`Home.tsx`** : Appliquer dynamiquement le nombre de colonnes via la classe CSS `grid-cols-{n}` en lisant `designSettings.categoryColumns`.
-- **`AppContext.tsx` / `types/index.ts`** : Ajouter `categoryColumns` dans le type `DesignSettings`.
-
-### Migration SQL
-```sql
-ALTER TABLE design_settings ADD COLUMN IF NOT EXISTS category_columns integer DEFAULT 4;
-```
+- Ajouter le logo/nom de marque dans le header mobile, visible sur mobile, a gauche.
+- Remplacer l'espace vide par un `Link to="/"` avec le texte "HMP" ou le logo.
+- Structure : `[Logo] --- [icons: cart, user, menu]`
 
 ---
 
-## 3. Dashboard admin fonctionnel sur mobile
+## 2. Popup : nettoyage du state quand banniere desactivee
 
-### Probleme actuel
-La sidebar admin est fixe a 64px de large (`ml-64`) et n'est pas responsive. Le dashboard ne s'adapte pas.
+**Fichier** : `src/components/home/PopupBanner.tsx`
 
-### Solution
-- **`Admin.tsx`** : 
-  - Rendre la sidebar masquee par defaut sur mobile, avec un bouton hamburger pour l'ouvrir (Sheet ou overlay).
-  - Supprimer le `ml-64` fixe sur mobile, utiliser `lg:ml-64` uniquement.
-  - Ajouter un header mobile avec le logo et le bouton menu.
-- **`AdminDashboard.tsx`** : 
-  - Les grilles stats passent a 1 colonne sur mobile (`grid-cols-1 sm:grid-cols-2`).
-  - Les graphiques passent en pleine largeur sur mobile (`grid-cols-1 lg:grid-cols-2`).
-  - Reduire la hauteur des graphiques sur mobile.
+- Ajouter un `useEffect` qui remet `banner` a `null` et `open` a `false` quand `banners` est vide (banniere desactivee/supprimee).
+- S'assurer que le `sessionStorage` check se fait correctement et que le composant ne persiste pas un ancien state.
 
 ---
 
-## 4. Header public fonctionnel sur mobile
+## 3. Selecteur de colonnes categories
 
-### Probleme actuel
-Le header a un `pl-[180px]` pour le logo, ce qui ecrase tout sur petit ecran. La navigation mobile existe via un Sheet mais le layout est rigide.
-
-### Solution
-- **`MainLayout.tsx`** :
-  - Remplacer le `pl-[180px]` par une valeur responsive (`pl-4 lg:pl-[180px]`).
-  - Masquer le logo-wrapper sur mobile ou le rendre plus petit.
-  - Ajuster le spacing pour que les icones (panier, user, menu) soient accessibles sur mobile.
+**Fichiers** :
+- `src/types/index.ts` : Ajouter `categoryColumns?: number` dans `DesignSettings`
+- `src/data/initialData.ts` : Ajouter `categoryColumns: 4` dans les valeurs par defaut
+- `src/pages/admin/AdminSettings.tsx` : Ajouter un selecteur (2, 3, 4 colonnes) dans l'onglet Categories, qui sauvegarde dans `designSettings` via `useApp().updateDesignSettings()`
+- `src/pages/Home.tsx` : Lire `designSettings.categoryColumns` et appliquer dynamiquement les classes CSS sur la grille des categories (`grid-cols-2`, `grid-cols-3`, `grid-cols-4`)
 
 ---
 
-## 5. Icone de notification en bas a droite
+## 4. Espacement mobile compact
 
-### Principe
-Ajouter un bouton flottant en bas a droite pour gerer les notifications / messages clients.
-
-### Solution
-- **`MainLayout.tsx`** : Ajouter un bouton flottant `fixed bottom-6 right-6` avec une icone Bell et un badge pour le nombre de messages non lus.
-- **Lecture des messages** : Utiliser la table `messages` existante pour compter les messages non lus (`is_read = false`).
-- **Clic** : Ouvrir un panneau Sheet a droite listant les messages recents avec la possibilite de les marquer comme lus.
-- **Visible uniquement pour les admins** (via `isAdmin` du contexte auth).
+**Fichiers** :
+- `src/pages/Home.tsx` : Reduire les paddings des sections sur mobile :
+  - `py-20 lg:py-28` devient `py-10 lg:py-28`
+  - `mb-12` devient `mb-6 lg:mb-12`
+  - Titres : `text-4xl lg:text-5xl` devient `text-2xl sm:text-4xl lg:text-5xl`
+  - Hero bottom padding : `pb-24` devient `pb-16 lg:pb-24`
+  - Newsletter section : `py-24` devient `py-12 lg:py-24`
+- `src/components/layout/MainLayout.tsx` (footer) :
+  - `py-16 mt-20` devient `py-8 mt-10 lg:py-16 lg:mt-20`
+  - `gap-12` devient `gap-6 lg:gap-12`
+  - `mb-6` (dans footer items) devient `mb-4 lg:mb-6`
+- `src/pages/Shop.tsx` :
+  - Titre `text-5xl` devient `text-3xl sm:text-5xl`
+  - `py-12` devient `py-6 lg:py-12`
+  - `mb-10` devient `mb-6 lg:mb-10`
+  - Barre de filtres : les selects passent en pleine largeur sur mobile (`w-full sm:w-[180px]`)
 
 ---
 
-## 6. Photos adaptees sur mobile (memes images desktop/mobile + option admin)
+## 5. Images hero identiques desktop/mobile
 
-### Probleme actuel
-Sur mobile, le hero slider montre une image differente (le panneau parallaxe gauche interfere). L'utilisateur veut que ses images soient les memes sur mobile ou pouvoir choisir une version mobile.
-
-### Solution
-- **Table `banners` ou `design_settings.hero_slides`** : Ajouter un champ `mobile_image` dans chaque slide du hero pour permettre a l'admin de specifier une image mobile alternative.
-- **`AdminDesign.tsx`** (section Hero) : Ajouter un champ "Image mobile (optionnel)" dans le formulaire de chaque slide.
-- **`Home.tsx`** : Sur mobile (`useIsMobile()`), utiliser `mobile_image` si defini, sinon l'image desktop standard.
-- **Sidebar gauche** : Sur mobile, la sidebar avec le mannequin est deja masquee par defaut (`-translate-x-full lg:translate-x-0`), donc le hero devrait s'afficher correctement en pleine largeur. Si ce n'est pas le cas, s'assurer que `main` n'a pas de `lg:ml-[35%]` sur mobile.
+Deja implemente dans le code (`mobileImage` dans `HeroSlide`). Le champ existe dans `AdminDesign.tsx`. Si aucune `mobileImage` n'est definie, l'image desktop est utilisee. Pas de changement necessaire.
 
 ---
 
@@ -99,26 +73,10 @@ Sur mobile, le hero slider montre une image differente (le panneau parallaxe gau
 
 | Fichier | Modification |
 |---------|-------------|
-| `supabase/migration` | Colonnes `display_delay` (banners) et `category_columns` (design_settings) |
-| `src/components/home/PopupBanner.tsx` | Delai configurable depuis la banniere |
-| `src/pages/admin/AdminMarketing.tsx` | Champ delai dans le formulaire popup |
-| `src/hooks/useBanners.ts` | Mapper `display_delay` |
-| `src/pages/admin/AdminSettings.tsx` | Selecteur nombre de colonnes |
-| `src/pages/Home.tsx` | Colonnes dynamiques + image mobile hero |
-| `src/pages/admin/Admin.tsx` | Sidebar responsive (hamburger mobile) |
-| `src/pages/admin/AdminDashboard.tsx` | Grilles responsive mobile |
-| `src/components/layout/MainLayout.tsx` | Header mobile + bouton notification flottant |
-| `src/types/index.ts` | Ajout `categoryColumns`, `mobileImage` dans types |
-| `src/pages/admin/AdminDesign.tsx` | Champ image mobile dans le formulaire hero |
-
----
-
-## Ordre d'implementation
-
-1. Migration SQL (colonnes `display_delay` et `category_columns`)
-2. Popup ameliore (delai configurable)
-3. Selecteur colonnes categories
-4. Admin responsive (sidebar mobile + dashboard mobile)
-5. Header public mobile
-6. Bouton notification flottant
-7. Images mobile hero
+| `src/components/layout/MainLayout.tsx` | Logo dans header mobile + footer compact |
+| `src/components/home/PopupBanner.tsx` | Reset state quand banniere desactivee |
+| `src/types/index.ts` | Ajout `categoryColumns` |
+| `src/data/initialData.ts` | Valeur par defaut `categoryColumns: 4` |
+| `src/pages/admin/AdminSettings.tsx` | Selecteur colonnes categories |
+| `src/pages/Home.tsx` | Colonnes dynamiques + espacement mobile |
+| `src/pages/Shop.tsx` | Espacement et filtres mobile |
