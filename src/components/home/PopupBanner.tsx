@@ -51,7 +51,14 @@ export default function PopupBanner() {
         setBanner(banners[0]);
         const timer = setTimeout(() => setOpen(true), banners[0].displayDelay);
         return () => clearTimeout(timer);
+      } else {
+        setBanner(null);
+        setOpen(false);
       }
+    } else {
+      // Banner deactivated/deleted — clear state
+      setBanner(null);
+      setOpen(false);
     }
   }, [banners]);
 

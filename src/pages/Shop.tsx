@@ -103,9 +103,9 @@ export default function Shop() {
         </div>
 
         {/* Filters Bar */}
-        <div className="bg-secondary/50 p-6 mb-8 bevel-corners">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="relative flex-1 min-w-[200px]">
+        <div className="bg-secondary/50 p-4 lg:p-6 mb-6 lg:mb-8 bevel-corners">
+          <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 lg:gap-4">
+            <div className="relative flex-1 min-w-0 sm:min-w-[200px]">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Rechercher..."
@@ -115,7 +115,7 @@ export default function Shop() {
               />
             </div>
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-[180px] h-12 bg-background border-0">
+              <SelectTrigger className="w-full sm:w-[180px] h-12 bg-background border-0">
                 <Filter className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Catégorie" />
               </SelectTrigger>
@@ -126,7 +126,7 @@ export default function Shop() {
               </SelectContent>
             </Select>
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-[180px] h-12 bg-background border-0">
+              <SelectTrigger className="w-full sm:w-[180px] h-12 bg-background border-0">
                 <SlidersHorizontal className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Trier par" />
               </SelectTrigger>
@@ -145,7 +145,7 @@ export default function Shop() {
               </Button>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2 mt-6">
+          <div className="flex flex-wrap gap-2 mt-4 lg:mt-6">
             {CATEGORIES.map((cat) => (
               <Button
                 key={cat}
