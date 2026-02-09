@@ -1,92 +1,53 @@
 
-# Ameliorations Sidebar, Hero et Header
+
+# Corrections : Hero Parallax, Categories, Boutons Sidebar, Menu Header
 
 ## Problemes identifies
 
-1. **Overlay sidebar** : L'image de fond de la sidebar a une `opacity: 0.4` (ligne 241 de MainLayout.tsx) qui cree un effet d'image "lavee". Il faut soit la passer a 1, soit ajouter un controle dans l'admin.
-2. **Hero slide 2 transparence** : Le `sliderImageOpacity` est applique globalement a toutes les slides. Sa valeur par defaut est `1` mais si elle a ete changee en admin, toutes les images sont affectees. Il faut s'assurer que l'opacite est bien a 100% par defaut et que chaque slide peut avoir son opacite individuelle si besoin.
-3. **Header deplace** : Le menu de navigation est dans le header avec `pl-[200px]` pour laisser la place au logo, mais il n'est plus centre correctement. Il faut remettre le menu dans la zone blanche du header, bien centre.
-4. **Carte produit info editable** : Actuellement la carte produit affiche les infos du produit survole/selectionne. L'utilisateur veut pouvoir modifier les infos affichees dans la carte depuis l'admin.
-5. **Selecteur de taille XS a XXXL** : L'utilisateur veut pouvoir configurer la liste des tailles disponibles dans l'admin Sidebar.
-6. **Couleurs de la barre de statistiques** : Pouvoir changer la couleur des segments remplis et vides des stat bars.
+### 1. Hero Parallax -- Image 2 transparente
+Dans `src/pages/Home.tsx` (lignes 171 et 181), l'opacite des images est liee a `designSettings.sliderImageOpacity`. Si cette valeur a ete modifiee dans l'admin (ou si elle est stockee dans localStorage avec une valeur differente de 1), toutes les slides sont affectees. De plus, la couche "midground" (ligne 189) a un `opacity-60` en dur qui reduit la visibilite. **Solution** : forcer `opacity: 1` sur toutes les couches principales (background), et s'assurer que la valeur par defaut est toujours 1. Supprimer le `opacity-60` sur le midground layer ou le rendre configurable.
 
-## Modifications prevues
+### 2. Vignettes de categories non synchronisees avec l'admin
+Dans `src/pages/Home.tsx` (lignes 35-40), les categories sont codees en dur avec une constante `CATEGORIES` qui utilise des imports d'images locales (`catHomme`, `catFemme`, etc.). Ces images ne lisent PAS `designSettings.categories`. **Solution** : remplacer la constante `CATEGORIES` par les donnees de `designSettings.categories` pour que les modifications faites dans l'admin soient refletees sur la page d'accueil. Ajouter aussi "Accessoires" dans les categories admin par defaut.
 
-### 1. Suppression de l'overlay sidebar (opacite de l'image de fond)
+### 3. Boutons hotspot de la sidebar non configurables
+Les hotspots du mannequin dans `src/components/layout/MannequinHotspot.tsx` (lignes 13-46) sont codes en dur ("COL TECHNIQUE", "POCHE TACTIQUE", etc.) et ne sont pas geres dans l'admin. **Solution** : ajouter un type `MannequinHotspot` dans les types, un champ `mannequinHotspots` dans `DesignSettings`, et une section dans l'admin pour les configurer (label, details, position X/Y, icone).
 
-**Fichier :** `src/components/layout/MainLayout.tsx` (ligne 241)
-- Remplacer `opacity: 0.4` par une variable configurable depuis l'admin
-- Ajouter un champ `sidebarImageOpacity` dans DesignSettings (defaut: `1`)
+### 4. Menu header -- Ajouter les categories et corriger le positionnement
+Dans `src/components/layout/MainLayout.tsx` (lignes 30-37), le menu `NAV_ITEMS` ne contient pas les categories (Homme, Femme, Enfant). **Solution** : ajouter les liens de categories dans le menu de navigation. Les liens pointeront vers `/boutique?category=Homme`, etc. Le positionnement du menu sera verifie pour rester centre dans la zone blanche du header.
 
-**Fichier :** `src/pages/admin/AdminDesign.tsx` (onglet Sidebar)
-- Ajouter un slider "Opacite de l'image de fond" (0% a 100%) dans la section "Image du mannequin"
-- Ajouter un toggle "Afficher l'overlay" avec option on/off
+## Modifications par fichier
 
-### 2. Opacite Hero Slider a 100% par defaut
+### `src/types/index.ts`
+- Ajouter un type `MannequinHotspotConfig` avec `id`, `x`, `y`, `label`, `details`, `icon`
+- Ajouter `mannequinHotspots: MannequinHotspotConfig[]` dans `DesignSettings`
 
-**Fichier :** `src/pages/Home.tsx`
-- Verifier que `designSettings.sliderImageOpacity ?? 1` est bien utilise (deja le cas)
-- Le probleme est probablement que la valeur a ete changee dans l'admin. S'assurer que la valeur par defaut dans initialData est `1`.
+### `src/data/initialData.ts`
+- Ajouter les valeurs par defaut pour `mannequinHotspots` (les 4 hotspots actuels)
+- Ajouter "Accessoires" dans les categories par defaut
+- S'assurer que `sliderImageOpacity` est bien a `1`
 
-### 3. Repositionnement du header
+### `src/pages/Home.tsx`
+- **Categories** : Remplacer la constante `CATEGORIES` codee en dur par `designSettings.categories`, avec un fallback sur les images locales si aucune image admin n'est configuree
+- **Hero opacity** : Forcer `opacity: 1` sur les couches background au lieu d'utiliser `sliderImageOpacity`, ou bien s'assurer que cette valeur est toujours 1 par defaut. Retirer le `opacity-60` du midground layer
 
-**Fichier :** `src/components/layout/MainLayout.tsx`
-- La navigation est actuellement dans un `div` avec `pl-[200px]` et `justify-between`
-- Remettre la navigation centree dans le header en utilisant `justify-center` pour la nav et en positionnant les actions a droite avec `ml-auto`
-- Structure : `[espace logo 200px] [--- nav centree ---] [actions a droite]`
+### `src/components/layout/MannequinHotspot.tsx`
+- Lire les hotspots depuis `designSettings.mannequinHotspots` au lieu de la constante codee en dur
+- Conserver un fallback sur les valeurs par defaut si aucun hotspot n'est configure
 
-### 4. Configuration des tailles dans l'admin
+### `src/components/layout/MainLayout.tsx`
+- Ajouter les categories au menu `NAV_ITEMS` : Homme (`/boutique?category=Homme`), Femme (`/boutique?category=Femme`), Enfant (`/boutique?category=Enfant`)
+- Verifier le centrage du menu dans le header
 
-**Fichier :** `src/types/index.ts`
-- Ajout de `sidebarSizes: string[]` dans DesignSettings (defaut: `['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']`)
+### `src/pages/admin/AdminDesign.tsx`
+- Ajouter un onglet ou une section "Categories" pour gerer les vignettes de categories (titre + image uploadable)
+- Ajouter une section "Hotspots du mannequin" dans l'onglet Sidebar pour configurer chaque hotspot (label, details, position X%, Y%)
 
-**Fichier :** `src/data/initialData.ts`
-- Valeur par defaut : `sidebarSizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']`
+## Comportement attendu
 
-**Fichier :** `src/components/layout/SidebarProductHUD.tsx`
-- Utiliser `designSettings.sidebarSizes` au lieu de `activeProduct?.sizes || ['S', 'M', 'L', 'XL']`
+- Toutes les images du hero parallax s'affichent a 100% d'opacite
+- Les vignettes de categories se mettent a jour automatiquement quand on les change dans l'admin
+- Les hotspots de la sidebar sont entierement configurables depuis l'admin (ajout, suppression, modification de position et texte)
+- Le menu header inclut les categories Homme, Femme, Enfant avec navigation vers la boutique filtree
+- Le scroll-to-top (deja implemente) garantit l'arrivee en haut de page
 
-**Fichier :** `src/pages/admin/AdminDesign.tsx` (onglet Sidebar)
-- Ajouter une section "Tailles affichees" avec des checkboxes pour chaque taille (XS, S, M, L, XL, XXL, XXXL)
-
-### 5. Couleurs des barres de statistiques
-
-**Fichier :** `src/types/index.ts`
-- Ajout de `statBarFilledColor: string` et `statBarEmptyColor: string` dans DesignSettings
-
-**Fichier :** `src/data/initialData.ts`
-- Valeurs par defaut : `statBarFilledColor: '#000000'`, `statBarEmptyColor: '#e5e5e5'`
-
-**Fichier :** `src/components/layout/StatBar.tsx`
-- Lire les couleurs depuis `designSettings` via `useApp()` et les appliquer aux segments
-
-**Fichier :** `src/pages/admin/AdminDesign.tsx` (onglet Sidebar, section Barres de statistiques)
-- Ajouter deux selecteurs de couleur : "Couleur remplie" et "Couleur vide"
-
-### 6. Carte produit info editable dans l'admin
-
-**Fichier :** `src/types/index.ts`
-- Ajout de `sidebarProductTitle: string` et `sidebarProductDescription: string` dans DesignSettings (valeurs par defaut vides = utilise les infos du produit actif)
-
-**Fichier :** `src/pages/admin/AdminDesign.tsx`
-- Ajouter des champs dans la section "Carte produit" : titre personnalise, description personnalisee (si vides, les infos du produit survole sont utilisees)
-
-**Fichier :** `src/components/layout/SidebarProductHUD.tsx`
-- Si `designSettings.sidebarProductTitle` est defini, l'afficher a la place de `activeProduct.name`
-- Idem pour la description
-
-### 7. Ajout du champ `sidebarImageOpacity` dans les types
-
-**Fichier :** `src/types/index.ts`
-- Ajout de `sidebarImageOpacity: number` (defaut 1)
-
-## Fichiers modifies
-
-| Fichier | Modification |
-|---------|-------------|
-| `src/types/index.ts` | Ajout `sidebarImageOpacity`, `sidebarSizes`, `statBarFilledColor`, `statBarEmptyColor`, `sidebarProductTitle`, `sidebarProductDescription` |
-| `src/data/initialData.ts` | Valeurs par defaut pour les nouveaux champs |
-| `src/components/layout/MainLayout.tsx` | Opacite image sidebar configurable + header repositionne |
-| `src/components/layout/SidebarProductHUD.tsx` | Tailles depuis designSettings, titre/description personnalisables |
-| `src/components/layout/StatBar.tsx` | Couleurs configurables |
-| `src/pages/admin/AdminDesign.tsx` | Nouveaux controles : opacite image sidebar, tailles, couleurs stat bars, carte produit |
