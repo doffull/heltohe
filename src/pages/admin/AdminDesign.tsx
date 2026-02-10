@@ -9,8 +9,9 @@ import { Slider } from '@/components/ui/slider';
 import { FileDropZone } from '@/components/admin/FileDropZone';
 import { useApp } from '@/context/AppContext';
 import { cn } from '@/lib/utils';
-import { HeroSlide, HUDStat, HUDButton, MannequinHotspotConfig, Category } from '@/types';
-import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical } from 'lucide-react';
+import { HeroSlide, HUDStat, HUDButton, MannequinHotspotConfig, Category, MarkerType } from '@/types';
+import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Eye, EyeOff } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { HeaderDesignTab } from '@/components/admin/HeaderDesignTab';
 
@@ -166,6 +167,60 @@ function HeroSliderTab() {
                 label="Image adaptée mobile"
               />
               <p className="text-xs text-muted-foreground mt-1">Si vide, l'image desktop sera utilisée</p>
+            </div>
+
+            {/* Object Fit / Position */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="space-y-1">
+                <Label className="text-xs">Affichage desktop</Label>
+                <Select value={slide.objectFit || 'cover'} onValueChange={(v) => updateSlide(index, { objectFit: v as any })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cover">Cover</SelectItem>
+                    <SelectItem value="contain">Contain</SelectItem>
+                    <SelectItem value="fill">Remplir</SelectItem>
+                    <SelectItem value="none">Original</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Position desktop</Label>
+                <Select value={slide.objectPosition || 'center'} onValueChange={(v) => updateSlide(index, { objectPosition: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="center">Centre</SelectItem>
+                    <SelectItem value="top">Haut</SelectItem>
+                    <SelectItem value="bottom">Bas</SelectItem>
+                    <SelectItem value="left">Gauche</SelectItem>
+                    <SelectItem value="right">Droite</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Affichage mobile</Label>
+                <Select value={slide.mobileObjectFit || 'cover'} onValueChange={(v) => updateSlide(index, { mobileObjectFit: v as any })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cover">Cover</SelectItem>
+                    <SelectItem value="contain">Contain</SelectItem>
+                    <SelectItem value="fill">Remplir</SelectItem>
+                    <SelectItem value="none">Original</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Position mobile</Label>
+                <Select value={slide.mobileObjectPosition || 'center'} onValueChange={(v) => updateSlide(index, { mobileObjectPosition: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="center">Centre</SelectItem>
+                    <SelectItem value="top">Haut</SelectItem>
+                    <SelectItem value="bottom">Bas</SelectItem>
+                    <SelectItem value="left">Gauche</SelectItem>
+                    <SelectItem value="right">Droite</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Text Fields */}
@@ -928,6 +983,7 @@ function CategoriesTab() {
 function HotspotsTab() {
   const { designSettings, updateDesignSettings } = useApp();
   const hotspots = designSettings.mannequinHotspots || [];
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   const updateHotspot = (index: number, updates: Partial<MannequinHotspotConfig>) => {
     const newHotspots = [...hotspots];
@@ -937,7 +993,7 @@ function HotspotsTab() {
 
   const addHotspot = () => {
     updateDesignSettings({
-      mannequinHotspots: [...hotspots, { id: generateId(), x: '50%', y: '50%', label: 'NOUVEAU', details: 'Description', icon: 'Shield' }],
+      mannequinHotspots: [...hotspots, { id: generateId(), x: '50%', y: '50%', label: 'NOUVEAU', details: 'Description', icon: 'Shield', enabled: true, markerType: 'dot', contentMode: 'manual' }],
     });
     toast.success('Hotspot ajouté');
   };
@@ -948,6 +1004,33 @@ function HotspotsTab() {
   };
 
   const ICONS = ['Shield', 'Package', 'Layers', 'Move'];
+  const MARKER_TYPES: { value: MarkerType; label: string }[] = [
+    { value: 'dot', label: '● Point' },
+    { value: 'cross', label: '✕ Croix' },
+    { value: 'diamond', label: '◆ Losange' },
+    { value: 'square', label: '■ Carré' },
+    { value: 'ring', label: '○ Anneau' },
+  ];
+
+  // Draggable preview handler
+  const handlePreviewMouseDown = (index: number) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    setDragIndex(index);
+  };
+
+  const handlePreviewMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (dragIndex === null) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+    updateHotspot(dragIndex, { x: `${Math.round(x)}%`, y: `${Math.round(y)}%` });
+  };
+
+  const handlePreviewMouseUp = () => {
+    setDragIndex(null);
+  };
+
+  const sidebarImage = designSettings.sidebarImage;
 
   return (
     <div className="space-y-6">
@@ -961,13 +1044,17 @@ function HotspotsTab() {
             {[
               { id: 'interactive', name: 'Mode interactif', desc: 'Points cliquables avec tooltip' },
               { id: 'showcase', name: 'Mode vitrine', desc: 'Labels statiques visibles' },
-              { id: 'disabled', name: 'Désactivé', desc: 'Aucun hotspot visible' },
+              { id: 'disabled', name: 'Désactivé', desc: 'Masquer tous les hotspots' },
             ].map((p) => (
               <button
                 key={p.id}
                 onClick={() => {
                   if (p.id === 'disabled') {
-                    updateDesignSettings({ mannequinHotspots: [] });
+                    const disabledHotspots = hotspots.map(h => ({ ...h, enabled: false }));
+                    updateDesignSettings({ mannequinHotspots: disabledHotspots });
+                  } else if (p.id === 'interactive') {
+                    const enabledHotspots = hotspots.map(h => ({ ...h, enabled: true }));
+                    updateDesignSettings({ mannequinHotspots: enabledHotspots });
                   }
                   toast.success(`Preset "${p.name}" appliqué`);
                 }}
@@ -976,6 +1063,41 @@ function HotspotsTab() {
                 <p className="text-sm font-bold">{p.name}</p>
                 <p className="text-xs text-muted-foreground">{p.desc}</p>
               </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Visual Preview */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Aperçu visuel</CardTitle>
+          <CardDescription>Glissez les points pour les repositionner</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div
+            className="relative w-full border border-border rounded-lg overflow-hidden select-none"
+            style={{ aspectRatio: '3/4', background: sidebarImage ? `url(${sidebarImage}) center/cover` : 'hsl(var(--muted))' }}
+            onMouseMove={handlePreviewMouseMove}
+            onMouseUp={handlePreviewMouseUp}
+            onMouseLeave={handlePreviewMouseUp}
+          >
+            {!sidebarImage && (
+              <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-sm">
+                Aucune image sidebar configurée
+              </div>
+            )}
+            {hotspots.map((hs, index) => (
+              <div
+                key={hs.id}
+                className={`absolute w-5 h-5 rounded-full flex items-center justify-center cursor-grab active:cursor-grabbing transition-shadow ${
+                  hs.enabled !== false ? 'bg-primary text-primary-foreground shadow-lg' : 'bg-muted-foreground/50 text-background'
+                } ${dragIndex === index ? 'ring-2 ring-primary scale-125' : ''}`}
+                style={{ left: hs.x, top: hs.y, transform: 'translate(-50%, -50%)', zIndex: dragIndex === index ? 50 : 10 }}
+                onMouseDown={handlePreviewMouseDown(index)}
+              >
+                <span className="text-[8px] font-bold">{index + 1}</span>
+              </div>
             ))}
           </div>
         </CardContent>
@@ -992,16 +1114,29 @@ function HotspotsTab() {
       </div>
 
       {hotspots.map((hs, index) => (
-        <Card key={hs.id}>
-          <CardContent className="pt-6 space-y-3">
+        <Card key={hs.id} className={hs.enabled === false ? 'opacity-50' : ''}>
+          <CardContent className="pt-6 space-y-4">
+            {/* Header row: label + toggle + delete */}
             <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => updateHotspot(index, { enabled: hs.enabled === false ? true : false })}
+                title={hs.enabled !== false ? 'Désactiver' : 'Activer'}
+              >
+                {hs.enabled !== false ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+              </Button>
               <Input value={hs.label} onChange={(e) => updateHotspot(index, { label: e.target.value })} placeholder="Label" className="flex-1" />
               <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeHotspot(index)}>
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
+
             <Input value={hs.details} onChange={(e) => updateHotspot(index, { details: e.target.value })} placeholder="Détails" />
-            <div className="grid grid-cols-3 gap-3">
+
+            {/* Position + Icon + Marker */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Position X</Label>
                 <Input value={hs.x} onChange={(e) => updateHotspot(index, { x: e.target.value })} placeholder="50%" />
@@ -1020,6 +1155,98 @@ function HotspotsTab() {
                   {ICONS.map(ic => <option key={ic} value={ic}>{ic}</option>)}
                 </select>
               </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Forme du marqueur</Label>
+                <select
+                  value={hs.markerType || 'dot'}
+                  onChange={(e) => updateHotspot(index, { markerType: e.target.value as MarkerType })}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  {MARKER_TYPES.map(mt => <option key={mt.value} value={mt.value}>{mt.label}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Media upload */}
+            <div>
+              <Label className="text-xs font-medium mb-2 block">Média (image/vidéo du popup)</Label>
+              <FileDropZone
+                accept={['image', 'video']}
+                folder="hotspots"
+                currentFile={hs.media}
+                onUpload={(url) => updateHotspot(index, { media: url })}
+                label="Image ou vidéo du hotspot"
+              />
+            </div>
+
+            {/* Content Mode */}
+            <div className="space-y-3 border-t border-border pt-4">
+              <Label className="text-xs font-semibold uppercase tracking-wider">Contenu du popup</Label>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant={hs.contentMode !== 'product' ? 'default' : 'outline'}
+                  onClick={() => updateHotspot(index, { contentMode: 'manual' })}
+                >
+                  Manuel
+                </Button>
+                <Button
+                  size="sm"
+                  variant={hs.contentMode === 'product' ? 'default' : 'outline'}
+                  onClick={() => updateHotspot(index, { contentMode: 'product' })}
+                >
+                  Produit existant
+                </Button>
+              </div>
+
+              {hs.contentMode === 'product' ? (
+                <div className="space-y-2">
+                  <Label className="text-xs">ID du produit</Label>
+                  <Input
+                    value={hs.productId || ''}
+                    onChange={(e) => updateHotspot(index, { productId: e.target.value })}
+                    placeholder="ID du produit (ex: p1)"
+                  />
+                  <p className="text-xs text-muted-foreground">Les infos du produit seront récupérées automatiquement</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Nom du produit</Label>
+                    <Input
+                      value={hs.productName || ''}
+                      onChange={(e) => updateHotspot(index, { productName: e.target.value })}
+                      placeholder="Nom"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Prix (€)</Label>
+                    <Input
+                      type="number"
+                      value={hs.productPrice || ''}
+                      onChange={(e) => updateHotspot(index, { productPrice: Number(e.target.value) || undefined })}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Prix promo (€)</Label>
+                    <Input
+                      type="number"
+                      value={hs.productSalePrice || ''}
+                      onChange={(e) => updateHotspot(index, { productSalePrice: Number(e.target.value) || undefined })}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Tailles (séparées par ,)</Label>
+                    <Input
+                      value={hs.productSizes?.join(', ') || ''}
+                      onChange={(e) => updateHotspot(index, { productSizes: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
+                      placeholder="S, M, L"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

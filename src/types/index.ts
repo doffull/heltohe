@@ -121,6 +121,10 @@ export interface HeroSlide {
   midgroundMedia?: string;
   foregroundMedia?: string;
   mobileImage?: string;
+  objectFit?: 'cover' | 'contain' | 'fill' | 'none';
+  objectPosition?: string;
+  mobileObjectFit?: 'cover' | 'contain' | 'fill' | 'none';
+  mobileObjectPosition?: string;
 }
 
 export interface SocialLink {
@@ -290,6 +294,8 @@ export interface DesignSettings {
   siteSpacing?: string; // 'compact' | 'normal' | 'spacious'
 }
 
+export type MarkerType = 'dot' | 'cross' | 'diamond' | 'square' | 'ring';
+
 export interface MannequinHotspotConfig {
   id: string;
   x: string;
@@ -297,8 +303,16 @@ export interface MannequinHotspotConfig {
   label: string;
   details: string;
   icon: string;
-  media?: string; // image or video URL
+  media?: string;
   mediaType?: 'image' | 'video';
+  enabled?: boolean;
+  markerType?: MarkerType;
+  contentMode?: 'manual' | 'product';
+  productId?: string;
+  productName?: string;
+  productPrice?: number;
+  productSalePrice?: number;
+  productSizes?: string[];
 }
 
 export interface TranslationStrings {

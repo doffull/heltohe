@@ -580,7 +580,13 @@
   transition: transform 0.2s ease;
 }
 
-.mannequin-hotspot:hover .hotspot-point {
+.hotspot-marker-custom {
+  animation: hotspot-pulse 2s ease-in-out infinite;
+  transition: transform 0.2s ease;
+}
+
+.mannequin-hotspot:hover .hotspot-point,
+.mannequin-hotspot:hover .hotspot-marker-custom {
   transform: scale(1.3);
   animation: none;
 }

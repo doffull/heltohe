@@ -344,9 +344,9 @@ export const INITIAL_DESIGN_SETTINGS: DesignSettings = {
   sidebarProductTitle: '',
   sidebarProductDescription: '',
   mannequinHotspots: [
-    { id: 'collar', x: '50%', y: '15%', label: 'COL TECHNIQUE', details: 'Protection coupe-vent intégrée', icon: 'Shield' },
-    { id: 'pocket', x: '30%', y: '45%', label: 'POCHE TACTIQUE', details: 'Accès rapide sécurisé', icon: 'Package' },
-    { id: 'fabric', x: '70%', y: '60%', label: 'TISSU TECHNIQUE', details: 'Gore-Tex Pro imperméabilité', icon: 'Layers' },
-    { id: 'hem', x: '50%', y: '85%', label: 'OURLET AJUSTABLE', details: 'Cordon élastique intégré', icon: 'Move' },
+    { id: 'collar', x: '50%', y: '15%', label: 'COL TECHNIQUE', details: 'Protection coupe-vent intégrée', icon: 'Shield', enabled: true, markerType: 'dot', contentMode: 'manual' },
+    { id: 'pocket', x: '30%', y: '45%', label: 'POCHE TACTIQUE', details: 'Accès rapide sécurisé', icon: 'Package', enabled: true, markerType: 'dot', contentMode: 'manual' },
+    { id: 'fabric', x: '70%', y: '60%', label: 'TISSU TECHNIQUE', details: 'Gore-Tex Pro imperméabilité', icon: 'Layers', enabled: true, markerType: 'dot', contentMode: 'manual' },
+    { id: 'hem', x: '50%', y: '85%', label: 'OURLET AJUSTABLE', details: 'Cordon élastique intégré', icon: 'Move', enabled: true, markerType: 'dot', contentMode: 'manual' },
   ],
 };
