@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { LucideIcon, Shield, Package, Layers, Move } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { MannequinHotspotConfig, MarkerType } from '@/types';
+import { useProducts } from '@/hooks/useProducts';
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Shield,
@@ -156,6 +157,7 @@ function Hotspot({ hotspot, products }: HotspotProps) {
 
 export function MannequinHotspots() {
   const { designSettings } = useApp();
+  const { data: products = [] } = useProducts();
   const allHotspots = designSettings.mannequinHotspots?.length > 0
     ? designSettings.mannequinHotspots
     : DEFAULT_HOTSPOTS;
@@ -166,7 +168,7 @@ export function MannequinHotspots() {
   return (
     <>
       {hotspots.map((hotspot) => (
-        <Hotspot key={hotspot.id} hotspot={hotspot} />
+        <Hotspot key={hotspot.id} hotspot={hotspot} products={products} />
       ))}
     </>
   );

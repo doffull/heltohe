@@ -14,6 +14,7 @@ import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Eye, EyeOff } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { HeaderDesignTab } from '@/components/admin/HeaderDesignTab';
+import { useProducts } from '@/hooks/useProducts';
 
 function generateId() {
   return `id-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
@@ -982,6 +983,7 @@ function CategoriesTab() {
 // ─── Hotspots Tab ───
 function HotspotsTab() {
   const { designSettings, updateDesignSettings } = useApp();
+  const { data: products = [] } = useProducts();
   const hotspots = designSettings.mannequinHotspots || [];
   const [dragIndex, setDragIndex] = useState<number | null>(null);
 
@@ -1201,13 +1203,30 @@ function HotspotsTab() {
 
               {hs.contentMode === 'product' ? (
                 <div className="space-y-2">
-                  <Label className="text-xs">ID du produit</Label>
-                  <Input
+                  <Label className="text-xs">Sélectionner un produit</Label>
+                  <Select
                     value={hs.productId || ''}
-                    onChange={(e) => updateHotspot(index, { productId: e.target.value })}
-                    placeholder="ID du produit (ex: p1)"
-                  />
-                  <p className="text-xs text-muted-foreground">Les infos du produit seront récupérées automatiquement</p>
+                    onValueChange={(v) => updateHotspot(index, { productId: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choisir un produit..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          <span className="flex items-center gap-2">
+                            {p.image && <img src={p.image} alt="" className="w-5 h-5 rounded object-cover" />}
+                            {p.name} — {p.price}€
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {hs.productId && products.find(p => p.id === hs.productId) && (
+                    <p className="text-xs text-muted-foreground">
+                      ✓ {products.find(p => p.id === hs.productId)?.name}
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
