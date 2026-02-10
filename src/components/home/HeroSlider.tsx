@@ -5,12 +5,14 @@ import { useApp } from '@/context/AppContext';
 import { HeroSlide } from '@/types';
 import { Button } from '@/components/ui/button';
 import { motion, useScroll, useTransform } from 'framer-motion';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export function HeroSlider() {
   const { designSettings, setCurrentView } = useApp();
   const { heroSlides, sliderAutoPlay, sliderSpeed, showSliderOverlay, sliderGrayscale } = designSettings;
   const [currentIndex, setCurrentIndex] = useState(0);
   const { scrollY } = useScroll();
+  const isMobile = useIsMobile();
   
   // Parallax transforms for 3 layers
   const bgY = useTransform(scrollY, [0, 600], [0, 120]);
@@ -35,7 +37,20 @@ export function HeroSlider() {
   if (heroSlides.length === 0) return null;
   
   const currentSlide = heroSlides[currentIndex];
-  const bgMedia = currentSlide.backgroundMedia || currentSlide.media;
+  
+  // Determine which media to show based on mobile
+  const useMobileImage = isMobile && currentSlide.mobileImage;
+  const bgMedia = useMobileImage
+    ? currentSlide.mobileImage!
+    : (currentSlide.backgroundMedia || currentSlide.media);
+  
+  // Determine objectFit/objectPosition
+  const objectFit = useMobileImage
+    ? (currentSlide.mobileObjectFit || 'cover')
+    : (currentSlide.objectFit || 'cover');
+  const objectPosition = useMobileImage
+    ? (currentSlide.mobileObjectPosition || 'center')
+    : (currentSlide.objectPosition || 'center');
   
   return (
     <div className="relative h-[70vh] lg:h-[80vh] overflow-hidden">
@@ -51,19 +66,21 @@ export function HeroSlider() {
           <video
             src={bgMedia}
             autoPlay muted loop playsInline
-            className="w-full h-full object-cover"
+            className="w-full h-full"
+            style={{ objectFit, objectPosition }}
           />
         ) : (
           <img
             src={bgMedia}
             alt={currentSlide.title}
-            className="w-full h-full object-cover"
+            className="w-full h-full"
+            style={{ objectFit, objectPosition }}
           />
         )}
       </motion.div>
 
       {/* Midground Layer */}
-      {currentSlide.midgroundMedia && (
+      {!useMobileImage && currentSlide.midgroundMedia && (
         <motion.div 
           className="absolute inset-0 z-[1]"
           style={{ y: mgY }}
@@ -77,7 +94,7 @@ export function HeroSlider() {
       )}
 
       {/* Foreground Layer (fastest parallax) */}
-      {currentSlide.foregroundMedia && (
+      {!useMobileImage && currentSlide.foregroundMedia && (
         <motion.div 
           className="absolute inset-0 z-[2]"
           style={{ y: fgY }}

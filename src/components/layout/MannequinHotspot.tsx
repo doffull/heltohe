@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { LucideIcon, Shield, Package, Layers, Move } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
-import { MannequinHotspotConfig } from '@/types';
+import { MannequinHotspotConfig, MarkerType } from '@/types';
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Shield,
@@ -11,15 +11,11 @@ const ICON_MAP: Record<string, LucideIcon> = {
 };
 
 const DEFAULT_HOTSPOTS: MannequinHotspotConfig[] = [
-  { id: 'collar', x: '50%', y: '15%', label: 'COL TECHNIQUE', details: 'Protection coupe-vent intégrée', icon: 'Shield' },
-  { id: 'pocket', x: '30%', y: '45%', label: 'POCHE TACTIQUE', details: 'Accès rapide sécurisé', icon: 'Package' },
-  { id: 'fabric', x: '70%', y: '60%', label: 'TISSU TECHNIQUE', details: 'Gore-Tex Pro imperméabilité', icon: 'Layers' },
-  { id: 'hem', x: '50%', y: '85%', label: 'OURLET AJUSTABLE', details: 'Cordon élastique intégré', icon: 'Move' },
+  { id: 'collar', x: '50%', y: '15%', label: 'COL TECHNIQUE', details: 'Protection coupe-vent intégrée', icon: 'Shield', enabled: true },
+  { id: 'pocket', x: '30%', y: '45%', label: 'POCHE TACTIQUE', details: 'Accès rapide sécurisé', icon: 'Package', enabled: true },
+  { id: 'fabric', x: '70%', y: '60%', label: 'TISSU TECHNIQUE', details: 'Gore-Tex Pro imperméabilité', icon: 'Layers', enabled: true },
+  { id: 'hem', x: '50%', y: '85%', label: 'OURLET AJUSTABLE', details: 'Cordon élastique intégré', icon: 'Move', enabled: true },
 ];
-
-interface HotspotProps {
-  hotspot: MannequinHotspotConfig;
-}
 
 function getMediaType(url: string): 'video' | 'image' {
   const ext = url.split('.').pop()?.toLowerCase() || '';
@@ -27,7 +23,45 @@ function getMediaType(url: string): 'video' | 'image' {
   return 'image';
 }
 
-function Hotspot({ hotspot }: HotspotProps) {
+function MarkerShape({ type = 'dot' }: { type?: MarkerType }) {
+  switch (type) {
+    case 'cross':
+      return (
+        <svg className="w-full h-full" viewBox="0 0 12 12">
+          <line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" strokeWidth="2" />
+          <line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" strokeWidth="2" />
+        </svg>
+      );
+    case 'diamond':
+      return (
+        <svg className="w-full h-full" viewBox="0 0 12 12">
+          <polygon points="6,1 11,6 6,11 1,6" fill="currentColor" />
+        </svg>
+      );
+    case 'square':
+      return (
+        <svg className="w-full h-full" viewBox="0 0 12 12">
+          <rect x="1" y="1" width="10" height="10" fill="currentColor" />
+        </svg>
+      );
+    case 'ring':
+      return (
+        <svg className="w-full h-full" viewBox="0 0 12 12">
+          <circle cx="6" cy="6" r="5" fill="none" stroke="currentColor" strokeWidth="2" />
+        </svg>
+      );
+    case 'dot':
+    default:
+      return <div className="hotspot-point" />;
+  }
+}
+
+interface HotspotProps {
+  hotspot: MannequinHotspotConfig;
+  products?: any[];
+}
+
+function Hotspot({ hotspot, products }: HotspotProps) {
   const [isHovered, setIsHovered] = useState(false);
   const Icon = ICON_MAP[hotspot.icon] || Shield;
 
@@ -36,6 +70,19 @@ function Hotspot({ hotspot }: HotspotProps) {
   const hasMedia = !!hotspot.media;
   const mediaType = hotspot.mediaType || (hotspot.media ? getMediaType(hotspot.media) : 'image');
 
+  // Resolve product data if contentMode === 'product'
+  const linkedProduct = hotspot.contentMode === 'product' && hotspot.productId && products
+    ? products.find(p => p.id === hotspot.productId)
+    : null;
+
+  const displayName = linkedProduct?.name || hotspot.productName || hotspot.label;
+  const displayDetails = linkedProduct?.subtitle || hotspot.details;
+  const displayPrice = linkedProduct?.price || hotspot.productPrice;
+  const displaySalePrice = linkedProduct?.salePrice || linkedProduct?.sale_price || hotspot.productSalePrice;
+  const displayImage = linkedProduct?.image || hotspot.media;
+  const displaySizes = linkedProduct?.sizes || hotspot.productSizes;
+  const isProductMode = hotspot.contentMode === 'product' || hotspot.contentMode === 'manual';
+
   return (
     <div
       className="mannequin-hotspot"
@@ -43,38 +90,65 @@ function Hotspot({ hotspot }: HotspotProps) {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="hotspot-point" />
+      {hotspot.markerType && hotspot.markerType !== 'dot' ? (
+        <div className="w-full h-full text-foreground/80 hotspot-marker-custom">
+          <MarkerShape type={hotspot.markerType} />
+        </div>
+      ) : (
+        <div className="hotspot-point" />
+      )}
       
       <div 
         className={`hotspot-tooltip ${tooltipPosition} ${isHovered ? 'visible' : ''}`}
-        style={hasMedia ? { minWidth: '200px' } : undefined}
+        style={isProductMode || hasMedia ? { minWidth: '220px' } : undefined}
       >
-        {/* Media preview */}
-        {hasMedia && isHovered && (
-          <div className="mb-2 rounded overflow-hidden border border-border/30" style={{ width: '180px', height: '120px' }}>
-            {mediaType === 'video' ? (
+        {/* Media / Product image preview */}
+        {displayImage && isHovered && (
+          <div className="mb-2 rounded overflow-hidden border border-border/30" style={{ width: '200px', height: '130px' }}>
+            {mediaType === 'video' && hotspot.media ? (
               <video
                 src={hotspot.media}
                 className="w-full h-full object-cover"
-                autoPlay
-                muted
-                loop
-                playsInline
+                autoPlay muted loop playsInline
               />
             ) : (
               <img
-                src={hotspot.media}
-                alt={hotspot.label}
+                src={displayImage}
+                alt={displayName}
                 className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
               />
             )}
           </div>
         )}
+
         <div className="flex items-center gap-2 mb-1">
           <Icon className="w-3 h-3" />
-          <span className="font-bold tracking-wider">{hotspot.label}</span>
+          <span className="font-bold tracking-wider">{displayName}</span>
         </div>
-        <p className="text-foreground/70">{hotspot.details}</p>
+        <p className="text-foreground/70">{displayDetails}</p>
+
+        {/* Price info */}
+        {displayPrice != null && (
+          <div className="mt-2 flex items-center gap-2">
+            {displaySalePrice ? (
+              <>
+                <span className="font-bold">{displaySalePrice}€</span>
+                <span className="line-through text-foreground/50 text-[10px]">{displayPrice}€</span>
+              </>
+            ) : (
+              <span className="font-bold">{displayPrice}€</span>
+            )}
+          </div>
+        )}
+
+        {/* Sizes */}
+        {displaySizes && displaySizes.length > 0 && (
+          <div className="mt-1 flex gap-1 flex-wrap">
+            {displaySizes.map(s => (
+              <span key={s} className="text-[9px] border border-foreground/30 px-1 rounded-sm">{s}</span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -82,9 +156,12 @@ function Hotspot({ hotspot }: HotspotProps) {
 
 export function MannequinHotspots() {
   const { designSettings } = useApp();
-  const hotspots = designSettings.mannequinHotspots?.length > 0
+  const allHotspots = designSettings.mannequinHotspots?.length > 0
     ? designSettings.mannequinHotspots
     : DEFAULT_HOTSPOTS;
+
+  // Filter only enabled hotspots
+  const hotspots = allHotspots.filter(h => h.enabled !== false);
 
   return (
     <>
