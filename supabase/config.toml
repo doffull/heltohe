@@ -1,4 +1,8 @@
 project_id = "bumfyrfmormisyjletpb"
 
+[auth.password]
+min_length = 6
+hibp_enabled = true
+
 [functions.parse-products-pdf]
 verify_jwt = false
