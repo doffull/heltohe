@@ -1,8 +1,10 @@
 import { useState, useCallback } from 'react';
-import { useMediaLibrary, useUploadMedia, useDeleteMedia, MediaFile } from '@/hooks/useMediaLibrary';
+import { useMediaLibrary, useUploadMedia, useDeleteMedia, useBulkDeleteMedia, MediaFile } from '@/hooks/useMediaLibrary';
+import { useBulkSelection } from '@/hooks/useBulkSelection';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Upload, Trash2, Copy, Search, Image, Film, FileText, X
 } from 'lucide-react';
@@ -12,6 +14,7 @@ export default function AdminMedia() {
   const { data: files = [], isLoading } = useMediaLibrary();
   const uploadMedia = useUploadMedia();
   const deleteMedia = useDeleteMedia();
+  const bulkDeleteMedia = useBulkDeleteMedia();
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'image' | 'video'>('all');
   const [isDragging, setIsDragging] = useState(false);
@@ -23,6 +26,17 @@ export default function AdminMedia() {
     if (filter === 'video' && !f.type.startsWith('video/')) return false;
     return true;
   });
+
+  const { selectedIds, toggle, toggleAll, clear, allSelected, someSelected, count } = useBulkSelection(filtered);
+
+  const handleBulkDelete = async () => {
+    if (!confirm(`Supprimer ${count} fichier(s) ?`)) return;
+    const names = filtered.filter(f => selectedIds.has(f.id)).map(f => f.name);
+    try {
+      await bulkDeleteMedia.mutateAsync(names);
+      clear();
+    } catch {}
+  };
 
   const handleFiles = useCallback(async (fileList: FileList | null) => {
     if (!fileList) return;
@@ -59,25 +73,19 @@ export default function AdminMedia() {
 
       {/* Upload Zone */}
       <div
-        className={`chamfer-hud border-2 border-dashed p-8 text-center transition-colors cursor-pointer ${
-          isDragging ? 'border-primary bg-primary/5' : 'border-border bg-card/50'
-        }`}
+        className={`chamfer-hud border-2 border-dashed p-8 text-center transition-colors cursor-pointer ${isDragging ? 'border-primary bg-primary/5' : 'border-border bg-card/50'}`}
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
         onClick={() => {
           const input = document.createElement('input');
-          input.type = 'file';
-          input.multiple = true;
-          input.accept = 'image/*,video/*';
+          input.type = 'file'; input.multiple = true; input.accept = 'image/*,video/*';
           input.onchange = () => handleFiles(input.files);
           input.click();
         }}
       >
         <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
-        <p className="text-sm text-muted-foreground">
-          Glissez-déposez vos fichiers ici ou <span className="text-primary underline">cliquez pour sélectionner</span>
-        </p>
+        <p className="text-sm text-muted-foreground">Glissez-déposez vos fichiers ici ou <span className="text-primary underline">cliquez pour sélectionner</span></p>
         {uploadMedia.isPending && <p className="text-xs text-primary mt-2">Upload en cours...</p>}
       </div>
 
@@ -96,6 +104,17 @@ export default function AdminMedia() {
         </div>
       </div>
 
+      {/* Bulk Actions */}
+      {someSelected && (
+        <div className="chamfer-hud bg-primary/10 border border-primary/30 p-3 flex items-center gap-4">
+          <span className="text-sm font-bold">{count} sélectionné(s)</span>
+          <Button variant="destructive" size="sm" onClick={handleBulkDelete} disabled={bulkDeleteMedia.isPending}>
+            <Trash2 className="h-3 w-3 mr-2" />Supprimer
+          </Button>
+          <Button variant="ghost" size="sm" onClick={clear}>Désélectionner</Button>
+        </div>
+      )}
+
       {/* Grid */}
       {isLoading ? (
         <div className="p-12 text-center"><div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto" /></div>
@@ -107,7 +126,10 @@ export default function AdminMedia() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {filtered.map(file => (
-            <div key={file.id} className="chamfer-hud bg-card border border-border overflow-hidden group relative">
+            <div key={file.id} className={`chamfer-hud bg-card border overflow-hidden group relative ${selectedIds.has(file.id) ? 'border-primary ring-1 ring-primary' : 'border-border'}`}>
+              <div className="absolute top-2 left-2 z-10">
+                <Checkbox checked={selectedIds.has(file.id)} onCheckedChange={() => toggle(file.id)} className="bg-background/80" />
+              </div>
               <div className="aspect-square overflow-hidden cursor-pointer" onClick={() => setPreview(file)}>
                 {isImage(file.type) ? (
                   <img src={file.url} alt={file.name} className="w-full h-full object-cover" loading="lazy" />

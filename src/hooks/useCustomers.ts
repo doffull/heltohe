@@ -55,3 +55,25 @@ export function useUpdateCustomer() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-customers'] }),
   });
 }
+
+export function useDeleteCustomer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('customers').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-customers'] }),
+  });
+}
+
+export function useBulkDeleteCustomers() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from('customers').delete().in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-customers'] }),
+  });
+}
