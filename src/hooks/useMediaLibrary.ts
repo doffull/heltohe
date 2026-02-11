@@ -82,3 +82,22 @@ export function useDeleteMedia() {
     },
   });
 }
+
+export function useBulkDeleteMedia() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (fileNames: string[]) => {
+      const { error } = await supabase.storage.from(BUCKET).remove(fileNames);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['media-library'] });
+      toast({ title: 'Fichiers supprimés' });
+    },
+    onError: (e: Error) => {
+      toast({ title: 'Erreur suppression', description: e.message, variant: 'destructive' });
+    },
+  });
+}

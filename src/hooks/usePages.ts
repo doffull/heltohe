@@ -110,3 +110,14 @@ export function useDeletePage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['pages'] }),
   });
 }
+
+export function useBulkDeletePages() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from('pages').delete().in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['pages'] }),
+  });
+}
