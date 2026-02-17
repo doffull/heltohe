@@ -1,58 +1,54 @@
 
 
-## Plan : Ajouter et Modifier des produits dans l'Inventaire Global
+## Plan : Import/Export CSV, Stock initial par variante, et Date de mise en stock
 
-### Contexte
+### 1. Date de mise en stock (migration SQL)
 
-Actuellement, la vue "Inventaire Global" affiche un tableau en lecture seule avec un bouton d'import en masse. Il manque la possibilite d'ajouter manuellement un produit a l'inventaire et de modifier les produits existants (nom, SKU, canal, seuil d'alerte, tailles, couleurs, etc.).
+Ajouter une colonne `stocked_at` a la table `stock_levels` pour tracer la date d'entree de chaque ligne de stock.
 
----
+```text
+ALTER TABLE public.stock_levels
+  ADD COLUMN stocked_at TIMESTAMPTZ DEFAULT now();
+```
 
-### 1. Bouton "Ajouter un produit" dans la barre d'actions
-
-Ajouter un bouton "Ajouter un produit" a cote du bouton "Importer fichier" dans `InventoryView`. Ce bouton ouvre un dialog de creation.
-
----
-
-### 2. Dialog de creation de produit + inventaire
-
-Un dialog complet permettant de :
-
-- Saisir les informations produit : **nom, SKU, prix, categorie, description, materiau**
-- Definir les **tailles** (champ texte avec tags : XS, S, M, L, XL, XXL, etc.)
-- Definir les **couleurs** (champ texte avec tags + pastilles colorees)
-- Choisir le **canal** (B2C, B2B, Les deux)
-- Definir le **seuil d'alerte** stock
-- Definir un **stock initial** (optionnel, affecte au canal Web par defaut)
-
-A la sauvegarde :
-1. INSERT dans `products` (nom, sku, prix, categorie, sizes, colors, etc.)
-2. INSERT dans `inventory` (product_id, sku, name, channel, threshold)
-3. INSERT dans `stock_levels` avec le stock initial si > 0 (location Web)
+Cette colonne sera automatiquement remplie a la creation. Elle sera aussi editable pour permettre de saisir une date d'entree differente.
 
 ---
 
-### 3. Bouton "Modifier" sur chaque ligne du tableau inventaire
+### 2. Stock initial par taille x couleur dans le dialog d'ajout inventaire
 
-Ajouter une colonne "Actions" dans le tableau de l'inventaire global avec :
+Modifier `InventoryProductDialog.tsx` pour remplacer le champ "Stock initial (Web)" par une grille taille x couleur quand le produit a des variantes :
 
-- **Crayon (Modifier)** : Ouvre le meme dialog en mode edition, pre-rempli avec les donnees du produit
-- **Corbeille (Supprimer)** : Confirmation puis suppression de l'inventaire + stock_levels associes
+- Si le produit a des tailles ET des couleurs configurees : afficher la matrice editable (comme dans la vue boutique)
+- Sinon : garder le champ stock global unique
+- A la sauvegarde, creer un `stock_levels` par combinaison taille/couleur avec quantite > 0 (sur la location Web)
+- Chaque `stock_levels` cree aura `stocked_at = now()` (par defaut)
 
-En mode edition :
-1. Charger les donnees du produit lie (`products` + `inventory`)
-2. Permettre la modification de tous les champs
-3. A la sauvegarde : UPDATE `products` + UPDATE `inventory`
+### 3. Import/Export CSV pour la grille taille x couleur
+
+#### Export CSV
+Ajouter un bouton "Exporter CSV" dans le composant `SizeColorGrid` (dans `AdminStock.tsx`) :
+
+- Genere un fichier CSV avec colonnes : `Couleur, Taille, Quantite, Reserve, Date mise en stock`
+- Telecharge automatiquement le fichier via `URL.createObjectURL` + `<a download>`
+- Nom du fichier : `stock_{nomBoutique}_{nomProduit}_{date}.csv`
+
+#### Import CSV
+Ajouter un bouton "Importer CSV" dans `SizeColorGrid` :
+
+- Accepte un fichier `.csv` avec format attendu : `Couleur,Taille,Quantite`
+- Parse le CSV cote client (pas besoin d'edge function)
+- Affiche un apercu des lignes a importer avec validation (couleurs/tailles reconnues vs inconnues)
+- A la confirmation : upsert dans `stock_levels` (update si la combinaison existe, insert sinon)
+- Chaque nouvelle entree recoit `stocked_at = now()`
 
 ---
 
-### 4. Gestion des tailles et couleurs avec tags
+### 4. Affichage de la date de mise en stock
 
-Pour les champs tailles et couleurs, implementer un systeme de tags :
-- Champ texte ou l'on tape une valeur puis Entree pour ajouter un tag
-- Chaque tag peut etre supprime avec un X
-- Les couleurs affichent une pastille coloree (via le `COLOR_HEX_MAP` existant)
-- Tailles predefinies suggerees : XS, S, M, L, XL, XXL
+- Dans `SizeColorGrid` : ajouter un tooltip sur chaque cellule affichant la date de mise en stock
+- Dans le bon de livraison : ajouter une colonne "Date entree" pour chaque ligne de stock
+- Dans le tableau inventaire global : optionnel, afficher la date la plus recente
 
 ---
 
@@ -60,30 +56,26 @@ Pour les champs tailles et couleurs, implementer un systeme de tags :
 
 | Element | Modification |
 |---|---|
-| `InventoryView` dans `AdminStock.tsx` | Ajout bouton "Ajouter un produit", colonne Actions (modifier/supprimer) |
-| Dialog creation/edition | Formulaire complet produit + inventaire avec tags tailles/couleurs |
-| Sauvegarde | INSERT/UPDATE coordonne sur `products`, `inventory`, `stock_levels` |
-| Suppression | DELETE cascade `stock_levels` puis `inventory` puis `products` |
+| Migration SQL | Ajout colonne `stocked_at` a `stock_levels` |
+| `InventoryProductDialog.tsx` | Grille taille x couleur pour stock initial, passer `stocked_at` |
+| `AdminStock.tsx` - `SizeColorGrid` | Boutons Export/Import CSV, tooltip date, mise a jour `stocked_at` a chaque insert |
+| `AdminStock.tsx` - `generateDeliveryNote` | Colonne date d'entree dans le bon de livraison |
 
-### Apercu du dialog
+### Format CSV attendu
 
 ```text
-+------------------------------------------+
-| Ajouter un produit a l'inventaire        |
-+------------------------------------------+
-| Nom:     [ALICANTE                     ] |
-| SKU:     [ALC-001                      ] |
-| Prix:    [89.90]   Categorie: [Femme v]  |
-| Description: [Veste technique...       ] |
-| Materiau:    [Polyester recycl...      ] |
-+------------------------------------------+
-| Tailles: [XS] [S] [M] [L] [XL] [+]     |
-| Couleurs: [*PINK] [*BLACK] [*BLUE] [+]  |
-+------------------------------------------+
-| Canal: [B2C v]   Seuil alerte: [10]     |
-| Stock initial:   [50]                    |
-+------------------------------------------+
-|              [Annuler] [Sauvegarder]     |
-+------------------------------------------+
+Couleur,Taille,Quantite
+PINK,XS,31
+PINK,S,167
+PINK,M,167
+BLACK,XS,81
+BLACK,S,567
+...
 ```
+
+### Fichiers modifies
+
+- `supabase/migrations/` : nouvelle migration pour `stocked_at`
+- `src/components/admin/InventoryProductDialog.tsx` : grille variante pour stock initial
+- `src/pages/admin/AdminStock.tsx` : export/import CSV dans `SizeColorGrid`, affichage date, mise a jour delivery note
 
