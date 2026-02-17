@@ -39,16 +39,22 @@ export function HeroSlider() {
   const currentSlide = heroSlides[currentIndex];
   
   // Determine which media to show based on mobile
-  const useMobileImage = isMobile && currentSlide.mobileImage;
-  const bgMedia = useMobileImage
+  const useMobileMedia = isMobile && currentSlide.mobileImage;
+  const bgMedia = useMobileMedia
     ? currentSlide.mobileImage!
     : (currentSlide.backgroundMedia || currentSlide.media);
   
+  // Determine media type for mobile
+  const mobileIsVideo = currentSlide.mobileMediaType === 'video';
+  const effectiveMediaType = useMobileMedia
+    ? (mobileIsVideo ? 'video' : 'image')
+    : currentSlide.mediaType;
+  
   // Determine objectFit/objectPosition
-  const objectFit = useMobileImage
+  const objectFit = useMobileMedia
     ? (currentSlide.mobileObjectFit || 'cover')
     : (currentSlide.objectFit || 'cover');
-  const objectPosition = useMobileImage
+  const objectPosition = useMobileMedia
     ? (currentSlide.mobileObjectPosition || 'center')
     : (currentSlide.objectPosition || 'center');
   
@@ -62,7 +68,7 @@ export function HeroSlider() {
         )}
         style={{ y: bgY, scale: bgScale }}
       >
-        {currentSlide.mediaType === 'video' ? (
+        {effectiveMediaType === 'video' ? (
           <video
             src={bgMedia}
             autoPlay muted loop playsInline
@@ -80,7 +86,7 @@ export function HeroSlider() {
       </motion.div>
 
       {/* Midground Layer */}
-      {!useMobileImage && currentSlide.midgroundMedia && (
+      {!useMobileMedia && currentSlide.midgroundMedia && (
         <motion.div 
           className="absolute inset-0 z-[1]"
           style={{ y: mgY }}
@@ -94,7 +100,7 @@ export function HeroSlider() {
       )}
 
       {/* Foreground Layer (fastest parallax) */}
-      {!useMobileImage && currentSlide.foregroundMedia && (
+      {!useMobileMedia && currentSlide.foregroundMedia && (
         <motion.div 
           className="absolute inset-0 z-[2]"
           style={{ y: fgY }}

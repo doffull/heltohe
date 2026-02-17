@@ -5,17 +5,19 @@ export function ProductSections() {
   const { designSettings, products, navigateToProduct, navigateToCategory, language } = useApp();
   const { homeSections } = designSettings;
   
-  // Filter products for different sections
-  const topProducts = products.slice(0, 4);
-  const trendingProducts = products.filter(p => p.stock > 10).slice(0, 4);
-  const styleProducts = products.filter(p => p.category === 'Homme').slice(0, 4);
-  const promoProducts = products.filter(p => p.salePrice).slice(0, 4);
+  // Filter products by tags, with fallback to legacy logic
+  const byTag = (tag: string) => products.filter(p => p.tags?.includes(tag));
+  
+  const topTagged = byTag('top');
+  const trendingTagged = byTag('trending');
+  const styleTagged = byTag('style');
+  const promoTagged = byTag('promo');
   
   const sectionProducts: Record<string, typeof products> = {
-    top: topProducts,
-    trending: trendingProducts,
-    style: styleProducts,
-    promo: promoProducts,
+    top: topTagged.length > 0 ? topTagged.slice(0, 8) : products.slice(0, 4),
+    trending: trendingTagged.length > 0 ? trendingTagged.slice(0, 8) : products.filter(p => p.stock > 10).slice(0, 4),
+    style: styleTagged.length > 0 ? styleTagged.slice(0, 8) : products.filter(p => p.category === 'Homme').slice(0, 4),
+    promo: promoTagged.length > 0 ? promoTagged.slice(0, 8) : products.filter(p => p.salePrice).slice(0, 4),
   };
   
   const visibleSections = homeSections.filter(s => s.isVisible);
