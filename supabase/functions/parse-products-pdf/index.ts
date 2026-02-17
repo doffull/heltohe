@@ -7,7 +7,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const MAX_PDF_SIZE = 10 * 1024 * 1024; // ~10MB base64
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // ~10MB base64
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -54,16 +54,20 @@ serve(async (req) => {
       });
     }
 
-    const { pdfBase64 } = await req.json();
-    if (!pdfBase64) {
-      return new Response(JSON.stringify({ error: "No PDF data provided" }), {
+    const body = await req.json();
+    // Support both old pdfBase64 field and new fileBase64+fileType fields
+    const fileBase64 = body.fileBase64 || body.pdfBase64;
+    const fileType = body.fileType || "pdf";
+
+    if (!fileBase64) {
+      return new Response(JSON.stringify({ error: "No file data provided" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    if (typeof pdfBase64 !== "string" || pdfBase64.length > MAX_PDF_SIZE) {
-      return new Response(JSON.stringify({ error: "PDF data too large or invalid" }), {
+    if (typeof fileBase64 !== "string" || fileBase64.length > MAX_FILE_SIZE) {
+      return new Response(JSON.stringify({ error: "File data too large or invalid" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -74,7 +78,7 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const systemPrompt = `You are a product data extraction assistant. You receive the text content of a PDF catalog and must extract ALL products found in it.
+    const systemPrompt = `You are a product data extraction assistant. You receive the content of a product catalog file and must extract ALL products found in it.
 
 For each product, return a JSON object with these fields:
 - name (string, required): Product name
@@ -92,6 +96,51 @@ For each product, return a JSON object with these fields:
 Return ONLY a valid JSON array of products. No markdown, no explanation, just the JSON array.
 If you cannot extract any products, return an empty array [].`;
 
+    let messages: any[];
+
+    if (fileType === "pdf") {
+      // PDF: send as image_url with base64
+      messages = [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "Extract all products from this PDF catalog. Return a JSON array.",
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:application/pdf;base64,${fileBase64}`,
+              },
+            },
+          ],
+        },
+      ];
+    } else {
+      // CSV/XLS/XLSX: decode base64 to text and send as text content
+      let textContent: string;
+      try {
+        const binaryString = atob(fileBase64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        textContent = new TextDecoder("utf-8").decode(bytes);
+      } catch {
+        textContent = atob(fileBase64);
+      }
+
+      messages = [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: `Extract all products from this ${fileType.toUpperCase()} file content. Return a JSON array.\n\n--- FILE CONTENT ---\n${textContent.slice(0, 100000)}`,
+        },
+      ];
+    }
+
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
       {
@@ -102,24 +151,7 @@ If you cannot extract any products, return an empty array [].`;
         },
         body: JSON.stringify({
           model: "google/gemini-2.5-flash",
-          messages: [
-            { role: "system", content: systemPrompt },
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: "Extract all products from this PDF catalog. Return a JSON array.",
-                },
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: `data:application/pdf;base64,${pdfBase64}`,
-                  },
-                },
-              ],
-            },
-          ],
+          messages,
         }),
       }
     );
@@ -153,7 +185,7 @@ If you cannot extract any products, return an empty array [].`;
     } catch (parseErr) {
       console.error("Failed to parse AI response");
       return new Response(
-        JSON.stringify({ error: "Failed to parse product data from PDF" }),
+        JSON.stringify({ error: "Failed to parse product data from file" }),
         { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
