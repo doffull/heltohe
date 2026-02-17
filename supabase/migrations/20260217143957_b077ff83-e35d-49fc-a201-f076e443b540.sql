@@ -1,0 +1,1 @@
+ALTER TABLE public.stock_levels ADD COLUMN stocked_at TIMESTAMPTZ DEFAULT now();

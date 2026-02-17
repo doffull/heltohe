@@ -68,6 +68,7 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
     threshold: 10,
     initialStock: 0,
   });
+  const [variantGrid, setVariantGrid] = useState<Record<string, Record<string, number>>>({});
   const [newColor, setNewColor] = useState('');
   const [newSize, setNewSize] = useState('');
 
@@ -194,15 +195,34 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
 
         if (invErr || !inv) throw invErr || new Error('Erreur création inventaire');
 
-        // INSERT initial stock if > 0
-        if (form.initialStock > 0) {
-          const webLoc = locations.find(l => l.type === 'web');
-          if (webLoc) {
+        // INSERT initial stock
+        const webLoc = locations.find(l => l.type === 'web');
+        if (webLoc) {
+          const hasVariants = form.sizes.length > 0 && form.colors.length > 0;
+          if (hasVariants) {
+            // Insert per variant
+            for (const [color, sizes] of Object.entries(variantGrid)) {
+              for (const [size, qty] of Object.entries(sizes)) {
+                if (qty > 0) {
+                  await supabase.from('stock_levels').insert({
+                    inventory_id: inv.id,
+                    location_id: webLoc.id,
+                    quantity: qty,
+                    reserved: 0,
+                    size,
+                    color,
+                    stocked_at: new Date().toISOString(),
+                  });
+                }
+              }
+            }
+          } else if (form.initialStock > 0) {
             await supabase.from('stock_levels').insert({
               inventory_id: inv.id,
               location_id: webLoc.id,
               quantity: form.initialStock,
               reserved: 0,
+              stocked_at: new Date().toISOString(),
             });
           }
         }
@@ -355,12 +375,60 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
           </div>
 
           {/* Initial stock (create only) */}
-          {!editData && (
+          {!editData && form.sizes.length > 0 && form.colors.length > 0 ? (
+            <div className="space-y-2">
+              <Label className="text-xs">Stock initial par variante (Web)</Label>
+              <div className="border rounded-lg overflow-hidden max-h-60 overflow-y-auto">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-muted/50">
+                      <th className="text-left py-2 px-3 font-medium">Couleur</th>
+                      {form.sizes.map(s => (
+                        <th key={s} className="text-center py-2 px-2 font-medium">{s}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {form.colors.map(color => (
+                      <tr key={color} className="border-t border-border/50">
+                        <td className="py-2 px-3">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="w-3 h-3 rounded-full shrink-0 border border-border/50"
+                              style={{ backgroundColor: getColorHex(color) }}
+                            />
+                            <span className="font-medium">{color}</span>
+                          </div>
+                        </td>
+                        {form.sizes.map(size => (
+                          <td key={size} className="text-center py-1 px-1">
+                            <Input
+                              type="number"
+                              min={0}
+                              value={variantGrid[color]?.[size] ?? 0}
+                              onChange={e => {
+                                const val = parseInt(e.target.value) || 0;
+                                setVariantGrid(prev => ({
+                                  ...prev,
+                                  [color]: { ...prev[color], [size]: val },
+                                }));
+                              }}
+                              className="w-14 h-6 text-center text-xs p-0 mx-auto"
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : !editData ? (
             <div className="space-y-1.5">
               <Label className="text-xs">Stock initial (Web)</Label>
               <Input type="number" value={form.initialStock} onChange={e => setForm(p => ({ ...p, initialStock: Number(e.target.value) }))} min={0} />
             </div>
-          )}
+          ) : null}
         </div>
 
         <DialogFooter>
