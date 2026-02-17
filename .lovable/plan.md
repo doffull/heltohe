@@ -1,58 +1,103 @@
 
 
-## Plan : Tags produits, Hero Slider ameliore, FileDropZone global et Video mobile
+## Plan : Import en masse, Gestion boutiques et Bons de livraison
+
+Ce plan couvre 4 fonctionnalites majeures dans le module `/admin/stock` :
 
 ---
 
-### 1. Systeme de tags/sections pour les produits
+### 1. Import produits en masse (PDF + XLS/CSV)
 
-Ajouter une colonne `tags` (tableau de textes) a la table `products`, puis permettre a l'admin d'assigner des tags a chaque produit pour controler dans quelles sections de la page d'accueil il apparait.
+**Edge Function** : Modifier `parse-products-pdf` pour accepter aussi les fichiers XLS/CSV en plus du PDF. L'IA (Gemini) extraira les produits depuis n'importe quel format.
 
-#### Modifications :
-
-- **Migration SQL** : Ajouter `tags text[] DEFAULT '{}'` a la table `products`
-- **`src/types/index.ts`** : Ajouter `tags?: string[]` au type `Product`
-- **`src/hooks/useProducts.ts`** : Mapper le champ `tags` dans `dbToAppProduct` et `appToDbProduct`
-- **`src/components/admin/ProductForm.tsx`** : Ajouter une section "Sections page d'accueil" avec des boutons toggle pour chaque tag : `new_arrival`, `trending`, `featured`, `top`, `style`, `promo`
-- **`src/components/home/ProductSections.tsx`** : Remplacer la logique codee en dur par un filtre sur `tags`, avec fallback sur la logique actuelle
+**Fichiers modifies :**
+- `supabase/functions/parse-products-pdf/index.ts` : Renommer en logique "parse-products-file", accepter `fileBase64` + `fileType` (pdf, csv, xlsx). Pour CSV/XLS, envoyer le contenu texte a l'IA. Pour PDF, garder la logique actuelle.
+- `src/pages/admin/AdminStock.tsx` : Ajouter un bouton "Importer fichier" dans la vue Inventaire qui ouvre un dialog d'import (similaire a celui de `AdminProducts.tsx`). Accepter `.pdf`, `.csv`, `.xlsx`, `.xls`. Afficher la liste extraite avec selection, puis creer les produits + les entrees inventaire + stock_levels correspondants.
 
 ---
 
-### 2. Hero Slider : corrections et video mobile
+### 2. Gestion complete des boutiques (CRUD)
 
-- Accepter `['image', 'video']` pour le champ mobile du Hero Slider
-- Ajouter `mobileMediaType?: 'image' | 'video'` au type `HeroSlide`
-- Detection automatique du type de media a l'upload via l'extension du fichier
-- Dans `HeroSlider.tsx`, utiliser `<video>` si le media mobile est une video
+Ajouter dans la vue "Boutiques" de `AdminStock.tsx` :
 
-#### Fichiers : `src/types/index.ts`, `src/pages/admin/AdminDesign.tsx`, `src/components/home/HeroSlider.tsx`
+- **Ajouter une boutique** : Dialog avec nom, ville, adresse, type (boutique/web/b2b), statut actif
+- **Modifier une boutique** : Meme dialog en mode edition
+- **Supprimer une boutique** : Confirmation avant suppression (avec verification qu'aucun stock n'est lie)
 
----
-
-### 3. FileDropZone sur tout le tableau de bord
-
-Remplacer les champs URL restants par FileDropZone, notamment les images des variantes couleur dans `ProductForm.tsx`.
+**Fichiers modifies :**
+- `src/pages/admin/AdminStock.tsx` : Ajouter les dialogs CRUD dans `BoutiquesView` avec boutons d'action sur chaque carte boutique
 
 ---
 
-### 4. Video pour Sidebar mobile
+### 3. Gestion des produits par boutique (references, variations, stock)
 
-- Changer le FileDropZone "Image mobile" de la sidebar de `accept={['image']}` a `accept={['image', 'video']}`
-- Ajouter `mobileSidebarMediaType?: 'image' | 'video'` a `DesignSettings`
-- Rendre `<video>` dans le composant sidebar si le media mobile est une video
+Enrichir la vue detail d'une boutique selectionnee :
+
+- **Tableau editable** : Pour chaque produit dans la boutique, afficher SKU, nom, quantite, reserve, et permettre la modification inline de la quantite
+- **Ajouter un produit** : Selectionner un produit de l'inventaire et l'affecter a la boutique avec une quantite initiale (INSERT dans `stock_levels`)
+- **Supprimer un produit d'une boutique** : Retirer l'entree `stock_levels` correspondante
+- **Variations** : Afficher les tailles/couleurs du produit lie si disponibles
+
+**Fichiers modifies :**
+- `src/pages/admin/AdminStock.tsx` : Enrichir la section detail boutique avec boutons Ajouter/Modifier/Supprimer sur chaque ligne du tableau
 
 ---
 
-### Resume des fichiers modifies
+### 4. Bons de livraison par boutique
 
-| Fichier | Modifications |
+Ajouter un bouton "Generer bon de livraison" sur chaque boutique qui :
+
+- Genere un document HTML/PDF listant toutes les references de la boutique
+- Inclut : nom boutique, date, adresse, liste complete des produits (SKU, nom, quantite, reserve, disponible)
+- Ouvre dans une nouvelle fenetre pour impression (`window.print()`)
+
+**Fichiers modifies :**
+- `src/pages/admin/AdminStock.tsx` : Ajouter une fonction `generateDeliveryNote` dans `BoutiquesView` qui ouvre une fenetre avec le bon de livraison formate
+
+---
+
+### Resume technique
+
+| Composant | Action |
 |---|---|
-| Migration SQL | Ajout colonne `tags text[]` sur `products` |
-| `src/types/index.ts` | `tags` sur Product, `mobileMediaType` sur HeroSlide, `mobileSidebarMediaType` sur DesignSettings |
-| `src/hooks/useProducts.ts` | Mapper `tags` |
-| `src/components/admin/ProductForm.tsx` | Toggles pour tags + FileDropZone pour variantes couleur |
-| `src/components/home/ProductSections.tsx` | Filtrer par tags |
-| `src/pages/admin/AdminDesign.tsx` | Accept video pour mobile Hero + Sidebar, detection auto type |
-| `src/components/home/HeroSlider.tsx` | Gerer video mobile |
-| `src/data/initialData.ts` | Valeurs par defaut |
+| `supabase/functions/parse-products-pdf/index.ts` | Accepter CSV/XLS en plus du PDF |
+| `supabase/config.toml` | Aucun changement (function deja configuree) |
+| `src/pages/admin/AdminStock.tsx` | Import en masse, CRUD boutiques, gestion produits par boutique, bons de livraison |
+
+### Flux d'import en masse
+
+```text
++------------------+     +-------------------+     +------------------+
+| Upload fichier   | --> | Edge Function     | --> | Liste extraite   |
+| (PDF/CSV/XLS)    |     | (IA Gemini)       |     | avec selection   |
++------------------+     +-------------------+     +------------------+
+                                                          |
+                                                          v
+                                              +------------------------+
+                                              | Creation :             |
+                                              | 1. products (table)    |
+                                              | 2. inventory (table)   |
+                                              | 3. stock_levels        |
+                                              +------------------------+
+```
+
+### Bon de livraison (apercu structure)
+
+```text
++------------------------------------------+
+| BON DE LIVRAISON                         |
+| Boutique: CC Parly 2 - Le Chesnay       |
+| Date: 17/02/2026                         |
+| Adresse: Centre Commercial Parly 2      |
++------------------------------------------+
+| SKU         | Produit        | Qte | Dispo |
+|-------------|----------------|-----|-------|
+| THORENS-001 | THORENS        |  45 |    42 |
+| EDG-HIM-001 | Himalaya       |  22 |    22 |
+| ...         | ...            | ... |  ...  |
++------------------------------------------+
+| Total references: 4                      |
+| Total unites: 120                        |
++------------------------------------------+
+```
 
