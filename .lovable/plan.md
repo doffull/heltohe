@@ -1,103 +1,113 @@
 
 
-## Plan : Import en masse, Gestion boutiques et Bons de livraison
+## Plan : Stock par Taille et Couleur + Icones Couleurs
 
-Ce plan couvre 4 fonctionnalites majeures dans le module `/admin/stock` :
+### Contexte
 
----
-
-### 1. Import produits en masse (PDF + XLS/CSV)
-
-**Edge Function** : Modifier `parse-products-pdf` pour accepter aussi les fichiers XLS/CSV en plus du PDF. L'IA (Gemini) extraira les produits depuis n'importe quel format.
-
-**Fichiers modifies :**
-- `supabase/functions/parse-products-pdf/index.ts` : Renommer en logique "parse-products-file", accepter `fileBase64` + `fileType` (pdf, csv, xlsx). Pour CSV/XLS, envoyer le contenu texte a l'IA. Pour PDF, garder la logique actuelle.
-- `src/pages/admin/AdminStock.tsx` : Ajouter un bouton "Importer fichier" dans la vue Inventaire qui ouvre un dialog d'import (similaire a celui de `AdminProducts.tsx`). Accepter `.pdf`, `.csv`, `.xlsx`, `.xls`. Afficher la liste extraite avec selection, puis creer les produits + les entrees inventaire + stock_levels correspondants.
+Actuellement, la table `stock_levels` stocke une seule quantite globale par produit/boutique. L'image de reference montre un tableau de type "matrice" avec les couleurs en lignes et les tailles en colonnes, avec des quantites individuelles et des totaux.
 
 ---
 
-### 2. Gestion complete des boutiques (CRUD)
+### 1. Modification de la base de donnees
 
-Ajouter dans la vue "Boutiques" de `AdminStock.tsx` :
+Ajouter deux colonnes a la table `stock_levels` pour permettre la ventilation par taille et couleur :
 
-- **Ajouter une boutique** : Dialog avec nom, ville, adresse, type (boutique/web/b2b), statut actif
-- **Modifier une boutique** : Meme dialog en mode edition
-- **Supprimer une boutique** : Confirmation avant suppression (avec verification qu'aucun stock n'est lie)
+```text
+ALTER TABLE stock_levels
+  ADD COLUMN size TEXT DEFAULT NULL,
+  ADD COLUMN color TEXT DEFAULT NULL;
+```
 
-**Fichiers modifies :**
-- `src/pages/admin/AdminStock.tsx` : Ajouter les dialogs CRUD dans `BoutiquesView` avec boutons d'action sur chaque carte boutique
+- `size = NULL` et `color = NULL` : stock global (retro-compatible avec les donnees existantes)
+- `size = 'M'` et `color = 'BLACK'` : stock pour une combinaison specifique
 
----
-
-### 3. Gestion des produits par boutique (references, variations, stock)
-
-Enrichir la vue detail d'une boutique selectionnee :
-
-- **Tableau editable** : Pour chaque produit dans la boutique, afficher SKU, nom, quantite, reserve, et permettre la modification inline de la quantite
-- **Ajouter un produit** : Selectionner un produit de l'inventaire et l'affecter a la boutique avec une quantite initiale (INSERT dans `stock_levels`)
-- **Supprimer un produit d'une boutique** : Retirer l'entree `stock_levels` correspondante
-- **Variations** : Afficher les tailles/couleurs du produit lie si disponibles
-
-**Fichiers modifies :**
-- `src/pages/admin/AdminStock.tsx` : Enrichir la section detail boutique avec boutons Ajouter/Modifier/Supprimer sur chaque ligne du tableau
+Supprimer la contrainte d'unicite actuelle si elle existe sur `(inventory_id, location_id)` et en creer une nouvelle sur `(inventory_id, location_id, size, color)` via COALESCE pour gerer les NULLs.
 
 ---
 
-### 4. Bons de livraison par boutique
+### 2. Interface "Grille Taille x Couleur" dans la vue Boutique
 
-Ajouter un bouton "Generer bon de livraison" sur chaque boutique qui :
+Modifier la section detail boutique dans `AdminStock.tsx` :
 
-- Genere un document HTML/PDF listant toutes les references de la boutique
-- Inclut : nom boutique, date, adresse, liste complete des produits (SKU, nom, quantite, reserve, disponible)
-- Ouvre dans une nouvelle fenetre pour impression (`window.print()`)
+- Quand on clique sur un produit dans la boutique, afficher un panneau expandable ou un dialog montrant la **matrice taille/couleur** (comme l'image de reference)
+- Lignes = couleurs du produit (avec pastille coloree)
+- Colonnes = tailles du produit (XS, S, M, L, XL, XXL)
+- Cellules = quantites editables inline
+- Colonne "Total" a droite avec somme par couleur
+- Les totaux en rouge si stock bas
 
-**Fichiers modifies :**
-- `src/pages/admin/AdminStock.tsx` : Ajouter une fonction `generateDeliveryNote` dans `BoutiquesView` qui ouvre une fenetre avec le bon de livraison formate
+---
+
+### 3. Ajout de produit avec ventilation taille/couleur
+
+Modifier le dialog "Ajouter un produit a la boutique" :
+
+- Apres selection du produit, charger ses tailles et couleurs depuis la table `products`
+- Afficher la grille taille/couleur vide a remplir
+- A la sauvegarde, creer une entree `stock_levels` par combinaison taille/couleur non-nulle
+- Garder aussi la possibilite d'ajouter un stock global (sans taille/couleur) pour les produits sans variantes
+
+---
+
+### 4. Modification du stock inline
+
+Dans la grille existante du detail boutique :
+
+- Au lieu d'une seule ligne par produit, afficher un accordeon/expander
+- Ligne principale = nom produit, SKU, total global
+- Sous-lignes (expandables) = la matrice taille x couleur editable
+- Modifier une cellule = UPDATE du `stock_levels` correspondant
+- Ajouter une couleur/taille = INSERT d'un nouveau `stock_levels`
+- Supprimer une ligne couleur = DELETE des `stock_levels` de cette couleur
+
+---
+
+### 5. Icones et pastilles couleur
+
+- Afficher une pastille ronde coloree (cercle CSS avec `backgroundColor`) a cote de chaque nom de couleur
+- Dans le tableau principal (vue boutique), remplacer la colonne "Couleurs" textuelle par des pastilles colorees cliquables
+- Mapper les noms de couleurs courants (PINK, BLACK, BLUE, GREY LIGHT, etc.) a des codes hex pour l'affichage
+
+---
+
+### 6. Mise a jour du bon de livraison
+
+Modifier `generateDeliveryNote` pour inclure la ventilation par taille/couleur :
+
+- Pour chaque produit, afficher la sous-table taille x couleur dans le bon de livraison
+- Inclure les totaux par couleur et le total general du produit
+
+---
+
+### 7. Adaptation des fonctions existantes
+
+- `getStockForItem` : sommer toutes les lignes `stock_levels` (avec ou sans size/color) pour un inventory_id
+- `handleUpdateStock` : mettre a jour la ligne specifique (avec size + color)
+- `handleAddProduct` : creer les entrees ventilees ou globales selon le produit
+- `handleRemoveProduct` : supprimer toutes les lignes liees au produit dans la boutique
 
 ---
 
 ### Resume technique
 
-| Composant | Action |
+| Element | Modification |
 |---|---|
-| `supabase/functions/parse-products-pdf/index.ts` | Accepter CSV/XLS en plus du PDF |
-| `supabase/config.toml` | Aucun changement (function deja configuree) |
-| `src/pages/admin/AdminStock.tsx` | Import en masse, CRUD boutiques, gestion produits par boutique, bons de livraison |
+| Migration SQL | Ajout colonnes `size` et `color` a `stock_levels`, contrainte unique |
+| `AdminStock.tsx` | Grille matrice taille x couleur, pastilles couleur, accordeon detail, dialog ajout avec variantes |
+| `AdminStock.tsx` (delivery note) | Ventilation taille/couleur dans le bon de livraison |
 
-### Flux d'import en masse
-
-```text
-+------------------+     +-------------------+     +------------------+
-| Upload fichier   | --> | Edge Function     | --> | Liste extraite   |
-| (PDF/CSV/XLS)    |     | (IA Gemini)       |     | avec selection   |
-+------------------+     +-------------------+     +------------------+
-                                                          |
-                                                          v
-                                              +------------------------+
-                                              | Creation :             |
-                                              | 1. products (table)    |
-                                              | 2. inventory (table)   |
-                                              | 3. stock_levels        |
-                                              +------------------------+
-```
-
-### Bon de livraison (apercu structure)
+### Apercu de la grille (comme l'image de reference)
 
 ```text
-+------------------------------------------+
-| BON DE LIVRAISON                         |
-| Boutique: CC Parly 2 - Le Chesnay       |
-| Date: 17/02/2026                         |
-| Adresse: Centre Commercial Parly 2      |
-+------------------------------------------+
-| SKU         | Produit        | Qte | Dispo |
-|-------------|----------------|-----|-------|
-| THORENS-001 | THORENS        |  45 |    42 |
-| EDG-HIM-001 | Himalaya       |  22 |    22 |
-| ...         | ...            | ... |  ...  |
-+------------------------------------------+
-| Total references: 4                      |
-| Total unites: 120                        |
-+------------------------------------------+
+Produit: ALICANTE
++-------------+----+-----+-----+-----+-----+-----+-------+
+| Couleur     | XS |  S  |  M  |  L  | XL  | XXL | Total |
++-------------+----+-----+-----+-----+-----+-----+-------+
+| [*] PINK    | 31 | 167 | 167 | 117 |  67 |     |   549 |
+| [*] BLACK   | 81 | 567 | 567 | 317 | 166 | 140 | 1 838 |
+| [*] BLUE    | 31 | 167 | 167 | 117 |  67 |     |   549 |
+| [*] GR.LIGHT|    | 167 | 167 | 117 |  67 |     |   518 |
++-------------+----+-----+-----+-----+-----+-----+-------+
+[*] = pastille coloree
+Cellules editables au clic
 ```
-
