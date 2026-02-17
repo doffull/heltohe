@@ -27,6 +27,7 @@ export interface Product {
   colorOptions?: ColorOption[];
   attributes?: Record<string, string>;
   videoUrl?: string;
+  tags?: string[];
 }
 
 export interface OrderItem {
@@ -125,6 +126,7 @@ export interface HeroSlide {
   objectPosition?: string;
   mobileObjectFit?: 'cover' | 'contain' | 'fill' | 'none';
   mobileObjectPosition?: string;
+  mobileMediaType?: 'image' | 'video';
 }
 
 export interface SocialLink {
@@ -244,6 +246,7 @@ export interface DesignSettings {
   
   // Mobile sidebar image
   mobileSidebarImage?: string;
+  mobileSidebarMediaType?: 'image' | 'video';
   
   // Configurable sizes for sidebar
   sidebarSizes: string[];

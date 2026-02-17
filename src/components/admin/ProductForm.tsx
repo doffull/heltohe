@@ -36,6 +36,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
     colorOptions: [] as ColorOption[],
     attributes: {} as Record<string, string>,
     videoUrl: '',
+    tags: [] as string[],
   });
 
   const [newAttrKey, setNewAttrKey] = useState('');
@@ -62,6 +63,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         colorOptions: product.colorOptions || [],
         attributes: product.attributes || {},
         videoUrl: product.videoUrl || '',
+        tags: product.tags || [],
       });
     }
   }, [product]);
@@ -72,6 +74,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
       ...formData,
       salePrice: formData.salePrice || undefined,
       videoUrl: formData.videoUrl || undefined,
+      tags: formData.tags,
     };
     
     if (product) {
@@ -223,6 +226,43 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         </div>
       </div>
 
+      {/* Homepage Sections Tags */}
+      <div className="space-y-4">
+        <h4 className="hud-text text-xs text-primary">// SECTIONS PAGE D'ACCUEIL</h4>
+        <p className="text-xs text-muted-foreground">Sélectionnez dans quelles sections ce produit apparaîtra sur la page d'accueil</p>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { id: 'top', label: 'Meilleures Ventes' },
+            { id: 'trending', label: 'Tendances' },
+            { id: 'featured', label: 'À la Une' },
+            { id: 'new_arrival', label: 'Dernières Arrivées' },
+            { id: 'style', label: 'Focus Style' },
+            { id: 'promo', label: 'Promo' },
+          ].map(tag => (
+            <button
+              key={tag.id}
+              type="button"
+              onClick={() => {
+                setFormData(prev => ({
+                  ...prev,
+                  tags: prev.tags.includes(tag.id)
+                    ? prev.tags.filter(t => t !== tag.id)
+                    : [...prev.tags, tag.id],
+                }));
+              }}
+              className={cn(
+                "px-3 py-1.5 hud-text text-xs border chamfer-hud-sm transition-all",
+                formData.tags.includes(tag.id)
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-secondary/30 text-muted-foreground border-border/30 hover:border-primary/50"
+              )}
+            >
+              {tag.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Pricing & Stock */}
       <div className="space-y-4">
         <h4 className="hud-text text-xs text-primary">// PRIX & STOCK</h4>
@@ -301,6 +341,9 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
                 style={{ backgroundColor: option.color }}
               />
               <span className="hud-text text-xs">{option.label}</span>
+              {option.image && (
+                <img src={option.image} alt="" className="w-6 h-6 object-cover rounded-sm" />
+              )}
               <button type="button" onClick={() => removeColorOption(index)}>
                 <X className="w-3 h-3 text-muted-foreground hover:text-destructive" />
               </button>
@@ -331,6 +374,29 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
             <Plus className="w-4 h-4" />
           </Button>
         </div>
+
+        {/* Image per color option */}
+        {formData.colorOptions.length > 0 && (
+          <div className="space-y-3 mt-3">
+            <Label className="hud-text text-xs text-muted-foreground">Images par couleur</Label>
+            {formData.colorOptions.map((option, index) => (
+              <div key={index} className="space-y-1">
+                <span className="text-xs text-muted-foreground">{option.label}</span>
+                <FileDropZone
+                  accept={['image']}
+                  folder="products/colors"
+                  currentFile={option.image}
+                  onUpload={(url) => {
+                    const newOptions = [...formData.colorOptions];
+                    newOptions[index] = { ...newOptions[index], image: url };
+                    setFormData(prev => ({ ...prev, colorOptions: newOptions }));
+                  }}
+                  label={`Image pour ${option.label}`}
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Description & Material */}

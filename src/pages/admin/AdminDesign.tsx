@@ -131,7 +131,10 @@ function HeroSliderTab() {
                   accept={['image', 'video']}
                   folder="hero/background"
                   currentFile={slide.backgroundMedia || slide.media}
-                  onUpload={(url) => updateSlide(index, { backgroundMedia: url, media: url || slide.media })}
+                  onUpload={(url) => {
+                    const isVideo = /\.(mp4|webm|mov|ogg)$/i.test(url);
+                    updateSlide(index, { backgroundMedia: url, media: url || slide.media, mediaType: isVideo ? 'video' : 'image' });
+                  }}
                   label="Fond (défilement lent)"
                 />
               </div>
@@ -157,17 +160,20 @@ function HeroSliderTab() {
               </div>
             </div>
 
-            {/* Mobile Image */}
+            {/* Mobile Media */}
             <div>
-              <Label className="text-xs font-medium mb-2 block">Image mobile (optionnel)</Label>
+              <Label className="text-xs font-medium mb-2 block">Média mobile (optionnel)</Label>
               <FileDropZone
-                accept={['image']}
+                accept={['image', 'video']}
                 folder="hero/mobile"
                 currentFile={(slide as any).mobileImage}
-                onUpload={(url) => updateSlide(index, { mobileImage: url } as any)}
-                label="Image adaptée mobile"
+                onUpload={(url) => {
+                  const isVideo = /\.(mp4|webm|mov|ogg)$/i.test(url);
+                  updateSlide(index, { mobileImage: url, mobileMediaType: isVideo ? 'video' : 'image' } as any);
+                }}
+                label="Image ou vidéo mobile"
               />
-              <p className="text-xs text-muted-foreground mt-1">Si vide, l'image desktop sera utilisée</p>
+              <p className="text-xs text-muted-foreground mt-1">Si vide, le média desktop sera utilisé. Supporte images et vidéos.</p>
             </div>
 
             {/* Object Fit / Position */}
@@ -616,15 +622,18 @@ function SidebarTab() {
             />
           </div>
           <div>
-            <Label className="text-xs font-medium mb-2 block">Image mobile (optionnel)</Label>
+            <Label className="text-xs font-medium mb-2 block">Média mobile (optionnel)</Label>
             <FileDropZone
-              accept={['image']}
+              accept={['image', 'video']}
               folder="sidebar/mobile"
               currentFile={(designSettings as any).mobileSidebarImage}
-              onUpload={(url) => updateDesignSettings({ mobileSidebarImage: url } as any)}
-              label="Image adaptée mobile"
+              onUpload={(url) => {
+                const isVideo = /\.(mp4|webm|mov|ogg)$/i.test(url);
+                updateDesignSettings({ mobileSidebarImage: url, mobileSidebarMediaType: isVideo ? 'video' : 'image' } as any);
+              }}
+              label="Image ou vidéo mobile"
             />
-            <p className="text-xs text-muted-foreground mt-1">Si vide, l'image desktop sera utilisée</p>
+            <p className="text-xs text-muted-foreground mt-1">Si vide, l'image desktop sera utilisée. Supporte images et vidéos.</p>
           </div>
           <div className="space-y-2">
             <Label>Opacité de l'image ({Math.round((designSettings.sidebarImageOpacity ?? 1) * 100)}%)</Label>
