@@ -1,88 +1,61 @@
 
 
-## Plan : Modifier/supprimer tailles et couleurs dans l'inventaire global + Historique des mises en stock
+## Plan : Deduire le stock global lors de l'attribution en boutique/site
 
-### Contexte
+### Probleme actuel
 
-L'inventaire global permet deja de modifier et supprimer des produits complets. Cependant :
-1. On ne peut pas modifier les tailles et couleurs d'un produit existant depuis le dialog d'edition (le dialog charge les donnees mais ne permet pas de gerer les variantes en edition)
-2. Il n'y a aucun historique des mouvements de stock (ajouts, modifications, suppressions)
+Quand un produit est ajoute a une boutique via "Ajouter produit", le systeme **cree de nouvelles entrees** `stock_levels` pour la boutique sans toucher au stock global (Web). Le stock est donc **duplique** au lieu d'etre transfere.
 
----
-
-### 1. Permettre la modification des tailles et couleurs en edition
-
-Modifier `InventoryProductDialog.tsx` pour supporter l'edition complete des variantes :
-
-- En mode edition (`editData` present), charger aussi les `stock_levels` existants pour cet inventaire
-- Afficher la meme interface de gestion des tailles (badges cliquables + champ custom) et couleurs (palette + champ custom) qu'en creation
-- Permettre d'ajouter ou retirer des tailles et couleurs
-- Mettre a jour `products.sizes` et `products.colors` a la sauvegarde
-- **Suppression securisee** : Si une taille ou couleur est retiree alors qu'elle a du stock, avertir l'utilisateur que les stock_levels associes seront supprimes
+Exemple : un produit a 100 unites en stock global Web. On ajoute 30 en boutique Paris. Resultat actuel : Web = 100, Paris = 30 (total 130). Resultat attendu : Web = 70, Paris = 30 (total 100).
 
 ---
 
-### 2. Creer une table `stock_history` pour tracer les mouvements
+### 1. Deduire le stock Web lors de l'ajout en boutique
 
-Nouvelle migration SQL :
+Modifier `handleAddProduct` dans `BoutiquesView` (AdminStock.tsx) :
 
-```text
-CREATE TABLE public.stock_history (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  inventory_id UUID NOT NULL,
-  location_id UUID,
-  action TEXT NOT NULL,          -- 'add', 'update', 'delete', 'import', 'transfer'
-  size TEXT,
-  color TEXT,
-  quantity_before INTEGER DEFAULT 0,
-  quantity_after INTEGER DEFAULT 0,
-  note TEXT,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  created_by UUID
-);
+**Mode global (sans variantes)** :
+- Trouver le `stock_level` Web correspondant (meme `inventory_id`, location Web, sans size/color)
+- Verifier que `webStock.quantity >= addProductQty`
+- Si pas assez de stock : toast d'erreur "Stock insuffisant. Disponible : X, demande : Y"
+- Si OK : deduire `webStock.quantity -= addProductQty` puis creer l'entree boutique
+- Logger les deux mouvements dans `stock_history` : un `transfer_out` pour Web, un `transfer_in` pour la boutique
 
--- RLS : admin full access
-ALTER TABLE public.stock_history ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Admins can manage stock history"
-  ON public.stock_history FOR ALL
-  USING (has_role(auth.uid(), 'admin'));
-
-CREATE POLICY "Admins can view stock history"
-  ON public.stock_history FOR SELECT
-  USING (has_role(auth.uid(), 'admin'));
-```
+**Mode variantes (taille x couleur)** :
+- Pour chaque combinaison couleur/taille avec qty > 0, trouver le stock Web correspondant
+- Verifier que le stock Web par variante est suffisant
+- Si une variante n'a pas assez de stock, bloquer et afficher le detail
+- Si OK : deduire chaque variante du Web et creer les entrees boutique
 
 ---
 
-### 3. Enregistrer les mouvements dans l'historique
+### 2. Afficher le stock disponible dans le dialog d'ajout
 
-Modifier `AdminStock.tsx` pour inserer un enregistrement `stock_history` a chaque operation :
+Modifier le dialog d'ajout de produit en boutique :
 
-- **`handleCellSave`** (SizeColorGrid) : log `update` avec qty avant/apres
-- **`handleUpdateStock`** (BoutiquesView) : log `update`
-- **`handleConfirmImport`** (CSV import) : log `import` par ligne
-- **`handleAddProduct`** (ajout en boutique) : log `add`
-- **`handleRemoveProduct`** (retrait de boutique) : log `delete`
-- **`handleDeleteColor`** (suppression couleur) : log `delete`
+**Mode global** :
+- Afficher "Stock Web disponible : X" a cote du champ quantite
+- Limiter le champ quantite au maximum du stock disponible
+- Si la quantite saisie depasse le stock Web : afficher un message d'alerte
 
-Modifier `InventoryProductDialog.tsx` :
-- A la creation avec stock initial : log `add`
+**Mode variantes** :
+- Pour chaque cellule de la grille couleur x taille, afficher le stock Web disponible en tooltip ou sous-texte
+- Empecher de saisir plus que le stock Web disponible
 
 ---
 
-### 4. Ajouter un onglet "Historique" dans la navigation
+### 3. Validation negative couverte
 
-Ajouter un 5e onglet dans `VIEWS` :
+Les validations existantes (`if (newQty < 0)` dans `handleCellSave`, `handleUpdateStock`, et `Math.max(0, val)` dans le dialog) sont deja en place. Ce plan les conserve.
 
-```text
-{ key: 'history', label: 'Historique', icon: Clock }
-```
+---
 
-Creer un composant `HistoryView` qui affiche :
-- Un tableau avec colonnes : Date, Produit, Emplacement, Action, Couleur, Taille, Avant, Apres, Note
-- Un filtre par produit et par action
-- Badge couleur par type d'action (vert pour ajout, orange pour modification, rouge pour suppression, bleu pour import/transfert)
-- Pagination (50 dernieres entrees par defaut)
+### 4. Mouvements d'historique enrichis
+
+Les logs `stock_history` seront adaptes pour distinguer :
+- `transfer_out` : deduction du stock Web (avec location Web)
+- `transfer_in` : ajout au stock boutique (avec location boutique)
+- Au lieu de l'unique `add` actuel
 
 ---
 
@@ -90,16 +63,12 @@ Creer un composant `HistoryView` qui affiche :
 
 | Element | Modification |
 |---|---|
-| Migration SQL | Creer table `stock_history` avec RLS admin |
-| `InventoryProductDialog.tsx` | Charger stock_levels en edition, permettre ajout/suppression tailles+couleurs, log historique |
-| `AdminStock.tsx` - `SizeColorGrid` | Log historique dans `handleCellSave`, `handleDeleteColor` |
-| `AdminStock.tsx` - `BoutiquesView` | Log historique dans `handleAddProduct`, `handleUpdateStock`, `handleRemoveProduct` |
-| `AdminStock.tsx` - VIEWS | Ajouter onglet "Historique" |
-| `AdminStock.tsx` - `HistoryView` | Nouveau composant avec tableau filtrable |
+| `AdminStock.tsx` - `handleAddProduct` mode global | Trouver stock Web, verifier suffisance, deduire, creer boutique, logger 2 mouvements |
+| `AdminStock.tsx` - `handleAddProduct` mode variantes | Idem par combinaison couleur/taille |
+| `AdminStock.tsx` - dialog ajout produit | Afficher stock Web dispo, limiter saisie, alertes |
+| `AdminStock.tsx` - `stock_history` | Actions `transfer_out` / `transfer_in` |
 
 ### Fichiers modifies
 
-- `supabase/migrations/` : nouvelle migration pour `stock_history`
-- `src/pages/admin/AdminStock.tsx` : logs historique partout + onglet HistoryView
-- `src/components/admin/InventoryProductDialog.tsx` : edition complete tailles/couleurs + logs historique
+- `src/pages/admin/AdminStock.tsx` : logique de deduction + UI du dialog
 
