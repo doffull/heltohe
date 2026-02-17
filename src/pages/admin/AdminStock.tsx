@@ -1369,18 +1369,54 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
     onRefresh();
   };
 
-  // Remove ALL stock_levels for a product in this boutique
+  // Remove ALL stock_levels for a product in this boutique — return stock to Web
   const handleRemoveProduct = async (inventoryId: string) => {
     const toDelete = stockLevels.filter((sl: StockLevel) => sl.inventory_id === inventoryId && sl.location_id === selected);
+    const webLoc = allLocations.find((l: Location) => l.type === 'web');
+
     for (const sl of toDelete) {
-      await supabase.from('stock_levels').delete().eq('id', sl.id);
+      // Return stock to Web location
+      if (webLoc && sl.quantity > 0) {
+        const existingWebSl = stockLevels.find(
+          (w: StockLevel) => w.inventory_id === inventoryId && w.location_id === webLoc.id
+            && w.size === sl.size && w.color === sl.color
+        );
+
+        if (existingWebSl) {
+          const newWebQty = existingWebSl.quantity + sl.quantity;
+          await supabase.from('stock_levels').update({ quantity: newWebQty }).eq('id', existingWebSl.id);
+          await supabase.from('stock_history' as any).insert({
+            inventory_id: inventoryId, location_id: webLoc.id, action: 'transfer_in',
+            size: sl.size, color: sl.color, quantity_before: existingWebSl.quantity, quantity_after: newWebQty,
+            note: `Retour depuis ${boutiques.find((b: Location) => b.id === selected)?.name || 'boutique'}`,
+            created_by: user?.id || null,
+          });
+        } else {
+          // Create Web stock_level entry if it doesn't exist
+          await supabase.from('stock_levels').insert({
+            inventory_id: inventoryId, location_id: webLoc.id, quantity: sl.quantity,
+            reserved: 0, size: sl.size, color: sl.color,
+          });
+          await supabase.from('stock_history' as any).insert({
+            inventory_id: inventoryId, location_id: webLoc.id, action: 'transfer_in',
+            size: sl.size, color: sl.color, quantity_before: 0, quantity_after: sl.quantity,
+            note: `Retour depuis ${boutiques.find((b: Location) => b.id === selected)?.name || 'boutique'}`,
+            created_by: user?.id || null,
+          });
+        }
+      }
+
+      // Log transfer_out from boutique
       await supabase.from('stock_history' as any).insert({
-        inventory_id: inventoryId, location_id: selected, action: 'delete',
+        inventory_id: inventoryId, location_id: selected, action: 'transfer_out',
         size: sl.size, color: sl.color, quantity_before: sl.quantity, quantity_after: 0,
-        note: 'Retrait de boutique', created_by: user?.id || null,
+        note: `Retour vers stock Web`, created_by: user?.id || null,
       });
+
+      // Delete boutique stock_level
+      await supabase.from('stock_levels').delete().eq('id', sl.id);
     }
-    toast({ title: 'Produit retiré de la boutique' });
+    toast({ title: 'Produit retiré — stock réattribué au Web' });
     onRefresh();
   };
 
