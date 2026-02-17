@@ -911,6 +911,7 @@ export type Database = {
           quantity: number
           reserved: number
           size: string | null
+          stocked_at: string | null
           updated_at: string
         }
         Insert: {
@@ -923,6 +924,7 @@ export type Database = {
           quantity?: number
           reserved?: number
           size?: string | null
+          stocked_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -935,6 +937,7 @@ export type Database = {
           quantity?: number
           reserved?: number
           size?: string | null
+          stocked_at?: string | null
           updated_at?: string
         }
         Relationships: [

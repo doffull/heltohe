@@ -7,8 +7,9 @@ import {
   BarChart3, Package, Store, ArrowLeftRight, AlertTriangle,
   RefreshCw, TrendingUp, TrendingDown, Search, Filter,
   Upload, Plus, Pencil, Trash2, FileText, X, Check, FileSpreadsheet,
-  ChevronDown, ChevronRight
+  ChevronDown, ChevronRight, Download
 } from 'lucide-react';
+import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +42,7 @@ type InventoryItem = {
 type StockLevel = {
   id: string; inventory_id: string; location_id: string; quantity: number; reserved: number;
   last_synced_at: string | null; size: string | null; color: string | null;
+  stocked_at: string | null;
 };
 type Transfer = {
   id: string; inventory_id: string; from_location_id: string; to_location_id: string;
@@ -686,6 +688,8 @@ function SizeColorGrid({
   productColors,
   stockLevels,
   onRefresh,
+  productName,
+  locationName,
 }: {
   inventoryId: string;
   locationId: string;
@@ -693,11 +697,15 @@ function SizeColorGrid({
   productColors: string[];
   stockLevels: StockLevel[];
   onRefresh: () => void;
+  productName?: string;
+  locationName?: string;
 }) {
   const { toast } = useToast();
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editValue, setEditValue] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [csvImportOpen, setCsvImportOpen] = useState(false);
+  const [csvPreview, setCsvPreview] = useState<{ color: string; size: string; qty: number; valid: boolean }[]>([]);
 
   const relevantLevels = stockLevels.filter(
     sl => sl.inventory_id === inventoryId && sl.location_id === locationId && sl.size && sl.color
@@ -710,6 +718,10 @@ function SizeColorGrid({
 
   const getSlId = (color: string, size: string) => {
     return relevantLevels.find(l => l.color === color && l.size === size)?.id;
+  };
+
+  const getStockedAt = (color: string, size: string) => {
+    return relevantLevels.find(l => l.color === color && l.size === size)?.stocked_at;
   };
 
   const getColorTotal = (color: string) => {
@@ -735,6 +747,7 @@ function SizeColorGrid({
         reserved: 0,
         size,
         color,
+        stocked_at: new Date().toISOString(),
       });
     }
     setSaving(false);
@@ -751,6 +764,86 @@ function SizeColorGrid({
     onRefresh();
   };
 
+  // ── CSV Export ──
+  const handleExportCsv = () => {
+    const rows = [['Couleur', 'Taille', 'Quantite', 'Reserve', 'Date mise en stock'].join(',')];
+    const colors = productColors.length > 0 ? productColors : ['DÉFAUT'];
+    const sizes = productSizes.length > 0 ? productSizes : ['UNIQUE'];
+    colors.forEach(color => {
+      sizes.forEach(size => {
+        const sl = relevantLevels.find(l => l.color === color && l.size === size);
+        const qty = sl?.quantity ?? 0;
+        const reserved = sl?.reserved ?? 0;
+        const stockedAt = sl?.stocked_at ? new Date(sl.stocked_at).toLocaleDateString('fr-FR') : '';
+        rows.push([color, size, qty, reserved, stockedAt].join(','));
+      });
+    });
+    const csv = rows.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const date = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `stock_${(locationName || 'loc').replace(/\s+/g, '_')}_${(productName || 'prod').replace(/\s+/g, '_')}_${date}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: 'CSV exporté' });
+  };
+
+  // ── CSV Import ──
+  const handleImportCsv = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+      // Skip header if present
+      const startIdx = lines[0]?.toLowerCase().includes('couleur') ? 1 : 0;
+      const preview = lines.slice(startIdx).map(line => {
+        const parts = line.split(',').map(p => p.trim());
+        const color = parts[0] || '';
+        const size = parts[1] || '';
+        const qty = parseInt(parts[2]) || 0;
+        const colorValid = productColors.length === 0 || productColors.includes(color);
+        const sizeValid = productSizes.length === 0 || productSizes.includes(size);
+        return { color, size, qty, valid: colorValid && sizeValid && qty >= 0 };
+      });
+      setCsvPreview(preview);
+      setCsvImportOpen(true);
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const handleConfirmImport = async () => {
+    setSaving(true);
+    let count = 0;
+    for (const row of csvPreview) {
+      if (!row.valid || row.qty <= 0) continue;
+      const existingId = getSlId(row.color, row.size);
+      if (existingId) {
+        await supabase.from('stock_levels').update({ quantity: row.qty }).eq('id', existingId);
+      } else {
+        await supabase.from('stock_levels').insert({
+          inventory_id: inventoryId,
+          location_id: locationId,
+          quantity: row.qty,
+          reserved: 0,
+          size: row.size,
+          color: row.color,
+          stocked_at: new Date().toISOString(),
+        });
+      }
+      count++;
+    }
+    setSaving(false);
+    setCsvImportOpen(false);
+    setCsvPreview([]);
+    toast({ title: `${count} lignes importées` });
+    onRefresh();
+  };
+
   if (productColors.length === 0 && productSizes.length === 0) {
     return <p className="text-xs text-muted-foreground py-2 px-4">Aucune variante configurée pour ce produit.</p>;
   }
@@ -758,89 +851,157 @@ function SizeColorGrid({
   const sizes = productSizes.length > 0 ? productSizes : ['UNIQUE'];
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-xs border-collapse">
-        <thead>
-          <tr className="bg-muted/50">
-            <th className="text-left py-2 px-3 font-medium">Couleur</th>
-            {sizes.map(s => (
-              <th key={s} className="text-center py-2 px-2 font-medium min-w-[50px]">{s}</th>
-            ))}
-            <th className="text-center py-2 px-3 font-semibold">Total</th>
-            <th className="w-8"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {(productColors.length > 0 ? productColors : ['DÉFAUT']).map(color => {
-            const total = getColorTotal(color);
-            return (
-              <tr key={color} className="border-t border-border/50 hover:bg-muted/30">
-                <td className="py-2 px-3">
-                  <div className="flex items-center gap-2">
-                    <ColorSwatch color={color} size={12} />
-                    <span className="font-medium">{color}</span>
-                  </div>
-                </td>
-                {sizes.map(size => {
-                  const key = cellKey(color, size);
-                  const qty = getQty(color, size);
-                  const isEditing = editingCell === key;
-                  return (
-                    <td key={size} className="text-center py-1 px-1">
-                      {isEditing ? (
-                        <div className="flex items-center gap-0.5 justify-center">
-                          <Input
-                            type="number"
-                            min={0}
-                            value={editValue}
-                            onChange={e => setEditValue(parseInt(e.target.value) || 0)}
-                            className="w-14 h-6 text-center text-xs p-0"
-                            autoFocus
-                            onKeyDown={e => {
-                              if (e.key === 'Enter') handleCellSave(color, size, editValue);
-                              if (e.key === 'Escape') setEditingCell(null);
-                            }}
-                          />
-                          <Button
-                            variant="ghost" size="icon" className="h-5 w-5"
-                            onClick={() => handleCellSave(color, size, editValue)}
-                            disabled={saving}
-                          >
-                            <Check className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <span
-                          className={cn(
-                            "cursor-pointer hover:text-primary font-mono inline-block min-w-[30px] py-1 rounded hover:bg-primary/10 transition-colors",
-                            qty === 0 && "text-muted-foreground/40"
-                          )}
-                          onClick={() => { setEditingCell(key); setEditValue(qty); }}
-                        >
-                          {qty || '—'}
-                        </span>
-                      )}
-                    </td>
-                  );
-                })}
-                <td className={cn("text-center py-2 px-3 font-bold font-mono", total < 10 && total > 0 && "text-destructive")}>
-                  {total}
-                </td>
-                <td>
-                  <Button
-                    variant="ghost" size="icon" className="h-5 w-5 text-destructive/60 hover:text-destructive"
-                    onClick={() => handleDeleteColor(color)}
-                    title="Supprimer cette couleur"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <TooltipProvider>
+      <div className="overflow-x-auto">
+        {/* CSV buttons */}
+        <div className="flex gap-2 px-3 py-2 border-b border-border/50">
+          <Button variant="outline" size="sm" className="gap-1 h-7 text-xs" onClick={handleExportCsv}>
+            <Download className="h-3 w-3" /> Exporter CSV
+          </Button>
+          <label className="cursor-pointer">
+            <Button variant="outline" size="sm" className="gap-1 h-7 text-xs pointer-events-none" asChild>
+              <span><Upload className="h-3 w-3" /> Importer CSV</span>
+            </Button>
+            <input type="file" accept=".csv" className="hidden" onChange={handleImportCsv} />
+          </label>
+        </div>
+
+        <table className="w-full text-xs border-collapse">
+          <thead>
+            <tr className="bg-muted/50">
+              <th className="text-left py-2 px-3 font-medium">Couleur</th>
+              {sizes.map(s => (
+                <th key={s} className="text-center py-2 px-2 font-medium min-w-[50px]">{s}</th>
+              ))}
+              <th className="text-center py-2 px-3 font-semibold">Total</th>
+              <th className="w-8"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {(productColors.length > 0 ? productColors : ['DÉFAUT']).map(color => {
+              const total = getColorTotal(color);
+              return (
+                <tr key={color} className="border-t border-border/50 hover:bg-muted/30">
+                  <td className="py-2 px-3">
+                    <div className="flex items-center gap-2">
+                      <ColorSwatch color={color} size={12} />
+                      <span className="font-medium">{color}</span>
+                    </div>
+                  </td>
+                  {sizes.map(size => {
+                    const key = cellKey(color, size);
+                    const qty = getQty(color, size);
+                    const stockedAt = getStockedAt(color, size);
+                    const isEditing = editingCell === key;
+                    return (
+                      <td key={size} className="text-center py-1 px-1">
+                        {isEditing ? (
+                          <div className="flex items-center gap-0.5 justify-center">
+                            <Input
+                              type="number"
+                              min={0}
+                              value={editValue}
+                              onChange={e => setEditValue(parseInt(e.target.value) || 0)}
+                              className="w-14 h-6 text-center text-xs p-0"
+                              autoFocus
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') handleCellSave(color, size, editValue);
+                                if (e.key === 'Escape') setEditingCell(null);
+                              }}
+                            />
+                            <Button
+                              variant="ghost" size="icon" className="h-5 w-5"
+                              onClick={() => handleCellSave(color, size, editValue)}
+                              disabled={saving}
+                            >
+                              <Check className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <UITooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                className={cn(
+                                  "cursor-pointer hover:text-primary font-mono inline-block min-w-[30px] py-1 rounded hover:bg-primary/10 transition-colors",
+                                  qty === 0 && "text-muted-foreground/40"
+                                )}
+                                onClick={() => { setEditingCell(key); setEditValue(qty); }}
+                              >
+                                {qty || '—'}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-xs">
+                              {stockedAt
+                                ? `Entrée : ${new Date(stockedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}`
+                                : 'Pas de date d\'entrée'}
+                            </TooltipContent>
+                          </UITooltip>
+                        )}
+                      </td>
+                    );
+                  })}
+                  <td className={cn("text-center py-2 px-3 font-bold font-mono", total < 10 && total > 0 && "text-destructive")}>
+                    {total}
+                  </td>
+                  <td>
+                    <Button
+                      variant="ghost" size="icon" className="h-5 w-5 text-destructive/60 hover:text-destructive"
+                      onClick={() => handleDeleteColor(color)}
+                      title="Supprimer cette couleur"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        {/* CSV Import Preview Dialog */}
+        <Dialog open={csvImportOpen} onOpenChange={setCsvImportOpen}>
+          <DialogContent className="max-w-lg max-h-[70vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Aperçu import CSV</DialogTitle>
+              <DialogDescription>{csvPreview.length} lignes détectées</DialogDescription>
+            </DialogHeader>
+            <div className="border rounded-md max-h-60 overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Couleur</TableHead>
+                    <TableHead>Taille</TableHead>
+                    <TableHead className="text-right">Qté</TableHead>
+                    <TableHead>Statut</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {csvPreview.map((row, i) => (
+                    <TableRow key={i} className={!row.valid ? 'bg-destructive/10' : ''}>
+                      <TableCell className="text-xs">{row.color}</TableCell>
+                      <TableCell className="text-xs">{row.size}</TableCell>
+                      <TableCell className="text-xs text-right font-mono">{row.qty}</TableCell>
+                      <TableCell>
+                        {row.valid
+                          ? <Badge variant="secondary" className="text-[10px]">OK</Badge>
+                          : <Badge variant="destructive" className="text-[10px]">Inconnu</Badge>
+                        }
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setCsvImportOpen(false); setCsvPreview([]); }}>Annuler</Button>
+              <Button onClick={handleConfirmImport} disabled={saving || csvPreview.filter(r => r.valid && r.qty > 0).length === 0}>
+                {saving ? 'Import...' : `Importer ${csvPreview.filter(r => r.valid && r.qty > 0).length} lignes`}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </TooltipProvider>
   );
 }
 
@@ -1065,19 +1226,24 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
         if (colors.length > 0 && sizes.length > 0) {
           productsHtml += `<tr><td colspan="5" style="padding:4px 12px 8px;"><table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr><td style="padding:4px 8px;font-weight:600;">Couleur</td>`;
           sizes.forEach(s => { productsHtml += `<td style="text-align:center;padding:4px;font-weight:600;">${s}</td>`; });
-          productsHtml += `<td style="text-align:center;padding:4px;font-weight:700;">Total</td></tr></thead><tbody>`;
+          productsHtml += `<td style="text-align:center;padding:4px;font-weight:700;">Total</td><td style="text-align:center;padding:4px;font-weight:600;">Date entrée</td></tr></thead><tbody>`;
 
           colors.forEach(color => {
             const hex = getColorHex(color);
             let colorTotal = 0;
+            const colorStockedDates: string[] = [];
             productsHtml += `<tr><td style="padding:3px 8px;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${hex};margin-right:6px;vertical-align:middle;${['WHITE','BLANC','CREAM','CREME','BEIGE','YELLOW','JAUNE'].includes(color.toUpperCase()) ? 'border:1px solid #ccc;' : ''}"></span>${color}</td>`;
             sizes.forEach(size => {
               const sl = sls.find(s => s.color === color && s.size === size);
               const qty = sl?.quantity || 0;
               colorTotal += qty;
+              if (sl?.stocked_at) colorStockedDates.push(sl.stocked_at);
               productsHtml += `<td style="text-align:center;padding:3px;">${qty || '—'}</td>`;
             });
-            productsHtml += `<td style="text-align:center;padding:3px;font-weight:700;">${colorTotal}</td></tr>`;
+            const latestDate = colorStockedDates.length > 0
+              ? new Date(colorStockedDates.sort().reverse()[0]).toLocaleDateString('fr-FR')
+              : '—';
+            productsHtml += `<td style="text-align:center;padding:3px;font-weight:700;">${colorTotal}</td><td style="text-align:center;padding:3px;font-size:10px;">${latestDate}</td></tr>`;
           });
           productsHtml += `</tbody></table></td></tr>`;
         }
@@ -1300,6 +1466,8 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
                             productColors={productColors}
                             stockLevels={stockLevels}
                             onRefresh={onRefresh}
+                            productName={inv?.name}
+                            locationName={selectedBoutique?.name}
                           />
                         </div>
                       )}
