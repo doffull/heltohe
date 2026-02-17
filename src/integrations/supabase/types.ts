@@ -902,6 +902,7 @@ export type Database = {
       }
       stock_levels: {
         Row: {
+          color: string | null
           created_at: string
           id: string
           inventory_id: string
@@ -909,9 +910,11 @@ export type Database = {
           location_id: string
           quantity: number
           reserved: number
+          size: string | null
           updated_at: string
         }
         Insert: {
+          color?: string | null
           created_at?: string
           id?: string
           inventory_id: string
@@ -919,9 +922,11 @@ export type Database = {
           location_id: string
           quantity?: number
           reserved?: number
+          size?: string | null
           updated_at?: string
         }
         Update: {
+          color?: string | null
           created_at?: string
           id?: string
           inventory_id?: string
@@ -929,6 +934,7 @@ export type Database = {
           location_id?: string
           quantity?: number
           reserved?: number
+          size?: string | null
           updated_at?: string
         }
         Relationships: [

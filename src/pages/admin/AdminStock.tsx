@@ -5,7 +5,8 @@ import { useAuth } from '@/context/AuthContext';
 import {
   BarChart3, Package, Store, ArrowLeftRight, AlertTriangle,
   RefreshCw, TrendingUp, TrendingDown, Search, Filter,
-  Upload, Plus, Pencil, Trash2, FileText, X, Check, FileSpreadsheet
+  Upload, Plus, Pencil, Trash2, FileText, X, Check, FileSpreadsheet,
+  ChevronDown, ChevronRight
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,7 +39,7 @@ type InventoryItem = {
 };
 type StockLevel = {
   id: string; inventory_id: string; location_id: string; quantity: number; reserved: number;
-  last_synced_at: string | null;
+  last_synced_at: string | null; size: string | null; color: string | null;
 };
 type Transfer = {
   id: string; inventory_id: string; from_location_id: string; to_location_id: string;
@@ -47,6 +48,55 @@ type Transfer = {
 type ProductRow = {
   id: string; name: string; sku: string; sizes: string[] | null; colors: string[] | null;
 };
+
+// ── Color map for swatches ──
+const COLOR_HEX_MAP: Record<string, string> = {
+  'BLACK': '#000000', 'NOIR': '#000000',
+  'WHITE': '#FFFFFF', 'BLANC': '#FFFFFF',
+  'RED': '#EF4444', 'ROUGE': '#EF4444',
+  'BLUE': '#3B82F6', 'BLEU': '#3B82F6',
+  'NAVY': '#1E3A5F', 'MARINE': '#1E3A5F',
+  'GREEN': '#22C55E', 'VERT': '#22C55E',
+  'YELLOW': '#EAB308', 'JAUNE': '#EAB308',
+  'ORANGE': '#F97316',
+  'PINK': '#EC4899', 'ROSE': '#EC4899',
+  'PURPLE': '#A855F7', 'VIOLET': '#A855F7',
+  'GREY': '#9CA3AF', 'GRAY': '#9CA3AF', 'GRIS': '#9CA3AF',
+  'GREY LIGHT': '#D1D5DB', 'GRAY LIGHT': '#D1D5DB', 'GRIS CLAIR': '#D1D5DB',
+  'GREY DARK': '#4B5563', 'GRAY DARK': '#4B5563', 'GRIS FONCE': '#4B5563',
+  'BROWN': '#92400E', 'MARRON': '#92400E',
+  'BEIGE': '#D2B48C',
+  'CREAM': '#FFFDD0', 'CREME': '#FFFDD0',
+  'KHAKI': '#BDB76B', 'KAKI': '#BDB76B',
+  'BURGUNDY': '#800020', 'BORDEAUX': '#800020',
+  'CORAL': '#FF7F50', 'CORAIL': '#FF7F50',
+  'TURQUOISE': '#40E0D0',
+  'GOLD': '#FFD700', 'OR': '#FFD700',
+  'SILVER': '#C0C0C0', 'ARGENT': '#C0C0C0',
+  'TAN': '#D2B48C', 'CAMEL': '#C19A6B',
+};
+
+function getColorHex(colorName: string): string {
+  const upper = colorName.toUpperCase().trim();
+  return COLOR_HEX_MAP[upper] || '#888888';
+}
+
+function ColorSwatch({ color, size = 14 }: { color: string; size?: number }) {
+  const hex = getColorHex(color);
+  const isLight = ['WHITE', 'BLANC', 'CREAM', 'CREME', 'BEIGE', 'YELLOW', 'JAUNE'].includes(color.toUpperCase().trim());
+  return (
+    <span
+      className="inline-block rounded-full shrink-0"
+      style={{
+        width: size,
+        height: size,
+        backgroundColor: hex,
+        border: isLight ? '1px solid hsl(var(--border))' : 'none',
+      }}
+      title={color}
+    />
+  );
+}
 
 const VIEWS = [
   { key: 'dashboard', label: 'Dashboard', icon: BarChart3 },
@@ -84,7 +134,7 @@ export default function AdminStock() {
     ]);
     if (locRes.data) setLocations(locRes.data as Location[]);
     if (invRes.data) setInventory(invRes.data as InventoryItem[]);
-    if (slRes.data) setStockLevels(slRes.data as StockLevel[]);
+    if (slRes.data) setStockLevels(slRes.data as unknown as StockLevel[]);
     if (trRes.data) setTransfers(trRes.data as Transfer[]);
     if (prodRes.data) setProducts(prodRes.data as ProductRow[]);
     setLastSync(new Date());
@@ -366,7 +416,6 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
     try {
       let created = 0;
       for (const p of selected) {
-        // 1. Create product
         const { data: prod, error: prodErr } = await supabase.from('products').insert({
           name: p.name || 'Sans nom',
           sku: p.sku || `IMP-${Date.now()}`,
@@ -384,7 +433,6 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
 
         if (prodErr || !prod) continue;
 
-        // 2. Create inventory entry
         const { data: inv, error: invErr } = await supabase.from('inventory').insert({
           product_id: prod.id,
           sku: p.sku || `IMP-${Date.now()}`,
@@ -395,7 +443,6 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
 
         if (invErr || !inv) continue;
 
-        // 3. Create stock_level for web location
         const webLoc = locations.find((l: Location) => l.type === 'web');
         if (webLoc) {
           await supabase.from('stock_levels').insert({
@@ -563,10 +610,177 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
   );
 }
 
-// ── Boutiques (CRUD + product management + delivery notes) ──
+// ── Size×Color Stock Grid Component ──
+function SizeColorGrid({
+  inventoryId,
+  locationId,
+  productSizes,
+  productColors,
+  stockLevels,
+  onRefresh,
+}: {
+  inventoryId: string;
+  locationId: string;
+  productSizes: string[];
+  productColors: string[];
+  stockLevels: StockLevel[];
+  onRefresh: () => void;
+}) {
+  const { toast } = useToast();
+  const [editingCell, setEditingCell] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState(0);
+  const [saving, setSaving] = useState(false);
+
+  const relevantLevels = stockLevels.filter(
+    sl => sl.inventory_id === inventoryId && sl.location_id === locationId && sl.size && sl.color
+  );
+
+  const getQty = (color: string, size: string) => {
+    const sl = relevantLevels.find(l => l.color === color && l.size === size);
+    return sl?.quantity ?? 0;
+  };
+
+  const getSlId = (color: string, size: string) => {
+    return relevantLevels.find(l => l.color === color && l.size === size)?.id;
+  };
+
+  const getColorTotal = (color: string) => {
+    return productSizes.reduce((sum, size) => sum + getQty(color, size), 0);
+  };
+
+  const cellKey = (color: string, size: string) => `${color}__${size}`;
+
+  const handleCellSave = async (color: string, size: string, newQty: number) => {
+    setSaving(true);
+    const existingId = getSlId(color, size);
+    if (existingId) {
+      if (newQty === 0) {
+        await supabase.from('stock_levels').delete().eq('id', existingId);
+      } else {
+        await supabase.from('stock_levels').update({ quantity: newQty }).eq('id', existingId);
+      }
+    } else if (newQty > 0) {
+      await supabase.from('stock_levels').insert({
+        inventory_id: inventoryId,
+        location_id: locationId,
+        quantity: newQty,
+        reserved: 0,
+        size,
+        color,
+      });
+    }
+    setSaving(false);
+    setEditingCell(null);
+    onRefresh();
+  };
+
+  const handleDeleteColor = async (color: string) => {
+    const toDelete = relevantLevels.filter(l => l.color === color);
+    for (const sl of toDelete) {
+      await supabase.from('stock_levels').delete().eq('id', sl.id);
+    }
+    toast({ title: `Couleur ${color} supprimée` });
+    onRefresh();
+  };
+
+  if (productColors.length === 0 && productSizes.length === 0) {
+    return <p className="text-xs text-muted-foreground py-2 px-4">Aucune variante configurée pour ce produit.</p>;
+  }
+
+  const sizes = productSizes.length > 0 ? productSizes : ['UNIQUE'];
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-xs border-collapse">
+        <thead>
+          <tr className="bg-muted/50">
+            <th className="text-left py-2 px-3 font-medium">Couleur</th>
+            {sizes.map(s => (
+              <th key={s} className="text-center py-2 px-2 font-medium min-w-[50px]">{s}</th>
+            ))}
+            <th className="text-center py-2 px-3 font-semibold">Total</th>
+            <th className="w-8"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {(productColors.length > 0 ? productColors : ['DÉFAUT']).map(color => {
+            const total = getColorTotal(color);
+            return (
+              <tr key={color} className="border-t border-border/50 hover:bg-muted/30">
+                <td className="py-2 px-3">
+                  <div className="flex items-center gap-2">
+                    <ColorSwatch color={color} size={12} />
+                    <span className="font-medium">{color}</span>
+                  </div>
+                </td>
+                {sizes.map(size => {
+                  const key = cellKey(color, size);
+                  const qty = getQty(color, size);
+                  const isEditing = editingCell === key;
+                  return (
+                    <td key={size} className="text-center py-1 px-1">
+                      {isEditing ? (
+                        <div className="flex items-center gap-0.5 justify-center">
+                          <Input
+                            type="number"
+                            min={0}
+                            value={editValue}
+                            onChange={e => setEditValue(parseInt(e.target.value) || 0)}
+                            className="w-14 h-6 text-center text-xs p-0"
+                            autoFocus
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') handleCellSave(color, size, editValue);
+                              if (e.key === 'Escape') setEditingCell(null);
+                            }}
+                          />
+                          <Button
+                            variant="ghost" size="icon" className="h-5 w-5"
+                            onClick={() => handleCellSave(color, size, editValue)}
+                            disabled={saving}
+                          >
+                            <Check className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <span
+                          className={cn(
+                            "cursor-pointer hover:text-primary font-mono inline-block min-w-[30px] py-1 rounded hover:bg-primary/10 transition-colors",
+                            qty === 0 && "text-muted-foreground/40"
+                          )}
+                          onClick={() => { setEditingCell(key); setEditValue(qty); }}
+                        >
+                          {qty || '—'}
+                        </span>
+                      )}
+                    </td>
+                  );
+                })}
+                <td className={cn("text-center py-2 px-3 font-bold font-mono", total < 10 && total > 0 && "text-destructive")}>
+                  {total}
+                </td>
+                <td>
+                  <Button
+                    variant="ghost" size="icon" className="h-5 w-5 text-destructive/60 hover:text-destructive"
+                    onClick={() => handleDeleteColor(color)}
+                    title="Supprimer cette couleur"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ── Boutiques (CRUD + product management + size/color grid + delivery notes) ──
 function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, products, onRefresh }: any) {
   const { toast } = useToast();
   const [selected, setSelected] = useState<string>('');
+  const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
 
   // Boutique CRUD state
   const [boutiqueDialog, setBoutiqueDialog] = useState(false);
@@ -579,6 +793,8 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
   const [addProductOpen, setAddProductOpen] = useState(false);
   const [addProductInvId, setAddProductInvId] = useState('');
   const [addProductQty, setAddProductQty] = useState(50);
+  const [addProductMode, setAddProductMode] = useState<'global' | 'variants'>('global');
+  const [variantGrid, setVariantGrid] = useState<Record<string, Record<string, number>>>({});
   const [savingProduct, setSavingProduct] = useState(false);
   const [editingStockId, setEditingStockId] = useState<string | null>(null);
   const [editQty, setEditQty] = useState(0);
@@ -633,7 +849,6 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
       toast({ title: 'Impossible', description: 'Cette boutique contient du stock. Transférez-le d\'abord.', variant: 'destructive' });
       return;
     }
-    // Delete stock_levels first, then location
     await supabase.from('stock_levels').delete().eq('location_id', id);
     const { error } = await supabase.from('locations').delete().eq('id', id);
     if (error) toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
@@ -645,32 +860,81 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
     onRefresh();
   };
 
+  // When product selection changes, build variant grid
+  const selectedProduct = useMemo(() => {
+    const inv = inventory.find((i: InventoryItem) => i.id === addProductInvId);
+    if (!inv) return null;
+    return products.find((p: ProductRow) => p.id === inv.product_id);
+  }, [addProductInvId, inventory, products]);
+
+  useEffect(() => {
+    if (selectedProduct && addProductMode === 'variants') {
+      const colors = selectedProduct.colors?.length ? selectedProduct.colors : [];
+      const sizes = selectedProduct.sizes?.length ? selectedProduct.sizes : [];
+      if (colors.length > 0 && sizes.length > 0) {
+        const grid: Record<string, Record<string, number>> = {};
+        colors.forEach((c: string) => {
+          grid[c] = {};
+          sizes.forEach((s: string) => { grid[c][s] = 0; });
+        });
+        setVariantGrid(grid);
+      }
+    }
+  }, [selectedProduct, addProductMode]);
+
   // Add product to boutique
   const handleAddProduct = async () => {
     if (!addProductInvId || !selected) return;
     setSavingProduct(true);
-    const existing = stockLevels.find((sl: StockLevel) => sl.inventory_id === addProductInvId && sl.location_id === selected);
-    if (existing) {
-      toast({ title: 'Ce produit existe déjà dans cette boutique', variant: 'destructive' });
-      setSavingProduct(false);
-      return;
+
+    if (addProductMode === 'variants' && selectedProduct?.colors?.length && selectedProduct?.sizes?.length) {
+      // Create one stock_level per color×size combination with qty > 0
+      let created = 0;
+      for (const [color, sizes] of Object.entries(variantGrid)) {
+        for (const [size, qty] of Object.entries(sizes)) {
+          if (qty > 0) {
+            await supabase.from('stock_levels').insert({
+              inventory_id: addProductInvId,
+              location_id: selected,
+              quantity: qty,
+              reserved: 0,
+              size,
+              color,
+            });
+            created++;
+          }
+        }
+      }
+      if (created > 0) toast({ title: `${created} variantes ajoutées` });
+      else toast({ title: 'Aucune quantité saisie', variant: 'destructive' });
+    } else {
+      // Global stock (no size/color)
+      const existing = stockLevels.find((sl: StockLevel) => sl.inventory_id === addProductInvId && sl.location_id === selected && !sl.size && !sl.color);
+      if (existing) {
+        toast({ title: 'Ce produit existe déjà dans cette boutique', variant: 'destructive' });
+        setSavingProduct(false);
+        return;
+      }
+      const { error } = await supabase.from('stock_levels').insert({
+        inventory_id: addProductInvId,
+        location_id: selected,
+        quantity: addProductQty,
+        reserved: 0,
+      });
+      if (error) toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
+      else toast({ title: 'Produit ajouté à la boutique' });
     }
-    const { error } = await supabase.from('stock_levels').insert({
-      inventory_id: addProductInvId,
-      location_id: selected,
-      quantity: addProductQty,
-      reserved: 0,
-    });
-    if (error) toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
-    else toast({ title: 'Produit ajouté à la boutique' });
+
     setSavingProduct(false);
     setAddProductOpen(false);
     setAddProductInvId('');
     setAddProductQty(50);
+    setAddProductMode('global');
+    setVariantGrid({});
     onRefresh();
   };
 
-  // Update stock quantity inline
+  // Update stock quantity inline (global stock only)
   const handleUpdateStock = async (slId: string, newQty: number) => {
     const { error } = await supabase.from('stock_levels').update({ quantity: newQty }).eq('id', slId);
     if (error) toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
@@ -679,27 +943,78 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
     onRefresh();
   };
 
-  // Remove product from boutique
-  const handleRemoveProduct = async (slId: string) => {
-    const { error } = await supabase.from('stock_levels').delete().eq('id', slId);
-    if (error) toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
-    else toast({ title: 'Produit retiré de la boutique' });
+  // Remove ALL stock_levels for a product in this boutique
+  const handleRemoveProduct = async (inventoryId: string) => {
+    const toDelete = stockLevels.filter((sl: StockLevel) => sl.inventory_id === inventoryId && sl.location_id === selected);
+    for (const sl of toDelete) {
+      await supabase.from('stock_levels').delete().eq('id', sl.id);
+    }
+    toast({ title: 'Produit retiré de la boutique' });
     onRefresh();
   };
 
-  // Generate delivery note
-  const generateDeliveryNote = (boutique: any) => {
-    const levels = stockLevels.filter((sl: StockLevel) => sl.location_id === boutique.id);
-    const totalQty = levels.reduce((s: number, sl: StockLevel) => s + sl.quantity, 0);
-    const totalDispo = levels.reduce((s: number, sl: StockLevel) => s + (sl.quantity - sl.reserved), 0);
+  const toggleExpand = (invId: string) => {
+    setExpandedProducts(prev => {
+      const next = new Set(prev);
+      next.has(invId) ? next.delete(invId) : next.add(invId);
+      return next;
+    });
+  };
 
-    const rows = levels.map((sl: StockLevel) => {
-      const inv = inventory.find((i: InventoryItem) => i.id === sl.inventory_id);
-      const prod = products.find((p: ProductRow) => p.id === inv?.product_id);
-      return { sku: inv?.sku || '-', name: inv?.name || 'Inconnu', qty: sl.quantity, reserved: sl.reserved, dispo: sl.quantity - sl.reserved, sizes: prod?.sizes?.join(', ') || '-', colors: prod?.colors?.join(', ') || '-' };
+  // Generate delivery note with size/color breakdown
+  const generateDeliveryNote = (boutique: any) => {
+    const levels = stockLevels.filter((sl: StockLevel) => sl.location_id === boutique.id) as StockLevel[];
+
+    // Group by inventory_id
+    const grouped: Record<string, StockLevel[]> = {};
+    levels.forEach(sl => {
+      if (!grouped[sl.inventory_id]) grouped[sl.inventory_id] = [];
+      grouped[sl.inventory_id].push(sl);
     });
 
     const now = new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+    let totalQty = 0;
+    let totalDispo = 0;
+
+    let productsHtml = '';
+    for (const [invId, sls] of Object.entries(grouped)) {
+      const inv = inventory.find((i: InventoryItem) => i.id === invId);
+      const prod = products.find((p: ProductRow) => p.id === inv?.product_id);
+      const prodTotal = sls.reduce((s, sl) => s + sl.quantity, 0);
+      const prodDispo = sls.reduce((s, sl) => s + (sl.quantity - sl.reserved), 0);
+      totalQty += prodTotal;
+      totalDispo += prodDispo;
+
+      const hasVariants = sls.some(sl => sl.size || sl.color);
+
+      productsHtml += `<tr style="background:#f0f0f0;"><td colspan="2" style="padding:8px 12px;font-weight:700;">${inv?.name || 'Inconnu'}</td><td style="padding:8px;font-family:monospace;font-size:11px;">${inv?.sku || '-'}</td><td style="text-align:right;padding:8px;font-weight:700;">${prodTotal}</td><td style="text-align:right;padding:8px;">${prodDispo}</td></tr>`;
+
+      if (hasVariants) {
+        // Get unique colors and sizes
+        const colors = [...new Set(sls.filter(sl => sl.color).map(sl => sl.color!))];
+        const sizes = [...new Set(sls.filter(sl => sl.size).map(sl => sl.size!))];
+
+        if (colors.length > 0 && sizes.length > 0) {
+          productsHtml += `<tr><td colspan="5" style="padding:4px 12px 8px;"><table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr><td style="padding:4px 8px;font-weight:600;">Couleur</td>`;
+          sizes.forEach(s => { productsHtml += `<td style="text-align:center;padding:4px;font-weight:600;">${s}</td>`; });
+          productsHtml += `<td style="text-align:center;padding:4px;font-weight:700;">Total</td></tr></thead><tbody>`;
+
+          colors.forEach(color => {
+            const hex = getColorHex(color);
+            let colorTotal = 0;
+            productsHtml += `<tr><td style="padding:3px 8px;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${hex};margin-right:6px;vertical-align:middle;${['WHITE','BLANC','CREAM','CREME','BEIGE','YELLOW','JAUNE'].includes(color.toUpperCase()) ? 'border:1px solid #ccc;' : ''}"></span>${color}</td>`;
+            sizes.forEach(size => {
+              const sl = sls.find(s => s.color === color && s.size === size);
+              const qty = sl?.quantity || 0;
+              colorTotal += qty;
+              productsHtml += `<td style="text-align:center;padding:3px;">${qty || '—'}</td>`;
+            });
+            productsHtml += `<td style="text-align:center;padding:3px;font-weight:700;">${colorTotal}</td></tr>`;
+          });
+          productsHtml += `</tbody></table></td></tr>`;
+        }
+      }
+    }
 
     const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Bon de livraison — ${boutique.name}</title>
 <style>
@@ -708,10 +1023,9 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
   .header { border-bottom: 3px solid #111; padding-bottom: 20px; margin-bottom: 30px; }
   .header h1 { font-size: 24px; text-transform: uppercase; letter-spacing: 2px; }
   .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; font-size: 13px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
   th { background: #111; color: #fff; padding: 10px 12px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
   td { padding: 8px 12px; border-bottom: 1px solid #ddd; font-size: 13px; }
-  tr:nth-child(even) { background: #f9f9f9; }
   .totals { margin-top: 30px; padding-top: 20px; border-top: 2px solid #111; display: flex; gap: 40px; font-size: 14px; }
   .totals strong { font-size: 20px; }
   .footer { margin-top: 60px; font-size: 11px; color: #666; text-align: center; }
@@ -727,11 +1041,11 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
     </div>
   </div>
   <table>
-    <thead><tr><th>SKU</th><th>Produit</th><th>Tailles</th><th>Couleurs</th><th style="text-align:right">Qté</th><th style="text-align:right">Réservé</th><th style="text-align:right">Disponible</th></tr></thead>
-    <tbody>${rows.map(r => `<tr><td style="font-family:monospace">${r.sku}</td><td>${r.name}</td><td>${r.sizes}</td><td>${r.colors}</td><td style="text-align:right">${r.qty}</td><td style="text-align:right">${r.reserved}</td><td style="text-align:right;font-weight:600">${r.dispo}</td></tr>`).join('')}</tbody>
+    <thead><tr><th colspan="2">Produit</th><th>SKU</th><th style="text-align:right">Qté</th><th style="text-align:right">Disponible</th></tr></thead>
+    <tbody>${productsHtml}</tbody>
   </table>
   <div class="totals">
-    <div>Références : <strong>${rows.length}</strong></div>
+    <div>Références : <strong>${Object.keys(grouped).length}</strong></div>
     <div>Total unités : <strong>${totalQty}</strong></div>
     <div>Total disponible : <strong>${totalDispo}</strong></div>
   </div>
@@ -746,11 +1060,29 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
   const boutiqueData = (boutiques as Location[]).concat(allLocations.filter((l: Location) => l.type === 'web' || l.type === 'b2b')).map((b: Location) => {
     const levels = stockLevels.filter((sl: StockLevel) => sl.location_id === b.id);
     const totalStock = levels.reduce((s: number, sl: StockLevel) => s + sl.quantity, 0);
-    const productCount = levels.length;
-    return { ...b, totalStock, productCount, levels };
+    // Count unique inventory items
+    const uniqueInvIds = new Set(levels.map((sl: StockLevel) => sl.inventory_id));
+    return { ...b, totalStock, productCount: uniqueInvIds.size, levels };
   });
 
   const selectedBoutique = boutiqueData.find((b: any) => b.id === selected);
+
+  // Group stock levels by inventory_id for accordion display
+  const groupedLevels = useMemo(() => {
+    if (!selectedBoutique) return [];
+    const levels = selectedBoutique.levels as StockLevel[];
+    const groups: Record<string, { inv: InventoryItem | undefined; prod: ProductRow | undefined; levels: StockLevel[]; totalQty: number }> = {};
+    levels.forEach(sl => {
+      if (!groups[sl.inventory_id]) {
+        const inv = inventory.find((i: InventoryItem) => i.id === sl.inventory_id);
+        const prod = products.find((p: ProductRow) => p.id === inv?.product_id);
+        groups[sl.inventory_id] = { inv, prod, levels: [], totalQty: 0 };
+      }
+      groups[sl.inventory_id].levels.push(sl);
+      groups[sl.inventory_id].totalQty += sl.quantity;
+    });
+    return Object.entries(groups).map(([invId, data]) => ({ invId, ...data }));
+  }, [selectedBoutique, inventory, products]);
 
   return (
     <motion.div {...fadeIn} transition={{ duration: 0.4 }} className="space-y-4">
@@ -804,7 +1136,7 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
         ))}
       </div>
 
-      {/* Boutique detail with product management */}
+      {/* Boutique detail with accordion product management */}
       {selectedBoutique && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           <Card>
@@ -821,66 +1153,92 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Produit</TableHead>
-                    <TableHead>SKU</TableHead>
-                    <TableHead>Tailles</TableHead>
-                    <TableHead>Couleurs</TableHead>
-                    <TableHead className="text-right">Quantité</TableHead>
-                    <TableHead className="text-right">Réservé</TableHead>
-                    <TableHead className="text-right">Disponible</TableHead>
-                    <TableHead className="w-20">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {selectedBoutique.levels.map((sl: StockLevel) => {
-                    const inv = inventory.find((i: InventoryItem) => i.id === sl.inventory_id);
-                    const prod = products.find((p: ProductRow) => p.id === inv?.product_id);
-                    const isEditing = editingStockId === sl.id;
-                    return (
-                      <TableRow key={sl.id}>
-                        <TableCell className="font-medium">{inv?.name || 'Inconnu'}</TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">{inv?.sku || '-'}</TableCell>
-                        <TableCell className="text-xs">{prod?.sizes?.join(', ') || '-'}</TableCell>
-                        <TableCell className="text-xs">{prod?.colors?.join(', ') || '-'}</TableCell>
-                        <TableCell className="text-right">
-                          {isEditing ? (
-                            <div className="flex items-center justify-end gap-1">
-                              <Input type="number" min={0} value={editQty} onChange={e => setEditQty(parseInt(e.target.value) || 0)} className="w-20 h-7 text-right" />
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleUpdateStock(sl.id, editQty)}>
-                                <Check className="h-3 w-3" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingStockId(null)}>
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <span className="font-mono cursor-pointer hover:text-primary" onClick={() => { setEditingStockId(sl.id); setEditQty(sl.quantity); }}>{sl.quantity}</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-muted-foreground">{sl.reserved}</TableCell>
-                        <TableCell className="text-right font-mono font-medium">{sl.quantity - sl.reserved}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingStockId(sl.id); setEditQty(sl.quantity); }}>
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleRemoveProduct(sl.id)}>
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
+            <CardContent className="space-y-1">
+              {groupedLevels.length === 0 ? (
+                <p className="text-center text-muted-foreground py-6">Aucun stock dans cette boutique</p>
+              ) : (
+                groupedLevels.map(({ invId, inv, prod, levels: grpLevels, totalQty }) => {
+                  const isExpanded = expandedProducts.has(invId);
+                  const hasVariants = grpLevels.some(sl => sl.size || sl.color);
+                  const globalLevel = grpLevels.find(sl => !sl.size && !sl.color);
+                  const productColors = prod?.colors || [];
+                  const productSizes = prod?.sizes || [];
+
+                  return (
+                    <div key={invId} className="border rounded-lg overflow-hidden">
+                      {/* Main row */}
+                      <div
+                        className={cn(
+                          "flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors",
+                          isExpanded && "bg-muted/30"
+                        )}
+                        onClick={() => toggleExpand(invId)}
+                      >
+                        <div className="shrink-0">
+                          {hasVariants || (productColors.length > 0 && productSizes.length > 0) ? (
+                            isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          ) : <div className="w-4" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{inv?.name || 'Inconnu'}</p>
+                          <p className="text-xs text-muted-foreground font-mono">{inv?.sku || '-'}</p>
+                        </div>
+                        {/* Color swatches preview */}
+                        {productColors.length > 0 && (
+                          <div className="flex gap-1 shrink-0">
+                            {productColors.slice(0, 6).map((c: string) => (
+                              <ColorSwatch key={c} color={c} size={10} />
+                            ))}
+                            {productColors.length > 6 && <span className="text-[10px] text-muted-foreground">+{productColors.length - 6}</span>}
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {selectedBoutique.levels.length === 0 && (
-                    <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-6">Aucun stock dans cette boutique</TableCell></TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                        )}
+                        <div className="text-right shrink-0">
+                          {globalLevel && !hasVariants ? (
+                            editingStockId === globalLevel.id ? (
+                              <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                                <Input type="number" min={0} value={editQty} onChange={e => setEditQty(parseInt(e.target.value) || 0)} className="w-20 h-7 text-right text-xs" />
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleUpdateStock(globalLevel.id, editQty)}><Check className="h-3 w-3" /></Button>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingStockId(null)}><X className="h-3 w-3" /></Button>
+                              </div>
+                            ) : (
+                              <span
+                                className="font-mono font-bold text-lg cursor-pointer hover:text-primary"
+                                onClick={e => { e.stopPropagation(); setEditingStockId(globalLevel.id); setEditQty(globalLevel.quantity); }}
+                              >
+                                {globalLevel.quantity}
+                              </span>
+                            )
+                          ) : (
+                            <span className="font-mono font-bold text-lg">{totalQty}</span>
+                          )}
+                          <p className="text-[10px] text-muted-foreground">unités</p>
+                        </div>
+                        <Button
+                          variant="ghost" size="icon" className="h-7 w-7 text-destructive shrink-0"
+                          onClick={e => { e.stopPropagation(); handleRemoveProduct(invId); }}
+                          title="Retirer ce produit"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+
+                      {/* Expanded: size×color grid */}
+                      {isExpanded && (productColors.length > 0 || productSizes.length > 0) && (
+                        <div className="border-t bg-background">
+                          <SizeColorGrid
+                            inventoryId={invId}
+                            locationId={selected}
+                            productSizes={productSizes}
+                            productColors={productColors}
+                            stockLevels={stockLevels}
+                            onRefresh={onRefresh}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -929,16 +1287,20 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
         </DialogContent>
       </Dialog>
 
-      {/* Add Product Dialog */}
-      <Dialog open={addProductOpen} onOpenChange={setAddProductOpen}>
-        <DialogContent>
+      {/* Add Product Dialog with variant grid */}
+      <Dialog open={addProductOpen} onOpenChange={(open) => {
+        setAddProductOpen(open);
+        if (!open) { setAddProductInvId(''); setAddProductMode('global'); setVariantGrid({}); }
+      }}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Ajouter un produit à la boutique</DialogTitle>
+            <DialogDescription>Sélectionnez un produit et définissez le stock initial par variante ou globalement.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <Label>Produit</Label>
-              <Select value={addProductInvId} onValueChange={setAddProductInvId}>
+              <Select value={addProductInvId} onValueChange={v => { setAddProductInvId(v); setAddProductMode('global'); }}>
                 <SelectTrigger><SelectValue placeholder="Sélectionner un produit..." /></SelectTrigger>
                 <SelectContent>
                   {inventory.map((inv: InventoryItem) => (
@@ -947,10 +1309,78 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label>Quantité initiale</Label>
-              <Input type="number" min={0} value={addProductQty} onChange={e => setAddProductQty(parseInt(e.target.value) || 0)} />
-            </div>
+
+            {selectedProduct && selectedProduct.colors?.length > 0 && selectedProduct.sizes?.length > 0 && (
+              <div>
+                <Label className="mb-2 block">Mode de saisie du stock</Label>
+                <div className="flex gap-2">
+                  <Button
+                    variant={addProductMode === 'global' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setAddProductMode('global')}
+                  >
+                    Stock global
+                  </Button>
+                  <Button
+                    variant={addProductMode === 'variants' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setAddProductMode('variants')}
+                  >
+                    Par taille × couleur
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {addProductMode === 'global' ? (
+              <div>
+                <Label>Quantité initiale</Label>
+                <Input type="number" min={0} value={addProductQty} onChange={e => setAddProductQty(parseInt(e.target.value) || 0)} />
+              </div>
+            ) : selectedProduct && (
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-muted/50">
+                      <th className="text-left py-2 px-3 font-medium">Couleur</th>
+                      {(selectedProduct.sizes || []).map((s: string) => (
+                        <th key={s} className="text-center py-2 px-2 font-medium">{s}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(selectedProduct.colors || []).map((color: string) => (
+                      <tr key={color} className="border-t border-border/50">
+                        <td className="py-2 px-3">
+                          <div className="flex items-center gap-2">
+                            <ColorSwatch color={color} size={12} />
+                            <span>{color}</span>
+                          </div>
+                        </td>
+                        {(selectedProduct.sizes || []).map((size: string) => (
+                          <td key={size} className="text-center py-1 px-1">
+                            <Input
+                              type="number"
+                              min={0}
+                              value={variantGrid[color]?.[size] ?? 0}
+                              onChange={e => {
+                                const val = parseInt(e.target.value) || 0;
+                                setVariantGrid(prev => ({
+                                  ...prev,
+                                  [color]: { ...prev[color], [size]: val },
+                                }));
+                              }}
+                              className="w-14 h-6 text-center text-xs p-0 mx-auto"
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
             <Button className="w-full" onClick={handleAddProduct} disabled={savingProduct || !addProductInvId}>
               {savingProduct ? 'Ajout en cours...' : 'Ajouter'}
             </Button>
