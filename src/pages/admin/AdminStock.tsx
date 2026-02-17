@@ -50,6 +50,7 @@ type Transfer = {
 };
 type ProductRow = {
   id: string; name: string; sku: string; sizes: string[] | null; colors: string[] | null;
+  image: string; description: string | null; color_options: any;
 };
 
 // ── Color map for swatches ──
@@ -133,7 +134,7 @@ export default function AdminStock() {
       supabase.from('inventory').select('*').order('name'),
       supabase.from('stock_levels').select('*'),
       supabase.from('stock_transfers').select('*').order('created_at', { ascending: false }).limit(50),
-      supabase.from('products').select('id, name, sku, sizes, colors'),
+      supabase.from('products').select('id, name, sku, sizes, colors, image, description, color_options'),
     ]);
     if (locRes.data) setLocations(locRes.data as Location[]);
     if (invRes.data) setInventory(invRes.data as InventoryItem[]);
@@ -236,7 +237,7 @@ export default function AdminStock() {
       <div className="flex-1 min-w-0">
         <AnimatePresence mode="wait">
           {view === 'dashboard' && <DashboardView key="dash" totalStock={totalStockByType} lowStockItems={lowStockItems} stockPerBoutique={stockPerBoutique} inventory={inventory} stockLevels={stockLevels} />}
-          {view === 'inventory' && <InventoryView key="inv" items={filteredInventory} stockLevels={stockLevels} locations={locations} channelFilter={channelFilter} setChannelFilter={setChannelFilter} searchTerm={searchTerm} setSearchTerm={setSearchTerm} getStockForItem={getStockForItem} inventory={inventory} onRefresh={fetchAll} />}
+          {view === 'inventory' && <InventoryView key="inv" items={filteredInventory} stockLevels={stockLevels} locations={locations} channelFilter={channelFilter} setChannelFilter={setChannelFilter} searchTerm={searchTerm} setSearchTerm={setSearchTerm} getStockForItem={getStockForItem} inventory={inventory} onRefresh={fetchAll} products={products} />}
           {view === 'boutiques' && <BoutiquesView key="bout" boutiques={boutiqueLocations} allLocations={locations} stockLevels={stockLevels} inventory={inventory} products={products} onRefresh={fetchAll} />}
           {view === 'transfers' && <TransfersView key="trans" transfers={transfers} locations={locations} inventory={inventory} user={user} onCreated={fetchAll} />}
         </AnimatePresence>
@@ -339,7 +340,7 @@ function KpiCard({ title, value, icon, variant }: { title: string; value: number
 }
 
 // ── Inventory with Import ──
-function InventoryView({ items, stockLevels, locations, channelFilter, setChannelFilter, searchTerm, setSearchTerm, getStockForItem, inventory, onRefresh }: any) {
+function InventoryView({ items, stockLevels, locations, channelFilter, setChannelFilter, searchTerm, setSearchTerm, getStockForItem, inventory, onRefresh, products }: any) {
   const { toast } = useToast();
   const [importOpen, setImportOpen] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -527,9 +528,12 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">Image</TableHead>
               <TableHead>Produit</TableHead>
               <TableHead>SKU</TableHead>
               <TableHead>Canal</TableHead>
+              <TableHead>Tailles</TableHead>
+              <TableHead>Couleurs</TableHead>
               <TableHead className="text-right">Stock Total</TableHead>
               <TableHead className="text-right">Seuil</TableHead>
               <TableHead>Statut</TableHead>
@@ -538,15 +542,39 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
           </TableHeader>
           <TableBody>
             {items.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Aucun produit en inventaire</TableCell></TableRow>
+              <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Aucun produit en inventaire</TableCell></TableRow>
             ) : items.map((item: InventoryItem) => {
               const total = getStockForItem(item.id);
               const isLow = total < item.threshold;
+              const matchedProduct = (products as ProductRow[])?.find(p => p.id === item.product_id);
               return (
                 <TableRow key={item.id}>
+                  <TableCell>
+                    {matchedProduct?.image && matchedProduct.image !== '/placeholder.svg' ? (
+                      <img src={matchedProduct.image} alt={item.name} className="w-8 h-8 rounded object-cover border border-border" />
+                    ) : (
+                      <div className="w-8 h-8 rounded bg-muted flex items-center justify-center">
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell className="font-mono text-xs text-muted-foreground">{item.sku}</TableCell>
                   <TableCell><Badge variant="outline">{item.channel.toUpperCase()}</Badge></TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-0.5">
+                      {matchedProduct?.sizes?.map((s: string) => (
+                        <span key={s} className="px-1.5 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground rounded">{s}</span>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-0.5">
+                      {matchedProduct?.colors?.map((c: string) => (
+                        <ColorSwatch key={c} color={c} size={16} />
+                      ))}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-right font-mono">{total}</TableCell>
                   <TableCell className="text-right font-mono text-muted-foreground">{item.threshold}</TableCell>
                   <TableCell>

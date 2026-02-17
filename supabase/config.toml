@@ -6,3 +6,6 @@ hibp_enabled = true
 
 [functions.parse-products-pdf]
 verify_jwt = false
+
+[functions.generate-product-description]
+verify_jwt = false
