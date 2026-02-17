@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
+import { InventoryProductDialog } from '@/components/admin/InventoryProductDialog';
 import { useAuth } from '@/context/AuthContext';
 import {
   BarChart3, Package, Store, ArrowLeftRight, AlertTriangle,
@@ -343,6 +344,32 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
   const [extractedProducts, setExtractedProducts] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [productDialogOpen, setProductDialogOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<{ inventoryId: string; productId: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<InventoryItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleEdit = (item: InventoryItem) => {
+    setEditTarget({ inventoryId: item.id, productId: item.product_id });
+    setProductDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await supabase.from('stock_levels').delete().eq('inventory_id', deleteTarget.id);
+      await supabase.from('inventory').delete().eq('id', deleteTarget.id);
+      await supabase.from('products').delete().eq('id', deleteTarget.product_id);
+      toast({ title: 'Produit supprimé de l\'inventaire' });
+      setDeleteTarget(null);
+      onRefresh();
+    } catch (err: any) {
+      toast({ title: 'Erreur', description: err.message, variant: 'destructive' });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -472,6 +499,9 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h2 className="text-2xl font-bold tracking-tight">Inventaire Global</h2>
         <div className="flex gap-2">
+          <Button className="gap-2" onClick={() => { setEditTarget(null); setProductDialogOpen(true); }}>
+            <Plus className="h-4 w-4" /> Ajouter un produit
+          </Button>
           <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
             <Upload className="h-4 w-4" /> Importer fichier
           </Button>
@@ -501,11 +531,12 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
               <TableHead className="text-right">Stock Total</TableHead>
               <TableHead className="text-right">Seuil</TableHead>
               <TableHead>Statut</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {items.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Aucun produit en inventaire</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Aucun produit en inventaire</TableCell></TableRow>
             ) : items.map((item: InventoryItem) => {
               const total = getStockForItem(item.id);
               const isLow = total < item.threshold;
@@ -522,6 +553,16 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                     ) : (
                       <Badge variant="secondary">OK</Badge>
                     )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(item)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setDeleteTarget(item)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               );
@@ -606,6 +647,33 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Product Create/Edit Dialog */}
+      <InventoryProductDialog
+        open={productDialogOpen}
+        onOpenChange={(open) => { setProductDialogOpen(open); if (!open) setEditTarget(null); }}
+        onSaved={onRefresh}
+        locations={locations}
+        editData={editTarget}
+      />
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer ce produit ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action supprimera le produit <strong>{deleteTarget?.name}</strong> de l'inventaire ainsi que tous les niveaux de stock associés. Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? 'Suppression...' : 'Supprimer'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </motion.div>
   );
 }
