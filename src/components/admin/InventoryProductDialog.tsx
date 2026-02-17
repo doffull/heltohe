@@ -69,6 +69,7 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
     initialStock: 0,
   });
   const [variantGrid, setVariantGrid] = useState<Record<string, Record<string, number>>>({});
+  const [sizeStockMap, setSizeStockMap] = useState<Record<string, number>>({});
   const [newColor, setNewColor] = useState('');
   const [newSize, setNewSize] = useState('');
 
@@ -198,9 +199,10 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
         // INSERT initial stock
         const webLoc = locations.find(l => l.type === 'web');
         if (webLoc) {
-          const hasVariants = form.sizes.length > 0 && form.colors.length > 0;
-          if (hasVariants) {
-            // Insert per variant
+          const hasSizesAndColors = form.sizes.length > 0 && form.colors.length > 0;
+          const hasSizesOnly = form.sizes.length > 0 && form.colors.length === 0;
+
+          if (hasSizesAndColors) {
             for (const [color, sizes] of Object.entries(variantGrid)) {
               for (const [size, qty] of Object.entries(sizes)) {
                 if (qty > 0) {
@@ -214,6 +216,19 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
                     stocked_at: new Date().toISOString(),
                   });
                 }
+              }
+            }
+          } else if (hasSizesOnly) {
+            for (const [size, qty] of Object.entries(sizeStockMap)) {
+              if (qty > 0) {
+                await supabase.from('stock_levels').insert({
+                  inventory_id: inv.id,
+                  location_id: webLoc.id,
+                  quantity: qty,
+                  reserved: 0,
+                  size,
+                  stocked_at: new Date().toISOString(),
+                });
               }
             }
           } else if (form.initialStock > 0) {
@@ -421,6 +436,27 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          ) : !editData && form.sizes.length > 0 && form.colors.length === 0 ? (
+            <div className="space-y-2">
+              <Label className="text-xs">Stock initial par taille (Web)</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {form.sizes.map(size => (
+                  <div key={size} className="flex items-center gap-2">
+                    <span className="text-xs font-medium w-10">{size}</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={sizeStockMap[size] ?? 0}
+                      onChange={e => {
+                        const val = parseInt(e.target.value) || 0;
+                        setSizeStockMap(prev => ({ ...prev, [size]: val }));
+                      }}
+                      className="h-7 text-xs"
+                    />
+                  </div>
+                ))}
               </div>
             </div>
           ) : !editData ? (
