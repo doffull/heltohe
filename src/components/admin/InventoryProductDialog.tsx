@@ -494,7 +494,7 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
                               type="number" min={0}
                               value={variantGrid[color]?.[size] ?? 0}
                               onChange={e => {
-                                const val = parseInt(e.target.value) || 0;
+                                const val = Math.max(0, parseInt(e.target.value) || 0);
                                 setVariantGrid(prev => ({ ...prev, [color]: { ...prev[color], [size]: val } }));
                               }}
                               className="w-14 h-6 text-center text-xs p-0 mx-auto"
@@ -518,7 +518,7 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
                     <Input
                       type="number" min={0}
                       value={sizeStockMap[size] ?? 0}
-                      onChange={e => setSizeStockMap(prev => ({ ...prev, [size]: parseInt(e.target.value) || 0 }))}
+                      onChange={e => setSizeStockMap(prev => ({ ...prev, [size]: Math.max(0, parseInt(e.target.value) || 0) }))}
                       className="h-7 text-xs"
                     />
                   </div>
@@ -537,7 +537,7 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
                     <Input
                       type="number" min={0}
                       value={colorStockMap[color] ?? 0}
-                      onChange={e => setColorStockMap(prev => ({ ...prev, [color]: parseInt(e.target.value) || 0 }))}
+                      onChange={e => setColorStockMap(prev => ({ ...prev, [color]: Math.max(0, parseInt(e.target.value) || 0) }))}
                       className="h-7 text-xs flex-1"
                     />
                   </div>
@@ -548,7 +548,7 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
             /* Global stock */
             <div className="space-y-1.5">
               <Label className="text-xs">Stock initial (Web)</Label>
-              <Input type="number" value={form.initialStock} onChange={e => setForm(p => ({ ...p, initialStock: Number(e.target.value) }))} min={0} />
+              <Input type="number" value={form.initialStock} onChange={e => setForm(p => ({ ...p, initialStock: Math.max(0, Number(e.target.value) || 0) }))} min={0} />
             </div>
           ) : null}
         </div>
