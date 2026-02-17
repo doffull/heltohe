@@ -900,6 +900,63 @@ export type Database = {
         }
         Relationships: []
       }
+      stock_history: {
+        Row: {
+          action: string
+          color: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          inventory_id: string
+          location_id: string | null
+          note: string | null
+          quantity_after: number | null
+          quantity_before: number | null
+          size: string | null
+        }
+        Insert: {
+          action: string
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          inventory_id: string
+          location_id?: string | null
+          note?: string | null
+          quantity_after?: number | null
+          quantity_before?: number | null
+          size?: string | null
+        }
+        Update: {
+          action?: string
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          inventory_id?: string
+          location_id?: string | null
+          note?: string | null
+          quantity_after?: number | null
+          quantity_before?: number | null
+          size?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_history_inventory_id_fkey"
+            columns: ["inventory_id"]
+            isOneToOne: false
+            referencedRelation: "inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_history_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_levels: {
         Row: {
           color: string | null

@@ -7,7 +7,7 @@ import {
   BarChart3, Package, Store, ArrowLeftRight, AlertTriangle,
   RefreshCw, TrendingUp, TrendingDown, Search, Filter,
   Upload, Plus, Pencil, Trash2, FileText, X, Check, FileSpreadsheet,
-  ChevronDown, ChevronRight, Download
+  ChevronDown, ChevronRight, Download, Clock
 } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -107,6 +107,7 @@ const VIEWS = [
   { key: 'inventory', label: 'Inventaire Global', icon: Package },
   { key: 'boutiques', label: 'Boutiques', icon: Store },
   { key: 'transfers', label: 'Transferts', icon: ArrowLeftRight },
+  { key: 'history', label: 'Historique', icon: Clock },
 ] as const;
 
 const PIE_COLORS = ['hsl(var(--primary))', 'hsl(var(--muted-foreground))', 'hsl(var(--destructive))'];
@@ -227,8 +228,8 @@ export default function AdminStock() {
       {/* Mobile tabs */}
       <div className="md:hidden w-full">
         <Tabs value={view} onValueChange={setView}>
-          <TabsList className="w-full grid grid-cols-4">
-            {VIEWS.map(v => <TabsTrigger key={v.key} value={v.key}><v.icon className="h-4 w-4" /></TabsTrigger>)}
+          <TabsList className="w-full grid grid-cols-5">
+            {VIEWS.map(v => <TabsTrigger key={v.key} value={v.key} className="text-[10px] px-1"><v.icon className="h-4 w-4" /></TabsTrigger>)}
           </TabsList>
         </Tabs>
       </div>
@@ -238,8 +239,9 @@ export default function AdminStock() {
         <AnimatePresence mode="wait">
           {view === 'dashboard' && <DashboardView key="dash" totalStock={totalStockByType} lowStockItems={lowStockItems} stockPerBoutique={stockPerBoutique} inventory={inventory} stockLevels={stockLevels} />}
           {view === 'inventory' && <InventoryView key="inv" items={filteredInventory} stockLevels={stockLevels} locations={locations} channelFilter={channelFilter} setChannelFilter={setChannelFilter} searchTerm={searchTerm} setSearchTerm={setSearchTerm} getStockForItem={getStockForItem} inventory={inventory} onRefresh={fetchAll} products={products} />}
-          {view === 'boutiques' && <BoutiquesView key="bout" boutiques={boutiqueLocations} allLocations={locations} stockLevels={stockLevels} inventory={inventory} products={products} onRefresh={fetchAll} />}
+          {view === 'boutiques' && <BoutiquesView key="bout" boutiques={boutiqueLocations} allLocations={locations} stockLevels={stockLevels} inventory={inventory} products={products} onRefresh={fetchAll} user={user} />}
           {view === 'transfers' && <TransfersView key="trans" transfers={transfers} locations={locations} inventory={inventory} user={user} onCreated={fetchAll} />}
+          {view === 'history' && <HistoryView key="hist" inventory={inventory} locations={locations} />}
         </AnimatePresence>
       </div>
     </div>
@@ -766,6 +768,7 @@ function SizeColorGrid({
     }
     setSaving(true);
     const existingId = getSlId(color, size);
+    const oldQty = getQty(color, size);
     if (existingId) {
       if (newQty === 0) {
         await supabase.from('stock_levels').delete().eq('id', existingId);
@@ -783,6 +786,14 @@ function SizeColorGrid({
         stocked_at: new Date().toISOString(),
       });
     }
+    // Log history
+    if (oldQty !== newQty) {
+      await supabase.from('stock_history' as any).insert({
+        inventory_id: inventoryId, location_id: locationId, action: 'update',
+        size, color, quantity_before: oldQty, quantity_after: newQty,
+        note: `Grille: ${color} ${size}`, created_by: null,
+      });
+    }
     setSaving(false);
     setEditingCell(null);
     onRefresh();
@@ -792,6 +803,11 @@ function SizeColorGrid({
     const toDelete = relevantLevels.filter(l => l.color === color);
     for (const sl of toDelete) {
       await supabase.from('stock_levels').delete().eq('id', sl.id);
+      await supabase.from('stock_history' as any).insert({
+        inventory_id: inventoryId, location_id: locationId, action: 'delete',
+        size: sl.size, color, quantity_before: sl.quantity, quantity_after: 0,
+        note: `Couleur ${color} supprimée`, created_by: null,
+      });
     }
     toast({ title: `Couleur ${color} supprimée` });
     onRefresh();
@@ -855,6 +871,7 @@ function SizeColorGrid({
     for (const row of csvPreview) {
       if (!row.valid || row.qty <= 0) continue;
       const existingId = getSlId(row.color, row.size);
+      const oldQty = getQty(row.color, row.size);
       if (existingId) {
         await supabase.from('stock_levels').update({ quantity: row.qty }).eq('id', existingId);
       } else {
@@ -868,6 +885,11 @@ function SizeColorGrid({
           stocked_at: new Date().toISOString(),
         });
       }
+      await supabase.from('stock_history' as any).insert({
+        inventory_id: inventoryId, location_id: locationId, action: 'import',
+        size: row.size, color: row.color, quantity_before: oldQty, quantity_after: row.qty,
+        note: 'Import CSV', created_by: null,
+      });
       count++;
     }
     setSaving(false);
@@ -1039,7 +1061,7 @@ function SizeColorGrid({
 }
 
 // ── Boutiques (CRUD + product management + size/color grid + delivery notes) ──
-function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, products, onRefresh }: any) {
+function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, products, onRefresh, user }: any) {
   const { toast } = useToast();
   const [selected, setSelected] = useState<string>('');
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
@@ -1169,7 +1191,6 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
     setSavingProduct(true);
 
     if (addProductMode === 'variants' && selectedProduct?.colors?.length && selectedProduct?.sizes?.length) {
-      // Create one stock_level per color×size combination with qty > 0
       let created = 0;
       for (const [color, sizes] of Object.entries(variantGrid)) {
         for (const [size, qty] of Object.entries(sizes)) {
@@ -1182,6 +1203,11 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
               size,
               color,
             });
+            await supabase.from('stock_history' as any).insert({
+              inventory_id: addProductInvId, location_id: selected, action: 'add',
+              size, color, quantity_before: 0, quantity_after: qty,
+              note: 'Ajout en boutique', created_by: user?.id || null,
+            });
             created++;
           }
         }
@@ -1189,7 +1215,6 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
       if (created > 0) toast({ title: `${created} variantes ajoutées` });
       else toast({ title: 'Aucune quantité saisie', variant: 'destructive' });
     } else {
-      // Global stock (no size/color)
       const existing = stockLevels.find((sl: StockLevel) => sl.inventory_id === addProductInvId && sl.location_id === selected && !sl.size && !sl.color);
       if (existing) {
         toast({ title: 'Ce produit existe déjà dans cette boutique', variant: 'destructive' });
@@ -1203,7 +1228,14 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
         reserved: 0,
       });
       if (error) toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
-      else toast({ title: 'Produit ajouté à la boutique' });
+      else {
+        toast({ title: 'Produit ajouté à la boutique' });
+        await supabase.from('stock_history' as any).insert({
+          inventory_id: addProductInvId, location_id: selected, action: 'add',
+          quantity_before: 0, quantity_after: addProductQty,
+          note: 'Ajout en boutique (global)', created_by: user?.id || null,
+        });
+      }
     }
 
     setSavingProduct(false);
@@ -1222,9 +1254,20 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
       setEditingStockId(null);
       return;
     }
+    const oldSl = stockLevels.find((sl: StockLevel) => sl.id === slId);
+    const oldQty = oldSl?.quantity ?? 0;
     const { error } = await supabase.from('stock_levels').update({ quantity: newQty }).eq('id', slId);
     if (error) toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
-    else toast({ title: 'Quantité mise à jour' });
+    else {
+      toast({ title: 'Quantité mise à jour' });
+      if (oldQty !== newQty && oldSl) {
+        await supabase.from('stock_history' as any).insert({
+          inventory_id: oldSl.inventory_id, location_id: oldSl.location_id, action: 'update',
+          size: oldSl.size, color: oldSl.color, quantity_before: oldQty, quantity_after: newQty,
+          note: 'Modification manuelle', created_by: user?.id || null,
+        });
+      }
+    }
     setEditingStockId(null);
     onRefresh();
   };
@@ -1234,6 +1277,11 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
     const toDelete = stockLevels.filter((sl: StockLevel) => sl.inventory_id === inventoryId && sl.location_id === selected);
     for (const sl of toDelete) {
       await supabase.from('stock_levels').delete().eq('id', sl.id);
+      await supabase.from('stock_history' as any).insert({
+        inventory_id: inventoryId, location_id: selected, action: 'delete',
+        size: sl.size, color: sl.color, quantity_before: sl.quantity, quantity_after: 0,
+        note: 'Retrait de boutique', created_by: user?.id || null,
+      });
     }
     toast({ title: 'Produit retiré de la boutique' });
     onRefresh();
@@ -1852,7 +1900,139 @@ function TransfersView({ transfers, locations, inventory, user, onCreated }: any
   );
 }
 
-// ── Skeleton ──
+// ── History View ──
+function HistoryView({ inventory, locations }: { inventory: InventoryItem[]; locations: Location[] }) {
+  const [entries, setEntries] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filterAction, setFilterAction] = useState('all');
+  const [filterProduct, setFilterProduct] = useState('all');
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 50;
+
+  const fetchHistory = async () => {
+    setLoading(true);
+    let query = supabase.from('stock_history' as any).select('*').order('created_at', { ascending: false }).range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+    if (filterAction !== 'all') query = query.eq('action', filterAction);
+    if (filterProduct !== 'all') query = query.eq('inventory_id', filterProduct);
+    const { data } = await query;
+    setEntries(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchHistory(); }, [page, filterAction, filterProduct]);
+
+  const getInvName = (id: string) => inventory.find(i => i.id === id)?.name || id.slice(0, 8);
+  const getLocName = (id: string) => locations.find(l => l.id === id)?.name || '-';
+
+  const actionBadge: Record<string, { label: string; className: string }> = {
+    add: { label: 'Ajout', className: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300' },
+    update: { label: 'Modification', className: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' },
+    delete: { label: 'Suppression', className: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300' },
+    import: { label: 'Import', className: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' },
+    transfer: { label: 'Transfert', className: 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300' },
+  };
+
+  return (
+    <motion.div {...fadeIn} transition={{ duration: 0.4 }} className="space-y-4">
+      <h2 className="text-2xl font-bold tracking-tight">Historique des mouvements de stock</h2>
+
+      <div className="flex flex-wrap gap-3">
+        <div className="space-y-1">
+          <Label className="text-xs">Action</Label>
+          <Select value={filterAction} onValueChange={v => { setFilterAction(v); setPage(0); }}>
+            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes</SelectItem>
+              <SelectItem value="add">Ajout</SelectItem>
+              <SelectItem value="update">Modification</SelectItem>
+              <SelectItem value="delete">Suppression</SelectItem>
+              <SelectItem value="import">Import</SelectItem>
+              <SelectItem value="transfer">Transfert</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Produit</Label>
+          <Select value={filterProduct} onValueChange={v => { setFilterProduct(v); setPage(0); }}>
+            <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous</SelectItem>
+              {inventory.map(inv => (
+                <SelectItem key={inv.id} value={inv.id}>{inv.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Date</TableHead>
+              <TableHead>Produit</TableHead>
+              <TableHead>Emplacement</TableHead>
+              <TableHead>Action</TableHead>
+              <TableHead>Couleur</TableHead>
+              <TableHead>Taille</TableHead>
+              <TableHead className="text-right">Avant</TableHead>
+              <TableHead className="text-right">Après</TableHead>
+              <TableHead>Note</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow><TableCell colSpan={9} className="text-center py-8"><RefreshCw className="h-4 w-4 animate-spin mx-auto" /></TableCell></TableRow>
+            ) : entries.length === 0 ? (
+              <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Aucun mouvement enregistré</TableCell></TableRow>
+            ) : entries.map((e: any) => {
+              const badge = actionBadge[e.action] || { label: e.action, className: 'bg-muted text-muted-foreground' };
+              return (
+                <TableRow key={e.id}>
+                  <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                    {new Date(e.created_at).toLocaleDateString('fr-FR')}
+                    <br />
+                    <span className="text-[10px]">{new Date(e.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                  </TableCell>
+                  <TableCell className="font-medium text-sm">{getInvName(e.inventory_id)}</TableCell>
+                  <TableCell className="text-sm">{e.location_id ? getLocName(e.location_id) : '-'}</TableCell>
+                  <TableCell>
+                    <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", badge.className)}>{badge.label}</span>
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {e.color ? (
+                      <div className="flex items-center gap-1.5">
+                        <ColorSwatch color={e.color} size={10} />
+                        <span>{e.color}</span>
+                      </div>
+                    ) : '-'}
+                  </TableCell>
+                  <TableCell className="text-sm">{e.size || '-'}</TableCell>
+                  <TableCell className="text-right font-mono text-sm">{e.quantity_before}</TableCell>
+                  <TableCell className="text-right font-mono text-sm font-bold">{e.quantity_after}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">{e.note || '-'}</TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </Card>
+
+      {/* Pagination */}
+      <div className="flex items-center justify-between">
+        <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>
+          ← Précédent
+        </Button>
+        <span className="text-xs text-muted-foreground">Page {page + 1}</span>
+        <Button variant="outline" size="sm" disabled={entries.length < PAGE_SIZE} onClick={() => setPage(p => p + 1)}>
+          Suivant →
+        </Button>
+      </div>
+    </motion.div>
+  );
+}
+
+
 function StockSkeleton() {
   return (
     <div className="space-y-6">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Sparkles, ImageIcon } from 'lucide-react';
+import { X, Plus, Sparkles, ImageIcon, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 
 const CATEGORIES = ['Homme', 'Femme', 'Enfant', 'Accessoires'];
 const DEFAULT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
@@ -56,6 +57,7 @@ interface InventoryProductDialogProps {
 
 export function InventoryProductDialog({ open, onOpenChange, onSaved, locations, editData }: InventoryProductDialogProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [saving, setSaving] = useState(false);
   const [generatingSku, setGeneratingSku] = useState(false);
   const [generatingDesc, setGeneratingDesc] = useState(false);
@@ -73,6 +75,9 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
     threshold: 10,
     initialStock: 0,
   });
+  const [originalSizes, setOriginalSizes] = useState<string[]>([]);
+  const [originalColors, setOriginalColors] = useState<string[]>([]);
+  const [existingStockLevels, setExistingStockLevels] = useState<any[]>([]);
   const [variantGrid, setVariantGrid] = useState<Record<string, Record<string, number>>>({});
   const [sizeStockMap, setSizeStockMap] = useState<Record<string, number>>({});
   const [colorStockMap, setColorStockMap] = useState<Record<string, number>>({});
@@ -88,6 +93,9 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
         name: '', sku: '', price: 0, category: 'Homme', description: '', material: '', image: '',
         sizes: [], colors: [], channel: 'b2c', threshold: 10, initialStock: 0,
       });
+      setOriginalSizes([]);
+      setOriginalColors([]);
+      setExistingStockLevels([]);
       setVariantGrid({});
       setSizeStockMap({});
       setColorStockMap({});
@@ -96,11 +104,14 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
 
   const loadEditData = async () => {
     if (!editData) return;
-    const [{ data: prod }, { data: inv }] = await Promise.all([
+    const [{ data: prod }, { data: inv }, { data: sls }] = await Promise.all([
       supabase.from('products').select('*').eq('id', editData.productId).single(),
       supabase.from('inventory').select('*').eq('id', editData.inventoryId).single(),
+      supabase.from('stock_levels').select('*').eq('inventory_id', editData.inventoryId),
     ]);
     if (prod && inv) {
+      const sizes = prod.sizes || [];
+      const colors = prod.colors || [];
       setForm({
         name: prod.name,
         sku: prod.sku,
@@ -109,12 +120,15 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
         description: prod.description || '',
         material: prod.material || '',
         image: prod.image || '',
-        sizes: prod.sizes || [],
-        colors: prod.colors || [],
+        sizes,
+        colors,
         channel: inv.channel,
         threshold: inv.threshold,
         initialStock: 0,
       });
+      setOriginalSizes([...sizes]);
+      setOriginalColors([...colors]);
+      setExistingStockLevels(sls || []);
     }
   };
 
@@ -149,7 +163,21 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
     setForm(prev => ({ ...prev, sizes: prev.sizes.filter(s => s !== size) }));
   };
 
-  // AI SKU generation (deterministic, client-side)
+  // Check if removing a size/color would delete stock
+  const getStockForSize = (size: string) => {
+    return existingStockLevels.filter(sl => sl.size === size).reduce((s: number, sl: any) => s + sl.quantity, 0);
+  };
+  const getStockForColor = (color: string) => {
+    return existingStockLevels.filter(sl => sl.color === color).reduce((s: number, sl: any) => s + sl.quantity, 0);
+  };
+
+  const removedSizes = editData ? originalSizes.filter(s => !form.sizes.includes(s)) : [];
+  const removedColors = editData ? originalColors.filter(c => !form.colors.includes(c)) : [];
+  const removedSizesWithStock = removedSizes.filter(s => getStockForSize(s) > 0);
+  const removedColorsWithStock = removedColors.filter(c => getStockForColor(c) > 0);
+  const hasStockWarning = removedSizesWithStock.length > 0 || removedColorsWithStock.length > 0;
+
+  // AI SKU generation
   const generateSku = () => {
     if (!form.name) { toast({ title: 'Entrez un nom d\'abord', variant: 'destructive' }); return; }
     setGeneratingSku(true);
@@ -160,7 +188,7 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
     setGeneratingSku(false);
   };
 
-  // AI Description generation (via edge function)
+  // AI Description generation
   const generateDescription = async () => {
     if (!form.name) { toast({ title: 'Entrez un nom d\'abord', variant: 'destructive' }); return; }
     setGeneratingDesc(true);
@@ -180,6 +208,22 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
     }
   };
 
+  const logStockHistory = async (entries: { inventory_id: string; location_id?: string; action: string; size?: string; color?: string; quantity_before?: number; quantity_after?: number; note?: string }[]) => {
+    for (const entry of entries) {
+      await supabase.from('stock_history' as any).insert({
+        inventory_id: entry.inventory_id,
+        location_id: entry.location_id || null,
+        action: entry.action,
+        size: entry.size || null,
+        color: entry.color || null,
+        quantity_before: entry.quantity_before ?? 0,
+        quantity_after: entry.quantity_after ?? 0,
+        note: entry.note || null,
+        created_by: user?.id || null,
+      });
+    }
+  };
+
   const handleSubmit = async () => {
     if (!form.name || !form.sku) {
       toast({ title: 'Nom et SKU requis', variant: 'destructive' });
@@ -188,6 +232,7 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
     setSaving(true);
     try {
       if (editData) {
+        // Update product
         await supabase.from('products').update({
           name: form.name, sku: form.sku, price: form.price, category: form.category,
           description: form.description, material: form.material, sizes: form.sizes, colors: form.colors,
@@ -198,8 +243,47 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
           name: form.name, sku: form.sku, channel: form.channel, threshold: form.threshold,
         }).eq('id', editData.inventoryId);
 
+        // Delete stock_levels for removed sizes/colors
+        const historyEntries: any[] = [];
+        for (const size of removedSizes) {
+          const toDelete = existingStockLevels.filter(sl => sl.size === size);
+          for (const sl of toDelete) {
+            await supabase.from('stock_levels').delete().eq('id', sl.id);
+            historyEntries.push({
+              inventory_id: editData.inventoryId,
+              location_id: sl.location_id,
+              action: 'delete',
+              size: sl.size,
+              color: sl.color,
+              quantity_before: sl.quantity,
+              quantity_after: 0,
+              note: `Taille ${size} supprimée`,
+            });
+          }
+        }
+        for (const color of removedColors) {
+          const toDelete = existingStockLevels.filter(sl => sl.color === color);
+          for (const sl of toDelete) {
+            await supabase.from('stock_levels').delete().eq('id', sl.id);
+            historyEntries.push({
+              inventory_id: editData.inventoryId,
+              location_id: sl.location_id,
+              action: 'delete',
+              size: sl.size,
+              color: sl.color,
+              quantity_before: sl.quantity,
+              quantity_after: 0,
+              note: `Couleur ${color} supprimée`,
+            });
+          }
+        }
+        if (historyEntries.length > 0) {
+          await logStockHistory(historyEntries);
+        }
+
         toast({ title: 'Produit mis à jour' });
       } else {
+        // Create
         const { data: prod, error: prodErr } = await supabase.from('products').insert({
           name: form.name, sku: form.sku, price: form.price, category: form.category,
           description: form.description, material: form.material, sizes: form.sizes, colors: form.colors,
@@ -215,6 +299,8 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
         if (invErr || !inv) throw invErr || new Error('Erreur création inventaire');
 
         const webLoc = locations.find(l => l.type === 'web');
+        const historyEntries: any[] = [];
+
         if (webLoc) {
           const hasSizes = form.sizes.length > 0;
           const hasColors = form.colors.length > 0;
@@ -227,6 +313,7 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
                     inventory_id: inv.id, location_id: webLoc.id, quantity: qty, reserved: 0,
                     size, color, stocked_at: new Date().toISOString(),
                   });
+                  historyEntries.push({ inventory_id: inv.id, location_id: webLoc.id, action: 'add', size, color, quantity_before: 0, quantity_after: qty, note: 'Stock initial' });
                 }
               }
             }
@@ -237,6 +324,7 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
                   inventory_id: inv.id, location_id: webLoc.id, quantity: qty, reserved: 0,
                   size, stocked_at: new Date().toISOString(),
                 });
+                historyEntries.push({ inventory_id: inv.id, location_id: webLoc.id, action: 'add', size, quantity_before: 0, quantity_after: qty, note: 'Stock initial' });
               }
             }
           } else if (!hasSizes && hasColors) {
@@ -246,6 +334,7 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
                   inventory_id: inv.id, location_id: webLoc.id, quantity: qty, reserved: 0,
                   color, stocked_at: new Date().toISOString(),
                 });
+                historyEntries.push({ inventory_id: inv.id, location_id: webLoc.id, action: 'add', color, quantity_before: 0, quantity_after: qty, note: 'Stock initial' });
               }
             }
           } else if (form.initialStock > 0) {
@@ -253,8 +342,14 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
               inventory_id: inv.id, location_id: webLoc.id, quantity: form.initialStock, reserved: 0,
               stocked_at: new Date().toISOString(),
             });
+            historyEntries.push({ inventory_id: inv.id, location_id: webLoc.id, action: 'add', quantity_before: 0, quantity_after: form.initialStock, note: 'Stock initial' });
           }
         }
+
+        if (historyEntries.length > 0) {
+          await logStockHistory(historyEntries);
+        }
+
         toast({ title: 'Produit ajouté à l\'inventaire' });
       }
 
@@ -393,7 +488,6 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
           {/* Colors with predefined palette */}
           <div className="space-y-2">
             <Label className="text-xs">Couleurs</Label>
-            {/* Predefined color palette */}
             <div className="flex flex-wrap gap-1.5 p-2 bg-muted/30 rounded-lg border border-border/50">
               {PREDEFINED_COLORS.map(color => {
                 const hex = getColorHex(color);
@@ -447,6 +541,22 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
             </div>
           </div>
 
+          {/* Warning for removed sizes/colors with stock */}
+          {hasStockWarning && (
+            <div className="flex items-start gap-2 p-3 rounded-lg border border-destructive/50 bg-destructive/5 text-sm">
+              <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-destructive">Attention : stock existant sera supprimé</p>
+                {removedSizesWithStock.map(s => (
+                  <p key={s} className="text-xs text-muted-foreground">Taille {s} : {getStockForSize(s)} unités en stock</p>
+                ))}
+                {removedColorsWithStock.map(c => (
+                  <p key={c} className="text-xs text-muted-foreground">Couleur {c} : {getStockForColor(c)} unités en stock</p>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Channel + Threshold */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -464,9 +574,8 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
             </div>
           </div>
 
-          {/* Stock initial sections */}
+          {/* Stock initial sections - shown in create mode AND edit mode */}
           {!editData && form.sizes.length > 0 && form.colors.length > 0 ? (
-            /* Size x Color grid */
             <div className="space-y-2">
               <Label className="text-xs">Stock initial par variante (Web)</Label>
               <div className="border rounded-lg overflow-hidden max-h-60 overflow-y-auto">
@@ -508,7 +617,6 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
               </div>
             </div>
           ) : !editData && form.sizes.length > 0 && form.colors.length === 0 ? (
-            /* Size only */
             <div className="space-y-2">
               <Label className="text-xs">Stock initial par taille (Web)</Label>
               <div className="grid grid-cols-3 gap-2">
@@ -526,7 +634,6 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
               </div>
             </div>
           ) : !editData && form.colors.length > 0 && form.sizes.length === 0 ? (
-            /* Color only */
             <div className="space-y-2">
               <Label className="text-xs">Stock initial par couleur (Web)</Label>
               <div className="grid grid-cols-2 gap-2">
@@ -545,7 +652,6 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
               </div>
             </div>
           ) : !editData ? (
-            /* Global stock */
             <div className="space-y-1.5">
               <Label className="text-xs">Stock initial (Web)</Label>
               <Input type="number" value={form.initialStock} onChange={e => setForm(p => ({ ...p, initialStock: Math.max(0, Number(e.target.value) || 0) }))} min={0} />
