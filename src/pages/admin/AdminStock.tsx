@@ -1166,23 +1166,43 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
     }
   }, [selectedProduct, addProductMode]);
 
-  // Compute global stock for selected product
-  const selectedProductGlobalStock = useMemo(() => {
-    if (!addProductInvId) return 0;
-    return stockLevels
-      .filter((sl: StockLevel) => sl.inventory_id === addProductInvId)
-      .reduce((s: number, sl: StockLevel) => s + sl.quantity, 0);
-  }, [addProductInvId, stockLevels]);
+  // Find the Web location
+  const webLoc = allLocations.find((l: Location) => l.type === 'web');
 
-  // Add product to boutique
+  // Compute Web stock for selected product (only Web location, not all locations)
+  const webStockLevels = useMemo(() => {
+    if (!addProductInvId || !webLoc) return [];
+    return stockLevels.filter((sl: StockLevel) => sl.inventory_id === addProductInvId && sl.location_id === webLoc.id);
+  }, [addProductInvId, stockLevels, webLoc]);
+
+  const selectedProductWebStock = useMemo(() => {
+    return webStockLevels.reduce((s: number, sl: StockLevel) => s + sl.quantity, 0);
+  }, [webStockLevels]);
+
+  // Helper: get web stock for a specific variant
+  const getWebStockForVariant = (color: string, size: string) => {
+    const sl = webStockLevels.find((s: StockLevel) => s.color === color && s.size === size);
+    return sl?.quantity ?? 0;
+  };
+
+  // Global web stock (no size/color)
+  const getWebStockGlobal = () => {
+    const sl = webStockLevels.find((s: StockLevel) => !s.size && !s.color);
+    return sl?.quantity ?? 0;
+  };
+
+  // Keep backward compat alias
+  const selectedProductGlobalStock = selectedProductWebStock;
+
+  // Add product to boutique — DEDUCTS from Web stock
   const handleAddProduct = async () => {
-    if (!addProductInvId || !selected) return;
+    if (!addProductInvId || !selected || !webLoc) return;
 
-    // Block if no global stock
-    if (selectedProductGlobalStock <= 0) {
+    // Block if no Web stock at all
+    if (selectedProductWebStock <= 0) {
       toast({
         title: '⚠️ Impossible d\'ajouter ce produit',
-        description: 'Aucun stock disponible dans l\'inventaire global. Ajoutez du stock d\'abord via l\'Inventaire Global.',
+        description: 'Aucun stock disponible sur le stock Web. Ajoutez du stock d\'abord via l\'Inventaire Global.',
         variant: 'destructive',
       });
       return;
@@ -1191,50 +1211,127 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
     setSavingProduct(true);
 
     if (addProductMode === 'variants' && selectedProduct?.colors?.length && selectedProduct?.sizes?.length) {
+      // --- Variant mode: validate all variants have sufficient Web stock ---
+      const insufficient: string[] = [];
+      for (const [color, sizes] of Object.entries(variantGrid)) {
+        for (const [size, qty] of Object.entries(sizes)) {
+          if (qty > 0) {
+            const webQty = getWebStockForVariant(color, size);
+            if (webQty < qty) {
+              insufficient.push(`${color}/${size}: demandé ${qty}, dispo ${webQty}`);
+            }
+          }
+        }
+      }
+      if (insufficient.length > 0) {
+        toast({
+          title: 'Stock Web insuffisant',
+          description: insufficient.join(' · '),
+          variant: 'destructive',
+        });
+        setSavingProduct(false);
+        return;
+      }
+
+      // All OK — deduct from Web and create boutique entries
       let created = 0;
       for (const [color, sizes] of Object.entries(variantGrid)) {
         for (const [size, qty] of Object.entries(sizes)) {
           if (qty > 0) {
-            await supabase.from('stock_levels').insert({
-              inventory_id: addProductInvId,
-              location_id: selected,
-              quantity: qty,
-              reserved: 0,
-              size,
-              color,
-            });
-            await supabase.from('stock_history' as any).insert({
-              inventory_id: addProductInvId, location_id: selected, action: 'add',
-              size, color, quantity_before: 0, quantity_after: qty,
-              note: 'Ajout en boutique', created_by: user?.id || null,
-            });
+            // Find the Web stock_level for this variant
+            const webSl = webStockLevels.find((s: StockLevel) => s.color === color && s.size === size);
+            if (webSl) {
+              const newWebQty = webSl.quantity - qty;
+              // Deduct from Web
+              await supabase.from('stock_levels').update({ quantity: newWebQty }).eq('id', webSl.id);
+              // Log transfer_out from Web
+              await supabase.from('stock_history' as any).insert({
+                inventory_id: addProductInvId, location_id: webLoc.id, action: 'transfer_out',
+                size, color, quantity_before: webSl.quantity, quantity_after: newWebQty,
+                note: `Transfert vers ${selectedBoutique?.name || 'boutique'}`, created_by: user?.id || null,
+              });
+            }
+
+            // Check if boutique already has this variant
+            const existingBoutique = stockLevels.find((sl: StockLevel) =>
+              sl.inventory_id === addProductInvId && sl.location_id === selected && sl.color === color && sl.size === size
+            );
+            if (existingBoutique) {
+              const newBoutiqueQty = existingBoutique.quantity + qty;
+              await supabase.from('stock_levels').update({ quantity: newBoutiqueQty }).eq('id', existingBoutique.id);
+              await supabase.from('stock_history' as any).insert({
+                inventory_id: addProductInvId, location_id: selected, action: 'transfer_in',
+                size, color, quantity_before: existingBoutique.quantity, quantity_after: newBoutiqueQty,
+                note: `Transfert depuis stock Web`, created_by: user?.id || null,
+              });
+            } else {
+              await supabase.from('stock_levels').insert({
+                inventory_id: addProductInvId, location_id: selected,
+                quantity: qty, reserved: 0, size, color,
+              });
+              await supabase.from('stock_history' as any).insert({
+                inventory_id: addProductInvId, location_id: selected, action: 'transfer_in',
+                size, color, quantity_before: 0, quantity_after: qty,
+                note: `Transfert depuis stock Web`, created_by: user?.id || null,
+              });
+            }
             created++;
           }
         }
       }
-      if (created > 0) toast({ title: `${created} variantes ajoutées` });
+      if (created > 0) toast({ title: `${created} variantes transférées depuis le stock Web` });
       else toast({ title: 'Aucune quantité saisie', variant: 'destructive' });
     } else {
-      const existing = stockLevels.find((sl: StockLevel) => sl.inventory_id === addProductInvId && sl.location_id === selected && !sl.size && !sl.color);
-      if (existing) {
-        toast({ title: 'Ce produit existe déjà dans cette boutique', variant: 'destructive' });
+      // --- Global mode ---
+      const webGlobalStock = getWebStockGlobal();
+      if (addProductQty > webGlobalStock) {
+        toast({
+          title: 'Stock Web insuffisant',
+          description: `Disponible : ${webGlobalStock}, demandé : ${addProductQty}`,
+          variant: 'destructive',
+        });
         setSavingProduct(false);
         return;
       }
-      const { error } = await supabase.from('stock_levels').insert({
-        inventory_id: addProductInvId,
-        location_id: selected,
-        quantity: addProductQty,
-        reserved: 0,
-      });
-      if (error) toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
-      else {
-        toast({ title: 'Produit ajouté à la boutique' });
+
+      const existing = stockLevels.find((sl: StockLevel) => sl.inventory_id === addProductInvId && sl.location_id === selected && !sl.size && !sl.color);
+
+      // Deduct from Web
+      const webSl = webStockLevels.find((s: StockLevel) => !s.size && !s.color);
+      if (webSl) {
+        const newWebQty = webSl.quantity - addProductQty;
+        await supabase.from('stock_levels').update({ quantity: newWebQty }).eq('id', webSl.id);
         await supabase.from('stock_history' as any).insert({
-          inventory_id: addProductInvId, location_id: selected, action: 'add',
-          quantity_before: 0, quantity_after: addProductQty,
-          note: 'Ajout en boutique (global)', created_by: user?.id || null,
+          inventory_id: addProductInvId, location_id: webLoc.id, action: 'transfer_out',
+          quantity_before: webSl.quantity, quantity_after: newWebQty,
+          note: `Transfert vers ${selectedBoutique?.name || 'boutique'}`, created_by: user?.id || null,
         });
+      }
+
+      if (existing) {
+        // Add to existing boutique stock
+        const newBoutiqueQty = existing.quantity + addProductQty;
+        await supabase.from('stock_levels').update({ quantity: newBoutiqueQty }).eq('id', existing.id);
+        await supabase.from('stock_history' as any).insert({
+          inventory_id: addProductInvId, location_id: selected, action: 'transfer_in',
+          quantity_before: existing.quantity, quantity_after: newBoutiqueQty,
+          note: 'Transfert depuis stock Web', created_by: user?.id || null,
+        });
+        toast({ title: 'Stock ajouté à la boutique (transféré du Web)' });
+      } else {
+        const { error } = await supabase.from('stock_levels').insert({
+          inventory_id: addProductInvId, location_id: selected,
+          quantity: addProductQty, reserved: 0,
+        });
+        if (error) toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
+        else {
+          toast({ title: 'Produit transféré du stock Web vers la boutique' });
+          await supabase.from('stock_history' as any).insert({
+            inventory_id: addProductInvId, location_id: selected, action: 'transfer_in',
+            quantity_before: 0, quantity_after: addProductQty,
+            note: 'Transfert depuis stock Web', created_by: user?.id || null,
+          });
+        }
       }
     }
 
@@ -1653,18 +1750,18 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
               {addProductInvId && (
                 <div className={cn(
                   "flex items-center gap-2 p-2.5 rounded-lg border text-sm",
-                  selectedProductGlobalStock > 0
-                    ? "bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800"
-                    : "bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800"
+                  selectedProductWebStock > 0
+                    ? "bg-muted/50 border-border"
+                    : "border-destructive/50 bg-destructive/5"
                 )}>
                   <span className={cn(
                     "w-2.5 h-2.5 rounded-full shrink-0",
-                    selectedProductGlobalStock > 0 ? "bg-green-500" : "bg-red-500"
+                    selectedProductWebStock > 0 ? "bg-primary" : "bg-destructive"
                   )} />
                   <span className="font-medium">
-                    Stock global : {selectedProductGlobalStock} unité{selectedProductGlobalStock !== 1 ? 's' : ''}
+                    Stock Web disponible : {selectedProductWebStock} unité{selectedProductWebStock !== 1 ? 's' : ''}
                   </span>
-                  {selectedProductGlobalStock <= 0 && (
+                  {selectedProductWebStock <= 0 && (
                     <span className="text-xs text-destructive ml-auto">Ajoutez du stock d'abord</span>
                   )}
                 </div>
@@ -1695,8 +1792,17 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
 
             {addProductMode === 'global' ? (
               <div>
-                <Label>Quantité initiale</Label>
-                <Input type="number" min={0} value={addProductQty} onChange={e => setAddProductQty(parseInt(e.target.value) || 0)} />
+                <Label>Quantité à transférer</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={getWebStockGlobal()}
+                  value={addProductQty}
+                  onChange={e => setAddProductQty(Math.min(parseInt(e.target.value) || 0, getWebStockGlobal()))}
+                />
+                {addProductQty > getWebStockGlobal() && (
+                  <p className="text-xs text-destructive mt-1">Maximum disponible : {getWebStockGlobal()}</p>
+                )}
               </div>
             ) : selectedProduct && (
               <div className="border rounded-lg overflow-hidden">
@@ -1718,23 +1824,30 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
                             <span>{color}</span>
                           </div>
                         </td>
-                        {(selectedProduct.sizes || []).map((size: string) => (
-                          <td key={size} className="text-center py-1 px-1">
-                            <Input
-                              type="number"
-                              min={0}
-                              value={variantGrid[color]?.[size] ?? 0}
-                              onChange={e => {
-                                const val = parseInt(e.target.value) || 0;
-                                setVariantGrid(prev => ({
-                                  ...prev,
-                                  [color]: { ...prev[color], [size]: val },
-                                }));
-                              }}
-                              className="w-14 h-6 text-center text-xs p-0 mx-auto"
-                            />
-                          </td>
-                        ))}
+                        {(selectedProduct.sizes || []).map((size: string) => {
+                          const webAvail = getWebStockForVariant(color, size);
+                          return (
+                            <td key={size} className="text-center py-1 px-1">
+                              <div className="flex flex-col items-center gap-0.5">
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={webAvail}
+                                  value={variantGrid[color]?.[size] ?? 0}
+                                  onChange={e => {
+                                    const val = Math.min(parseInt(e.target.value) || 0, webAvail);
+                                    setVariantGrid(prev => ({
+                                      ...prev,
+                                      [color]: { ...prev[color], [size]: val },
+                                    }));
+                                  }}
+                                  className="w-14 h-6 text-center text-xs p-0 mx-auto"
+                                />
+                                <span className="text-[9px] text-muted-foreground">/{webAvail}</span>
+                              </div>
+                            </td>
+                          );
+                        })}
                       </tr>
                     ))}
                   </tbody>
@@ -1742,8 +1855,8 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
               </div>
             )}
 
-            <Button className="w-full" onClick={handleAddProduct} disabled={savingProduct || !addProductInvId || selectedProductGlobalStock <= 0}>
-              {savingProduct ? 'Ajout en cours...' : selectedProductGlobalStock <= 0 && addProductInvId ? '⚠️ Stock insuffisant' : 'Ajouter'}
+            <Button className="w-full" onClick={handleAddProduct} disabled={savingProduct || !addProductInvId || selectedProductWebStock <= 0}>
+              {savingProduct ? 'Transfert en cours...' : selectedProductWebStock <= 0 && addProductInvId ? '⚠️ Stock Web insuffisant' : 'Transférer depuis le stock Web'}
             </Button>
           </div>
         </DialogContent>
