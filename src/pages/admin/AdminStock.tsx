@@ -759,6 +759,11 @@ function SizeColorGrid({
   const cellKey = (color: string, size: string) => `${color}__${size}`;
 
   const handleCellSave = async (color: string, size: string, newQty: number) => {
+    if (newQty < 0) {
+      toast({ title: 'Le stock ne peut pas être négatif', variant: 'destructive' });
+      setEditingCell(null);
+      return;
+    }
     setSaving(true);
     const existingId = getSlId(color, size);
     if (existingId) {
@@ -1139,9 +1144,28 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
     }
   }, [selectedProduct, addProductMode]);
 
+  // Compute global stock for selected product
+  const selectedProductGlobalStock = useMemo(() => {
+    if (!addProductInvId) return 0;
+    return stockLevels
+      .filter((sl: StockLevel) => sl.inventory_id === addProductInvId)
+      .reduce((s: number, sl: StockLevel) => s + sl.quantity, 0);
+  }, [addProductInvId, stockLevels]);
+
   // Add product to boutique
   const handleAddProduct = async () => {
     if (!addProductInvId || !selected) return;
+
+    // Block if no global stock
+    if (selectedProductGlobalStock <= 0) {
+      toast({
+        title: '⚠️ Impossible d\'ajouter ce produit',
+        description: 'Aucun stock disponible dans l\'inventaire global. Ajoutez du stock d\'abord via l\'Inventaire Global.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setSavingProduct(true);
 
     if (addProductMode === 'variants' && selectedProduct?.colors?.length && selectedProduct?.sizes?.length) {
@@ -1193,6 +1217,11 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
 
   // Update stock quantity inline (global stock only)
   const handleUpdateStock = async (slId: string, newQty: number) => {
+    if (newQty < 0) {
+      toast({ title: 'Le stock ne peut pas être négatif', variant: 'destructive' });
+      setEditingStockId(null);
+      return;
+    }
     const { error } = await supabase.from('stock_levels').update({ quantity: newQty }).eq('id', slId);
     if (error) toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
     else toast({ title: 'Quantité mise à jour' });
@@ -1562,7 +1591,7 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
             <DialogDescription>Sélectionnez un produit et définissez le stock initial par variante ou globalement.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
+            <div className="space-y-2">
               <Label>Produit</Label>
               <Select value={addProductInvId} onValueChange={v => { setAddProductInvId(v); setAddProductMode('global'); }}>
                 <SelectTrigger><SelectValue placeholder="Sélectionner un produit..." /></SelectTrigger>
@@ -1572,6 +1601,26 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
                   ))}
                 </SelectContent>
               </Select>
+              {/* Stock info when product selected */}
+              {addProductInvId && (
+                <div className={cn(
+                  "flex items-center gap-2 p-2.5 rounded-lg border text-sm",
+                  selectedProductGlobalStock > 0
+                    ? "bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800"
+                    : "bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800"
+                )}>
+                  <span className={cn(
+                    "w-2.5 h-2.5 rounded-full shrink-0",
+                    selectedProductGlobalStock > 0 ? "bg-green-500" : "bg-red-500"
+                  )} />
+                  <span className="font-medium">
+                    Stock global : {selectedProductGlobalStock} unité{selectedProductGlobalStock !== 1 ? 's' : ''}
+                  </span>
+                  {selectedProductGlobalStock <= 0 && (
+                    <span className="text-xs text-destructive ml-auto">Ajoutez du stock d'abord</span>
+                  )}
+                </div>
+              )}
             </div>
 
             {selectedProduct && selectedProduct.colors?.length > 0 && selectedProduct.sizes?.length > 0 && (
@@ -1645,8 +1694,8 @@ function BoutiquesView({ boutiques, allLocations, stockLevels, inventory, produc
               </div>
             )}
 
-            <Button className="w-full" onClick={handleAddProduct} disabled={savingProduct || !addProductInvId}>
-              {savingProduct ? 'Ajout en cours...' : 'Ajouter'}
+            <Button className="w-full" onClick={handleAddProduct} disabled={savingProduct || !addProductInvId || selectedProductGlobalStock <= 0}>
+              {savingProduct ? 'Ajout en cours...' : selectedProductGlobalStock <= 0 && addProductInvId ? '⚠️ Stock insuffisant' : 'Ajouter'}
             </Button>
           </div>
         </DialogContent>
