@@ -8,8 +8,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { 
-  Plus, Search, Pencil, Trash2, MoreHorizontal, Package, Upload, FileText, X, Check, Filter
+  Plus, Search, Pencil, Trash2, MoreHorizontal, Package, Upload, FileText, X, Check, Filter, Wand2
 } from 'lucide-react';
+import { ImportMockupDialog } from '@/components/admin/ImportMockupDialog';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -51,6 +52,7 @@ export default function AdminProducts() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
+  const [isMockupDialogOpen, setIsMockupDialogOpen] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [extractedProducts, setExtractedProducts] = useState<ExtractedProduct[]>([]);
   const [isImporting, setIsImporting] = useState(false);
@@ -177,6 +179,9 @@ export default function AdminProducts() {
           <p className="text-muted-foreground mt-1">{products.length} produits au catalogue</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsMockupDialogOpen(true)} className="chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10">
+            <Wand2 className="h-4 w-4 mr-2" />Importer Maquette IA
+          </Button>
           <Button variant="outline" onClick={() => setIsPdfDialogOpen(true)} className="chamfer-hud-sm">
             <Upload className="h-4 w-4 mr-2" />Importer PDF
           </Button>
@@ -372,6 +377,13 @@ export default function AdminProducts() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Mockup IA Import Dialog */}
+      <ImportMockupDialog
+        open={isMockupDialogOpen}
+        onOpenChange={setIsMockupDialogOpen}
+        onSuccess={() => {}}
+      />
     </div>
   );
 }
