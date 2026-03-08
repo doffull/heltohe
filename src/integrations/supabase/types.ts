@@ -272,6 +272,7 @@ export type Database = {
           background_media: Json | null
           background_watermark: string | null
           category_columns: number | null
+          category_layout: Json | null
           click_scale: number | null
           contact_email: string | null
           contact_phone: string | null
@@ -306,10 +307,13 @@ export type Database = {
           sidebar_bg: string | null
           sidebar_gradient: boolean | null
           sidebar_image: string | null
+          sidebar_reappear_delay: number | null
           site_name: string | null
+          site_spacing: string | null
           site_tagline: string | null
           slider_auto_play: boolean | null
           slider_grayscale: boolean | null
+          slider_height: string | null
           slider_speed: number | null
           slideshow_speed: number | null
           social_display_mode: string | null
@@ -329,6 +333,7 @@ export type Database = {
           background_media?: Json | null
           background_watermark?: string | null
           category_columns?: number | null
+          category_layout?: Json | null
           click_scale?: number | null
           contact_email?: string | null
           contact_phone?: string | null
@@ -363,10 +368,13 @@ export type Database = {
           sidebar_bg?: string | null
           sidebar_gradient?: boolean | null
           sidebar_image?: string | null
+          sidebar_reappear_delay?: number | null
           site_name?: string | null
+          site_spacing?: string | null
           site_tagline?: string | null
           slider_auto_play?: boolean | null
           slider_grayscale?: boolean | null
+          slider_height?: string | null
           slider_speed?: number | null
           slideshow_speed?: number | null
           social_display_mode?: string | null
@@ -386,6 +394,7 @@ export type Database = {
           background_media?: Json | null
           background_watermark?: string | null
           category_columns?: number | null
+          category_layout?: Json | null
           click_scale?: number | null
           contact_email?: string | null
           contact_phone?: string | null
@@ -420,10 +429,13 @@ export type Database = {
           sidebar_bg?: string | null
           sidebar_gradient?: boolean | null
           sidebar_image?: string | null
+          sidebar_reappear_delay?: number | null
           site_name?: string | null
+          site_spacing?: string | null
           site_tagline?: string | null
           slider_auto_play?: boolean | null
           slider_grayscale?: boolean | null
+          slider_height?: string | null
           slider_speed?: number | null
           slideshow_speed?: number | null
           social_display_mode?: string | null
