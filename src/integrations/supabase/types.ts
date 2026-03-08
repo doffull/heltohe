@@ -273,6 +273,8 @@ export type Database = {
           background_watermark: string | null
           category_columns: number | null
           click_scale: number | null
+          contact_email: string | null
+          contact_phone: string | null
           created_at: string
           custom_unit_id: string | null
           favicon_url: string | null
@@ -304,6 +306,8 @@ export type Database = {
           sidebar_bg: string | null
           sidebar_gradient: boolean | null
           sidebar_image: string | null
+          site_name: string | null
+          site_tagline: string | null
           slider_auto_play: boolean | null
           slider_grayscale: boolean | null
           slider_speed: number | null
@@ -326,6 +330,8 @@ export type Database = {
           background_watermark?: string | null
           category_columns?: number | null
           click_scale?: number | null
+          contact_email?: string | null
+          contact_phone?: string | null
           created_at?: string
           custom_unit_id?: string | null
           favicon_url?: string | null
@@ -357,6 +363,8 @@ export type Database = {
           sidebar_bg?: string | null
           sidebar_gradient?: boolean | null
           sidebar_image?: string | null
+          site_name?: string | null
+          site_tagline?: string | null
           slider_auto_play?: boolean | null
           slider_grayscale?: boolean | null
           slider_speed?: number | null
@@ -379,6 +387,8 @@ export type Database = {
           background_watermark?: string | null
           category_columns?: number | null
           click_scale?: number | null
+          contact_email?: string | null
+          contact_phone?: string | null
           created_at?: string
           custom_unit_id?: string | null
           favicon_url?: string | null
@@ -410,6 +420,8 @@ export type Database = {
           sidebar_bg?: string | null
           sidebar_gradient?: boolean | null
           sidebar_image?: string | null
+          site_name?: string | null
+          site_tagline?: string | null
           slider_auto_play?: boolean | null
           slider_grayscale?: boolean | null
           slider_speed?: number | null

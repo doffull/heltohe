@@ -349,4 +349,8 @@ export const INITIAL_DESIGN_SETTINGS: DesignSettings = {
     { id: 'fabric', x: '70%', y: '60%', label: 'TISSU TECHNIQUE', details: 'Gore-Tex Pro imperméabilité', icon: 'Layers', enabled: true, markerType: 'dot', contentMode: 'manual' },
     { id: 'hem', x: '50%', y: '85%', label: 'OURLET AJUSTABLE', details: 'Cordon élastique intégré', icon: 'Move', enabled: true, markerType: 'dot', contentMode: 'manual' },
   ],
+  siteName: 'Mon Site',
+  siteTagline: '',
+  contactEmail: '',
+  contactPhone: '',
 };

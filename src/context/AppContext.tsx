@@ -88,6 +88,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [dbSettings]);
 
+  // Update document title when siteName changes
+  useEffect(() => {
+    const name = (designSettings as any).siteName;
+    if (name) document.title = name;
+  }, [(designSettings as any).siteName]);
+
   // Persist orders to localStorage (orders don't have a full Supabase hook in AppContext yet)
   useEffect(() => {
     localStorage.setItem('app_orders', JSON.stringify(orders));

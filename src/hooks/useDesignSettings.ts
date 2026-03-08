@@ -23,6 +23,10 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     headerBgColor: (db.header_bg_color as string) ?? base.headerBgColor,
     headerTextColor: (db.header_text_color as string) ?? base.headerTextColor,
     socialDisplayMode: ((db.social_display_mode as string) || base.socialDisplayMode) as 'icons' | 'text' | 'both',
+    siteName: (db.site_name as string) ?? base.siteName,
+    siteTagline: (db.site_tagline as string) ?? base.siteTagline,
+    contactEmail: (db.contact_email as string) ?? base.contactEmail,
+    contactPhone: (db.contact_phone as string) ?? base.contactPhone,
     
     // Booleans
     showLogo: db.show_logo !== null ? (db.show_logo as boolean) : base.showLogo,
@@ -80,6 +84,10 @@ function settingsToDb(s: DesignSettings) {
     header_text_color: s.headerTextColor,
     header_fixed: s.headerFixed,
     social_display_mode: s.socialDisplayMode,
+    site_name: s.siteName ?? '',
+    site_tagline: s.siteTagline ?? '',
+    contact_email: s.contactEmail ?? '',
+    contact_phone: s.contactPhone ?? '',
     show_logo: s.showLogo,
     show_stats: s.showStats,
     show_unit_id: s.showUnitID,

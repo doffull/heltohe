@@ -11,20 +11,36 @@ const socialIcons: Record<string, React.ElementType> = {
 export function Footer() {
   const { designSettings, language } = useApp();
   const { socialLinks, socialDisplayMode } = designSettings;
-  
+  const siteName = designSettings.siteName || 'Mon Site';
+  const siteTagline = designSettings.siteTagline;
+  const contactEmail = designSettings.contactEmail;
+  const contactPhone = designSettings.contactPhone;
+
   return (
     <footer className="relative z-20 border-t border-border/30 bg-background/80 backdrop-blur-sm">
       <div className="px-6 py-8 lg:px-12">
         <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
           {/* Brand */}
-          <div className="flex items-center gap-4">
-            <div className="hud-text text-sm text-muted-foreground">
-              <span className="text-primary">© 2024</span> LVTK6 CONCEPT
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-4">
+              <div className="hud-text text-sm text-muted-foreground">
+                <span className="text-primary">© {new Date().getFullYear()}</span> {siteName.toUpperCase()}
+              </div>
+              <div className="hidden md:block w-px h-4 bg-border" />
+              <div className="hidden md:block hud-text text-xs text-muted-foreground/60">
+                {language === 'FR' ? 'TOUS DROITS RÉSERVÉS' : 'ALL RIGHTS RESERVED'}
+              </div>
             </div>
-            <div className="hidden md:block w-px h-4 bg-border" />
-            <div className="hidden md:block hud-text text-xs text-muted-foreground/60">
-              {language === 'FR' ? 'TOUS DROITS RÉSERVÉS' : 'ALL RIGHTS RESERVED'}
-            </div>
+            {siteTagline && (
+              <p className="hud-text text-xs text-muted-foreground/50">{siteTagline}</p>
+            )}
+            {(contactEmail || contactPhone) && (
+              <div className="flex items-center gap-3 text-xs text-muted-foreground/50 hud-text">
+                {contactEmail && <span>{contactEmail}</span>}
+                {contactEmail && contactPhone && <span>·</span>}
+                {contactPhone && <span>{contactPhone}</span>}
+              </div>
+            )}
           </div>
           
           {/* Social Links */}
