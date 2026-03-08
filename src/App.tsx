@@ -46,10 +46,10 @@ function ScrollToTop() {
   return null;
 }
 
-/** Must be rendered inside AppProvider */
+/** Uses useDesignSettings directly — no AppContext dependency */
 function FaviconManager() {
-  const { designSettings } = useApp();
-  const faviconUrl = (designSettings as any).faviconUrl;
+  const { data: settings } = useDesignSettings();
+  const faviconUrl = (settings as any)?.faviconUrl;
   useEffect(() => {
     if (!faviconUrl) return;
     let link = document.querySelector("link[rel='icon']") as HTMLLinkElement | null;
