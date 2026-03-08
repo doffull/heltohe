@@ -94,6 +94,7 @@ export function ImportMockupDialog({ open, onOpenChange, onSuccess }: ImportMock
       setEditPrice(String(p.price));
       setEditName(p.name);
       setEditCategory(p.category);
+      setEditableColors(p.colorOptions || []);
       toast.success(`Produit analysé : ${p.name}`);
     } catch (err: any) {
       toast.error(err.message || "Erreur lors de l'analyse");
@@ -117,8 +118,8 @@ export function ImportMockupDialog({ open, onOpenChange, onSuccess }: ImportMock
         price: parseFloat(editPrice) || extracted.price,
         category: editCategory || extracted.category,
         image: imageUrl,
-        colors: extracted.colorOptions.map(c => c.label),
-        colorOptions: extracted.colorOptions,
+        colors: editableColors.map(c => c.label),
+        colorOptions: editableColors,
         attributes: {},
         careInstructions: undefined,
         salePrice: undefined,
