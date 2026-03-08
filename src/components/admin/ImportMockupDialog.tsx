@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Wand2, Upload, X, Loader2, Check, ImageIcon, Sparkles } from 'lucide-react';
+import { Wand2, Upload, X, Loader2, Check, ImageIcon, Sparkles, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCreateProduct } from '@/hooks/useProducts';
 import { useFileUpload } from '@/hooks/useFileUpload';
