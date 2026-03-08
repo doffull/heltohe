@@ -295,6 +295,12 @@ export interface DesignSettings {
 
   // Global site spacing
   siteSpacing?: string; // 'compact' | 'normal' | 'spacious'
+
+  // Brand identity
+  siteName?: string;
+  siteTagline?: string;
+  contactEmail?: string;
+  contactPhone?: string;
 }
 
 export type MarkerType = 'dot' | 'cross' | 'diamond' | 'square' | 'ring';
