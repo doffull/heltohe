@@ -1,9 +1,10 @@
 import { motion } from 'framer-motion';
-import { Check, Truck, Shield, RotateCcw } from 'lucide-react';
+import { Check, Truck, Shield, RotateCcw, Sparkles } from 'lucide-react';
 import { Product } from '@/types';
 
 interface ProductInfoProps {
   product: Product;
+  isNew?: boolean;
 }
 
 const fadeUp = {
@@ -11,7 +12,7 @@ const fadeUp = {
   animate: { opacity: 1, y: 0 },
 };
 
-export default function ProductInfo({ product }: ProductInfoProps) {
+export default function ProductInfo({ product, isNew }: ProductInfoProps) {
   return (
     <>
       {/* Category & SKU */}
