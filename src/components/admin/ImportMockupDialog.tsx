@@ -159,6 +159,7 @@ export function ImportMockupDialog({ open, onOpenChange, onSuccess }: ImportMock
     setExtracted(null);
     setAnalyzing(false);
     setCreating(false);
+    setEditableColors([]);
     onOpenChange(false);
   };
 
