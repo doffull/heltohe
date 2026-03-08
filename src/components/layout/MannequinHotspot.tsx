@@ -158,6 +158,10 @@ function Hotspot({ hotspot, products }: HotspotProps) {
 export function MannequinHotspots() {
   const { designSettings } = useApp();
   const { data: products = [] } = useProducts();
+
+  // Respect the global "showOverlays" toggle
+  if (!designSettings.showOverlays) return null;
+
   const allHotspots = designSettings.mannequinHotspots?.length > 0
     ? designSettings.mannequinHotspots
     : DEFAULT_HOTSPOTS;
