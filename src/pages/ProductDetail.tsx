@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import ProductImageGallery from '@/components/product/ProductImageGallery';
 import ProductInfo from '@/components/product/ProductInfo';
 import ProductOptions from '@/components/product/ProductOptions';
+import RelatedProducts from '@/components/product/RelatedProducts';
 
 export default function ProductDetail() {
   const { slugOrId, id } = useParams<{ slugOrId?: string; id?: string }>();
