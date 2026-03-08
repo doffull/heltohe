@@ -846,10 +846,9 @@ function SidebarTab() {
               </div>
             </CardContent>
           </Card>
-        </div>
       </div>
 
-      {/* Row 2: Images mannequin + Identité de marque */}
+      {/* ── Row 3: Images mannequin + Identité de marque ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
