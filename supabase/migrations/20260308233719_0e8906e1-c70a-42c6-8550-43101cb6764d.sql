@@ -1,0 +1,21 @@
+
+ALTER TABLE design_settings
+  ADD COLUMN IF NOT EXISTS show_sidebar_product_card boolean DEFAULT true,
+  ADD COLUMN IF NOT EXISTS show_sidebar_sizes boolean DEFAULT true,
+  ADD COLUMN IF NOT EXISTS show_sidebar_stats boolean DEFAULT true,
+  ADD COLUMN IF NOT EXISTS show_sidebar_gallery boolean DEFAULT true,
+  ADD COLUMN IF NOT EXISTS show_sidebar_product_number boolean DEFAULT true,
+  ADD COLUMN IF NOT EXISTS sidebar_slider_enabled boolean DEFAULT true,
+  ADD COLUMN IF NOT EXISTS sidebar_slider_speed integer DEFAULT 6000,
+  ADD COLUMN IF NOT EXISTS sidebar_slider_max_products integer DEFAULT 5,
+  ADD COLUMN IF NOT EXISTS sidebar_brand_name text DEFAULT '',
+  ADD COLUMN IF NOT EXISTS sidebar_brand_subtitle text DEFAULT '',
+  ADD COLUMN IF NOT EXISTS sidebar_info_text text DEFAULT '',
+  ADD COLUMN IF NOT EXISTS sidebar_product_title text DEFAULT '',
+  ADD COLUMN IF NOT EXISTS sidebar_product_description text DEFAULT '',
+  ADD COLUMN IF NOT EXISTS sidebar_sizes jsonb DEFAULT '["XS","S","M","L","XL","XXL","XXXL"]'::jsonb,
+  ADD COLUMN IF NOT EXISTS sidebar_image_opacity numeric DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS mobile_sidebar_image text,
+  ADD COLUMN IF NOT EXISTS mobile_sidebar_media_type text DEFAULT 'image',
+  ADD COLUMN IF NOT EXISTS stat_bar_filled_color text DEFAULT '#ffffff',
+  ADD COLUMN IF NOT EXISTS stat_bar_empty_color text DEFAULT '#333333';

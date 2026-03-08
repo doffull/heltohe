@@ -1,83 +1,103 @@
 
-## Two fixes in one
+## Thinking
 
-### 1. Bug: Switch galerie (et autres) ne change pas visuellement
+The user wants to:
+1. Upload a product mockup image (like the Marco jacket shown)
+2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
+3. Automatically generates a fully interactive, dynamic product page from it
 
-**Root cause** : `checked={(designSettings as any)[key] !== false}` 
+The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
 
-Quand la valeur est `undefined` (jamais sauvegardée) → `undefined !== false = true` → toujours affiché ON.  
-Quand on clique pour désactiver, le `updateDesignSettings({ showSidebarGallery: false })` est bien appelé **mais** si Supabase ne persiste pas les nouvelles clés `show*` dans la table, elles retournent `undefined` au prochain chargement → le switch rebascule sur ON.
+1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
+   - Accepts an image (jpg/png/webp)
+   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
+   - Also extracts the **color variants** as `colorOptions` with proper hex values
+   - Returns a structured product object ready to pre-fill the ProductForm
 
-**Fix**: Remplacer par `checked={Boolean((designSettings as any)[key] ?? true)}` + vérifier que `updateDesignSettings` déclenche bien `useSaveDesignSettings` (le debounce dans AppContext).
+2. **Add "Importer Maquette IA" button** in AdminProducts that:
+   - Opens a dialog with a dropzone accepting images
+   - Sends image to the edge function
+   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
+   - Lets admin review/edit before confirming creation
+   - On confirm: creates the product in the DB with all extracted data
 
-En fait le vrai problème est que ces clés (`showSidebarProductCard`, `showSidebarGallery`, etc.) n'existent **pas** dans la DB `design_settings` — elles ne sont pas dans `settingsToDb()` dans `useDesignSettings.ts`. Donc quand on sauvegarde, ces valeurs ne sont pas persistées → au rechargement, `undefined !== false = true` à chaque fois.
+3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
 
-**Solution** : Ajouter ces colonnes dans `settingsToDb()` (et leur lecture dans `dbToSettings()`) dans `useDesignSettings.ts`. Alternativement, les stocker dans un JSONB existant comme `hud_buttons` ou créer un champ `sidebar_config` JSONB.
+Looking at the Marco image:
+- Product name: MARCO
+- Brand: Helvetica Mountain Pioneers x PEGASWOES  
+- Season: HIVER 2026
+- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
+- Sizes: XS, S, M, L, XL, XXL
+- Composition: 100% POLYESTER
+- Tags: limited edition
 
-La solution la plus simple sans migration DB : **stocker tous les flags `show*` dans un objet JSONB `sidebar_config`** dans la table `design_settings` (colonne existante, ou utiliser `pages` JSONB qu'on n'utilise pas pour ça).
+## Plan
 
-Meilleure solution : ajouter les colonnes manquantes dans `settingsToDb`/`dbToSettings` qui mapperont vers des colonnes dans la DB. On a besoin d'une migration.
+### 1. New edge function `analyze-product-image`
+New file: `supabase/functions/analyze-product-image/index.ts`
 
-**Migration SQL** :
-```sql
-ALTER TABLE design_settings
-  ADD COLUMN IF NOT EXISTS show_sidebar_product_card boolean DEFAULT true,
-  ADD COLUMN IF NOT EXISTS show_sidebar_sizes boolean DEFAULT true,
-  ADD COLUMN IF NOT EXISTS show_sidebar_stats boolean DEFAULT true,
-  ADD COLUMN IF NOT EXISTS show_sidebar_gallery boolean DEFAULT true,
-  ADD COLUMN IF NOT EXISTS show_sidebar_product_number boolean DEFAULT true,
-  ADD COLUMN IF NOT EXISTS sidebar_slider_enabled boolean DEFAULT true,
-  ADD COLUMN IF NOT EXISTS sidebar_slider_speed integer DEFAULT 6000,
-  ADD COLUMN IF NOT EXISTS sidebar_slider_max_products integer DEFAULT 5,
-  ADD COLUMN IF NOT EXISTS sidebar_brand_name text,
-  ADD COLUMN IF NOT EXISTS sidebar_brand_subtitle text,
-  ADD COLUMN IF NOT EXISTS sidebar_info_text text,
-  ADD COLUMN IF NOT EXISTS sidebar_product_title text,
-  ADD COLUMN IF NOT EXISTS sidebar_product_description text,
-  ADD COLUMN IF NOT EXISTS sidebar_sizes jsonb,
-  ADD COLUMN IF NOT EXISTS sidebar_image_opacity numeric DEFAULT 1,
-  ADD COLUMN IF NOT EXISTS mobile_sidebar_image text,
-  ADD COLUMN IF NOT EXISTS mobile_sidebar_media_type text;
-```
+Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
+- name, subtitle, price (ask to estimate if not found), category
+- sizes (exact text from image)
+- colors with **hex values** from the color swatches visible in image
+- colorOptions: [{color: "#hex", label: "nom"}]
+- material/composition
+- description (generated from visual)
+- sku (auto-generated)
+- tags (e.g., "limited edition" if spotted)
+- Any brand/collection info → subtitle
 
-Puis mapper dans `settingsToDb` et `dbToSettings` dans `useDesignSettings.ts`.
+### 2. New UI component `ImportMockupDialog.tsx`
+In `src/components/admin/ImportMockupDialog.tsx`:
+- Image dropzone (jpg/png/webp/gif up to 10MB)
+- Preview of uploaded image
+- "Analyser avec l'IA" button
+- Loading state with animated scan effect
+- Results preview:
+  - Product name, subtitle
+  - Price field (editable, since AI may not find it)
+  - Color swatches preview
+  - Size badges preview
+  - Material info
+  - Generated description
+- "Créer ce produit" confirm button
+- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
 
----
+### 3. AdminProducts integration
+- Add "Importer Maquette IA" button next to existing "Importer PDF" button
+- Opens the new ImportMockupDialog
+- After product created, show toast + option to go to product detail
 
-### 2. Aperçus SVG pour les presets
+### Files to create/modify
+- `supabase/functions/analyze-product-image/index.ts` — new edge function
+- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
+- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
 
-Remplacer le simple emoji + texte par une **carte avec miniature SVG** représentant le rendu de chaque preset.
+## Implementation Steps
 
-Chaque SVG ~100×160px représente une sidebar stylisée :
+### Step 1: Edge function `analyze-product-image`
+Input: `{ imageBase64: string, mimeType: string }`
+Prompt to Gemini Pro Vision:
+- Extract all visible product info
+- Extract hex colors from color swatches
+- Generate description if not present
+- Output strict JSON matching `ExtractedProductData` schema
 
-```
-┌──────────────────────────────────────────┐
-│  [SVG Classique]    [SVG Minimal]         │
-│  ┌─────┐            ┌─────┐              │
-│  │img  │            │img  │              │
-│  │card │            │     │              │
-│  │stat ││           │     │              │
-│  │stat ││           └─────┘              │
-│  └─────┘                                 │
-│  Classique ✓         Minimal             │
-│  Image + carte       Image seule         │
-└──────────────────────────────────────────┘
-```
+### Step 2: `ImportMockupDialog` component
+States:
+- `file`, `preview` (image URL)
+- `analyzing` (loading state)
+- `extracted` (ExtractedProductData | null)
+- `editableData` (form state to review/edit before import)
 
-**SVG par preset** :
-- **Classique** : fond sombre, image haute, carte produit avec lignes de texte, 3 barres de stat
-- **Minimal** : fond sombre, image pleine hauteur, rien d'autre
-- **Parallaxe** : fond avec gradient visible, image + carte + stat
-- **Vitrine** : gradient fort (violet/bleu), galerie petite en bas
-- **Sombre** : fond quasi-noir, image très sombre, seulement les stat bars
-- **Catalogue** : 2 petites images côte à côte (rotation rapide)
+UX Flow:
+1. Drag & drop or click to upload image
+2. Preview appears
+3. Click "Analyser avec IA" → loading scan animation
+4. Results appear: color swatches, size badges, all info
+5. User can edit price/name if needed
+6. Click "Créer le produit" → uploads image to storage, creates product, success
 
----
-
-### Fichiers modifiés
-
-| Fichier | Changement |
-|---|---|
-| Migration SQL | Ajouter ~17 colonnes `show_sidebar_*`, `sidebar_slider_*`, `sidebar_brand_*`, `sidebar_image_opacity`, etc. |
-| `src/hooks/useDesignSettings.ts` | Mapper les nouvelles colonnes dans `dbToSettings` et `settingsToDb` |
-| `src/pages/admin/AdminDesign.tsx` | Remplacer les cartes preset emoji → cartes avec miniatures SVG inline |
+### Step 3: AdminProducts button
+Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)
