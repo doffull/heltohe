@@ -94,9 +94,9 @@ function SplashScreen({ onDone, logo }: { onDone: () => void; logo?: string }) {
   );
 }
 
+// SplashScreen reads logo directly — no context dependency
 function SplashScreenWrapper({ onDone }: { onDone: () => void }) {
-  const { designSettings } = useApp();
-  return <SplashScreen onDone={onDone} logo={designSettings.hudLogo} />;
+  return <SplashScreen onDone={onDone} />;
 }
 
 function AnimatedRoutes() {
