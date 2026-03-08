@@ -792,12 +792,13 @@ function SidebarTab() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Presets Sidebar</CardTitle>
-          <CardDescription>Appliquez un style complet en un clic — le preset actif est surligné</CardDescription>
+          <CardDescription>Cliquez pour appliquer — le preset actif est surligné en vert</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {SIDEBAR_PRESETS.map((p) => {
               const active = isPresetActive(p.settings, designSettings);
+              const Thumbnail = PRESET_THUMBNAILS[p.id];
               return (
                 <button
                   key={p.id}
@@ -806,22 +807,34 @@ function SidebarTab() {
                     toast.success(`Preset "${p.name}" appliqué`);
                   }}
                   className={cn(
-                    'relative border-2 rounded-lg p-3 text-left transition-all',
+                    'relative border-2 rounded-lg overflow-hidden text-left transition-all group',
                     active
-                      ? 'border-primary bg-primary/10'
-                      : 'border-border hover:border-primary/50 hover:bg-muted/40'
+                      ? 'border-primary ring-2 ring-primary/30'
+                      : 'border-border hover:border-primary/50'
                   )}
                 >
+                  {/* SVG thumbnail */}
+                  <div className="w-full aspect-[2/3] bg-[#0a0a0a] relative overflow-hidden">
+                    {Thumbnail && <Thumbnail />}
+                    {/* hover overlay */}
+                    <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/10 transition-colors duration-200" />
+                  </div>
+                  {/* active checkmark badge */}
                   {active && (
-                    <span className="absolute top-2 right-2 flex h-4 w-4 items-center justify-center rounded-full bg-primary">
+                    <span className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary shadow-lg">
                       <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                        <path d="M2 5l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary-foreground" style={{ color: 'hsl(var(--primary-foreground))' }} />
+                        <path d="M2 5l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </span>
                   )}
-                  <span className="block text-xl mb-1">{p.icon}</span>
-                  <p className="text-sm font-bold">{p.name}</p>
-                  <p className="text-xs text-muted-foreground leading-snug">{p.desc}</p>
+                  {/* label row */}
+                  <div className={cn(
+                    'px-2.5 py-2 border-t',
+                    active ? 'border-primary/40 bg-primary/5' : 'border-border'
+                  )}>
+                    <p className="text-xs font-bold leading-tight">{p.name}</p>
+                    <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">{p.desc}</p>
+                  </div>
                 </button>
               );
             })}
