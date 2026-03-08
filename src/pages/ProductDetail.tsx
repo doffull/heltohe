@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowLeft } from 'lucide-react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Sparkles } from 'lucide-react';
 import { useProduct } from '@/hooks/useProducts';
 import { useCart } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,8 @@ export default function ProductDetail() {
   const { slugOrId, id } = useParams<{ slugOrId?: string; id?: string }>();
   const productId = slugOrId || id || '';
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isNewImport = searchParams.get('new') === '1';
   const { toast } = useToast();
   const { data: product, isLoading } = useProduct(productId);
   const { addItem } = useCart();
@@ -82,6 +84,34 @@ export default function ProductDetail() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-4 md:py-8">
+
+        {/* "Freshly imported" banner */}
+        <AnimatePresence>
+          {isNewImport && (
+            <motion.div
+              className="mb-6 flex items-center gap-3 rounded-lg border border-primary/40 bg-primary/5 px-4 py-3"
+              initial={{ opacity: 0, y: -16, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -16 }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <Sparkles className="h-5 w-5 text-primary shrink-0" />
+              <div>
+                <p className="text-sm font-bold hud-text">PRODUIT IMPORTÉ AVEC SUCCÈS</p>
+                <p className="text-xs text-muted-foreground">Couleurs, tailles et description ont été extraites automatiquement par l'IA depuis votre maquette.</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-auto text-xs"
+                onClick={() => navigate(`/admin/products`, { replace: true })}
+              >
+                Retour admin
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Back Button */}
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
           <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4 md:mb-6 h-9 md:h-10 text-sm">
@@ -92,11 +122,18 @@ export default function ProductDetail() {
 
         <div className="grid lg:grid-cols-2 gap-6 lg:gap-12">
           {/* Left: Image Gallery */}
-          <ProductImageGallery image={product.image} name={product.name} videoUrl={product.videoUrl} />
+          <ProductImageGallery
+            image={product.image}
+            name={product.name}
+            videoUrl={product.videoUrl}
+            colorOptions={product.colorOptions}
+            selectedColor={selectedColor}
+            onColorChange={setSelectedColor}
+          />
 
           {/* Right: Product Details */}
           <div className="space-y-6">
-            <ProductInfo product={product} />
+            <ProductInfo product={product} isNew={isNewImport} />
             <ProductOptions
               product={product}
               selectedSize={selectedSize}

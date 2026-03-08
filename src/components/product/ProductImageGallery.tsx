@@ -1,11 +1,15 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ZoomIn, ZoomOut, Play, Image as ImageIcon } from 'lucide-react';
+import { ColorOption } from '@/types';
 
 interface ProductImageGalleryProps {
   image: string;
   name: string;
   videoUrl?: string;
+  colorOptions?: ColorOption[];
+  selectedColor?: string | null;
+  onColorChange?: (color: string) => void;
 }
 
 function isEmbedVideo(url: string) {
@@ -20,7 +24,14 @@ function getEmbedUrl(url: string) {
   return url;
 }
 
-export default function ProductImageGallery({ image, name, videoUrl }: ProductImageGalleryProps) {
+export default function ProductImageGallery({
+  image,
+  name,
+  videoUrl,
+  colorOptions = [],
+  selectedColor,
+  onColorChange,
+}: ProductImageGalleryProps) {
   const [activeMedia, setActiveMedia] = useState<'image' | 'video'>('image');
   const [isZoomed, setIsZoomed] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
@@ -47,6 +58,10 @@ export default function ProductImageGallery({ image, name, videoUrl }: ProductIm
     setIsZoomed(false);
   };
 
+  // Determine which color image to show (if colorOptions have images)
+  const activeColorOption = colorOptions.find(c => c.color === selectedColor);
+  const displayImage = (activeColorOption?.image) || image;
+
   return (
     <div className="space-y-4">
       {/* Main media area */}
@@ -63,8 +78,8 @@ export default function ProductImageGallery({ image, name, videoUrl }: ProductIm
         <AnimatePresence mode="wait">
           {activeMedia === 'image' ? (
             <motion.img
-              key="image"
-              src={image}
+              key={`image-${displayImage}`}
+              src={displayImage}
               alt={name}
               className="w-full h-full object-cover"
               initial={{ opacity: 0 }}
@@ -112,6 +127,28 @@ export default function ProductImageGallery({ image, name, videoUrl }: ProductIm
           ) : null}
         </AnimatePresence>
 
+        {/* Selected color badge overlay */}
+        <AnimatePresence>
+          {selectedColor && activeColorOption && (
+            <motion.div
+              key={selectedColor}
+              className="absolute top-4 left-4 flex items-center gap-2 bg-background/85 backdrop-blur-sm rounded-full px-3 py-1.5 shadow-md"
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -12 }}
+              transition={{ duration: 0.25 }}
+            >
+              <span
+                className="w-3 h-3 rounded-full border border-border/60 shadow-sm"
+                style={{ backgroundColor: activeColorOption.color }}
+              />
+              <span className="text-xs font-bold hud-text uppercase tracking-wider">
+                {activeColorOption.label}
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Zoom indicator (image only) */}
         {activeMedia === 'image' && (
           <motion.div
@@ -137,48 +174,93 @@ export default function ProductImageGallery({ image, name, videoUrl }: ProductIm
 
       {/* Thumbnail strip */}
       <motion.div
-        className="flex gap-2"
+        className="flex gap-2 flex-wrap"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, duration: 0.5 }}
       >
-        {/* Image thumbnail */}
-        <button
-          onClick={switchToImage}
-          className={`w-20 h-20 chamfer-hud-sm overflow-hidden border-2 bg-card/30 relative transition-colors ${activeMedia === 'image' ? 'border-primary' : 'border-border/30 opacity-60 hover:opacity-100'}`}
-        >
-          <img src={image} alt={name} className="w-full h-full object-cover" />
-          {videoUrl && (
-            <div className="absolute bottom-1 left-1">
-              <ImageIcon className="h-3 w-3 text-foreground drop-shadow-md" />
-            </div>
-          )}
-        </button>
+        {/* Color swatches as thumbnails (when colorOptions exist) */}
+        {colorOptions.length > 0 ? (
+          colorOptions.map((co, i) => (
+            <motion.button
+              key={co.color}
+              onClick={() => {
+                onColorChange?.(co.color);
+                switchToImage();
+              }}
+              className={`w-14 h-14 chamfer-hud-sm overflow-hidden border-2 relative transition-all ${
+                selectedColor === co.color
+                  ? 'border-primary shadow-[0_0_8px_hsl(var(--primary)/0.4)]'
+                  : 'border-border/30 opacity-70 hover:opacity-100 hover:border-border'
+              }`}
+              title={co.label}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 + i * 0.05 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              {co.image ? (
+                <img src={co.image} alt={co.label} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: co.color }}>
+                  {selectedColor === co.color && (
+                    <span className="text-[10px] font-bold" style={{ color: isLightColor(co.color) ? '#000' : '#fff' }}>✓</span>
+                  )}
+                </div>
+              )}
+            </motion.button>
+          ))
+        ) : (
+          <>
+            {/* Image thumbnail */}
+            <button
+              onClick={switchToImage}
+              className={`w-20 h-20 chamfer-hud-sm overflow-hidden border-2 bg-card/30 relative transition-colors ${activeMedia === 'image' ? 'border-primary' : 'border-border/30 opacity-60 hover:opacity-100'}`}
+            >
+              <img src={image} alt={name} className="w-full h-full object-cover" />
+              {videoUrl && (
+                <div className="absolute bottom-1 left-1">
+                  <ImageIcon className="h-3 w-3 text-foreground drop-shadow-md" />
+                </div>
+              )}
+            </button>
 
-        {/* Video thumbnail */}
+            {/* Placeholder thumbnails */}
+            {!videoUrl && [1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="w-20 h-20 chamfer-hud-sm overflow-hidden border border-border/30 bg-card/10 opacity-40 relative"
+              >
+                <img src={image} alt={name} className="w-full h-full object-cover grayscale" />
+                <div className="absolute inset-0 bg-background/60" />
+              </div>
+            ))}
+          </>
+        )}
+
+        {/* Video thumbnail always last */}
         {videoUrl && (
           <button
             onClick={switchToVideo}
-            className={`w-20 h-20 chamfer-hud-sm overflow-hidden border-2 bg-card/30 relative transition-colors ${activeMedia === 'video' ? 'border-primary' : 'border-border/30 opacity-60 hover:opacity-100'}`}
+            className={`w-14 h-14 chamfer-hud-sm overflow-hidden border-2 bg-card/30 relative transition-colors ${activeMedia === 'video' ? 'border-primary' : 'border-border/30 opacity-60 hover:opacity-100'}`}
           >
             <img src={image} alt={`${name} video`} className="w-full h-full object-cover grayscale" />
             <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
-              <Play className="h-6 w-6 text-foreground fill-foreground" />
+              <Play className="h-5 w-5 text-foreground fill-foreground" />
             </div>
           </button>
         )}
-
-        {/* Placeholder thumbnails */}
-        {!videoUrl && [1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className="w-20 h-20 chamfer-hud-sm overflow-hidden border border-border/30 bg-card/10 opacity-40 relative"
-          >
-            <img src={image} alt={name} className="w-full h-full object-cover grayscale" />
-            <div className="absolute inset-0 bg-background/60" />
-          </div>
-        ))}
       </motion.div>
     </div>
   );
+}
+
+function isLightColor(hex: string): boolean {
+  const c = hex.replace('#', '');
+  if (c.length < 6) return false;
+  const r = parseInt(c.substring(0, 2), 16);
+  const g = parseInt(c.substring(2, 4), 16);
+  const b = parseInt(c.substring(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 160;
 }
