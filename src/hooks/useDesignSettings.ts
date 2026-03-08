@@ -27,6 +27,35 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     siteTagline: (db.site_tagline as string) ?? base.siteTagline,
     contactEmail: (db.contact_email as string) ?? base.contactEmail,
     contactPhone: (db.contact_phone as string) ?? base.contactPhone,
+
+    // Sidebar HUD text fields
+    sidebarBrandName: (db.sidebar_brand_name as string) ?? base.sidebarBrandName,
+    sidebarBrandSubtitle: (db.sidebar_brand_subtitle as string) ?? base.sidebarBrandSubtitle,
+    sidebarInfoText: (db.sidebar_info_text as string) ?? base.sidebarInfoText,
+    sidebarProductTitle: (db.sidebar_product_title as string) ?? base.sidebarProductTitle,
+    sidebarProductDescription: (db.sidebar_product_description as string) ?? base.sidebarProductDescription,
+    mobileSidebarImage: (db.mobile_sidebar_image as string) || undefined,
+    mobileSidebarMediaType: ((db.mobile_sidebar_media_type as string) || 'image') as 'image' | 'video',
+
+    // Sidebar show/hide booleans (DB columns now exist)
+    showSidebarProductCard: db.show_sidebar_product_card !== null ? (db.show_sidebar_product_card as boolean) : true,
+    showSidebarSizes: db.show_sidebar_sizes !== null ? (db.show_sidebar_sizes as boolean) : true,
+    showSidebarStats: db.show_sidebar_stats !== null ? (db.show_sidebar_stats as boolean) : true,
+    showSidebarGallery: db.show_sidebar_gallery !== null ? (db.show_sidebar_gallery as boolean) : true,
+    showSidebarProductNumber: db.show_sidebar_product_number !== null ? (db.show_sidebar_product_number as boolean) : true,
+
+    // Sidebar slider
+    sidebarSliderEnabled: db.sidebar_slider_enabled !== null ? (db.sidebar_slider_enabled as boolean) : true,
+    sidebarSliderSpeed: (db.sidebar_slider_speed as number) ?? 6000,
+    sidebarSliderMaxProducts: (db.sidebar_slider_max_products as number) ?? 5,
+
+    // Sidebar image opacity + sizes
+    sidebarImageOpacity: (db.sidebar_image_opacity as number) ?? 1,
+    sidebarSizes: (db.sidebar_sizes as string[]) || base.sidebarSizes,
+
+    // Stat bar colors
+    statBarFilledColor: (db.stat_bar_filled_color as string) ?? '#ffffff',
+    statBarEmptyColor: (db.stat_bar_empty_color as string) ?? '#333333',
     
     // Booleans
     showLogo: db.show_logo !== null ? (db.show_logo as boolean) : base.showLogo,
