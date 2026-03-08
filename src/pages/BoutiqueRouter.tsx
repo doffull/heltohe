@@ -1,5 +1,4 @@
 import { useParams } from 'react-router-dom';
-import { useCategories } from '@/hooks/useCategories';
 import { usePage } from '@/hooks/usePages';
 import Shop from './Shop';
 import ProductDetail from './ProductDetail';
@@ -11,7 +10,6 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 
 export default function BoutiqueRouter() {
   const { slugOrId } = useParams<{ slugOrId: string }>();
-  const { data: categories = [] } = useCategories();
   const { data: customPage } = usePage(slugOrId || '');
 
   // SEO for custom pages
@@ -27,23 +25,15 @@ export default function BoutiqueRouter() {
     return <ProductDetail />;
   }
 
-  // Check if there's a custom page with sections for this slug
-  if (customPage && customPage.sections.length > 0) {
+  // Check if there's a custom page with sections for this slug (non-category custom pages)
+  if (customPage && customPage.sections.length > 0 && customPage.type !== 'category') {
     return (
       <div className="min-h-screen">
         <PageRenderer sections={customPage.sections} />
-        {/* If it's a category page, also show products below */}
-        {customPage.type === 'category' && (
-          <Shop categoryFromSlug={customPage.title} />
-        )}
       </div>
     );
   }
 
-  // Otherwise treat as category slug
-  const category = categories.find(c => c.slug === slugOrId);
-  const categoryTitle = category?.title || slugOrId;
-
-  return <Shop categoryFromSlug={categoryTitle} />;
+  // Fallback: show full shop
+  return <Shop />;
 }
-

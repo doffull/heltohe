@@ -138,7 +138,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } else {
       const cat = allCategories.find(c => c.title === category);
       const slug = cat?.slug || encodeURIComponent(category.toLowerCase());
-      navigate(`/boutique/${slug}`);
+      // Clean URL: /homme, /femme etc. (no /boutique prefix)
+      navigate(`/${slug}`);
     }
   }, [navigate, allCategories]);
 

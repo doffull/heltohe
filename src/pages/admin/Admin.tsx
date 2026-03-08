@@ -17,7 +17,8 @@ import {
   Menu,
   X,
   FileText,
-  Warehouse
+  Warehouse,
+  ShoppingBag
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -34,6 +35,7 @@ import AdminDesign from './AdminDesign';
 import AdminMedia from './AdminMedia';
 import AdminPages from './AdminPages';
 import AdminStock from './AdminStock';
+import AdminWooCommerce from './AdminWooCommerce';
 
 const SIDEBAR_ITEMS = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/admin' },
@@ -45,6 +47,7 @@ const SIDEBAR_ITEMS = [
   { icon: Megaphone, label: 'Marketing', href: '/admin/marketing' },
   { icon: Palette, label: 'Design', href: '/admin/design' },
   { icon: Warehouse, label: 'Stock', href: '/admin/stock' },
+  { icon: ShoppingBag, label: 'WooCommerce', href: '/admin/woocommerce' },
   { icon: Settings, label: 'Paramètres', href: '/admin/parametres' },
 ];
 
@@ -174,6 +177,7 @@ export default function Admin() {
             <Route path="bannieres/*" element={<AdminMarketing />} />
             <Route path="design/*" element={<AdminDesign />} />
             <Route path="stock/*" element={<AdminStock />} />
+            <Route path="woocommerce/*" element={<AdminWooCommerce />} />
             <Route path="parametres/*" element={<AdminSettings />} />
           </Routes>
         </div>
