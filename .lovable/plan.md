@@ -1,103 +1,85 @@
 
-## Thinking
+## Plan: Champs Titre & Description du site dans Design & Visuels
 
-The user wants to:
-1. Upload a product mockup image (like the Marco jacket shown)
-2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
-3. Automatically generates a fully interactive, dynamic product page from it
+### Objectif
+Ajouter une section "Identité de marque" dans la page admin **Design & Visuels** permettant de configurer :
+- **Nom du site** (ex: "LVTK6 CONCEPT") — utilisé dans le header fallback, le footer, et l'onglet navigateur
+- **Slogan / Description courte** — tagline affichée dans le footer et le `<meta description>` pour le SEO
+- **Email de contact** — affiché dans le footer et la page À propos
+- **Numéro de téléphone** — optionnel
 
-The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
+Ces champs sont sauvegardés dans `design_settings` via le hook existant.
 
-1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
-   - Accepts an image (jpg/png/webp)
-   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
-   - Also extracts the **color variants** as `colorOptions` with proper hex values
-   - Returns a structured product object ready to pre-fill the ProductForm
+---
 
-2. **Add "Importer Maquette IA" button** in AdminProducts that:
-   - Opens a dialog with a dropzone accepting images
-   - Sends image to the edge function
-   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
-   - Lets admin review/edit before confirming creation
-   - On confirm: creates the product in the DB with all extracted data
+### 1. Migration DB — 4 nouvelles colonnes `design_settings`
 
-3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
+```sql
+ALTER TABLE design_settings
+  ADD COLUMN IF NOT EXISTS site_name text DEFAULT 'Mon Site',
+  ADD COLUMN IF NOT EXISTS site_tagline text DEFAULT '',
+  ADD COLUMN IF NOT EXISTS contact_email text DEFAULT '',
+  ADD COLUMN IF NOT EXISTS contact_phone text DEFAULT '';
+```
 
-Looking at the Marco image:
-- Product name: MARCO
-- Brand: Helvetica Mountain Pioneers x PEGASWOES  
-- Season: HIVER 2026
-- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
-- Sizes: XS, S, M, L, XL, XXL
-- Composition: 100% POLYESTER
-- Tags: limited edition
+---
 
-## Plan
+### 2. Mise à jour du type `DesignSettings` (`src/types/index.ts`)
 
-### 1. New edge function `analyze-product-image`
-New file: `supabase/functions/analyze-product-image/index.ts`
+Ajouter dans l'interface :
+```typescript
+siteName?: string;
+siteTagline?: string;
+contactEmail?: string;
+contactPhone?: string;
+```
 
-Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
-- name, subtitle, price (ask to estimate if not found), category
-- sizes (exact text from image)
-- colors with **hex values** from the color swatches visible in image
-- colorOptions: [{color: "#hex", label: "nom"}]
-- material/composition
-- description (generated from visual)
-- sku (auto-generated)
-- tags (e.g., "limited edition" if spotted)
-- Any brand/collection info → subtitle
+---
 
-### 2. New UI component `ImportMockupDialog.tsx`
-In `src/components/admin/ImportMockupDialog.tsx`:
-- Image dropzone (jpg/png/webp/gif up to 10MB)
-- Preview of uploaded image
-- "Analyser avec l'IA" button
-- Loading state with animated scan effect
-- Results preview:
-  - Product name, subtitle
-  - Price field (editable, since AI may not find it)
-  - Color swatches preview
-  - Size badges preview
-  - Material info
-  - Generated description
-- "Créer ce produit" confirm button
-- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
+### 3. Mise à jour du hook `useDesignSettings.ts`
 
-### 3. AdminProducts integration
-- Add "Importer Maquette IA" button next to existing "Importer PDF" button
-- Opens the new ImportMockupDialog
-- After product created, show toast + option to go to product detail
+Dans `dbToSettings()` : mapper `db.site_name → siteName`, etc.  
+Dans `settingsToDb()` : ajouter les 4 champs dans le payload.
 
-### Files to create/modify
-- `supabase/functions/analyze-product-image/index.ts` — new edge function
-- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
-- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
+---
 
-## Implementation Steps
+### 4. Nouvelle section dans `AdminDesign.tsx` — onglet **Logo**
 
-### Step 1: Edge function `analyze-product-image`
-Input: `{ imageBase64: string, mimeType: string }`
-Prompt to Gemini Pro Vision:
-- Extract all visible product info
-- Extract hex colors from color swatches
-- Generate description if not present
-- Output strict JSON matching `ExtractedProductData` schema
+Dans l'onglet **Logo** (qui gère déjà l'identité visuelle), ajouter une carte **"Identité de marque"** en première position avec :
 
-### Step 2: `ImportMockupDialog` component
-States:
-- `file`, `preview` (image URL)
-- `analyzing` (loading state)
-- `extracted` (ExtractedProductData | null)
-- `editableData` (form state to review/edit before import)
+```
+┌─────────────────────────────────────────────┐
+│ Identité de marque                          │
+│ Ces informations apparaissent dans votre... │
+├─────────────────────────────────────────────┤
+│ Nom du site    [________________]           │
+│ Slogan         [________________]           │
+│ Email contact  [________________]           │
+│ Téléphone      [________________]           │
+└─────────────────────────────────────────────┘
+```
 
-UX Flow:
-1. Drag & drop or click to upload image
-2. Preview appears
-3. Click "Analyser avec IA" → loading scan animation
-4. Results appear: color swatches, size badges, all info
-5. User can edit price/name if needed
-6. Click "Créer le produit" → uploads image to storage, creates product, success
+---
 
-### Step 3: AdminProducts button
-Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)
+### 5. Utilisation des champs dans l'UI
+
+**Footer** (`Footer.tsx`) : remplacer le texte en dur `LVTK6 CONCEPT` par `designSettings.siteName`.
+
+**Header** (`MainLayout.tsx`) : quand pas de logo image (hudLogo vide), afficher `designSettings.siteName` au lieu de `HMP`.
+
+**Document title** : dans `App.tsx` ou un effet dans `AppContext`, faire `document.title = designSettings.siteName` quand la valeur change.
+
+---
+
+### Fichiers modifiés
+
+| Fichier | Changement |
+|---|---|
+| Migration DB | Ajouter 4 colonnes à `design_settings` |
+| `src/types/index.ts` | Ajouter 4 champs dans `DesignSettings` |
+| `src/hooks/useDesignSettings.ts` | Mapper les 4 nouveaux champs |
+| `src/data/initialData.ts` | Ajouter valeurs par défaut |
+| `src/pages/admin/AdminDesign.tsx` | Carte "Identité de marque" dans l'onglet Logo |
+| `src/components/layout/Footer.tsx` | Utiliser `siteName` dynamiquement |
+| `src/components/layout/MainLayout.tsx` | Utiliser `siteName` comme fallback logo |
+| `src/context/AppContext.tsx` | `document.title = siteName` via useEffect |
