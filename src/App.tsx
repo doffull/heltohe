@@ -1,5 +1,4 @@
 import { Toaster } from "@/components/ui/toaster";
-
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -14,7 +13,6 @@ import { useEffect, useState } from "react";
 // Pages
 import Home from "./pages/Home";
 import Shop from "./pages/Shop";
-import ProductDetail from "./pages/ProductDetail";
 import BoutiqueRouter from "./pages/BoutiqueRouter";
 import CategoryPageRouter from "./pages/CategoryPageRouter";
 import Cart from "./pages/Cart";
@@ -28,7 +26,6 @@ import About from "./pages/About";
 import { MainLayout } from "./components/layout/MainLayout";
 
 const queryClient = new QueryClient();
-
 
 const pageVariants = {
   initial: { opacity: 0, y: 60 },
@@ -48,25 +45,26 @@ function ScrollToTop() {
   return null;
 }
 
+/** Must be rendered inside AppProvider */
 function FaviconManager() {
   const { designSettings } = useApp();
   const faviconUrl = (designSettings as any).faviconUrl;
   useEffect(() => {
-    if (faviconUrl) {
-      const link = document.querySelector("link[rel='icon']") as HTMLLinkElement | null;
-      if (link) { link.href = faviconUrl; }
-      else {
-        const newLink = document.createElement('link');
-        newLink.rel = 'icon';
-        newLink.href = faviconUrl;
-        document.head.appendChild(newLink);
-      }
+    if (!faviconUrl) return;
+    let link = document.querySelector("link[rel='icon']") as HTMLLinkElement | null;
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'icon';
+      document.head.appendChild(link);
     }
+    link.href = faviconUrl;
   }, [faviconUrl]);
   return null;
 }
 
-function SplashScreen({ onDone, logo }: { onDone: () => void; logo?: string }) {
+function SplashScreen({ onDone }: { onDone: () => void }) {
+  const { designSettings } = useApp();
+  const logo = designSettings.hudLogo;
   useEffect(() => {
     const timer = setTimeout(onDone, 1200);
     return () => clearTimeout(timer);
@@ -94,14 +92,8 @@ function SplashScreen({ onDone, logo }: { onDone: () => void; logo?: string }) {
   );
 }
 
-// SplashScreen reads logo directly — no context dependency
-function SplashScreenWrapper({ onDone }: { onDone: () => void }) {
-  return <SplashScreen onDone={onDone} />;
-}
-
 function AnimatedRoutes() {
   const location = useLocation();
-
   return (
     <AnimatePresence mode="wait">
       <motion.div
@@ -113,26 +105,15 @@ function AnimatedRoutes() {
         transition={pageTransition}
       >
         <Routes location={location}>
-          {/* Public routes with main layout */}
           <Route path="/" element={<MainLayout><Home /></MainLayout>} />
           <Route path="/boutique" element={<MainLayout><Shop /></MainLayout>} />
           <Route path="/boutique/:slugOrId" element={<MainLayout><BoutiqueRouter /></MainLayout>} />
           <Route path="/panier" element={<MainLayout><Cart /></MainLayout>} />
           <Route path="/a-propos" element={<MainLayout><About /></MainLayout>} />
-          
-          {/* Auth routes (no layout) */}
           <Route path="/auth" element={<Auth />} />
-          
-          {/* Account routes (with layout) */}
           <Route path="/compte/*" element={<MainLayout><Account /></MainLayout>} />
-          
-          {/* Admin routes (custom layout) */}
           <Route path="/admin/*" element={<Admin />} />
-          
-          {/* Category clean URLs (e.g. /homme, /femme) */}
           <Route path="/:categorySlug" element={<MainLayout><CategoryPageRouter /></MainLayout>} />
-
-          {/* Catch-all */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </motion.div>
@@ -140,19 +121,25 @@ function AnimatedRoutes() {
   );
 }
 
-function AppContextConsumers() {
+/**
+ * AppShell — rendered inside BrowserRouter so useNavigate (used by AppProvider) works,
+ * and all children are inside AppProvider so useApp() works.
+ */
+function AppShell() {
   const [showSplash, setShowSplash] = useState(true);
   return (
-    <TooltipProvider>
-      <AnimatePresence>
-        {showSplash && <SplashScreenWrapper onDone={() => setShowSplash(false)} />}
-      </AnimatePresence>
-      <FaviconManager />
-      <Toaster />
-      <Sonner />
-      <ScrollToTop />
-      <AnimatedRoutes />
-    </TooltipProvider>
+    <AppProvider>
+      <TooltipProvider>
+        <FaviconManager />
+        <Toaster />
+        <Sonner />
+        <ScrollToTop />
+        <AnimatePresence>
+          {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
+        </AnimatePresence>
+        <AnimatedRoutes />
+      </TooltipProvider>
+    </AppProvider>
   );
 }
 
@@ -162,9 +149,7 @@ const App = () => (
       <AuthProvider>
         <CartProvider>
           <SidebarProvider>
-            <AppProvider>
-              <AppContextConsumers />
-            </AppProvider>
+            <AppShell />
           </SidebarProvider>
         </CartProvider>
       </AuthProvider>
