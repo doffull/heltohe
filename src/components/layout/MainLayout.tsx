@@ -200,7 +200,11 @@ export function MainLayout({ children }: MainLayoutProps) {
                   headerPreset === 'centered' ? "h-8 lg:h-10" : "h-7"
                 )} />
               ) : (
-                designSettings.showLogo !== false && <span className="font-bold text-base tracking-wider uppercase">HMP</span>
+                designSettings.showLogo !== false && (
+                  <span className="font-bold text-base tracking-wider uppercase">
+                    {(designSettings as any).siteName || 'HMP'}
+                  </span>
+                )
               )}
             </Link>
 
