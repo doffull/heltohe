@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+
 import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, useBulkDeleteProducts } from '@/hooks/useProducts';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
 import { Product } from '@/types';
@@ -39,6 +40,7 @@ interface ExtractedProduct {
 }
 
 export default function AdminProducts() {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const { data: products = [], isLoading } = useProducts();
   const createProduct = useCreateProduct();
@@ -383,7 +385,10 @@ export default function AdminProducts() {
       <ImportMockupDialog
         open={isMockupDialogOpen}
         onOpenChange={setIsMockupDialogOpen}
-        onSuccess={() => {}}
+        onSuccess={(productId) => {
+          setIsMockupDialogOpen(false);
+          navigate(`/boutique/${productId}?new=1`);
+        }}
       />
     </div>
   );
