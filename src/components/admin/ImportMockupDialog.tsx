@@ -47,6 +47,7 @@ export function ImportMockupDialog({ open, onOpenChange, onSuccess }: ImportMock
   const [editPrice, setEditPrice] = useState('');
   const [editName, setEditName] = useState('');
   const [editCategory, setEditCategory] = useState('');
+  const [editableColors, setEditableColors] = useState<ColorOption[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const createProduct = useCreateProduct();
   const { upload } = useFileUpload({ folder: 'products' });
