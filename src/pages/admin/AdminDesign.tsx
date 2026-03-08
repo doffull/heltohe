@@ -1142,7 +1142,7 @@ function SidebarTab() {
               <div key={key} className="flex items-center justify-between py-1">
                 <Label className="text-sm">{label}</Label>
                 <Switch
-                  checked={(designSettings as any)[key] !== false}
+                  checked={Boolean((designSettings as any)[key] ?? true)}
                   onCheckedChange={(v) => updateDesignSettings({ [key]: v } as any)}
                 />
               </div>
