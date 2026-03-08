@@ -140,21 +140,19 @@ function AnimatedRoutes() {
   );
 }
 
-function AppInner() {
+function AppContextConsumers() {
   const [showSplash, setShowSplash] = useState(true);
   return (
-    <AppProvider>
-      <TooltipProvider>
-        <AnimatePresence>
-          {showSplash && <SplashScreenWrapper onDone={() => setShowSplash(false)} />}
-        </AnimatePresence>
-        <FaviconManager />
-        <Toaster />
-        <Sonner />
-        <ScrollToTop />
-        <AnimatedRoutes />
-      </TooltipProvider>
-    </AppProvider>
+    <TooltipProvider>
+      <AnimatePresence>
+        {showSplash && <SplashScreenWrapper onDone={() => setShowSplash(false)} />}
+      </AnimatePresence>
+      <FaviconManager />
+      <Toaster />
+      <Sonner />
+      <ScrollToTop />
+      <AnimatedRoutes />
+    </TooltipProvider>
   );
 }
 
@@ -164,7 +162,9 @@ const App = () => (
       <AuthProvider>
         <CartProvider>
           <SidebarProvider>
-            <AppInner />
+            <AppProvider>
+              <AppContextConsumers />
+            </AppProvider>
           </SidebarProvider>
         </CartProvider>
       </AuthProvider>
