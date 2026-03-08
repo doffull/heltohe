@@ -353,4 +353,13 @@ export const INITIAL_DESIGN_SETTINGS: DesignSettings = {
   siteTagline: '',
   contactEmail: '',
   contactPhone: '',
+  sidebarReappearDelay: 10000,
+  sliderHeight: '100vh',
+  siteSpacing: 'compact',
+  categoryLayout: {
+    preset: 'portrait',
+    columns: 4,
+    aspectRatio: '3/4',
+    gap: 'md',
+  },
 };

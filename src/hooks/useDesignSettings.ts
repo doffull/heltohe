@@ -48,6 +48,14 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     slideshowSpeed: (db.slideshow_speed as number) ?? base.slideshowSpeed,
     sliderSpeed: (db.slider_speed as number) ?? base.sliderSpeed,
     categoryColumns: (db.category_columns as number) ?? base.categoryColumns,
+    sidebarReappearDelay: (db.sidebar_reappear_delay as number) ?? base.sidebarReappearDelay,
+
+    // Extra text/string fields
+    sliderHeight: (db.slider_height as string) ?? base.sliderHeight,
+    siteSpacing: (db.site_spacing as string) ?? base.siteSpacing,
+
+    // Extra JSONB
+    categoryLayout: (db.category_layout as typeof base.categoryLayout) || base.categoryLayout,
     
     // JSONB fields
     stats: (db.stats as typeof base.stats) || base.stats,
@@ -104,6 +112,10 @@ function settingsToDb(s: DesignSettings) {
     glitch_intensity: s.glitchIntensity,
     click_scale: s.clickScale,
     category_columns: s.categoryColumns,
+    sidebar_reappear_delay: s.sidebarReappearDelay ?? 10000,
+    slider_height: s.sliderHeight ?? '100vh',
+    site_spacing: s.siteSpacing ?? 'compact',
+    category_layout: s.categoryLayout as unknown as Json,
     stats: s.stats as unknown as Json,
     hud_buttons: s.hudButtons as unknown as Json,
     logo_style: s.logoStyle as unknown as Json,
