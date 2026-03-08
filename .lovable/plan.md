@@ -1,103 +1,92 @@
 
-## Thinking
+## Root cause
 
-The user wants to:
-1. Upload a product mockup image (like the Marco jacket shown)
-2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
-3. Automatically generates a fully interactive, dynamic product page from it
+`AppContext.tsx` stores **products** (partially redundant since AdminProducts uses Supabase hooks), **designSettings**, and **orders** in `localStorage`. The critical issue is `designSettings` — all the admin design customizations (hero slides, colors, HUD, stats, etc.) are ONLY in localStorage, never saved to the cloud `design_settings` table that already exists in the DB.
 
-The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
+**What's already in the cloud (Supabase):**
+- Products → `useProducts()` reads/writes via Supabase ✅
+- Categories → `useCategories()` reads/writes via Supabase ✅
+- Orders, Customers, Banners, Pages, etc. → all via Supabase ✅
 
-1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
-   - Accepts an image (jpg/png/webp)
-   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
-   - Also extracts the **color variants** as `colorOptions` with proper hex values
-   - Returns a structured product object ready to pre-fill the ProductForm
+**What's ONLY in localStorage (the problem):**
+- `designSettings` in `AppContext` → saved to `localStorage` only, backed by `INITIAL_DESIGN_SETTINGS`
+- The `design_settings` table in the DB already exists and has the right columns, but `AppContext` never reads from or writes to it
 
-2. **Add "Importer Maquette IA" button** in AdminProducts that:
-   - Opens a dialog with a dropzone accepting images
-   - Sends image to the edge function
-   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
-   - Lets admin review/edit before confirming creation
-   - On confirm: creates the product in the DB with all extracted data
+**Secondary: products in AppContext**  
+`AppContext.products` / `setProducts` reads localStorage too. But `AdminProducts.tsx` uses `useProducts()` which reads from Supabase correctly. The `AppContext.products` is a leftover that some components may still consume — it could diverge. Need to verify.
 
-3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
-
-Looking at the Marco image:
-- Product name: MARCO
-- Brand: Helvetica Mountain Pioneers x PEGASWOES  
-- Season: HIVER 2026
-- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
-- Sizes: XS, S, M, L, XL, XXL
-- Composition: 100% POLYESTER
-- Tags: limited edition
+---
 
 ## Plan
 
-### 1. New edge function `analyze-product-image`
-New file: `supabase/functions/analyze-product-image/index.ts`
+### 1. Create `useDesignSettings` hook
+New file: `src/hooks/useDesignSettings.ts`
 
-Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
-- name, subtitle, price (ask to estimate if not found), category
-- sizes (exact text from image)
-- colors with **hex values** from the color swatches visible in image
-- colorOptions: [{color: "#hex", label: "nom"}]
-- material/composition
-- description (generated from visual)
-- sku (auto-generated)
-- tags (e.g., "limited edition" if spotted)
-- Any brand/collection info → subtitle
+```typescript
+export function useDesignSettings() // reads from DB
+export function useSaveDesignSettings() // writes to DB (upsert on settings_key = 'main')
+```
 
-### 2. New UI component `ImportMockupDialog.tsx`
-In `src/components/admin/ImportMockupDialog.tsx`:
-- Image dropzone (jpg/png/webp/gif up to 10MB)
-- Preview of uploaded image
-- "Analyser avec l'IA" button
-- Loading state with animated scan effect
-- Results preview:
-  - Product name, subtitle
-  - Price field (editable, since AI may not find it)
-  - Color swatches preview
-  - Size badges preview
-  - Material info
-  - Generated description
-- "Créer ce produit" confirm button
-- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
+- `queryFn`: `supabase.from('design_settings').select('*').eq('settings_key', 'main').single()`
+- Maps DB columns → `DesignSettings` object (the DB already stores JSONB columns like `hero_slides`, `stats`, `hud_buttons`, etc.)
+- `mutationFn`: upsert with `settings_key: 'main'`
 
-### 3. AdminProducts integration
-- Add "Importer Maquette IA" button next to existing "Importer PDF" button
-- Opens the new ImportMockupDialog
-- After product created, show toast + option to go to product detail
+### 2. Update `AppContext.tsx`
 
-### Files to create/modify
-- `supabase/functions/analyze-product-image/index.ts` — new edge function
-- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
-- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
+Replace the localStorage-based `designSettings` state with:
+```typescript
+const { data: dbSettings } = useDesignSettings();
+const saveDesignSettings = useSaveDesignSettings();
 
-## Implementation Steps
+const [designSettings, setDesignSettingsLocal] = useState(INITIAL_DESIGN_SETTINGS);
 
-### Step 1: Edge function `analyze-product-image`
-Input: `{ imageBase64: string, mimeType: string }`
-Prompt to Gemini Pro Vision:
-- Extract all visible product info
-- Extract hex colors from color swatches
-- Generate description if not present
-- Output strict JSON matching `ExtractedProductData` schema
+// sync DB → local on load
+useEffect(() => { if (dbSettings) setDesignSettingsLocal(dbSettings); }, [dbSettings]);
 
-### Step 2: `ImportMockupDialog` component
-States:
-- `file`, `preview` (image URL)
-- `analyzing` (loading state)
-- `extracted` (ExtractedProductData | null)
-- `editableData` (form state to review/edit before import)
+const updateDesignSettings = (updates) => {
+  const next = { ...designSettings, ...updates };
+  setDesignSettingsLocal(next);
+  saveDesignSettings.mutate(next); // persist to cloud
+};
+```
 
-UX Flow:
-1. Drag & drop or click to upload image
-2. Preview appears
-3. Click "Analyser avec IA" → loading scan animation
-4. Results appear: color swatches, size badges, all info
-5. User can edit price/name if needed
-6. Click "Créer le produit" → uploads image to storage, creates product, success
+Remove all `localStorage.setItem('app_design_settings', ...)` calls.
 
-### Step 3: AdminProducts button
-Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)
+### 3. Map DesignSettings ↔ DB columns
+
+The DB `design_settings` table already has matching columns:
+- `hero_slides` JSONB → `heroSlides`
+- `stats` JSONB → `stats`
+- `hud_buttons` JSONB → `hudButtons`
+- `background_media` JSONB → `backgroundMedia`
+- `social_links` JSONB → `socialLinks`
+- `home_sections` JSONB → `homeSections`
+- `accent_color` TEXT → `accentColor`
+- `sidebar_bg` TEXT → `sidebarBg`
+- `header_bg_color` TEXT → `headerBgColor`
+- `header_text_color` TEXT → `headerTextColor`
+- `top_banner` JSONB → `topBanner`
+- etc.
+
+The hook needs a `dbToSettings()` and `settingsToDb()` mapper.
+
+### 4. Remove localStorage product redundancy
+
+`AppContext.products` uses localStorage. Since `AdminProducts` correctly uses `useProducts()` hook (Supabase), the `AppContext.products` array is stale/redundant for most cases. 
+
+However, some components might still call `useApp().products`. I'll keep `AppContext.products` but make it derive from `useProducts()` data instead of localStorage, so there's a single source of truth (Supabase). Remove the localStorage save for products.
+
+### 5. Debounce saves
+
+To avoid hammering the DB on every keystroke in design sliders/inputs, debounce `saveDesignSettings` by 800ms using a `useRef` timeout.
+
+---
+
+## Files to modify/create
+
+| File | Change |
+|---|---|
+| `src/hooks/useDesignSettings.ts` | **New** — read/write design settings from Supabase |
+| `src/context/AppContext.tsx` | Replace localStorage design with Supabase hook; remove localStorage product save |
+
+No DB migrations needed — `design_settings` table already exists with all needed columns.
