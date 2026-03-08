@@ -118,7 +118,7 @@ export default function AdminWooCommerce() {
           <div className="flex items-center gap-3">
             <Zap className="h-5 w-5 text-primary" />
             <h2 className="font-bold uppercase tracking-wider text-sm">Configuration API</h2>
-            {connectionStatus === 'ok' && <Badge variant="default" className="ml-auto bg-green-600">Connecté</Badge>}
+            {connectionStatus === 'ok' && <Badge variant="default" className="ml-auto">Connecté</Badge>}
             {connectionStatus === 'error' && <Badge variant="destructive" className="ml-auto">Erreur</Badge>}
           </div>
 
@@ -224,7 +224,7 @@ export default function AdminWooCommerce() {
           {result && (
             <div className="bg-card border border-primary/30 p-6 space-y-3">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <CheckCircle2 className="h-5 w-5 text-primary" />
                 <h3 className="font-bold uppercase text-sm tracking-wider">Import terminé</h3>
               </div>
               <div className="grid grid-cols-3 gap-3">
