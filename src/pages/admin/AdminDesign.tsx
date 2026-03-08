@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +9,10 @@ import { FileDropZone } from '@/components/admin/FileDropZone';
 import { useApp } from '@/context/AppContext';
 import { cn } from '@/lib/utils';
 import { HeroSlide, HUDStat, HUDButton, MannequinHotspotConfig, Category, MarkerType } from '@/types';
-import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Eye, EyeOff } from 'lucide-react';
+import {
+  Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Eye, EyeOff,
+  LayoutDashboard, ImagePlay, PanelTop, Image, PanelLeft, Grid3x3, Crosshair, BookOpen,
+} from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { HeaderDesignTab } from '@/components/admin/HeaderDesignTab';
@@ -19,6 +21,18 @@ import { useProducts } from '@/hooks/useProducts';
 function generateId() {
   return `id-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
 }
+
+// ─── Nav items ───
+const NAV_ITEMS = [
+  { key: 'disposition', label: 'Disposition', icon: LayoutDashboard, desc: 'Presets globaux' },
+  { key: 'hero',        label: 'Hero Slider',  icon: ImagePlay,       desc: 'Slides & parallaxe' },
+  { key: 'header',      label: 'Header',       icon: PanelTop,        desc: 'Barre de navigation' },
+  { key: 'logo',        label: 'Logo & Marque',icon: Image,           desc: 'Identité visuelle' },
+  { key: 'sidebar',     label: 'Sidebar',      icon: PanelLeft,       desc: 'Panneau latéral' },
+  { key: 'categories',  label: 'Catégories',   icon: Grid3x3,         desc: 'Grille d\'accueil' },
+  { key: 'hotspots',    label: 'Hotspots',     icon: Crosshair,       desc: 'Points interactifs' },
+  { key: 'catalogue',   label: 'Catalogue',    icon: BookOpen,        desc: 'Affichage produits' },
+];
 
 // ─── Hero Slider Tab ───
 function HeroSliderTab() {
@@ -61,7 +75,7 @@ function HeroSliderTab() {
 
   return (
     <div className="space-y-6">
-      {/* Hero Presets */}
+      {/* Presets */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Presets rapides</CardTitle>
@@ -69,11 +83,11 @@ function HeroSliderTab() {
         <CardContent>
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
             {[
-              { id: 'fullscreen', name: 'Plein écran', desc: '100vh, texte en bas à gauche', height: '100vh', grayscale: false, speed: 6000 },
-              { id: 'half', name: 'Demi-écran', desc: '60vh, texte centré', height: '60vh', grayscale: false, speed: 6000 },
-              { id: 'banner', name: 'Bannière', desc: '40vh, compact', height: '40vh', grayscale: false, speed: 5000 },
-              { id: 'cinematic', name: 'Cinématique', desc: '80vh, N&B, lent', height: '80vh', grayscale: true, speed: 10000 },
-              { id: 'minimal', name: 'Minimal', desc: '50vh, image seule', height: '50vh', grayscale: false, speed: 8000 },
+              { id: 'fullscreen', name: 'Plein écran',  desc: '100vh, texte en bas à gauche', height: '100vh', grayscale: false, speed: 6000 },
+              { id: 'half',       name: 'Demi-écran',   desc: '60vh, texte centré',            height: '60vh',  grayscale: false, speed: 6000 },
+              { id: 'banner',     name: 'Bannière',     desc: '40vh, compact',                 height: '40vh',  grayscale: false, speed: 5000 },
+              { id: 'cinematic',  name: 'Cinématique',  desc: '80vh, N&B, lent',               height: '80vh',  grayscale: true,  speed: 10000 },
+              { id: 'minimal',    name: 'Minimal',      desc: '50vh, image seule',             height: '50vh',  grayscale: false, speed: 8000 },
             ].map((p) => (
               <button
                 key={p.id}
@@ -91,13 +105,64 @@ function HeroSliderTab() {
         </CardContent>
       </Card>
 
+      {/* Slider Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Paramètres du Slider</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label>Lecture automatique</Label>
+              <Switch
+                checked={designSettings.sliderAutoPlay}
+                onCheckedChange={(v) => updateDesignSettings({ sliderAutoPlay: v })}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label>Overlay gradient</Label>
+              <Switch
+                checked={designSettings.showSliderOverlay}
+                onCheckedChange={(v) => updateDesignSettings({ showSliderOverlay: v })}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label>Noir & blanc</Label>
+              <Switch
+                checked={designSettings.sliderGrayscale}
+                onCheckedChange={(v) => updateDesignSettings({ sliderGrayscale: v })}
+              />
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Vitesse ({(designSettings.sliderSpeed / 1000).toFixed(1)}s)</Label>
+              <Slider
+                value={[designSettings.sliderSpeed]}
+                min={2000} max={15000} step={500}
+                onValueChange={([v]) => updateDesignSettings({ sliderSpeed: v })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Opacité ({Math.round((designSettings.sliderImageOpacity ?? 1) * 100)}%)</Label>
+              <Slider
+                value={[(designSettings.sliderImageOpacity ?? 1) * 100]}
+                min={10} max={100} step={5}
+                onValueChange={([v]) => updateDesignSettings({ sliderImageOpacity: v / 100 })}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Slides */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Hero Slider Parallax</h3>
+          <h3 className="text-lg font-semibold">Slides</h3>
           <p className="text-sm text-muted-foreground">Configurez chaque slide avec 3 couches de profondeur</p>
         </div>
         <Button onClick={addSlide} size="sm">
-          <Plus className="h-4 w-4 mr-2" /> Ajouter une slide
+          <Plus className="h-4 w-4 mr-2" /> Ajouter
         </Button>
       </div>
 
@@ -123,7 +188,6 @@ function HeroSliderTab() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Parallax Layers */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label className="text-xs font-medium mb-2 block">Arrière-plan (fond)</Label>
@@ -159,8 +223,6 @@ function HeroSliderTab() {
                 />
               </div>
             </div>
-
-            {/* Mobile Media */}
             <div>
               <Label className="text-xs font-medium mb-2 block">Média mobile (optionnel)</Label>
               <FileDropZone
@@ -173,10 +235,8 @@ function HeroSliderTab() {
                 }}
                 label="Image ou vidéo mobile"
               />
-              <p className="text-xs text-muted-foreground mt-1">Si vide, le média desktop sera utilisé. Supporte images et vidéos.</p>
+              <p className="text-xs text-muted-foreground mt-1">Si vide, le média desktop sera utilisé.</p>
             </div>
-
-            {/* Object Fit / Position */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="space-y-1">
                 <Label className="text-xs">Affichage desktop</Label>
@@ -229,8 +289,6 @@ function HeroSliderTab() {
                 </Select>
               </div>
             </div>
-
-            {/* Text Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Titre</Label>
@@ -272,56 +330,6 @@ function HeroSliderTab() {
           </CardContent>
         </Card>
       )}
-
-      {/* Slider Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Paramètres du Slider</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label>Lecture automatique</Label>
-            <Switch
-              checked={designSettings.sliderAutoPlay}
-              onCheckedChange={(v) => updateDesignSettings({ sliderAutoPlay: v })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Vitesse ({(designSettings.sliderSpeed / 1000).toFixed(1)}s)</Label>
-            <Slider
-              value={[designSettings.sliderSpeed]}
-              min={2000}
-              max={15000}
-              step={500}
-              onValueChange={([v]) => updateDesignSettings({ sliderSpeed: v })}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <Label>Overlay gradient</Label>
-            <Switch
-              checked={designSettings.showSliderOverlay}
-              onCheckedChange={(v) => updateDesignSettings({ showSliderOverlay: v })}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <Label>Noir & blanc</Label>
-            <Switch
-              checked={designSettings.sliderGrayscale}
-              onCheckedChange={(v) => updateDesignSettings({ sliderGrayscale: v })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Opacité des images ({Math.round((designSettings.sliderImageOpacity ?? 1) * 100)}%)</Label>
-            <Slider
-              value={[(designSettings.sliderImageOpacity ?? 1) * 100]}
-              min={10}
-              max={100}
-              step={5}
-              onValueChange={([v]) => updateDesignSettings({ sliderImageOpacity: v / 100 })}
-            />
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
@@ -332,105 +340,109 @@ function LogoTab() {
 
   return (
     <div className="space-y-6">
-      {/* Brand Identity */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Identité de marque</CardTitle>
-          <CardDescription>Ces informations apparaissent dans le footer, le titre de l'onglet navigateur et le header</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Nom du site</Label>
-            <Input
-              value={designSettings.siteName ?? ''}
-              onChange={(e) => updateDesignSettings({ siteName: e.target.value })}
-              placeholder="Ex : LVTK6 CONCEPT"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Slogan / Description courte</Label>
-            <Input
-              value={designSettings.siteTagline ?? ''}
-              onChange={(e) => updateDesignSettings({ siteTagline: e.target.value })}
-              placeholder="Ex : Équipement tactique urbain"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Email de contact</Label>
-            <Input
-              type="email"
-              value={designSettings.contactEmail ?? ''}
-              onChange={(e) => updateDesignSettings({ contactEmail: e.target.value })}
-              placeholder="contact@monsite.com"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Téléphone (optionnel)</Label>
-            <Input
-              type="tel"
-              value={designSettings.contactPhone ?? ''}
-              onChange={(e) => updateDesignSettings({ contactPhone: e.target.value })}
-              placeholder="+33 6 00 00 00 00"
-            />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Brand Identity */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Identité de marque</CardTitle>
+            <CardDescription>Footer, titre de l'onglet et header</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nom du site</Label>
+              <Input
+                value={designSettings.siteName ?? ''}
+                onChange={(e) => updateDesignSettings({ siteName: e.target.value })}
+                placeholder="Ex : LVTK6 CONCEPT"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Slogan</Label>
+              <Input
+                value={designSettings.siteTagline ?? ''}
+                onChange={(e) => updateDesignSettings({ siteTagline: e.target.value })}
+                placeholder="Ex : Équipement tactique urbain"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email de contact</Label>
+              <Input
+                type="email"
+                value={designSettings.contactEmail ?? ''}
+                onChange={(e) => updateDesignSettings({ contactEmail: e.target.value })}
+                placeholder="contact@monsite.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Téléphone (optionnel)</Label>
+              <Input
+                type="tel"
+                value={designSettings.contactPhone ?? ''}
+                onChange={(e) => updateDesignSettings({ contactPhone: e.target.value })}
+                placeholder="+33 6 00 00 00 00"
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Logo principal</CardTitle>
-          <CardDescription>Uploadez votre logo (image ou GIF animé) pour le header et la sidebar</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <FileDropZone
-            accept={['image']}
-            folder="branding"
-            currentFile={designSettings.hudLogo}
-            onUpload={(url) => updateDesignSettings({ hudLogo: url })}
-            label="Glissez votre logo ici (PNG, JPG, GIF, SVG)"
-          />
+        {/* Logos */}
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Logo principal</CardTitle>
+              <CardDescription>Header et sidebar</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FileDropZone
+                accept={['image']}
+                folder="branding"
+                currentFile={designSettings.hudLogo}
+                onUpload={(url) => updateDesignSettings({ hudLogo: url })}
+                label="PNG, JPG, GIF, SVG"
+              />
+              <div className="flex items-center justify-between">
+                <Label>Afficher le logo</Label>
+                <Switch
+                  checked={designSettings.showLogo}
+                  onCheckedChange={(v) => updateDesignSettings({ showLogo: v })}
+                />
+              </div>
+            </CardContent>
+          </Card>
 
-          <div className="flex items-center justify-between">
-            <Label>Afficher le logo</Label>
-            <Switch
-              checked={designSettings.showLogo}
-              onCheckedChange={(v) => updateDesignSettings({ showLogo: v })}
-            />
-          </div>
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Logo du footer</CardTitle>
+              <CardDescription>Optionnel — utilise le logo principal par défaut</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FileDropZone
+                accept={['image']}
+                folder="branding"
+                currentFile={(designSettings as any).footerLogo}
+                onUpload={(url) => updateDesignSettings({ footerLogo: url } as any)}
+                label="Logo du footer"
+              />
+            </CardContent>
+          </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Logo du footer</CardTitle>
-          <CardDescription>Logo affiché dans le pied de page (optionnel, utilise le logo principal par défaut)</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <FileDropZone
-            accept={['image']}
-            folder="branding"
-            currentFile={(designSettings as any).footerLogo}
-            onUpload={(url) => updateDesignSettings({ footerLogo: url } as any)}
-            label="Logo du footer (PNG, JPG, GIF, SVG)"
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Favicon</CardTitle>
-          <CardDescription>Icône du site affichée dans l'onglet du navigateur</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <FileDropZone
-            accept={['image']}
-            folder="branding"
-            currentFile={(designSettings as any).faviconUrl}
-            onUpload={(url) => updateDesignSettings({ faviconUrl: url } as any)}
-            label="Favicon (PNG, ICO, SVG)"
-          />
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Favicon</CardTitle>
+              <CardDescription>Icône de l'onglet navigateur</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FileDropZone
+                accept={['image']}
+                folder="branding"
+                currentFile={(designSettings as any).faviconUrl}
+                onUpload={(url) => updateDesignSettings({ faviconUrl: url } as any)}
+                label="PNG, ICO, SVG"
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
@@ -449,13 +461,8 @@ function SidebarTab() {
     updateDesignSettings({ stats: newStats });
   };
 
-  const addStat = () => {
-    updateDesignSettings({ stats: [...stats, { label: 'NOUVEAU', value: 50 }] });
-  };
-
-  const removeStat = (index: number) => {
-    updateDesignSettings({ stats: stats.filter((_, i) => i !== index) });
-  };
+  const addStat = () => updateDesignSettings({ stats: [...stats, { label: 'NOUVEAU', value: 50 }] });
+  const removeStat = (index: number) => updateDesignSettings({ stats: stats.filter((_, i) => i !== index) });
 
   const addButton = () => {
     const newBtn: HUDButton = {
@@ -487,277 +494,284 @@ function SidebarTab() {
 
   return (
     <div className="space-y-6">
-      {/* Sidebar Delay */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Réapparition automatique</CardTitle>
-          <CardDescription>Temps avant que la sidebar réapparaisse après fermeture. Désactivez pour qu'elle ne réapparaisse jamais.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label>Activée</Label>
-            <Switch
-              checked={((designSettings as any).sidebarReappearDelay ?? 10000) > 0}
-              onCheckedChange={(checked) => updateDesignSettings({ sidebarReappearDelay: checked ? 30000 : 0 } as any)}
-            />
-          </div>
-          {((designSettings as any).sidebarReappearDelay ?? 10000) > 0 && (
-            <div className="space-y-2">
-              <Label>Délai de réapparition</Label>
-              <div className="flex gap-2">
-                {[
-                  { label: '10s', value: 10000 },
-                  { label: '30s', value: 30000 },
-                  { label: '1 min', value: 60000 },
-                ].map(opt => (
-                  <Button
-                    key={opt.value}
-                    size="sm"
-                    variant={((designSettings as any).sidebarReappearDelay ?? 10000) === opt.value ? 'default' : 'outline'}
-                    onClick={() => updateDesignSettings({ sidebarReappearDelay: opt.value } as any)}
-                  >
-                    {opt.label}
-                  </Button>
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Actuellement : {((designSettings as any).sidebarReappearDelay ?? 10000) / 1000}s
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Sidebar Presets */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Presets Sidebar</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-            {[
-              { id: 'classic', name: 'Classique', desc: 'Image + carte produit + hotspots' },
-              { id: 'minimal', name: 'Minimal', desc: 'Image seule + bouton CTA' },
-              { id: 'catalog', name: 'Catalogue', desc: 'Grille de produits' },
-              { id: 'parallax', name: 'Parallaxe', desc: 'Image fixe + hotspots animés' },
-              { id: 'vitrine', name: 'Vitrine', desc: 'Image + overlay gradient + promo' },
-              { id: 'dark', name: 'Sombre', desc: 'Fond sombre + stats + CTA' },
-            ].map((p) => (
-              <button
-                key={p.id}
-                onClick={() => {
-                  if (p.id === 'classic') {
-                    updateDesignSettings({ showSidebarProductCard: true, showSidebarSizes: true, showSidebarStats: true, showSidebarGallery: true });
-                  } else if (p.id === 'minimal') {
-                    updateDesignSettings({ showSidebarProductCard: false, showSidebarSizes: false, showSidebarStats: false, showSidebarGallery: false });
-                  } else if (p.id === 'parallax') {
-                    updateDesignSettings({ showSidebarProductCard: true, showSidebarSizes: true, showSidebarStats: true, showSidebarGallery: true, sidebarImageOpacity: 1 });
-                  } else if (p.id === 'vitrine') {
-                    updateDesignSettings({ showSidebarProductCard: false, showSidebarSizes: false, showSidebarStats: false, showSidebarGallery: false, sidebarGradient: true, gradientIntensity: 80 });
-                  } else if (p.id === 'dark') {
-                    updateDesignSettings({ showSidebarProductCard: false, showSidebarSizes: false, showSidebarStats: true, showSidebarGallery: false, sidebarBg: '#0a0a0a', sidebarImageOpacity: 0.3 });
-                  }
-                  toast.success(`Preset Sidebar "${p.name}" appliqué`);
-                }}
-                className="border-2 border-border hover:border-primary/50 rounded-lg p-3 text-left transition-all"
-              >
-                <p className="text-sm font-bold">{p.name}</p>
-                <p className="text-xs text-muted-foreground">{p.desc}</p>
-              </button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Brand Identity */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Identité de marque</CardTitle>
-          <CardDescription>Textes affichés en haut de la sidebar</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Nom de marque</Label>
-            <Input
-              value={designSettings.sidebarBrandName || ''}
-              onChange={(e) => updateDesignSettings({ sidebarBrandName: e.target.value })}
-              placeholder="LVTK6"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Sous-titre</Label>
-            <Input
-              value={designSettings.sidebarBrandSubtitle || ''}
-              onChange={(e) => updateDesignSettings({ sidebarBrandSubtitle: e.target.value })}
-              placeholder="NEW EDITION"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Texte info (bas de sidebar)</Label>
-            <Input
-              value={designSettings.sidebarInfoText || ''}
-              onChange={(e) => updateDesignSettings({ sidebarInfoText: e.target.value })}
-              placeholder="Model 001"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Visibility Toggles */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Éléments visibles</CardTitle>
-          <CardDescription>Activez ou désactivez les composants de la sidebar</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label>Numéro de produit (badge SKU)</Label>
-            <Switch
-              checked={designSettings.showSidebarProductNumber !== false}
-              onCheckedChange={(v) => updateDesignSettings({ showSidebarProductNumber: v })}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <Label>Carte produit (info)</Label>
-            <Switch
-              checked={designSettings.showSidebarProductCard !== false}
-              onCheckedChange={(v) => updateDesignSettings({ showSidebarProductCard: v })}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <Label>Sélecteurs de taille</Label>
-            <Switch
-              checked={designSettings.showSidebarSizes !== false}
-              onCheckedChange={(v) => updateDesignSettings({ showSidebarSizes: v })}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <Label>Galerie miniature</Label>
-            <Switch
-              checked={designSettings.showSidebarGallery !== false}
-              onCheckedChange={(v) => updateDesignSettings({ showSidebarGallery: v })}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <Label>Barres de statistiques</Label>
-            <Switch
-              checked={designSettings.showSidebarStats !== false}
-              onCheckedChange={(v) => updateDesignSettings({ showSidebarStats: v })}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Mannequin Image */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Image du mannequin</CardTitle>
-          <CardDescription>Photo de fond du panneau latéral gauche</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div>
-            <Label className="text-xs font-medium mb-2 block">Image desktop</Label>
-            <FileDropZone
-              accept={['image']}
-              folder="sidebar"
-              currentFile={designSettings.sidebarImage}
-              onUpload={(url) => updateDesignSettings({ sidebarImage: url })}
-              label="Glissez l'image du mannequin (desktop)"
-            />
-          </div>
-          <div>
-            <Label className="text-xs font-medium mb-2 block">Média mobile (optionnel)</Label>
-            <FileDropZone
-              accept={['image', 'video']}
-              folder="sidebar/mobile"
-              currentFile={(designSettings as any).mobileSidebarImage}
-              onUpload={(url) => {
-                const isVideo = /\.(mp4|webm|mov|ogg)$/i.test(url);
-                updateDesignSettings({ mobileSidebarImage: url, mobileSidebarMediaType: isVideo ? 'video' : 'image' } as any);
-              }}
-              label="Image ou vidéo mobile"
-            />
-            <p className="text-xs text-muted-foreground mt-1">Si vide, l'image desktop sera utilisée. Supporte images et vidéos.</p>
-          </div>
-          <div className="space-y-2">
-            <Label>Opacité de l'image ({Math.round((designSettings.sidebarImageOpacity ?? 1) * 100)}%)</Label>
-            <Slider
-              value={[(designSettings.sidebarImageOpacity ?? 1) * 100]}
-              min={0}
-              max={100}
-              step={5}
-              onValueChange={([v]) => updateDesignSettings({ sidebarImageOpacity: v / 100 })}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Product Card Text */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Carte produit (texte personnalisé)</CardTitle>
-          <CardDescription>Laissez vide pour utiliser les infos du produit actif</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Titre personnalisé</Label>
-            <Input
-              value={designSettings.sidebarProductTitle || ''}
-              onChange={(e) => updateDesignSettings({ sidebarProductTitle: e.target.value })}
-              placeholder="(nom du produit actif)"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Description personnalisée</Label>
-            <Input
-              value={designSettings.sidebarProductDescription || ''}
-              onChange={(e) => updateDesignSettings({ sidebarProductDescription: e.target.value })}
-              placeholder="(sous-titre du produit actif)"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Size Selectors */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Tailles affichées</CardTitle>
-          <CardDescription>Sélectionnez les tailles à afficher sur la sidebar</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-3">
-            {ALL_SIZES.map((size) => {
-              const isActive = currentSizes.includes(size);
-              return (
+      {/* Row 1: Presets + Réapparition */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Presets Sidebar</CardTitle>
+            <CardDescription>Appliquez un style complet en un clic</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { id: 'classic',  name: 'Classique', desc: 'Image + carte + hotspots' },
+                { id: 'minimal',  name: 'Minimal',   desc: 'Image seule + CTA' },
+                { id: 'parallax', name: 'Parallaxe', desc: 'Image fixe + hotspots animés' },
+                { id: 'vitrine',  name: 'Vitrine',   desc: 'Gradient + promo' },
+                { id: 'dark',     name: 'Sombre',    desc: 'Fond sombre + stats' },
+                { id: 'catalog',  name: 'Catalogue', desc: 'Grille de produits' },
+              ].map((p) => (
                 <button
-                  key={size}
+                  key={p.id}
                   onClick={() => {
-                    const newSizes = isActive
-                      ? currentSizes.filter(s => s !== size)
-                      : [...currentSizes, size].sort((a, b) => ALL_SIZES.indexOf(a) - ALL_SIZES.indexOf(b));
-                    updateDesignSettings({ sidebarSizes: newSizes });
+                    if (p.id === 'classic')   updateDesignSettings({ showSidebarProductCard: true,  showSidebarSizes: true,  showSidebarStats: true,  showSidebarGallery: true });
+                    if (p.id === 'minimal')   updateDesignSettings({ showSidebarProductCard: false, showSidebarSizes: false, showSidebarStats: false, showSidebarGallery: false });
+                    if (p.id === 'parallax')  updateDesignSettings({ showSidebarProductCard: true,  showSidebarSizes: true,  showSidebarStats: true,  showSidebarGallery: true,  sidebarImageOpacity: 1 });
+                    if (p.id === 'vitrine')   updateDesignSettings({ showSidebarProductCard: false, showSidebarSizes: false, showSidebarStats: false, showSidebarGallery: false, sidebarGradient: true, gradientIntensity: 80 });
+                    if (p.id === 'dark')      updateDesignSettings({ showSidebarProductCard: false, showSidebarSizes: false, showSidebarStats: true,  showSidebarGallery: false, sidebarBg: '#0a0a0a', sidebarImageOpacity: 0.3 });
+                    toast.success(`Preset Sidebar "${p.name}" appliqué`);
                   }}
-                  className={`px-4 py-2 border text-sm font-bold uppercase transition-colors ${
-                    isActive 
-                      ? 'bg-foreground text-background border-foreground' 
-                      : 'bg-background text-muted-foreground border-border hover:border-foreground'
-                  }`}
+                  className="border border-border hover:border-primary/60 rounded-lg p-3 text-left transition-all hover:bg-muted/40"
                 >
-                  {size}
+                  <p className="text-sm font-semibold">{p.name}</p>
+                  <p className="text-xs text-muted-foreground">{p.desc}</p>
                 </button>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Stat Bars */}
+        <div className="space-y-4">
+          {/* Réapparition */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Réapparition automatique</CardTitle>
+              <CardDescription>Délai avant réouverture après fermeture</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Activée</Label>
+                <Switch
+                  checked={((designSettings as any).sidebarReappearDelay ?? 10000) > 0}
+                  onCheckedChange={(checked) => updateDesignSettings({ sidebarReappearDelay: checked ? 30000 : 0 } as any)}
+                />
+              </div>
+              {((designSettings as any).sidebarReappearDelay ?? 10000) > 0 && (
+                <div className="flex gap-2">
+                  {[{ label: '10s', value: 10000 }, { label: '30s', value: 30000 }, { label: '1 min', value: 60000 }].map(opt => (
+                    <Button
+                      key={opt.value}
+                      size="sm"
+                      variant={((designSettings as any).sidebarReappearDelay ?? 10000) === opt.value ? 'default' : 'outline'}
+                      onClick={() => updateDesignSettings({ sidebarReappearDelay: opt.value } as any)}
+                      className="flex-1"
+                    >
+                      {opt.label}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Apparence */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Apparence</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Couleur de fond</Label>
+                <div className="flex gap-2">
+                  <input
+                    type="color"
+                    value={designSettings.sidebarBg}
+                    onChange={(e) => updateDesignSettings({ sidebarBg: e.target.value })}
+                    className="h-9 w-12 cursor-pointer rounded border border-border"
+                  />
+                  <Input
+                    value={designSettings.sidebarBg}
+                    onChange={(e) => updateDesignSettings({ sidebarBg: e.target.value })}
+                    className="flex-1 h-9"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <Label>Dégradé</Label>
+                <Switch
+                  checked={designSettings.sidebarGradient}
+                  onCheckedChange={(v) => updateDesignSettings({ sidebarGradient: v })}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Row 2: Images mannequin + Identité de marque */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Image du mannequin</CardTitle>
+            <CardDescription>Photo de fond du panneau latéral</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label className="text-xs font-medium mb-2 block">Desktop</Label>
+              <FileDropZone
+                accept={['image']}
+                folder="sidebar"
+                currentFile={designSettings.sidebarImage}
+                onUpload={(url) => updateDesignSettings({ sidebarImage: url })}
+                label="Image desktop"
+              />
+            </div>
+            <div>
+              <Label className="text-xs font-medium mb-2 block">Mobile (optionnel)</Label>
+              <FileDropZone
+                accept={['image', 'video']}
+                folder="sidebar/mobile"
+                currentFile={(designSettings as any).mobileSidebarImage}
+                onUpload={(url) => {
+                  const isVideo = /\.(mp4|webm|mov|ogg)$/i.test(url);
+                  updateDesignSettings({ mobileSidebarImage: url, mobileSidebarMediaType: isVideo ? 'video' : 'image' } as any);
+                }}
+                label="Image ou vidéo mobile"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Si vide, l'image desktop est utilisée.</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Opacité ({Math.round((designSettings.sidebarImageOpacity ?? 1) * 100)}%)</Label>
+              <Slider
+                value={[(designSettings.sidebarImageOpacity ?? 1) * 100]}
+                min={0} max={100} step={5}
+                onValueChange={([v]) => updateDesignSettings({ sidebarImageOpacity: v / 100 })}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="space-y-4">
+          {/* Identité de marque */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Identité de marque</CardTitle>
+              <CardDescription>Textes affichés en haut de la sidebar</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Nom de marque</Label>
+                <Input
+                  value={designSettings.sidebarBrandName || ''}
+                  onChange={(e) => updateDesignSettings({ sidebarBrandName: e.target.value })}
+                  placeholder="LVTK6"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Sous-titre</Label>
+                <Input
+                  value={designSettings.sidebarBrandSubtitle || ''}
+                  onChange={(e) => updateDesignSettings({ sidebarBrandSubtitle: e.target.value })}
+                  placeholder="NEW EDITION"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Texte info (bas)</Label>
+                <Input
+                  value={designSettings.sidebarInfoText || ''}
+                  onChange={(e) => updateDesignSettings({ sidebarInfoText: e.target.value })}
+                  placeholder="Model 001"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Carte produit texte */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Carte produit</CardTitle>
+              <CardDescription>Laissez vide pour utiliser le produit actif</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Titre personnalisé</Label>
+                <Input
+                  value={designSettings.sidebarProductTitle || ''}
+                  onChange={(e) => updateDesignSettings({ sidebarProductTitle: e.target.value })}
+                  placeholder="(nom du produit actif)"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Description</Label>
+                <Input
+                  value={designSettings.sidebarProductDescription || ''}
+                  onChange={(e) => updateDesignSettings({ sidebarProductDescription: e.target.value })}
+                  placeholder="(sous-titre du produit actif)"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Row 3: Éléments visibles + Tailles */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Éléments visibles</CardTitle>
+            <CardDescription>Activez ou désactivez les composants</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {[
+              { key: 'showSidebarProductNumber', label: 'Numéro de produit (SKU)' },
+              { key: 'showSidebarProductCard',   label: 'Carte produit' },
+              { key: 'showSidebarSizes',         label: 'Sélecteurs de taille' },
+              { key: 'showSidebarGallery',       label: 'Galerie miniature' },
+              { key: 'showSidebarStats',         label: 'Barres de statistiques' },
+            ].map(({ key, label }) => (
+              <div key={key} className="flex items-center justify-between py-1">
+                <Label className="text-sm">{label}</Label>
+                <Switch
+                  checked={(designSettings as any)[key] !== false}
+                  onCheckedChange={(v) => updateDesignSettings({ [key]: v } as any)}
+                />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Tailles affichées</CardTitle>
+            <CardDescription>Cochez les tailles à proposer</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {ALL_SIZES.map((size) => {
+                const isActive = currentSizes.includes(size);
+                return (
+                  <button
+                    key={size}
+                    onClick={() => {
+                      const newSizes = isActive
+                        ? currentSizes.filter(s => s !== size)
+                        : [...currentSizes, size].sort((a, b) => ALL_SIZES.indexOf(a) - ALL_SIZES.indexOf(b));
+                      updateDesignSettings({ sidebarSizes: newSizes });
+                    }}
+                    className={cn(
+                      'px-4 py-2 border text-sm font-bold uppercase transition-colors rounded',
+                      isActive
+                        ? 'bg-foreground text-background border-foreground'
+                        : 'bg-background text-muted-foreground border-border hover:border-foreground'
+                    )}
+                  >
+                    {size}
+                  </button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Row 4: Barres de stats + Couleurs */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-base">Barres de statistiques</CardTitle>
-              <CardDescription>Configurez les indicateurs affichés sur la sidebar</CardDescription>
+              <CardDescription>Indicateurs affichés sur la sidebar</CardDescription>
             </div>
             <Button onClick={addStat} size="sm" variant="outline">
               <Plus className="h-4 w-4 mr-2" /> Ajouter
@@ -770,17 +784,11 @@ function SidebarTab() {
               <Input
                 value={stat.label}
                 onChange={(e) => updateStat(index, { label: e.target.value })}
-                className="w-40"
+                className="w-36"
                 placeholder="Label"
               />
               <div className="flex-1 space-y-1">
-                <Slider
-                  value={[stat.value]}
-                  min={0}
-                  max={100}
-                  step={1}
-                  onValueChange={([v]) => updateStat(index, { value: v })}
-                />
+                <Slider value={[stat.value]} min={0} max={100} step={1} onValueChange={([v]) => updateStat(index, { value: v })} />
               </div>
               <span className="text-sm font-mono text-muted-foreground w-10 text-right">{stat.value}%</span>
               <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeStat(index)}>
@@ -788,47 +796,40 @@ function SidebarTab() {
               </Button>
             </div>
           ))}
-
           {stats.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              Aucune barre configurée
-            </p>
+            <p className="text-sm text-muted-foreground text-center py-4">Aucune barre configurée</p>
           )}
-
-          {/* Stat Bar Colors */}
-          <div className="border-t border-border pt-4 mt-4">
-            <Label className="text-xs font-semibold uppercase tracking-wider mb-3 block">Couleurs des barres</Label>
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2">
-                <Label className="text-xs">Remplie</Label>
-                <input
-                  type="color"
-                  value={designSettings.statBarFilledColor || '#000000'}
-                  onChange={(e) => updateDesignSettings({ statBarFilledColor: e.target.value })}
-                  className="h-8 w-10 cursor-pointer rounded border border-border"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Label className="text-xs">Vide</Label>
-                <input
-                  type="color"
-                  value={designSettings.statBarEmptyColor || '#e5e5e5'}
-                  onChange={(e) => updateDesignSettings({ statBarEmptyColor: e.target.value })}
-                  className="h-8 w-10 cursor-pointer rounded border border-border"
-                />
-              </div>
+          <div className="border-t border-border pt-4 flex items-center gap-6">
+            <Label className="text-xs font-semibold uppercase tracking-wider">Couleurs</Label>
+            <div className="flex items-center gap-2">
+              <Label className="text-xs">Remplie</Label>
+              <input
+                type="color"
+                value={designSettings.statBarFilledColor || '#000000'}
+                onChange={(e) => updateDesignSettings({ statBarFilledColor: e.target.value })}
+                className="h-8 w-10 cursor-pointer rounded border border-border"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Label className="text-xs">Vide</Label>
+              <input
+                type="color"
+                value={designSettings.statBarEmptyColor || '#e5e5e5'}
+                onChange={(e) => updateDesignSettings({ statBarEmptyColor: e.target.value })}
+                className="h-8 w-10 cursor-pointer rounded border border-border"
+              />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* HUD Buttons */}
+      {/* Row 5: Boutons de la sidebar */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-base">Boutons de la sidebar</CardTitle>
-              <CardDescription>Boutons d'action affichés sur la sidebar</CardDescription>
+              <CardDescription>Boutons d'action CTA</CardDescription>
             </div>
             <Button onClick={addButton} size="sm" variant="outline">
               <Plus className="h-4 w-4 mr-2" /> Ajouter
@@ -839,51 +840,24 @@ function SidebarTab() {
           {hudButtons.map((btn, index) => (
             <div key={btn.id} className="p-3 border border-border rounded-lg space-y-3">
               <div className="flex items-center gap-2">
-                <Input
-                  value={btn.label}
-                  onChange={(e) => updateButton(index, { label: e.target.value })}
-                  placeholder="Label"
-                  className="flex-1"
-                />
-                <Input
-                  value={btn.url}
-                  onChange={(e) => updateButton(index, { url: e.target.value })}
-                  placeholder="URL"
-                  className="flex-1"
-                />
+                <Input value={btn.label} onChange={(e) => updateButton(index, { label: e.target.value })} placeholder="Label" className="flex-1" />
+                <Input value={btn.url} onChange={(e) => updateButton(index, { url: e.target.value })} placeholder="URL" className="flex-1" />
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeButton(index)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex items-center gap-2">
                   <Label className="text-xs">Fond</Label>
-                  <input
-                    type="color"
-                    value={btn.style.bg}
-                    onChange={(e) => updateButtonStyle(index, { bg: e.target.value })}
-                    className="h-8 w-10 cursor-pointer rounded border border-border"
-                  />
+                  <input type="color" value={btn.style.bg} onChange={(e) => updateButtonStyle(index, { bg: e.target.value })} className="h-8 w-10 cursor-pointer rounded border border-border" />
                 </div>
                 <div className="flex items-center gap-2">
                   <Label className="text-xs">Texte</Label>
-                  <input
-                    type="color"
-                    value={btn.style.text}
-                    onChange={(e) => updateButtonStyle(index, { text: e.target.value })}
-                    className="h-8 w-10 cursor-pointer rounded border border-border"
-                  />
+                  <input type="color" value={btn.style.text} onChange={(e) => updateButtonStyle(index, { text: e.target.value })} className="h-8 w-10 cursor-pointer rounded border border-border" />
                 </div>
                 <div className="flex items-center gap-2">
-                  <Label className="text-xs">Taille</Label>
-                  <Input
-                    type="number"
-                    value={btn.style.fontSize || 10}
-                    onChange={(e) => updateButtonStyle(index, { fontSize: Number(e.target.value) })}
-                    className="w-16 h-8"
-                    min={8}
-                    max={24}
-                  />
+                  <Label className="text-xs">Taille police</Label>
+                  <Input type="number" value={btn.style.fontSize || 10} onChange={(e) => updateButtonStyle(index, { fontSize: Number(e.target.value) })} className="w-16 h-8" min={8} max={24} />
                 </div>
               </div>
             </div>
@@ -893,48 +867,16 @@ function SidebarTab() {
           )}
         </CardContent>
       </Card>
-
-      {/* Sidebar Appearance */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Apparence</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Couleur de fond</Label>
-            <div className="flex gap-2">
-              <input
-                type="color"
-                value={designSettings.sidebarBg}
-                onChange={(e) => updateDesignSettings({ sidebarBg: e.target.value })}
-                className="h-10 w-14 cursor-pointer rounded border border-border"
-              />
-              <Input
-                value={designSettings.sidebarBg}
-                onChange={(e) => updateDesignSettings({ sidebarBg: e.target.value })}
-                className="flex-1"
-              />
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <Label>Dégradé</Label>
-            <Switch
-              checked={designSettings.sidebarGradient}
-              onCheckedChange={(v) => updateDesignSettings({ sidebarGradient: v })}
-            />
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
 
 const CATEGORY_PRESETS = [
-  { id: 'compact', name: 'Grille compacte', description: '4 colonnes, ratio 4:3, tout sur une ligne', columns: 4, aspectRatio: '4/3', gap: 'sm' },
-  { id: 'square', name: 'Grille carrée', description: '4 colonnes, ratio 1:1', columns: 4, aspectRatio: '1/1', gap: 'md' },
-  { id: 'portrait', name: 'Grille portrait', description: '4 colonnes, ratio 3:4 (classique)', columns: 4, aspectRatio: '3/4', gap: 'md' },
-  { id: 'banner', name: 'Bande horizontale', description: '4 colonnes, ratio 16:9, style bannière', columns: 4, aspectRatio: '16/9', gap: 'sm' },
-  { id: 'wide', name: '2 colonnes larges', description: '2 colonnes, ratio 16:9', columns: 2, aspectRatio: '16/9', gap: 'lg' },
+  { id: 'compact',  name: 'Grille compacte',   description: '4 colonnes, ratio 4:3',     columns: 4, aspectRatio: '4/3',  gap: 'sm' },
+  { id: 'square',   name: 'Grille carrée',      description: '4 colonnes, ratio 1:1',     columns: 4, aspectRatio: '1/1',  gap: 'md' },
+  { id: 'portrait', name: 'Grille portrait',    description: '4 colonnes, ratio 3:4',     columns: 4, aspectRatio: '3/4',  gap: 'md' },
+  { id: 'banner',   name: 'Bande horizontale',  description: '4 colonnes, ratio 16:9',    columns: 4, aspectRatio: '16/9', gap: 'sm' },
+  { id: 'wide',     name: '2 colonnes larges',  description: '2 colonnes, ratio 16:9',    columns: 2, aspectRatio: '16/9', gap: 'lg' },
 ];
 
 // ─── Categories Tab ───
@@ -949,9 +891,7 @@ function CategoriesTab() {
   };
 
   const addCategory = () => {
-    updateDesignSettings({
-      categories: [...categories, { id: generateId(), title: 'Nouvelle catégorie', image: '' }],
-    });
+    updateDesignSettings({ categories: [...categories, { id: generateId(), title: 'Nouvelle catégorie', image: '' }] });
     toast.success('Catégorie ajoutée');
   };
 
@@ -962,21 +902,10 @@ function CategoriesTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">Catégories</h3>
-          <p className="text-sm text-muted-foreground">Vignettes affichées sur la page d'accueil</p>
-        </div>
-        <Button onClick={addCategory} size="sm">
-          <Plus className="h-4 w-4 mr-2" /> Ajouter
-        </Button>
-      </div>
-
-      {/* Category Layout Presets */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Disposition</CardTitle>
-          <CardDescription>Choisissez un preset de mise en page pour la grille de catégories</CardDescription>
+          <CardTitle className="text-base">Disposition de la grille</CardTitle>
+          <CardDescription>Choisissez un preset de mise en page</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1005,30 +934,42 @@ function CategoriesTab() {
         </CardContent>
       </Card>
 
-      {categories.map((cat, index) => (
-        <Card key={cat.id}>
-          <CardContent className="pt-6 space-y-4">
-            <div className="flex items-center gap-3">
-              <Input
-                value={cat.title}
-                onChange={(e) => updateCategory(index, { title: e.target.value })}
-                placeholder="Titre"
-                className="flex-1"
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Catégories</h3>
+          <p className="text-sm text-muted-foreground">Vignettes affichées sur la page d'accueil</p>
+        </div>
+        <Button onClick={addCategory} size="sm">
+          <Plus className="h-4 w-4 mr-2" /> Ajouter
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {categories.map((cat, index) => (
+          <Card key={cat.id}>
+            <CardContent className="pt-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Input
+                  value={cat.title}
+                  onChange={(e) => updateCategory(index, { title: e.target.value })}
+                  placeholder="Titre"
+                  className="flex-1"
+                />
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeCategory(index)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+              <FileDropZone
+                accept={['image']}
+                folder="categories"
+                currentFile={cat.image}
+                onUpload={(url) => updateCategory(index, { image: url })}
+                label="Image de la catégorie"
               />
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeCategory(index)}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-            <FileDropZone
-              accept={['image']}
-              folder="categories"
-              currentFile={cat.image}
-              onUpload={(url) => updateCategory(index, { image: url })}
-              label="Image de la catégorie"
-            />
-          </CardContent>
-        </Card>
-      ))}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1067,7 +1008,6 @@ function HotspotsTab() {
     { value: 'ring', label: '○ Anneau' },
   ];
 
-  // Draggable preview handler
   const handlePreviewMouseDown = (index: number) => (e: React.MouseEvent) => {
     e.preventDefault();
     setDragIndex(index);
@@ -1081,82 +1021,78 @@ function HotspotsTab() {
     updateHotspot(dragIndex, { x: `${Math.round(x)}%`, y: `${Math.round(y)}%` });
   };
 
-  const handlePreviewMouseUp = () => {
-    setDragIndex(null);
-  };
-
+  const handlePreviewMouseUp = () => setDragIndex(null);
   const sidebarImage = designSettings.sidebarImage;
 
   return (
     <div className="space-y-6">
-      {/* Hotspot Presets */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Presets Hotspots</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { id: 'interactive', name: 'Mode interactif', desc: 'Points cliquables avec tooltip' },
-              { id: 'showcase', name: 'Mode vitrine', desc: 'Labels statiques visibles' },
-              { id: 'disabled', name: 'Désactivé', desc: 'Masquer tous les hotspots' },
-            ].map((p) => (
-              <button
-                key={p.id}
-                onClick={() => {
-                  if (p.id === 'disabled') {
-                    const disabledHotspots = hotspots.map(h => ({ ...h, enabled: false }));
-                    updateDesignSettings({ mannequinHotspots: disabledHotspots });
-                  } else if (p.id === 'interactive') {
-                    const enabledHotspots = hotspots.map(h => ({ ...h, enabled: true }));
-                    updateDesignSettings({ mannequinHotspots: enabledHotspots });
-                  }
-                  toast.success(`Preset "${p.name}" appliqué`);
-                }}
-                className="border-2 border-border hover:border-primary/50 rounded-lg p-3 text-left transition-all"
-              >
-                <p className="text-sm font-bold">{p.name}</p>
-                <p className="text-xs text-muted-foreground">{p.desc}</p>
-              </button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Presets */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Presets Hotspots</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 gap-2">
+              {[
+                { id: 'interactive', name: 'Mode interactif', desc: 'Points cliquables avec tooltip' },
+                { id: 'showcase',    name: 'Mode vitrine',    desc: 'Labels statiques visibles' },
+                { id: 'disabled',    name: 'Désactivé',       desc: 'Masquer tous les hotspots' },
+              ].map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => {
+                    if (p.id === 'disabled')     updateDesignSettings({ mannequinHotspots: hotspots.map(h => ({ ...h, enabled: false })) });
+                    else if (p.id === 'interactive') updateDesignSettings({ mannequinHotspots: hotspots.map(h => ({ ...h, enabled: true })) });
+                    toast.success(`Preset "${p.name}" appliqué`);
+                  }}
+                  className="border border-border hover:border-primary/60 rounded-lg p-3 text-left transition-all hover:bg-muted/40"
+                >
+                  <p className="text-sm font-semibold">{p.name}</p>
+                  <p className="text-xs text-muted-foreground">{p.desc}</p>
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Visual Preview */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Aperçu visuel</CardTitle>
-          <CardDescription>Glissez les points pour les repositionner</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div
-            className="relative w-full border border-border rounded-lg overflow-hidden select-none"
-            style={{ aspectRatio: '3/4', background: sidebarImage ? `url(${sidebarImage}) center/cover` : 'hsl(var(--muted))' }}
-            onMouseMove={handlePreviewMouseMove}
-            onMouseUp={handlePreviewMouseUp}
-            onMouseLeave={handlePreviewMouseUp}
-          >
-            {!sidebarImage && (
-              <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-sm">
-                Aucune image sidebar configurée
-              </div>
-            )}
-            {hotspots.map((hs, index) => (
-              <div
-                key={hs.id}
-                className={`absolute w-5 h-5 rounded-full flex items-center justify-center cursor-grab active:cursor-grabbing transition-shadow ${
-                  hs.enabled !== false ? 'bg-primary text-primary-foreground shadow-lg' : 'bg-muted-foreground/50 text-background'
-                } ${dragIndex === index ? 'ring-2 ring-primary scale-125' : ''}`}
-                style={{ left: hs.x, top: hs.y, transform: 'translate(-50%, -50%)', zIndex: dragIndex === index ? 50 : 10 }}
-                onMouseDown={handlePreviewMouseDown(index)}
-              >
-                <span className="text-[8px] font-bold">{index + 1}</span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+        {/* Visual Preview */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Aperçu visuel</CardTitle>
+            <CardDescription>Glissez les points pour les repositionner</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div
+              className="relative w-full border border-border rounded-lg overflow-hidden select-none"
+              style={{ aspectRatio: '3/4', background: sidebarImage ? `url(${sidebarImage}) center/cover` : 'hsl(var(--muted))' }}
+              onMouseMove={handlePreviewMouseMove}
+              onMouseUp={handlePreviewMouseUp}
+              onMouseLeave={handlePreviewMouseUp}
+            >
+              {!sidebarImage && (
+                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-sm">
+                  Aucune image sidebar configurée
+                </div>
+              )}
+              {hotspots.map((hs, index) => (
+                <div
+                  key={hs.id}
+                  className={cn(
+                    "absolute w-5 h-5 rounded-full flex items-center justify-center cursor-grab active:cursor-grabbing transition-shadow",
+                    hs.enabled !== false ? 'bg-primary text-primary-foreground shadow-lg' : 'bg-muted-foreground/50 text-background',
+                    dragIndex === index && 'ring-2 ring-primary scale-125'
+                  )}
+                  style={{ left: hs.x, top: hs.y, transform: 'translate(-50%, -50%)', zIndex: dragIndex === index ? 50 : 10 }}
+                  onMouseDown={handlePreviewMouseDown(index)}
+                >
+                  <span className="text-[8px] font-bold">{index + 1}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="flex items-center justify-between">
         <div>
@@ -1171,12 +1107,9 @@ function HotspotsTab() {
       {hotspots.map((hs, index) => (
         <Card key={hs.id} className={hs.enabled === false ? 'opacity-50' : ''}>
           <CardContent className="pt-6 space-y-4">
-            {/* Header row: label + toggle + delete */}
             <div className="flex items-center gap-2">
               <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
+                variant="ghost" size="icon" className="h-8 w-8"
                 onClick={() => updateHotspot(index, { enabled: hs.enabled === false ? true : false })}
                 title={hs.enabled !== false ? 'Désactiver' : 'Activer'}
               >
@@ -1187,10 +1120,7 @@ function HotspotsTab() {
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
-
             <Input value={hs.details} onChange={(e) => updateHotspot(index, { details: e.target.value })} placeholder="Détails" />
-
-            {/* Position + Icon + Marker */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Position X</Label>
@@ -1202,68 +1132,32 @@ function HotspotsTab() {
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Icône</Label>
-                <select
-                  value={hs.icon}
-                  onChange={(e) => updateHotspot(index, { icon: e.target.value })}
-                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-                >
+                <select value={hs.icon} onChange={(e) => updateHotspot(index, { icon: e.target.value })} className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm">
                   {ICONS.map(ic => <option key={ic} value={ic}>{ic}</option>)}
                 </select>
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Forme du marqueur</Label>
-                <select
-                  value={hs.markerType || 'dot'}
-                  onChange={(e) => updateHotspot(index, { markerType: e.target.value as MarkerType })}
-                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-                >
+                <select value={hs.markerType || 'dot'} onChange={(e) => updateHotspot(index, { markerType: e.target.value as MarkerType })} className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm">
                   {MARKER_TYPES.map(mt => <option key={mt.value} value={mt.value}>{mt.label}</option>)}
                 </select>
               </div>
             </div>
-
-            {/* Media upload */}
             <div>
-              <Label className="text-xs font-medium mb-2 block">Média (image/vidéo du popup)</Label>
-              <FileDropZone
-                accept={['image', 'video']}
-                folder="hotspots"
-                currentFile={hs.media}
-                onUpload={(url) => updateHotspot(index, { media: url })}
-                label="Image ou vidéo du hotspot"
-              />
+              <Label className="text-xs font-medium mb-2 block">Média du popup</Label>
+              <FileDropZone accept={['image', 'video']} folder="hotspots" currentFile={hs.media} onUpload={(url) => updateHotspot(index, { media: url })} label="Image ou vidéo du hotspot" />
             </div>
-
-            {/* Content Mode */}
             <div className="space-y-3 border-t border-border pt-4">
               <Label className="text-xs font-semibold uppercase tracking-wider">Contenu du popup</Label>
               <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant={hs.contentMode !== 'product' ? 'default' : 'outline'}
-                  onClick={() => updateHotspot(index, { contentMode: 'manual' })}
-                >
-                  Manuel
-                </Button>
-                <Button
-                  size="sm"
-                  variant={hs.contentMode === 'product' ? 'default' : 'outline'}
-                  onClick={() => updateHotspot(index, { contentMode: 'product' })}
-                >
-                  Produit existant
-                </Button>
+                <Button size="sm" variant={hs.contentMode !== 'product' ? 'default' : 'outline'} onClick={() => updateHotspot(index, { contentMode: 'manual' })}>Manuel</Button>
+                <Button size="sm" variant={hs.contentMode === 'product' ? 'default' : 'outline'} onClick={() => updateHotspot(index, { contentMode: 'product' })}>Produit existant</Button>
               </div>
-
               {hs.contentMode === 'product' ? (
                 <div className="space-y-2">
                   <Label className="text-xs">Sélectionner un produit</Label>
-                  <Select
-                    value={hs.productId || ''}
-                    onValueChange={(v) => updateHotspot(index, { productId: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choisir un produit..." />
-                    </SelectTrigger>
+                  <Select value={hs.productId || ''} onValueChange={(v) => updateHotspot(index, { productId: v })}>
+                    <SelectTrigger><SelectValue placeholder="Choisir un produit..." /></SelectTrigger>
                     <SelectContent>
                       {products.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
@@ -1275,47 +1169,24 @@ function HotspotsTab() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {hs.productId && products.find(p => p.id === hs.productId) && (
-                    <p className="text-xs text-muted-foreground">
-                      ✓ {products.find(p => p.id === hs.productId)?.name}
-                    </p>
-                  )}
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs">Nom du produit</Label>
-                    <Input
-                      value={hs.productName || ''}
-                      onChange={(e) => updateHotspot(index, { productName: e.target.value })}
-                      placeholder="Nom"
-                    />
+                    <Input value={hs.productName || ''} onChange={(e) => updateHotspot(index, { productName: e.target.value })} placeholder="Nom" />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Prix (€)</Label>
-                    <Input
-                      type="number"
-                      value={hs.productPrice || ''}
-                      onChange={(e) => updateHotspot(index, { productPrice: Number(e.target.value) || undefined })}
-                      placeholder="0"
-                    />
+                    <Input type="number" value={hs.productPrice || ''} onChange={(e) => updateHotspot(index, { productPrice: Number(e.target.value) || undefined })} placeholder="0" />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Prix promo (€)</Label>
-                    <Input
-                      type="number"
-                      value={hs.productSalePrice || ''}
-                      onChange={(e) => updateHotspot(index, { productSalePrice: Number(e.target.value) || undefined })}
-                      placeholder="0"
-                    />
+                    <Input type="number" value={hs.productSalePrice || ''} onChange={(e) => updateHotspot(index, { productSalePrice: Number(e.target.value) || undefined })} placeholder="0" />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Tailles (séparées par ,)</Label>
-                    <Input
-                      value={hs.productSizes?.join(', ') || ''}
-                      onChange={(e) => updateHotspot(index, { productSizes: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
-                      placeholder="S, M, L"
-                    />
+                    <Input value={hs.productSizes?.join(', ') || ''} onChange={(e) => updateHotspot(index, { productSizes: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} placeholder="S, M, L" />
                   </div>
                 </div>
               )}
@@ -1323,7 +1194,6 @@ function HotspotsTab() {
           </CardContent>
         </Card>
       ))}
-
       {hotspots.length === 0 && (
         <Card className="border-dashed">
           <CardContent className="py-8 text-center text-muted-foreground">Aucun hotspot configuré</CardContent>
@@ -1345,7 +1215,7 @@ function CatalogueTab() {
           <CardTitle className="text-base">Affichage des variantes couleur</CardTitle>
           <CardDescription>Choisissez comment les couleurs sont affichées sur la fiche produit</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent>
           <div className="flex items-center justify-between">
             <div>
               <Label className="text-sm font-medium">Mode d'affichage</Label>
@@ -1354,12 +1224,9 @@ function CatalogueTab() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <span className={`text-xs font-medium ${mode === 'swatches' ? 'text-foreground' : 'text-muted-foreground'}`}>Pastilles</span>
-              <Switch
-                checked={mode === 'images'}
-                onCheckedChange={(v) => updateDesignSettings({ colorDisplayMode: v ? 'images' : 'swatches' })}
-              />
-              <span className={`text-xs font-medium ${mode === 'images' ? 'text-foreground' : 'text-muted-foreground'}`}>Images</span>
+              <span className={cn("text-xs font-medium", mode === 'swatches' ? 'text-foreground' : 'text-muted-foreground')}>Pastilles</span>
+              <Switch checked={mode === 'images'} onCheckedChange={(v) => updateDesignSettings({ colorDisplayMode: v ? 'images' : 'swatches' })} />
+              <span className={cn("text-xs font-medium", mode === 'images' ? 'text-foreground' : 'text-muted-foreground')}>Images</span>
             </div>
           </div>
         </CardContent>
@@ -1368,7 +1235,7 @@ function CatalogueTab() {
   );
 }
 
-// ─── Disposition (Global) Tab ───
+// ─── Disposition Tab ───
 function DispositionTab() {
   const { updateDesignSettings } = useApp();
 
@@ -1377,45 +1244,25 @@ function DispositionTab() {
       id: 'luxe-industriel',
       name: 'Luxe Industriel',
       desc: 'Hero 100vh, sidebar visible, 4 colonnes portrait, espacement compact',
-      settings: {
-        sliderHeight: '100vh',
-        headerPreset: 'classic',
-        categoryLayout: { preset: 'portrait', columns: 4, aspectRatio: '3/4', gap: 'md' },
-        siteSpacing: 'compact',
-      },
+      settings: { sliderHeight: '100vh', headerPreset: 'classic', categoryLayout: { preset: 'portrait', columns: 4, aspectRatio: '3/4', gap: 'md' }, siteSpacing: 'compact' },
     },
     {
       id: 'boutique-epuree',
       name: 'Boutique épurée',
       desc: 'Hero 60vh, 2 colonnes larges, header centré, espacement normal',
-      settings: {
-        sliderHeight: '60vh',
-        headerPreset: 'centered',
-        categoryLayout: { preset: 'wide', columns: 2, aspectRatio: '16/9', gap: 'lg' },
-        siteSpacing: 'normal',
-      },
+      settings: { sliderHeight: '60vh', headerPreset: 'centered', categoryLayout: { preset: 'wide', columns: 2, aspectRatio: '16/9', gap: 'lg' }, siteSpacing: 'normal' },
     },
     {
       id: 'vitrine-minimaliste',
       name: 'Vitrine minimaliste',
-      desc: 'Hero 100vh, bannières 16:9, header minimal, tout compact',
-      settings: {
-        sliderHeight: '100vh',
-        headerPreset: 'minimal',
-        categoryLayout: { preset: 'banner', columns: 4, aspectRatio: '16/9', gap: 'sm' },
-        siteSpacing: 'compact',
-      },
+      desc: 'Hero 100vh, bannières 16:9, header minimal',
+      settings: { sliderHeight: '100vh', headerPreset: 'minimal', categoryLayout: { preset: 'banner', columns: 4, aspectRatio: '16/9', gap: 'sm' }, siteSpacing: 'compact' },
     },
     {
       id: 'catalogue-dense',
       name: 'Catalogue dense',
-      desc: 'Hero 40vh, compact 4/3, header fullwidth, sans espacement',
-      settings: {
-        sliderHeight: '40vh',
-        headerPreset: 'fullwidth',
-        categoryLayout: { preset: 'compact', columns: 4, aspectRatio: '4/3', gap: 'sm' },
-        siteSpacing: 'compact',
-      },
+      desc: 'Hero 40vh, compact 4/3, header fullwidth',
+      settings: { sliderHeight: '40vh', headerPreset: 'fullwidth', categoryLayout: { preset: 'compact', columns: 4, aspectRatio: '4/3', gap: 'sm' }, siteSpacing: 'compact' },
     },
   ];
 
@@ -1441,7 +1288,6 @@ function DispositionTab() {
         ))}
       </div>
 
-      {/* Manual spacing control */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Espacement des sections</CardTitle>
@@ -1450,9 +1296,9 @@ function DispositionTab() {
         <CardContent>
           <div className="grid grid-cols-3 gap-3">
             {[
-              { id: 'compact', name: 'Compact', desc: 'Espacement minimal' },
-              { id: 'normal', name: 'Normal', desc: 'Espacement standard' },
-              { id: 'spacious', name: 'Aéré', desc: 'Espacement large' },
+              { id: 'compact', name: 'Compact',  desc: 'Espacement minimal' },
+              { id: 'normal',  name: 'Normal',   desc: 'Espacement standard' },
+              { id: 'spacious',name: 'Aéré',     desc: 'Espacement large' },
             ].map((s) => (
               <button
                 key={s.id}
@@ -1471,51 +1317,64 @@ function DispositionTab() {
 }
 
 // ─── Main Page ───
+const TAB_COMPONENTS: Record<string, React.ComponentType> = {
+  disposition: DispositionTab,
+  hero:        HeroSliderTab,
+  header:      HeaderDesignTab,
+  logo:        LogoTab,
+  sidebar:     SidebarTab,
+  categories:  CategoriesTab,
+  hotspots:    HotspotsTab,
+  catalogue:   CatalogueTab,
+};
+
 export default function AdminDesign() {
+  const [activeTab, setActiveTab] = useState('disposition');
+  const ActiveComponent = TAB_COMPONENTS[activeTab] || DispositionTab;
+
   return (
-    <div>
-      <div className="mb-8">
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="mb-6">
         <h1 className="text-2xl font-bold">Design & Visuels</h1>
-        <p className="text-muted-foreground mt-1">Gérez le hero slider, le logo, la sidebar et le catalogue</p>
+        <p className="text-muted-foreground text-sm mt-1">Personnalisez l'apparence complète de votre boutique</p>
       </div>
 
-      <Tabs defaultValue="hero" className="space-y-6">
-        <TabsList className="flex-wrap">
-          <TabsTrigger value="disposition">Disposition</TabsTrigger>
-          <TabsTrigger value="hero">Hero Slider</TabsTrigger>
-          <TabsTrigger value="header">Header</TabsTrigger>
-          <TabsTrigger value="logo">Logo</TabsTrigger>
-          <TabsTrigger value="sidebar">Sidebar</TabsTrigger>
-          <TabsTrigger value="categories">Catégories</TabsTrigger>
-          <TabsTrigger value="hotspots">Hotspots</TabsTrigger>
-          <TabsTrigger value="catalogue">Catalogue</TabsTrigger>
-        </TabsList>
+      {/* Two-column layout */}
+      <div className="flex gap-6 min-h-0">
+        {/* Left nav */}
+        <nav className="w-52 shrink-0">
+          <div className="flex flex-col gap-1 sticky top-4">
+            {NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.key;
+              return (
+                <button
+                  key={item.key}
+                  onClick={() => setActiveTab(item.key)}
+                  className={cn(
+                    "flex items-start gap-3 px-3 py-3 rounded-lg text-left transition-all w-full",
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Icon className={cn("h-4 w-4 mt-0.5 shrink-0", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
+                  <div className="min-w-0">
+                    <p className={cn("text-sm font-medium leading-tight", isActive ? "text-primary-foreground" : "text-foreground")}>{item.label}</p>
+                    <p className={cn("text-xs mt-0.5 leading-tight truncate", isActive ? "text-primary-foreground/70" : "text-muted-foreground")}>{item.desc}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
 
-        <TabsContent value="disposition">
-          <DispositionTab />
-        </TabsContent>
-        <TabsContent value="hero">
-          <HeroSliderTab />
-        </TabsContent>
-        <TabsContent value="header">
-          <HeaderDesignTab />
-        </TabsContent>
-        <TabsContent value="logo">
-          <LogoTab />
-        </TabsContent>
-        <TabsContent value="sidebar">
-          <SidebarTab />
-        </TabsContent>
-        <TabsContent value="categories">
-          <CategoriesTab />
-        </TabsContent>
-        <TabsContent value="hotspots">
-          <HotspotsTab />
-        </TabsContent>
-        <TabsContent value="catalogue">
-          <CatalogueTab />
-        </TabsContent>
-      </Tabs>
+        {/* Right content */}
+        <div className="flex-1 min-w-0 pb-8">
+          <ActiveComponent />
+        </div>
+      </div>
     </div>
   );
 }
