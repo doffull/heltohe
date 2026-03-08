@@ -447,13 +447,175 @@ function LogoTab() {
   );
 }
 
+// ─── Sidebar Preset SVG Thumbnails ───
+function PresetThumbnailClassic() {
+  return (
+    <svg viewBox="0 0 80 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <rect width="80" height="120" fill="#0a0a0a"/>
+      {/* mannequin image area */}
+      <rect x="8" y="8" width="64" height="52" rx="2" fill="#1a1a1a"/>
+      <rect x="8" y="8" width="64" height="52" rx="2" fill="url(#img-classic)" opacity="0.7"/>
+      {/* product card */}
+      <rect x="8" y="66" width="64" height="28" rx="2" fill="#181818" stroke="#333" strokeWidth="0.5"/>
+      <rect x="13" y="71" width="30" height="3" rx="1" fill="#e5e5e5" opacity="0.8"/>
+      <rect x="13" y="77" width="22" height="2" rx="1" fill="#666"/>
+      <rect x="13" y="82" width="14" height="2.5" rx="1" fill="#3b82f6" opacity="0.9"/>
+      {/* stat bars */}
+      <rect x="8" y="100" width="64" height="2" rx="1" fill="#222"/>
+      <rect x="8" y="100" width="52" height="2" rx="1" fill="#fff" opacity="0.7"/>
+      <rect x="8" y="106" width="64" height="2" rx="1" fill="#222"/>
+      <rect x="8" y="106" width="30" height="2" rx="1" fill="#fff" opacity="0.5"/>
+      <rect x="8" y="112" width="64" height="2" rx="1" fill="#222"/>
+      <rect x="8" y="112" width="44" height="2" rx="1" fill="#fff" opacity="0.6"/>
+      <defs>
+        <linearGradient id="img-classic" x1="8" y1="8" x2="72" y2="60" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#555"/>
+          <stop offset="1" stopColor="#111"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
+function PresetThumbnailMinimal() {
+  return (
+    <svg viewBox="0 0 80 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <rect width="80" height="120" fill="#0a0a0a"/>
+      {/* full-height image, no content */}
+      <rect x="8" y="8" width="64" height="104" rx="2" fill="#1a1a1a" opacity="0.85"/>
+      <rect x="8" y="8" width="64" height="104" rx="2" fill="url(#img-min)" opacity="0.55"/>
+      {/* single brand label at bottom */}
+      <rect x="22" y="100" width="36" height="3" rx="1" fill="#fff" opacity="0.25"/>
+      <defs>
+        <linearGradient id="img-min" x1="8" y1="8" x2="72" y2="112" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#444"/>
+          <stop offset="1" stopColor="#0a0a0a"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
+function PresetThumbnailParallax() {
+  return (
+    <svg viewBox="0 0 80 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <rect width="80" height="120" fill="#0d0d0d"/>
+      {/* gradient overlay */}
+      <rect x="0" y="0" width="80" height="120" fill="url(#grad-par)" opacity="0.6"/>
+      {/* image */}
+      <rect x="8" y="8" width="64" height="48" rx="2" fill="#1a1a1a" opacity="0.9"/>
+      {/* product card */}
+      <rect x="8" y="62" width="64" height="24" rx="2" fill="#161616" stroke="#2a2a2a" strokeWidth="0.5"/>
+      <rect x="13" y="67" width="28" height="2.5" rx="1" fill="#e5e5e5" opacity="0.75"/>
+      <rect x="13" y="72" width="20" height="2" rx="1" fill="#555"/>
+      {/* stat bars */}
+      <rect x="8" y="92" width="64" height="1.5" rx="1" fill="#222"/>
+      <rect x="8" y="92" width="48" height="1.5" rx="1" fill="#fff" opacity="0.65"/>
+      <rect x="8" y="97" width="64" height="1.5" rx="1" fill="#222"/>
+      <rect x="8" y="97" width="35" height="1.5" rx="1" fill="#fff" opacity="0.5"/>
+      <rect x="8" y="102" width="64" height="1.5" rx="1" fill="#222"/>
+      <rect x="8" y="102" width="55" height="1.5" rx="1" fill="#fff" opacity="0.6"/>
+      {/* animated shimmer line */}
+      <rect x="0" y="56" width="80" height="1" fill="url(#shimmer)" opacity="0.4"/>
+      <defs>
+        <linearGradient id="grad-par" x1="0" y1="0" x2="80" y2="120" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#1a0a3a"/>
+          <stop offset="0.5" stopColor="#0d0d0d"/>
+          <stop offset="1" stopColor="#0a1a1a"/>
+        </linearGradient>
+        <linearGradient id="shimmer" x1="0" y1="0" x2="80" y2="0" gradientUnits="userSpaceOnUse">
+          <stop stopColor="transparent"/>
+          <stop offset="0.5" stopColor="#fff"/>
+          <stop offset="1" stopColor="transparent"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
+function PresetThumbnailVitrine() {
+  return (
+    <svg viewBox="0 0 80 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <rect width="80" height="120" fill="#111"/>
+      {/* strong gradient */}
+      <rect x="0" y="0" width="80" height="120" fill="url(#grad-vit)" opacity="0.85"/>
+      {/* image */}
+      <rect x="8" y="8" width="64" height="55" rx="2" fill="#1c1c1c" opacity="0.7"/>
+      {/* product card */}
+      <rect x="8" y="68" width="64" height="18" rx="2" fill="#191919" stroke="#2d2d2d" strokeWidth="0.5"/>
+      <rect x="13" y="73" width="34" height="2.5" rx="1" fill="#f0f0f0" opacity="0.8"/>
+      <rect x="13" y="78" width="18" height="2" rx="1" fill="#888"/>
+      {/* mini gallery at bottom */}
+      <rect x="8" y="92" width="20" height="20" rx="1" fill="#1e1e1e"/>
+      <rect x="30" y="92" width="20" height="20" rx="1" fill="#1e1e1e"/>
+      <rect x="52" y="92" width="20" height="20" rx="1" fill="#1e1e1e"/>
+      <defs>
+        <linearGradient id="grad-vit" x1="0" y1="0" x2="80" y2="120" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#2d1b69"/>
+          <stop offset="0.5" stopColor="#111"/>
+          <stop offset="1" stopColor="#0a2a2a"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
+function PresetThumbnailDark() {
+  return (
+    <svg viewBox="0 0 80 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <rect width="80" height="120" fill="#050505"/>
+      {/* very dark image, barely visible */}
+      <rect x="8" y="8" width="64" height="72" rx="2" fill="#111" opacity="0.25"/>
+      {/* product number chip */}
+      <rect x="52" y="10" width="18" height="10" rx="1" fill="#1a1a1a"/>
+      <rect x="55" y="13" width="12" height="2" rx="1" fill="#fff" opacity="0.4"/>
+      {/* only stat bars visible */}
+      <rect x="8" y="88" width="64" height="2" rx="1" fill="#1a1a1a"/>
+      <rect x="8" y="88" width="55" height="2" rx="1" fill="#fff" opacity="0.8"/>
+      <rect x="8" y="95" width="64" height="2" rx="1" fill="#1a1a1a"/>
+      <rect x="8" y="95" width="28" height="2" rx="1" fill="#fff" opacity="0.6"/>
+      <rect x="8" y="102" width="64" height="2" rx="1" fill="#1a1a1a"/>
+      <rect x="8" y="102" width="44" height="2" rx="1" fill="#fff" opacity="0.7"/>
+    </svg>
+  );
+}
+function PresetThumbnailCatalog() {
+  return (
+    <svg viewBox="0 0 80 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <rect width="80" height="120" fill="#0a0a0a"/>
+      {/* 2 product images side by side */}
+      <rect x="4" y="8" width="34" height="46" rx="2" fill="#1a1a1a"/>
+      <rect x="42" y="8" width="34" height="46" rx="2" fill="#1a1a1a"/>
+      {/* active indicator on left */}
+      <rect x="4" y="8" width="34" height="46" rx="2" stroke="#fff" strokeWidth="1" opacity="0.25"/>
+      {/* product info */}
+      <rect x="4" y="60" width="72" height="2.5" rx="1" fill="#e5e5e5" opacity="0.7"/>
+      <rect x="4" y="66" width="50" height="2" rx="1" fill="#555"/>
+      <rect x="4" y="72" width="22" height="2.5" rx="1" fill="#3b82f6" opacity="0.8"/>
+      {/* size badges */}
+      <rect x="4" y="80" width="14" height="10" rx="1" fill="#181818" stroke="#333" strokeWidth="0.5"/>
+      <rect x="21" y="80" width="14" height="10" rx="1" fill="#181818" stroke="#333" strokeWidth="0.5"/>
+      <rect x="38" y="80" width="14" height="10" rx="1" fill="#181818" stroke="#333" strokeWidth="0.5"/>
+      <rect x="55" y="80" width="14" height="10" rx="1" fill="#181818" stroke="#333" strokeWidth="0.5"/>
+      {/* rotation dots */}
+      <circle cx="32" cy="108" r="2.5" fill="#fff" opacity="0.8"/>
+      <circle cx="40" cy="108" r="1.5" fill="#fff" opacity="0.3"/>
+      <circle cx="47" cy="108" r="1.5" fill="#fff" opacity="0.3"/>
+    </svg>
+  );
+}
+
+const PRESET_THUMBNAILS: Record<string, React.FC> = {
+  classic:  PresetThumbnailClassic,
+  minimal:  PresetThumbnailMinimal,
+  parallax: PresetThumbnailParallax,
+  vitrine:  PresetThumbnailVitrine,
+  dark:     PresetThumbnailDark,
+  catalog:  PresetThumbnailCatalog,
+};
+
 // ─── Sidebar Presets ───
 const SIDEBAR_PRESETS = [
   {
     id: 'classic',
     name: 'Classique',
     desc: 'Image + carte + stats',
-    icon: '🏪',
     settings: {
       showSidebarProductCard: true,
       showSidebarSizes: true,
@@ -473,7 +635,6 @@ const SIDEBAR_PRESETS = [
     id: 'minimal',
     name: 'Minimal',
     desc: 'Image seule, sans surcharge',
-    icon: '◻',
     settings: {
       showSidebarProductCard: false,
       showSidebarSizes: false,
@@ -493,7 +654,6 @@ const SIDEBAR_PRESETS = [
     id: 'parallax',
     name: 'Parallaxe',
     desc: 'Image + gradient animé',
-    icon: '🎞',
     settings: {
       showSidebarProductCard: true,
       showSidebarSizes: true,
@@ -513,7 +673,6 @@ const SIDEBAR_PRESETS = [
     id: 'vitrine',
     name: 'Vitrine',
     desc: 'Gradient fort + galerie',
-    icon: '✨',
     settings: {
       showSidebarProductCard: true,
       showSidebarSizes: false,
@@ -533,7 +692,6 @@ const SIDEBAR_PRESETS = [
     id: 'dark',
     name: 'Sombre',
     desc: 'Fond très sombre + stats',
-    icon: '🌑',
     settings: {
       showSidebarProductCard: false,
       showSidebarSizes: false,
@@ -553,7 +711,6 @@ const SIDEBAR_PRESETS = [
     id: 'catalog',
     name: 'Catalogue',
     desc: 'Rotation rapide de produits',
-    icon: '📖',
     settings: {
       showSidebarProductCard: true,
       showSidebarSizes: true,
