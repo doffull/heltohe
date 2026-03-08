@@ -1,77 +1,103 @@
 
-## Plan : 4 features on the product detail page + admin
+## Thinking
 
-### Scope
-1. **Size guide modal** — "Guide des tailles" link near the size selector → responsive table XS→XXL + body diagram
-2. **Editable color swatch picker in ImportMockupDialog** — after AI analysis, each extracted swatch is clickable and opens a native color picker to adjust the hex
-3. **Related products section** — bottom of ProductDetail, horizontal scroll, same category, hover zoom
-4. **Per-color image swap** — clicking a color swatch in the gallery changes the main image; admin ProductForm gets an image upload per color option
+The user wants to:
+1. Upload a product mockup image (like the Marco jacket shown)
+2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
+3. Automatically generates a fully interactive, dynamic product page from it
 
----
+The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
 
-### 1. Size Guide Modal — new component
+1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
+   - Accepts an image (jpg/png/webp)
+   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
+   - Also extracts the **color variants** as `colorOptions` with proper hex values
+   - Returns a structured product object ready to pre-fill the ProductForm
 
-**New file**: `src/components/product/SizeGuideModal.tsx`
+2. **Add "Importer Maquette IA" button** in AdminProducts that:
+   - Opens a dialog with a dropzone accepting images
+   - Sends image to the edge function
+   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
+   - Lets admin review/edit before confirming creation
+   - On confirm: creates the product in the DB with all extracted data
 
-Static size table (XS→XXL) with measurements in cm (chest, waist, hips, length). Add an ASCII/SVG body silhouette illustration using inline SVG (a simple outline with measurement arrows — no external assets needed).
+3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
 
-In `ProductOptions.tsx`, add a small "Guide des tailles →" link (text button) next to the `Taille` label. Clicking it opens `SizeGuideModal` as a `Dialog`.
+Looking at the Marco image:
+- Product name: MARCO
+- Brand: Helvetica Mountain Pioneers x PEGASWOES  
+- Season: HIVER 2026
+- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
+- Sizes: XS, S, M, L, XL, XXL
+- Composition: 100% POLYESTER
+- Tags: limited edition
 
----
+## Plan
 
-### 2. Color swatch editor in ImportMockupDialog
+### 1. New edge function `analyze-product-image`
+New file: `supabase/functions/analyze-product-image/index.ts`
 
-In `ImportMockupDialog.tsx`, replace the read-only swatch display in the extracted results panel with an editable list:
+Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
+- name, subtitle, price (ask to estimate if not found), category
+- sizes (exact text from image)
+- colors with **hex values** from the color swatches visible in image
+- colorOptions: [{color: "#hex", label: "nom"}]
+- material/composition
+- description (generated from visual)
+- sku (auto-generated)
+- tags (e.g., "limited edition" if spotted)
+- Any brand/collection info → subtitle
 
-- Each row: color preview circle (clickable `<input type="color">` hidden behind it) + editable label input + remove button
-- Clicking the circle opens the native browser color picker
-- Adds "+ Ajouter couleur" button to push a new blank entry
-- State: `editableColors` (array of `{color, label}`) initialized from `extracted.colorOptions` on analysis complete; passed to `handleCreate` instead of `extracted.colorOptions`
+### 2. New UI component `ImportMockupDialog.tsx`
+In `src/components/admin/ImportMockupDialog.tsx`:
+- Image dropzone (jpg/png/webp/gif up to 10MB)
+- Preview of uploaded image
+- "Analyser avec l'IA" button
+- Loading state with animated scan effect
+- Results preview:
+  - Product name, subtitle
+  - Price field (editable, since AI may not find it)
+  - Color swatches preview
+  - Size badges preview
+  - Material info
+  - Generated description
+- "Créer ce produit" confirm button
+- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
 
-State changes:
-```
-const [editableColors, setEditableColors] = useState<ColorOption[]>([]);
-// set on analysis success: setEditableColors(p.colorOptions)
-```
+### 3. AdminProducts integration
+- Add "Importer Maquette IA" button next to existing "Importer PDF" button
+- Opens the new ImportMockupDialog
+- After product created, show toast + option to go to product detail
 
----
+### Files to create/modify
+- `supabase/functions/analyze-product-image/index.ts` — new edge function
+- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
+- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
 
-### 3. Related products section
+## Implementation Steps
 
-In `ProductDetail.tsx`, after the two-column grid, add a `RelatedProducts` section:
+### Step 1: Edge function `analyze-product-image`
+Input: `{ imageBase64: string, mimeType: string }`
+Prompt to Gemini Pro Vision:
+- Extract all visible product info
+- Extract hex colors from color swatches
+- Generate description if not present
+- Output strict JSON matching `ExtractedProductData` schema
 
-**New file**: `src/components/product/RelatedProducts.tsx`
-- Queries `useProducts()`, filters to `same category` + `id !== current`, max 8
-- Horizontal scroll container with `overflow-x-auto` + `flex gap-4`
-- Each card: fixed `w-52 shrink-0`, image with `hover:scale-105 transition-transform duration-500`, name, price
-- Click navigates to `/boutique/:id`
-- Loading skeleton (3 shimmer cards)
+### Step 2: `ImportMockupDialog` component
+States:
+- `file`, `preview` (image URL)
+- `analyzing` (loading state)
+- `extracted` (ExtractedProductData | null)
+- `editableData` (form state to review/edit before import)
 
----
+UX Flow:
+1. Drag & drop or click to upload image
+2. Preview appears
+3. Click "Analyser avec IA" → loading scan animation
+4. Results appear: color swatches, size badges, all info
+5. User can edit price/name if needed
+6. Click "Créer le produit" → uploads image to storage, creates product, success
 
-### 4. Per-color image in admin ProductForm + gallery swap
-
-**ProductForm.tsx** — in the color options section (around line 96–114), update `addColorOption` and the render of each existing `colorOption` to include an optional image URL field:
-- Each color row already shows color + label. Add a small `FileDropZone` (compact) or URL input for `image` per swatch
-- `addColorOption` already includes `{ color, label }` → add `image?: string`
-
-**ProductImageGallery.tsx** — already handles `activeColorOption?.image` correctly (line `const displayImage = (activeColorOption?.image) || image`). No change needed here — this is already done.
-
-**ProductDetail.tsx** — `selectedColor` state drives `onColorChange` callback in `ProductImageGallery` already. This is already wired. The main image swap already works via `displayImage` in the gallery.
-
-So the only real change for feature 4 is: **admin ProductForm** color row → add image upload per color option. When saved, `colorOptions[i].image` gets stored and the gallery auto-uses it.
-
----
-
-### Files to modify/create
-
-| File | Change |
-|---|---|
-| `src/components/product/SizeGuideModal.tsx` | **New** — dialog with table + SVG silhouette |
-| `src/components/product/RelatedProducts.tsx` | **New** — horizontal scroll related products |
-| `src/components/product/ProductOptions.tsx` | Add "Guide des tailles" link + import SizeGuideModal |
-| `src/pages/ProductDetail.tsx` | Add `<RelatedProducts>` below the grid |
-| `src/components/admin/ImportMockupDialog.tsx` | Replace static swatches with editable color picker rows |
-| `src/components/admin/ProductForm.tsx` | Add image upload per color option row |
-
-No DB changes needed — `colorOptions` JSONB column already stores `{ color, label, image }`.
+### Step 3: AdminProducts button
+Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)

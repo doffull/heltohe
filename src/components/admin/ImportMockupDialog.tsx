@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Wand2, Upload, X, Loader2, Check, ImageIcon, Sparkles } from 'lucide-react';
+import { Wand2, Upload, X, Loader2, Check, ImageIcon, Sparkles, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCreateProduct } from '@/hooks/useProducts';
 import { useFileUpload } from '@/hooks/useFileUpload';
@@ -47,6 +47,7 @@ export function ImportMockupDialog({ open, onOpenChange, onSuccess }: ImportMock
   const [editPrice, setEditPrice] = useState('');
   const [editName, setEditName] = useState('');
   const [editCategory, setEditCategory] = useState('');
+  const [editableColors, setEditableColors] = useState<ColorOption[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const createProduct = useCreateProduct();
   const { upload } = useFileUpload({ folder: 'products' });
@@ -93,6 +94,7 @@ export function ImportMockupDialog({ open, onOpenChange, onSuccess }: ImportMock
       setEditPrice(String(p.price));
       setEditName(p.name);
       setEditCategory(p.category);
+      setEditableColors(p.colorOptions || []);
       toast.success(`Produit analysé : ${p.name}`);
     } catch (err: any) {
       toast.error(err.message || "Erreur lors de l'analyse");
@@ -116,8 +118,8 @@ export function ImportMockupDialog({ open, onOpenChange, onSuccess }: ImportMock
         price: parseFloat(editPrice) || extracted.price,
         category: editCategory || extracted.category,
         image: imageUrl,
-        colors: extracted.colorOptions.map(c => c.label),
-        colorOptions: extracted.colorOptions,
+        colors: editableColors.map(c => c.label),
+        colorOptions: editableColors,
         attributes: {},
         careInstructions: undefined,
         salePrice: undefined,
@@ -157,6 +159,7 @@ export function ImportMockupDialog({ open, onOpenChange, onSuccess }: ImportMock
     setExtracted(null);
     setAnalyzing(false);
     setCreating(false);
+    setEditableColors([]);
     onOpenChange(false);
   };
 
@@ -321,24 +324,62 @@ export function ImportMockupDialog({ open, onOpenChange, onSuccess }: ImportMock
                   </div>
                 )}
 
-                {/* Color swatches */}
-                {extracted.colorOptions.length > 0 && (
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">COLORIS DÉTECTÉS ({extracted.colorOptions.length})</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {extracted.colorOptions.map((c, i) => (
-                        <div key={i} className="flex items-center gap-1.5 bg-muted/50 rounded px-2 py-1">
+                {/* Color swatches — editable */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs text-muted-foreground">
+                      COLORIS ({editableColors.length})
+                    </Label>
+                    <button
+                      type="button"
+                      onClick={() => setEditableColors(prev => [...prev, { color: '#888888', label: 'Nouveau' }])}
+                      className="flex items-center gap-1 text-xs text-primary hover:opacity-70 transition-opacity"
+                    >
+                      <Plus className="h-3 w-3" /> Ajouter
+                    </button>
+                  </div>
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {editableColors.map((c, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        {/* Clickable swatch opens color picker */}
+                        <label className="relative cursor-pointer shrink-0" title="Changer la couleur">
                           <div
-                            className="w-4 h-4 rounded-full border border-border shadow-sm"
+                            className="w-8 h-8 rounded-full border-2 border-border shadow-sm hover:ring-2 hover:ring-primary/50 transition-all"
                             style={{ backgroundColor: c.color }}
                           />
-                          <span className="text-xs">{c.label}</span>
-                          <span className="text-xs text-muted-foreground font-mono">{c.color}</span>
-                        </div>
-                      ))}
-                    </div>
+                          <input
+                            type="color"
+                            value={c.color}
+                            onChange={e => {
+                              const updated = [...editableColors];
+                              updated[i] = { ...updated[i], color: e.target.value };
+                              setEditableColors(updated);
+                            }}
+                            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                          />
+                        </label>
+                        <span className="text-xs font-mono text-muted-foreground w-16 shrink-0">{c.color}</span>
+                        <Input
+                          value={c.label}
+                          onChange={e => {
+                            const updated = [...editableColors];
+                            updated[i] = { ...updated[i], label: e.target.value };
+                            setEditableColors(updated);
+                          }}
+                          className="h-7 text-xs py-0 flex-1"
+                          placeholder="Nom de la couleur"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setEditableColors(prev => prev.filter((_, idx) => idx !== i))}
+                          className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                )}
+                </div>
 
                 {/* Material */}
                 {extracted.material && (
