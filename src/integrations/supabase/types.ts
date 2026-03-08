@@ -295,19 +295,36 @@ export type Database = {
           id: string
           is_slideshow_active: boolean | null
           logo_style: Json | null
+          mobile_sidebar_image: string | null
+          mobile_sidebar_media_type: string | null
           pages: Json | null
           presets: Json | null
           schedules: Json | null
           settings_key: string
           show_logo: boolean | null
           show_overlays: boolean | null
+          show_sidebar_gallery: boolean | null
+          show_sidebar_product_card: boolean | null
+          show_sidebar_product_number: boolean | null
+          show_sidebar_sizes: boolean | null
+          show_sidebar_stats: boolean | null
           show_slider_overlay: boolean | null
           show_stats: boolean | null
           show_unit_id: boolean | null
           sidebar_bg: string | null
+          sidebar_brand_name: string | null
+          sidebar_brand_subtitle: string | null
           sidebar_gradient: boolean | null
           sidebar_image: string | null
+          sidebar_image_opacity: number | null
+          sidebar_info_text: string | null
+          sidebar_product_description: string | null
+          sidebar_product_title: string | null
           sidebar_reappear_delay: number | null
+          sidebar_sizes: Json | null
+          sidebar_slider_enabled: boolean | null
+          sidebar_slider_max_products: number | null
+          sidebar_slider_speed: number | null
           site_name: string | null
           site_spacing: string | null
           site_tagline: string | null
@@ -319,6 +336,8 @@ export type Database = {
           social_display_mode: string | null
           social_links: Json | null
           social_style: Json | null
+          stat_bar_empty_color: string | null
+          stat_bar_filled_color: string | null
           stats: Json | null
           stats_label: string | null
           stats_style: Json | null
@@ -356,19 +375,36 @@ export type Database = {
           id?: string
           is_slideshow_active?: boolean | null
           logo_style?: Json | null
+          mobile_sidebar_image?: string | null
+          mobile_sidebar_media_type?: string | null
           pages?: Json | null
           presets?: Json | null
           schedules?: Json | null
           settings_key?: string
           show_logo?: boolean | null
           show_overlays?: boolean | null
+          show_sidebar_gallery?: boolean | null
+          show_sidebar_product_card?: boolean | null
+          show_sidebar_product_number?: boolean | null
+          show_sidebar_sizes?: boolean | null
+          show_sidebar_stats?: boolean | null
           show_slider_overlay?: boolean | null
           show_stats?: boolean | null
           show_unit_id?: boolean | null
           sidebar_bg?: string | null
+          sidebar_brand_name?: string | null
+          sidebar_brand_subtitle?: string | null
           sidebar_gradient?: boolean | null
           sidebar_image?: string | null
+          sidebar_image_opacity?: number | null
+          sidebar_info_text?: string | null
+          sidebar_product_description?: string | null
+          sidebar_product_title?: string | null
           sidebar_reappear_delay?: number | null
+          sidebar_sizes?: Json | null
+          sidebar_slider_enabled?: boolean | null
+          sidebar_slider_max_products?: number | null
+          sidebar_slider_speed?: number | null
           site_name?: string | null
           site_spacing?: string | null
           site_tagline?: string | null
@@ -380,6 +416,8 @@ export type Database = {
           social_display_mode?: string | null
           social_links?: Json | null
           social_style?: Json | null
+          stat_bar_empty_color?: string | null
+          stat_bar_filled_color?: string | null
           stats?: Json | null
           stats_label?: string | null
           stats_style?: Json | null
@@ -417,19 +455,36 @@ export type Database = {
           id?: string
           is_slideshow_active?: boolean | null
           logo_style?: Json | null
+          mobile_sidebar_image?: string | null
+          mobile_sidebar_media_type?: string | null
           pages?: Json | null
           presets?: Json | null
           schedules?: Json | null
           settings_key?: string
           show_logo?: boolean | null
           show_overlays?: boolean | null
+          show_sidebar_gallery?: boolean | null
+          show_sidebar_product_card?: boolean | null
+          show_sidebar_product_number?: boolean | null
+          show_sidebar_sizes?: boolean | null
+          show_sidebar_stats?: boolean | null
           show_slider_overlay?: boolean | null
           show_stats?: boolean | null
           show_unit_id?: boolean | null
           sidebar_bg?: string | null
+          sidebar_brand_name?: string | null
+          sidebar_brand_subtitle?: string | null
           sidebar_gradient?: boolean | null
           sidebar_image?: string | null
+          sidebar_image_opacity?: number | null
+          sidebar_info_text?: string | null
+          sidebar_product_description?: string | null
+          sidebar_product_title?: string | null
           sidebar_reappear_delay?: number | null
+          sidebar_sizes?: Json | null
+          sidebar_slider_enabled?: boolean | null
+          sidebar_slider_max_products?: number | null
+          sidebar_slider_speed?: number | null
           site_name?: string | null
           site_spacing?: string | null
           site_tagline?: string | null
@@ -441,6 +496,8 @@ export type Database = {
           social_display_mode?: string | null
           social_links?: Json | null
           social_style?: Json | null
+          stat_bar_empty_color?: string | null
+          stat_bar_filled_color?: string | null
           stats?: Json | null
           stats_label?: string | null
           stats_style?: Json | null
