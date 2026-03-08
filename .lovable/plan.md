@@ -1,103 +1,125 @@
 
-## Thinking
+## Analysis
 
-The user wants to:
-1. Upload a product mockup image (like the Marco jacket shown)
-2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
-3. Automatically generates a fully interactive, dynamic product page from it
+### Current state — Category routing
 
-The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
+Right now when you click "Homme" in the category grid:
+1. `AppContext.navigateToCategory` calls `navigate('/boutique/homme')` 
+2. `BoutiqueRouter` receives `slugOrId = 'homme'`
+3. It checks for a custom page with that slug → if it has sections, renders `PageRenderer` + `<Shop categoryFromSlug>` below
+4. If no page sections → falls back to `<Shop categoryFromSlug="Homme" />`
 
-1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
-   - Accepts an image (jpg/png/webp)
-   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
-   - Also extracts the **color variants** as `colorOptions` with proper hex values
-   - Returns a structured product object ready to pre-fill the ProductForm
+**Problem**: the Shop component always shows "Boutique" as H1, category tabs include everything, and the URL is `/boutique/homme` not `/homme`.
 
-2. **Add "Importer Maquette IA" button** in AdminProducts that:
-   - Opens a dialog with a dropzone accepting images
-   - Sends image to the edge function
-   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
-   - Lets admin review/edit before confirming creation
-   - On confirm: creates the product in the DB with all extracted data
+**What the user wants**:
+- `/homme`, `/femme`, `/enfant` etc. — dedicated clean URLs **without** `/boutique` prefix
+- Each category has its own page (managed from admin Pages, already built in DB)
+- `/boutique` stays as the full catalogue with all categories + filters
 
-3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
+### Current state — Category pages in admin
 
-Looking at the Marco image:
-- Product name: MARCO
-- Brand: Helvetica Mountain Pioneers x PEGASWOES  
-- Season: HIVER 2026
-- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
-- Sizes: XS, S, M, L, XL, XXL
-- Composition: 100% POLYESTER
-- Tags: limited edition
+The `pages` table already has `type: 'category'` rows linked to categories via `category_id`. These are managed in `AdminPages`. The page builder lets admins add hero sections, text, product grids etc. This connection already exists in the DB — it just isn't exposed on clean URLs.
 
-## Plan
+### Plan
 
-### 1. New edge function `analyze-product-image`
-New file: `supabase/functions/analyze-product-image/index.ts`
+---
 
-Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
-- name, subtitle, price (ask to estimate if not found), category
-- sizes (exact text from image)
-- colors with **hex values** from the color swatches visible in image
-- colorOptions: [{color: "#hex", label: "nom"}]
-- material/composition
-- description (generated from visual)
-- sku (auto-generated)
-- tags (e.g., "limited edition" if spotted)
-- Any brand/collection info → subtitle
+### Feature 1 — Clean category URLs `/[slug]`
 
-### 2. New UI component `ImportMockupDialog.tsx`
-In `src/components/admin/ImportMockupDialog.tsx`:
-- Image dropzone (jpg/png/webp/gif up to 10MB)
-- Preview of uploaded image
-- "Analyser avec l'IA" button
-- Loading state with animated scan effect
-- Results preview:
-  - Product name, subtitle
-  - Price field (editable, since AI may not find it)
-  - Color swatches preview
-  - Size badges preview
-  - Material info
-  - Generated description
-- "Créer ce produit" confirm button
-- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
+**`src/App.tsx`**: Add new route `/:categorySlug` that tries to resolve to a category page before falling through to 404.
 
-### 3. AdminProducts integration
-- Add "Importer Maquette IA" button next to existing "Importer PDF" button
-- Opens the new ImportMockupDialog
-- After product created, show toast + option to go to product detail
+```
+Route: /:categorySlug  →  <CategoryPageRouter />
+```
 
-### Files to create/modify
-- `supabase/functions/analyze-product-image/index.ts` — new edge function
-- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
-- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
+New component `src/pages/CategoryPageRouter.tsx`:
+- Gets `categorySlug` from params
+- Looks up `useCategories()` to find a category with that slug
+- If found: queries `usePage(slug)` — renders `PageRenderer` (custom sections) + `<Shop categoryFromSlug>` products below
+- If not found: renders `<NotFound />`
 
-## Implementation Steps
+**`src/context/AppContext.tsx`**: Update `navigateToCategory`:
+```typescript
+navigate(`/${slug}`);  // instead of /boutique/${slug}
+```
 
-### Step 1: Edge function `analyze-product-image`
-Input: `{ imageBase64: string, mimeType: string }`
-Prompt to Gemini Pro Vision:
-- Extract all visible product info
-- Extract hex colors from color swatches
-- Generate description if not present
-- Output strict JSON matching `ExtractedProductData` schema
+**`src/components/home/CategoryGrid.tsx`**: Link clicks already call `navigateToCategory` — no change needed.
 
-### Step 2: `ImportMockupDialog` component
-States:
-- `file`, `preview` (image URL)
-- `analyzing` (loading state)
-- `extracted` (ExtractedProductData | null)
-- `editableData` (form state to review/edit before import)
+**`BoutiqueRouter`**: Keep as-is for `/boutique/:slugOrId` (product UUIDs + product detail pages). Remove category slug handling from there since category pages now live at `/:slug`.
 
-UX Flow:
-1. Drag & drop or click to upload image
-2. Preview appears
-3. Click "Analyser avec IA" → loading scan animation
-4. Results appear: color swatches, size badges, all info
-5. User can edit price/name if needed
-6. Click "Créer le produit" → uploads image to storage, creates product, success
+---
 
-### Step 3: AdminProducts button
-Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)
+### Feature 2 — WooCommerce import connector
+
+New admin page: `src/pages/admin/AdminWooCommerce.tsx`
+
+A configuration form with:
+- WooCommerce store URL (e.g. `https://monsite.com`)
+- Consumer Key + Consumer Secret (from WooCommerce → Settings → Advanced → REST API)
+- Test connection button
+- Import sections: Products, Orders, Customers (with checkboxes)
+- "Lancer l'import" button
+
+Store the WooCommerce credentials securely in the database as a `settings` row (or use Supabase secrets via an Edge Function).
+
+**Edge Function** `supabase/functions/woocommerce-import/index.ts`:
+- Receives `{ url, key, secret, importProducts, importOrders, importCustomers }`
+- Calls WooCommerce REST API v3 (`/wp-json/wc/v3/products`, `/orders`, `/customers`)
+- Maps and upserts data into Supabase `products`, `orders`, `customers` tables
+- Returns progress summary
+
+Add "WooCommerce" entry to `Admin.tsx` sidebar.
+
+Secrets needed: stored per-import via the edge function (user enters credentials in UI), not as global secrets.
+
+---
+
+### Files to modify/create
+
+| File | Change |
+|---|---|
+| `src/pages/CategoryPageRouter.tsx` | **New** — resolves `/:categorySlug` to a category page + products |
+| `src/App.tsx` | Add `/:categorySlug` route before `*` catch-all |
+| `src/context/AppContext.tsx` | `navigateToCategory` → `navigate('/${slug}')` |
+| `src/pages/admin/AdminWooCommerce.tsx` | **New** — WooCommerce config + import UI |
+| `src/pages/admin/Admin.tsx` | Add WooCommerce route + sidebar link |
+| `supabase/functions/woocommerce-import/index.ts` | **New** — Edge function that calls WC REST API + upserts data |
+| `src/pages/BoutiqueRouter.tsx` | Remove category slug matching (clean separation) |
+
+---
+
+### Route priority in App.tsx
+
+```text
+/                    → Home
+/boutique            → Shop (all products)
+/boutique/:slugOrId  → BoutiqueRouter (product detail OR custom page)
+/panier              → Cart
+/a-propos            → About
+/auth                → Auth
+/compte/*            → Account
+/admin/*             → Admin
+/:categorySlug       → CategoryPageRouter  ← NEW (before catch-all)
+*                    → NotFound
+```
+
+The `/:categorySlug` route goes BEFORE the `*` catch-all. It internally validates against known category slugs, so non-matching slugs fall through to NotFound behavior inside the component.
+
+---
+
+### WooCommerce import mapping
+
+| WC field | Local table/field |
+|---|---|
+| `products[].name` | `products.name` |
+| `products[].price` | `products.price` |
+| `products[].images[0].src` | `products.image` |
+| `products[].categories[0].name` | `products.category` |
+| `products[].stock_quantity` | `products.stock` |
+| `orders[].billing` | `orders.customer_*` |
+| `orders[].total` | `orders.total` |
+| `orders[].line_items` | `orders.items` |
+| `customers[].email` | `customers.email` |
+| `customers[].first_name/last_name` | `customers.first_name/last_name` |
+
+No DB migrations needed — all target tables already exist with correct columns.
