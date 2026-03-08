@@ -16,6 +16,7 @@ import Home from "./pages/Home";
 import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
 import BoutiqueRouter from "./pages/BoutiqueRouter";
+import CategoryPageRouter from "./pages/CategoryPageRouter";
 import Cart from "./pages/Cart";
 import Auth from "./pages/Auth";
 import Account from "./pages/Account";
@@ -128,6 +129,9 @@ function AnimatedRoutes() {
           {/* Admin routes (custom layout) */}
           <Route path="/admin/*" element={<Admin />} />
           
+          {/* Category clean URLs (e.g. /homme, /femme) */}
+          <Route path="/:categorySlug" element={<MainLayout><CategoryPageRouter /></MainLayout>} />
+
           {/* Catch-all */}
           <Route path="*" element={<NotFound />} />
         </Routes>
