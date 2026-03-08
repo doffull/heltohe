@@ -332,6 +332,50 @@ function LogoTab() {
 
   return (
     <div className="space-y-6">
+      {/* Brand Identity */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Identité de marque</CardTitle>
+          <CardDescription>Ces informations apparaissent dans le footer, le titre de l'onglet navigateur et le header</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Nom du site</Label>
+            <Input
+              value={designSettings.siteName ?? ''}
+              onChange={(e) => updateDesignSettings({ siteName: e.target.value })}
+              placeholder="Ex : LVTK6 CONCEPT"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Slogan / Description courte</Label>
+            <Input
+              value={designSettings.siteTagline ?? ''}
+              onChange={(e) => updateDesignSettings({ siteTagline: e.target.value })}
+              placeholder="Ex : Équipement tactique urbain"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Email de contact</Label>
+            <Input
+              type="email"
+              value={designSettings.contactEmail ?? ''}
+              onChange={(e) => updateDesignSettings({ contactEmail: e.target.value })}
+              placeholder="contact@monsite.com"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Téléphone (optionnel)</Label>
+            <Input
+              type="tel"
+              value={designSettings.contactPhone ?? ''}
+              onChange={(e) => updateDesignSettings({ contactPhone: e.target.value })}
+              placeholder="+33 6 00 00 00 00"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Logo principal</CardTitle>
