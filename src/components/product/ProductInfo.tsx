@@ -31,7 +31,20 @@ export default function ProductInfo({ product, isNew }: ProductInfoProps) {
 
       {/* Title */}
       <motion.div {...fadeUp} transition={{ delay: 0.15 }}>
-        <h1 className="text-2xl md:text-4xl font-bold hud-text uppercase tracking-wider">{product.name}</h1>
+        <div className="flex items-center gap-3 flex-wrap">
+          <h1 className="text-2xl md:text-4xl font-bold hud-text uppercase tracking-wider">{product.name}</h1>
+          {isNew && (
+            <motion.span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-primary/40 bg-primary/10 text-xs font-bold hud-text"
+              initial={{ opacity: 0, scale: 0.7 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.4, type: 'spring', stiffness: 260 }}
+            >
+              <Sparkles className="h-3 w-3" />
+              IA
+            </motion.span>
+          )}
+        </div>
         {product.subtitle && (
           <p className="text-lg text-muted-foreground mt-1">{product.subtitle}</p>
         )}
