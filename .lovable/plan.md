@@ -1,172 +1,103 @@
 
-## Diagnostic
+## Thinking
 
-The presets sidebar currently exist as simple buttons that call `updateDesignSettings` with a partial set of values. The problem is twofold:
+The user wants to:
+1. Upload a product mockup image (like the Marco jacket shown)
+2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
+3. Automatically generates a fully interactive, dynamic product page from it
 
-1. **Incomplete preset definitions** — Each preset only sets a few `show*` flags but ignores important settings like `sidebarBg`, `sidebarGradient`, `gradientIntensity`, `sidebarImageOpacity`, `sidebarSliderEnabled`, `sidebarSliderSpeed`, `statBarFilledColor`, `hudButtons`, etc. For example, clicking "Classique" doesn't reset the background color, or the gradient state.
+The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
 
-2. **No visual feedback** — There's no way to tell which preset is currently active. All 6 buttons look identical regardless of state.
+1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
+   - Accepts an image (jpg/png/webp)
+   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
+   - Also extracts the **color variants** as `colorOptions` with proper hex values
+   - Returns a structured product object ready to pre-fill the ProductForm
 
-3. **Missing "Catalogue" preset logic** — The `catalog` preset has no associated `updateDesignSettings` call at all (falls through without doing anything).
+2. **Add "Importer Maquette IA" button** in AdminProducts that:
+   - Opens a dialog with a dropzone accepting images
+   - Sends image to the edge function
+   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
+   - Lets admin review/edit before confirming creation
+   - On confirm: creates the product in the DB with all extracted data
 
-4. **Slider settings not exposed** — The admin sidebar tab has no UI for `sidebarSliderEnabled`, `sidebarSliderSpeed`, or `sidebarSliderMaxProducts`, so those features from `SidebarProductHUD.tsx` are inaccessible.
+3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
 
----
+Looking at the Marco image:
+- Product name: MARCO
+- Brand: Helvetica Mountain Pioneers x PEGASWOES  
+- Season: HIVER 2026
+- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
+- Sizes: XS, S, M, L, XL, XXL
+- Composition: 100% POLYESTER
+- Tags: limited edition
 
 ## Plan
 
-### 1. Define rich, complete SIDEBAR_PRESETS data
+### 1. New edge function `analyze-product-image`
+New file: `supabase/functions/analyze-product-image/index.ts`
 
-Replace the inline array in `SidebarTab` with a complete constant `SIDEBAR_PRESETS` where each preset carries a **full set of settings** that fully describes the sidebar look:
+Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
+- name, subtitle, price (ask to estimate if not found), category
+- sizes (exact text from image)
+- colors with **hex values** from the color swatches visible in image
+- colorOptions: [{color: "#hex", label: "nom"}]
+- material/composition
+- description (generated from visual)
+- sku (auto-generated)
+- tags (e.g., "limited edition" if spotted)
+- Any brand/collection info → subtitle
 
-```typescript
-const SIDEBAR_PRESETS = [
-  {
-    id: 'classic',
-    name: 'Classique',
-    desc: 'Image + carte + hotspots',
-    icon: '🏪',
-    settings: {
-      showSidebarProductCard: true,
-      showSidebarSizes: true,
-      showSidebarStats: true,
-      showSidebarGallery: true,
-      showSidebarProductNumber: true,
-      sidebarBg: '#0a0a0a',
-      sidebarGradient: false,
-      gradientIntensity: 0,
-      sidebarImageOpacity: 1,
-      sidebarSliderEnabled: true,
-      sidebarSliderSpeed: 6000,
-      sidebarSliderMaxProducts: 5,
-      statBarFilledColor: '#ffffff',
-      statBarEmptyColor: '#333333',
-    }
-  },
-  {
-    id: 'minimal',
-    name: 'Minimal',
-    desc: 'Image seule + CTA',
-    icon: '◻',
-    settings: {
-      showSidebarProductCard: false,
-      showSidebarSizes: false,
-      showSidebarStats: false,
-      showSidebarGallery: false,
-      showSidebarProductNumber: false,
-      sidebarBg: '#0a0a0a',
-      sidebarGradient: false,
-      gradientIntensity: 0,
-      sidebarImageOpacity: 0.85,
-      sidebarSliderEnabled: false,
-    }
-  },
-  {
-    id: 'parallax',
-    name: 'Parallaxe',
-    desc: 'Image fixe + hotspots animés',
-    icon: '🎞',
-    settings: {
-      showSidebarProductCard: true,
-      showSidebarSizes: true,
-      showSidebarStats: true,
-      showSidebarGallery: true,
-      showSidebarProductNumber: true,
-      sidebarBg: '#0d0d0d',
-      sidebarGradient: true,
-      gradientIntensity: 60,
-      sidebarImageOpacity: 0.9,
-      sidebarSliderEnabled: true,
-      sidebarSliderSpeed: 8000,
-    }
-  },
-  {
-    id: 'vitrine',
-    name: 'Vitrine',
-    desc: 'Gradient + promo',
-    icon: '✨',
-    settings: {
-      showSidebarProductCard: true,
-      showSidebarSizes: false,
-      showSidebarStats: false,
-      showSidebarGallery: true,
-      showSidebarProductNumber: false,
-      sidebarBg: '#111111',
-      sidebarGradient: true,
-      gradientIntensity: 85,
-      sidebarImageOpacity: 0.7,
-      sidebarSliderEnabled: true,
-      sidebarSliderSpeed: 5000,
-    }
-  },
-  {
-    id: 'dark',
-    name: 'Sombre',
-    desc: 'Fond sombre + stats',
-    icon: '🌑',
-    settings: {
-      showSidebarProductCard: false,
-      showSidebarSizes: false,
-      showSidebarStats: true,
-      showSidebarGallery: false,
-      showSidebarProductNumber: true,
-      sidebarBg: '#050505',
-      sidebarGradient: false,
-      gradientIntensity: 0,
-      sidebarImageOpacity: 0.25,
-      statBarFilledColor: '#ffffff',
-      statBarEmptyColor: '#1a1a1a',
-    }
-  },
-  {
-    id: 'catalog',
-    name: 'Catalogue',
-    desc: 'Grille de produits en rotation',
-    icon: '📖',
-    settings: {
-      showSidebarProductCard: true,
-      showSidebarSizes: true,
-      showSidebarStats: false,
-      showSidebarGallery: true,
-      showSidebarProductNumber: true,
-      sidebarBg: '#0a0a0a',
-      sidebarGradient: false,
-      gradientIntensity: 0,
-      sidebarImageOpacity: 0.6,
-      sidebarSliderEnabled: true,
-      sidebarSliderSpeed: 4000,
-      sidebarSliderMaxProducts: 8,
-    }
-  },
-];
-```
+### 2. New UI component `ImportMockupDialog.tsx`
+In `src/components/admin/ImportMockupDialog.tsx`:
+- Image dropzone (jpg/png/webp/gif up to 10MB)
+- Preview of uploaded image
+- "Analyser avec l'IA" button
+- Loading state with animated scan effect
+- Results preview:
+  - Product name, subtitle
+  - Price field (editable, since AI may not find it)
+  - Color swatches preview
+  - Size badges preview
+  - Material info
+  - Generated description
+- "Créer ce produit" confirm button
+- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
 
-### 2. Active preset detection + highlighted active button
+### 3. AdminProducts integration
+- Add "Importer Maquette IA" button next to existing "Importer PDF" button
+- Opens the new ImportMockupDialog
+- After product created, show toast + option to go to product detail
 
-Add a helper function to detect which preset is currently active by comparing `designSettings` against each preset's `settings`. The matching preset's card gets a highlighted border and checkmark.
+### Files to create/modify
+- `supabase/functions/analyze-product-image/index.ts` — new edge function
+- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
+- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│ Presets Sidebar                                                  │
-│ ┌──────────────┐  ┌──────────────┐  ┌──────────────┐           │
-│ │ ✓ Classique  │  │  Minimal     │  │  Parallaxe   │           │
-│ │ (border vert)│  │              │  │              │           │
-│ └──────────────┘  └──────────────┘  └──────────────┘           │
-│ ┌──────────────┐  ┌──────────────┐  ┌──────────────┐           │
-│ │  Vitrine     │  │  Sombre      │  │  Catalogue   │           │
-│ └──────────────┘  └──────────────┘  └──────────────┘           │
-└─────────────────────────────────────────────────────────────────┘
-```
+## Implementation Steps
 
-### 3. Expose slider controls in the Sidebar tab
+### Step 1: Edge function `analyze-product-image`
+Input: `{ imageBase64: string, mimeType: string }`
+Prompt to Gemini Pro Vision:
+- Extract all visible product info
+- Extract hex colors from color swatches
+- Generate description if not present
+- Output strict JSON matching `ExtractedProductData` schema
 
-Add a new card "Slider de produits" in the sidebar tab (below the presets) with:
-- Toggle: Activer le slider automatique
-- Boutons de vitesse: 3s / 5s / 8s / 12s  
-- Slider: Nombre de produits max (1–10)
+### Step 2: `ImportMockupDialog` component
+States:
+- `file`, `preview` (image URL)
+- `analyzing` (loading state)
+- `extracted` (ExtractedProductData | null)
+- `editableData` (form state to review/edit before import)
 
-### 4. Files modified
+UX Flow:
+1. Drag & drop or click to upload image
+2. Preview appears
+3. Click "Analyser avec IA" → loading scan animation
+4. Results appear: color swatches, size badges, all info
+5. User can edit price/name if needed
+6. Click "Créer le produit" → uploads image to storage, creates product, success
 
-| Fichier | Changement |
-|---|---|
-| `src/pages/admin/AdminDesign.tsx` | Replace inline preset array with `SIDEBAR_PRESETS` constant, add active detection, add slider controls card |
+### Step 3: AdminProducts button
+Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)

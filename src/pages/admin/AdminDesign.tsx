@@ -447,6 +447,138 @@ function LogoTab() {
   );
 }
 
+// ─── Sidebar Presets ───
+const SIDEBAR_PRESETS = [
+  {
+    id: 'classic',
+    name: 'Classique',
+    desc: 'Image + carte + stats',
+    icon: '🏪',
+    settings: {
+      showSidebarProductCard: true,
+      showSidebarSizes: true,
+      showSidebarStats: true,
+      showSidebarGallery: true,
+      showSidebarProductNumber: true,
+      sidebarBg: '#0a0a0a',
+      sidebarGradient: false,
+      gradientIntensity: 0,
+      sidebarImageOpacity: 1,
+      sidebarSliderEnabled: true,
+      sidebarSliderSpeed: 6000,
+      sidebarSliderMaxProducts: 5,
+    },
+  },
+  {
+    id: 'minimal',
+    name: 'Minimal',
+    desc: 'Image seule, sans surcharge',
+    icon: '◻',
+    settings: {
+      showSidebarProductCard: false,
+      showSidebarSizes: false,
+      showSidebarStats: false,
+      showSidebarGallery: false,
+      showSidebarProductNumber: false,
+      sidebarBg: '#0a0a0a',
+      sidebarGradient: false,
+      gradientIntensity: 0,
+      sidebarImageOpacity: 0.85,
+      sidebarSliderEnabled: false,
+      sidebarSliderSpeed: 6000,
+      sidebarSliderMaxProducts: 3,
+    },
+  },
+  {
+    id: 'parallax',
+    name: 'Parallaxe',
+    desc: 'Image + gradient animé',
+    icon: '🎞',
+    settings: {
+      showSidebarProductCard: true,
+      showSidebarSizes: true,
+      showSidebarStats: true,
+      showSidebarGallery: true,
+      showSidebarProductNumber: true,
+      sidebarBg: '#0d0d0d',
+      sidebarGradient: true,
+      gradientIntensity: 60,
+      sidebarImageOpacity: 0.9,
+      sidebarSliderEnabled: true,
+      sidebarSliderSpeed: 8000,
+      sidebarSliderMaxProducts: 5,
+    },
+  },
+  {
+    id: 'vitrine',
+    name: 'Vitrine',
+    desc: 'Gradient fort + galerie',
+    icon: '✨',
+    settings: {
+      showSidebarProductCard: true,
+      showSidebarSizes: false,
+      showSidebarStats: false,
+      showSidebarGallery: true,
+      showSidebarProductNumber: false,
+      sidebarBg: '#111111',
+      sidebarGradient: true,
+      gradientIntensity: 85,
+      sidebarImageOpacity: 0.7,
+      sidebarSliderEnabled: true,
+      sidebarSliderSpeed: 5000,
+      sidebarSliderMaxProducts: 4,
+    },
+  },
+  {
+    id: 'dark',
+    name: 'Sombre',
+    desc: 'Fond très sombre + stats',
+    icon: '🌑',
+    settings: {
+      showSidebarProductCard: false,
+      showSidebarSizes: false,
+      showSidebarStats: true,
+      showSidebarGallery: false,
+      showSidebarProductNumber: true,
+      sidebarBg: '#050505',
+      sidebarGradient: false,
+      gradientIntensity: 0,
+      sidebarImageOpacity: 0.25,
+      sidebarSliderEnabled: true,
+      sidebarSliderSpeed: 7000,
+      sidebarSliderMaxProducts: 5,
+    },
+  },
+  {
+    id: 'catalog',
+    name: 'Catalogue',
+    desc: 'Rotation rapide de produits',
+    icon: '📖',
+    settings: {
+      showSidebarProductCard: true,
+      showSidebarSizes: true,
+      showSidebarStats: false,
+      showSidebarGallery: true,
+      showSidebarProductNumber: true,
+      sidebarBg: '#0a0a0a',
+      sidebarGradient: false,
+      gradientIntensity: 0,
+      sidebarImageOpacity: 0.6,
+      sidebarSliderEnabled: true,
+      sidebarSliderSpeed: 4000,
+      sidebarSliderMaxProducts: 8,
+    },
+  },
+];
+
+function isPresetActive(presetSettings: Record<string, any>, designSettings: any): boolean {
+  return Object.entries(presetSettings).every(([k, v]) => {
+    const current = designSettings[k];
+    if (typeof v === 'number') return Math.abs((current ?? 0) - v) < 0.01;
+    return current === v;
+  });
+}
+
 // ─── Sidebar Tab ───
 function SidebarTab() {
   const { designSettings, updateDesignSettings } = useApp();
@@ -492,45 +624,163 @@ function SidebarTab() {
     toast.success('Bouton supprimé');
   };
 
+  const sliderEnabled = (designSettings as any).sidebarSliderEnabled !== false;
+  const sliderSpeed   = (designSettings as any).sidebarSliderSpeed ?? 6000;
+  const sliderMax     = (designSettings as any).sidebarSliderMaxProducts ?? 5;
+
   return (
     <div className="space-y-6">
 
-      {/* Row 1: Presets + Réapparition */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Presets Sidebar</CardTitle>
-            <CardDescription>Appliquez un style complet en un clic</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { id: 'classic',  name: 'Classique', desc: 'Image + carte + hotspots' },
-                { id: 'minimal',  name: 'Minimal',   desc: 'Image seule + CTA' },
-                { id: 'parallax', name: 'Parallaxe', desc: 'Image fixe + hotspots animés' },
-                { id: 'vitrine',  name: 'Vitrine',   desc: 'Gradient + promo' },
-                { id: 'dark',     name: 'Sombre',    desc: 'Fond sombre + stats' },
-                { id: 'catalog',  name: 'Catalogue', desc: 'Grille de produits' },
-              ].map((p) => (
+      {/* ── Presets ── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Presets Sidebar</CardTitle>
+          <CardDescription>Appliquez un style complet en un clic — le preset actif est surligné</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {SIDEBAR_PRESETS.map((p) => {
+              const active = isPresetActive(p.settings, designSettings);
+              return (
                 <button
                   key={p.id}
                   onClick={() => {
-                    if (p.id === 'classic')   updateDesignSettings({ showSidebarProductCard: true,  showSidebarSizes: true,  showSidebarStats: true,  showSidebarGallery: true });
-                    if (p.id === 'minimal')   updateDesignSettings({ showSidebarProductCard: false, showSidebarSizes: false, showSidebarStats: false, showSidebarGallery: false });
-                    if (p.id === 'parallax')  updateDesignSettings({ showSidebarProductCard: true,  showSidebarSizes: true,  showSidebarStats: true,  showSidebarGallery: true,  sidebarImageOpacity: 1 });
-                    if (p.id === 'vitrine')   updateDesignSettings({ showSidebarProductCard: false, showSidebarSizes: false, showSidebarStats: false, showSidebarGallery: false, sidebarGradient: true, gradientIntensity: 80 });
-                    if (p.id === 'dark')      updateDesignSettings({ showSidebarProductCard: false, showSidebarSizes: false, showSidebarStats: true,  showSidebarGallery: false, sidebarBg: '#0a0a0a', sidebarImageOpacity: 0.3 });
-                    toast.success(`Preset Sidebar "${p.name}" appliqué`);
+                    updateDesignSettings(p.settings as any);
+                    toast.success(`Preset "${p.name}" appliqué`);
                   }}
-                  className="border border-border hover:border-primary/60 rounded-lg p-3 text-left transition-all hover:bg-muted/40"
+                  className={cn(
+                    'relative border-2 rounded-lg p-3 text-left transition-all',
+                    active
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border hover:border-primary/50 hover:bg-muted/40'
+                  )}
                 >
-                  <p className="text-sm font-semibold">{p.name}</p>
-                  <p className="text-xs text-muted-foreground">{p.desc}</p>
+                  {active && (
+                    <span className="absolute top-2 right-2 flex h-4 w-4 items-center justify-center rounded-full bg-primary">
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                        <path d="M2 5l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary-foreground" style={{ color: 'hsl(var(--primary-foreground))' }} />
+                      </svg>
+                    </span>
+                  )}
+                  <span className="block text-xl mb-1">{p.icon}</span>
+                  <p className="text-sm font-bold">{p.name}</p>
+                  <p className="text-xs text-muted-foreground leading-snug">{p.desc}</p>
                 </button>
-              ))}
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Slider de produits ── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Slider de produits</CardTitle>
+          <CardDescription>Rotation automatique des produits dans la sidebar</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label>Activer le slider automatique</Label>
+            <Switch
+              checked={sliderEnabled}
+              onCheckedChange={(v) => updateDesignSettings({ sidebarSliderEnabled: v } as any)}
+            />
+          </div>
+          {sliderEnabled && (
+            <>
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Vitesse de rotation</Label>
+                <div className="flex gap-2">
+                  {[{ label: '3s', value: 3000 }, { label: '5s', value: 5000 }, { label: '8s', value: 8000 }, { label: '12s', value: 12000 }].map(opt => (
+                    <Button
+                      key={opt.value}
+                      size="sm"
+                      variant={sliderSpeed === opt.value ? 'default' : 'outline'}
+                      onClick={() => updateDesignSettings({ sidebarSliderSpeed: opt.value } as any)}
+                      className="flex-1"
+                    >
+                      {opt.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Produits maximum : <span className="font-bold text-foreground">{sliderMax}</span></Label>
+                <Slider
+                  value={[sliderMax]}
+                  min={1} max={10} step={1}
+                  onValueChange={([v]) => updateDesignSettings({ sidebarSliderMaxProducts: v } as any)}
+                />
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Row 2: Réapparition + Apparence ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Réapparition automatique</CardTitle>
+            <CardDescription>Délai avant réouverture après fermeture</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label>Activée</Label>
+              <Switch
+                checked={((designSettings as any).sidebarReappearDelay ?? 10000) > 0}
+                onCheckedChange={(checked) => updateDesignSettings({ sidebarReappearDelay: checked ? 30000 : 0 } as any)}
+              />
+            </div>
+            {((designSettings as any).sidebarReappearDelay ?? 10000) > 0 && (
+              <div className="flex gap-2">
+                {[{ label: '10s', value: 10000 }, { label: '30s', value: 30000 }, { label: '1 min', value: 60000 }].map(opt => (
+                  <Button
+                    key={opt.value}
+                    size="sm"
+                    variant={((designSettings as any).sidebarReappearDelay ?? 10000) === opt.value ? 'default' : 'outline'}
+                    onClick={() => updateDesignSettings({ sidebarReappearDelay: opt.value } as any)}
+                    className="flex-1"
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Apparence</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Couleur de fond</Label>
+              <div className="flex gap-2">
+                <input
+                  type="color"
+                  value={designSettings.sidebarBg}
+                  onChange={(e) => updateDesignSettings({ sidebarBg: e.target.value })}
+                  className="h-9 w-12 cursor-pointer rounded border border-border"
+                />
+                <Input
+                  value={designSettings.sidebarBg}
+                  onChange={(e) => updateDesignSettings({ sidebarBg: e.target.value })}
+                  className="flex-1 h-9"
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <Label>Dégradé</Label>
+              <Switch
+                checked={designSettings.sidebarGradient}
+                onCheckedChange={(v) => updateDesignSettings({ sidebarGradient: v })}
+              />
             </div>
           </CardContent>
         </Card>
+      </div>
 
         <div className="space-y-4">
           {/* Réapparition */}
@@ -596,10 +846,9 @@ function SidebarTab() {
               </div>
             </CardContent>
           </Card>
-        </div>
       </div>
 
-      {/* Row 2: Images mannequin + Identité de marque */}
+      {/* ── Row 3: Images mannequin + Identité de marque ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
