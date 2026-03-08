@@ -1,0 +1,146 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { DesignSettings } from '@/types';
+import { INITIAL_DESIGN_SETTINGS } from '@/data/initialData';
+import { Json } from '@/integrations/supabase/types';
+
+// Map DB row → DesignSettings
+function dbToSettings(db: Record<string, unknown>): DesignSettings {
+  const base = { ...INITIAL_DESIGN_SETTINGS };
+  return {
+    ...base,
+    // Text fields
+    sidebarBg: (db.sidebar_bg as string) || base.sidebarBg,
+    accentColor: (db.accent_color as string) || base.accentColor,
+    hudLogo: (db.hud_logo as string) || base.hudLogo,
+    unitIdLabel: (db.unit_id_label as string) || base.unitIdLabel,
+    customUnitID: (db.custom_unit_id as string) || base.customUnitID,
+    statsLabel: (db.stats_label as string) || base.statsLabel,
+    statsSubLabel: (db.stats_sub_label as string) || base.statsSubLabel,
+    backgroundWatermark: (db.background_watermark as string) ?? base.backgroundWatermark,
+    sidebarImage: (db.sidebar_image as string) || undefined,
+    headerPreset: (db.header_preset as string) || base.headerPreset,
+    headerBgColor: (db.header_bg_color as string) ?? base.headerBgColor,
+    headerTextColor: (db.header_text_color as string) ?? base.headerTextColor,
+    socialDisplayMode: ((db.social_display_mode as string) || base.socialDisplayMode) as 'icons' | 'text' | 'both',
+    
+    // Booleans
+    showLogo: db.show_logo !== null ? (db.show_logo as boolean) : base.showLogo,
+    showStats: db.show_stats !== null ? (db.show_stats as boolean) : base.showStats,
+    showUnitID: db.show_unit_id !== null ? (db.show_unit_id as boolean) : base.showUnitID,
+    showOverlays: db.show_overlays !== null ? (db.show_overlays as boolean) : base.showOverlays,
+    sidebarGradient: db.sidebar_gradient !== null ? (db.sidebar_gradient as boolean) : base.sidebarGradient,
+    headerFixed: db.header_fixed !== null ? (db.header_fixed as boolean) : base.headerFixed,
+    isSlideshowActive: db.is_slideshow_active !== null ? (db.is_slideshow_active as boolean) : base.isSlideshowActive,
+    sliderAutoPlay: db.slider_auto_play !== null ? (db.slider_auto_play as boolean) : base.sliderAutoPlay,
+    showSliderOverlay: db.show_slider_overlay !== null ? (db.show_slider_overlay as boolean) : base.showSliderOverlay,
+    sliderGrayscale: db.slider_grayscale !== null ? (db.slider_grayscale as boolean) : base.sliderGrayscale,
+    
+    // Numbers
+    gradientIntensity: (db.gradient_intensity as number) ?? base.gradientIntensity,
+    glitchDuration: (db.glitch_duration as number) ?? base.glitchDuration,
+    glitchIntensity: (db.glitch_intensity as number) ?? base.glitchIntensity,
+    clickScale: (db.click_scale as number) ?? base.clickScale,
+    slideshowSpeed: (db.slideshow_speed as number) ?? base.slideshowSpeed,
+    sliderSpeed: (db.slider_speed as number) ?? base.sliderSpeed,
+    categoryColumns: (db.category_columns as number) ?? base.categoryColumns,
+    
+    // JSONB fields
+    stats: (db.stats as typeof base.stats) || base.stats,
+    hudButtons: (db.hud_buttons as typeof base.hudButtons) || base.hudButtons,
+    logoStyle: (db.logo_style as typeof base.logoStyle) || base.logoStyle,
+    statsStyle: (db.stats_style as typeof base.statsStyle) || base.statsStyle,
+    unitIdStyle: (db.unit_id_style as typeof base.unitIdStyle) || base.unitIdStyle,
+    socialStyle: (db.social_style as typeof base.socialStyle) || base.socialStyle,
+    backgroundMedia: (db.background_media as typeof base.backgroundMedia) || base.backgroundMedia,
+    heroSlides: (db.hero_slides as typeof base.heroSlides) || base.heroSlides,
+    socialLinks: (db.social_links as typeof base.socialLinks) || base.socialLinks,
+    homeSections: (db.home_sections as typeof base.homeSections) || base.homeSections,
+    presets: (db.presets as typeof base.presets) || base.presets,
+    schedules: (db.schedules as typeof base.schedules) || base.schedules,
+    pages: (db.pages as typeof base.pages) || base.pages,
+  };
+}
+
+// Map DesignSettings → DB row (only columns that exist in the table)
+function settingsToDb(s: DesignSettings) {
+  return {
+    settings_key: 'main',
+    sidebar_bg: s.sidebarBg,
+    accent_color: s.accentColor,
+    hud_logo: s.hudLogo,
+    unit_id_label: s.unitIdLabel,
+    custom_unit_id: s.customUnitID,
+    stats_label: s.statsLabel,
+    stats_sub_label: s.statsSubLabel,
+    background_watermark: s.backgroundWatermark,
+    sidebar_image: s.sidebarImage || null,
+    header_preset: s.headerPreset,
+    header_bg_color: s.headerBgColor,
+    header_text_color: s.headerTextColor,
+    header_fixed: s.headerFixed,
+    social_display_mode: s.socialDisplayMode,
+    show_logo: s.showLogo,
+    show_stats: s.showStats,
+    show_unit_id: s.showUnitID,
+    show_overlays: s.showOverlays,
+    sidebar_gradient: s.sidebarGradient,
+    gradient_intensity: s.gradientIntensity,
+    is_slideshow_active: s.isSlideshowActive,
+    slideshow_speed: s.slideshowSpeed,
+    slider_auto_play: s.sliderAutoPlay,
+    slider_speed: s.sliderSpeed,
+    show_slider_overlay: s.showSliderOverlay,
+    slider_grayscale: s.sliderGrayscale,
+    glitch_duration: s.glitchDuration,
+    glitch_intensity: s.glitchIntensity,
+    click_scale: s.clickScale,
+    category_columns: s.categoryColumns,
+    stats: s.stats as unknown as Json,
+    hud_buttons: s.hudButtons as unknown as Json,
+    logo_style: s.logoStyle as unknown as Json,
+    stats_style: s.statsStyle as unknown as Json,
+    unit_id_style: s.unitIdStyle as unknown as Json,
+    social_style: s.socialStyle as unknown as Json,
+    background_media: s.backgroundMedia as unknown as Json,
+    hero_slides: s.heroSlides as unknown as Json,
+    social_links: s.socialLinks as unknown as Json,
+    home_sections: s.homeSections as unknown as Json,
+    presets: s.presets as unknown as Json,
+    schedules: s.schedules as unknown as Json,
+    pages: s.pages as unknown as Json,
+  };
+}
+
+export function useDesignSettings() {
+  return useQuery({
+    queryKey: ['design_settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('design_settings')
+        .select('*')
+        .eq('settings_key', 'main')
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      return dbToSettings(data as Record<string, unknown>);
+    },
+    staleTime: 1000 * 60 * 5, // 5 min cache
+  });
+}
+
+export function useSaveDesignSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (settings: DesignSettings) => {
+      const payload = settingsToDb(settings);
+      const { error } = await supabase
+        .from('design_settings')
+        .upsert(payload, { onConflict: 'settings_key' });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['design_settings'] });
+    },
+  });
+}
