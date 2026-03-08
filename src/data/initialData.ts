@@ -343,6 +343,9 @@ export const INITIAL_DESIGN_SETTINGS: DesignSettings = {
   statBarEmptyColor: '#e5e5e5',
   sidebarProductTitle: '',
   sidebarProductDescription: '',
+  sidebarSliderEnabled: true,
+  sidebarSliderSpeed: 6000,
+  sidebarSliderMaxProducts: 5,
   mannequinHotspots: [
     { id: 'collar', x: '50%', y: '15%', label: 'COL TECHNIQUE', details: 'Protection coupe-vent intégrée', icon: 'Shield', enabled: true, markerType: 'dot', contentMode: 'manual' },
     { id: 'pocket', x: '30%', y: '45%', label: 'POCHE TACTIQUE', details: 'Accès rapide sécurisé', icon: 'Package', enabled: true, markerType: 'dot', contentMode: 'manual' },
