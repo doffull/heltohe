@@ -125,10 +125,36 @@ function settingsToDb(s: DesignSettings) {
     site_tagline: s.siteTagline ?? '',
     contact_email: s.contactEmail ?? '',
     contact_phone: s.contactPhone ?? '',
+    // Core show/hide booleans
     show_logo: s.showLogo,
     show_stats: s.showStats,
     show_unit_id: s.showUnitID,
     show_overlays: s.showOverlays,
+    // Sidebar show/hide booleans (NOW persisted to DB)
+    show_sidebar_product_card: s.showSidebarProductCard,
+    show_sidebar_sizes: s.showSidebarSizes,
+    show_sidebar_stats: s.showSidebarStats,
+    show_sidebar_gallery: s.showSidebarGallery,
+    show_sidebar_product_number: s.showSidebarProductNumber,
+    // Sidebar slider
+    sidebar_slider_enabled: s.sidebarSliderEnabled ?? true,
+    sidebar_slider_speed: s.sidebarSliderSpeed ?? 6000,
+    sidebar_slider_max_products: s.sidebarSliderMaxProducts ?? 5,
+    // Sidebar text/identity
+    sidebar_brand_name: s.sidebarBrandName ?? '',
+    sidebar_brand_subtitle: s.sidebarBrandSubtitle ?? '',
+    sidebar_info_text: s.sidebarInfoText ?? '',
+    sidebar_product_title: s.sidebarProductTitle ?? '',
+    sidebar_product_description: s.sidebarProductDescription ?? '',
+    mobile_sidebar_image: s.mobileSidebarImage || null,
+    mobile_sidebar_media_type: s.mobileSidebarMediaType ?? 'image',
+    // Sidebar image opacity + sizes
+    sidebar_image_opacity: s.sidebarImageOpacity ?? 1,
+    sidebar_sizes: s.sidebarSizes as unknown as Json,
+    // Stat bar colors
+    stat_bar_filled_color: s.statBarFilledColor ?? '#ffffff',
+    stat_bar_empty_color: s.statBarEmptyColor ?? '#333333',
+    // Other toggles
     sidebar_gradient: s.sidebarGradient,
     gradient_intensity: s.gradientIntensity,
     is_slideshow_active: s.isSlideshowActive,
