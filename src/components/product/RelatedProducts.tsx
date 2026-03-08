@@ -17,7 +17,7 @@ export default function RelatedProducts({ category, currentId }: RelatedProducts
   const { data: allProducts, isLoading } = useProducts();
 
   const related = (allProducts || [])
-    .filter(p => p.category === category && p.id !== currentId && p.isActive !== false)
+    .filter(p => p.category === category && p.id !== currentId)
     .slice(0, 8);
 
   const scroll = (dir: 'left' | 'right') => {
