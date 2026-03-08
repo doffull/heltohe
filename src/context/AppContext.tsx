@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCategories } from '@/hooks/useCategories';
+import { useProducts } from '@/hooks/useProducts';
+import { useDesignSettings, useSaveDesignSettings } from '@/hooks/useDesignSettings';
 import { 
   DesignSettings, 
   Product, 
@@ -10,7 +12,7 @@ import {
   translations,
   TranslationStrings
 } from '@/types';
-import { INITIAL_DESIGN_SETTINGS, INITIAL_PRODUCTS, INITIAL_ORDERS } from '@/data/initialData';
+import { INITIAL_DESIGN_SETTINGS, INITIAL_ORDERS } from '@/data/initialData';
 
 interface AppContextType {
   // View management
@@ -52,15 +54,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isTranslating, setIsTranslating] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   
-  const [products, setProducts] = useState<Product[]>(() => {
-    const saved = localStorage.getItem('app_products');
-    if (saved) {
-      try { return JSON.parse(saved); } 
-      catch { return INITIAL_PRODUCTS; }
-    }
-    return INITIAL_PRODUCTS;
-  });
+  // Products: source from Supabase via useProducts hook
+  const { data: supabaseProducts = [] } = useProducts();
+  const [products, setProducts] = useState<Product[]>([]);
   
+  // Sync products from Supabase
+  useEffect(() => {
+    if (supabaseProducts.length > 0) {
+      setProducts(supabaseProducts);
+    }
+  }, [supabaseProducts]);
+
   const [orders, setOrders] = useState<Order[]>(() => {
     const saved = localStorage.getItem('app_orders');
     if (saved) {
@@ -70,29 +74,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return INITIAL_ORDERS;
   });
   
-  const [designSettings, setDesignSettings] = useState<DesignSettings>(() => {
-    const saved = localStorage.getItem('app_design_settings');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        return { ...INITIAL_DESIGN_SETTINGS, ...parsed };
-      } catch { return INITIAL_DESIGN_SETTINGS; }
-    }
-    return INITIAL_DESIGN_SETTINGS;
-  });
+  // Design settings: source from Supabase cloud
+  const [designSettings, setDesignSettingsLocal] = useState<DesignSettings>(INITIAL_DESIGN_SETTINGS);
+  const { data: dbSettings } = useDesignSettings();
+  const saveDesignSettings = useSaveDesignSettings();
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Persist to localStorage
+  // Sync cloud → local on load
   useEffect(() => {
-    localStorage.setItem('app_products', JSON.stringify(products));
-  }, [products]);
+    if (dbSettings) {
+      setDesignSettingsLocal(prev => ({ ...INITIAL_DESIGN_SETTINGS, ...dbSettings, ...prev === INITIAL_DESIGN_SETTINGS ? dbSettings : {} }));
+      setDesignSettingsLocal(dbSettings);
+    }
+  }, [dbSettings]);
 
+  // Persist orders to localStorage (orders don't have a full Supabase hook in AppContext yet)
   useEffect(() => {
     localStorage.setItem('app_orders', JSON.stringify(orders));
   }, [orders]);
-
-  useEffect(() => {
-    localStorage.setItem('app_design_settings', JSON.stringify(designSettings));
-  }, [designSettings]);
 
   const setLanguage = (lang: Language) => {
     if (lang === language) return;
@@ -107,9 +106,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return translations[language][key] || key;
   };
 
-  const updateDesignSettings = (updates: Partial<DesignSettings>) => {
-    setDesignSettings(prev => ({ ...prev, ...updates }));
-  };
+  // Debounced save to cloud (800ms)
+  const debouncedSave = useCallback((settings: DesignSettings) => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      saveDesignSettings.mutate(settings);
+    }, 800);
+  }, [saveDesignSettings]);
+
+  const setDesignSettings = useCallback((settings: DesignSettings) => {
+    setDesignSettingsLocal(settings);
+    debouncedSave(settings);
+  }, [debouncedSave]);
+
+  const updateDesignSettings = useCallback((updates: Partial<DesignSettings>) => {
+    setDesignSettingsLocal(prev => {
+      const next = { ...prev, ...updates };
+      debouncedSave(next);
+      return next;
+    });
+  }, [debouncedSave]);
 
   const navigate = useNavigate();
   const { data: allCategories = [] } = useCategories();
@@ -120,7 +136,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (category === 'Tout') {
       navigate('/boutique');
     } else {
-      // Find slug for this category
       const cat = allCategories.find(c => c.title === category);
       const slug = cat?.slug || encodeURIComponent(category.toLowerCase());
       navigate(`/boutique/${slug}`);
