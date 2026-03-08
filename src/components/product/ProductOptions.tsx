@@ -233,6 +233,7 @@ export default function ProductOptions({
           </motion.div>
         </div>
       </motion.div>
+      <SizeGuideModal open={sizeGuideOpen} onOpenChange={setSizeGuideOpen} />
     </>
   );
 }

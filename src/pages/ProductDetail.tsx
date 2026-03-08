@@ -147,6 +147,9 @@ export default function ProductDetail() {
             />
           </div>
         </div>
+
+        {/* Related products */}
+        <RelatedProducts category={product.category} currentId={product.id} />
       </div>
     </div>
   );
