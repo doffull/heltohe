@@ -163,9 +163,14 @@ export function MainLayout({ children }: MainLayoutProps) {
         )}>
           <Link to="/" className="logo-link">
             {designSettings.hudLogo ? (
-              <img src={designSettings.hudLogo} alt="Logo" className="h-10 w-auto object-contain" />
+              <img 
+                src={designSettings.hudLogo} 
+                alt="Logo" 
+                className="h-10 w-auto object-contain"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
             ) : (
-              <span className="logo-text">Helvetica-MP</span>
+              <span className="logo-text">{(designSettings as any).siteName || 'Helvetica-MP'}</span>
             )}
           </Link>
         </div>
@@ -195,10 +200,15 @@ export function MainLayout({ children }: MainLayoutProps) {
               headerPreset === 'centered' ? "" : (showSidebar ? "lg:hidden mr-auto" : "mr-auto")
             )}>
               {designSettings.showLogo !== false && designSettings.hudLogo ? (
-                <img src={designSettings.hudLogo} alt="Logo" className={cn(
-                  "w-auto object-contain",
-                  headerPreset === 'centered' ? "h-8 lg:h-10" : "h-7"
-                )} />
+                <img 
+                  src={designSettings.hudLogo} 
+                  alt="Logo" 
+                  className={cn(
+                    "w-auto object-contain",
+                    headerPreset === 'centered' ? "h-8 lg:h-12" : "h-8 lg:h-10"
+                  )}
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
               ) : (
                 designSettings.showLogo !== false && (
                   <span className="font-bold text-base tracking-wider uppercase">
