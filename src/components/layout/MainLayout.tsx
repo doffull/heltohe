@@ -72,7 +72,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const categoryNavItems = dbCategories
     .filter(c => !c.parentId)
     .map(c => ({
-      href: `/boutique/${c.slug || encodeURIComponent(c.title.toLowerCase())}`,
+      href: `/${c.slug || encodeURIComponent(c.title.toLowerCase())}`,
       label: c.title,
     }));
 
