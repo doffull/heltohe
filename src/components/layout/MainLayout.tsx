@@ -163,9 +163,14 @@ export function MainLayout({ children }: MainLayoutProps) {
         )}>
           <Link to="/" className="logo-link">
             {designSettings.hudLogo ? (
-              <img src={designSettings.hudLogo} alt="Logo" className="h-10 w-auto object-contain" />
+              <img 
+                src={designSettings.hudLogo} 
+                alt="Logo" 
+                className="h-10 w-auto object-contain"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
             ) : (
-              <span className="logo-text">Helvetica-MP</span>
+              <span className="logo-text">{(designSettings as any).siteName || 'Helvetica-MP'}</span>
             )}
           </Link>
         </div>
