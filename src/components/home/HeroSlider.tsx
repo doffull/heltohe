@@ -59,7 +59,7 @@ export function HeroSlider() {
     : (currentSlide.objectPosition || 'center');
   
   return (
-    <div className="relative h-[70vh] lg:h-[80vh] overflow-hidden">
+    <div className="relative h-[55vh] sm:h-[70vh] lg:h-[80vh] overflow-hidden">
       {/* Background Layer (slowest parallax) */}
       <motion.div 
         className={cn(
