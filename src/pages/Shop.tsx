@@ -18,6 +18,8 @@ import {
   SlidersHorizontal
 } from 'lucide-react';
 
+import { ProductCard } from '@/components/products/ProductCard';
+
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Nouveautés' },
   { value: 'price-asc', label: 'Prix croissant' },
@@ -255,52 +257,16 @@ export default function Shop({ categoryFromSlug }: { categoryFromSlug?: string }
             {filteredProducts.map((product, index) => (
               <div
                 key={product.id}
-                className="group bevel-corners bg-card overflow-hidden border border-border hover:border-foreground transition-all duration-300 shadow-hmp hover:shadow-hmp-lg animate-fade-in"
+                className="animate-fade-in"
                 style={{ animationDelay: `${index * 50}ms` }}
                 onMouseEnter={() => handleProductHover(product)}
                 onMouseLeave={handleProductLeave}
               >
-                <div className="relative aspect-[3/4] overflow-hidden cursor-pointer" onClick={() => navigate(`/boutique/${product.id}`)}>
-                  <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                  {product.salePrice && (
-                    <div className="absolute top-3 left-3 bg-foreground text-background px-2 py-1 text-[10px] font-bold uppercase">Promo</div>
-                  )}
-                  {product.stock <= 5 && product.stock > 0 && (
-                    <div className="absolute top-3 right-3 bg-destructive text-destructive-foreground px-2 py-1 text-[10px] uppercase">Stock limité</div>
-                  )}
-                  <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <div className="text-center">
-                      <p className="text-xs uppercase tracking-wider mb-3">Tailles disponibles</p>
-                      <div className="flex gap-1.5 justify-center">
-                        {(product.sizes || ['XS', 'S', 'M', 'L', 'XL']).slice(0, 5).map((size) => (
-                          <span key={size} className="w-8 h-8 border border-foreground flex items-center justify-center text-xs font-medium">{size}</span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  <button className="absolute bottom-3 right-3 w-9 h-9 bg-background/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background">
-                    <Heart className="h-4 w-4" />
-                  </button>
-                </div>
-                <div className="p-4">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{product.category}</p>
-                  <h3 className="font-bold uppercase text-sm tracking-tight truncate cursor-pointer hover:text-muted-foreground transition-colors" onClick={() => navigate(`/boutique/${product.id}`)}>
-                    {product.name}
-                  </h3>
-                  <div className="flex items-center gap-2 mt-2">
-                    {product.salePrice ? (
-                      <>
-                        <span className="text-base font-bold">{product.salePrice}€</span>
-                        <span className="text-xs line-through text-muted-foreground">{product.price}€</span>
-                      </>
-                    ) : (
-                      <span className="text-base font-bold">{product.price}€</span>
-                    )}
-                  </div>
-                </div>
-                <button className="product-card-footer text-xs" onClick={() => handleAddToCart(product)} disabled={product.stock === 0}>
-                  {product.stock === 0 ? 'Épuisé' : 'Ajouter au panier'}
-                </button>
+                <ProductCard
+                  product={product}
+                  onClick={() => navigate(`/boutique/${product.id}`)}
+                  onAddToCart={() => handleAddToCart(product)}
+                />
               </div>
             ))}
           </div>
