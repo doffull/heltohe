@@ -142,7 +142,7 @@ export function HeroSlider() {
           <Button
             onClick={() => setCurrentView('Shop')}
             className={cn(
-              "chamfer-hud px-8 py-6 hud-text text-sm tracking-wider",
+              "chamfer-hud px-5 py-4 sm:px-8 sm:py-6 hud-text text-xs sm:text-sm tracking-wider",
               "bg-primary text-primary-foreground hover:bg-primary/90",
               "transition-all duration-300 hover:scale-105"
             )}

@@ -86,13 +86,13 @@ export default function ProductInfo({ product, isNew }: ProductInfoProps) {
 
       {/* Features bar */}
       <motion.div
-        className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-6 border-y border-border"
+        className="grid grid-cols-3 gap-2 py-4 border-y border-border"
         {...fadeUp}
         transition={{ delay: 0.5 }}
       >
         {[
-          { icon: Truck, label: 'Livraison gratuite dès 100€' },
-          { icon: Shield, label: 'Garantie 2 ans' },
+          { icon: Truck, label: 'Livraison gratuite dès 200€ en point relais' },
+          { icon: Shield, label: 'Garantie 1 an' },
           { icon: RotateCcw, label: 'Retours sous 30 jours' },
         ].map(({ icon: Icon, label }, i) => (
           <motion.div
@@ -102,8 +102,8 @@ export default function ProductInfo({ product, isNew }: ProductInfoProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 + i * 0.1 }}
           >
-            <Icon className="h-7 w-7 mx-auto mb-2 text-primary" />
-            <p className="text-xs text-muted-foreground">{label}</p>
+            <Icon className="h-5 w-5 sm:h-7 sm:w-7 mx-auto mb-1 sm:mb-2 text-primary" />
+            <p className="text-[9px] sm:text-xs text-muted-foreground leading-tight">{label}</p>
           </motion.div>
         ))}
       </motion.div>
