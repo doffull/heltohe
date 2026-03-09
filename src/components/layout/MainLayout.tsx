@@ -195,10 +195,15 @@ export function MainLayout({ children }: MainLayoutProps) {
               headerPreset === 'centered' ? "" : (showSidebar ? "lg:hidden mr-auto" : "mr-auto")
             )}>
               {designSettings.showLogo !== false && designSettings.hudLogo ? (
-                <img src={designSettings.hudLogo} alt="Logo" className={cn(
-                  "w-auto object-contain",
-                  headerPreset === 'centered' ? "h-8 lg:h-10" : "h-7"
-                )} />
+                <img 
+                  src={designSettings.hudLogo} 
+                  alt="Logo" 
+                  className={cn(
+                    "w-auto object-contain",
+                    headerPreset === 'centered' ? "h-8 lg:h-12" : "h-8 lg:h-10"
+                  )}
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
               ) : (
                 designSettings.showLogo !== false && (
                   <span className="font-bold text-base tracking-wider uppercase">
