@@ -456,7 +456,12 @@ export function MainLayout({ children }: MainLayoutProps) {
           <div 
             className="absolute inset-0 z-0"
             style={{
-              backgroundImage: `url(${(isMobile && (designSettings as any).mobileSidebarImage) ? (designSettings as any).mobileSidebarImage : (designSettings.sidebarImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&auto=format&fit=crop&q=60')})`,
+              backgroundImage: (isMobile && (designSettings as any).mobileSidebarImage) 
+                ? `url(${(designSettings as any).mobileSidebarImage})` 
+                : designSettings.sidebarImage 
+                  ? `url(${designSettings.sidebarImage})` 
+                  : undefined,
+              backgroundColor: designSettings.sidebarImage ? undefined : 'hsl(var(--secondary))',
               backgroundSize: 'cover',
               backgroundPosition: 'center top',
               backgroundAttachment: isMobile ? 'scroll' : 'fixed',
