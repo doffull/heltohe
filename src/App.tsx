@@ -117,6 +117,7 @@ function AnimatedRoutes() {
           <Route path="/boutique/:slugOrId" element={<MainLayout><BoutiqueRouter /></MainLayout>} />
           <Route path="/panier" element={<MainLayout><Cart /></MainLayout>} />
           <Route path="/a-propos" element={<MainLayout><About /></MainLayout>} />
+          <Route path="/contact" element={<MainLayout><Contact /></MainLayout>} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/compte/*" element={<MainLayout><Account /></MainLayout>} />
           <Route path="/admin/*" element={<Admin />} />
