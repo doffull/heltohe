@@ -78,20 +78,18 @@ export default function ProductImageGallery({
         <AnimatePresence mode="wait">
           {activeMedia === 'image' ? (
             <motion.img
-              key={`image-${displayImage}`}
+              key={`image-${displayImage}-${selectedColor}`}
               src={displayImage}
               alt={name}
               className="w-full h-full object-cover"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              initial={{ opacity: 0, scale: 1.03 }}
+              animate={{ opacity: 1, scale: isZoomed ? 2.5 : 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
               style={isZoomed ? {
                 transformOrigin: `${mousePos.x}% ${mousePos.y}%`,
-                scale: 2.5,
               } : {
                 transformOrigin: 'center center',
-                scale: 1,
               }}
             />
           ) : videoUrl && isEmbedVideo(videoUrl) ? (
