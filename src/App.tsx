@@ -22,6 +22,7 @@ import Account from "./pages/Account";
 import Admin from "./pages/admin/Admin";
 import NotFound from "./pages/NotFound";
 import About from "./pages/About";
+import Contact from "./pages/Contact";
 
 // Layout
 import { MainLayout } from "./components/layout/MainLayout";
