@@ -17,6 +17,7 @@ import {
   Heart,
   SlidersHorizontal
 } from 'lucide-react';
+
 import { ProductCard } from '@/components/products/ProductCard';
 
 const SORT_OPTIONS = [
