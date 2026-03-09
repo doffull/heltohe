@@ -59,7 +59,7 @@ export function HeroSlider() {
     : (currentSlide.objectPosition || 'center');
   
   return (
-    <div className="relative h-[70vh] lg:h-[80vh] overflow-hidden">
+    <div className="relative h-[55vh] sm:h-[70vh] lg:h-[80vh] overflow-hidden">
       {/* Background Layer (slowest parallax) */}
       <motion.div 
         className={cn(
@@ -133,7 +133,7 @@ export function HeroSlider() {
             {currentSlide.subtitle}
           </div>
           
-          <h1 className="text-4xl lg:text-6xl xl:text-7xl font-bold tracking-tight">
+          <h1 className="text-2xl sm:text-4xl lg:text-6xl xl:text-7xl font-bold tracking-tight">
             <span className="glitch-effect" data-text={currentSlide.title}>
               {currentSlide.title}
             </span>
@@ -142,7 +142,7 @@ export function HeroSlider() {
           <Button
             onClick={() => setCurrentView('Shop')}
             className={cn(
-              "chamfer-hud px-8 py-6 hud-text text-sm tracking-wider",
+              "chamfer-hud px-5 py-4 sm:px-8 sm:py-6 hud-text text-xs sm:text-sm tracking-wider",
               "bg-primary text-primary-foreground hover:bg-primary/90",
               "transition-all duration-300 hover:scale-105"
             )}

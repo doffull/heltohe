@@ -72,7 +72,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const categoryNavItems = dbCategories
     .filter(c => !c.parentId)
     .map(c => ({
-      href: `/boutique/${c.slug || encodeURIComponent(c.title.toLowerCase())}`,
+      href: `/${c.slug || encodeURIComponent(c.title.toLowerCase())}`,
       label: c.title,
     }));
 
@@ -332,7 +332,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                     {/* Dynamic Categories with subcategories */}
                     {dbCategories.filter(c => !c.parentId).map((cat) => {
                       const subs = dbCategories.filter(c => c.parentId === cat.id);
-                      const catHref = `/boutique/${cat.slug || encodeURIComponent(cat.title.toLowerCase())}`;
+                      const catHref = `/${cat.slug || encodeURIComponent(cat.title.toLowerCase())}`;
                       return (
                         <div key={cat.id}>
                           <Link
@@ -349,7 +349,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                               {subs.map(sub => (
                                 <Link
                                   key={sub.id}
-                                  to={`/boutique/${sub.slug || encodeURIComponent(sub.title.toLowerCase())}`}
+                                  to={`/${sub.slug || encodeURIComponent(sub.title.toLowerCase())}`}
                                   className="flex items-center justify-between py-2 text-sm font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground"
                                 >
                                   {sub.title}
@@ -456,7 +456,12 @@ export function MainLayout({ children }: MainLayoutProps) {
           <div 
             className="absolute inset-0 z-0"
             style={{
-              backgroundImage: `url(${(isMobile && (designSettings as any).mobileSidebarImage) ? (designSettings as any).mobileSidebarImage : (designSettings.sidebarImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&auto=format&fit=crop&q=60')})`,
+              backgroundImage: (isMobile && (designSettings as any).mobileSidebarImage) 
+                ? `url(${(designSettings as any).mobileSidebarImage})` 
+                : designSettings.sidebarImage 
+                  ? `url(${designSettings.sidebarImage})` 
+                  : undefined,
+              backgroundColor: designSettings.sidebarImage ? undefined : 'hsl(var(--secondary))',
               backgroundSize: 'cover',
               backgroundPosition: 'center top',
               backgroundAttachment: isMobile ? 'scroll' : 'fixed',

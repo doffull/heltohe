@@ -1,87 +1,103 @@
 
-## Summary of all requests
+## Thinking
 
-1. **Hero/Header mobile responsive** — HeroSlider uses fixed `h-[70vh] lg:h-[80vh]`, text sizing is OK but the content padding `px-6` is fine. The main issue on mobile is that the hero text overlaps with no consideration for the sidebar panel button at bottom. The header is `h-14 lg:h-20` and already responsive. Need to make the hero better on mobile: smaller title, tighter CTA.
+The user wants to:
+1. Upload a product mockup image (like the Marco jacket shown)
+2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
+3. Automatically generates a fully interactive, dynamic product page from it
 
-2. **Logo cassé** — In `MainLayout.tsx` line 459, the sidebar background falls back to `'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800...'` when no `sidebarImage` is set. The splash screen at `App.tsx` line 90 falls back to `HMP` text. The logo in sidebar `Sidebar.tsx` line 42 shows a `<Layers>` icon when no `hudLogo`. Logo in header line 198-208 renders if `designSettings.hudLogo` exists. So if `hudLogo` is empty/null, all these fallbacks trigger. The issue is likely `hudLogo` is set but broken URL, OR the initial data still references an Unsplash URL that doesn't match the user's actual logo.
+The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
 
-3. **Image parasite** — The `ProductImageGallery.tsx` lines 229-238 render **3 fake grayscale placeholder thumbnails** (copies of the main product image with overlay). These appear as ghost images the user didn't add. Also `src/data/initialData.ts` has Unsplash images in `INITIAL_PRODUCTS`, `heroSlides`, `categories`, `backgroundMedia` — these are fallbacks only used if DB is empty. The real problem: the 3 placeholder thumbnails in ProductImageGallery must be removed.
+1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
+   - Accepts an image (jpg/png/webp)
+   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
+   - Also extracts the **color variants** as `colorOptions` with proper hex values
+   - Returns a structured product object ready to pre-fill the ProductForm
 
-4. **Catégorie Homme → arrive sur Boutique** — In `MainLayout.tsx` line 75, category nav items are built as `href: /boutique/${cat.slug}` — this goes to `/boutique/homme` which is handled by `BoutiqueRouter`, not `CategoryPageRouter`. The correct clean URL is `/${slug}` (e.g. `/homme`). Fix: change line 75 to use `/${c.slug}` instead of `/boutique/${c.slug}`.
+2. **Add "Importer Maquette IA" button** in AdminProducts that:
+   - Opens a dialog with a dropzone accepting images
+   - Sends image to the edge function
+   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
+   - Lets admin review/edit before confirming creation
+   - On confirm: creates the product in the DB with all extracted data
 
-5. **Scroll vers image au clic couleur** — When user clicks a color variant in `ProductOptions.tsx`, `onColorChange` is called. Need to scroll to `ProductImageGallery` (the image at the top of the page) with smooth behavior. Add a `ref` on the gallery container and call `scrollIntoView` when color changes.
+3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
 
-6. **Mini-menu popup variations couleur** — Add a floating sticky panel on mobile (and optionally desktop) showing color swatches. When user clicks a color, it triggers the existing `onColorChange` + scroll to image. This is a small floating pill/sheet at the left side of the product page.
+Looking at the Marco image:
+- Product name: MARCO
+- Brand: Helvetica Mountain Pioneers x PEGASWOES  
+- Season: HIVER 2026
+- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
+- Sizes: XS, S, M, L, XL, XXL
+- Composition: 100% POLYESTER
+- Tags: limited edition
 
-7. **Features bar — une seule ligne sur mobile** — In `ProductInfo.tsx` lines 79-98, the grid is `grid-cols-1 sm:grid-cols-3`. On mobile (`<sm`) it stacks. Change to `grid-cols-3` always (no stacking), with smaller text/icons on mobile.
+## Plan
 
-8. **Livraison gratuite → 200€ en point relais** — Change from "Livraison gratuite dès 100€" to "Livraison gratuite dès 200€ en point relais" in `ProductInfo.tsx` line 84.
+### 1. New edge function `analyze-product-image`
+New file: `supabase/functions/analyze-product-image/index.ts`
 
-9. **Garantie → 1 an (pas 2 ans)** — Change "Garantie 2 ans" to "Garantie 1 an" in `ProductInfo.tsx` line 85.
+Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
+- name, subtitle, price (ask to estimate if not found), category
+- sizes (exact text from image)
+- colors with **hex values** from the color swatches visible in image
+- colorOptions: [{color: "#hex", label: "nom"}]
+- material/composition
+- description (generated from visual)
+- sku (auto-generated)
+- tags (e.g., "limited edition" if spotted)
+- Any brand/collection info → subtitle
 
----
+### 2. New UI component `ImportMockupDialog.tsx`
+In `src/components/admin/ImportMockupDialog.tsx`:
+- Image dropzone (jpg/png/webp/gif up to 10MB)
+- Preview of uploaded image
+- "Analyser avec l'IA" button
+- Loading state with animated scan effect
+- Results preview:
+  - Product name, subtitle
+  - Price field (editable, since AI may not find it)
+  - Color swatches preview
+  - Size badges preview
+  - Material info
+  - Generated description
+- "Créer ce produit" confirm button
+- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
 
-## Files to modify
+### 3. AdminProducts integration
+- Add "Importer Maquette IA" button next to existing "Importer PDF" button
+- Opens the new ImportMockupDialog
+- After product created, show toast + option to go to product detail
 
-| File | Changes |
-|---|---|
-| `src/components/home/HeroSlider.tsx` | Better mobile sizing: `h-[55vh] sm:h-[70vh] lg:h-[80vh]`, smaller title on mobile `text-3xl sm:text-4xl lg:text-6xl xl:text-7xl`, tighter padding |
-| `src/components/product/ProductImageGallery.tsx` | Remove the 3 fake placeholder thumbnails (lines 229-238); add `ref` forwarding for scroll |
-| `src/components/product/ProductInfo.tsx` | Fix features bar to `grid-cols-3` always; update copy: "200€ en point relais", "1 an" |
-| `src/components/product/ProductOptions.tsx` | Add `onColorChange` scroll-to-image callback via a ref passed from parent; add floating color variant quick-picker |
-| `src/pages/ProductDetail.tsx` | Add `imageRef` ref; pass `scrollToImage` callback to `ProductOptions`; wire `onColorChange` to scroll |
-| `src/components/layout/MainLayout.tsx` | Fix category nav href: line 75 change `/boutique/${c.slug}` → `/${c.slug}` |
+### Files to create/modify
+- `supabase/functions/analyze-product-image/index.ts` — new edge function
+- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
+- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
 
----
+## Implementation Steps
 
-## Detailed logic
+### Step 1: Edge function `analyze-product-image`
+Input: `{ imageBase64: string, mimeType: string }`
+Prompt to Gemini Pro Vision:
+- Extract all visible product info
+- Extract hex colors from color swatches
+- Generate description if not present
+- Output strict JSON matching `ExtractedProductData` schema
 
-### Category nav fix (1 line)
-```typescript
-// Line 75 in MainLayout.tsx — change:
-href: `/boutique/${c.slug || encodeURIComponent(c.title.toLowerCase())}`,
-// to:
-href: `/${c.slug || encodeURIComponent(c.title.toLowerCase())}`,
-```
+### Step 2: `ImportMockupDialog` component
+States:
+- `file`, `preview` (image URL)
+- `analyzing` (loading state)
+- `extracted` (ExtractedProductData | null)
+- `editableData` (form state to review/edit before import)
 
-### Remove phantom thumbnails
-In `ProductImageGallery.tsx`, delete the `{/* Placeholder thumbnails */}` block (3 grayscale copies shown when no colorOptions and no video).
+UX Flow:
+1. Drag & drop or click to upload image
+2. Preview appears
+3. Click "Analyser avec IA" → loading scan animation
+4. Results appear: color swatches, size badges, all info
+5. User can edit price/name if needed
+6. Click "Créer le produit" → uploads image to storage, creates product, success
 
-### Features bar — always 3 columns
-```tsx
-// Change: className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-6 border-y border-border"
-// To:    className="grid grid-cols-3 gap-2 sm:gap-4 py-4 sm:py-6 border-y border-border"
-// And icons: h-5 w-5 sm:h-7 sm:w-7, text-[10px] sm:text-xs
-```
-
-### Scroll to image on color change
-In `ProductDetail.tsx`, add a `imageRef = useRef<HTMLDivElement>(null)` and pass a `scrollToImage` fn:
-```typescript
-const scrollToImage = useCallback(() => {
-  imageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}, []);
-```
-Wrap `ProductImageGallery` in a `div ref={imageRef}`.
-Pass `onColorChange` in `ProductOptions` to call both `setSelectedColor` AND `scrollToImage`.
-
-### Floating color variant popup
-Add a small `<ColorVariantPopup>` component — a fixed pill/button on the left side of screen on product pages that expands to show color swatches. Only visible when product has colors. It triggers `onColorChange` + scroll.
-
-```text
-Mobile layout — product page:
-┌────────────────────────────┐
-│         [Image]            │
-│                            │
-│  ◉ [COLOR POPUP]           │  ← floating left, toggles open
-└────────────────────────────┘
-│    Product Info             │
-│    Size selector            │
-│    [Add to Cart]            │
-└────────────────────────────┘
-
-When popup expanded:
-┌──────────────────┐
-│ 🎨 COULEURS      │
-│ ● ● ●           │  (swatches)
-└──────────────────┘
-```
+### Step 3: AdminProducts button
+Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)

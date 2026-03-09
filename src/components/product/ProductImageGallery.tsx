@@ -226,16 +226,6 @@ export default function ProductImageGallery({
               )}
             </button>
 
-            {/* Placeholder thumbnails */}
-            {!videoUrl && [1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="w-20 h-20 chamfer-hud-sm overflow-hidden border border-border/30 bg-card/10 opacity-40 relative"
-              >
-                <img src={image} alt={name} className="w-full h-full object-cover grayscale" />
-                <div className="absolute inset-0 bg-background/60" />
-              </div>
-            ))}
           </>
         )}
 
