@@ -22,6 +22,7 @@ import Account from "./pages/Account";
 import Admin from "./pages/admin/Admin";
 import NotFound from "./pages/NotFound";
 import About from "./pages/About";
+import Contact from "./pages/Contact";
 
 // Layout
 import { MainLayout } from "./components/layout/MainLayout";
@@ -84,7 +85,12 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
         transition={{ type: 'spring', stiffness: 200, damping: 20 }}
       >
         {logo ? (
-          <img src={logo} alt="Logo" className="h-16 w-auto object-contain" />
+          <img
+            src={logo}
+            alt="Logo"
+            className="h-16 w-auto object-contain"
+            style={{ filter: 'drop-shadow(0 0 8px rgba(0,0,0,0.6)) drop-shadow(0 0 16px rgba(0,0,0,0.4))' }}
+          />
         ) : (
           <span className="text-3xl font-bold tracking-widest uppercase">HMP</span>
         )}
@@ -111,6 +117,7 @@ function AnimatedRoutes() {
           <Route path="/boutique/:slugOrId" element={<MainLayout><BoutiqueRouter /></MainLayout>} />
           <Route path="/panier" element={<MainLayout><Cart /></MainLayout>} />
           <Route path="/a-propos" element={<MainLayout><About /></MainLayout>} />
+          <Route path="/contact" element={<MainLayout><Contact /></MainLayout>} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/compte/*" element={<MainLayout><Account /></MainLayout>} />
           <Route path="/admin/*" element={<Admin />} />

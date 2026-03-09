@@ -1,91 +1,103 @@
 
-## Trois problèmes, une page nouvelle
+## Thinking
 
----
+The user wants to:
+1. Upload a product mockup image (like the Marco jacket shown)
+2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
+3. Automatically generates a fully interactive, dynamic product page from it
 
-### 1. Variations couleur ne changent pas l'image
+The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
 
-**Cause racine identifiée** : Dans la DB, les `color_options` du produit VANCOUVER contiennent `{color: "#1C1C1E", label: "Noir"}` — les couleurs sont des **hex codes** comme `#1C1C1E`, `#2A3C82`, etc. Mais dans `ProductImageGallery.tsx`, le match se fait via :
+1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
+   - Accepts an image (jpg/png/webp)
+   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
+   - Also extracts the **color variants** as `colorOptions` with proper hex values
+   - Returns a structured product object ready to pre-fill the ProductForm
 
-```typescript
-const activeColorOption = colorOptions.find(c => c.color === selectedColor);
-```
+2. **Add "Importer Maquette IA" button** in AdminProducts that:
+   - Opens a dialog with a dropzone accepting images
+   - Sends image to the edge function
+   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
+   - Lets admin review/edit before confirming creation
+   - On confirm: creates the product in the DB with all extracted data
 
-Et dans `ProductOptions.tsx`, les swatches utilisent `item.key = co.color` (le hex). Donc quand l'user clique, `onColorChange('#1C1C1E')` est appelé et `selectedColor` prend la valeur `'#1C1C1E'`. Le match `c.color === selectedColor` devrait fonctionner…
+3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
 
-**Vrai problème** : Les colorOptions dans les données de test **n'ont pas de `image`** associée (sauf ATLANTA qui en a une). Sans image dans `co.image`, `displayImage` reste l'image par défaut du produit. Le comportement "ne change rien" vient du fait qu'aucune des variations n'a d'image différente → la galerie affiche toujours la même image principale.
+Looking at the Marco image:
+- Product name: MARCO
+- Brand: Helvetica Mountain Pioneers x PEGASWOES  
+- Season: HIVER 2026
+- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
+- Sizes: XS, S, M, L, XL, XXL
+- Composition: 100% POLYESTER
+- Tags: limited edition
 
-**Solution** : 
-1. Le badge couleur dans la galerie s'affiche déjà (overlay top-left) ✓
-2. Ajouter un effet visuel clair quand une couleur est sélectionnée MÊME si elle n'a pas d'image associée : teinte de fond colorée + badge visible + barre active dans les thumbnails
-3. Le `selectedColor` est bien propagé, le swatch s'active (ring-2), et le badge s'affiche — le problème est que sans `co.image`, l'image ne change pas. C'est **le comportement attendu** quand les couleurs n'ont pas d'image distincte.
+## Plan
 
-**La vraie correction** : améliorer le feedback visuel pour que le clic soit clairement ressenti même sans changement d'image :
-- Ajouter un léger flash d'animation sur le conteneur image quand la couleur change
-- Le badge couleur en overlay avec le nom de la couleur sélectionnée doit s'afficher même sans `co.image` (actuellement `activeColorOption` peut être null si `selectedColor` ne matche pas)
-- Ajouter un `key` sur l'image pour forcer la ré-animation même si `displayImage` ne change pas
+### 1. New edge function `analyze-product-image`
+New file: `supabase/functions/analyze-product-image/index.ts`
 
----
+Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
+- name, subtitle, price (ask to estimate if not found), category
+- sizes (exact text from image)
+- colors with **hex values** from the color swatches visible in image
+- colorOptions: [{color: "#hex", label: "nom"}]
+- material/composition
+- description (generated from visual)
+- sku (auto-generated)
+- tags (e.g., "limited edition" if spotted)
+- Any brand/collection info → subtitle
 
-### 2. Logo "cassé" → logo blanc sur fond blanc
+### 2. New UI component `ImportMockupDialog.tsx`
+In `src/components/admin/ImportMockupDialog.tsx`:
+- Image dropzone (jpg/png/webp/gif up to 10MB)
+- Preview of uploaded image
+- "Analyser avec l'IA" button
+- Loading state with animated scan effect
+- Results preview:
+  - Product name, subtitle
+  - Price field (editable, since AI may not find it)
+  - Color swatches preview
+  - Size badges preview
+  - Material info
+  - Generated description
+- "Créer ce produit" confirm button
+- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
 
-**Cause identifiée** : La requête DB confirme que le logo existe : `https://bumfyrfmormisyjletpb.supabase.co/storage/v1/object/public/media/branding/1773001616388-y056nu.png`. La capture d'écran montre que l'image est **entièrement blanche** — le logo est probablement blanc/transparent sur fond blanc, le rendant invisible.
+### 3. AdminProducts integration
+- Add "Importer Maquette IA" button next to existing "Importer PDF" button
+- Opens the new ImportMockupDialog
+- After product created, show toast + option to go to product detail
 
-**Solution** : Ajouter un `background` sombre derrière le logo dans tous les emplacements où il s'affiche (header, sidebar, splash screen, footer). Ou ajouter un `drop-shadow` qui le rend visible quelle que soit la couleur du fond.
+### Files to create/modify
+- `supabase/functions/analyze-product-image/index.ts` — new edge function
+- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
+- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
 
-Concrètement :
-- Header : `filter: drop-shadow(0 0 6px rgba(0,0,0,0.4))` ou wrapper avec padding sombre
-- Sidebar : idem
-- Splash screen : fond sombre déjà présent, mais ajouter `filter: invert(1)` si le fond est clair pour les logos blancs
-- Une option propre : ajouter dans AdminDesign une option "fond sous le logo" (petit toggle) + dans le code, entourer le logo d'un `div` semi-transparent quand c'est activé
+## Implementation Steps
 
-**Approche retenue** (sans toucher à l'admin) : Ajouter `filter: drop-shadow(0 0 8px rgba(0,0,0,0.6))` sur tous les `<img>` logo. Ainsi un logo blanc devient visible sur fond clair ET sur fond sombre.
+### Step 1: Edge function `analyze-product-image`
+Input: `{ imageBase64: string, mimeType: string }`
+Prompt to Gemini Pro Vision:
+- Extract all visible product info
+- Extract hex colors from color swatches
+- Generate description if not present
+- Output strict JSON matching `ExtractedProductData` schema
 
----
+### Step 2: `ImportMockupDialog` component
+States:
+- `file`, `preview` (image URL)
+- `analyzing` (loading state)
+- `extracted` (ExtractedProductData | null)
+- `editableData` (form state to review/edit before import)
 
-### 3. Page Contact avec chatbot IA
+UX Flow:
+1. Drag & drop or click to upload image
+2. Preview appears
+3. Click "Analyser avec IA" → loading scan animation
+4. Results appear: color swatches, size badges, all info
+5. User can edit price/name if needed
+6. Click "Créer le produit" → uploads image to storage, creates product, success
 
-Créer `/contact` avec :
-- Formulaire de contact classique (nom, email, message) → stocké en DB
-- Section chatbot IA avec réponses automatiques alimentées par `LOVABLE_API_KEY` (déjà disponible)
-- Edge function `contact-chat` pour appeler l'IA
-
-**Architecture** :
-
-```
-src/pages/Contact.tsx              ← page avec 2 sections
-supabase/functions/contact-chat/   ← edge function IA (streaming)
-supabase/migrations/...            ← table contact_messages
-```
-
-**DB** : Table `contact_messages` (id, name, email, message, created_at) — publique en INSERT seulement (RLS).
-
-**IA** : Le bot est configuré avec un system prompt qui parle de la marque LVTK6, répond aux questions sur les produits, livraisons, retours. Streaming token-par-token.
-
-**Routing** : Ajouter `<Route path="/contact" element={<MainLayout><Contact /></MainLayout>} />` dans `App.tsx`. Ajouter "Contact" dans les nav items (déjà présent dans `translations`).
-
----
-
-### Fichiers modifiés
-
-| Fichier | Changement |
-|---|---|
-| `src/components/product/ProductImageGallery.tsx` | Forcer re-animation sur changement couleur + badge toujours visible + feedback visuel amélioré |
-| `src/components/layout/MainLayout.tsx` | `drop-shadow` sur logo header + ajouter lien Contact dans nav |
-| `src/components/layout/Sidebar.tsx` | `drop-shadow` sur logo |
-| `src/App.tsx` | `SplashScreen` drop-shadow + ajouter route `/contact` |
-| `src/pages/Contact.tsx` | Nouvelle page : formulaire + chatbot IA |
-| `supabase/functions/contact-chat/index.ts` | Edge function streaming IA |
-| `supabase/config.toml` | Ajouter `[functions.contact-chat] verify_jwt = false` |
-| Migration SQL | Table `contact_messages` avec RLS |
-
----
-
-### Détail chatbot
-
-System prompt :
-```
-Tu es l'assistant virtuel de LVTK6, une marque de streetwear/concept. Tu réponds aux questions sur les produits, la livraison (gratuite dès 200€ en point relais), les retours (30 jours), la garantie (1 an), et les tailles. Tu restes concis, professionnel et dans le ton de la marque. Si tu ne sais pas, tu proposes de contacter le service client par email.
-```
-
-Le chat est persisté localement (useState), pas en DB — seuls les formulaires de contact classiques sont sauvegardés.
+### Step 3: AdminProducts button
+Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)

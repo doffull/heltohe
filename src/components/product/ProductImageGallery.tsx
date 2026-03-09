@@ -78,20 +78,18 @@ export default function ProductImageGallery({
         <AnimatePresence mode="wait">
           {activeMedia === 'image' ? (
             <motion.img
-              key={`image-${displayImage}`}
+              key={`image-${displayImage}-${selectedColor}`}
               src={displayImage}
               alt={name}
               className="w-full h-full object-cover"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              initial={{ opacity: 0, scale: 1.03 }}
+              animate={{ opacity: 1, scale: isZoomed ? 2.5 : 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
               style={isZoomed ? {
                 transformOrigin: `${mousePos.x}% ${mousePos.y}%`,
-                scale: 2.5,
               } : {
                 transformOrigin: 'center center',
-                scale: 1,
               }}
             />
           ) : videoUrl && isEmbedVideo(videoUrl) ? (
@@ -127,9 +125,9 @@ export default function ProductImageGallery({
           ) : null}
         </AnimatePresence>
 
-        {/* Selected color badge overlay */}
+        {/* Selected color badge overlay — always visible when a color is selected */}
         <AnimatePresence>
-          {selectedColor && activeColorOption && (
+          {selectedColor && (
             <motion.div
               key={selectedColor}
               className="absolute top-4 left-4 flex items-center gap-2 bg-background/85 backdrop-blur-sm rounded-full px-3 py-1.5 shadow-md"
@@ -140,12 +138,27 @@ export default function ProductImageGallery({
             >
               <span
                 className="w-3 h-3 rounded-full border border-border/60 shadow-sm"
-                style={{ backgroundColor: activeColorOption.color }}
+                style={{ backgroundColor: activeColorOption?.color || selectedColor }}
               />
               <span className="text-xs font-bold hud-text uppercase tracking-wider">
-                {activeColorOption.label}
+                {activeColorOption?.label || selectedColor}
               </span>
             </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Color tint overlay for visual feedback when no per-color image */}
+        <AnimatePresence>
+          {selectedColor && !activeColorOption?.image && activeMedia === 'image' && (
+            <motion.div
+              key={`tint-${selectedColor}`}
+              className="absolute inset-0 pointer-events-none"
+              style={{ backgroundColor: selectedColor, mixBlendMode: 'hue' }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.15 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            />
           )}
         </AnimatePresence>
 
