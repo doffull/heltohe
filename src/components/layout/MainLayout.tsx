@@ -41,6 +41,7 @@ const DEFAULT_NAV_ITEMS = [
   { href: '/', label: 'Accueil' },
   { href: '/boutique', label: 'Boutique' },
   { href: '/a-propos', label: 'À Propos' },
+  { href: '/contact', label: 'Contact' },
 ];
 
 export function MainLayout({ children }: MainLayoutProps) {
