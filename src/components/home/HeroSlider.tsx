@@ -133,7 +133,7 @@ export function HeroSlider() {
             {currentSlide.subtitle}
           </div>
           
-          <h1 className="text-4xl lg:text-6xl xl:text-7xl font-bold tracking-tight">
+          <h1 className="text-2xl sm:text-4xl lg:text-6xl xl:text-7xl font-bold tracking-tight">
             <span className="glitch-effect" data-text={currentSlide.title}>
               {currentSlide.title}
             </span>
