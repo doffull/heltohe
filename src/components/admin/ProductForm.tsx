@@ -332,25 +332,8 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
       {/* Colors */}
       <div className="space-y-4">
         <h4 className="hud-text text-xs text-primary">// OPTIONS COULEURS</h4>
-        
-        <div className="flex flex-wrap gap-2 mb-3">
-          {formData.colorOptions.map((option, index) => (
-            <div key={index} className="flex items-center gap-2 px-2 py-1 bg-secondary/30 border border-border/30">
-              <div 
-                className="w-5 h-5 rounded-sm border border-border/50"
-                style={{ backgroundColor: option.color }}
-              />
-              <span className="hud-text text-xs">{option.label}</span>
-              {option.image && (
-                <img src={option.image} alt="" className="w-6 h-6 object-cover rounded-sm" />
-              )}
-              <button type="button" onClick={() => removeColorOption(index)}>
-                <X className="w-3 h-3 text-muted-foreground hover:text-destructive" />
-              </button>
-            </div>
-          ))}
-        </div>
 
+        {/* Add new color */}
         <div className="flex items-end gap-2">
           <div className="space-y-2">
             <Label className="hud-text text-xs">Couleur</Label>
@@ -368,6 +351,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
               onChange={(e) => setNewColorLabel(e.target.value)}
               className="bg-secondary/50 border-border/30"
               placeholder="Noir Obsidian"
+              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addColorOption())}
             />
           </div>
           <Button type="button" variant="outline" size="icon" onClick={addColorOption}>
@@ -375,24 +359,83 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
           </Button>
         </div>
 
-        {/* Image per color option */}
+        {/* Color options with inline image upload */}
         {formData.colorOptions.length > 0 && (
-          <div className="space-y-3 mt-3">
-            <Label className="hud-text text-xs text-muted-foreground">Images par couleur</Label>
+          <div className="space-y-3">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+              Cliquez sur une variante pour assigner son image produit
+            </p>
             {formData.colorOptions.map((option, index) => (
-              <div key={index} className="space-y-1">
-                <span className="text-xs text-muted-foreground">{option.label}</span>
-                <FileDropZone
-                  accept={['image']}
-                  folder="products/colors"
-                  currentFile={option.image}
-                  onUpload={(url) => {
-                    const newOptions = [...formData.colorOptions];
-                    newOptions[index] = { ...newOptions[index], image: url };
-                    setFormData(prev => ({ ...prev, colorOptions: newOptions }));
-                  }}
-                  label={`Image pour ${option.label}`}
-                />
+              <div key={index} className="border border-border/30 bg-secondary/20 p-3 space-y-3">
+                {/* Header row */}
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-7 h-7 rounded-sm border border-border/50 flex-shrink-0"
+                    style={{ backgroundColor: option.color }}
+                  />
+                  <span className="hud-text text-xs font-medium flex-1">{option.label}</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">{option.color}</span>
+                  <button type="button" onClick={() => removeColorOption(index)} className="ml-1">
+                    <X className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
+                  </button>
+                </div>
+
+                {/* Image upload for this color */}
+                <div className="flex items-start gap-3">
+                  {/* Thumbnail preview */}
+                  <div className="flex-shrink-0 w-16 h-16 border border-border/30 bg-secondary/40 overflow-hidden relative">
+                    {option.image ? (
+                      <>
+                        <img
+                          src={option.image}
+                          alt={option.label}
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newOptions = [...formData.colorOptions];
+                            newOptions[index] = { ...newOptions[index], image: undefined };
+                            setFormData(prev => ({ ...prev, colorOptions: newOptions }));
+                          }}
+                          className="absolute top-0.5 right-0.5 bg-background/80 rounded-full p-0.5"
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
+                      </>
+                    ) : (
+                      <div
+                        className="w-full h-full opacity-20"
+                        style={{ backgroundColor: option.color }}
+                      />
+                    )}
+                  </div>
+
+                  {/* Drop zone */}
+                  <div className="flex-1 min-w-0">
+                    <FileDropZone
+                      accept={['image']}
+                      folder="products/colors"
+                      currentFile={option.image}
+                      onUpload={(url) => {
+                        const newOptions = [...formData.colorOptions];
+                        newOptions[index] = { ...newOptions[index], image: url };
+                        setFormData(prev => ({ ...prev, colorOptions: newOptions }));
+                      }}
+                      label={option.image ? `Remplacer l'image` : `Image pour "${option.label}"`}
+                    />
+                    <Input
+                      value={option.image || ''}
+                      onChange={(e) => {
+                        const newOptions = [...formData.colorOptions];
+                        newOptions[index] = { ...newOptions[index], image: e.target.value || undefined };
+                        setFormData(prev => ({ ...prev, colorOptions: newOptions }));
+                      }}
+                      className="mt-1 bg-secondary/50 border-border/30 text-xs h-7"
+                      placeholder="Ou collez une URL d'image..."
+                    />
+                  </div>
+                </div>
               </div>
             ))}
           </div>
