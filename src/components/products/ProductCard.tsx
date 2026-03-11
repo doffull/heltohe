@@ -53,7 +53,13 @@ export function ProductCard({ product, onClick, onAddToCart, onNavigate, swatchS
       {/* Image */}
       <div
         className="relative aspect-[3/4] overflow-hidden"
-        onClick={onClick}
+        onClick={() => {
+          if (onNavigate) {
+            onNavigate(product.id, activeColorOpt?.color ?? null);
+          } else {
+            onClick?.();
+          }
+        }}
       >
         <img
           key={`${product.id}-${selectedColorIndex ?? 'default'}`}
