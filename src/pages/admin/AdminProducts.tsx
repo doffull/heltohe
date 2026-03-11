@@ -283,7 +283,7 @@ export default function AdminProducts() {
                   <Tag className="h-3 w-3 mr-1" /><SelectValue placeholder="Inchangée" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Inchangée</SelectItem>
+                  <SelectItem value="__unchanged__">Inchangée</SelectItem>
                   {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                 </SelectContent>
               </Select>
