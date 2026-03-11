@@ -401,7 +401,7 @@ export default function Checkout() {
                 {/* PayPlug */}
                 <div className="border border-border chamfer-hud p-4 space-y-3">
                   <div className="flex items-center gap-3">
-                    <div className="bg-blue-600 text-white px-3 py-1 text-xs font-bold rounded">PayPlug</div>
+                    <div className="bg-primary text-primary-foreground px-3 py-1 text-xs font-bold">PayPlug</div>
                     <span className="text-sm text-muted-foreground">Paiement 100% sécurisé</span>
                   </div>
                   <p className="text-xs text-muted-foreground">
