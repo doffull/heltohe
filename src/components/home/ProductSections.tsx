@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
