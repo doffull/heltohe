@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { MannequinHotspots } from './MannequinHotspot';
 import { SidebarProductHUD } from './SidebarProductHUD';
+import { ChatBotWidget } from './ChatBotWidget';
 import { 
   Search, 
   ShoppingBag, 
