@@ -61,6 +61,11 @@ export default function AdminProducts() {
   const [extractedProducts, setExtractedProducts] = useState<ExtractedProduct[]>([]);
   const [isImporting, setIsImporting] = useState(false);
 
+  // Bulk edit state
+  const [bulkCategory, setBulkCategory] = useState('');
+  const [bulkPrice, setBulkPrice] = useState('');
+  const [bulkStock, setBulkStock] = useState('');
+
   const categories = [...new Set(products.map(p => p.category))];
 
   let filteredProducts = products.filter(p => {
