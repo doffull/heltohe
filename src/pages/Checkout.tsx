@@ -207,16 +207,16 @@ export default function Checkout() {
               <button
                 onClick={() => {
                   if (s === 'address') setStep('address');
-                  if (s === 'delivery' && step === 'confirmation') setStep('delivery');
+                  if (s === 'delivery') setStep('delivery');
                 }}
                 className={cn(
                   'w-8 h-8 flex items-center justify-center text-sm font-bold transition-colors',
                   step === s ? 'bg-primary text-primary-foreground' :
-                  steps.indexOf(step) > i ? 'bg-foreground/20 text-foreground' : 'bg-secondary text-muted-foreground',
+                  (steps as string[]).indexOf(step) > i ? 'bg-foreground/20 text-foreground' : 'bg-secondary text-muted-foreground',
                 )}
                 style={{ clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)' }}
               >
-                {steps.indexOf(step as Step) > i ? <CheckCircle className="h-4 w-4" /> : i + 1}
+                {(steps as string[]).indexOf(step) > i ? <CheckCircle className="h-4 w-4" /> : i + 1}
               </button>
               <span className={cn('text-xs font-medium hidden sm:block', step === s ? 'text-foreground' : 'text-muted-foreground')}>
                 {stepLabels[s]}
