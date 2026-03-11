@@ -1,103 +1,112 @@
 
-## Thinking
+## 3 features à implémenter
 
-The user wants to:
-1. Upload a product mockup image (like the Marco jacket shown)
-2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
-3. Automatically generates a fully interactive, dynamic product page from it
+---
 
-The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
+### 1. Bouton "Dupliquer" dans l'admin produit
 
-1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
-   - Accepts an image (jpg/png/webp)
-   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
-   - Also extracts the **color variants** as `colorOptions` with proper hex values
-   - Returns a structured product object ready to pre-fill the ProductForm
+**Où** : `AdminProducts.tsx` — dans le `DropdownMenu` de chaque ligne produit, ajouter `<DropdownMenuItem>Dupliquer</DropdownMenuItem>` avec l'icône `Copy`.
 
-2. **Add "Importer Maquette IA" button** in AdminProducts that:
-   - Opens a dialog with a dropzone accepting images
-   - Sends image to the edge function
-   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
-   - Lets admin review/edit before confirming creation
-   - On confirm: creates the product in the DB with all extracted data
+**Logique** :
+```typescript
+const handleDuplicate = async (product: Product) => {
+  await createProduct.mutateAsync({
+    ...product (sans id),
+    name: `${product.name} V2`,
+    sku: `${product.sku}-COPY`,
+    // Copie complète : colorOptions, sizes, colors, image, etc.
+  });
+  toast({ title: `"${product.name} V2" créé` });
+};
+```
 
-3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
+Résultat : VANCOUVER → VANCOUVER V2 avec toutes ses variantes couleur, images, tailles, etc.
 
-Looking at the Marco image:
-- Product name: MARCO
-- Brand: Helvetica Mountain Pioneers x PEGASWOES  
-- Season: HIVER 2026
-- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
-- Sizes: XS, S, M, L, XL, XXL
-- Composition: 100% POLYESTER
-- Tags: limited edition
+---
 
-## Plan
+### 2. Synchronisation galerie → couleur sélectionnée depuis la carte
 
-### 1. New edge function `analyze-product-image`
-New file: `supabase/functions/analyze-product-image/index.ts`
+**Mécanisme** : quand on navigue depuis une carte produit (`ProductCard`) avec une couleur active (`selectedColorIndex`), passer la couleur dans l'URL : `/boutique/${product.id}?color=%231C1C1E`.
 
-Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
-- name, subtitle, price (ask to estimate if not found), category
-- sizes (exact text from image)
-- colors with **hex values** from the color swatches visible in image
-- colorOptions: [{color: "#hex", label: "nom"}]
-- material/composition
-- description (generated from visual)
-- sku (auto-generated)
-- tags (e.g., "limited edition" if spotted)
-- Any brand/collection info → subtitle
+**Changements** :
 
-### 2. New UI component `ImportMockupDialog.tsx`
-In `src/components/admin/ImportMockupDialog.tsx`:
-- Image dropzone (jpg/png/webp/gif up to 10MB)
-- Preview of uploaded image
-- "Analyser avec l'IA" button
-- Loading state with animated scan effect
-- Results preview:
-  - Product name, subtitle
-  - Price field (editable, since AI may not find it)
-  - Color swatches preview
-  - Size badges preview
-  - Material info
-  - Generated description
-- "Créer ce produit" confirm button
-- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
+**`ProductCard.tsx`** — modifier le `onClick` pour inclure la couleur sélectionnée dans la navigation :
+```typescript
+// Au lieu de onClick={() => navigate(`/boutique/${product.id}`)}
+// Dans Shop.tsx, passer onProductClick avec la couleur sélectionnée
+```
 
-### 3. AdminProducts integration
-- Add "Importer Maquette IA" button next to existing "Importer PDF" button
-- Opens the new ImportMockupDialog
-- After product created, show toast + option to go to product detail
+Mais `ProductCard` ne connaît pas `navigate`. La solution propre : exposer un `onColorClick` prop ou passer la couleur via l'`onClick` callback.
 
-### Files to create/modify
-- `supabase/functions/analyze-product-image/index.ts` — new edge function
-- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
-- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
+**Architecture choisie** : exposer `getDetailUrl` comme prop dans `ProductCard`, ou plus simple — dans `Shop.tsx` et `ProductSections.tsx`, remplacer le `onClick` par :
+```typescript
+onClick={() => {
+  const activeColor = ...; // on ne peut pas accéder au state interne de ProductCard
+}}
+```
 
-## Implementation Steps
+→ Problème : `selectedColorIndex` est un state **interne** à `ProductCard`. Deux options :
+1. **Lifter le state** vers le parent (Shop/ProductSections) — lourd
+2. **Callback `onNavigate(productId, selectedColor)`** — propre
 
-### Step 1: Edge function `analyze-product-image`
-Input: `{ imageBase64: string, mimeType: string }`
-Prompt to Gemini Pro Vision:
-- Extract all visible product info
-- Extract hex colors from color swatches
-- Generate description if not present
-- Output strict JSON matching `ExtractedProductData` schema
+**Solution retenue** : Ajouter prop `onNavigate?: (productId: string, selectedColor: string | null) => void` dans `ProductCard`. Quand l'user clique sur l'image, appeler `onNavigate(product.id, activeColorOpt?.color ?? null)` au lieu de `onClick`.
 
-### Step 2: `ImportMockupDialog` component
-States:
-- `file`, `preview` (image URL)
-- `analyzing` (loading state)
-- `extracted` (ExtractedProductData | null)
-- `editableData` (form state to review/edit before import)
+Dans `Shop.tsx` et `ProductSections.tsx` :
+```typescript
+onNavigate={(id, color) => navigate(`/boutique/${id}${color ? `?color=${encodeURIComponent(color)}` : ''}`)}
+```
 
-UX Flow:
-1. Drag & drop or click to upload image
-2. Preview appears
-3. Click "Analyser avec IA" → loading scan animation
-4. Results appear: color swatches, size badges, all info
-5. User can edit price/name if needed
-6. Click "Créer le produit" → uploads image to storage, creates product, success
+**`ProductDetail.tsx`** — lire `?color=` depuis `useSearchParams` :
+```typescript
+const [searchParams] = useSearchParams(); // déjà importé
+const colorFromUrl = searchParams.get('color');
 
-### Step 3: AdminProducts button
-Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)
+// Dans l'initialisation du state :
+const [selectedColor, setSelectedColor] = useState<string | null>(colorFromUrl);
+```
+
+La galerie s'initialise sur la bonne variante automatiquement.
+
+---
+
+### 3. Modification en masse des produits
+
+**Comportement attendu** : quand ≥1 produit est sélectionné, afficher un panel "Actions en masse" avec :
+- **Changer la catégorie** pour tous les sélectionnés
+- **Changer le prix** (définir ou appliquer % de réduction)
+- **Changer le stock**
+- **Activer/désactiver** (toggle `is_active`)
+- **Supprimer** (déjà présent)
+
+**UI** : Remplacer la barre de bulk actuelle (qui n'a que "Supprimer") par un panel élargi avec un `Select` de catégorie, des inputs de prix/stock, et des boutons d'action.
+
+**Nouveau hook** : `useBulkUpdateProducts` dans `useProducts.ts` :
+```typescript
+export function useBulkUpdateProducts() {
+  return useMutation({
+    mutationFn: async ({ ids, updates }: { ids: string[]; updates: Partial<ReturnType<typeof appToDbProduct>> }) => {
+      const { error } = await supabase.from('products').update(updates).in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['products'] }),
+  });
+}
+```
+
+**Dans `AdminProducts.tsx`** — remplacer le div `someSelected &&` existant par un composant `BulkActionsBar` inline avec :
+```
+[N sélectionnés]  [Catégorie: Select]  [Prix: Input €]  [Stock: Input]  [Appliquer]  [Supprimer]  [✕]
+```
+
+---
+
+### Fichiers à modifier
+
+| Fichier | Changement |
+|---|---|
+| `src/pages/admin/AdminProducts.tsx` | Bouton "Dupliquer" + BulkActionsBar élargi |
+| `src/hooks/useProducts.ts` | Ajouter `useBulkUpdateProducts` |
+| `src/components/products/ProductCard.tsx` | Prop `onNavigate(id, color)` |
+| `src/pages/Shop.tsx` | Utiliser `onNavigate` |
+| `src/components/home/ProductSections.tsx` | Utiliser `onNavigate` |
+| `src/pages/ProductDetail.tsx` | `useState` initialisé avec `?color=` param |
