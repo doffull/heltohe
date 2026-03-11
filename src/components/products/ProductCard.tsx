@@ -7,6 +7,7 @@ interface ProductCardProps {
   product: Product;
   onClick?: () => void;
   onAddToCart?: () => void;
+  onNavigate?: (productId: string, selectedColor: string | null) => void;
   swatchStyle?: 'round' | 'square' | 'separated' | 'geometric';
 }
 

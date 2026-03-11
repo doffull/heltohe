@@ -154,3 +154,14 @@ export function useBulkDeleteProducts() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['products'] }),
   });
 }
+
+export function useBulkUpdateProducts() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ ids, updates }: { ids: string[]; updates: { category?: string; price?: number; sale_price?: number | null; stock?: number; is_active?: boolean } }) => {
+      const { error } = await supabase.from('products').update(updates).in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['products'] }),
+  });
+}

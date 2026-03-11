@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, useBulkDeleteProducts } from '@/hooks/useProducts';
+import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, useBulkDeleteProducts, useBulkUpdateProducts } from '@/hooks/useProducts';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
 import { Product } from '@/types';
 import { Button } from '@/components/ui/button';
