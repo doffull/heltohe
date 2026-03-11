@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, useBulkDeleteProducts } from '@/hooks/useProducts';
+import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, useBulkDeleteProducts, useBulkUpdateProducts } from '@/hooks/useProducts';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
 import { Product } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { 
-  Plus, Search, Pencil, Trash2, MoreHorizontal, Package, Upload, FileText, X, Check, Filter, Wand2
+  Plus, Search, Pencil, Trash2, MoreHorizontal, Package, Upload, FileText, X, Check, Filter, Wand2, Copy, Tag, DollarSign, Archive
 } from 'lucide-react';
 import { ImportMockupDialog } from '@/components/admin/ImportMockupDialog';
 import {
@@ -47,6 +47,7 @@ export default function AdminProducts() {
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
   const bulkDelete = useBulkDeleteProducts();
+  const bulkUpdate = useBulkUpdateProducts();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -59,6 +60,11 @@ export default function AdminProducts() {
   const [isParsing, setIsParsing] = useState(false);
   const [extractedProducts, setExtractedProducts] = useState<ExtractedProduct[]>([]);
   const [isImporting, setIsImporting] = useState(false);
+
+  // Bulk edit state
+  const [bulkCategory, setBulkCategory] = useState('');
+  const [bulkPrice, setBulkPrice] = useState('');
+  const [bulkStock, setBulkStock] = useState('');
 
   const categories = [...new Set(products.map(p => p.category))];
 
@@ -89,6 +95,40 @@ export default function AdminProducts() {
       clear();
     } catch {
       toast({ title: 'Erreur', variant: 'destructive' });
+    }
+  };
+
+  const handleBulkApply = async () => {
+    const updates: Record<string, unknown> = {};
+    if (bulkCategory) updates.category = bulkCategory;
+    if (bulkPrice !== '') updates.price = parseFloat(bulkPrice);
+    if (bulkStock !== '') updates.stock = parseInt(bulkStock, 10);
+    if (Object.keys(updates).length === 0) {
+      toast({ title: 'Aucune modification', description: 'Remplissez au moins un champ', variant: 'destructive' });
+      return;
+    }
+    try {
+      await bulkUpdate.mutateAsync({ ids, updates: updates as Parameters<typeof bulkUpdate.mutateAsync>[0]['updates'] });
+      toast({ title: `${count} produit(s) mis à jour` });
+      setBulkCategory(''); setBulkPrice(''); setBulkStock('');
+      clear();
+    } catch {
+      toast({ title: 'Erreur lors de la mise à jour', variant: 'destructive' });
+    }
+  };
+
+  const handleDuplicate = async (product: Product) => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { id, ...rest } = product;
+      await createProduct.mutateAsync({
+        ...rest,
+        name: `${product.name} V2`,
+        sku: `${product.sku}-COPY`,
+      });
+      toast({ title: `"${product.name} V2" créé`, description: 'Toutes les variantes ont été copiées' });
+    } catch {
+      toast({ title: 'Erreur lors de la duplication', variant: 'destructive' });
     }
   };
 
@@ -230,12 +270,45 @@ export default function AdminProducts() {
 
       {/* Bulk Actions */}
       {someSelected && (
-        <div className="chamfer-hud bg-primary/10 border border-primary/30 p-3 flex items-center gap-4">
-          <span className="text-sm font-bold">{count} sélectionné(s)</span>
-          <Button variant="destructive" size="sm" onClick={handleBulkDelete} disabled={bulkDelete.isPending}>
-            <Trash2 className="h-3 w-3 mr-2" />Supprimer
-          </Button>
-          <Button variant="ghost" size="sm" onClick={clear}>Désélectionner</Button>
+        <div className="chamfer-hud bg-primary/10 border border-primary/30 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-bold hud-text">{count} PRODUIT(S) SÉLECTIONNÉ(S)</span>
+            <Button variant="ghost" size="sm" onClick={clear} className="h-7 text-xs"><X className="h-3 w-3 mr-1" />Désélectionner</Button>
+          </div>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex-1 min-w-[140px]">
+              <label className="text-[10px] text-muted-foreground hud-text block mb-1">CATÉGORIE</label>
+              <Select value={bulkCategory} onValueChange={setBulkCategory}>
+                <SelectTrigger className="h-8 text-xs bg-background/60">
+                  <Tag className="h-3 w-3 mr-1" /><SelectValue placeholder="Inchangée" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Inchangée</SelectItem>
+                  {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1 min-w-[110px]">
+              <label className="text-[10px] text-muted-foreground hud-text block mb-1">PRIX (€)</label>
+              <div className="relative">
+                <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                <Input value={bulkPrice} onChange={e => setBulkPrice(e.target.value)} type="number" min="0" step="0.01" placeholder="Inchangé" className="h-8 text-xs pl-7 bg-background/60" />
+              </div>
+            </div>
+            <div className="flex-1 min-w-[110px]">
+              <label className="text-[10px] text-muted-foreground hud-text block mb-1">STOCK</label>
+              <div className="relative">
+                <Archive className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                <Input value={bulkStock} onChange={e => setBulkStock(e.target.value)} type="number" min="0" placeholder="Inchangé" className="h-8 text-xs pl-7 bg-background/60" />
+              </div>
+            </div>
+            <Button size="sm" onClick={handleBulkApply} disabled={bulkUpdate.isPending} className="h-8 text-xs chamfer-hud-sm">
+              <Check className="h-3 w-3 mr-1" />Appliquer
+            </Button>
+            <Button variant="destructive" size="sm" onClick={handleBulkDelete} disabled={bulkDelete.isPending} className="h-8 text-xs chamfer-hud-sm">
+              <Trash2 className="h-3 w-3 mr-1" />Supprimer
+            </Button>
+          </div>
         </div>
       )}
 
@@ -299,6 +372,7 @@ export default function AdminProducts() {
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => { setEditingProduct(product); setIsFormOpen(true); }}><Pencil className="h-4 w-4 mr-2" />Modifier</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDuplicate(product)}><Copy className="h-4 w-4 mr-2" />Dupliquer</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleDelete(product.id)} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" />Supprimer</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

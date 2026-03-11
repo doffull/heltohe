@@ -7,10 +7,11 @@ interface ProductCardProps {
   product: Product;
   onClick?: () => void;
   onAddToCart?: () => void;
+  onNavigate?: (productId: string, selectedColor: string | null) => void;
   swatchStyle?: 'round' | 'square' | 'separated' | 'geometric';
 }
 
-export function ProductCard({ product, onClick, onAddToCart, swatchStyle = 'round' }: ProductCardProps) {
+export function ProductCard({ product, onClick, onAddToCart, onNavigate, swatchStyle = 'round' }: ProductCardProps) {
   const [selectedColorIndex, setSelectedColorIndex] = useState<number | null>(null);
   const hasDiscount = product.salePrice && product.salePrice < product.price;
   const isLowStock = product.stock <= 5 && product.stock > 0;
@@ -52,7 +53,13 @@ export function ProductCard({ product, onClick, onAddToCart, swatchStyle = 'roun
       {/* Image */}
       <div
         className="relative aspect-[3/4] overflow-hidden"
-        onClick={onClick}
+        onClick={() => {
+          if (onNavigate) {
+            onNavigate(product.id, activeColorOpt?.color ?? null);
+          } else {
+            onClick?.();
+          }
+        }}
       >
         <img
           key={`${product.id}-${selectedColorIndex ?? 'default'}`}
@@ -206,10 +213,11 @@ interface ProductGridProps {
   products: Product[];
   onProductClick?: (product: Product) => void;
   onAddToCart?: (product: Product) => void;
+  onNavigate?: (productId: string, selectedColor: string | null) => void;
   swatchStyle?: 'round' | 'square' | 'separated' | 'geometric';
 }
 
-export function ProductGrid({ products, onProductClick, onAddToCart, swatchStyle }: ProductGridProps) {
+export function ProductGrid({ products, onProductClick, onAddToCart, onNavigate, swatchStyle }: ProductGridProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {products.map((product, index) => (
@@ -220,7 +228,8 @@ export function ProductGrid({ products, onProductClick, onAddToCart, swatchStyle
         >
           <ProductCard
             product={product}
-            onClick={() => onProductClick?.(product)}
+            onClick={onNavigate ? undefined : () => onProductClick?.(product)}
+            onNavigate={onNavigate}
             onAddToCart={onAddToCart ? () => onAddToCart(product) : undefined}
             swatchStyle={swatchStyle}
           />

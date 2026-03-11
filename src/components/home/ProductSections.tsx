@@ -1,10 +1,12 @@
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { ProductGrid } from '@/components/products/ProductCard';
 
 export function ProductSections() {
-  const { designSettings, products, navigateToProduct, navigateToCategory, language } = useApp();
+  const { designSettings, products, navigateToCategory, language } = useApp();
+  const navigate = useNavigate();
   const { addItem } = useCart();
   const { toast } = useToast();
   const { homeSections } = designSettings;
@@ -75,7 +77,7 @@ export function ProductSections() {
             <div className="px-6 lg:px-12">
               <ProductGrid
                 products={sectionItems}
-                onProductClick={navigateToProduct}
+                onNavigate={(id, color) => navigate(`/boutique/${id}${color ? `?color=${encodeURIComponent(color)}` : ''}`)}
                 onAddToCart={handleAddToCart}
               />
             </div>
