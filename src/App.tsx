@@ -17,6 +17,7 @@ import Shop from "./pages/Shop";
 import BoutiqueRouter from "./pages/BoutiqueRouter";
 import CategoryPageRouter from "./pages/CategoryPageRouter";
 import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
 import Auth from "./pages/Auth";
 import Account from "./pages/Account";
 import Admin from "./pages/admin/Admin";
