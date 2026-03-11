@@ -5,7 +5,8 @@ import { useToast } from '@/hooks/use-toast';
 import { ProductGrid } from '@/components/products/ProductCard';
 
 export function ProductSections() {
-  const { designSettings, products, navigateToProduct, navigateToCategory, language } = useApp();
+  const { designSettings, products, navigateToCategory, language } = useApp();
+  const navigate = useNavigate();
   const { addItem } = useCart();
   const { toast } = useToast();
   const { homeSections } = designSettings;
