@@ -17,6 +17,7 @@ import Shop from "./pages/Shop";
 import BoutiqueRouter from "./pages/BoutiqueRouter";
 import CategoryPageRouter from "./pages/CategoryPageRouter";
 import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
 import Auth from "./pages/Auth";
 import Account from "./pages/Account";
 import Admin from "./pages/admin/Admin";
@@ -116,6 +117,7 @@ function AnimatedRoutes() {
           <Route path="/boutique" element={<MainLayout><Shop /></MainLayout>} />
           <Route path="/boutique/:slugOrId" element={<MainLayout><BoutiqueRouter /></MainLayout>} />
           <Route path="/panier" element={<MainLayout><Cart /></MainLayout>} />
+          <Route path="/checkout" element={<MainLayout><Checkout /></MainLayout>} />
           <Route path="/a-propos" element={<MainLayout><About /></MainLayout>} />
           <Route path="/contact" element={<MainLayout><Contact /></MainLayout>} />
           <Route path="/auth" element={<Auth />} />

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -6,16 +7,18 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `Tu es l'assistant virtuel de LVTK6, une marque de streetwear/concept haut de gamme. Tu réponds en français, de manière concise et dans le ton de la marque (direct, stylé, moderne).
+const DEFAULT_SYSTEM_PROMPT = `Tu es Helvetica, l'expert mode et conseiller personnel de LVTK6, une marque de streetwear/concept haut de gamme. Tu réponds en français, de manière concise, stylée et moderne — dans le ton de la marque : direct, premium, contemporain.
 
-Informations clés :
-- Livraison gratuite dès 200€ en point relais
-- Retours acceptés sous 30 jours
-- Garantie produit : 1 an
-- Tailles disponibles : XS, S, M, L, XL, XXL, XXXL
-- Collections : Homme, Femme, Enfant, Accessoires
+Tu maîtrises :
+- Les collections LVTK6 : Homme, Femme, Enfant, Accessoires
+- Les conseils vestimentaires et associations de tenues
+- Les tendances mode et streetwear
+- Les matières et compositions (polyester technique, coton, etc.)
+- La logistique : livraison gratuite dès 200€ en point relais, retours sous 30 jours
+- Les tailles disponibles : XS, S, M, L, XL, XXL, XXXL
+- La garantie produit : 1 an
 
-Si tu ne sais pas, propose de contacter le service client par email. Ne promets rien de faux.`;
+Si tu ne sais pas, propose de contacter le service client par email. Ne promets rien de faux. Tu t'appelles Helvetica et tu représentes la marque LVTK6.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -30,6 +33,24 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    // Fetch bot config from DB (best-effort, fallback to default)
+    let systemPrompt = DEFAULT_SYSTEM_PROMPT;
+    try {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      const { data } = await supabase
+        .from("bot_config")
+        .select("system_prompt")
+        .eq("is_active", true)
+        .single();
+      if (data?.system_prompt) {
+        systemPrompt = data.system_prompt;
+      }
+    } catch (e) {
+      console.warn("Could not fetch bot_config, using default prompt:", e);
+    }
+
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
       {
@@ -41,7 +62,7 @@ serve(async (req) => {
         body: JSON.stringify({
           model: "google/gemini-3-flash-preview",
           messages: [
-            { role: "system", content: SYSTEM_PROMPT },
+            { role: "system", content: systemPrompt },
             ...messages,
           ],
           stream: true,

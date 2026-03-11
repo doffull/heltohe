@@ -1,126 +1,103 @@
 
+## Thinking
 
-## 3 fonctionnalités à implémenter
+The user wants to:
+1. Upload a product mockup image (like the Marco jacket shown)
+2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
+3. Automatically generates a fully interactive, dynamic product page from it
 
----
+The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
 
-### 1. Chatbot flottant sur toute la boutique + persona "Expert Helvetica"
+1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
+   - Accepts an image (jpg/png/webp)
+   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
+   - Also extracts the **color variants** as `colorOptions` with proper hex values
+   - Returns a structured product object ready to pre-fill the ProductForm
 
-**Ce qui existe** : Le chatbot est uniquement sur la page `/contact`. L'utilisateur veut un **widget flottant** accessible depuis toutes les pages du site, avec un expert nommé "Helvetica".
+2. **Add "Importer Maquette IA" button** in AdminProducts that:
+   - Opens a dialog with a dropzone accepting images
+   - Sends image to the edge function
+   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
+   - Lets admin review/edit before confirming creation
+   - On confirm: creates the product in the DB with all extracted data
 
-**Architecture** :
-- Créer `src/components/layout/ChatBotWidget.tsx` — bouton flottant (bas droite) qui ouvre une fenêtre de chat. Identique au chat de Contact mais dans un panneau flottant avec avatar "Helvetica".
-- Modifier le `SYSTEM_PROMPT` dans `supabase/functions/contact-chat/index.ts` pour que le bot se présente comme **"Helvetica"**, expert de la marque LVTK6. Il répond à tout : style, mode, conseils vestimentaires, tendances, questions produits, logistique, etc.
-- Ajouter `<ChatBotWidget />` dans `src/components/layout/MainLayout.tsx`
-- Pas de nouvelle edge function : réutiliser `contact-chat`
+3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
 
-**UI** :
-```
-[💬 Helvetica]  ← bouton flottant bas-droite, chamfer-hud style
-↓ clic
-┌─────────────────────────────────┐
-│ 🤖 Helvetica  • En ligne        │
-├─────────────────────────────────┤
-│ Messages scrollables             │
-├─────────────────────────────────┤
-│ [Posez votre question...] [▶]   │
-└─────────────────────────────────┘
-```
+Looking at the Marco image:
+- Product name: MARCO
+- Brand: Helvetica Mountain Pioneers x PEGASWOES  
+- Season: HIVER 2026
+- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
+- Sizes: XS, S, M, L, XL, XXL
+- Composition: 100% POLYESTER
+- Tags: limited edition
 
----
+## Plan
 
-### 2. Espace admin "Chatbot" pour gérer Helvetica
+### 1. New edge function `analyze-product-image`
+New file: `supabase/functions/analyze-product-image/index.ts`
 
-**Page** : `src/pages/admin/AdminChatbot.tsx` — nouvelle page dans le panneau admin
+Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
+- name, subtitle, price (ask to estimate if not found), category
+- sizes (exact text from image)
+- colors with **hex values** from the color swatches visible in image
+- colorOptions: [{color: "#hex", label: "nom"}]
+- material/composition
+- description (generated from visual)
+- sku (auto-generated)
+- tags (e.g., "limited edition" if spotted)
+- Any brand/collection info → subtitle
 
-**Fonctionnalités** :
-- **Personnalité du bot** : éditer le `system_prompt` stocké en base (table `bot_config` à créer)
-- **Informations produits/boutique** : zone de texte avec les données que le bot doit connaître (horaires, adresses, politiques, etc.)
-- **Suggestions rapides** : gérer les chips de suggestions affichées dans le chat
-- **Statistiques** : nombre de conversations (table `chat_logs` à créer)
+### 2. New UI component `ImportMockupDialog.tsx`
+In `src/components/admin/ImportMockupDialog.tsx`:
+- Image dropzone (jpg/png/webp/gif up to 10MB)
+- Preview of uploaded image
+- "Analyser avec l'IA" button
+- Loading state with animated scan effect
+- Results preview:
+  - Product name, subtitle
+  - Price field (editable, since AI may not find it)
+  - Color swatches preview
+  - Size badges preview
+  - Material info
+  - Generated description
+- "Créer ce produit" confirm button
+- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
 
-**Migration SQL** :
-```sql
--- Table de configuration du bot
-CREATE TABLE public.bot_config (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  system_prompt text NOT NULL,
-  suggestions jsonb DEFAULT '[]',
-  bot_name text DEFAULT 'Helvetica',
-  bot_avatar text,
-  is_active boolean DEFAULT true,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
--- Ligne par défaut insérée
-INSERT INTO public.bot_config (system_prompt, bot_name, suggestions) VALUES (...)
+### 3. AdminProducts integration
+- Add "Importer Maquette IA" button next to existing "Importer PDF" button
+- Opens the new ImportMockupDialog
+- After product created, show toast + option to go to product detail
 
--- Table de logs de conversations (stats)
-CREATE TABLE public.chat_logs (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  session_id text,
-  messages jsonb DEFAULT '[]',
-  created_at timestamptz DEFAULT now()
-);
-```
+### Files to create/modify
+- `supabase/functions/analyze-product-image/index.ts` — new edge function
+- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
+- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
 
-**RLS** : `bot_config` lisible par tous (anon) pour que le widget puisse le charger. Modifiable uniquement par admin via edge function.
+## Implementation Steps
 
-**Edge function mise à jour** : `contact-chat` lit `bot_config` depuis la base au lieu du prompt hardcodé.
+### Step 1: Edge function `analyze-product-image`
+Input: `{ imageBase64: string, mimeType: string }`
+Prompt to Gemini Pro Vision:
+- Extract all visible product info
+- Extract hex colors from color swatches
+- Generate description if not present
+- Output strict JSON matching `ExtractedProductData` schema
 
-**Admin** :
-- Ajouter l'entrée "Chatbot" dans `SIDEBAR_ITEMS` de `Admin.tsx`
-- Route `/admin/chatbot/*`
+### Step 2: `ImportMockupDialog` component
+States:
+- `file`, `preview` (image URL)
+- `analyzing` (loading state)
+- `extracted` (ExtractedProductData | null)
+- `editableData` (form state to review/edit before import)
 
----
+UX Flow:
+1. Drag & drop or click to upload image
+2. Preview appears
+3. Click "Analyser avec IA" → loading scan animation
+4. Results appear: color swatches, size badges, all info
+5. User can edit price/name if needed
+6. Click "Créer le produit" → uploads image to storage, creates product, success
 
-### 3. Colissimo + PayPlug
-
-#### 3a. Colissimo (livraison)
-
-**Ce que c'est** : Colissimo est un service de La Poste (France) pour la livraison de colis. L'intégration typique = **widget de sélection de point relais** + **génération d'étiquettes** via leur API.
-
-**Scope réaliste pour cette implémentation** :
-- Page de **checkout** (`src/pages/Checkout.tsx` à créer) avec étape de livraison
-- Option "Domicile" vs "Point relais Colissimo" dans le formulaire
-- Calcul du coût selon le mode de livraison (défini en admin)
-- Note : La génération d'étiquettes nécessite un compte Colissimo Pro et une edge function séparée — intégration visuelle complète mais API réelle en mode démo
-
-**Admin Settings** : Ajouter onglet "Livraison" dans `AdminSettings.tsx` pour configurer les tarifs Colissimo (domicile, relais, gratuit dès X€).
-
-#### 3b. PayPlug (paiement)
-
-**Ce que c'est** : PayPlug est un prestataire de paiement français (Banque Populaire / BPCE). Leur API ressemble à Stripe.
-
-**Ce qu'il faut** :
-- Edge function `payplug-checkout` qui crée un paiement PayPlug et retourne l'URL de paiement
-- Page `/checkout` avec bouton "Payer avec PayPlug"
-- **Clé API PayPlug** à stocker en secret (clé secrète et clé publique test disponibles dans le dashboard PayPlug)
-
-**Flow** :
-```
-Panier → /checkout → Saisie adresse + choix livraison → Résumé → PayPlug popup/redirect → Confirmation
-```
-
-**Ce que je demanderai** : la clé secrète PayPlug (à récupérer sur https://www.payplug.com dans Paramètres > Clés API).
-
----
-
-### Fichiers à créer/modifier
-
-| Fichier | Action |
-|---|---|
-| `src/components/layout/ChatBotWidget.tsx` | **CRÉER** — widget flottant Helvetica |
-| `src/components/layout/MainLayout.tsx` | **MODIFIER** — intégrer `<ChatBotWidget />` |
-| `src/pages/admin/AdminChatbot.tsx` | **CRÉER** — gestion du bot |
-| `src/pages/admin/Admin.tsx` | **MODIFIER** — ajouter route + sidebar |
-| `supabase/functions/contact-chat/index.ts` | **MODIFIER** — lire bot_config depuis la base |
-| `supabase/migrations/` | **CRÉER** — tables `bot_config` + `chat_logs` |
-| `src/pages/Checkout.tsx` | **CRÉER** — page checkout avec Colissimo + PayPlug |
-| `src/pages/Cart.tsx` | **MODIFIER** — bouton "Passer commande" → `/checkout` |
-| `src/pages/admin/AdminSettings.tsx` | **MODIFIER** — onglet Livraison |
-| `supabase/functions/payplug-checkout/` | **CRÉER** — edge function PayPlug |
-| `src/pages/admin/Admin.tsx` | **MODIFIER** — route `/admin/chatbot` |
-
-**Note importante sur PayPlug** : Avant d'implémenter, je devrai demander ta clé secrète PayPlug test (`sk_test_...`) via l'outil de secrets sécurisés. Je te guiderai pour la récupérer depuis ton dashboard PayPlug.
-
+### Step 3: AdminProducts button
+Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)

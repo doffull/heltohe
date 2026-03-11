@@ -127,6 +127,42 @@ export type Database = {
         }
         Relationships: []
       }
+      bot_config: {
+        Row: {
+          bot_avatar: string | null
+          bot_name: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          suggestions: Json | null
+          system_prompt: string
+          updated_at: string | null
+          welcome_message: string | null
+        }
+        Insert: {
+          bot_avatar?: string | null
+          bot_name?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          suggestions?: Json | null
+          system_prompt?: string
+          updated_at?: string | null
+          welcome_message?: string | null
+        }
+        Update: {
+          bot_avatar?: string | null
+          bot_name?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          suggestions?: Json | null
+          system_prompt?: string
+          updated_at?: string | null
+          welcome_message?: string | null
+        }
+        Relationships: []
+      }
       cart_items: {
         Row: {
           color: string | null
@@ -223,6 +259,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      chat_logs: {
+        Row: {
+          bot_response: string | null
+          created_at: string | null
+          id: string
+          session_id: string | null
+          user_message: string | null
+        }
+        Insert: {
+          bot_response?: string | null
+          created_at?: string | null
+          id?: string
+          session_id?: string | null
+          user_message?: string | null
+        }
+        Update: {
+          bot_response?: string | null
+          created_at?: string | null
+          id?: string
+          session_id?: string | null
+          user_message?: string | null
+        }
+        Relationships: []
       }
       customers: {
         Row: {

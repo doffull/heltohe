@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { MannequinHotspots } from './MannequinHotspot';
 import { SidebarProductHUD } from './SidebarProductHUD';
+import { ChatBotWidget } from './ChatBotWidget';
 import { 
   Search, 
   ShoppingBag, 
@@ -644,6 +645,9 @@ export function MainLayout({ children }: MainLayoutProps) {
           </div>
         </div>
       </footer>
+
+      {/* Chatbot Widget - visible on all pages */}
+      <ChatBotWidget />
     </div>
   );
 }
