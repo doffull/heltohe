@@ -11,7 +11,7 @@ interface ProductCardProps {
   swatchStyle?: 'round' | 'square' | 'separated' | 'geometric';
 }
 
-export function ProductCard({ product, onClick, onAddToCart, swatchStyle = 'round' }: ProductCardProps) {
+export function ProductCard({ product, onClick, onAddToCart, onNavigate, swatchStyle = 'round' }: ProductCardProps) {
   const [selectedColorIndex, setSelectedColorIndex] = useState<number | null>(null);
   const hasDiscount = product.salePrice && product.salePrice < product.price;
   const isLowStock = product.stock <= 5 && product.stock > 0;
