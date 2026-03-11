@@ -213,10 +213,11 @@ interface ProductGridProps {
   products: Product[];
   onProductClick?: (product: Product) => void;
   onAddToCart?: (product: Product) => void;
+  onNavigate?: (productId: string, selectedColor: string | null) => void;
   swatchStyle?: 'round' | 'square' | 'separated' | 'geometric';
 }
 
-export function ProductGrid({ products, onProductClick, onAddToCart, swatchStyle }: ProductGridProps) {
+export function ProductGrid({ products, onProductClick, onAddToCart, onNavigate, swatchStyle }: ProductGridProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {products.map((product, index) => (
@@ -227,7 +228,8 @@ export function ProductGrid({ products, onProductClick, onAddToCart, swatchStyle
         >
           <ProductCard
             product={product}
-            onClick={() => onProductClick?.(product)}
+            onClick={onNavigate ? undefined : () => onProductClick?.(product)}
+            onNavigate={onNavigate}
             onAddToCart={onAddToCart ? () => onAddToCart(product) : undefined}
             swatchStyle={swatchStyle}
           />

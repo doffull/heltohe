@@ -264,7 +264,7 @@ export default function Shop({ categoryFromSlug }: { categoryFromSlug?: string }
               >
                 <ProductCard
                   product={product}
-                  onClick={() => navigate(`/boutique/${product.id}`)}
+                  onNavigate={(id, color) => navigate(`/boutique/${id}${color ? `?color=${encodeURIComponent(color)}` : ''}`)}
                   onAddToCart={() => handleAddToCart(product)}
                 />
               </div>

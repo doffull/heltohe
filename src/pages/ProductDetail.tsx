@@ -17,12 +17,13 @@ export default function ProductDetail() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isNewImport = searchParams.get('new') === '1';
+  const colorFromUrl = searchParams.get('color');
   const { toast } = useToast();
   const { data: product, isLoading } = useProduct(productId);
   const { addItem } = useCart();
 
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [selectedColor, setSelectedColor] = useState<string | null>(colorFromUrl);
   const [quantity, setQuantity] = useState(1);
 
   // Ref to scroll to image when color changes

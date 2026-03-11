@@ -77,7 +77,7 @@ export function ProductSections() {
             <div className="px-6 lg:px-12">
               <ProductGrid
                 products={sectionItems}
-                onProductClick={navigateToProduct}
+                onNavigate={(id, color) => navigate(`/boutique/${id}${color ? `?color=${encodeURIComponent(color)}` : ''}`)}
                 onAddToCart={handleAddToCart}
               />
             </div>
