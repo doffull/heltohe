@@ -47,6 +47,7 @@ export default function AdminProducts() {
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
   const bulkDelete = useBulkDeleteProducts();
+  const bulkUpdate = useBulkUpdateProducts();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
