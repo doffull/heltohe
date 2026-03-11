@@ -62,7 +62,7 @@ export default function AdminProducts() {
   const [isImporting, setIsImporting] = useState(false);
 
   // Bulk edit state
-  const [bulkCategory, setBulkCategory] = useState('');
+  const [bulkCategory, setBulkCategory] = useState('__unchanged__');
   const [bulkPrice, setBulkPrice] = useState('');
   const [bulkStock, setBulkStock] = useState('');
 
