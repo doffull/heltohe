@@ -100,7 +100,7 @@ export default function AdminProducts() {
 
   const handleBulkApply = async () => {
     const updates: Record<string, unknown> = {};
-    if (bulkCategory) updates.category = bulkCategory;
+    if (bulkCategory && bulkCategory !== '__unchanged__') updates.category = bulkCategory;
     if (bulkPrice !== '') updates.price = parseFloat(bulkPrice);
     if (bulkStock !== '') updates.stock = parseInt(bulkStock, 10);
     if (Object.keys(updates).length === 0) {
@@ -110,7 +110,7 @@ export default function AdminProducts() {
     try {
       await bulkUpdate.mutateAsync({ ids, updates: updates as Parameters<typeof bulkUpdate.mutateAsync>[0]['updates'] });
       toast({ title: `${count} produit(s) mis à jour` });
-      setBulkCategory(''); setBulkPrice(''); setBulkStock('');
+      setBulkCategory('__unchanged__'); setBulkPrice(''); setBulkStock('');
       clear();
     } catch {
       toast({ title: 'Erreur lors de la mise à jour', variant: 'destructive' });
