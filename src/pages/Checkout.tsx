@@ -216,7 +216,7 @@ export default function Checkout() {
                 )}
                 style={{ clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)' }}
               >
-                {steps.indexOf(step) > i ? <CheckCircle className="h-4 w-4" /> : i + 1}
+                {steps.indexOf(step as Step) > i ? <CheckCircle className="h-4 w-4" /> : i + 1}
               </button>
               <span className={cn('text-xs font-medium hidden sm:block', step === s ? 'text-foreground' : 'text-muted-foreground')}>
                 {stepLabels[s]}
