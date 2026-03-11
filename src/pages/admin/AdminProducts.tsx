@@ -62,7 +62,7 @@ export default function AdminProducts() {
   const [isImporting, setIsImporting] = useState(false);
 
   // Bulk edit state
-  const [bulkCategory, setBulkCategory] = useState('');
+  const [bulkCategory, setBulkCategory] = useState('__unchanged__');
   const [bulkPrice, setBulkPrice] = useState('');
   const [bulkStock, setBulkStock] = useState('');
 
@@ -100,7 +100,7 @@ export default function AdminProducts() {
 
   const handleBulkApply = async () => {
     const updates: Record<string, unknown> = {};
-    if (bulkCategory) updates.category = bulkCategory;
+    if (bulkCategory && bulkCategory !== '__unchanged__') updates.category = bulkCategory;
     if (bulkPrice !== '') updates.price = parseFloat(bulkPrice);
     if (bulkStock !== '') updates.stock = parseInt(bulkStock, 10);
     if (Object.keys(updates).length === 0) {
@@ -110,7 +110,7 @@ export default function AdminProducts() {
     try {
       await bulkUpdate.mutateAsync({ ids, updates: updates as Parameters<typeof bulkUpdate.mutateAsync>[0]['updates'] });
       toast({ title: `${count} produit(s) mis à jour` });
-      setBulkCategory(''); setBulkPrice(''); setBulkStock('');
+      setBulkCategory('__unchanged__'); setBulkPrice(''); setBulkStock('');
       clear();
     } catch {
       toast({ title: 'Erreur lors de la mise à jour', variant: 'destructive' });
@@ -283,7 +283,7 @@ export default function AdminProducts() {
                   <Tag className="h-3 w-3 mr-1" /><SelectValue placeholder="Inchangée" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Inchangée</SelectItem>
+                  <SelectItem value="__unchanged__">Inchangée</SelectItem>
                   {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                 </SelectContent>
               </Select>
