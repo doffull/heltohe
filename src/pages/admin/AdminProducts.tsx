@@ -270,12 +270,45 @@ export default function AdminProducts() {
 
       {/* Bulk Actions */}
       {someSelected && (
-        <div className="chamfer-hud bg-primary/10 border border-primary/30 p-3 flex items-center gap-4">
-          <span className="text-sm font-bold">{count} sélectionné(s)</span>
-          <Button variant="destructive" size="sm" onClick={handleBulkDelete} disabled={bulkDelete.isPending}>
-            <Trash2 className="h-3 w-3 mr-2" />Supprimer
-          </Button>
-          <Button variant="ghost" size="sm" onClick={clear}>Désélectionner</Button>
+        <div className="chamfer-hud bg-primary/10 border border-primary/30 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-bold hud-text">{count} PRODUIT(S) SÉLECTIONNÉ(S)</span>
+            <Button variant="ghost" size="sm" onClick={clear} className="h-7 text-xs"><X className="h-3 w-3 mr-1" />Désélectionner</Button>
+          </div>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex-1 min-w-[140px]">
+              <label className="text-[10px] text-muted-foreground hud-text block mb-1">CATÉGORIE</label>
+              <Select value={bulkCategory} onValueChange={setBulkCategory}>
+                <SelectTrigger className="h-8 text-xs bg-background/60">
+                  <Tag className="h-3 w-3 mr-1" /><SelectValue placeholder="Inchangée" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Inchangée</SelectItem>
+                  {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1 min-w-[110px]">
+              <label className="text-[10px] text-muted-foreground hud-text block mb-1">PRIX (€)</label>
+              <div className="relative">
+                <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                <Input value={bulkPrice} onChange={e => setBulkPrice(e.target.value)} type="number" min="0" step="0.01" placeholder="Inchangé" className="h-8 text-xs pl-7 bg-background/60" />
+              </div>
+            </div>
+            <div className="flex-1 min-w-[110px]">
+              <label className="text-[10px] text-muted-foreground hud-text block mb-1">STOCK</label>
+              <div className="relative">
+                <Archive className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                <Input value={bulkStock} onChange={e => setBulkStock(e.target.value)} type="number" min="0" placeholder="Inchangé" className="h-8 text-xs pl-7 bg-background/60" />
+              </div>
+            </div>
+            <Button size="sm" onClick={handleBulkApply} disabled={bulkUpdate.isPending} className="h-8 text-xs chamfer-hud-sm">
+              <Check className="h-3 w-3 mr-1" />Appliquer
+            </Button>
+            <Button variant="destructive" size="sm" onClick={handleBulkDelete} disabled={bulkDelete.isPending} className="h-8 text-xs chamfer-hud-sm">
+              <Trash2 className="h-3 w-3 mr-1" />Supprimer
+            </Button>
+          </div>
         </div>
       )}
 
