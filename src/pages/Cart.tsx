@@ -277,12 +277,7 @@ export default function Cart() {
               {/* Checkout Button */}
               <Button 
                 className="w-full mt-6 chamfer-hud-sm h-12 text-lg"
-                onClick={() => {
-                  toast({
-                    title: 'Fonctionnalité à venir',
-                    description: 'Le paiement en ligne sera bientôt disponible.',
-                  });
-                }}
+                onClick={() => navigate('/checkout')}
               >
                 PASSER COMMANDE
                 <ChevronRight className="ml-2 h-5 w-5" />

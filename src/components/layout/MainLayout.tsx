@@ -643,8 +643,8 @@ export function MainLayout({ children }: MainLayoutProps) {
               <span className="font-mono text-xs tracking-widest">EUR €</span>
             </div>
           </div>
-        </div>
-      </footer>
+      {/* Chatbot Widget - visible on all pages */}
+      <ChatBotWidget />
     </div>
   );
 }
