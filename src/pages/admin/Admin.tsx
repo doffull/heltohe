@@ -36,6 +36,7 @@ import AdminMedia from './AdminMedia';
 import AdminPages from './AdminPages';
 import AdminStock from './AdminStock';
 import AdminWooCommerce from './AdminWooCommerce';
+import AdminChatbot from './AdminChatbot';
 
 const SIDEBAR_ITEMS = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/admin' },
