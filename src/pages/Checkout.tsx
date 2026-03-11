@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -11,18 +11,17 @@ import {
   ArrowLeft,
   Truck,
   MapPin,
-  CreditCard,
   Shield,
   Package,
   CheckCircle,
   Loader2,
   Home,
-  Building2
+  ClipboardCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type DeliveryMode = 'home' | 'relay';
-type Step = 'address' | 'delivery' | 'payment';
+type Step = 'address' | 'delivery' | 'confirmation';
 
 const COLISSIMO_RATES = {
   home: 6.5,
@@ -39,6 +38,7 @@ export default function Checkout() {
   const [step, setStep] = useState<Step>('address');
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>('relay');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [orderNumber, setOrderNumber] = useState('');
 
   const [form, setForm] = useState({
     firstName: '',
@@ -66,19 +66,11 @@ export default function Checkout() {
     return required.every(f => form[f as keyof typeof form].trim());
   };
 
-  const handlePayment = async () => {
-    if (!validateAddress()) {
-      toast({ title: 'Formulaire incomplet', description: 'Veuillez remplir tous les champs obligatoires.', variant: 'destructive' });
-      return;
-    }
-
+  const handlePlaceOrder = async () => {
     setIsProcessing(true);
-
     try {
-      // Generate order number
-      const orderNumber = `LVTK-${Date.now().toString(36).toUpperCase()}`;
+      const num = `LVTK-${Date.now().toString(36).toUpperCase()}`;
 
-      // Create order in DB
       const orderItems = items.map(item => ({
         productId: item.productId,
         name: item.name,
@@ -89,8 +81,8 @@ export default function Checkout() {
         image: item.image,
       }));
 
-      const { data: order, error: orderError } = await supabase.from('orders').insert({
-        order_number: orderNumber,
+      const { error: orderError } = await supabase.from('orders').insert({
+        order_number: num,
         user_id: user?.id || null,
         customer_email: form.email,
         customer_name: `${form.firstName} ${form.lastName}`,
@@ -106,61 +98,30 @@ export default function Checkout() {
         shipping_cost: shippingCost,
         tax: tax,
         total: orderTotal,
-        payment_method: 'payplug',
+        payment_method: 'manual',
         payment_status: 'pending',
         status: 'pending',
         shipping_carrier: 'colissimo',
-      }).select().single();
+      });
 
       if (orderError) throw orderError;
 
-      // Call PayPlug edge function
-      const { data: paymentData, error: paymentError } = await supabase.functions.invoke('payplug-checkout', {
-        body: {
-          orderId: order.id,
-          orderNumber,
-          amount: Math.round(orderTotal * 100), // centimes
-          currency: 'EUR',
-          customer: {
-            email: form.email,
-            first_name: form.firstName,
-            last_name: form.lastName,
-          },
-          successUrl: `${window.location.origin}/commande-confirmee?order=${orderNumber}`,
-          cancelUrl: `${window.location.origin}/checkout`,
-        },
-      });
-
-      if (paymentError || !paymentData?.payment_url) {
-        // If PayPlug not configured, show demo success
-        if (paymentError?.message?.includes('PAYPLUG_SECRET_KEY')) {
-          toast({
-            title: '⚙️ PayPlug non configuré',
-            description: 'Ajoutez votre clé secrète PayPlug dans les paramètres admin.',
-            variant: 'destructive',
-          });
-          setIsProcessing(false);
-          return;
-        }
-        throw paymentError || new Error('No payment URL');
-      }
-
-      // Redirect to PayPlug
+      setOrderNumber(num);
       clearCart();
-      window.location.href = paymentData.payment_url;
-
+      setStep('confirmation');
     } catch (err) {
       console.error('Checkout error:', err);
       toast({
-        title: 'Erreur lors du paiement',
+        title: 'Erreur lors de la commande',
         description: 'Veuillez réessayer ou contacter le support.',
         variant: 'destructive',
       });
+    } finally {
       setIsProcessing(false);
     }
   };
 
-  if (items.length === 0) {
+  if (items.length === 0 && step !== 'confirmation') {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -172,6 +133,58 @@ export default function Checkout() {
     );
   }
 
+  // CONFIRMATION PAGE
+  if (step === 'confirmation') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="chamfer-hud bg-card/50 p-8 max-w-lg w-full text-center space-y-6">
+          <div className="flex justify-center">
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <CheckCircle className="h-10 w-10 text-primary" />
+            </div>
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold hud-text mb-2">COMMANDE CONFIRMÉE</h1>
+            <p className="text-muted-foreground text-sm">Merci {form.firstName} ! Votre commande a été enregistrée.</p>
+            <p className="text-xs text-muted-foreground mt-1">N° {orderNumber}</p>
+          </div>
+
+          <div className="bg-secondary/30 chamfer-hud-sm p-4 text-left space-y-3">
+            <p className="text-sm font-bold hud-text flex items-center gap-2">
+              <Shield className="h-4 w-4 text-primary" />
+              INFORMATIONS DE PAIEMENT
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Votre commande est en attente de paiement. Veuillez effectuer un virement bancaire avec la référence <span className="font-bold text-foreground">{orderNumber}</span>.
+            </p>
+            <div className="border border-border chamfer-hud-sm p-3 text-xs space-y-1 font-mono">
+              <div className="flex justify-between"><span className="text-muted-foreground">Bénéficiaire :</span><span>LVTK6 Concept</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Montant :</span><span className="text-primary font-bold">{orderTotal.toFixed(2)} €</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Référence :</span><span>{orderNumber}</span></div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Une confirmation vous sera envoyée à <span className="font-medium text-foreground">{form.email}</span> dès réception du paiement.
+            </p>
+          </div>
+
+          <div className="bg-primary/10 border border-primary/20 chamfer-hud-sm p-3">
+            <p className="text-xs text-primary flex items-center gap-2">
+              <Truck className="h-3 w-3 flex-shrink-0" />
+              Expédition Colissimo {deliveryMode === 'relay' ? 'Point Relais' : 'Domicile'} dès validation du paiement
+            </p>
+          </div>
+
+          <Button className="w-full chamfer-hud-sm" onClick={() => navigate('/boutique')}>
+            Continuer mes achats
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const steps: Step[] = ['address', 'delivery', 'confirmation'];
+  const stepLabels = { address: 'Adresse', delivery: 'Livraison', confirmation: 'Confirmation' };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-5xl">
@@ -182,33 +195,33 @@ export default function Checkout() {
             Retour au panier
           </Button>
           <h1 className="text-3xl font-bold hud-text flex items-center gap-3">
-            <CreditCard className="h-8 w-8 text-primary" />
+            <ClipboardCheck className="h-8 w-8 text-primary" />
             FINALISER LA COMMANDE
           </h1>
         </div>
 
         {/* Progress steps */}
         <div className="flex items-center gap-4 mb-8">
-          {(['address', 'delivery', 'payment'] as Step[]).map((s, i) => (
+          {steps.map((s, i) => (
             <div key={s} className="flex items-center gap-2">
               <button
                 onClick={() => {
                   if (s === 'address') setStep('address');
-                  if (s === 'delivery' && step === 'payment') setStep('delivery');
+                  if (s === 'delivery') setStep('delivery');
                 }}
                 className={cn(
                   'w-8 h-8 flex items-center justify-center text-sm font-bold transition-colors',
                   step === s ? 'bg-primary text-primary-foreground' :
-                  (step === 'delivery' && s === 'address') || (step === 'payment') ? 'bg-foreground/20 text-foreground' : 'bg-secondary text-muted-foreground',
+                  (steps as string[]).indexOf(step) > i ? 'bg-foreground/20 text-foreground' : 'bg-secondary text-muted-foreground',
                 )}
                 style={{ clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)' }}
               >
-                {(step === 'delivery' && s === 'address') || step === 'payment' && s !== 'payment' ? <CheckCircle className="h-4 w-4" /> : i + 1}
+                {(steps as string[]).indexOf(step) > i ? <CheckCircle className="h-4 w-4" /> : i + 1}
               </button>
               <span className={cn('text-xs font-medium hidden sm:block', step === s ? 'text-foreground' : 'text-muted-foreground')}>
-                {s === 'address' ? 'Adresse' : s === 'delivery' ? 'Livraison' : 'Paiement'}
+                {stepLabels[s]}
               </span>
-              {i < 2 && <div className="w-8 h-px bg-border" />}
+              {i < steps.length - 1 && <div className="w-8 h-px bg-border" />}
             </div>
           ))}
         </div>
@@ -360,73 +373,33 @@ export default function Checkout() {
                   <div className="bg-primary/10 border border-primary/20 px-4 py-3 chamfer-hud-sm">
                     <p className="text-xs text-primary">
                       <Truck className="h-3 w-3 inline mr-1" />
-                      Plus que {(COLISSIMO_RATES.free_threshold - subtotal).toFixed(2)}€ d'achats pour la livraison gratuite en point relais !
+                      Plus que {(COLISSIMO_RATES.free_threshold - subtotal).toFixed(2)}€ d'achats pour la livraison gratuite !
                     </p>
                   </div>
                 )}
+
+                {/* Summary before placing order */}
+                <div className="bg-secondary/30 p-4 chamfer-hud-sm space-y-2 text-sm">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <MapPin className="h-3 w-3" />
+                    <span>{form.firstName} {form.lastName} — {form.address}, {form.zip} {form.city}</span>
+                  </div>
+                </div>
 
                 <div className="flex gap-3">
                   <Button variant="outline" onClick={() => setStep('address')} className="flex-1">
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Retour
                   </Button>
-                  <Button className="flex-1 chamfer-hud-sm h-12" onClick={() => setStep('payment')}>
-                    Continuer vers le paiement
-                    <ArrowLeft className="ml-2 h-4 w-4 rotate-180" />
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* STEP 3: PAYMENT */}
-            {step === 'payment' && (
-              <div className="chamfer-hud bg-card/50 p-6 space-y-4">
-                <h2 className="text-lg font-bold hud-text flex items-center gap-2">
-                  <CreditCard className="h-5 w-5 text-primary" />
-                  PAIEMENT SÉCURISÉ
-                </h2>
-
-                {/* Summary */}
-                <div className="bg-secondary/30 p-4 chamfer-hud-sm space-y-2 text-sm">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
-                    <MapPin className="h-3 w-3" />
-                    <span>{form.firstName} {form.lastName} — {form.address}, {form.zip} {form.city}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Truck className="h-3 w-3" />
-                    <span>Colissimo {deliveryMode === 'relay' ? 'Point Relais' : 'Domicile'} — {shippingCost === 0 ? 'GRATUIT' : `${shippingCost.toFixed(2)}€`}</span>
-                  </div>
-                </div>
-
-                {/* PayPlug */}
-                <div className="border border-border chamfer-hud p-4 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-primary text-primary-foreground px-3 py-1 text-xs font-bold">PayPlug</div>
-                    <span className="text-sm text-muted-foreground">Paiement 100% sécurisé</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Vous serez redirigé vers la page de paiement sécurisée PayPlug pour finaliser votre commande par carte bancaire.
-                  </p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Shield className="h-3 w-3" />
-                    <span>Cryptage SSL 256-bit — Certifié PCI DSS</span>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <Button variant="outline" onClick={() => setStep('delivery')} className="flex-1">
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Retour
-                  </Button>
                   <Button
                     className="flex-1 chamfer-hud-sm h-12 text-base font-bold"
-                    onClick={handlePayment}
+                    onClick={handlePlaceOrder}
                     disabled={isProcessing}
                   >
                     {isProcessing ? (
                       <><Loader2 className="h-5 w-5 mr-2 animate-spin" />Traitement...</>
                     ) : (
-                      <><CreditCard className="h-5 w-5 mr-2" />PAYER {orderTotal.toFixed(2)}€</>
+                      <><CheckCircle className="h-5 w-5 mr-2" />CONFIRMER {orderTotal.toFixed(2)}€</>
                     )}
                   </Button>
                 </div>
@@ -475,6 +448,11 @@ export default function Checkout() {
                   <span>TOTAL</span>
                   <span className="text-primary">{orderTotal.toFixed(2)}€</span>
                 </div>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-border flex items-center gap-2 text-xs text-muted-foreground">
+                <Shield className="h-3 w-3" />
+                <span>Paiement sécurisé par virement bancaire</span>
               </div>
             </div>
           </div>
