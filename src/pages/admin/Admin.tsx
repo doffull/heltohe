@@ -39,6 +39,7 @@ import AdminPages from './AdminPages';
 import AdminStock from './AdminStock';
 import AdminWooCommerce from './AdminWooCommerce';
 import AdminChatbot from './AdminChatbot';
+import AdminColissimo from './AdminColissimo';
 
 const SIDEBAR_ITEMS = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/admin' },

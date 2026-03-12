@@ -14,10 +14,12 @@ import { supabase } from '@/integrations/supabase/client';
 import {
   Package, Truck, MapPin, Settings2, ExternalLink, Download,
   CheckCircle2, XCircle, Loader2, Search, RefreshCw, Tag,
-  Clock, Building2, AlertTriangle, Info,
+  Building2, AlertTriangle, Info,
 } from 'lucide-react';
 import { useOrders } from '@/hooks/useOrders';
+import { useQueryClient } from '@tanstack/react-query';
 import { useDesignSettings, useSaveDesignSettings } from '@/hooks/useDesignSettings';
+import { Order } from '@/types';
 
 // Leaflet map imports
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
@@ -30,17 +32,6 @@ L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
-
-// Custom relay-point icon
-const relayIcon = new L.Icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
 });
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -85,16 +76,16 @@ function formatDistance(meters: string) {
   return `${(m / 1000).toFixed(1)} km`;
 }
 
-function getShippingStatus(order: any): 'to_ship' | 'in_transit' | 'delivered' {
+function getShippingStatus(order: Order): 'to_ship' | 'in_transit' | 'delivered' {
   if (order.status === 'Delivered') return 'delivered';
-  if (order.tracking_number || order.status === 'Shipped') return 'in_transit';
+  if (order.trackingNumber || order.status === 'Shipped') return 'in_transit';
   return 'to_ship';
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: string }) {
-  if (status === 'to_ship') return <Badge variant="outline" className="text-yellow-600 border-yellow-600/40 bg-yellow-500/10">À expédier</Badge>;
+  if (status === 'to_ship') return <Badge variant="outline" className="text-yellow-500 border-yellow-500/40 bg-yellow-500/10">À expédier</Badge>;
   if (status === 'in_transit') return <Badge variant="outline" className="text-blue-500 border-blue-500/40 bg-blue-500/10">En transit</Badge>;
   if (status === 'delivered') return <Badge variant="outline" className="text-green-500 border-green-500/40 bg-green-500/10">Livré</Badge>;
   return null;
@@ -106,27 +97,28 @@ function ExpeditionsTab({ senderName, senderAddress, senderZip, senderCity }: {
   senderName: string; senderAddress: string; senderZip: string; senderCity: string;
 }) {
   const { toast } = useToast();
-  const { data: orders = [], refetch } = useOrders();
+  const { data: orders = [] } = useOrders();
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState<ShippingFilter>('all');
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState<Record<string, boolean>>({});
+  const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({});
   const [bulkLoading, setBulkLoading] = useState(false);
   const [search, setSearch] = useState('');
 
-  const filtered = orders.filter(order => {
+  const filtered = orders.filter((order: Order) => {
     const status = getShippingStatus(order);
     const matchesFilter = filter === 'all' || filter === status;
     const matchesSearch = !search ||
-      order.order_number?.toLowerCase().includes(search.toLowerCase()) ||
-      order.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
-      order.customer_email?.toLowerCase().includes(search.toLowerCase());
+      order.orderNumber?.toLowerCase().includes(search.toLowerCase()) ||
+      order.customer?.name?.toLowerCase().includes(search.toLowerCase()) ||
+      order.customer?.email?.toLowerCase().includes(search.toLowerCase());
     return matchesFilter && matchesSearch;
   });
 
   const counts = {
-    to_ship: orders.filter(o => getShippingStatus(o) === 'to_ship').length,
-    in_transit: orders.filter(o => getShippingStatus(o) === 'in_transit').length,
-    delivered: orders.filter(o => getShippingStatus(o) === 'delivered').length,
+    to_ship: orders.filter((o: Order) => getShippingStatus(o) === 'to_ship').length,
+    in_transit: orders.filter((o: Order) => getShippingStatus(o) === 'in_transit').length,
+    delivered: orders.filter((o: Order) => getShippingStatus(o) === 'delivered').length,
   };
 
   const toggleSelect = (id: string) => {
@@ -137,26 +129,25 @@ function ExpeditionsTab({ senderName, senderAddress, senderZip, senderCity }: {
 
   const toggleAll = () => {
     if (selected.size === filtered.length) setSelected(new Set());
-    else setSelected(new Set(filtered.map(o => o.id)));
+    else setSelected(new Set(filtered.map((o: Order) => o.id)));
   };
 
-  async function generateLabel(order: any) {
-    setLoading(l => ({ ...l, [order.id]: true }));
+  async function generateLabel(order: Order) {
+    setLoadingMap(l => ({ ...l, [order.id]: true }));
     try {
-      const { data: { session } } = await supabase.auth.getSession();
       const res = await supabase.functions.invoke('colissimo-proxy', {
         body: {
           action: 'generateLabel',
           senderName, senderAddress, senderZip, senderCity,
           order: {
-            orderNumber: order.order_number,
+            orderNumber: order.orderNumber,
             customer: {
-              name: order.customer_name,
-              email: order.customer_email,
-              phone: order.customer_phone,
-              address: order.customer_address,
-              city: order.customer_city,
-              zip: order.customer_zip,
+              name: order.customer.name,
+              email: order.customer.email,
+              phone: order.customer.phone,
+              address: order.customer.address,
+              city: order.customer.city,
+              zip: order.customer.zip,
             },
           },
         },
@@ -179,30 +170,30 @@ function ExpeditionsTab({ senderName, senderAddress, senderZip, senderCity }: {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `etiquette_${order.order_number}.pdf`;
+        a.download = `etiquette_${order.orderNumber}.pdf`;
         a.click();
         URL.revokeObjectURL(url);
       }
 
       toast({ title: `Étiquette générée`, description: trackingNumber ? `N° suivi: ${trackingNumber}` : 'Aucun numéro retourné' });
-      refetch();
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
     } catch (e: any) {
       toast({ title: 'Erreur', description: e.message, variant: 'destructive' });
     } finally {
-      setLoading(l => ({ ...l, [order.id]: false }));
+      setLoadingMap(l => ({ ...l, [order.id]: false }));
     }
   }
 
-  async function markShipped(order: any) {
+  async function markShipped(order: Order) {
     await supabase.from('orders').update({ status: 'Shipped', shipping_carrier: 'Colissimo' }).eq('id', order.id);
     toast({ title: 'Commande marquée expédiée' });
-    refetch();
+    queryClient.invalidateQueries({ queryKey: ['orders'] });
   }
 
   async function bulkGenerateLabels() {
     if (!selected.size) return;
     setBulkLoading(true);
-    const toProcess = filtered.filter(o => selected.has(o.id) && getShippingStatus(o) === 'to_ship');
+    const toProcess = filtered.filter((o: Order) => selected.has(o.id) && getShippingStatus(o) === 'to_ship');
     for (const order of toProcess) {
       await generateLabel(order);
     }
@@ -240,7 +231,7 @@ function ExpeditionsTab({ senderName, senderAddress, senderZip, senderCity }: {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Rechercher commande, client..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-1 flex-wrap">
           {[['all', 'Tout'], ['to_ship', 'À expédier'], ['in_transit', 'En transit'], ['delivered', 'Livré']].map(([val, label]) => (
             <Button key={val} variant={filter === val ? 'default' : 'outline'} size="sm" onClick={() => setFilter(val as ShippingFilter)}>
               {label}
@@ -275,33 +266,33 @@ function ExpeditionsTab({ senderName, senderAddress, senderZip, senderCity }: {
             {filtered.length === 0 && (
               <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Aucune commande</TableCell></TableRow>
             )}
-            {filtered.map(order => {
+            {filtered.map((order: Order) => {
               const status = getShippingStatus(order);
-              const isLoading = loading[order.id];
+              const isLoading = loadingMap[order.id];
               return (
                 <TableRow key={order.id}>
                   <TableCell>
                     <Checkbox checked={selected.has(order.id)} onCheckedChange={() => toggleSelect(order.id)} />
                   </TableCell>
-                  <TableCell className="font-mono text-sm font-semibold">#{order.order_number}</TableCell>
+                  <TableCell className="font-mono text-sm font-semibold">#{order.orderNumber}</TableCell>
                   <TableCell>
-                    <div className="font-medium text-sm">{order.customer_name}</div>
-                    <div className="text-xs text-muted-foreground">{order.customer_email}</div>
+                    <div className="font-medium text-sm">{order.customer.name}</div>
+                    <div className="text-xs text-muted-foreground">{order.customer.email}</div>
                   </TableCell>
                   <TableCell>
-                    <div className="text-sm">{order.customer_city}</div>
-                    <div className="text-xs text-muted-foreground">{order.customer_zip}</div>
+                    <div className="text-sm">{order.customer.city}</div>
+                    <div className="text-xs text-muted-foreground">{order.customer.zip}</div>
                   </TableCell>
                   <TableCell><StatusBadge status={status} /></TableCell>
                   <TableCell>
-                    {order.tracking_number ? (
+                    {order.trackingNumber ? (
                       <a
-                        href={`https://www.laposte.fr/particulier/outils/suivre-vos-envois?code=${order.tracking_number}`}
+                        href={`https://www.laposte.fr/particulier/outils/suivre-vos-envois?code=${order.trackingNumber}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-primary text-sm font-mono hover:underline"
                       >
-                        {order.tracking_number}
+                        {order.trackingNumber}
                         <ExternalLink className="h-3 w-3" />
                       </a>
                     ) : (
@@ -322,9 +313,9 @@ function ExpeditionsTab({ senderName, senderAddress, senderZip, senderCity }: {
                           </Button>
                         </>
                       )}
-                      {order.tracking_number && (
+                      {order.trackingNumber && (
                         <a
-                          href={`https://www.laposte.fr/particulier/outils/suivre-vos-envois?code=${order.tracking_number}`}
+                          href={`https://www.laposte.fr/particulier/outils/suivre-vos-envois?code=${order.trackingNumber}`}
                           target="_blank"
                           rel="noopener noreferrer"
                         >
@@ -359,7 +350,7 @@ function PointsRelaisTab() {
   const hasCoords = (p: RelayPoint) =>
     p.lat && p.lng && !isNaN(parseFloat(p.lat)) && !isNaN(parseFloat(p.lng));
 
-  async function search() {
+  async function handleSearch() {
     if (!zipCode.trim()) return;
     setLoading(true);
     setPoints([]);
@@ -386,12 +377,11 @@ function PointsRelaisTab() {
     }
   };
 
-  // Default map center France
-  const mapCenter: [number, number] = points.filter(hasCoords).length > 0
-    ? [parseFloat(points.find(hasCoords)!.lat), parseFloat(points.find(hasCoords)!.lng)]
+  const firstWithCoords = points.find(hasCoords);
+  const mapCenter: [number, number] = firstWithCoords
+    ? [parseFloat(firstWithCoords.lat), parseFloat(firstWithCoords.lng)]
     : [46.6, 2.3];
-
-  const mapZoom = points.filter(hasCoords).length > 0 ? 13 : 5;
+  const mapZoom = firstWithCoords ? 13 : 5;
 
   return (
     <div className="space-y-4">
@@ -406,11 +396,11 @@ function PointsRelaisTab() {
                 className="pl-9"
                 value={zipCode}
                 onChange={e => setZipCode(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && search()}
+                onKeyDown={e => e.key === 'Enter' && handleSearch()}
                 maxLength={10}
               />
             </div>
-            <Button onClick={search} disabled={loading || !zipCode.trim()} className="gap-2 min-w-32">
+            <Button onClick={handleSearch} disabled={loading || !zipCode.trim()} className="gap-2 min-w-36">
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
               {loading ? 'Recherche...' : 'Rechercher'}
             </Button>
@@ -419,7 +409,7 @@ function PointsRelaisTab() {
       </Card>
 
       {points.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[600px]">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" style={{ height: '620px' }}>
           {/* Map — 2/3 */}
           <div className="lg:col-span-2 rounded-xl overflow-hidden border border-border h-full">
             <MapContainer
@@ -436,7 +426,6 @@ function PointsRelaisTab() {
                 <Marker
                   key={p.identifiant}
                   position={[parseFloat(p.lat), parseFloat(p.lng)]}
-                  icon={relayIcon}
                   eventHandlers={{ click: () => selectPoint(p.identifiant) }}
                 >
                   <Popup>
@@ -445,7 +434,7 @@ function PointsRelaisTab() {
                       <p>{p.adresse1}</p>
                       {p.adresse2 && <p>{p.adresse2}</p>}
                       <p>{p.codePostal} {p.localite}</p>
-                      {p.distanceEnMetre && <p className="text-gray-500">{formatDistance(p.distanceEnMetre)}</p>}
+                      {p.distanceEnMetre && <p className="text-muted-foreground">{formatDistance(p.distanceEnMetre)}</p>}
                     </div>
                   </Popup>
                 </Marker>
@@ -454,7 +443,7 @@ function PointsRelaisTab() {
           </div>
 
           {/* List — 1/3 */}
-          <div className="overflow-y-auto space-y-2 pr-1">
+          <div className="overflow-y-auto space-y-2 pr-1 h-full">
             <p className="text-sm text-muted-foreground pb-1">{points.length} point{points.length > 1 ? 's' : ''} trouvé{points.length > 1 ? 's' : ''}</p>
             {points.map((p, i) => (
               <Card
@@ -464,28 +453,28 @@ function PointsRelaisTab() {
               >
                 <CardContent className="p-3 space-y-2">
                   <div className="flex items-start justify-between gap-2">
-                    <div>
+                    <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-mono text-muted-foreground">#{i + 1}</span>
-                        <p className="text-sm font-semibold leading-tight">{p.nom}</p>
+                        <span className="text-xs font-mono text-muted-foreground shrink-0">#{i + 1}</span>
+                        <p className="text-sm font-semibold leading-tight truncate">{p.nom}</p>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">{p.adresse1}{p.adresse2 ? `, ${p.adresse2}` : ''}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{p.adresse1}{p.adresse2 ? `, ${p.adresse2}` : ''}</p>
                       <p className="text-xs text-muted-foreground">{p.codePostal} {p.localite}</p>
                     </div>
                     {p.distanceEnMetre && (
                       <Badge variant="secondary" className="text-xs shrink-0">{formatDistance(p.distanceEnMetre)}</Badge>
                     )}
                   </div>
-                  {/* Horaires */}
+                  {/* Horaires compact */}
                   <div className="grid grid-cols-7 gap-0.5">
                     {DAYS.map(({ key, label }) => {
-                      const hours = p[key as keyof RelayPoint];
-                      const isOpen = hours && hours !== '00:00-00:00';
+                      const hours = p[key as keyof RelayPoint] as string;
+                      const isOpen = hours && hours !== '00:00-00:00' && hours !== '';
                       return (
                         <div key={key} className="text-center">
                           <p className="text-[9px] font-medium text-muted-foreground">{label}</p>
-                          <div className={`text-[8px] rounded px-0.5 py-0.5 leading-tight ${isOpen ? 'bg-green-500/10 text-green-600' : 'bg-muted text-muted-foreground'}`}>
-                            {isOpen ? hours!.replace('-', '\n') : '—'}
+                          <div className={`text-[8px] rounded px-0.5 py-0.5 leading-none mt-0.5 ${isOpen ? 'bg-green-500/10 text-green-600' : 'bg-muted text-muted-foreground'}`}>
+                            {isOpen ? '✓' : '—'}
                           </div>
                         </div>
                       );
@@ -498,18 +487,11 @@ function PointsRelaisTab() {
         </div>
       )}
 
-      {!loading && points.length === 0 && zipCode && (
-        <div className="text-center py-16 text-muted-foreground">
-          <MapPin className="h-10 w-10 mx-auto mb-3 opacity-30" />
-          <p>Entrez un code postal et cliquez sur Rechercher</p>
-        </div>
-      )}
-
-      {!zipCode && (
+      {!loading && points.length === 0 && (
         <div className="text-center py-16 text-muted-foreground">
           <MapPin className="h-12 w-12 mx-auto mb-3 opacity-20" />
           <p className="text-lg font-medium">Rechercher des points relais</p>
-          <p className="text-sm mt-1">Entrez un code postal pour afficher les points relais Colissimo sur la carte</p>
+          <p className="text-sm mt-1">Entrez un code postal et appuyez sur Entrée ou cliquez Rechercher</p>
         </div>
       )}
     </div>
@@ -592,15 +574,15 @@ function ConfigurationTab() {
           <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border border-border">
             <Info className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
             <p className="text-sm text-muted-foreground">
-              Les identifiants Colissimo (login / mot de passe) sont stockés de façon sécurisée dans les secrets du backend.
-              Pour les modifier, utilisez la section <strong>Paramètres → Secrets</strong> avec les clés{' '}
+              Les identifiants Colissimo (login / mot de passe) sont stockés de façon sécurisée dans les secrets backend.
+              Pour les modifier, contactez l'administrateur avec les clés{' '}
               <code className="bg-muted px-1 rounded text-xs">COLISSIMO_LOGIN</code> et{' '}
               <code className="bg-muted px-1 rounded text-xs">COLISSIMO_PASSWORD</code>.
             </p>
           </div>
 
           {/* Test connection */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <Button
               variant="outline"
               onClick={testConnection}
@@ -613,9 +595,9 @@ function ConfigurationTab() {
               Tester la connexion
             </Button>
             {testStatus === 'ok' && (
-              <span className="inline-flex items-center gap-1.5 text-sm text-green-500">
+              <span className="inline-flex items-center gap-1.5 text-sm text-green-500 font-medium">
                 <CheckCircle2 className="h-4 w-4" />
-                Connexion réussie
+                Connexion réussie — identifiants valides
               </span>
             )}
             {testStatus === 'error' && (
@@ -638,7 +620,7 @@ function ConfigurationTab() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Ces informations sont imprimées sur toutes les étiquettes Colissimo générées.
+            Ces informations apparaissent sur toutes les étiquettes Colissimo générées.
           </p>
 
           <div className="space-y-3">
@@ -653,11 +635,11 @@ function ConfigurationTab() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Code postal</Label>
-                <Input className="mt-1" placeholder="ex: 75001" value={form.senderZip} onChange={handleChange('senderZip')} maxLength={5} />
+                <Input className="mt-1" placeholder="75001" value={form.senderZip} onChange={handleChange('senderZip')} maxLength={5} />
               </div>
               <div>
                 <Label>Ville</Label>
-                <Input className="mt-1" placeholder="ex: Paris" value={form.senderCity} onChange={handleChange('senderCity')} />
+                <Input className="mt-1" placeholder="Paris" value={form.senderCity} onChange={handleChange('senderCity')} />
               </div>
             </div>
           </div>
@@ -677,10 +659,10 @@ function ConfigurationTab() {
             <p className="font-medium text-foreground">Modes de livraison supportés</p>
             <ul className="list-disc list-inside space-y-0.5 text-xs">
               <li><strong>DOM</strong> — Livraison à domicile Colissimo</li>
-              <li><strong>A2P</strong> — Livraison en point relais (détecté automatiquement)</li>
+              <li><strong>A2P</strong> — Point relais (détecté automatiquement si l'adresse contient "point relais")</li>
             </ul>
             <p className="text-xs mt-2">
-              Les étiquettes sont générées au format <strong>PDF 10×15 300dpi</strong> prêtes pour imprimante d'étiquettes thermique.
+              Les étiquettes sont générées au format <strong>PDF 10×15 300dpi</strong>, prêtes pour imprimante thermique.
             </p>
           </div>
         </CardContent>
