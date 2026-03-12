@@ -61,6 +61,8 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
   const [saving, setSaving] = useState(false);
   const [generatingSku, setGeneratingSku] = useState(false);
   const [generatingDesc, setGeneratingDesc] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     name: '',
     sku: '',
