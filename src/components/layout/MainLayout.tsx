@@ -168,7 +168,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               <img 
                 src={designSettings.hudLogo} 
                 alt="Logo" 
-                className="h-10 w-auto object-contain"
+                className="h-10 w-auto object-contain logo-visibility-filter"
                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
             ) : (
