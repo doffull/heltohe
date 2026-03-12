@@ -186,6 +186,7 @@ export default function Checkout() {
           shippingCost,
           total: orderTotal,
           deliveryMode,
+          adminEmail: designSettings.adminNotificationEmail || undefined,
         },
       }).catch(err => console.warn('Email confirmation failed (non-blocking):', err));
 
