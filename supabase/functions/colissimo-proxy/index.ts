@@ -5,7 +5,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const COLISSIMO_API = 'https://ws.colissimo.fr';
+const COLISSIMO_RELAY_API = 'https://ws.colissimo.fr/pointretrait-ws-cxf/PointRetraitServiceWS/2.0';
+const COLISSIMO_LABEL_API = 'https://ws.colissimo.fr/sls-ws/SlsServiceWS/2.0';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -28,8 +29,8 @@ Deno.serve(async (req) => {
   );
 
   const token = authHeader.replace('Bearer ', '');
-  const { data, error: authError } = await supabase.auth.getClaims(token);
-  if (authError || !data?.claims) {
+  const { data: claimsData, error: authError } = await supabase.auth.getClaims(token);
+  if (authError || !claimsData?.claims) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -50,9 +51,9 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
-    // ─── ACTION: GET RELAY POINTS ─────────────────────────────────────────────
+    // ─── ACTION: GET RELAY POINTS (SOAP) ─────────────────────────────────────
     if (action === 'getRelayPoints') {
-      const { zipCode, city = '', countryCode = 'FR', deliveryMode = 'RDV', maxPointChronopost = 5, maxPointRelaisColissimo = 5 } = body;
+      const { zipCode, city = '', countryCode = 'FR' } = body;
 
       if (!zipCode) {
         return new Response(JSON.stringify({ error: 'zipCode is required' }), {
@@ -61,68 +62,53 @@ Deno.serve(async (req) => {
         });
       }
 
-      const payload = {
-        accountNumber: COLISSIMO_LOGIN,
-        password: COLISSIMO_PASSWORD,
-        address: '',
-        zipCode,
-        city,
-        countryCode,
-        optionInter: '1',
-        filterRelay: '0',
-        requestId: '',
-        lang: 'FR',
-        resurce: '',
-        date: '',
-        productCode: 'A2P',
-        availableLoadingDate: '',
-        maxPointChronopost,
-        maxPointRelaisColissimo,
-        filterSupportsDeLivraison: '1',
-        thresholdPallets: '',
-      };
+      const soapBody = `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://ws.colissimo.fr">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <ser:getPointRetraitAcheminementByCodePoste>
+      <accountNumber>${COLISSIMO_LOGIN}</accountNumber>
+      <password>${COLISSIMO_PASSWORD}</password>
+      <address></address>
+      <zipCode>${zipCode}</zipCode>
+      <city>${city}</city>
+      <countryCode>${countryCode}</countryCode>
+      <optionInter>1</optionInter>
+      <reseau>24R</reseau>
+      <filterRelay>0</filterRelay>
+      <lang>FR</lang>
+      <date></date>
+      <productCode>A2P</productCode>
+      <availableLoadingDate></availableLoadingDate>
+      <maxPointChronopost>0</maxPointChronopost>
+      <maxPointRelaisColissimo>7</maxPointRelaisColissimo>
+      <filterSupportsDeLivraison>1</filterSupportsDeLivraison>
+    </ser:getPointRetraitAcheminementByCodePoste>
+  </soapenv:Body>
+</soapenv:Envelope>`;
 
-      const response = await fetch(
-        `${COLISSIMO_API}/pointretrait-ws-cxf/PointRetraitServiceWS/2.0/getPointRetraitAcheminement`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        }
-      );
+      const response = await fetch(COLISSIMO_RELAY_API, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/xml; charset=UTF-8',
+          'SOAPAction': '"getPointRetraitAcheminementByCodePoste"',
+        },
+        body: soapBody,
+      });
+
+      const xmlText = await response.text();
+      console.log('Colissimo relay response status:', response.status);
+      console.log('Colissimo relay response (first 500):', xmlText.slice(0, 500));
 
       if (!response.ok) {
-        const errText = await response.text();
-        console.error('Colissimo getRelayPoints error:', errText);
-        return new Response(JSON.stringify({ error: `Colissimo API error [${response.status}]`, details: errText }), {
+        return new Response(JSON.stringify({ error: `Colissimo SOAP error [${response.status}]`, details: xmlText.slice(0, 500) }), {
           status: 502,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      const data = await response.json();
-
-      // Normalize relay points list
-      const points = (data?.listePointRetraitAcheminement || []).map((p: Record<string, unknown>) => ({
-        identifiant: p.identifiant,
-        nom: p.nom,
-        adresse1: p.adresse1,
-        adresse2: p.adresse2,
-        codePostal: p.codePostal,
-        localite: p.localite,
-        libellePays: p.libellePays,
-        coordGeolocalisationLatitude: p.coordGeolocalisationLatitude,
-        coordGeolocalisationLongitude: p.coordGeolocalisationLongitude,
-        distanceEnMetre: p.distanceEnMetre,
-        horairesOuvertureLundi: p.horairesOuvertureLundi,
-        horairesOuvertureMardi: p.horairesOuvertureMardi,
-        horairesOuvertureMercredi: p.horairesOuvertureMercredi,
-        horairesOuvertureJeudi: p.horairesOuvertureJeudi,
-        horairesOuvertureVendredi: p.horairesOuvertureVendredi,
-        horairesOuvertureSamedi: p.horairesOuvertureSamedi,
-        horairesOuvertureDimanche: p.horairesOuvertureDimanche,
-        typeDePoint: p.typeDePoint,
-      }));
+      // Parse relay points from XML
+      const points = parseRelayPointsFromXml(xmlText);
 
       return new Response(JSON.stringify({ success: true, points }), {
         status: 200,
@@ -130,7 +116,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ─── ACTION: GENERATE LABEL ───────────────────────────────────────────────
+    // ─── ACTION: GENERATE LABEL (SOAP) ───────────────────────────────────────
     if (action === 'generateLabel') {
       const { order } = body;
 
@@ -141,95 +127,114 @@ Deno.serve(async (req) => {
         });
       }
 
-      const isRelay = order.customer?.address?.includes('Point Relais');
+      const depositDate = new Date().toISOString().split('T')[0];
+      const lastName = (order.customer?.name || '').split(' ').slice(-1)[0] || 'Client';
+      const firstName = (order.customer?.name || '').split(' ').slice(0, -1).join(' ') || 'LVTK6';
+      const isRelay = (order.customer?.address || '').toLowerCase().includes('point relais');
+      const productCode = isRelay ? 'A2P' : 'DOM';
 
-      const payload = {
-        contractNumber: COLISSIMO_LOGIN,
-        password: COLISSIMO_PASSWORD,
-        outputFormat: {
-          x: 0,
-          y: 15,
-          outputPrintingType: 'PDF_10x15_300dpi',
-        },
-        letter: {
-          service: {
-            productCode: isRelay ? 'A2P' : 'DOM',
-            depositDate: new Date().toISOString().split('T')[0],
-            orderNumber: order.orderNumber,
-          },
-          parcel: {
-            weight: 1.0,
-          },
-          sender: {
-            address: {
-              companyName: 'LVTK6 Concept Store',
-              line2: '1 Rue de la Paix',
-              city: 'Paris',
-              zipCode: '75001',
-              countryCode: 'FR',
-            },
-          },
-          addressee: {
-            address: {
-              lastName: order.customer?.name?.split(' ').slice(-1)[0] || order.customer?.name || '',
-              firstName: order.customer?.name?.split(' ').slice(0, -1).join(' ') || '',
-              line2: order.customer?.address || '',
-              city: order.customer?.city || '',
-              zipCode: order.customer?.zip || '',
-              countryCode: 'FR',
-              email: order.customer?.email || '',
-              mobileNumber: order.customer?.phone || '',
-            },
-          },
-        },
-      };
+      const soapBody = `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://sls.ws.coliposte.fr">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <ser:generateLabel>
+      <contractNumber>${COLISSIMO_LOGIN}</contractNumber>
+      <password>${COLISSIMO_PASSWORD}</password>
+      <outputFormat>
+        <x>0</x>
+        <y>15</y>
+        <outputPrintingType>PDF_10x15_300dpi</outputPrintingType>
+      </outputFormat>
+      <letter>
+        <service>
+          <productCode>${productCode}</productCode>
+          <depositDate>${depositDate}</depositDate>
+          <orderNumber>${order.orderNumber}</orderNumber>
+        </service>
+        <parcel>
+          <weight>1.0</weight>
+        </parcel>
+        <sender>
+          <address>
+            <companyName>LVTK6 Concept Store</companyName>
+            <line2>1 Rue de la Paix</line2>
+            <city>Paris</city>
+            <zipCode>75001</zipCode>
+            <countryCode>FR</countryCode>
+          </address>
+        </sender>
+        <addressee>
+          <address>
+            <lastName>${escapeXml(lastName)}</lastName>
+            <firstName>${escapeXml(firstName)}</firstName>
+            <line2>${escapeXml(order.customer?.address || '')}</line2>
+            <city>${escapeXml(order.customer?.city || '')}</city>
+            <zipCode>${escapeXml(order.customer?.zip || '')}</zipCode>
+            <countryCode>FR</countryCode>
+            <email>${escapeXml(order.customer?.email || '')}</email>
+            <mobileNumber>${escapeXml(order.customer?.phone || '')}</mobileNumber>
+          </address>
+        </addressee>
+      </letter>
+    </ser:generateLabel>
+  </soapenv:Body>
+</soapenv:Envelope>`;
 
-      const response = await fetch(
-        `${COLISSIMO_API}/sls-ws/SlsServiceWS/2.0/generateLabel`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        }
-      );
+      const response = await fetch(COLISSIMO_LABEL_API, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/xml; charset=UTF-8',
+          'SOAPAction': '"generateLabel"',
+        },
+        body: soapBody,
+      });
+
+      const contentType = response.headers.get('Content-Type') || '';
+      console.log('Label response status:', response.status, 'content-type:', contentType);
 
       if (!response.ok) {
         const errText = await response.text();
-        console.error('Colissimo generateLabel error:', errText);
-        return new Response(JSON.stringify({ error: `Colissimo API error [${response.status}]`, details: errText }), {
+        console.error('Colissimo generateLabel error:', errText.slice(0, 500));
+        return new Response(JSON.stringify({ error: `Colissimo label error [${response.status}]`, details: errText.slice(0, 500) }), {
           status: 502,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      const contentType = response.headers.get('Content-Type') || '';
-
-      // Colissimo returns multipart/mixed with PDF + JSON metadata
+      // Colissimo returns multipart/mixed: first part is XML response, second is PDF
       if (contentType.includes('multipart')) {
         const rawBytes = await response.arrayBuffer();
-        const text = new TextDecoder().decode(rawBytes);
+        const fullText = new TextDecoder('utf-8', { fatal: false }).decode(rawBytes);
 
-        // Extract tracking number from JSON part
-        const jsonMatch = text.match(/\{[\s\S]*"parcelNumber"\s*:\s*"([^"]+)"[\s\S]*\}/);
-        const trackingNumber = jsonMatch ? jsonMatch[1] : null;
+        // Extract tracking number from XML part
+        const trackingMatch = fullText.match(/<parcelNumber>([^<]+)<\/parcelNumber>/);
+        const trackingNumber = trackingMatch ? trackingMatch[1] : null;
 
-        // Find PDF bytes (starts with %PDF)
-        const pdfStart = text.indexOf('%PDF');
-        let pdfBase64 = null;
-        if (pdfStart >= 0) {
-          const pdfBytes = new Uint8Array(rawBytes.slice(pdfStart));
-          pdfBase64 = btoa(String.fromCharCode(...pdfBytes));
+        // Find PDF start marker
+        const pdfStartIdx = rawBytes instanceof ArrayBuffer
+          ? findPdfStart(new Uint8Array(rawBytes))
+          : -1;
+
+        let pdfBase64: string | null = null;
+        if (pdfStartIdx >= 0) {
+          const pdfSlice = new Uint8Array(rawBytes).slice(pdfStartIdx);
+          // Find PDF end marker %%EOF
+          const eofMarker = findEof(pdfSlice);
+          const pdfBytes = eofMarker > 0 ? pdfSlice.slice(0, eofMarker) : pdfSlice;
+          pdfBase64 = uint8ArrayToBase64(pdfBytes);
         }
 
+        console.log('Tracking:', trackingNumber, 'PDF found:', pdfBase64 !== null);
         return new Response(JSON.stringify({ success: true, trackingNumber, pdfBase64 }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      // Fallback: JSON response
-      const data = await response.json();
-      return new Response(JSON.stringify({ success: true, ...data }), {
+      // Plain XML (error case)
+      const xmlText = await response.text();
+      const trackingMatch = xmlText.match(/<parcelNumber>([^<]+)<\/parcelNumber>/);
+      return new Response(JSON.stringify({ success: true, trackingNumber: trackingMatch?.[1] || null, pdfBase64: null }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -247,3 +252,82 @@ Deno.serve(async (req) => {
     });
   }
 });
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+
+function escapeXml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function parseRelayPointsFromXml(xml: string) {
+  const points: Record<string, string>[] = [];
+  const pointRegex = /<pointRetraitAcheminement>([\s\S]*?)<\/pointRetraitAcheminement>/g;
+  let match;
+  while ((match = pointRegex.exec(xml)) !== null) {
+    const block = match[1];
+    const get = (tag: string) => {
+      const m = block.match(new RegExp(`<${tag}>([^<]*)<\/${tag}>`));
+      return m ? m[1].trim() : '';
+    };
+    points.push({
+      identifiant: get('identifiant'),
+      nom: get('nom'),
+      adresse1: get('adresse1'),
+      adresse2: get('adresse2'),
+      codePostal: get('codePostal'),
+      localite: get('localite'),
+      libellePays: get('libellePays'),
+      distanceEnMetre: get('distanceEnMetre'),
+      horairesOuvertureLundi: get('horairesOuvertureLundi'),
+      horairesOuvertureMardi: get('horairesOuvertureMardi'),
+      horairesOuvertureMercredi: get('horairesOuvertureMercredi'),
+      horairesOuvertureJeudi: get('horairesOuvertureJeudi'),
+      horairesOuvertureVendredi: get('horairesOuvertureVendredi'),
+      horairesOuvertureSamedi: get('horairesOuvertureSamedi'),
+      horairesOuvertureDimanche: get('horairesOuvertureDimanche'),
+      typeDePoint: get('typeDePoint'),
+    });
+  }
+  return points;
+}
+
+function findPdfStart(bytes: Uint8Array): number {
+  // %PDF marker in bytes: 37 80 68 70
+  for (let i = 0; i < bytes.length - 4; i++) {
+    if (bytes[i] === 37 && bytes[i + 1] === 80 && bytes[i + 2] === 68 && bytes[i + 3] === 70) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+function findEof(bytes: Uint8Array): number {
+  // %%EOF marker
+  const marker = [37, 37, 69, 79, 70]; // %%EOF
+  for (let i = bytes.length - 1; i >= marker.length; i--) {
+    let found = true;
+    for (let j = 0; j < marker.length; j++) {
+      if (bytes[i - marker.length + j] !== marker[j]) {
+        found = false;
+        break;
+      }
+    }
+    if (found) return i + 1;
+  }
+  return -1;
+}
+
+function uint8ArrayToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  const chunkSize = 8192;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
+}
