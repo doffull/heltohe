@@ -1,103 +1,39 @@
 
-## Thinking
+## Analyse
 
-The user wants to:
-1. Upload a product mockup image (like the Marco jacket shown)
-2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
-3. Automatically generates a fully interactive, dynamic product page from it
+L'utilisateur demande où trouver le paramètre "admin notification email". La fonctionnalité n'existe pas encore — le secret `ADMIN_NOTIFICATION_EMAIL` n'a pas été créé (l'outil n'a pas été approuvé dans le message précédent), et la fonction `send-order-confirmation` n'envoie actuellement qu'un seul email au client.
 
-The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
+Il faut :
+1. Ajouter le champ email de notification admin dans `AdminSettings.tsx` (onglet Général) — configurable depuis l'interface
+2. Stocker cet email dans les `design_settings` ou dans la table `app_settings` existante
+3. Modifier `send-order-confirmation/index.ts` pour lire l'email admin et envoyer un 2e email de notification avec template dédié (récapitulatif commande + lien direct admin)
 
-1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
-   - Accepts an image (jpg/png/webp)
-   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
-   - Also extracts the **color variants** as `colorOptions` with proper hex values
-   - Returns a structured product object ready to pre-fill the ProductForm
+### Approche : stocker l'email admin dans design_settings
+C'est la solution la plus simple — `designSettings` est déjà utilisé partout, il suffit d'ajouter un champ `adminNotificationEmail`.
 
-2. **Add "Importer Maquette IA" button** in AdminProducts that:
-   - Opens a dialog with a dropzone accepting images
-   - Sends image to the edge function
-   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
-   - Lets admin review/edit before confirming creation
-   - On confirm: creates the product in the DB with all extracted data
+### Plan d'implémentation
 
-3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
+**1. `src/pages/admin/AdminSettings.tsx`** — onglet Général
+- Ajouter un champ "Email de notification admin" avec sauvegarde via `updateDesignSettings`
+- Afficher l'info contextuelle : "Cet email recevra une copie de chaque nouvelle commande"
 
-Looking at the Marco image:
-- Product name: MARCO
-- Brand: Helvetica Mountain Pioneers x PEGASWOES  
-- Season: HIVER 2026
-- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
-- Sizes: XS, S, M, L, XL, XXL
-- Composition: 100% POLYESTER
-- Tags: limited edition
+**2. `supabase/functions/send-order-confirmation/index.ts`**
+- Accepter un nouveau champ `adminEmail` dans le payload (optionnel)
+- Si présent, envoyer un 2e email Resend avec template admin spécifique :
+  - Bandeau rouge "NOUVELLE COMMANDE"
+  - Infos client complètes (nom, email)
+  - Récapitulatif articles
+  - Total + mode livraison
+  - Bouton "Voir la commande dans l'admin" → lien `https://lvatk6000art.lovable.app/admin/commandes`
 
-## Plan
+**3. `src/pages/Checkout.tsx`** (ou le hook qui appelle la fonction)
+- Passer l'`adminEmail` depuis `designSettings` lors de l'appel à `send-order-confirmation`
 
-### 1. New edge function `analyze-product-image`
-New file: `supabase/functions/analyze-product-image/index.ts`
+### Fichiers modifiés
+| Fichier | Action |
+|---|---|
+| `src/pages/admin/AdminSettings.tsx` | Ajouter champ email notif admin dans l'onglet Général |
+| `supabase/functions/send-order-confirmation/index.ts` | Ajouter envoi 2e email admin |
+| `src/pages/Checkout.tsx` | Passer adminEmail dans le payload |
 
-Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
-- name, subtitle, price (ask to estimate if not found), category
-- sizes (exact text from image)
-- colors with **hex values** from the color swatches visible in image
-- colorOptions: [{color: "#hex", label: "nom"}]
-- material/composition
-- description (generated from visual)
-- sku (auto-generated)
-- tags (e.g., "limited edition" if spotted)
-- Any brand/collection info → subtitle
-
-### 2. New UI component `ImportMockupDialog.tsx`
-In `src/components/admin/ImportMockupDialog.tsx`:
-- Image dropzone (jpg/png/webp/gif up to 10MB)
-- Preview of uploaded image
-- "Analyser avec l'IA" button
-- Loading state with animated scan effect
-- Results preview:
-  - Product name, subtitle
-  - Price field (editable, since AI may not find it)
-  - Color swatches preview
-  - Size badges preview
-  - Material info
-  - Generated description
-- "Créer ce produit" confirm button
-- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
-
-### 3. AdminProducts integration
-- Add "Importer Maquette IA" button next to existing "Importer PDF" button
-- Opens the new ImportMockupDialog
-- After product created, show toast + option to go to product detail
-
-### Files to create/modify
-- `supabase/functions/analyze-product-image/index.ts` — new edge function
-- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
-- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
-
-## Implementation Steps
-
-### Step 1: Edge function `analyze-product-image`
-Input: `{ imageBase64: string, mimeType: string }`
-Prompt to Gemini Pro Vision:
-- Extract all visible product info
-- Extract hex colors from color swatches
-- Generate description if not present
-- Output strict JSON matching `ExtractedProductData` schema
-
-### Step 2: `ImportMockupDialog` component
-States:
-- `file`, `preview` (image URL)
-- `analyzing` (loading state)
-- `extracted` (ExtractedProductData | null)
-- `editableData` (form state to review/edit before import)
-
-UX Flow:
-1. Drag & drop or click to upload image
-2. Preview appears
-3. Click "Analyser avec IA" → loading scan animation
-4. Results appear: color swatches, size badges, all info
-5. User can edit price/name if needed
-6. Click "Créer le produit" → uploads image to storage, creates product, success
-
-### Step 3: AdminProducts button
-Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)
+C'est un plan propre, sans nouveau secret nécessaire — l'email admin est configurable directement dans l'interface admin.
