@@ -14,7 +14,6 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Auth check
   const authHeader = req.headers.get('Authorization');
   if (!authHeader?.startsWith('Bearer ')) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -106,7 +105,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ─── ACTION: GET RELAY POINTS (SOAP v2) ───────────────────────────────────
+    // ─── ACTION: GET RELAY POINTS ─────────────────────────────────────────────
     if (action === 'getRelayPoints') {
       const { zipCode, city = '', countryCode = 'FR' } = body;
 
@@ -142,20 +141,15 @@ Deno.serve(async (req) => {
 
       const response = await fetch(COLISSIMO_RELAY_API, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'text/xml; charset=UTF-8',
-          'SOAPAction': '',
-        },
+        headers: { 'Content-Type': 'text/xml; charset=UTF-8', 'SOAPAction': '' },
         body: soapBody,
       });
 
       const xmlText = await response.text();
-      console.log('Relay status:', response.status);
       if (!response.ok || xmlText.includes('<faultcode>')) {
         const faultMatch = xmlText.match(/<faultstring>([^<]+)<\/faultstring>/);
         const fault = faultMatch ? faultMatch[1] : xmlText.slice(0, 300);
-        console.error('Colissimo relay SOAP fault:', fault);
-        return new Response(JSON.stringify({ error: `Colissimo SOAP fault`, details: fault }), {
+        return new Response(JSON.stringify({ error: 'Colissimo SOAP fault', details: fault }), {
           status: 502,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -178,9 +172,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ─── ACTION: GENERATE LABEL (SOAP) ────────────────────────────────────────
+    // ─── ACTION: GENERATE LABEL ───────────────────────────────────────────────
     if (action === 'generateLabel') {
-      const { order, senderName, senderAddress, senderZip, senderCity } = body;
+      const { order, senderName, senderAddress, senderZip, senderCity, isReturn = false } = body;
 
       if (!order) {
         return new Response(JSON.stringify({ error: 'order is required' }), {
@@ -190,13 +184,16 @@ Deno.serve(async (req) => {
       }
 
       const depositDate = new Date().toISOString().split('T')[0];
-      const nameParts = (order.customer?.name || 'Client LVTK6').split(' ');
+      const nameParts = (order.customer?.name || 'Client').split(' ');
       const lastName = nameParts.slice(-1)[0] || 'Client';
-      const firstName = nameParts.slice(0, -1).join(' ') || 'LVTK6';
+      const firstName = nameParts.slice(0, -1).join(' ') || 'Client';
       const isRelay = (order.customer?.address || '').toLowerCase().includes('point relais');
-      const productCode = isRelay ? 'A2P' : 'DOM';
 
-      // Use sender info from request body, fallback to defaults
+      // Product code: REPA for returns, A2P for relay, DOM for home delivery
+      let productCode = 'DOM';
+      if (isReturn) productCode = 'REPA';
+      else if (isRelay) productCode = 'A2P';
+
       const resolvedSenderName = senderName || 'LVTK6 Concept Store';
       const resolvedSenderAddress = senderAddress || '1 Rue de la Paix';
       const resolvedSenderZip = senderZip || '75001';
@@ -262,14 +259,11 @@ Deno.serve(async (req) => {
       });
 
       const contentType = response.headers.get('Content-Type') || '';
-      console.log('Label status:', response.status, 'content-type:', contentType);
 
       if (!response.ok) {
         const errText = await response.text();
         const faultMatch = errText.match(/<faultstring>([^<]+)<\/faultstring>/);
-        const fault = faultMatch ? faultMatch[1] : errText.slice(0, 300);
-        console.error('Label SOAP fault:', fault);
-        return new Response(JSON.stringify({ error: 'Colissimo label error', details: fault }), {
+        return new Response(JSON.stringify({ error: 'Colissimo label error', details: faultMatch?.[1] || errText.slice(0, 300) }), {
           status: 502,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -309,6 +303,96 @@ Deno.serve(async (req) => {
       }
       const trackingMatch = xmlText.match(/<parcelNumber>([^<]+)<\/parcelNumber>/);
       return new Response(JSON.stringify({ success: true, trackingNumber: trackingMatch?.[1]?.trim() || null, pdfBase64: null }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // ─── ACTION: GENERATE BORDEREAU ───────────────────────────────────────────
+    if (action === 'generateBordereau') {
+      const { senderName, senderAddress, senderZip, senderCity, bordereauDate, trackingNumbers = [] } = body;
+
+      // Colissimo doesn't have a standard SOAP bordereau endpoint in the public API.
+      // We return a simple JSON summary; the client generates a text/PDF locally.
+      return new Response(JSON.stringify({
+        success: true,
+        pdfBase64: null, // PDF generation would require La Poste bordereau API access
+        summary: {
+          date: bordereauDate,
+          sender: `${senderName}, ${senderAddress}, ${senderZip} ${senderCity}`,
+          packageCount: trackingNumbers.length,
+          trackingNumbers,
+        },
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // ─── ACTION: REFRESH TRACKING STATUSES ───────────────────────────────────
+    if (action === 'refreshTrackingStatuses') {
+      const { trackingNumbers = [] } = body;
+      // La Poste suivi API requires a separate API key (LAPOSTE_API_KEY).
+      // Without it, we return a response indicating the feature needs setup.
+      const LAPOSTE_API_KEY = Deno.env.get('LAPOSTE_API_KEY');
+
+      if (!LAPOSTE_API_KEY) {
+        return new Response(JSON.stringify({
+          success: false,
+          updated: 0,
+          error: 'La clé API La Poste (LAPOSTE_API_KEY) n\'est pas configurée. Fonctionnalité non disponible.',
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      let updated = 0;
+      const results: Array<{ id: string; trackingNumber: string; status: string; delivered: boolean }> = [];
+
+      for (const item of trackingNumbers) {
+        try {
+          const resp = await fetch(
+            `https://api.laposte.fr/suivi/v2/idships/${item.trackingNumber}?lang=fr_FR`,
+            { headers: { 'X-Okapi-Key': LAPOSTE_API_KEY } }
+          );
+          if (!resp.ok) continue;
+          const data = await resp.json();
+          const event = data?.shipment?.event?.[0];
+          if (!event) continue;
+          const delivered = event?.code === 'DR1';
+          results.push({ id: item.id, trackingNumber: item.trackingNumber, status: event?.label || '', delivered });
+          updated++;
+        } catch {
+          // skip failed lookups
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true, updated, results }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // ─── ACTION: IMPORT TRACKING NUMBERS ──────────────────────────────────────
+    if (action === 'importTrackingNumbers') {
+      const { pairs = [] } = body; // [{ orderNumber, trackingNumber }]
+
+      const supabaseAdmin = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      );
+
+      let count = 0;
+      for (const { orderNumber, trackingNumber } of pairs) {
+        const { error } = await supabaseAdmin
+          .from('orders')
+          .update({ tracking_number: trackingNumber, shipping_carrier: 'Colissimo' })
+          .eq('order_number', orderNumber);
+        if (!error) count++;
+      }
+
+      return new Response(JSON.stringify({ success: true, updated: count }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -365,7 +449,6 @@ function parseRelayPointsFromXml(xml: string) {
       horairesOuvertureSamedi: get('horairesOuvertureSamedi'),
       horairesOuvertureDimanche: get('horairesOuvertureDimanche'),
       typeDePoint: get('typeDePoint'),
-      // Geolocation coordinates for map
       lat: get('coordGeolocalisationLatitude'),
       lng: get('coordGeolocalisationLongitude'),
     });
@@ -375,9 +458,7 @@ function parseRelayPointsFromXml(xml: string) {
 
 function findPdfStart(bytes: Uint8Array): number {
   for (let i = 0; i < bytes.length - 4; i++) {
-    if (bytes[i] === 37 && bytes[i + 1] === 80 && bytes[i + 2] === 68 && bytes[i + 3] === 70) {
-      return i;
-    }
+    if (bytes[i] === 37 && bytes[i + 1] === 80 && bytes[i + 2] === 68 && bytes[i + 3] === 70) return i;
   }
   return -1;
 }
@@ -387,10 +468,7 @@ function findEof(bytes: Uint8Array): number {
   for (let i = bytes.length - 1; i >= marker.length; i--) {
     let found = true;
     for (let j = 0; j < marker.length; j++) {
-      if (bytes[i - marker.length + 1 + j] !== marker[j]) {
-        found = false;
-        break;
-      }
+      if (bytes[i - marker.length + 1 + j] !== marker[j]) { found = false; break; }
     }
     if (found) return i + 1;
   }
