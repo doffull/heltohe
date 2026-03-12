@@ -304,6 +304,12 @@ export interface DesignSettings {
 
   // Admin notification
   adminNotificationEmail?: string;
+
+  // Colissimo sender fields
+  colissimo_sender_name?: string;
+  colissimo_sender_address?: string;
+  colissimo_sender_zip?: string;
+  colissimo_sender_city?: string;
 }
 
 export type MarkerType = 'dot' | 'cross' | 'diamond' | 'square' | 'ring';
