@@ -60,6 +60,9 @@ export default function AdminProducts() {
   const [isParsing, setIsParsing] = useState(false);
   const [extractedProducts, setExtractedProducts] = useState<ExtractedProduct[]>([]);
   const [isImporting, setIsImporting] = useState(false);
+  // Inline stock edit
+  const [editingStockId, setEditingStockId] = useState<string | null>(null);
+  const [editingStockValue, setEditingStockValue] = useState<number>(0);
 
   // Bulk edit state
   const [bulkCategory, setBulkCategory] = useState('__unchanged__');
