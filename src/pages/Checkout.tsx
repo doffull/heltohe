@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
+import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,6 +49,7 @@ export default function Checkout() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { designSettings } = useApp();
   const { items, subtotal, promoDiscount, total, clearCart } = useCart();
 
   const [step, setStep] = useState<Step>('address');
@@ -184,6 +186,7 @@ export default function Checkout() {
           shippingCost,
           total: orderTotal,
           deliveryMode,
+          adminEmail: designSettings.adminNotificationEmail || undefined,
         },
       }).catch(err => console.warn('Email confirmation failed (non-blocking):', err));
 

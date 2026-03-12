@@ -27,6 +27,7 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     siteTagline: (db.site_tagline as string) ?? base.siteTagline,
     contactEmail: (db.contact_email as string) ?? base.contactEmail,
     contactPhone: (db.contact_phone as string) ?? base.contactPhone,
+    adminNotificationEmail: (db.admin_notification_email as string) || undefined,
 
     // Sidebar HUD text fields
     sidebarBrandName: (db.sidebar_brand_name as string) ?? base.sidebarBrandName,
@@ -125,6 +126,7 @@ function settingsToDb(s: DesignSettings) {
     site_tagline: s.siteTagline ?? '',
     contact_email: s.contactEmail ?? '',
     contact_phone: s.contactPhone ?? '',
+    admin_notification_email: s.adminNotificationEmail || null,
     // Core show/hide booleans
     show_logo: s.showLogo,
     show_stats: s.showStats,

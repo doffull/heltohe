@@ -346,6 +346,34 @@ export default function AdminSettings() {
               Les paramètres de design avancés (logo, couleurs, HUD) sont accessibles via la section Design dans le panneau admin.
             </p>
           </div>
+
+          {/* Notifications */}
+          <div className="chamfer-hud bg-card/50 p-6 space-y-4">
+            <div>
+              <h3 className="text-lg font-bold hud-text">NOTIFICATIONS EMAIL</h3>
+              <p className="text-xs text-muted-foreground mt-1">Recevez une copie de chaque nouvelle commande passée sur la boutique.</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="hud-text text-xs">Email de notification admin</Label>
+              <Input
+                type="email"
+                placeholder="admin@votredomaine.com"
+                value={designSettings.adminNotificationEmail ?? ''}
+                onChange={e => updateDesignSettings({ adminNotificationEmail: e.target.value } as any)}
+                className="bg-secondary/50 border-border/30"
+              />
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                Cet email recevra un récapitulatif complet + lien admin pour chaque nouvelle commande.
+              </p>
+            </div>
+            {designSettings.adminNotificationEmail && (
+              <div className="flex items-center gap-2 text-xs text-primary bg-primary/10 border border-primary/20 chamfer-hud-sm px-3 py-2">
+                <span>✓</span>
+                <span>Notifications actives → <strong>{designSettings.adminNotificationEmail}</strong></span>
+              </div>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
 

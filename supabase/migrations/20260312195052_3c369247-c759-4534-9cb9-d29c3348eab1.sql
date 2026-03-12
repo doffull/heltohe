@@ -1,0 +1,1 @@
+ALTER TABLE public.design_settings ADD COLUMN IF NOT EXISTS admin_notification_email TEXT;

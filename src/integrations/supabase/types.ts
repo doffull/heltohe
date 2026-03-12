@@ -329,6 +329,7 @@ export type Database = {
       design_settings: {
         Row: {
           accent_color: string | null
+          admin_notification_email: string | null
           background_media: Json | null
           background_watermark: string | null
           category_columns: number | null
@@ -409,6 +410,7 @@ export type Database = {
         }
         Insert: {
           accent_color?: string | null
+          admin_notification_email?: string | null
           background_media?: Json | null
           background_watermark?: string | null
           category_columns?: number | null
@@ -489,6 +491,7 @@ export type Database = {
         }
         Update: {
           accent_color?: string | null
+          admin_notification_email?: string | null
           background_media?: Json | null
           background_watermark?: string | null
           category_columns?: number | null

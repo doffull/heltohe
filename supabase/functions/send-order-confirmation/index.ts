@@ -23,6 +23,7 @@ interface EmailPayload {
   shippingCost: number;
   total: number;
   deliveryMode: 'home' | 'relay';
+  adminEmail?: string;
 }
 
 function buildEmailHtml(payload: EmailPayload): string {
@@ -177,6 +178,123 @@ function buildEmailHtml(payload: EmailPayload): string {
   `.trim();
 }
 
+function buildAdminEmailHtml(payload: EmailPayload): string {
+  const { orderNumber, customerName, customerEmail, items, subtotal, shippingCost, total, deliveryMode } = payload;
+  const deliveryLabel = deliveryMode === 'relay' ? 'Colissimo Point Relais (3–5 jours)' : 'Colissimo Domicile (2–3 jours)';
+  const adminUrl = `https://lvatk6000art.lovable.app/admin/commandes`;
+
+  const itemsRows = items.map(item => `
+    <tr>
+      <td style="padding: 8px 0; border-bottom: 1px solid #222; font-size: 13px; color: #eee;">
+        <strong>${item.name}</strong>
+        ${item.size ? `<br><span style="color: #888; font-size: 11px;">Taille: ${item.size}</span>` : ''}
+        ${item.color ? `<span style="color: #888; font-size: 11px;"> / ${item.color}</span>` : ''}
+      </td>
+      <td style="padding: 8px 0; border-bottom: 1px solid #222; text-align: center; font-size: 13px; color: #aaa;">×${item.quantity}</td>
+      <td style="padding: 8px 0; border-bottom: 1px solid #222; text-align: right; font-size: 13px; font-weight: bold; color: #eee;">${(item.price * item.quantity).toFixed(2)} €</td>
+    </tr>
+  `).join('');
+
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nouvelle commande ${orderNumber}</title>
+</head>
+<body style="margin:0;padding:0;background:#0a0a0a;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0a;padding:32px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#111;border:1px solid #222;border-radius:4px;overflow:hidden;">
+
+          <!-- Alert header -->
+          <tr>
+            <td style="background:#dc2626;padding:16px 32px;text-align:center;">
+              <p style="margin:0;color:#fff;font-size:12px;font-weight:700;letter-spacing:4px;text-transform:uppercase;">🛍️ NOUVELLE COMMANDE REÇUE</p>
+            </td>
+          </tr>
+
+          <!-- Brand -->
+          <tr>
+            <td style="background:#111;padding:24px 32px 16px;text-align:center;border-bottom:1px solid #222;">
+              <h1 style="margin:0;color:#fff;font-size:20px;font-weight:900;letter-spacing:4px;text-transform:uppercase;">LVTK6</h1>
+              <p style="margin:4px 0 0;color:#555;font-size:10px;letter-spacing:2px;text-transform:uppercase;">Admin Notification</p>
+            </td>
+          </tr>
+
+          <!-- Order info -->
+          <tr>
+            <td style="padding:24px 32px 0;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;padding:16px;">
+                <tr>
+                  <td style="padding:6px 0;font-size:13px;color:#888;">N° de commande</td>
+                  <td style="padding:6px 0;text-align:right;font-size:13px;font-weight:700;color:#fff;font-family:'Courier New',monospace;">${orderNumber}</td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;font-size:13px;color:#888;">Client</td>
+                  <td style="padding:6px 0;text-align:right;font-size:13px;font-weight:600;color:#fff;">${customerName}</td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;font-size:13px;color:#888;">Email</td>
+                  <td style="padding:6px 0;text-align:right;font-size:13px;color:#60a5fa;">${customerEmail}</td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;font-size:13px;color:#888;">Livraison</td>
+                  <td style="padding:6px 0;text-align:right;font-size:13px;color:#fff;">${deliveryLabel}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Articles -->
+          <tr>
+            <td style="padding:24px 32px 0;">
+              <p style="margin:0 0 12px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#555;">Articles</p>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tbody>${itemsRows}</tbody>
+              </table>
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px;">
+                <tr>
+                  <td style="padding:5px 0;font-size:13px;color:#777;">Sous-total</td>
+                  <td style="padding:5px 0;text-align:right;font-size:13px;color:#aaa;">${subtotal.toFixed(2)} €</td>
+                </tr>
+                <tr>
+                  <td style="padding:5px 0;font-size:13px;color:#777;">Livraison</td>
+                  <td style="padding:5px 0;text-align:right;font-size:13px;color:#aaa;">${shippingCost === 0 ? 'GRATUIT' : `${shippingCost.toFixed(2)} €`}</td>
+                </tr>
+                <tr>
+                  <td style="padding:12px 0 0;font-size:15px;font-weight:700;color:#fff;border-top:1px solid #333;">TOTAL</td>
+                  <td style="padding:12px 0 0;text-align:right;font-size:18px;font-weight:900;color:#22c55e;border-top:1px solid #333;">${total.toFixed(2)} €</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- CTA -->
+          <tr>
+            <td style="padding:32px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <a href="${adminUrl}" style="display:inline-block;background:#fff;color:#000;font-size:13px;font-weight:900;letter-spacing:2px;text-transform:uppercase;text-decoration:none;padding:14px 32px;border-radius:2px;">
+                      → Voir la commande dans l'admin
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:20px 0 0;font-size:11px;color:#444;text-align:center;letter-spacing:1px;">LVTK6 Concept Store — Notification automatique</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -189,7 +307,7 @@ serve(async (req) => {
     }
 
     const payload: EmailPayload = await req.json();
-    const { customerEmail, customerName, orderNumber } = payload;
+    const { customerEmail, customerName, orderNumber, adminEmail } = payload;
 
     if (!customerEmail || !orderNumber) {
       return new Response(
@@ -200,6 +318,7 @@ serve(async (req) => {
 
     const html = buildEmailHtml(payload);
 
+    // Send customer confirmation email
     const resendResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -222,6 +341,28 @@ serve(async (req) => {
         JSON.stringify({ error: 'Failed to send email', details: resendData }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Send admin notification email if configured
+    if (adminEmail) {
+      const adminHtml = buildAdminEmailHtml(payload);
+      const adminRes = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${RESEND_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: 'LVTK6 Boutique <onboarding@resend.dev>',
+          to: [adminEmail],
+          subject: `🛍️ Nouvelle commande ${orderNumber} — ${customerName}`,
+          html: adminHtml,
+        }),
+      });
+      if (!adminRes.ok) {
+        const adminErr = await adminRes.json();
+        console.error('Admin notification email error:', adminErr);
+      }
     }
 
     return new Response(
