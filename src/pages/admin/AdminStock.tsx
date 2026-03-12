@@ -354,6 +354,97 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
   const [deleteTarget, setDeleteTarget] = useState<InventoryItem | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // ── Transfer state ──
+  const [transferTarget, setTransferTarget] = useState<InventoryItem | null>(null);
+  const [transferQty, setTransferQty] = useState(1);
+  const [transferDestId, setTransferDestId] = useState('');
+  const [transferring, setTransferring] = useState(false);
+
+  const boutiqueLocations = locations.filter((l: Location) => l.type === 'boutique');
+  const webLocation = locations.find((l: Location) => l.type === 'web');
+
+  const handleOpenTransfer = (item: InventoryItem) => {
+    setTransferTarget(item);
+    setTransferQty(1);
+    setTransferDestId(boutiqueLocations[0]?.id || '');
+  };
+
+  const handleTransfer = async () => {
+    if (!transferTarget || !transferDestId || transferQty < 1) return;
+    if (!webLocation) {
+      toast({ title: 'Location Web introuvable', variant: 'destructive' }); return;
+    }
+    setTransferring(true);
+    try {
+      const invId = transferTarget.id;
+
+      // Find Web stock levels for this inventory (aggregate)
+      const webLevels = stockLevels.filter((sl: StockLevel) => sl.inventory_id === invId && sl.location_id === webLocation.id);
+      const webTotal = webLevels.reduce((s: number, sl: StockLevel) => s + sl.quantity, 0);
+
+      if (webTotal < transferQty) {
+        toast({ title: 'Stock Web insuffisant', description: `Stock disponible : ${webTotal}`, variant: 'destructive' });
+        setTransferring(false);
+        return;
+      }
+
+      // Deduct from web: deduct from levels in order
+      let remaining = transferQty;
+      for (const sl of webLevels) {
+        if (remaining <= 0) break;
+        const deduct = Math.min(sl.quantity, remaining);
+        await supabase.from('stock_levels').update({ quantity: sl.quantity - deduct, updated_at: new Date().toISOString() }).eq('id', sl.id);
+        remaining -= deduct;
+      }
+
+      // Add to destination boutique: find or create a stock_level
+      const destLevel = stockLevels.find((sl: StockLevel) => sl.inventory_id === invId && sl.location_id === transferDestId && !sl.size && !sl.color);
+      if (destLevel) {
+        await supabase.from('stock_levels').update({ quantity: destLevel.quantity + transferQty, updated_at: new Date().toISOString() }).eq('id', destLevel.id);
+      } else {
+        await supabase.from('stock_levels').insert({
+          inventory_id: invId,
+          location_id: transferDestId,
+          quantity: transferQty,
+          reserved: 0,
+          stocked_at: new Date().toISOString(),
+        });
+      }
+
+      // Record transfer
+      const { data: { user } } = await supabase.auth.getUser();
+      await supabase.from('stock_transfers').insert({
+        inventory_id: invId,
+        from_location_id: webLocation.id,
+        to_location_id: transferDestId,
+        quantity: transferQty,
+        status: 'completed',
+        created_by: user?.id || '',
+        notes: `Transfert depuis inventaire global`,
+      });
+
+      // History
+      await supabase.from('stock_history' as any).insert({
+        inventory_id: invId,
+        location_id: transferDestId,
+        action: 'transfer_in',
+        quantity_before: destLevel?.quantity || 0,
+        quantity_after: (destLevel?.quantity || 0) + transferQty,
+        note: `Transfert depuis stock Web (${transferQty} unité${transferQty > 1 ? 's' : ''})`,
+        created_by: user?.id || null,
+      });
+
+      const destName = boutiqueLocations.find((l: Location) => l.id === transferDestId)?.name || 'boutique';
+      toast({ title: `${transferQty} unité${transferQty > 1 ? 's' : ''} transférée${transferQty > 1 ? 's' : ''} vers ${destName}` });
+      setTransferTarget(null);
+      onRefresh();
+    } catch (err: any) {
+      toast({ title: 'Erreur lors du transfert', description: err.message, variant: 'destructive' });
+    } finally {
+      setTransferring(false);
+    }
+  };
+
   const handleEdit = (item: InventoryItem) => {
     setEditTarget({ inventoryId: item.id, productId: item.product_id });
     setProductDialogOpen(true);
