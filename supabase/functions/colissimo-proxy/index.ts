@@ -64,7 +64,9 @@ Deno.serve(async (req) => {
       }
 
       // Using findRDVPointRetraitAcheminement — the correct v2 operation
-      const shippingDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      // Date must be in DD/MM/YYYY format
+      const now = new Date();
+      const shippingDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
       const soapBody = `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="${RELAY_NS}">
   <soapenv:Header/>
