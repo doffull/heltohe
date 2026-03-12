@@ -171,12 +171,12 @@ export default function Checkout() {
       });
 
       if (rpcError) throw rpcError;
-      if (rpcResult?.error) {
-        throw new Error(rpcResult.error);
-      }
 
-      const verifiedTotal = rpcResult.total;
-      const verifiedItems = rpcResult.items;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = rpcResult as any;
+      if (result?.error) {
+        throw new Error(result.error);
+      }
 
       // Send confirmation email (fire and forget) using server-verified values
       supabase.functions.invoke('send-order-confirmation', {
@@ -184,10 +184,10 @@ export default function Checkout() {
           orderNumber: num,
           customerName: `${form.firstName} ${form.lastName}`,
           customerEmail: form.email,
-          items: verifiedItems,
-          subtotal: rpcResult.subtotal,
-          shippingCost: rpcResult.shippingCost,
-          total: verifiedTotal,
+          items: result.items,
+          subtotal: result.subtotal,
+          shippingCost: result.shippingCost,
+          total: result.total,
           deliveryMode,
           adminEmail: designSettings.adminNotificationEmail || undefined,
         },
