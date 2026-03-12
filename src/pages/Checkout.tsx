@@ -50,7 +50,7 @@ export default function Checkout() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { designSettings } = useApp();
-  const { items, subtotal, promoDiscount, total, clearCart } = useCart();
+  const { items, subtotal, promoDiscount, promoCode, total, clearCart } = useCart();
 
   const [step, setStep] = useState<Step>('address');
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>('relay');
