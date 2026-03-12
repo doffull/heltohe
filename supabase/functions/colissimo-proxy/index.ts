@@ -7,6 +7,7 @@ const corsHeaders = {
 
 const COLISSIMO_RELAY_API = 'https://ws.colissimo.fr/pointretrait-ws-cxf/PointRetraitServiceWS/2.0';
 const COLISSIMO_LABEL_API = 'https://ws.colissimo.fr/sls-ws/SlsServiceWS/2.0';
+const RELAY_NS = 'http://v2.pointretrait.geopost.com/';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -51,7 +52,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
-    // ─── ACTION: GET RELAY POINTS (SOAP) ─────────────────────────────────────
+    // ─── ACTION: GET RELAY POINTS (SOAP v2) ───────────────────────────────────
     if (action === 'getRelayPoints') {
       const { zipCode, city = '', countryCode = 'FR' } = body;
 
@@ -62,28 +63,25 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Using findRDVPointRetraitAcheminement — the correct v2 operation
       const soapBody = `<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://ws.colissimo.fr">
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="${RELAY_NS}">
   <soapenv:Header/>
   <soapenv:Body>
-    <ser:getPointRetraitAcheminementByCodePoste>
-      <accountNumber>${COLISSIMO_LOGIN}</accountNumber>
-      <password>${COLISSIMO_PASSWORD}</password>
+    <tns:findRDVPointRetraitAcheminement>
+      <accountNumber>${escapeXml(COLISSIMO_LOGIN)}</accountNumber>
+      <password>${escapeXml(COLISSIMO_PASSWORD)}</password>
       <address></address>
-      <zipCode>${zipCode}</zipCode>
-      <city>${city}</city>
-      <countryCode>${countryCode}</countryCode>
-      <optionInter>1</optionInter>
-      <reseau>24R</reseau>
+      <zipCode>${escapeXml(zipCode)}</zipCode>
+      <city>${escapeXml(city)}</city>
+      <countryCode>${escapeXml(countryCode)}</countryCode>
+      <weight>1</weight>
+      <shippingDate></shippingDate>
       <filterRelay>0</filterRelay>
+      <requestId></requestId>
       <lang>FR</lang>
-      <date></date>
-      <productCode>A2P</productCode>
-      <availableLoadingDate></availableLoadingDate>
-      <maxPointChronopost>0</maxPointChronopost>
-      <maxPointRelaisColissimo>7</maxPointRelaisColissimo>
-      <filterSupportsDeLivraison>1</filterSupportsDeLivraison>
-    </ser:getPointRetraitAcheminementByCodePoste>
+      <optionInter>1</optionInter>
+    </tns:findRDVPointRetraitAcheminement>
   </soapenv:Body>
 </soapenv:Envelope>`;
 
@@ -91,32 +89,42 @@ Deno.serve(async (req) => {
         method: 'POST',
         headers: {
           'Content-Type': 'text/xml; charset=UTF-8',
-          'SOAPAction': '"getPointRetraitAcheminementByCodePoste"',
+          'SOAPAction': '',
         },
         body: soapBody,
       });
 
       const xmlText = await response.text();
-      console.log('Colissimo relay response status:', response.status);
-      console.log('Colissimo relay response (first 500):', xmlText.slice(0, 500));
-
-      if (!response.ok) {
-        return new Response(JSON.stringify({ error: `Colissimo SOAP error [${response.status}]`, details: xmlText.slice(0, 500) }), {
+      console.log('Relay status:', response.status);
+      if (!response.ok || xmlText.includes('<faultcode>')) {
+        const faultMatch = xmlText.match(/<faultstring>([^<]+)<\/faultstring>/);
+        const fault = faultMatch ? faultMatch[1] : xmlText.slice(0, 300);
+        console.error('Colissimo relay SOAP fault:', fault);
+        return new Response(JSON.stringify({ error: `Colissimo SOAP fault`, details: fault }), {
           status: 502,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      // Parse relay points from XML
-      const points = parseRelayPointsFromXml(xmlText);
+      // Check errorCode in response
+      const errorCodeMatch = xmlText.match(/<errorCode>([^<]+)<\/errorCode>/);
+      const errorCode = errorCodeMatch ? parseInt(errorCodeMatch[1]) : 0;
+      if (errorCode !== 0) {
+        const errorMsgMatch = xmlText.match(/<errorMessage>([^<]+)<\/errorMessage>/);
+        return new Response(JSON.stringify({ error: `Colissimo error ${errorCode}`, details: errorMsgMatch?.[1] || '' }), {
+          status: 422,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
 
+      const points = parseRelayPointsFromXml(xmlText);
       return new Response(JSON.stringify({ success: true, points }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // ─── ACTION: GENERATE LABEL (SOAP) ───────────────────────────────────────
+    // ─── ACTION: GENERATE LABEL (SOAP) ────────────────────────────────────────
     if (action === 'generateLabel') {
       const { order } = body;
 
@@ -128,8 +136,9 @@ Deno.serve(async (req) => {
       }
 
       const depositDate = new Date().toISOString().split('T')[0];
-      const lastName = (order.customer?.name || '').split(' ').slice(-1)[0] || 'Client';
-      const firstName = (order.customer?.name || '').split(' ').slice(0, -1).join(' ') || 'LVTK6';
+      const nameParts = (order.customer?.name || 'Client LVTK6').split(' ');
+      const lastName = nameParts.slice(-1)[0] || 'Client';
+      const firstName = nameParts.slice(0, -1).join(' ') || 'LVTK6';
       const isRelay = (order.customer?.address || '').toLowerCase().includes('point relais');
       const productCode = isRelay ? 'A2P' : 'DOM';
 
@@ -138,8 +147,8 @@ Deno.serve(async (req) => {
   <soapenv:Header/>
   <soapenv:Body>
     <ser:generateLabel>
-      <contractNumber>${COLISSIMO_LOGIN}</contractNumber>
-      <password>${COLISSIMO_PASSWORD}</password>
+      <contractNumber>${escapeXml(COLISSIMO_LOGIN)}</contractNumber>
+      <password>${escapeXml(COLISSIMO_PASSWORD)}</password>
       <outputFormat>
         <x>0</x>
         <y>15</y>
@@ -149,7 +158,7 @@ Deno.serve(async (req) => {
         <service>
           <productCode>${productCode}</productCode>
           <depositDate>${depositDate}</depositDate>
-          <orderNumber>${order.orderNumber}</orderNumber>
+          <orderNumber>${escapeXml(order.orderNumber || '')}</orderNumber>
         </service>
         <parcel>
           <weight>1.0</weight>
@@ -184,57 +193,63 @@ Deno.serve(async (req) => {
         method: 'POST',
         headers: {
           'Content-Type': 'text/xml; charset=UTF-8',
-          'SOAPAction': '"generateLabel"',
+          'SOAPAction': '',
+          'Accept': 'multipart/related, text/xml',
         },
         body: soapBody,
       });
 
       const contentType = response.headers.get('Content-Type') || '';
-      console.log('Label response status:', response.status, 'content-type:', contentType);
+      console.log('Label status:', response.status, 'content-type:', contentType);
 
       if (!response.ok) {
         const errText = await response.text();
-        console.error('Colissimo generateLabel error:', errText.slice(0, 500));
-        return new Response(JSON.stringify({ error: `Colissimo label error [${response.status}]`, details: errText.slice(0, 500) }), {
+        const faultMatch = errText.match(/<faultstring>([^<]+)<\/faultstring>/);
+        const fault = faultMatch ? faultMatch[1] : errText.slice(0, 300);
+        console.error('Label SOAP fault:', fault);
+        return new Response(JSON.stringify({ error: 'Colissimo label error', details: fault }), {
           status: 502,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      // Colissimo returns multipart/mixed: first part is XML response, second is PDF
       if (contentType.includes('multipart')) {
         const rawBytes = await response.arrayBuffer();
-        const fullText = new TextDecoder('utf-8', { fatal: false }).decode(rawBytes);
+        const textDecoder = new TextDecoder('utf-8', { fatal: false });
+        const fullText = textDecoder.decode(rawBytes);
 
-        // Extract tracking number from XML part
+        // Extract tracking number
         const trackingMatch = fullText.match(/<parcelNumber>([^<]+)<\/parcelNumber>/);
-        const trackingNumber = trackingMatch ? trackingMatch[1] : null;
+        const trackingNumber = trackingMatch ? trackingMatch[1].trim() : null;
 
-        // Find PDF start marker
-        const pdfStartIdx = rawBytes instanceof ArrayBuffer
-          ? findPdfStart(new Uint8Array(rawBytes))
-          : -1;
-
+        // Find PDF binary
+        const byteArray = new Uint8Array(rawBytes);
+        const pdfStartIdx = findPdfStart(byteArray);
         let pdfBase64: string | null = null;
         if (pdfStartIdx >= 0) {
-          const pdfSlice = new Uint8Array(rawBytes).slice(pdfStartIdx);
-          // Find PDF end marker %%EOF
-          const eofMarker = findEof(pdfSlice);
-          const pdfBytes = eofMarker > 0 ? pdfSlice.slice(0, eofMarker) : pdfSlice;
+          const pdfSlice = byteArray.slice(pdfStartIdx);
+          const eofIdx = findEof(pdfSlice);
+          const pdfBytes = eofIdx > 0 ? pdfSlice.slice(0, eofIdx) : pdfSlice;
           pdfBase64 = uint8ArrayToBase64(pdfBytes);
         }
 
-        console.log('Tracking:', trackingNumber, 'PDF found:', pdfBase64 !== null);
         return new Response(JSON.stringify({ success: true, trackingNumber, pdfBase64 }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      // Plain XML (error case)
+      // Plain XML fallback
       const xmlText = await response.text();
+      if (xmlText.includes('<faultcode>')) {
+        const faultMatch = xmlText.match(/<faultstring>([^<]+)<\/faultstring>/);
+        return new Response(JSON.stringify({ error: 'Colissimo label fault', details: faultMatch?.[1] }), {
+          status: 502,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       const trackingMatch = xmlText.match(/<parcelNumber>([^<]+)<\/parcelNumber>/);
-      return new Response(JSON.stringify({ success: true, trackingNumber: trackingMatch?.[1] || null, pdfBase64: null }), {
+      return new Response(JSON.stringify({ success: true, trackingNumber: trackingMatch?.[1]?.trim() || null, pdfBase64: null }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -256,7 +271,7 @@ Deno.serve(async (req) => {
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
 function escapeXml(str: string): string {
-  return str
+  return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -266,12 +281,13 @@ function escapeXml(str: string): string {
 
 function parseRelayPointsFromXml(xml: string) {
   const points: Record<string, string>[] = [];
-  const pointRegex = /<pointRetraitAcheminement>([\s\S]*?)<\/pointRetraitAcheminement>/g;
+  // Match both pointRetraitAcheminement blocks
+  const blockRegex = /<listePointRetraitAcheminement[^>]*>([\s\S]*?)<\/listePointRetraitAcheminement>/g;
   let match;
-  while ((match = pointRegex.exec(xml)) !== null) {
+  while ((match = blockRegex.exec(xml)) !== null) {
     const block = match[1];
     const get = (tag: string) => {
-      const m = block.match(new RegExp(`<${tag}>([^<]*)<\/${tag}>`));
+      const m = block.match(new RegExp(`<${tag}>([^<]*)<\\/${tag}>`));
       return m ? m[1].trim() : '';
     };
     points.push({
@@ -297,7 +313,7 @@ function parseRelayPointsFromXml(xml: string) {
 }
 
 function findPdfStart(bytes: Uint8Array): number {
-  // %PDF marker in bytes: 37 80 68 70
+  // %PDF = 37 80 68 70
   for (let i = 0; i < bytes.length - 4; i++) {
     if (bytes[i] === 37 && bytes[i + 1] === 80 && bytes[i + 2] === 68 && bytes[i + 3] === 70) {
       return i;
@@ -307,12 +323,12 @@ function findPdfStart(bytes: Uint8Array): number {
 }
 
 function findEof(bytes: Uint8Array): number {
-  // %%EOF marker
-  const marker = [37, 37, 69, 79, 70]; // %%EOF
+  // %%EOF = 37 37 69 79 70
+  const marker = [37, 37, 69, 79, 70];
   for (let i = bytes.length - 1; i >= marker.length; i--) {
     let found = true;
     for (let j = 0; j < marker.length; j++) {
-      if (bytes[i - marker.length + j] !== marker[j]) {
+      if (bytes[i - marker.length + 1 + j] !== marker[j]) {
         found = false;
         break;
       }
