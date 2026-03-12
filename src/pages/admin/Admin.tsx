@@ -184,6 +184,7 @@ export default function Admin() {
             <Route path="bannieres/*" element={<AdminMarketing />} />
             <Route path="design/*" element={<AdminDesign />} />
             <Route path="stock/*" element={<AdminStock />} />
+            <Route path="colissimo/*" element={<AdminColissimo />} />
             <Route path="chatbot/*" element={<AdminChatbot />} />
             <Route path="woocommerce/*" element={<AdminWooCommerce />} />
             <Route path="parametres/*" element={<AdminSettings />} />
