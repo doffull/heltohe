@@ -238,8 +238,9 @@ Deno.serve(async (req) => {
               <city>${escapeXml(order.customer?.city || '')}</city>
               <zipCode>${escapeXml(order.customer?.zip || '')}</zipCode>
               <countryCode>FR</countryCode>
-              <email>${escapeXml(order.customer?.email || '')}</email>
+              <phoneNumber>${escapeXml(order.customer?.phone || '')}</phoneNumber>
               <mobileNumber>${escapeXml(order.customer?.phone || '')}</mobileNumber>
+              <email>${escapeXml(order.customer?.email || '')}</email>
             </address>
           </addressee>
         </letter>
