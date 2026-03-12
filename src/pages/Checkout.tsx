@@ -49,6 +49,7 @@ export default function Checkout() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { designSettings } = useApp();
   const { items, subtotal, promoDiscount, total, clearCart } = useCart();
 
   const [step, setStep] = useState<Step>('address');
