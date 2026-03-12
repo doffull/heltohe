@@ -19,7 +19,8 @@ import {
   FileText,
   Warehouse,
   ShoppingBag,
-  Bot
+  Bot,
+  Truck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
