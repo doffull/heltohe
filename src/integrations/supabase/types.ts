@@ -1320,6 +1320,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      validate_and_create_order: {
+        Args: {
+          p_delivery_mode: string
+          p_items: Json
+          p_order_data: Json
+          p_promo_code: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
