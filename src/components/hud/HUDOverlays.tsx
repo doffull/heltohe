@@ -134,7 +134,7 @@ export function HUDLogo({ className }: { className?: string }) {
       <img 
         src={hudLogo} 
         alt="Brand Logo" 
-        className="h-12 w-auto object-contain"
+        className="h-12 w-auto object-contain logo-visibility-filter"
       />
     </div>
   );
