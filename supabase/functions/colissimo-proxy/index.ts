@@ -225,9 +225,9 @@ Deno.serve(async (req) => {
             <address>
               <companyName>${escapeXml(resolvedSenderName)}</companyName>
               <line2>${escapeXml(resolvedSenderAddress)}</line2>
+              <countryCode>FR</countryCode>
               <city>${escapeXml(resolvedSenderCity)}</city>
               <zipCode>${escapeXml(resolvedSenderZip)}</zipCode>
-              <countryCode>FR</countryCode>
             </address>
           </sender>
           <addressee>
