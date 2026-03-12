@@ -207,44 +207,46 @@ Deno.serve(async (req) => {
   <soapenv:Header/>
   <soapenv:Body>
     <ser:generateLabel>
-      <contractNumber>${escapeXml(COLISSIMO_LOGIN)}</contractNumber>
-      <password>${escapeXml(COLISSIMO_PASSWORD)}</password>
-      <outputFormat>
-        <x>0</x>
-        <y>15</y>
-        <outputPrintingType>PDF_10x15_300dpi</outputPrintingType>
-      </outputFormat>
-      <letter>
-        <service>
-          <productCode>${productCode}</productCode>
-          <depositDate>${depositDate}</depositDate>
-          <orderNumber>${escapeXml(order.orderNumber || '')}</orderNumber>
-        </service>
-        <parcel>
-          <weight>1.0</weight>
-        </parcel>
-        <sender>
-          <address>
-            <companyName>${escapeXml(resolvedSenderName)}</companyName>
-            <line2>${escapeXml(resolvedSenderAddress)}</line2>
-            <city>${escapeXml(resolvedSenderCity)}</city>
-            <zipCode>${escapeXml(resolvedSenderZip)}</zipCode>
-            <countryCode>FR</countryCode>
-          </address>
-        </sender>
-        <addressee>
-          <address>
-            <lastName>${escapeXml(lastName)}</lastName>
-            <firstName>${escapeXml(firstName)}</firstName>
-            <line2>${escapeXml(order.customer?.address || '')}</line2>
-            <city>${escapeXml(order.customer?.city || '')}</city>
-            <zipCode>${escapeXml(order.customer?.zip || '')}</zipCode>
-            <countryCode>FR</countryCode>
-            <email>${escapeXml(order.customer?.email || '')}</email>
-            <mobileNumber>${escapeXml(order.customer?.phone || '')}</mobileNumber>
-          </address>
-        </addressee>
-      </letter>
+      <generateLabelRequest>
+        <contractNumber>${escapeXml(COLISSIMO_LOGIN)}</contractNumber>
+        <password>${escapeXml(COLISSIMO_PASSWORD)}</password>
+        <outputFormat>
+          <x>0</x>
+          <y>15</y>
+          <outputPrintingType>PDF_10x15_300dpi</outputPrintingType>
+        </outputFormat>
+        <letter>
+          <service>
+            <productCode>${productCode}</productCode>
+            <depositDate>${depositDate}</depositDate>
+            <orderNumber>${escapeXml(order.orderNumber || '')}</orderNumber>
+          </service>
+          <parcel>
+            <weight>1.0</weight>
+          </parcel>
+          <sender>
+            <address>
+              <companyName>${escapeXml(resolvedSenderName)}</companyName>
+              <line2>${escapeXml(resolvedSenderAddress)}</line2>
+              <city>${escapeXml(resolvedSenderCity)}</city>
+              <zipCode>${escapeXml(resolvedSenderZip)}</zipCode>
+              <countryCode>FR</countryCode>
+            </address>
+          </sender>
+          <addressee>
+            <address>
+              <lastName>${escapeXml(lastName)}</lastName>
+              <firstName>${escapeXml(firstName)}</firstName>
+              <line2>${escapeXml(order.customer?.address || '')}</line2>
+              <city>${escapeXml(order.customer?.city || '')}</city>
+              <zipCode>${escapeXml(order.customer?.zip || '')}</zipCode>
+              <countryCode>FR</countryCode>
+              <email>${escapeXml(order.customer?.email || '')}</email>
+              <mobileNumber>${escapeXml(order.customer?.phone || '')}</mobileNumber>
+            </address>
+          </addressee>
+        </letter>
+      </generateLabelRequest>
     </ser:generateLabel>
   </soapenv:Body>
 </soapenv:Envelope>`;
