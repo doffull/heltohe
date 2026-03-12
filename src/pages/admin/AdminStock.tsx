@@ -354,6 +354,97 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
   const [deleteTarget, setDeleteTarget] = useState<InventoryItem | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // ── Transfer state ──
+  const [transferTarget, setTransferTarget] = useState<InventoryItem | null>(null);
+  const [transferQty, setTransferQty] = useState(1);
+  const [transferDestId, setTransferDestId] = useState('');
+  const [transferring, setTransferring] = useState(false);
+
+  const boutiqueLocations = locations.filter((l: Location) => l.type === 'boutique');
+  const webLocation = locations.find((l: Location) => l.type === 'web');
+
+  const handleOpenTransfer = (item: InventoryItem) => {
+    setTransferTarget(item);
+    setTransferQty(1);
+    setTransferDestId(boutiqueLocations[0]?.id || '');
+  };
+
+  const handleTransfer = async () => {
+    if (!transferTarget || !transferDestId || transferQty < 1) return;
+    if (!webLocation) {
+      toast({ title: 'Location Web introuvable', variant: 'destructive' }); return;
+    }
+    setTransferring(true);
+    try {
+      const invId = transferTarget.id;
+
+      // Find Web stock levels for this inventory (aggregate)
+      const webLevels = stockLevels.filter((sl: StockLevel) => sl.inventory_id === invId && sl.location_id === webLocation.id);
+      const webTotal = webLevels.reduce((s: number, sl: StockLevel) => s + sl.quantity, 0);
+
+      if (webTotal < transferQty) {
+        toast({ title: 'Stock Web insuffisant', description: `Stock disponible : ${webTotal}`, variant: 'destructive' });
+        setTransferring(false);
+        return;
+      }
+
+      // Deduct from web: deduct from levels in order
+      let remaining = transferQty;
+      for (const sl of webLevels) {
+        if (remaining <= 0) break;
+        const deduct = Math.min(sl.quantity, remaining);
+        await supabase.from('stock_levels').update({ quantity: sl.quantity - deduct, updated_at: new Date().toISOString() }).eq('id', sl.id);
+        remaining -= deduct;
+      }
+
+      // Add to destination boutique: find or create a stock_level
+      const destLevel = stockLevels.find((sl: StockLevel) => sl.inventory_id === invId && sl.location_id === transferDestId && !sl.size && !sl.color);
+      if (destLevel) {
+        await supabase.from('stock_levels').update({ quantity: destLevel.quantity + transferQty, updated_at: new Date().toISOString() }).eq('id', destLevel.id);
+      } else {
+        await supabase.from('stock_levels').insert({
+          inventory_id: invId,
+          location_id: transferDestId,
+          quantity: transferQty,
+          reserved: 0,
+          stocked_at: new Date().toISOString(),
+        });
+      }
+
+      // Record transfer
+      const { data: { user } } = await supabase.auth.getUser();
+      await supabase.from('stock_transfers').insert({
+        inventory_id: invId,
+        from_location_id: webLocation.id,
+        to_location_id: transferDestId,
+        quantity: transferQty,
+        status: 'completed',
+        created_by: user?.id || '',
+        notes: `Transfert depuis inventaire global`,
+      });
+
+      // History
+      await supabase.from('stock_history' as any).insert({
+        inventory_id: invId,
+        location_id: transferDestId,
+        action: 'transfer_in',
+        quantity_before: destLevel?.quantity || 0,
+        quantity_after: (destLevel?.quantity || 0) + transferQty,
+        note: `Transfert depuis stock Web (${transferQty} unité${transferQty > 1 ? 's' : ''})`,
+        created_by: user?.id || null,
+      });
+
+      const destName = boutiqueLocations.find((l: Location) => l.id === transferDestId)?.name || 'boutique';
+      toast({ title: `${transferQty} unité${transferQty > 1 ? 's' : ''} transférée${transferQty > 1 ? 's' : ''} vers ${destName}` });
+      setTransferTarget(null);
+      onRefresh();
+    } catch (err: any) {
+      toast({ title: 'Erreur lors du transfert', description: err.message, variant: 'destructive' });
+    } finally {
+      setTransferring(false);
+    }
+  };
+
   const handleEdit = (item: InventoryItem) => {
     setEditTarget({ inventoryId: item.id, productId: item.product_id });
     setProductDialogOpen(true);
@@ -588,6 +679,14 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
+                      <UITooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary hover:text-primary" onClick={() => handleOpenTransfer(item)} disabled={boutiqueLocations.length === 0}>
+                            <ArrowLeftRight className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">{boutiqueLocations.length === 0 ? 'Aucune boutique disponible' : 'Transférer vers une boutique'}</TooltipContent>
+                      </UITooltip>
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(item)}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
@@ -602,6 +701,82 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
           </TableBody>
         </Table>
       </Card>
+
+      {/* Transfer Dialog */}
+      <Dialog open={!!transferTarget} onOpenChange={(open) => { if (!open) setTransferTarget(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowLeftRight className="h-4 w-4 text-primary" />
+              Transférer vers une boutique
+            </DialogTitle>
+            <DialogDescription>
+              Déplace du stock Web → Boutique pour <strong>{transferTarget?.name}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Available web stock info */}
+            {transferTarget && webLocation && (
+              <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm">
+                <span className="text-muted-foreground">Stock Web disponible</span>
+                <span className="font-mono font-semibold">
+                  {stockLevels.filter((sl: StockLevel) => sl.inventory_id === transferTarget.id && sl.location_id === webLocation.id).reduce((s: number, sl: StockLevel) => s + sl.quantity, 0)}
+                </span>
+              </div>
+            )}
+
+            {/* Destination */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Boutique de destination</Label>
+              {boutiqueLocations.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Aucune boutique configurée. Ajoutez-en une dans l'onglet Boutiques.</p>
+              ) : (
+                <Select value={transferDestId} onValueChange={setTransferDestId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choisir une boutique…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {boutiqueLocations.map((loc: Location) => (
+                      <SelectItem key={loc.id} value={loc.id}>
+                        {loc.name}{loc.city ? ` — ${loc.city}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            {/* Quantity */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Quantité à transférer</Label>
+              <Input
+                type="number"
+                min={1}
+                value={transferQty}
+                onChange={e => setTransferQty(Math.max(1, Number(e.target.value)))}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTransferTarget(null)} disabled={transferring}>
+              Annuler
+            </Button>
+            <Button
+              onClick={handleTransfer}
+              disabled={transferring || boutiqueLocations.length === 0 || !transferDestId || transferQty < 1}
+              className="gap-2"
+            >
+              {transferring ? (
+                <><RefreshCw className="h-3.5 w-3.5 animate-spin" /> Transfert…</>
+              ) : (
+                <><ArrowLeftRight className="h-3.5 w-3.5" /> Transférer</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Import Dialog */}
       <Dialog open={importOpen} onOpenChange={setImportOpen}>
