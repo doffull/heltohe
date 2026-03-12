@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
-  Users, Search, Mail, Phone, Crown, TrendingUp, Eye, Trash2, Filter
+  Users, Search, Mail, Phone, Crown, TrendingUp, Eye, Trash2, Filter, ArrowUpDown
 } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
