@@ -126,6 +126,7 @@ function settingsToDb(s: DesignSettings) {
     site_tagline: s.siteTagline ?? '',
     contact_email: s.contactEmail ?? '',
     contact_phone: s.contactPhone ?? '',
+    admin_notification_email: s.adminNotificationEmail || null,
     // Core show/hide booleans
     show_logo: s.showLogo,
     show_stats: s.showStats,
