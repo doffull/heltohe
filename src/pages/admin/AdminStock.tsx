@@ -688,7 +688,7 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                   {/* Per-location stock cells */}
                   {webLocation && (
                     <TableCell className="text-right font-mono">
-                      <span className={cn("text-sm font-semibold", webQty === 0 ? "text-destructive/70" : "text-blue-500 dark:text-blue-400")}>
+                      <span className={cn("text-sm font-semibold", webQty === 0 ? "text-destructive/70" : "text-primary")}>
                         {webQty ?? 0}
                       </span>
                     </TableCell>
