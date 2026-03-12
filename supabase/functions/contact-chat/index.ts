@@ -20,13 +20,27 @@ Tu maîtrises :
 
 Si tu ne sais pas, propose de contacter le service client par email. Ne promets rien de faux. Tu t'appelles Helvetica et tu représentes la marque LVTK6.`;
 
+const MAX_MESSAGES = 20;
+const MAX_CONTENT_LENGTH = 4000;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { messages } = await req.json();
+    const body = await req.json();
+    const rawMessages = Array.isArray(body?.messages) ? body.messages : [];
+
+    // Sanitize: only allow user/assistant roles, cap count and content length
+    const safeMessages = rawMessages
+      .filter((m: any) => m?.role === "user" || m?.role === "assistant")
+      .slice(-MAX_MESSAGES)
+      .map((m: any) => ({
+        role: m.role as "user" | "assistant",
+        content: String(m.content ?? "").slice(0, MAX_CONTENT_LENGTH),
+      }));
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     if (!LOVABLE_API_KEY) {
@@ -63,7 +77,7 @@ serve(async (req) => {
           model: "google/gemini-3-flash-preview",
           messages: [
             { role: "system", content: systemPrompt },
-            ...messages,
+            ...safeMessages,
           ],
           stream: true,
         }),
@@ -97,7 +111,7 @@ serve(async (req) => {
   } catch (e) {
     console.error("contact-chat error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Erreur inconnue" }),
+      JSON.stringify({ error: "Erreur interne du service" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

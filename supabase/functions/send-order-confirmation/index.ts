@@ -470,7 +470,7 @@ serve(async (req) => {
     if (!resendResponse.ok) {
       console.error('Resend API error:', resendData);
       return new Response(
-        JSON.stringify({ error: 'Failed to send email', details: resendData }),
+        JSON.stringify({ error: 'EMAIL_SEND_FAILED' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -504,7 +504,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Edge function error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
