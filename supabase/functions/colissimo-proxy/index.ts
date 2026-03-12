@@ -64,6 +64,7 @@ Deno.serve(async (req) => {
       }
 
       // Using findRDVPointRetraitAcheminement — the correct v2 operation
+      const shippingDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
       const soapBody = `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="${RELAY_NS}">
   <soapenv:Header/>
@@ -76,7 +77,7 @@ Deno.serve(async (req) => {
       <city>${escapeXml(city)}</city>
       <countryCode>${escapeXml(countryCode)}</countryCode>
       <weight>1</weight>
-      <shippingDate></shippingDate>
+      <shippingDate>${shippingDate}</shippingDate>
       <filterRelay>0</filterRelay>
       <requestId></requestId>
       <lang>FR</lang>
