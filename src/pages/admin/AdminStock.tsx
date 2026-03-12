@@ -685,21 +685,65 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                       ))}
                     </div>
                   </TableCell>
-                  {/* Per-location stock cells */}
-                  {webLocation && (
-                    <TableCell className="text-right font-mono">
-                      <span className={cn("text-sm font-semibold", webQty === 0 ? "text-destructive/70" : "text-primary")}>
-                        {webQty ?? 0}
-                      </span>
-                    </TableCell>
-                  )}
+                  {/* Per-location stock cells with variant breakdown tooltip */}
+                  {webLocation && (() => {
+                    const levels = stockLevels.filter((sl: StockLevel) => sl.inventory_id === item.id && sl.location_id === webLocation.id && sl.quantity > 0);
+                    const hasVariants = levels.some((sl: StockLevel) => sl.size || sl.color);
+                    return (
+                      <TableCell className="text-right font-mono">
+                        <UITooltip>
+                          <TooltipTrigger asChild>
+                            <span className={cn("text-sm font-semibold cursor-default", webQty === 0 ? "text-destructive/70" : "text-primary")}>
+                              {webQty ?? 0}
+                            </span>
+                          </TooltipTrigger>
+                          {hasVariants && (
+                            <TooltipContent side="left" className="max-w-48">
+                              <p className="text-xs font-semibold mb-1 text-muted-foreground">Web — répartition</p>
+                              <div className="space-y-0.5">
+                                {levels.map((sl: StockLevel, i: number) => (
+                                  <div key={i} className="flex items-center justify-between gap-3 text-xs">
+                                    <span className="text-muted-foreground">
+                                      {[sl.color, sl.size].filter(Boolean).join(' / ') || 'Sans variante'}
+                                    </span>
+                                    <span className="font-mono font-semibold">×{sl.quantity}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </TooltipContent>
+                          )}
+                        </UITooltip>
+                      </TableCell>
+                    );
+                  })()}
                   {boutiqueLocations.map((loc: Location) => {
                     const locQty = getStockForItem(item.id, loc.id);
+                    const levels = stockLevels.filter((sl: StockLevel) => sl.inventory_id === item.id && sl.location_id === loc.id && sl.quantity > 0);
+                    const hasVariants = levels.some((sl: StockLevel) => sl.size || sl.color);
                     return (
                       <TableCell key={loc.id} className="text-right font-mono">
-                        <span className={cn("text-sm font-semibold", locQty === 0 ? "text-muted-foreground/40" : "text-foreground")}>
-                          {locQty}
-                        </span>
+                        <UITooltip>
+                          <TooltipTrigger asChild>
+                            <span className={cn("text-sm font-semibold cursor-default", locQty === 0 ? "text-muted-foreground/40" : "text-foreground")}>
+                              {locQty}
+                            </span>
+                          </TooltipTrigger>
+                          {hasVariants && (
+                            <TooltipContent side="left" className="max-w-48">
+                              <p className="text-xs font-semibold mb-1 text-muted-foreground">{loc.name} — répartition</p>
+                              <div className="space-y-0.5">
+                                {levels.map((sl: StockLevel, i: number) => (
+                                  <div key={i} className="flex items-center justify-between gap-3 text-xs">
+                                    <span className="text-muted-foreground">
+                                      {[sl.color, sl.size].filter(Boolean).join(' / ') || 'Sans variante'}
+                                    </span>
+                                    <span className="font-mono font-semibold">×{sl.quantity}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </TooltipContent>
+                          )}
+                        </UITooltip>
                       </TableCell>
                     );
                   })}
