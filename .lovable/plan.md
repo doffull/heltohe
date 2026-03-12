@@ -1,69 +1,103 @@
 
-## Intégration Colissimo — Plan complet
+## Thinking
 
-### Contexte
-L'API Colissimo Entreprise (La Poste) propose deux services clés :
-- **`getPointRetraitAcheminement`** : liste les points relais autour d'un code postal
-- **`generateLabel`** : génère une étiquette PDF Colissimo pour une commande
+The user wants to:
+1. Upload a product mockup image (like the Marco jacket shown)
+2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
+3. Automatically generates a fully interactive, dynamic product page from it
 
-Les credentials sont : un **numéro de compte client** (ex: `123456`) + **mot de passe API**.
+The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
 
----
+1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
+   - Accepts an image (jpg/png/webp)
+   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
+   - Also extracts the **color variants** as `colorOptions` with proper hex values
+   - Returns a structured product object ready to pre-fill the ProductForm
 
-### Ce qu'on va construire
+2. **Add "Importer Maquette IA" button** in AdminProducts that:
+   - Opens a dialog with a dropzone accepting images
+   - Sends image to the edge function
+   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
+   - Lets admin review/edit before confirming creation
+   - On confirm: creates the product in the DB with all extracted data
 
-**1. Deux secrets à stocker**
-- `COLISSIMO_LOGIN` — numéro de compte client
-- `COLISSIMO_PASSWORD` — mot de passe API
+3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
 
-**2. Edge function `colissimo-proxy`**
-Proxy sécurisé pour deux actions :
-- `action: "getRelayPoints"` → appel `getPointRetraitAcheminement` avec code postal + mode de livraison → retourne la liste des points relais proches (nom, adresse, horaires)
-- `action: "generateLabel"` → appel `generateLabel` avec les infos de commande → retourne le PDF en base64 + numéro de tracking
+Looking at the Marco image:
+- Product name: MARCO
+- Brand: Helvetica Mountain Pioneers x PEGASWOES  
+- Season: HIVER 2026
+- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
+- Sizes: XS, S, M, L, XL, XXL
+- Composition: 100% POLYESTER
+- Tags: limited edition
 
-**3. Au checkout — Sélecteur de point relais interactif**
-Quand l'utilisateur choisit "Colissimo Point Relais" à l'étape livraison :
-- Un champ code postal permet de chercher les points relais
-- Une liste de **3-5 points relais** s'affiche avec nom, adresse, distance
-- Le client sélectionne son point relais préféré (stocké dans `form.relayInfo`)
+## Plan
 
-**4. Dans AdminOrders — Bouton "Générer étiquette Colissimo"**
-Dans la vue détail d'une commande avec statut Expédiée :
-- Bouton **"Étiquette Colissimo"** appelle `colissimo-proxy` avec les données client
-- Télécharge le PDF de l'étiquette officielle
-- Stocke le numéro de tracking dans le champ `trackingNumber` de la commande
+### 1. New edge function `analyze-product-image`
+New file: `supabase/functions/analyze-product-image/index.ts`
 
----
+Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
+- name, subtitle, price (ask to estimate if not found), category
+- sizes (exact text from image)
+- colors with **hex values** from the color swatches visible in image
+- colorOptions: [{color: "#hex", label: "nom"}]
+- material/composition
+- description (generated from visual)
+- sku (auto-generated)
+- tags (e.g., "limited edition" if spotted)
+- Any brand/collection info → subtitle
 
-### Fichiers modifiés
-| Fichier | Action |
-|---|---|
-| `supabase/functions/colissimo-proxy/index.ts` | CRÉER — proxy API Colissimo |
-| `supabase/config.toml` | MODIFIER — ajouter `colissimo-proxy` |
-| `src/pages/Checkout.tsx` | MODIFIER — sélecteur point relais interactif |
-| `src/pages/admin/AdminOrders.tsx` | MODIFIER — bouton génération étiquette |
+### 2. New UI component `ImportMockupDialog.tsx`
+In `src/components/admin/ImportMockupDialog.tsx`:
+- Image dropzone (jpg/png/webp/gif up to 10MB)
+- Preview of uploaded image
+- "Analyser avec l'IA" button
+- Loading state with animated scan effect
+- Results preview:
+  - Product name, subtitle
+  - Price field (editable, since AI may not find it)
+  - Color swatches preview
+  - Size badges preview
+  - Material info
+  - Generated description
+- "Créer ce produit" confirm button
+- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
 
----
+### 3. AdminProducts integration
+- Add "Importer Maquette IA" button next to existing "Importer PDF" button
+- Opens the new ImportMockupDialog
+- After product created, show toast + option to go to product detail
 
-### Flux technique
+### Files to create/modify
+- `supabase/functions/analyze-product-image/index.ts` — new edge function
+- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
+- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
 
-```text
-[Checkout]
-  ↓ code postal saisi
-  → supabase.functions.invoke("colissimo-proxy", { action: "getRelayPoints", zipCode, deliveryMode })
-  → Edge function → POST https://ws.colissimo.fr/pointretrait-ws-cxf/PointRetraitServiceWS/2.0/getPointRetraitAcheminement
-  ← liste points relais
-  → Affichage cards sélectionnables
+## Implementation Steps
 
-[AdminOrders]
-  ↓ clic "Étiquette Colissimo"
-  → supabase.functions.invoke("colissimo-proxy", { action: "generateLabel", order })
-  → Edge function → POST https://ws.colissimo.fr/sls-ws/SlsServiceWS/2.0/generateLabel
-  ← PDF base64 + trackingNumber
-  → Téléchargement PDF + maj trackingNumber en DB
-```
+### Step 1: Edge function `analyze-product-image`
+Input: `{ imageBase64: string, mimeType: string }`
+Prompt to Gemini Pro Vision:
+- Extract all visible product info
+- Extract hex colors from color swatches
+- Generate description if not present
+- Output strict JSON matching `ExtractedProductData` schema
 
----
+### Step 2: `ImportMockupDialog` component
+States:
+- `file`, `preview` (image URL)
+- `analyzing` (loading state)
+- `extracted` (ExtractedProductData | null)
+- `editableData` (form state to review/edit before import)
 
-### Note importante
-L'API Colissimo utilise du JSON (REST) sur l'endpoint `https://ws.colissimo.fr`. Pour tester en sandbox, Colissimo fournit un environnement de recette. On configurera d'abord sur la **production** directement avec tes vraies credentials.
+UX Flow:
+1. Drag & drop or click to upload image
+2. Preview appears
+3. Click "Analyser avec IA" → loading scan animation
+4. Results appear: color swatches, size badges, all info
+5. User can edit price/name if needed
+6. Click "Créer le produit" → uploads image to storage, creates product, success
+
+### Step 3: AdminProducts button
+Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)

@@ -17,6 +17,8 @@ import {
   Loader2,
   Home,
   ClipboardCheck,
+  Search,
+  Clock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -29,6 +31,19 @@ const COLISSIMO_RATES = {
   free_threshold: 200,
 };
 
+interface RelayPoint {
+  identifiant: string;
+  nom: string;
+  adresse1: string;
+  adresse2?: string;
+  codePostal: string;
+  localite: string;
+  distanceEnMetre?: number;
+  horairesOuvertureLundi?: string;
+  horairesOuvertureSamedi?: string;
+  typeDePoint?: string;
+}
+
 export default function Checkout() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -39,6 +54,12 @@ export default function Checkout() {
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>('relay');
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
+
+  // Relay point state
+  const [relayPoints, setRelayPoints] = useState<RelayPoint[]>([]);
+  const [selectedRelay, setSelectedRelay] = useState<RelayPoint | null>(null);
+  const [relaySearchZip, setRelaySearchZip] = useState('');
+  const [isSearchingRelays, setIsSearchingRelays] = useState(false);
 
   const [form, setForm] = useState({
     firstName: '',
@@ -66,7 +87,53 @@ export default function Checkout() {
     return required.every(f => form[f as keyof typeof form].trim());
   };
 
+  const searchRelayPoints = async (zip: string) => {
+    if (!zip || zip.length < 5) {
+      toast({ title: 'Code postal invalide', description: 'Saisissez un code postal valide (5 chiffres)', variant: 'destructive' });
+      return;
+    }
+    setIsSearchingRelays(true);
+    setRelayPoints([]);
+    setSelectedRelay(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('colissimo-proxy', {
+        body: { action: 'getRelayPoints', zipCode: zip, city: form.city || '', countryCode: 'FR' },
+      });
+      if (error) throw error;
+      if (data?.success && data.points?.length > 0) {
+        setRelayPoints(data.points.slice(0, 5));
+      } else {
+        toast({ title: 'Aucun point relais trouvé', description: 'Essayez un autre code postal', variant: 'destructive' });
+      }
+    } catch (err) {
+      console.error('Relay search error:', err);
+      toast({ title: 'Erreur lors de la recherche', description: 'Impossible de récupérer les points relais', variant: 'destructive' });
+    } finally {
+      setIsSearchingRelays(false);
+    }
+  };
+
+  const selectRelay = (point: RelayPoint) => {
+    setSelectedRelay(point);
+    updateForm('relayInfo', `${point.nom} — ${point.adresse1}, ${point.codePostal} ${point.localite}`);
+  };
+
+  const formatDistance = (meters?: number) => {
+    if (!meters) return '';
+    if (meters < 1000) return `${meters}m`;
+    return `${(meters / 1000).toFixed(1)}km`;
+  };
+
+  const formatHoraires = (h?: string) => {
+    if (!h || h === '00:00-00:00' || h === '') return 'Fermé';
+    return h;
+  };
+
   const handlePlaceOrder = async () => {
+    if (deliveryMode === 'relay' && !selectedRelay) {
+      toast({ title: 'Point relais requis', description: 'Veuillez sélectionner un point relais', variant: 'destructive' });
+      return;
+    }
     setIsProcessing(true);
     try {
       const num = `LVTK-${Date.now().toString(36).toUpperCase()}`;
@@ -106,7 +173,7 @@ export default function Checkout() {
 
       if (orderError) throw orderError;
 
-      // Send confirmation email (fire and forget — doesn't block order confirmation)
+      // Send confirmation email (fire and forget)
       supabase.functions.invoke('send-order-confirmation', {
         body: {
           orderNumber: num,
@@ -180,6 +247,14 @@ export default function Checkout() {
               Une confirmation vous sera envoyée à <span className="font-medium text-foreground">{form.email}</span> dès réception du paiement.
             </p>
           </div>
+
+          {deliveryMode === 'relay' && selectedRelay && (
+            <div className="bg-primary/10 border border-primary/20 chamfer-hud-sm p-3 text-left">
+              <p className="text-xs font-bold hud-text mb-1 flex items-center gap-1"><MapPin className="h-3 w-3 text-primary" />POINT RELAIS SÉLECTIONNÉ</p>
+              <p className="text-xs text-foreground font-medium">{selectedRelay.nom}</p>
+              <p className="text-xs text-muted-foreground">{selectedRelay.adresse1}, {selectedRelay.codePostal} {selectedRelay.localite}</p>
+            </div>
+          )}
 
           <div className="bg-primary/10 border border-primary/20 chamfer-hud-sm p-3">
             <p className="text-xs text-primary flex items-center gap-2">
@@ -302,6 +377,7 @@ export default function Checkout() {
                       toast({ title: 'Champs obligatoires manquants', variant: 'destructive' });
                       return;
                     }
+                    setRelaySearchZip(form.zip);
                     setStep('delivery');
                   }}
                 >
@@ -323,40 +399,113 @@ export default function Checkout() {
 
                 <div className="space-y-3">
                   {/* Relay */}
-                  <button
-                    onClick={() => setDeliveryMode('relay')}
+                  <div
                     className={cn(
-                      'w-full p-4 text-left border transition-all chamfer-hud-sm',
-                      deliveryMode === 'relay' ? 'border-primary bg-primary/5' : 'border-border hover:border-foreground/30',
+                      'border transition-all chamfer-hud-sm',
+                      deliveryMode === 'relay' ? 'border-primary bg-primary/5' : 'border-border',
                     )}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={cn('w-4 h-4 rounded-full border-2 flex items-center justify-center', deliveryMode === 'relay' ? 'border-primary' : 'border-muted-foreground')}>
-                          {deliveryMode === 'relay' && <div className="w-2 h-2 rounded-full bg-primary" />}
+                    <button
+                      onClick={() => setDeliveryMode('relay')}
+                      className="w-full p-4 text-left"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={cn('w-4 h-4 rounded-full border-2 flex items-center justify-center', deliveryMode === 'relay' ? 'border-primary' : 'border-muted-foreground')}>
+                            {deliveryMode === 'relay' && <div className="w-2 h-2 rounded-full bg-primary" />}
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm">Colissimo Point Relais</p>
+                            <p className="text-xs text-muted-foreground">Livraison en 3-5 jours ouvrés</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-bold text-sm">Colissimo Point Relais</p>
-                          <p className="text-xs text-muted-foreground">Livraison en 3-5 jours ouvrés</p>
-                        </div>
+                        <span className="font-bold text-sm">
+                          {subtotal >= COLISSIMO_RATES.free_threshold ? <span className="text-primary">GRATUIT</span> : `${COLISSIMO_RATES.relay.toFixed(2)}€`}
+                        </span>
                       </div>
-                      <span className="font-bold text-sm">
-                        {subtotal >= COLISSIMO_RATES.free_threshold ? <span className="text-primary">GRATUIT</span> : `${COLISSIMO_RATES.relay.toFixed(2)}€`}
-                      </span>
-                    </div>
+                    </button>
+
                     {deliveryMode === 'relay' && (
-                      <div className="mt-3 pt-3 border-t border-border">
-                        <Label className="hud-text text-xs">INDIQUER VOTRE POINT RELAIS PRÉFÉRÉ</Label>
-                        <Input
-                          value={form.relayInfo}
-                          onChange={e => updateForm('relayInfo', e.target.value)}
-                          placeholder="Nom ou adresse du point relais (optionnel)"
-                          className="mt-2 bg-secondary/50 text-sm"
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">Nous vous contacterons pour confirmer le point relais disponible à proximité.</p>
+                      <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
+                        {/* Relay search */}
+                        <div>
+                          <Label className="hud-text text-xs mb-2 block">RECHERCHER UN POINT RELAIS</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              value={relaySearchZip}
+                              onChange={e => setRelaySearchZip(e.target.value)}
+                              placeholder="Code postal (ex: 75001)"
+                              className="bg-secondary/50 flex-1"
+                              onKeyDown={e => e.key === 'Enter' && searchRelayPoints(relaySearchZip)}
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => searchRelayPoints(relaySearchZip)}
+                              disabled={isSearchingRelays}
+                              className="shrink-0"
+                            >
+                              {isSearchingRelays ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Relay points list */}
+                        {relayPoints.length > 0 && (
+                          <div className="space-y-2 max-h-72 overflow-y-auto">
+                            {relayPoints.map(point => (
+                              <button
+                                key={point.identifiant}
+                                onClick={() => selectRelay(point)}
+                                className={cn(
+                                  'w-full text-left p-3 chamfer-hud-sm border transition-all',
+                                  selectedRelay?.identifiant === point.identifiant
+                                    ? 'border-primary bg-primary/10'
+                                    : 'border-border hover:border-foreground/30 bg-secondary/20'
+                                )}
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <div className={cn('w-3 h-3 rounded-full border-2 flex-shrink-0 flex items-center justify-center', selectedRelay?.identifiant === point.identifiant ? 'border-primary' : 'border-muted-foreground')}>
+                                        {selectedRelay?.identifiant === point.identifiant && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                                      </div>
+                                      <p className="font-bold text-xs truncate">{point.nom}</p>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-0.5 ml-5">{point.adresse1}</p>
+                                    <p className="text-xs text-muted-foreground ml-5">{point.codePostal} {point.localite}</p>
+                                    {point.horairesOuvertureLundi && (
+                                      <div className="flex items-center gap-1 mt-1 ml-5">
+                                        <Clock className="h-3 w-3 text-muted-foreground" />
+                                        <span className="text-xs text-muted-foreground">Lun: {formatHoraires(point.horairesOuvertureLundi)} · Sam: {formatHoraires(point.horairesOuvertureSamedi)}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  {point.distanceEnMetre !== undefined && (
+                                    <span className="text-xs font-bold text-primary shrink-0">{formatDistance(point.distanceEnMetre)}</span>
+                                  )}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {selectedRelay && (
+                          <div className="flex items-start gap-2 bg-primary/10 border border-primary/20 chamfer-hud-sm p-3">
+                            <CheckCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                            <div className="text-xs">
+                              <p className="font-bold text-primary">Point relais sélectionné</p>
+                              <p className="text-foreground">{selectedRelay.nom} — {selectedRelay.adresse1}, {selectedRelay.codePostal} {selectedRelay.localite}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {!selectedRelay && relayPoints.length === 0 && (
+                          <p className="text-xs text-muted-foreground">Recherchez un point relais par code postal pour sélectionner votre lieu de retrait.</p>
+                        )}
                       </div>
                     )}
-                  </button>
+                  </div>
 
                   {/* Home */}
                   <button
@@ -408,7 +557,7 @@ export default function Checkout() {
                   <Button
                     className="flex-1 chamfer-hud-sm h-12 text-base font-bold"
                     onClick={handlePlaceOrder}
-                    disabled={isProcessing}
+                    disabled={isProcessing || (deliveryMode === 'relay' && !selectedRelay)}
                   >
                     {isProcessing ? (
                       <><Loader2 className="h-5 w-5 mr-2 animate-spin" />Traitement...</>

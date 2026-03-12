@@ -8,9 +8,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Package, Clock, Truck, CheckCircle, XCircle, Eye, FileText, Save, Printer, Mail, ExternalLink, Trash2,
-  CreditCard, Banknote, MapPin, FileDown, Tag, Search, Filter
+  CreditCard, Banknote, MapPin, FileDown, Tag, Search, Filter, Loader2
 } from 'lucide-react';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -125,6 +126,7 @@ export default function AdminOrders() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [editForm, setEditForm] = useState<EditForm | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isGeneratingLabel, setIsGeneratingLabel] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
 
@@ -196,6 +198,67 @@ export default function AdminOrders() {
       setSelectedOrder(null);
     } catch {
       toast({ title: 'Erreur', variant: 'destructive' });
+    }
+  };
+
+  const handleGenerateColissimoLabel = async () => {
+    if (!selectedOrder) return;
+    setIsGeneratingLabel(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('colissimo-proxy', {
+        body: {
+          action: 'generateLabel',
+          order: {
+            orderNumber: selectedOrder.orderNumber,
+            customer: {
+              name: editForm?.customerName || selectedOrder.customer.name,
+              email: editForm?.customerEmail || selectedOrder.customer.email,
+              phone: editForm?.customerPhone || selectedOrder.customer.phone,
+              address: editForm?.customerAddress || selectedOrder.customer.address,
+              city: editForm?.customerCity || selectedOrder.customer.city,
+              zip: editForm?.customerZip || selectedOrder.customer.zip,
+            },
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.trackingNumber && editForm) {
+        setEditForm({ ...editForm, trackingNumber: data.trackingNumber, shippingCarrier: 'Colissimo' });
+        // Save tracking number to DB immediately
+        await updateOrder.mutateAsync({
+          id: selectedOrder.id,
+          trackingNumber: data.trackingNumber,
+          shippingCarrier: 'Colissimo',
+        });
+        toast({ title: 'Numéro de suivi enregistré', description: data.trackingNumber });
+      }
+
+      if (data?.pdfBase64) {
+        // Download PDF
+        const blob = new Blob(
+          [Uint8Array.from(atob(data.pdfBase64), c => c.charCodeAt(0))],
+          { type: 'application/pdf' }
+        );
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `colissimo-${selectedOrder.orderNumber}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast({ title: 'Étiquette Colissimo téléchargée' });
+      } else {
+        toast({
+          title: 'Étiquette générée',
+          description: data?.trackingNumber ? `N° suivi: ${data.trackingNumber}` : 'Vérifiez vos identifiants Colissimo',
+        });
+      }
+    } catch (err) {
+      console.error('Colissimo label error:', err);
+      toast({ title: 'Erreur génération étiquette', description: String(err), variant: 'destructive' });
+    } finally {
+      setIsGeneratingLabel(false);
     }
   };
 
@@ -421,6 +484,19 @@ export default function AdminOrders() {
                 <Button variant="outline" size="sm" onClick={() => selectedOrder && openPrintWindow(generateShippingLabelHTML(selectedOrder))}><Tag className="h-4 w-4 mr-1" />Étiquette aller</Button>
                 <Button variant="outline" size="sm" onClick={() => selectedOrder && openPrintWindow(generateShippingLabelHTML(selectedOrder, true))}><Tag className="h-4 w-4 mr-1" />Étiquette retour</Button>
                 <Button variant="outline" size="sm" onClick={() => selectedOrder && openPrintWindow(generateInvoiceHTML(selectedOrder))}><Printer className="h-4 w-4 mr-1" />Facture</Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGenerateColissimoLabel}
+                  disabled={isGeneratingLabel}
+                  className="border-primary/40 text-primary hover:bg-primary/10"
+                >
+                  {isGeneratingLabel ? (
+                    <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Génération...</>
+                  ) : (
+                    <><Truck className="h-4 w-4 mr-1" />Étiquette Colissimo</>
+                  )}
+                </Button>
                 <Button onClick={handleSave} disabled={updateOrder.isPending}><Save className="h-4 w-4 mr-2" />Enregistrer</Button>
               </div>
             </div>
