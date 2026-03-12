@@ -179,6 +179,28 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
   const removedColorsWithStock = removedColors.filter(c => getStockForColor(c) > 0);
   const hasStockWarning = removedSizesWithStock.length > 0 || removedColorsWithStock.length > 0;
 
+  // Image file upload
+  const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { toast({ title: 'Fichier trop volumineux (max 10 Mo)', variant: 'destructive' }); return; }
+    setUploadingImage(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const fileName = `products/${Date.now()}-${Math.random().toString(36).substring(2, 6)}.${ext}`;
+      const { error } = await supabase.storage.from('media').upload(fileName, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from('media').getPublicUrl(fileName);
+      setForm(p => ({ ...p, image: urlData.publicUrl }));
+      toast({ title: 'Image uploadée !' });
+    } catch (err: any) {
+      toast({ title: 'Erreur upload', description: err.message, variant: 'destructive' });
+    } finally {
+      setUploadingImage(false);
+      if (imageInputRef.current) imageInputRef.current.value = '';
+    }
+  };
+
   // AI SKU generation
   const generateSku = () => {
     if (!form.name) { toast({ title: 'Entrez un nom d\'abord', variant: 'destructive' }); return; }
