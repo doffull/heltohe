@@ -284,6 +284,33 @@ export type Database = {
         }
         Relationships: []
       }
+      colissimo_bordereaux: {
+        Row: {
+          bordereau_date: string
+          created_at: string | null
+          id: string
+          package_count: number
+          pdf_base64: string | null
+          tracking_numbers: Json | null
+        }
+        Insert: {
+          bordereau_date: string
+          created_at?: string | null
+          id?: string
+          package_count?: number
+          pdf_base64?: string | null
+          tracking_numbers?: Json | null
+        }
+        Update: {
+          bordereau_date?: string
+          created_at?: string | null
+          id?: string
+          package_count?: number
+          pdf_base64?: string | null
+          tracking_numbers?: Json | null
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           created_at: string
