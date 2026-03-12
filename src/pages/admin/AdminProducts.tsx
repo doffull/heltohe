@@ -135,11 +135,36 @@ export default function AdminProducts() {
     }
   };
 
+  const handleSaveInlineStock = async (productId: string) => {
+    try {
+      await updateProduct.mutateAsync({ id: productId, stock: editingStockValue });
+      toast({ title: 'Stock mis à jour' });
+    } catch {
+      toast({ title: 'Erreur', variant: 'destructive' });
+    } finally {
+      setEditingStockId(null);
+    }
+  };
+
   const handleCreate = async (data: Omit<Product, 'id'>) => {
     try {
-      await createProduct.mutateAsync(data);
+      const created = await createProduct.mutateAsync(data);
       toast({ title: 'Produit créé' });
       setIsFormOpen(false);
+      // Auto-sync to inventory/stock central
+      try {
+        const { data: webLoc } = await supabase.from('locations').select('id').eq('type', 'web').maybeSingle();
+        if (webLoc && created?.id) {
+          const { data: inv } = await supabase.from('inventory').insert({
+            product_id: created.id, sku: data.sku, name: data.name, channel: 'b2c', threshold: 10,
+          }).select('id').single();
+          if (inv && data.stock > 0) {
+            await supabase.from('stock_levels').insert({
+              inventory_id: inv.id, location_id: webLoc.id, quantity: data.stock, reserved: 0,
+            });
+          }
+        }
+      } catch { /* silent — stock sync is non-critical */ }
     } catch {
       toast({ title: 'Erreur', variant: 'destructive' });
     }
