@@ -617,7 +617,7 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
         </div>
       </div>
 
-      <Card>
+      <Card className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -627,7 +627,23 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
               <TableHead>Canal</TableHead>
               <TableHead>Tailles</TableHead>
               <TableHead>Couleurs</TableHead>
-              <TableHead className="text-right">Stock Total</TableHead>
+              {/* Dynamic per-location stock columns */}
+              {webLocation && (
+                <TableHead className="text-right whitespace-nowrap">
+                  <span className="inline-flex items-center justify-end gap-1 text-blue-500 dark:text-blue-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block shrink-0" />Web
+                  </span>
+                </TableHead>
+              )}
+              {boutiqueLocations.map((loc: Location) => (
+                <TableHead key={loc.id} className="text-right whitespace-nowrap text-xs">
+                  <span className="inline-flex items-center justify-end gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block shrink-0" />
+                    {loc.name.length > 14 ? loc.name.slice(0, 12) + '…' : loc.name}
+                  </span>
+                </TableHead>
+              ))}
+              <TableHead className="text-right font-semibold whitespace-nowrap">Total</TableHead>
               <TableHead className="text-right">Seuil</TableHead>
               <TableHead>Statut</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -635,11 +651,12 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
           </TableHeader>
           <TableBody>
             {items.length === 0 ? (
-              <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Aucun produit en inventaire</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7 + (webLocation ? 1 : 0) + boutiqueLocations.length} className="text-center text-muted-foreground py-8">Aucun produit en inventaire</TableCell></TableRow>
             ) : items.map((item: InventoryItem) => {
               const total = getStockForItem(item.id);
               const isLow = total < item.threshold;
               const matchedProduct = (products as ProductRow[])?.find(p => p.id === item.product_id);
+              const webQty = webLocation ? getStockForItem(item.id, webLocation.id) : null;
               return (
                 <TableRow key={item.id}>
                   <TableCell>
@@ -668,7 +685,25 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                       ))}
                     </div>
                   </TableCell>
-                  <TableCell className="text-right font-mono">{total}</TableCell>
+                  {/* Per-location stock cells */}
+                  {webLocation && (
+                    <TableCell className="text-right font-mono">
+                      <span className={cn("text-sm font-semibold", webQty === 0 ? "text-destructive/70" : "text-blue-500 dark:text-blue-400")}>
+                        {webQty ?? 0}
+                      </span>
+                    </TableCell>
+                  )}
+                  {boutiqueLocations.map((loc: Location) => {
+                    const locQty = getStockForItem(item.id, loc.id);
+                    return (
+                      <TableCell key={loc.id} className="text-right font-mono">
+                        <span className={cn("text-sm font-semibold", locQty === 0 ? "text-muted-foreground/40" : "text-foreground")}>
+                          {locQty}
+                        </span>
+                      </TableCell>
+                    );
+                  })}
+                  <TableCell className="text-right font-mono font-bold">{total}</TableCell>
                   <TableCell className="text-right font-mono text-muted-foreground">{item.threshold}</TableCell>
                   <TableCell>
                     {isLow ? (
@@ -687,9 +722,14 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                         </TooltipTrigger>
                         <TooltipContent side="top">{boutiqueLocations.length === 0 ? 'Aucune boutique disponible' : 'Transférer vers une boutique'}</TooltipContent>
                       </UITooltip>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(item)}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
+                      <UITooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(item)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Modifier le produit</TooltipContent>
+                      </UITooltip>
                       <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setDeleteTarget(item)}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
