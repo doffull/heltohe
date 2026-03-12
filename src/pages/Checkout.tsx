@@ -140,61 +140,63 @@ export default function Checkout() {
     try {
       const num = `LVTK-${Date.now().toString(36).toUpperCase()}`;
 
-      const orderItems = items.map(item => ({
+      // Build minimal item list — server will re-fetch prices from DB
+      const orderItemsPayload = items.map(item => ({
         productId: item.productId,
-        name: item.name,
-        price: item.salePrice || item.price,
         quantity: item.quantity,
         size: item.size,
         color: item.color,
-        image: item.image,
       }));
 
-      const { error: orderError } = await supabase.from('orders').insert({
-        order_number: num,
-        user_id: user?.id || null,
-        customer_email: form.email,
-        customer_name: `${form.firstName} ${form.lastName}`,
-        customer_phone: form.phone || null,
-        customer_address: deliveryMode === 'relay' && form.relayInfo
-          ? `Point Relais: ${form.relayInfo} — ${form.address}`
-          : form.address,
-        customer_city: form.city,
-        customer_zip: form.zip,
-        customer_country: form.country,
-        items: orderItems,
-        subtotal: subtotal - promoDiscount,
-        shipping_cost: shippingCost,
-        tax: tax,
-        total: orderTotal,
-        payment_method: 'manual',
-        payment_status: 'pending',
-        status: 'pending',
-        shipping_carrier: 'colissimo',
+      const customerAddress = deliveryMode === 'relay' && form.relayInfo
+        ? `Point Relais: ${form.relayInfo} — ${form.address}`
+        : form.address;
+
+      // Server-side RPC: validates prices, promo code, calculates totals, inserts order
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('validate_and_create_order', {
+        p_items: orderItemsPayload,
+        p_promo_code: promoCode || '',
+        p_delivery_mode: deliveryMode,
+        p_order_data: {
+          order_number: num,
+          user_id: user?.id || '',
+          customer_email: form.email,
+          customer_name: `${form.firstName} ${form.lastName}`,
+          customer_phone: form.phone || '',
+          customer_address: customerAddress,
+          customer_city: form.city,
+          customer_zip: form.zip,
+          customer_country: form.country,
+        },
       });
 
-      if (orderError) throw orderError;
+      if (rpcError) throw rpcError;
+      if (rpcResult?.error) {
+        throw new Error(rpcResult.error);
+      }
 
-      // Send confirmation email (fire and forget)
+      const verifiedTotal = rpcResult.total;
+      const verifiedItems = rpcResult.items;
+
+      // Send confirmation email (fire and forget) using server-verified values
       supabase.functions.invoke('send-order-confirmation', {
         body: {
           orderNumber: num,
           customerName: `${form.firstName} ${form.lastName}`,
           customerEmail: form.email,
-          items: orderItems,
-          subtotal: subtotal - promoDiscount,
-          shippingCost,
-          total: orderTotal,
+          items: verifiedItems,
+          subtotal: rpcResult.subtotal,
+          shippingCost: rpcResult.shippingCost,
+          total: verifiedTotal,
           deliveryMode,
           adminEmail: designSettings.adminNotificationEmail || undefined,
         },
-      }).catch(err => console.warn('Email confirmation failed (non-blocking):', err));
+      }).catch(() => {/* non-blocking, swallow silently */});
 
       setOrderNumber(num);
       clearCart();
       setStep('confirmation');
     } catch (err) {
-      console.error('Checkout error:', err);
       toast({
         title: 'Erreur lors de la commande',
         description: 'Veuillez réessayer ou contacter le support.',
