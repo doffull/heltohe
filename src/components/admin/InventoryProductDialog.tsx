@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { X, Plus, Sparkles, ImageIcon, AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, Plus, Sparkles, ImageIcon, AlertTriangle, Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
