@@ -630,15 +630,15 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
               {/* Dynamic per-location stock columns */}
               {webLocation && (
                 <TableHead className="text-right whitespace-nowrap">
-                  <span className="inline-flex items-center justify-end gap-1 text-blue-500 dark:text-blue-400">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block shrink-0" />Web
+                  <span className="inline-flex items-center justify-end gap-1 text-primary">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block shrink-0" />Web
                   </span>
                 </TableHead>
               )}
               {boutiqueLocations.map((loc: Location) => (
                 <TableHead key={loc.id} className="text-right whitespace-nowrap text-xs">
                   <span className="inline-flex items-center justify-end gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block shrink-0" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground inline-block shrink-0" />
                     {loc.name.length > 14 ? loc.name.slice(0, 12) + '…' : loc.name}
                   </span>
                 </TableHead>
