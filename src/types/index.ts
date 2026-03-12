@@ -301,6 +301,9 @@ export interface DesignSettings {
   siteTagline?: string;
   contactEmail?: string;
   contactPhone?: string;
+
+  // Admin notification
+  adminNotificationEmail?: string;
 }
 
 export type MarkerType = 'dot' | 'cross' | 'diamond' | 'square' | 'ring';
