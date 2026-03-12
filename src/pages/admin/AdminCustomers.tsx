@@ -98,6 +98,16 @@ export default function AdminCustomers() {
             <SelectItem value="platinum">Platinum</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="w-[180px]"><ArrowUpDown className="h-3 w-3 mr-2" /><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="name">Nom A-Z</SelectItem>
+            <SelectItem value="spent-desc">Dépenses (haut → bas)</SelectItem>
+            <SelectItem value="spent-asc">Dépenses (bas → haut)</SelectItem>
+            <SelectItem value="points-desc">Points fidélité</SelectItem>
+            <SelectItem value="date-desc">Inscription récente</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="grid sm:grid-cols-4 gap-4">
