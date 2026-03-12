@@ -23,6 +23,7 @@ interface EmailPayload {
   shippingCost: number;
   total: number;
   deliveryMode: 'home' | 'relay';
+  adminEmail?: string;
 }
 
 function buildEmailHtml(payload: EmailPayload): string {
