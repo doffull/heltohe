@@ -51,10 +51,12 @@ const SIDEBAR_ITEMS = [
   { icon: Megaphone, label: 'Marketing', href: '/admin/marketing' },
   { icon: Palette, label: 'Design', href: '/admin/design' },
   { icon: Warehouse, label: 'Stock', href: '/admin/stock' },
+  { icon: Truck, label: 'Colissimo', href: '/admin/colissimo' },
   { icon: Bot, label: 'Chatbot', href: '/admin/chatbot' },
   { icon: ShoppingBag, label: 'WooCommerce', href: '/admin/woocommerce' },
   { icon: Settings, label: 'Paramètres', href: '/admin/parametres' },
 ];
+
 
 function SidebarContent({ user, signOut, location }: { user: any; signOut: () => void; location: any }) {
   return (
