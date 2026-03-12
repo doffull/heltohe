@@ -19,3 +19,6 @@ verify_jwt = false
 [functions.send-order-confirmation]
 verify_jwt = false
 
+[functions.colissimo-proxy]
+verify_jwt = false
+
