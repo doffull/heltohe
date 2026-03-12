@@ -201,6 +201,67 @@ export default function AdminOrders() {
     }
   };
 
+  const handleGenerateColissimoLabel = async () => {
+    if (!selectedOrder) return;
+    setIsGeneratingLabel(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('colissimo-proxy', {
+        body: {
+          action: 'generateLabel',
+          order: {
+            orderNumber: selectedOrder.orderNumber,
+            customer: {
+              name: editForm?.customerName || selectedOrder.customer.name,
+              email: editForm?.customerEmail || selectedOrder.customer.email,
+              phone: editForm?.customerPhone || selectedOrder.customer.phone,
+              address: editForm?.customerAddress || selectedOrder.customer.address,
+              city: editForm?.customerCity || selectedOrder.customer.city,
+              zip: editForm?.customerZip || selectedOrder.customer.zip,
+            },
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.trackingNumber && editForm) {
+        setEditForm({ ...editForm, trackingNumber: data.trackingNumber, shippingCarrier: 'Colissimo' });
+        // Save tracking number to DB immediately
+        await updateOrder.mutateAsync({
+          id: selectedOrder.id,
+          trackingNumber: data.trackingNumber,
+          shippingCarrier: 'Colissimo',
+        });
+        toast({ title: 'Numéro de suivi enregistré', description: data.trackingNumber });
+      }
+
+      if (data?.pdfBase64) {
+        // Download PDF
+        const blob = new Blob(
+          [Uint8Array.from(atob(data.pdfBase64), c => c.charCodeAt(0))],
+          { type: 'application/pdf' }
+        );
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `colissimo-${selectedOrder.orderNumber}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast({ title: 'Étiquette Colissimo téléchargée' });
+      } else {
+        toast({
+          title: 'Étiquette générée',
+          description: data?.trackingNumber ? `N° suivi: ${data.trackingNumber}` : 'Vérifiez vos identifiants Colissimo',
+        });
+      }
+    } catch (err) {
+      console.error('Colissimo label error:', err);
+      toast({ title: 'Erreur génération étiquette', description: String(err), variant: 'destructive' });
+    } finally {
+      setIsGeneratingLabel(false);
+    }
+  };
+
   const getStatusInfo = (status: OrderStatus) => STATUS_OPTIONS.find(o => o.value === status) || STATUS_OPTIONS[0];
 
   return (
