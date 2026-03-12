@@ -52,6 +52,60 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
+    // ─── ACTION: TEST CONNECTION ──────────────────────────────────────────────
+    if (action === 'testConnection') {
+      const now = new Date();
+      const shippingDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+      const soapBody = `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="${RELAY_NS}">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <tns:findRDVPointRetraitAcheminement>
+      <accountNumber>${escapeXml(COLISSIMO_LOGIN)}</accountNumber>
+      <password>${escapeXml(COLISSIMO_PASSWORD)}</password>
+      <address></address>
+      <zipCode>75001</zipCode>
+      <city>Paris</city>
+      <countryCode>FR</countryCode>
+      <weight>1</weight>
+      <shippingDate>${shippingDate}</shippingDate>
+      <filterRelay>0</filterRelay>
+      <requestId></requestId>
+      <lang>FR</lang>
+      <optionInter>1</optionInter>
+    </tns:findRDVPointRetraitAcheminement>
+  </soapenv:Body>
+</soapenv:Envelope>`;
+
+      const response = await fetch(COLISSIMO_RELAY_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/xml; charset=UTF-8', 'SOAPAction': '' },
+        body: soapBody,
+      });
+
+      const xmlText = await response.text();
+      if (!response.ok || xmlText.includes('<faultcode>')) {
+        const faultMatch = xmlText.match(/<faultstring>([^<]+)<\/faultstring>/);
+        return new Response(JSON.stringify({ success: false, error: faultMatch?.[1] || 'Connection failed' }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const errorCodeMatch = xmlText.match(/<errorCode>([^<]+)<\/errorCode>/);
+      const errorCode = errorCodeMatch ? parseInt(errorCodeMatch[1]) : 0;
+      if (errorCode !== 0) {
+        const errorMsgMatch = xmlText.match(/<errorMessage>([^<]+)<\/errorMessage>/);
+        return new Response(JSON.stringify({ success: false, error: `Code ${errorCode}: ${errorMsgMatch?.[1] || ''}` }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // ─── ACTION: GET RELAY POINTS (SOAP v2) ───────────────────────────────────
     if (action === 'getRelayPoints') {
       const { zipCode, city = '', countryCode = 'FR' } = body;
@@ -63,8 +117,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Using findRDVPointRetraitAcheminement — the correct v2 operation
-      // Date must be in DD/MM/YYYY format
       const now = new Date();
       const shippingDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
       const soapBody = `<?xml version="1.0" encoding="UTF-8"?>
@@ -109,7 +161,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Check errorCode in response
       const errorCodeMatch = xmlText.match(/<errorCode>([^<]+)<\/errorCode>/);
       const errorCode = errorCodeMatch ? parseInt(errorCodeMatch[1]) : 0;
       if (errorCode !== 0) {
@@ -129,7 +180,7 @@ Deno.serve(async (req) => {
 
     // ─── ACTION: GENERATE LABEL (SOAP) ────────────────────────────────────────
     if (action === 'generateLabel') {
-      const { order } = body;
+      const { order, senderName, senderAddress, senderZip, senderCity } = body;
 
       if (!order) {
         return new Response(JSON.stringify({ error: 'order is required' }), {
@@ -144,6 +195,12 @@ Deno.serve(async (req) => {
       const firstName = nameParts.slice(0, -1).join(' ') || 'LVTK6';
       const isRelay = (order.customer?.address || '').toLowerCase().includes('point relais');
       const productCode = isRelay ? 'A2P' : 'DOM';
+
+      // Use sender info from request body, fallback to defaults
+      const resolvedSenderName = senderName || 'LVTK6 Concept Store';
+      const resolvedSenderAddress = senderAddress || '1 Rue de la Paix';
+      const resolvedSenderZip = senderZip || '75001';
+      const resolvedSenderCity = senderCity || 'Paris';
 
       const soapBody = `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://sls.ws.coliposte.fr">
@@ -168,10 +225,10 @@ Deno.serve(async (req) => {
         </parcel>
         <sender>
           <address>
-            <companyName>LVTK6 Concept Store</companyName>
-            <line2>1 Rue de la Paix</line2>
-            <city>Paris</city>
-            <zipCode>75001</zipCode>
+            <companyName>${escapeXml(resolvedSenderName)}</companyName>
+            <line2>${escapeXml(resolvedSenderAddress)}</line2>
+            <city>${escapeXml(resolvedSenderCity)}</city>
+            <zipCode>${escapeXml(resolvedSenderZip)}</zipCode>
             <countryCode>FR</countryCode>
           </address>
         </sender>
@@ -221,11 +278,9 @@ Deno.serve(async (req) => {
         const textDecoder = new TextDecoder('utf-8', { fatal: false });
         const fullText = textDecoder.decode(rawBytes);
 
-        // Extract tracking number
         const trackingMatch = fullText.match(/<parcelNumber>([^<]+)<\/parcelNumber>/);
         const trackingNumber = trackingMatch ? trackingMatch[1].trim() : null;
 
-        // Find PDF binary
         const byteArray = new Uint8Array(rawBytes);
         const pdfStartIdx = findPdfStart(byteArray);
         let pdfBase64: string | null = null;
@@ -242,7 +297,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Plain XML fallback
       const xmlText = await response.text();
       if (xmlText.includes('<faultcode>')) {
         const faultMatch = xmlText.match(/<faultstring>([^<]+)<\/faultstring>/);
@@ -284,7 +338,6 @@ function escapeXml(str: string): string {
 
 function parseRelayPointsFromXml(xml: string) {
   const points: Record<string, string>[] = [];
-  // Match both pointRetraitAcheminement blocks
   const blockRegex = /<listePointRetraitAcheminement[^>]*>([\s\S]*?)<\/listePointRetraitAcheminement>/g;
   let match;
   while ((match = blockRegex.exec(xml)) !== null) {
@@ -310,13 +363,15 @@ function parseRelayPointsFromXml(xml: string) {
       horairesOuvertureSamedi: get('horairesOuvertureSamedi'),
       horairesOuvertureDimanche: get('horairesOuvertureDimanche'),
       typeDePoint: get('typeDePoint'),
+      // Geolocation coordinates for map
+      lat: get('coordGeolocalisationLatitude'),
+      lng: get('coordGeolocalisationLongitude'),
     });
   }
   return points;
 }
 
 function findPdfStart(bytes: Uint8Array): number {
-  // %PDF = 37 80 68 70
   for (let i = 0; i < bytes.length - 4; i++) {
     if (bytes[i] === 37 && bytes[i + 1] === 80 && bytes[i + 2] === 68 && bytes[i + 3] === 70) {
       return i;
@@ -326,7 +381,6 @@ function findPdfStart(bytes: Uint8Array): number {
 }
 
 function findEof(bytes: Uint8Array): number {
-  // %%EOF = 37 37 69 79 70
   const marker = [37, 37, 69, 79, 70];
   for (let i = bytes.length - 1; i >= marker.length; i--) {
     let found = true;

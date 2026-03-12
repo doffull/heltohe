@@ -1,80 +1,103 @@
 
-## Plan — Espace Colissimo Complet (page dédiée /admin/colissimo)
+## Thinking
 
-### Ce qu'il faut construire
+The user wants to:
+1. Upload a product mockup image (like the Marco jacket shown)
+2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
+3. Automatically generates a fully interactive, dynamic product page from it
 
-Une nouvelle page admin `/admin/colissimo` avec 3 onglets :
+The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
 
----
+1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
+   - Accepts an image (jpg/png/webp)
+   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
+   - Also extracts the **color variants** as `colorOptions` with proper hex values
+   - Returns a structured product object ready to pre-fill the ProductForm
 
-### Onglet 1 — Expéditions (tableau de bord principal)
+2. **Add "Importer Maquette IA" button** in AdminProducts that:
+   - Opens a dialog with a dropzone accepting images
+   - Sends image to the edge function
+   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
+   - Lets admin review/edit before confirming creation
+   - On confirm: creates the product in the DB with all extracted data
 
-Liste de toutes les commandes avec leur statut d'expédition Colissimo :
-- Filtre : "Sans étiquette" / "Étiquette générée" / "Expédié" / "Livré"
-- Colonne numéro de suivi cliquable (lien La Poste)
-- Bouton **"Générer étiquette"** par ligne → appelle `colissimo-proxy` action `generateLabel` → sauvegarde le tracking dans la commande + télécharge le PDF
-- Bouton **"Voir le suivi"** si numéro présent
-- Bouton **"Marquer expédiée"** → met `status = 'Shipped'` + `shippingCarrier = 'Colissimo'`
-- Compteurs en haut : À expédier / En transit / Livrées
-- Génération groupée (plusieurs commandes à la fois)
+3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
 
----
+Looking at the Marco image:
+- Product name: MARCO
+- Brand: Helvetica Mountain Pioneers x PEGASWOES  
+- Season: HIVER 2026
+- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
+- Sizes: XS, S, M, L, XL, XXL
+- Composition: 100% POLYESTER
+- Tags: limited edition
 
-### Onglet 2 — Points Relais (carte + liste)
+## Plan
 
-Recherche de points relais Colissimo :
-- Input code postal + bouton Rechercher → appelle `colissimo-proxy` action `getRelayPoints`
-- **Carte interactive** via [Leaflet.js](https://leafletjs.com/) + OpenStreetMap (gratuit, pas de clé API)
-  - Marqueurs sur la carte pour chaque point relais
-  - Clic sur marqueur → popup avec infos
-- Liste à côté avec nom, adresse, distance, horaires d'ouverture par jour
-- Design : carte à gauche (2/3) + liste scrollable à droite (1/3)
+### 1. New edge function `analyze-product-image`
+New file: `supabase/functions/analyze-product-image/index.ts`
 
-**Package à ajouter** : `leaflet` + `react-leaflet` (gratuits, OSM, pas de clé API)
+Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
+- name, subtitle, price (ask to estimate if not found), category
+- sizes (exact text from image)
+- colors with **hex values** from the color swatches visible in image
+- colorOptions: [{color: "#hex", label: "nom"}]
+- material/composition
+- description (generated from visual)
+- sku (auto-generated)
+- tags (e.g., "limited edition" if spotted)
+- Any brand/collection info → subtitle
 
----
+### 2. New UI component `ImportMockupDialog.tsx`
+In `src/components/admin/ImportMockupDialog.tsx`:
+- Image dropzone (jpg/png/webp/gif up to 10MB)
+- Preview of uploaded image
+- "Analyser avec l'IA" button
+- Loading state with animated scan effect
+- Results preview:
+  - Product name, subtitle
+  - Price field (editable, since AI may not find it)
+  - Color swatches preview
+  - Size badges preview
+  - Material info
+  - Generated description
+- "Créer ce produit" confirm button
+- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
 
-### Onglet 3 — Configuration Colissimo
+### 3. AdminProducts integration
+- Add "Importer Maquette IA" button next to existing "Importer PDF" button
+- Opens the new ImportMockupDialog
+- After product created, show toast + option to go to product detail
 
-Formulaire pour configurer les identifiants Colissimo :
-- Champ Login Colissimo Entreprise + Password (stockés comme secrets via `secrets--fetch_secrets`)
-- Adresse expéditeur (nom société, adresse, CP, ville) → stockée dans `design_settings` comme nouveaux champs `colissimo_sender_*`
-- Test de connexion → bouton "Tester la connexion" → appelle `getRelayPoints` avec CP `75001` pour vérifier
-- Statut de connexion (vert = OK / rouge = erreur credentials)
-- Migration DB pour ajouter les champs sender dans `design_settings`
+### Files to create/modify
+- `supabase/functions/analyze-product-image/index.ts` — new edge function
+- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
+- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
 
----
+## Implementation Steps
 
-### Architecture technique
+### Step 1: Edge function `analyze-product-image`
+Input: `{ imageBase64: string, mimeType: string }`
+Prompt to Gemini Pro Vision:
+- Extract all visible product info
+- Extract hex colors from color swatches
+- Generate description if not present
+- Output strict JSON matching `ExtractedProductData` schema
 
-**Nouveau fichier** : `src/pages/admin/AdminColissimo.tsx`
-- 3 tabs : Expéditions / Points Relais / Configuration
+### Step 2: `ImportMockupDialog` component
+States:
+- `file`, `preview` (image URL)
+- `analyzing` (loading state)
+- `extracted` (ExtractedProductData | null)
+- `editableData` (form state to review/edit before import)
 
-**Modifications** :
-- `src/pages/admin/Admin.tsx` : ajouter route `/admin/colissimo/*` + icône Truck dans sidebar
-- `supabase/functions/colissimo-proxy/index.ts` : ajouter action `testConnection` (appel `getRelayPoints` 75001 et retourne success/error)
-- Migration DB : ajouter colonnes `colissimo_sender_name`, `colissimo_sender_address`, `colissimo_sender_zip`, `colissimo_sender_city` dans `design_settings`
-- `src/hooks/useDesignSettings.ts` : mapper les nouveaux champs sender
+UX Flow:
+1. Drag & drop or click to upload image
+2. Preview appears
+3. Click "Analyser avec IA" → loading scan animation
+4. Results appear: color swatches, size badges, all info
+5. User can edit price/name if needed
+6. Click "Créer le produit" → uploads image to storage, creates product, success
 
-**Carte** : `react-leaflet` + `leaflet` (npm packages, tiles OpenStreetMap gratuites)
-- Coordonnées des points relais sont disponibles dans la réponse XML Colissimo (lat/lng dans `coordGeolocalisationLatitude` / `coordGeolocalisationLongitude`)
-- Le parser `parseRelayPointsFromXml` dans l'edge function sera mis à jour pour inclure ces champs
-
----
-
-### Fichiers à créer/modifier
-
-| Fichier | Action |
-|---|---|
-| `src/pages/admin/AdminColissimo.tsx` | Créer — page complète 3 onglets |
-| `src/pages/admin/Admin.tsx` | Ajouter route + sidebar item Colissimo |
-| `supabase/functions/colissimo-proxy/index.ts` | Ajouter action `testConnection` + lat/lng dans parseRelayPoints |
-| Migration SQL | Ajouter colonnes sender dans design_settings |
-| `src/hooks/useDesignSettings.ts` | Mapper nouveaux champs colissimo_sender_* |
-
----
-
-### Dépendances à installer
-
-- `react-leaflet` + `leaflet` (carte interactive open-source, OpenStreetMap, gratuit, aucune clé API requise)
-- Ajouter le CSS Leaflet dans `index.html` ou `index.css`
+### Step 3: AdminProducts button
+Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)

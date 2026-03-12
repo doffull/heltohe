@@ -335,6 +335,10 @@ export type Database = {
           category_columns: number | null
           category_layout: Json | null
           click_scale: number | null
+          colissimo_sender_address: string | null
+          colissimo_sender_city: string | null
+          colissimo_sender_name: string | null
+          colissimo_sender_zip: string | null
           contact_email: string | null
           contact_phone: string | null
           created_at: string
@@ -416,6 +420,10 @@ export type Database = {
           category_columns?: number | null
           category_layout?: Json | null
           click_scale?: number | null
+          colissimo_sender_address?: string | null
+          colissimo_sender_city?: string | null
+          colissimo_sender_name?: string | null
+          colissimo_sender_zip?: string | null
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
@@ -497,6 +505,10 @@ export type Database = {
           category_columns?: number | null
           category_layout?: Json | null
           click_scale?: number | null
+          colissimo_sender_address?: string | null
+          colissimo_sender_city?: string | null
+          colissimo_sender_name?: string | null
+          colissimo_sender_zip?: string | null
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string

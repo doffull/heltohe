@@ -29,6 +29,12 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     contactPhone: (db.contact_phone as string) ?? base.contactPhone,
     adminNotificationEmail: (db.admin_notification_email as string) || undefined,
 
+    // Colissimo sender fields
+    colissimo_sender_name: (db.colissimo_sender_name as string) ?? '',
+    colissimo_sender_address: (db.colissimo_sender_address as string) ?? '',
+    colissimo_sender_zip: (db.colissimo_sender_zip as string) ?? '',
+    colissimo_sender_city: (db.colissimo_sender_city as string) ?? '',
+
     // Sidebar HUD text fields
     sidebarBrandName: (db.sidebar_brand_name as string) ?? base.sidebarBrandName,
     sidebarBrandSubtitle: (db.sidebar_brand_subtitle as string) ?? base.sidebarBrandSubtitle,
@@ -127,6 +133,11 @@ function settingsToDb(s: DesignSettings) {
     contact_email: s.contactEmail ?? '',
     contact_phone: s.contactPhone ?? '',
     admin_notification_email: s.adminNotificationEmail || null,
+    // Colissimo sender fields
+    colissimo_sender_name: s.colissimo_sender_name ?? '',
+    colissimo_sender_address: s.colissimo_sender_address ?? '',
+    colissimo_sender_zip: s.colissimo_sender_zip ?? '',
+    colissimo_sender_city: s.colissimo_sender_city ?? '',
     // Core show/hide booleans
     show_logo: s.showLogo,
     show_stats: s.showStats,
