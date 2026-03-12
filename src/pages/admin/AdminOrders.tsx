@@ -126,6 +126,7 @@ export default function AdminOrders() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [editForm, setEditForm] = useState<EditForm | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isGeneratingLabel, setIsGeneratingLabel] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
 
