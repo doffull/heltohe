@@ -484,6 +484,19 @@ export default function AdminOrders() {
                 <Button variant="outline" size="sm" onClick={() => selectedOrder && openPrintWindow(generateShippingLabelHTML(selectedOrder))}><Tag className="h-4 w-4 mr-1" />Étiquette aller</Button>
                 <Button variant="outline" size="sm" onClick={() => selectedOrder && openPrintWindow(generateShippingLabelHTML(selectedOrder, true))}><Tag className="h-4 w-4 mr-1" />Étiquette retour</Button>
                 <Button variant="outline" size="sm" onClick={() => selectedOrder && openPrintWindow(generateInvoiceHTML(selectedOrder))}><Printer className="h-4 w-4 mr-1" />Facture</Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGenerateColissimoLabel}
+                  disabled={isGeneratingLabel}
+                  className="border-primary/40 text-primary hover:bg-primary/10"
+                >
+                  {isGeneratingLabel ? (
+                    <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Génération...</>
+                  ) : (
+                    <><Truck className="h-4 w-4 mr-1" />Étiquette Colissimo</>
+                  )}
+                </Button>
                 <Button onClick={handleSave} disabled={updateOrder.isPending}><Save className="h-4 w-4 mr-2" />Enregistrer</Button>
               </div>
             </div>
