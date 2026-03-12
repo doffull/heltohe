@@ -190,7 +190,7 @@ serve(async (req) => {
     }
 
     const payload: EmailPayload = await req.json();
-    const { customerEmail, customerName, orderNumber } = payload;
+    const { customerEmail, customerName, orderNumber, adminEmail } = payload;
 
     if (!customerEmail || !orderNumber) {
       return new Response(
@@ -201,6 +201,7 @@ serve(async (req) => {
 
     const html = buildEmailHtml(payload);
 
+    // Send customer confirmation email
     const resendResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -223,6 +224,28 @@ serve(async (req) => {
         JSON.stringify({ error: 'Failed to send email', details: resendData }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Send admin notification email if configured
+    if (adminEmail) {
+      const adminHtml = buildAdminEmailHtml(payload);
+      const adminRes = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${RESEND_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: 'LVTK6 Boutique <onboarding@resend.dev>',
+          to: [adminEmail],
+          subject: `🛍️ Nouvelle commande ${orderNumber} — ${customerName}`,
+          html: adminHtml,
+        }),
+      });
+      if (!adminRes.ok) {
+        const adminErr = await adminRes.json();
+        console.error('Admin notification email error:', adminErr);
+      }
     }
 
     return new Response(
