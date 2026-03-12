@@ -401,21 +401,34 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
           <div className="space-y-2">
             <Label className="text-xs">Image produit</Label>
             <div className="flex gap-3 items-start">
-              <div className="w-16 h-16 rounded-lg border border-border overflow-hidden bg-muted flex items-center justify-center shrink-0">
+              <div className="w-16 h-16 rounded-lg border border-border overflow-hidden bg-muted flex items-center justify-center shrink-0 relative group cursor-pointer" onClick={() => imageInputRef.current?.click()}>
                 {form.image && form.image !== '/placeholder.svg' ? (
                   <img src={form.image} alt="Produit" className="w-full h-full object-cover" />
                 ) : (
                   <ImageIcon className="h-6 w-6 text-muted-foreground" />
                 )}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
+                  <Upload className="h-4 w-4 text-white" />
+                </div>
               </div>
               <div className="flex-1 space-y-1.5">
-                <Input
-                  value={form.image}
-                  onChange={e => setForm(p => ({ ...p, image: e.target.value }))}
-                  placeholder="URL de l'image..."
-                  className="h-8 text-xs"
-                />
-                <p className="text-[10px] text-muted-foreground">Collez l'URL d'une image ou laissez vide pour le placeholder</p>
+                <div className="flex gap-1.5">
+                  <Input
+                    value={form.image}
+                    onChange={e => setForm(p => ({ ...p, image: e.target.value }))}
+                    placeholder="URL de l'image..."
+                    className="h-8 text-xs flex-1"
+                  />
+                  <label>
+                    <Button type="button" variant="outline" size="sm" className="h-8 px-2 gap-1 shrink-0" disabled={uploadingImage} asChild>
+                      <span>
+                        {uploadingImage ? <><Upload className="h-3 w-3 animate-pulse" /></> : <><Upload className="h-3 w-3" /></>}
+                      </span>
+                    </Button>
+                    <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageFileUpload} disabled={uploadingImage} />
+                  </label>
+                </div>
+                <p className="text-[10px] text-muted-foreground">URL ou cliquez sur l'image / le bouton pour uploader</p>
               </div>
             </div>
           </div>
