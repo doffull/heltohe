@@ -60,6 +60,9 @@ export default function AdminProducts() {
   const [isParsing, setIsParsing] = useState(false);
   const [extractedProducts, setExtractedProducts] = useState<ExtractedProduct[]>([]);
   const [isImporting, setIsImporting] = useState(false);
+  // Inline stock edit
+  const [editingStockId, setEditingStockId] = useState<string | null>(null);
+  const [editingStockValue, setEditingStockValue] = useState<number>(0);
 
   // Bulk edit state
   const [bulkCategory, setBulkCategory] = useState('__unchanged__');
@@ -132,11 +135,36 @@ export default function AdminProducts() {
     }
   };
 
+  const handleSaveInlineStock = async (productId: string) => {
+    try {
+      await updateProduct.mutateAsync({ id: productId, stock: editingStockValue });
+      toast({ title: 'Stock mis à jour' });
+    } catch {
+      toast({ title: 'Erreur', variant: 'destructive' });
+    } finally {
+      setEditingStockId(null);
+    }
+  };
+
   const handleCreate = async (data: Omit<Product, 'id'>) => {
     try {
-      await createProduct.mutateAsync(data);
+      const created = await createProduct.mutateAsync(data);
       toast({ title: 'Produit créé' });
       setIsFormOpen(false);
+      // Auto-sync to inventory/stock central
+      try {
+        const { data: webLoc } = await supabase.from('locations').select('id').eq('type', 'web').maybeSingle();
+        if (webLoc && created?.id) {
+          const { data: inv } = await supabase.from('inventory').insert({
+            product_id: created.id, sku: data.sku, name: data.name, channel: 'b2c', threshold: 10,
+          }).select('id').single();
+          if (inv && data.stock > 0) {
+            await supabase.from('stock_levels').insert({
+              inventory_id: inv.id, location_id: webLoc.id, quantity: data.stock, reserved: 0,
+            });
+          }
+        }
+      } catch { /* silent — stock sync is non-critical */ }
     } catch {
       toast({ title: 'Erreur', variant: 'destructive' });
     }
@@ -363,9 +391,29 @@ export default function AdminProducts() {
                       )}
                     </td>
                     <td className="p-4 text-right">
-                      <span className={`text-sm font-bold ${product.stock === 0 ? 'text-destructive' : product.stock <= 5 ? 'text-yellow-500' : 'text-green-500'}`}>
-                        {product.stock}
-                      </span>
+                      {editingStockId === product.id ? (
+                        <div className="flex items-center gap-1 justify-end">
+                          <input
+                            type="number"
+                            min={0}
+                            value={editingStockValue}
+                            onChange={e => setEditingStockValue(Number(e.target.value))}
+                            onKeyDown={e => { if (e.key === 'Enter') handleSaveInlineStock(product.id); if (e.key === 'Escape') setEditingStockId(null); }}
+                            className="w-16 h-7 text-xs text-right border border-primary rounded px-1 bg-background"
+                            autoFocus
+                          />
+                          <button onClick={() => handleSaveInlineStock(product.id)} className="text-green-500 hover:text-green-400 text-xs">✓</button>
+                          <button onClick={() => setEditingStockId(null)} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
+                        </div>
+                      ) : (
+                        <span
+                          className={`text-sm font-bold cursor-pointer hover:underline decoration-dotted ${product.stock === 0 ? 'text-destructive' : product.stock <= 5 ? 'text-yellow-500' : 'text-green-500'}`}
+                          onClick={() => { setEditingStockId(product.id); setEditingStockValue(product.stock); }}
+                          title="Cliquer pour modifier le stock"
+                        >
+                          {product.stock}
+                        </span>
+                      )}
                     </td>
                     <td className="p-4 text-right">
                       <DropdownMenu>

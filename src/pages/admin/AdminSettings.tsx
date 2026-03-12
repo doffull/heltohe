@@ -331,11 +331,41 @@ export default function AdminSettings() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="hud-text text-xs">Nom du site</Label>
-                <Input defaultValue="LVTK6 Concept" className="bg-secondary/50 border-border/30" />
+                <Input
+                  value={designSettings.siteName ?? ''}
+                  onChange={e => updateDesignSettings({ siteName: e.target.value } as any)}
+                  placeholder="Nom de votre boutique"
+                  className="bg-secondary/50 border-border/30"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="hud-text text-xs">Tagline / Slogan</Label>
+                <Input
+                  value={(designSettings as any).siteTagline ?? ''}
+                  onChange={e => updateDesignSettings({ siteTagline: e.target.value } as any)}
+                  placeholder="Votre slogan..."
+                  className="bg-secondary/50 border-border/30"
+                />
               </div>
               <div className="space-y-2">
                 <Label className="hud-text text-xs">Email de contact</Label>
-                <Input defaultValue="contact@lvtk6.com" className="bg-secondary/50 border-border/30" />
+                <Input
+                  type="email"
+                  value={(designSettings as any).contactEmail ?? ''}
+                  onChange={e => updateDesignSettings({ contactEmail: e.target.value } as any)}
+                  placeholder="contact@votredomaine.com"
+                  className="bg-secondary/50 border-border/30"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="hud-text text-xs">Téléphone de contact</Label>
+                <Input
+                  type="tel"
+                  value={(designSettings as any).contactPhone ?? ''}
+                  onChange={e => updateDesignSettings({ contactPhone: e.target.value } as any)}
+                  placeholder="+33 6 00 00 00 00"
+                  className="bg-secondary/50 border-border/30"
+                />
               </div>
             </div>
             <div className="space-y-2">
@@ -343,7 +373,7 @@ export default function AdminSettings() {
               <Input defaultValue="EUR (€)" className="bg-secondary/50 border-border/30" disabled />
             </div>
             <p className="text-xs text-muted-foreground">
-              Les paramètres de design avancés (logo, couleurs, HUD) sont accessibles via la section Design dans le panneau admin.
+              Ces informations sont sauvegardées automatiquement. Les paramètres de design avancés sont accessibles via la section Design.
             </p>
           </div>
 

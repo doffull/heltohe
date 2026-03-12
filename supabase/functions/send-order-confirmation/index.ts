@@ -24,6 +24,7 @@ interface EmailPayload {
   total: number;
   deliveryMode: 'home' | 'relay';
   adminEmail?: string;
+  emailType?: 'order_confirmation' | 'payment_confirmation' | 'resend_confirmation';
 }
 
 function buildEmailHtml(payload: EmailPayload): string {
@@ -152,6 +153,125 @@ function buildEmailHtml(payload: EmailPayload): string {
             <td style="padding: 24px 40px 0;">
               <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; padding: 16px; font-size: 14px; color: #15803d;">
                 📦 Expédition <strong>${deliveryLabel}</strong> dès validation de votre paiement.
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 40px; border-top: 1px solid #f0f0f0; margin-top: 32px;">
+              <p style="margin: 0; font-size: 12px; color: #aaa; text-align: center; line-height: 1.8;">
+                Une question ? Contactez-nous par email ou via le chat sur notre site.<br>
+                Cet email a été envoyé à <strong>${customerEmail}</strong>.
+              </p>
+              <p style="margin: 16px 0 0; font-size: 11px; color: #ccc; text-align: center; letter-spacing: 2px; text-transform: uppercase;">
+                LVTK6 Concept Store
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+function buildPaymentConfirmationHtml(payload: EmailPayload): string {
+  const { orderNumber, customerName, customerEmail, items, subtotal, shippingCost, total, deliveryMode } = payload;
+  const firstName = customerName.split(' ')[0];
+  const deliveryLabel = deliveryMode === 'relay' ? 'Colissimo Point Relais (3–5 jours)' : 'Colissimo Domicile (2–3 jours)';
+
+  const itemsRows = items.map(item => `
+    <tr>
+      <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; color: #111;">
+        <strong>${item.name}</strong>
+        ${item.size ? `<br><span style="color: #888; font-size: 12px;">Taille: ${item.size}</span>` : ''}
+        ${item.color ? `<span style="color: #888; font-size: 12px;"> / ${item.color}</span>` : ''}
+      </td>
+      <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; text-align: center; font-size: 14px; color: #555;">×${item.quantity}</td>
+      <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; text-align: right; font-size: 14px; font-weight: bold; color: #111;">
+        ${(item.price * item.quantity).toFixed(2)} €
+      </td>
+    </tr>
+  `).join('');
+
+  return `
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paiement reçu — ${orderNumber}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 4px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color: #111111; padding: 32px 40px; text-align: center;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 22px; font-weight: 900; letter-spacing: 4px; text-transform: uppercase;">LVTK6</h1>
+              <p style="margin: 6px 0 0; color: #888; font-size: 11px; letter-spacing: 2px; text-transform: uppercase;">Concept Store</p>
+            </td>
+          </tr>
+
+          <!-- Payment confirmed banner -->
+          <tr>
+            <td style="background-color: #f0fdf4; border-bottom: 2px solid #22c55e; padding: 20px 40px; text-align: center;">
+              <p style="margin: 0; font-size: 16px; font-weight: 700; color: #15803d;">✅ Paiement reçu et confirmé</p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding: 40px 40px 0;">
+              <h2 style="margin: 0 0 8px; font-size: 20px; color: #111; font-weight: 700;">Votre paiement a été reçu !</h2>
+              <p style="margin: 0 0 24px; color: #555; font-size: 15px; line-height: 1.6;">
+                Bonjour <strong>${firstName}</strong>,<br>
+                Nous avons bien reçu votre paiement pour la commande <strong>${orderNumber}</strong>. Votre commande est maintenant en cours de préparation et sera expédiée très prochainement.
+              </p>
+              <p style="margin: 0 0 32px; display: inline-block; background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px 16px; border-radius: 4px; font-size: 13px; color: #15803d; font-weight: 600;">
+                Commande ${orderNumber} — Payée ✓
+              </p>
+            </td>
+          </tr>
+
+          <!-- Order items -->
+          <tr>
+            <td style="padding: 0 40px;">
+              <h3 style="margin: 0 0 16px; font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #888;">Récapitulatif</h3>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tbody>${itemsRows}</tbody>
+              </table>
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-top: 16px;">
+                <tr>
+                  <td style="padding: 6px 0; font-size: 14px; color: #555;">Sous-total</td>
+                  <td style="padding: 6px 0; text-align: right; font-size: 14px; color: #555;">${subtotal.toFixed(2)} €</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; font-size: 14px; color: #555;">Livraison (${deliveryLabel})</td>
+                  <td style="padding: 6px 0; text-align: right; font-size: 14px; color: #555;">
+                    ${shippingCost === 0 ? '<span style="color: #22c55e; font-weight: 600;">GRATUIT</span>' : `${shippingCost.toFixed(2)} €`}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 0 0; font-size: 16px; font-weight: 700; color: #111; border-top: 2px solid #111;">TOTAL PAYÉ</td>
+                  <td style="padding: 12px 0 0; text-align: right; font-size: 18px; font-weight: 900; color: #22c55e; border-top: 2px solid #111;">${total.toFixed(2)} €</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Shipping info -->
+          <tr>
+            <td style="padding: 32px 40px 0;">
+              <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; padding: 16px; font-size: 14px; color: #1d4ed8;">
+                🚚 Votre commande sera expédiée en <strong>${deliveryLabel}</strong>. Vous recevrez un email avec votre numéro de suivi dès l'expédition.
               </div>
             </td>
           </tr>
@@ -307,7 +427,7 @@ serve(async (req) => {
     }
 
     const payload: EmailPayload = await req.json();
-    const { customerEmail, customerName, orderNumber, adminEmail } = payload;
+    const { customerEmail, customerName, orderNumber, adminEmail, emailType = 'order_confirmation' } = payload;
 
     if (!customerEmail || !orderNumber) {
       return new Response(
@@ -316,9 +436,21 @@ serve(async (req) => {
       );
     }
 
-    const html = buildEmailHtml(payload);
+    let html: string;
+    let subject: string;
 
-    // Send customer confirmation email
+    if (emailType === 'payment_confirmation') {
+      html = buildPaymentConfirmationHtml(payload);
+      subject = `✅ Paiement reçu — Commande ${orderNumber} — LVTK6`;
+    } else {
+      // order_confirmation or resend_confirmation
+      html = buildEmailHtml(payload);
+      subject = emailType === 'resend_confirmation'
+        ? `[Renvoi] Confirmation de commande ${orderNumber} — LVTK6`
+        : `Confirmation de commande ${orderNumber} — LVTK6`;
+    }
+
+    // Send customer email
     const resendResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -328,7 +460,7 @@ serve(async (req) => {
       body: JSON.stringify({
         from: 'LVTK6 Concept <onboarding@resend.dev>',
         to: [customerEmail],
-        subject: `Confirmation de commande ${orderNumber} — LVTK6`,
+        subject,
         html,
       }),
     });
@@ -343,8 +475,8 @@ serve(async (req) => {
       );
     }
 
-    // Send admin notification email if configured
-    if (adminEmail) {
+    // Send admin notification email if configured (only for new orders)
+    if (adminEmail && emailType === 'order_confirmation') {
       const adminHtml = buildAdminEmailHtml(payload);
       const adminRes = await fetch('https://api.resend.com/emails', {
         method: 'POST',

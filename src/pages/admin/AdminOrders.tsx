@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useOrders, useUpdateOrder, useBulkDeleteOrders } from '@/hooks/useOrders';
+import { useDesignSettings } from '@/hooks/useDesignSettings';
 import { Order, OrderStatus, PaymentStatus, OrderItem } from '@/types';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   Package, Clock, Truck, CheckCircle, XCircle, Eye, FileText, Save, Printer, Mail, ExternalLink, Trash2,
-  CreditCard, Banknote, MapPin, FileDown, Tag, Search, Filter, Loader2
+  CreditCard, Banknote, MapPin, FileDown, Tag, Search, Filter, Loader2, RefreshCw, CheckSquare, ArrowUpDown
 } from 'lucide-react';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -121,14 +122,18 @@ interface EditForm {
 export default function AdminOrders() {
   const { toast } = useToast();
   const { data: orders = [], isLoading } = useOrders();
+  const { data: designSettings } = useDesignSettings();
   const updateOrder = useUpdateOrder();
   const bulkDelete = useBulkDeleteOrders();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [editForm, setEditForm] = useState<EditForm | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isGeneratingLabel, setIsGeneratingLabel] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [isMarkingPaid, setIsMarkingPaid] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('date-desc');
 
   let filteredOrders = orders.filter(o => {
     if (searchQuery) {
@@ -138,6 +143,16 @@ export default function AdminOrders() {
     if (statusFilter !== 'all' && o.status !== statusFilter) return false;
     if (paymentFilter !== 'all' && o.paymentStatus !== paymentFilter) return false;
     return true;
+  });
+
+  // Sort
+  filteredOrders = [...filteredOrders].sort((a, b) => {
+    if (sortBy === 'date-desc') return new Date(b.date).getTime() - new Date(a.date).getTime();
+    if (sortBy === 'date-asc') return new Date(a.date).getTime() - new Date(b.date).getTime();
+    if (sortBy === 'total-desc') return b.total - a.total;
+    if (sortBy === 'total-asc') return a.total - b.total;
+    if (sortBy === 'status') return a.status.localeCompare(b.status);
+    return 0;
   });
 
   const { selectedIds, toggle, toggleAll, clear, allSelected, someSelected, count, ids } = useBulkSelection(filteredOrders);
@@ -201,6 +216,66 @@ export default function AdminOrders() {
     }
   };
 
+  const handleResendConfirmation = async () => {
+    if (!selectedOrder) return;
+    setIsResending(true);
+    try {
+      const { error } = await supabase.functions.invoke('send-order-confirmation', {
+        body: {
+          orderNumber: selectedOrder.orderNumber,
+          customerName: selectedOrder.customer.name,
+          customerEmail: selectedOrder.customer.email,
+          items: selectedOrder.items.map(i => ({ name: i.name, price: i.price || 0, quantity: i.quantity, size: i.size, color: i.color })),
+          subtotal: selectedOrder.subtotal,
+          shippingCost: selectedOrder.shippingCost,
+          total: selectedOrder.total,
+          deliveryMode: 'home',
+          emailType: 'resend_confirmation',
+        },
+      });
+      if (error) throw error;
+      toast({ title: 'Email de confirmation renvoyé', description: `À ${selectedOrder.customer.email}` });
+    } catch (err: any) {
+      toast({ title: 'Erreur envoi email', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  const handleMarkAsPaid = async (order?: Order) => {
+    const targetOrder = order || selectedOrder;
+    if (!targetOrder) return;
+    setIsMarkingPaid(true);
+    try {
+      await updateOrder.mutateAsync({ id: targetOrder.id, paymentStatus: 'Paid' });
+
+      // Send payment confirmation email
+      const { error } = await supabase.functions.invoke('send-order-confirmation', {
+        body: {
+          orderNumber: targetOrder.orderNumber,
+          customerName: targetOrder.customer.name,
+          customerEmail: targetOrder.customer.email,
+          items: targetOrder.items.map(i => ({ name: i.name, price: i.price || 0, quantity: i.quantity, size: i.size, color: i.color })),
+          subtotal: targetOrder.subtotal,
+          shippingCost: targetOrder.shippingCost,
+          total: targetOrder.total,
+          deliveryMode: 'home',
+          emailType: 'payment_confirmation',
+        },
+      });
+      if (error) console.error('Payment email error:', error);
+      
+      toast({ title: '✅ Paiement marqué', description: `Email de confirmation envoyé à ${targetOrder.customer.email}` });
+      if (editForm) {
+        setEditForm({ ...editForm, paymentStatus: 'Paid' });
+      }
+    } catch (err: any) {
+      toast({ title: 'Erreur', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsMarkingPaid(false);
+    }
+  };
+
   const handleGenerateColissimoLabel = async () => {
     if (!selectedOrder) return;
     setIsGeneratingLabel(true);
@@ -226,7 +301,6 @@ export default function AdminOrders() {
 
       if (data?.trackingNumber && editForm) {
         setEditForm({ ...editForm, trackingNumber: data.trackingNumber, shippingCarrier: 'Colissimo' });
-        // Save tracking number to DB immediately
         await updateOrder.mutateAsync({
           id: selectedOrder.id,
           trackingNumber: data.trackingNumber,
@@ -236,7 +310,6 @@ export default function AdminOrders() {
       }
 
       if (data?.pdfBase64) {
-        // Download PDF
         const blob = new Blob(
           [Uint8Array.from(atob(data.pdfBase64), c => c.charCodeAt(0))],
           { type: 'application/pdf' }
@@ -289,6 +362,16 @@ export default function AdminOrders() {
           <SelectContent>
             <SelectItem value="all">Tous paiements</SelectItem>
             {PAYMENT_STATUS_OPTIONS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="w-[160px]"><ArrowUpDown className="h-3 w-3 mr-2" /><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="date-desc">Date (récent → ancien)</SelectItem>
+            <SelectItem value="date-asc">Date (ancien → récent)</SelectItem>
+            <SelectItem value="total-desc">Total (haut → bas)</SelectItem>
+            <SelectItem value="total-asc">Total (bas → haut)</SelectItem>
+            <SelectItem value="status">Par statut</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -362,11 +445,21 @@ export default function AdminOrders() {
                         )}
                       </td>
                       <td className="p-4">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           {getPaymentIcon(order.paymentMethod)}
                           <span className={`text-xs font-bold ${order.paymentStatus === 'Paid' ? 'text-green-500' : order.paymentStatus === 'Failed' ? 'text-destructive' : 'text-yellow-500'}`}>
                             {PAYMENT_STATUS_OPTIONS.find(o => o.value === order.paymentStatus)?.label || order.paymentStatus}
                           </span>
+                          {order.paymentStatus !== 'Paid' && (
+                            <button
+                              onClick={() => handleMarkAsPaid(order)}
+                              disabled={isMarkingPaid}
+                              className="text-[10px] text-green-500 hover:text-green-400 underline"
+                              title="Marquer comme payé"
+                            >
+                              Marquer payé
+                            </button>
+                          )}
                         </div>
                       </td>
                       <td className="p-4 text-right">
@@ -484,6 +577,28 @@ export default function AdminOrders() {
                 <Button variant="outline" size="sm" onClick={() => selectedOrder && openPrintWindow(generateShippingLabelHTML(selectedOrder))}><Tag className="h-4 w-4 mr-1" />Étiquette aller</Button>
                 <Button variant="outline" size="sm" onClick={() => selectedOrder && openPrintWindow(generateShippingLabelHTML(selectedOrder, true))}><Tag className="h-4 w-4 mr-1" />Étiquette retour</Button>
                 <Button variant="outline" size="sm" onClick={() => selectedOrder && openPrintWindow(generateInvoiceHTML(selectedOrder))}><Printer className="h-4 w-4 mr-1" />Facture</Button>
+                {/* Resend confirmation */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResendConfirmation}
+                  disabled={isResending}
+                  className="border-blue-500/40 text-blue-500 hover:bg-blue-500/10"
+                >
+                  {isResending ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Envoi...</> : <><RefreshCw className="h-4 w-4 mr-1" />Renvoyer confirmation</>}
+                </Button>
+                {/* Mark as paid */}
+                {editForm.paymentStatus !== 'Paid' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleMarkAsPaid()}
+                    disabled={isMarkingPaid}
+                    className="border-green-500/40 text-green-500 hover:bg-green-500/10"
+                  >
+                    {isMarkingPaid ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Traitement...</> : <><CheckSquare className="h-4 w-4 mr-1" />Marquer comme payé</>}
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
-  Users, Search, Mail, Phone, Crown, TrendingUp, Eye, Trash2, Filter
+  Users, Search, Mail, Phone, Crown, TrendingUp, Eye, Trash2, Filter, ArrowUpDown
 } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -30,15 +30,25 @@ export default function AdminCustomers() {
   const bulkDelete = useBulkDeleteCustomers();
   const [searchQuery, setSearchQuery] = useState('');
   const [tierFilter, setTierFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('name');
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerRecord | null>(null);
 
-  const filtered = customers.filter(c => {
+  let filtered = customers.filter(c => {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       if (!c.email.toLowerCase().includes(q) && !`${c.firstName} ${c.lastName}`.toLowerCase().includes(q)) return false;
     }
     if (tierFilter !== 'all' && c.loyaltyTier !== tierFilter) return false;
     return true;
+  });
+
+  filtered = [...filtered].sort((a, b) => {
+    if (sortBy === 'name') return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
+    if (sortBy === 'spent-desc') return b.totalSpent - a.totalSpent;
+    if (sortBy === 'spent-asc') return a.totalSpent - b.totalSpent;
+    if (sortBy === 'points-desc') return b.loyaltyPoints - a.loyaltyPoints;
+    if (sortBy === 'date-desc') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    return 0;
   });
 
   const { selectedIds, toggle, toggleAll, clear, allSelected, someSelected, count, ids } = useBulkSelection(filtered);
@@ -86,6 +96,16 @@ export default function AdminCustomers() {
             <SelectItem value="silver">Silver</SelectItem>
             <SelectItem value="gold">Gold</SelectItem>
             <SelectItem value="platinum">Platinum</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="w-[180px]"><ArrowUpDown className="h-3 w-3 mr-2" /><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="name">Nom A-Z</SelectItem>
+            <SelectItem value="spent-desc">Dépenses (haut → bas)</SelectItem>
+            <SelectItem value="spent-asc">Dépenses (bas → haut)</SelectItem>
+            <SelectItem value="points-desc">Points fidélité</SelectItem>
+            <SelectItem value="date-desc">Inscription récente</SelectItem>
           </SelectContent>
         </Select>
       </div>
