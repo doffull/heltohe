@@ -106,6 +106,20 @@ export default function Checkout() {
 
       if (orderError) throw orderError;
 
+      // Send confirmation email (fire and forget — doesn't block order confirmation)
+      supabase.functions.invoke('send-order-confirmation', {
+        body: {
+          orderNumber: num,
+          customerName: `${form.firstName} ${form.lastName}`,
+          customerEmail: form.email,
+          items: orderItems,
+          subtotal: subtotal - promoDiscount,
+          shippingCost,
+          total: orderTotal,
+          deliveryMode,
+        },
+      }).catch(err => console.warn('Email confirmation failed (non-blocking):', err));
+
       setOrderNumber(num);
       clearCart();
       setStep('confirmation');
