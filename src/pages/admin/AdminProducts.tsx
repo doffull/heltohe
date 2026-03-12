@@ -391,9 +391,29 @@ export default function AdminProducts() {
                       )}
                     </td>
                     <td className="p-4 text-right">
-                      <span className={`text-sm font-bold ${product.stock === 0 ? 'text-destructive' : product.stock <= 5 ? 'text-yellow-500' : 'text-green-500'}`}>
-                        {product.stock}
-                      </span>
+                      {editingStockId === product.id ? (
+                        <div className="flex items-center gap-1 justify-end">
+                          <input
+                            type="number"
+                            min={0}
+                            value={editingStockValue}
+                            onChange={e => setEditingStockValue(Number(e.target.value))}
+                            onKeyDown={e => { if (e.key === 'Enter') handleSaveInlineStock(product.id); if (e.key === 'Escape') setEditingStockId(null); }}
+                            className="w-16 h-7 text-xs text-right border border-primary rounded px-1 bg-background"
+                            autoFocus
+                          />
+                          <button onClick={() => handleSaveInlineStock(product.id)} className="text-green-500 hover:text-green-400 text-xs">✓</button>
+                          <button onClick={() => setEditingStockId(null)} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
+                        </div>
+                      ) : (
+                        <span
+                          className={`text-sm font-bold cursor-pointer hover:underline decoration-dotted ${product.stock === 0 ? 'text-destructive' : product.stock <= 5 ? 'text-yellow-500' : 'text-green-500'}`}
+                          onClick={() => { setEditingStockId(product.id); setEditingStockValue(product.stock); }}
+                          title="Cliquer pour modifier le stock"
+                        >
+                          {product.stock}
+                        </span>
+                      )}
                     </td>
                     <td className="p-4 text-right">
                       <DropdownMenu>
