@@ -624,3 +624,24 @@
 .logo-visibility-filter {
   /* No forced filters — logo is displayed as-is */
 }
+
+/* ===== INLINE EDITABLE — Visual Editor ===== */
+.inline-editable-input {
+  display: inline;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+  text-transform: inherit;
+  width: auto;
+  min-width: 2ch;
+  max-width: 100%;
+  caret-color: hsl(var(--primary));
+  border-bottom: 2px dashed hsl(var(--primary) / 0.7);
+}
+

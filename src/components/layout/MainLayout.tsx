@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { MannequinHotspots } from './MannequinHotspot';
 import { SidebarProductHUD } from './SidebarProductHUD';
 import { ChatBotWidget } from './ChatBotWidget';
+import { InlineEditable } from '@/components/visual-editor/InlineEditable';
 import { 
   Search, 
   ShoppingBag, 
@@ -49,7 +50,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const location = useLocation();
   const { user, isAdmin } = useAuth();
   const { itemCount } = useCart();
-  const { designSettings, language, setLanguage } = useApp();
+  const { designSettings, language, setLanguage, updateDesignSettings } = useApp();
   const isMobile = useIsMobile();
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -196,7 +197,13 @@ export function MainLayout({ children }: MainLayoutProps) {
                 />
               ) : (
                 <span className="font-bold text-base tracking-wider uppercase">
-                  {(designSettings as any).siteName || 'LVTK6'}
+                  <InlineEditable
+                    fieldKey="header-sitename"
+                    value={(designSettings as any).siteName || 'LVTK6'}
+                    onChange={(v) => updateDesignSettings({ siteName: v } as any)}
+                    as="span"
+                    className="font-bold text-base tracking-wider uppercase"
+                  />
                 </span>
               )}
             </Link>

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Pencil, X } from 'lucide-react';
 import { useVisualEditor } from './VisualEditorProvider';
@@ -5,13 +6,23 @@ import { useVisualEditor } from './VisualEditorProvider';
 export function VisualEditorToggle() {
   const { isOpen, setIsOpen, isDirty } = useVisualEditor();
 
+  // Add/remove body class for global cursor hints
+  useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add('visual-editor-active');
+    } else {
+      document.body.classList.remove('visual-editor-active');
+    }
+    return () => document.body.classList.remove('visual-editor-active');
+  }, [isOpen]);
+
   return (
     <motion.button
       onClick={() => setIsOpen(!isOpen)}
       className="fixed left-4 top-1/2 -translate-y-1/2 z-[80] flex flex-col items-center gap-1 group"
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
-      title={isOpen ? 'Fermer l\'éditeur' : 'Ouvrir l\'éditeur visuel'}
+      title={isOpen ? "Fermer l'éditeur" : 'Ouvrir l\'éditeur visuel'}
     >
       {/* Main button */}
       <div className="relative w-11 h-11 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg ring-2 ring-primary/20 transition-all duration-200 group-hover:shadow-xl group-hover:ring-primary/40">

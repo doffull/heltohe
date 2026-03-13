@@ -3,12 +3,15 @@ import { useApp } from '@/context/AppContext';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { ProductGrid } from '@/components/products/ProductCard';
+import { InlineEditable } from '@/components/visual-editor/InlineEditable';
+import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
 
 export function ProductSections() {
-  const { designSettings, products, navigateToCategory, language } = useApp();
+  const { designSettings, updateDesignSettings, products, navigateToCategory, language } = useApp();
   const navigate = useNavigate();
   const { addItem } = useCart();
   const { toast } = useToast();
+  const { setIsDirty } = useVisualEditor();
   const { homeSections } = designSettings;
 
   const byTag = (tag: string) => products.filter(p => p.tags?.includes(tag));
@@ -61,7 +64,19 @@ export function ProductSections() {
                     // {section.id.toUpperCase()}_SECTION
                   </h2>
                   <h3 className="text-2xl font-bold tracking-tight">
-                    {section.title}
+                    <InlineEditable
+                      fieldKey={`section-title-${section.id}`}
+                      value={section.title}
+                      onChange={(v) => {
+                        const next = designSettings.homeSections.map(s =>
+                          s.id === section.id ? { ...s, title: v } : s
+                        );
+                        updateDesignSettings({ homeSections: next });
+                        setIsDirty(true);
+                      }}
+                      as="span"
+                      className="text-2xl font-bold tracking-tight"
+                    />
                   </h3>
                 </div>
                 <button
