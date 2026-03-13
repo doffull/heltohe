@@ -197,7 +197,13 @@ export function MainLayout({ children }: MainLayoutProps) {
                 />
               ) : (
                 <span className="font-bold text-base tracking-wider uppercase">
-                  {(designSettings as any).siteName || 'LVTK6'}
+                  <InlineEditable
+                    fieldKey="header-sitename"
+                    value={(designSettings as any).siteName || 'LVTK6'}
+                    onChange={(v) => updateDesignSettings({ siteName: v } as any)}
+                    as="span"
+                    className="font-bold text-base tracking-wider uppercase"
+                  />
                 </span>
               )}
             </Link>
