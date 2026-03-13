@@ -27,13 +27,7 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     siteTagline: (db.site_tagline as string) ?? base.siteTagline,
     contactEmail: (db.contact_email as string) ?? base.contactEmail,
     contactPhone: (db.contact_phone as string) ?? base.contactPhone,
-    adminNotificationEmail: (db.admin_notification_email as string) || undefined,
-
-    // Colissimo sender fields
-    colissimo_sender_name: (db.colissimo_sender_name as string) ?? '',
-    colissimo_sender_address: (db.colissimo_sender_address as string) ?? '',
-    colissimo_sender_zip: (db.colissimo_sender_zip as string) ?? '',
-    colissimo_sender_city: (db.colissimo_sender_city as string) ?? '',
+    // adminNotificationEmail and Colissimo sender fields moved to admin_config table
 
     // Sidebar HUD text fields
     sidebarBrandName: (db.sidebar_brand_name as string) ?? base.sidebarBrandName,
