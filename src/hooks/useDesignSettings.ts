@@ -126,12 +126,7 @@ function settingsToDb(s: DesignSettings) {
     site_tagline: s.siteTagline ?? '',
     contact_email: s.contactEmail ?? '',
     contact_phone: s.contactPhone ?? '',
-    admin_notification_email: s.adminNotificationEmail || null,
-    // Colissimo sender fields
-    colissimo_sender_name: s.colissimo_sender_name ?? '',
-    colissimo_sender_address: s.colissimo_sender_address ?? '',
-    colissimo_sender_zip: s.colissimo_sender_zip ?? '',
-    colissimo_sender_city: s.colissimo_sender_city ?? '',
+    // adminNotificationEmail and Colissimo sender fields moved to admin_config table
     // Core show/hide booleans
     show_logo: s.showLogo,
     show_stats: s.showStats,

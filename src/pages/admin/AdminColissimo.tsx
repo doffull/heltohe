@@ -1160,8 +1160,8 @@ function PointsRelaisTab() {
 
 function ConfigurationTab() {
   const { toast } = useToast();
-  const { data: settings } = useDesignSettings();
-  const save = useSaveDesignSettings();
+  const { data: adminConfig } = useAdminConfig();
+  const saveAdminConfig = useSaveAdminConfig();
   const [testStatus, setTestStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
   const [testError, setTestError] = useState('');
 
@@ -1173,28 +1173,27 @@ function ConfigurationTab() {
   });
 
   useEffect(() => {
-    if (settings) {
+    if (adminConfig) {
       setForm({
-        senderName: (settings as any).colissimo_sender_name || settings.siteName || '',
-        senderAddress: (settings as any).colissimo_sender_address || '',
-        senderZip: (settings as any).colissimo_sender_zip || '',
-        senderCity: (settings as any).colissimo_sender_city || '',
+        senderName: adminConfig.colissimoSenderName || '',
+        senderAddress: adminConfig.colissimoSenderAddress || '',
+        senderZip: adminConfig.colissimoSenderZip || '',
+        senderCity: adminConfig.colissimoSenderCity || '',
       });
     }
-  }, [settings]);
+  }, [adminConfig]);
 
   const handleChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(f => ({ ...f, [field]: e.target.value }));
 
   async function handleSave() {
-    if (!settings) return;
-    await save.mutateAsync({
-      ...settings,
-      colissimo_sender_name: form.senderName,
-      colissimo_sender_address: form.senderAddress,
-      colissimo_sender_zip: form.senderZip,
-      colissimo_sender_city: form.senderCity,
-    } as any);
+    await saveAdminConfig.mutateAsync({
+      ...adminConfig,
+      colissimoSenderName: form.senderName,
+      colissimoSenderAddress: form.senderAddress,
+      colissimoSenderZip: form.senderZip,
+      colissimoSenderCity: form.senderCity,
+    });
     toast({ title: 'Configuration sauvegardée' });
   }
 
