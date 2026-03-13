@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
+import { useAdminConfig } from '@/hooks/useAdminConfig';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -50,6 +51,7 @@ export default function Checkout() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { designSettings } = useApp();
+  const { data: adminConfig } = useAdminConfig();
   const { items, subtotal, promoDiscount, promoCode, total, clearCart } = useCart();
 
   const [step, setStep] = useState<Step>('address');
@@ -189,7 +191,7 @@ export default function Checkout() {
           shippingCost: result.shippingCost,
           total: result.total,
           deliveryMode,
-          adminEmail: designSettings.adminNotificationEmail || undefined,
+          adminEmail: adminConfig?.adminNotificationEmail || undefined,
         },
       }).catch(() => {/* non-blocking, swallow silently */});
 

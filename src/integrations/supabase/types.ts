@@ -73,6 +73,42 @@ export type Database = {
           },
         ]
       }
+      admin_config: {
+        Row: {
+          admin_notification_email: string | null
+          colissimo_sender_address: string | null
+          colissimo_sender_city: string | null
+          colissimo_sender_name: string | null
+          colissimo_sender_zip: string | null
+          config_key: string
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notification_email?: string | null
+          colissimo_sender_address?: string | null
+          colissimo_sender_city?: string | null
+          colissimo_sender_name?: string | null
+          colissimo_sender_zip?: string | null
+          config_key?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notification_email?: string | null
+          colissimo_sender_address?: string | null
+          colissimo_sender_city?: string | null
+          colissimo_sender_name?: string | null
+          colissimo_sender_zip?: string | null
+          config_key?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       banners: {
         Row: {
           button_text: string | null

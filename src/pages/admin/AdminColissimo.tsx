@@ -28,6 +28,7 @@ import {
 import { useOrders } from '@/hooks/useOrders';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDesignSettings, useSaveDesignSettings } from '@/hooks/useDesignSettings';
+import { useAdminConfig, useSaveAdminConfig } from '@/hooks/useAdminConfig';
 import { Order } from '@/types';
 
 // Leaflet
@@ -1160,8 +1161,8 @@ function PointsRelaisTab() {
 
 function ConfigurationTab() {
   const { toast } = useToast();
-  const { data: settings } = useDesignSettings();
-  const save = useSaveDesignSettings();
+  const { data: adminConfig } = useAdminConfig();
+  const saveAdminConfig = useSaveAdminConfig();
   const [testStatus, setTestStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
   const [testError, setTestError] = useState('');
 
@@ -1173,28 +1174,27 @@ function ConfigurationTab() {
   });
 
   useEffect(() => {
-    if (settings) {
+    if (adminConfig) {
       setForm({
-        senderName: (settings as any).colissimo_sender_name || settings.siteName || '',
-        senderAddress: (settings as any).colissimo_sender_address || '',
-        senderZip: (settings as any).colissimo_sender_zip || '',
-        senderCity: (settings as any).colissimo_sender_city || '',
+        senderName: adminConfig.colissimoSenderName || '',
+        senderAddress: adminConfig.colissimoSenderAddress || '',
+        senderZip: adminConfig.colissimoSenderZip || '',
+        senderCity: adminConfig.colissimoSenderCity || '',
       });
     }
-  }, [settings]);
+  }, [adminConfig]);
 
   const handleChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(f => ({ ...f, [field]: e.target.value }));
 
   async function handleSave() {
-    if (!settings) return;
-    await save.mutateAsync({
-      ...settings,
-      colissimo_sender_name: form.senderName,
-      colissimo_sender_address: form.senderAddress,
-      colissimo_sender_zip: form.senderZip,
-      colissimo_sender_city: form.senderCity,
-    } as any);
+    await saveAdminConfig.mutateAsync({
+      ...adminConfig,
+      colissimoSenderName: form.senderName,
+      colissimoSenderAddress: form.senderAddress,
+      colissimoSenderZip: form.senderZip,
+      colissimoSenderCity: form.senderCity,
+    });
     toast({ title: 'Configuration sauvegardée' });
   }
 
@@ -1281,8 +1281,8 @@ function ConfigurationTab() {
               </div>
             </div>
           </div>
-          <Button onClick={handleSave} disabled={save.isPending} className="gap-2">
-            {save.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          <Button onClick={handleSave} disabled={saveAdminConfig.isPending} className="gap-2">
+            {saveAdminConfig.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Sauvegarder
           </Button>
         </CardContent>
@@ -1309,11 +1309,12 @@ function ConfigurationTab() {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function AdminColissimo() {
+  const { data: adminConfig } = useAdminConfig();
   const { data: settings } = useDesignSettings();
-  const senderName = (settings as any)?.colissimo_sender_name || settings?.siteName || 'LVTK6 Concept Store';
-  const senderAddress = (settings as any)?.colissimo_sender_address || '1 Rue de la Paix';
-  const senderZip = (settings as any)?.colissimo_sender_zip || '75001';
-  const senderCity = (settings as any)?.colissimo_sender_city || 'Paris';
+  const senderName = adminConfig?.colissimoSenderName || settings?.siteName || 'LVTK6 Concept Store';
+  const senderAddress = adminConfig?.colissimoSenderAddress || '1 Rue de la Paix';
+  const senderZip = adminConfig?.colissimoSenderZip || '75001';
+  const senderCity = adminConfig?.colissimoSenderCity || 'Paris';
 
   return (
     <div className="space-y-6">
