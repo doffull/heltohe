@@ -421,28 +421,40 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Auth check — only authenticated users may trigger email sends
+  // Auth check — reject requests with no Supabase credentials at all.
+  // We accept:
+  //   1. Authenticated users (Bearer JWT from supabase.functions.invoke with a logged-in session)
+  //   2. Anon/guest users (apikey header sent automatically by the Supabase JS SDK)
+  // We reject: raw unauthenticated HTTP requests (no Authorization header AND no apikey).
   const authHeader = req.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
+  const apiKeyHeader = req.headers.get('apikey');
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+  if (!authHeader && !apiKeyHeader) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 
-  const supabaseClient = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_ANON_KEY')!,
-    { global: { headers: { Authorization: authHeader } } }
-  );
-
-  const token = authHeader.replace('Bearer ', '');
-  const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
-  if (claimsError || !claimsData?.claims) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+  // If Bearer token present, validate it belongs to a real user session
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.replace('Bearer ', '');
+    // Only validate as user JWT if it's not just the anon key being passed as Bearer
+    if (token !== supabaseAnonKey) {
+      const supabaseClient = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        supabaseAnonKey,
+        { global: { headers: { Authorization: authHeader } } }
+      );
+      const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
+      if (claimsError || !claimsData?.claims) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
   }
 
   try {
