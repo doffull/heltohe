@@ -263,6 +263,7 @@ export default function AdminMarketing() {
           <TabsTrigger value="banners" className="gap-2"><Image className="h-4 w-4" />Bannières</TabsTrigger>
           <TabsTrigger value="promos" className="gap-2"><Tag className="h-4 w-4" />Codes Promo</TabsTrigger>
           <TabsTrigger value="newsletter" className="gap-2"><Mail className="h-4 w-4" />Newsletter</TabsTrigger>
+          <TabsTrigger value="styles" className="gap-2"><Palette className="h-4 w-4" />Styles</TabsTrigger>
         </TabsList>
 
         {/* ── BANNERS TAB ── */}
