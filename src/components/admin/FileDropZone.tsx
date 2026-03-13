@@ -77,8 +77,19 @@ export function FileDropZone({
     <div className={cn("relative", className)}>
       {currentFile ? (
         <div className="relative border border-border rounded-lg overflow-hidden bg-muted">
-          {fileType === 'image' && (
-            <img src={currentFile} alt="" className="w-full h-40 object-cover" />
+          {(fileType === 'image' || fileType === 'unknown') && (
+            <div className="w-full h-40 flex items-center justify-center bg-muted p-2">
+              <img
+                src={currentFile}
+                alt=""
+                className="max-w-full max-h-full object-contain"
+                onError={(e) => {
+                  // If image fails to load, show fallback
+                  (e.target as HTMLImageElement).style.display = 'none';
+                  (e.target as HTMLImageElement).parentElement!.innerHTML += '<span class="text-xs text-muted-foreground">Aperçu non disponible</span>';
+                }}
+              />
+            </div>
           )}
           {fileType === 'video' && (
             <video src={currentFile} className="w-full h-40 object-cover" controls muted />
@@ -86,11 +97,6 @@ export function FileDropZone({
           {fileType === 'audio' && (
             <div className="h-40 flex items-center justify-center p-4">
               <audio src={currentFile} controls className="w-full" />
-            </div>
-          )}
-          {fileType === 'unknown' && (
-            <div className="h-40 flex items-center justify-center text-muted-foreground">
-              Fichier uploadé
             </div>
           )}
           <Button
