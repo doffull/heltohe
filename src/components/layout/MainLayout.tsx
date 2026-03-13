@@ -50,7 +50,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const location = useLocation();
   const { user, isAdmin } = useAuth();
   const { itemCount } = useCart();
-  const { designSettings, language, setLanguage } = useApp();
+  const { designSettings, language, setLanguage, updateDesignSettings } = useApp();
   const isMobile = useIsMobile();
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
