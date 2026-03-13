@@ -423,6 +423,7 @@ export type Database = {
           id: string
           is_slideshow_active: boolean | null
           logo_style: Json | null
+          mannequin_hotspots: Json
           mobile_sidebar_image: string | null
           mobile_sidebar_media_type: string | null
           pages: Json | null
@@ -508,6 +509,7 @@ export type Database = {
           id?: string
           is_slideshow_active?: boolean | null
           logo_style?: Json | null
+          mannequin_hotspots?: Json
           mobile_sidebar_image?: string | null
           mobile_sidebar_media_type?: string | null
           pages?: Json | null
@@ -593,6 +595,7 @@ export type Database = {
           id?: string
           is_slideshow_active?: boolean | null
           logo_style?: Json | null
+          mannequin_hotspots?: Json
           mobile_sidebar_image?: string | null
           mobile_sidebar_media_type?: string | null
           pages?: Json | null
@@ -995,6 +998,72 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      product_looks: {
+        Row: {
+          cover_image: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          product_ids: string[]
+          updated_at: string
+        }
+        Insert: {
+          cover_image?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          product_ids?: string[]
+          updated_at?: string
+        }
+        Update: {
+          cover_image?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          product_ids?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      product_styles: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          image: string | null
+          is_active: boolean
+          name: string
+          product_ids: string[]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image?: string | null
+          is_active?: boolean
+          name: string
+          product_ids?: string[]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image?: string | null
+          is_active?: boolean
+          name?: string
+          product_ids?: string[]
+          updated_at?: string
+        }
+        Relationships: []
       }
       products: {
         Row: {

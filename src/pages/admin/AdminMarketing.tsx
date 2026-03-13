@@ -3,14 +3,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useBanners, useCreateBanner, useUpdateBanner, useDeleteBanner, BannerRecord } from '@/hooks/useBanners';
 import { usePromoCodes, useCreatePromoCode, useUpdatePromoCode, useDeletePromoCode, PromoCode } from '@/hooks/usePromoCodes';
 import { useNewsletters, useDeleteNewsletter } from '@/hooks/useNewsletters';
+import { useProductStyles, useCreateProductStyle, useUpdateProductStyle, useDeleteProductStyle, ProductStyle } from '@/hooks/useProductStyles';
+import { useProducts } from '@/hooks/useProducts';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import { FileDropZone } from '@/components/admin/FileDropZone';
 import { 
   Plus, Trash2, Pencil, Image, Tag, Mail, 
-  MoreHorizontal, Megaphone 
+  MoreHorizontal, Megaphone, Palette, Check
 } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -184,6 +188,7 @@ function PromoForm({ promo, onSubmit, onCancel }: {
 // ── MAIN COMPONENT ──
 export default function AdminMarketing() {
   const { toast } = useToast();
+  const { data: products = [] } = useProducts();
 
   // Banners
   const { data: banners = [], isLoading: loadingBanners } = useBanners();
@@ -204,6 +209,15 @@ export default function AdminMarketing() {
   // Newsletter
   const { data: subs = [], isLoading: loadingSubs } = useNewsletters();
   const deleteNewsletter = useDeleteNewsletter();
+
+  // Styles
+  const { data: styles = [], isLoading: loadingStyles } = useProductStyles();
+  const createStyle = useCreateProductStyle();
+  const updateStyle = useUpdateProductStyle();
+  const deleteStyle = useDeleteProductStyle();
+  const [styleDialogOpen, setStyleDialogOpen] = useState(false);
+  const [editingStyle, setEditingStyle] = useState<ProductStyle | null>(null);
+  const [styleForm, setStyleForm] = useState({ name: '', description: '', image: '', productIds: [] as string[], isActive: true });
 
   // Banner handlers
   const handleBannerSubmit = async (data: Omit<BannerRecord, 'id'>) => {
@@ -249,6 +263,7 @@ export default function AdminMarketing() {
           <TabsTrigger value="banners" className="gap-2"><Image className="h-4 w-4" />Bannières</TabsTrigger>
           <TabsTrigger value="promos" className="gap-2"><Tag className="h-4 w-4" />Codes Promo</TabsTrigger>
           <TabsTrigger value="newsletter" className="gap-2"><Mail className="h-4 w-4" />Newsletter</TabsTrigger>
+          <TabsTrigger value="styles" className="gap-2"><Palette className="h-4 w-4" />Styles</TabsTrigger>
         </TabsList>
 
         {/* ── BANNERS TAB ── */}
@@ -457,6 +472,82 @@ export default function AdminMarketing() {
             )}
           </div>
         </TabsContent>
+
+        {/* ── STYLES TAB ── */}
+        <TabsContent value="styles" className="space-y-4">
+          <div className="flex justify-end">
+            <Button
+              onClick={() => {
+                setEditingStyle(null);
+                setStyleForm({ name: '', description: '', image: '', productIds: [], isActive: true });
+                setStyleDialogOpen(true);
+              }}
+              className="chamfer-hud-sm"
+            >
+              <Plus className="h-4 w-4 mr-2" />Nouveau style
+            </Button>
+          </div>
+          <div className="chamfer-hud bg-card/50 overflow-hidden">
+            {loadingStyles ? (
+              <div className="p-12 text-center"><div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto" /></div>
+            ) : styles.length === 0 ? (
+              <div className="p-12 text-center">
+                <Palette className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">Aucun style éditorial créé</p>
+                <p className="text-xs text-muted-foreground mt-1">Créez des fiches ambiance avec image + produits associés</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+                {styles.map((style) => {
+                  const styleProducts = products.filter(p => style.productIds.includes(p.id));
+                  return (
+                    <div key={style.id} className="border border-border rounded-lg overflow-hidden hover:border-primary/40 transition-colors">
+                      {style.image && (
+                        <div className="h-32 overflow-hidden">
+                          <img src={style.image} alt={style.name} className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                      <div className="p-4">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div>
+                            <p className="font-bold text-sm">{style.name}</p>
+                            {style.description && <p className="text-xs text-muted-foreground mt-0.5">{style.description}</p>}
+                          </div>
+                          <div className="flex gap-1 shrink-0">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
+                              setEditingStyle(style);
+                              setStyleForm({ name: style.name, description: style.description || '', image: style.image || '', productIds: style.productIds, isActive: style.isActive });
+                              setStyleDialogOpen(true);
+                            }}>
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={async () => {
+                              if (confirm('Supprimer ce style ?')) {
+                                await deleteStyle.mutateAsync(style.id);
+                                toast({ title: 'Style supprimé' });
+                              }
+                            }}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 flex-wrap">
+                          {styleProducts.slice(0, 4).map(p => (
+                            <img key={p.id} src={p.image} alt={p.name} className="w-8 h-8 object-cover rounded border border-border" title={p.name} />
+                          ))}
+                          {styleProducts.length > 4 && <span className="text-xs text-muted-foreground self-center ml-1">+{styleProducts.length - 4}</span>}
+                        </div>
+                        <span className={`mt-2 inline-block text-[10px] px-1.5 py-0.5 rounded ${style.isActive ? 'bg-green-500/20 text-green-500' : 'bg-muted text-muted-foreground'}`}>
+                          {style.isActive ? 'Actif' : 'Inactif'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </TabsContent>
       </Tabs>
 
       {/* Banner Dialog */}
@@ -476,6 +567,88 @@ export default function AdminMarketing() {
             <DialogTitle className="hud-text">{editingPromo ? 'MODIFIER LE CODE PROMO' : 'NOUVEAU CODE PROMO'}</DialogTitle>
           </DialogHeader>
           <PromoForm promo={editingPromo || undefined} onSubmit={handlePromoSubmit} onCancel={() => setPromoDialogOpen(false)} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Style Dialog */}
+      <Dialog open={styleDialogOpen} onOpenChange={setStyleDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="hud-text">{editingStyle ? 'MODIFIER LE STYLE' : 'NOUVEAU STYLE'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs hud-text">Nom du style *</Label>
+              <Input value={styleForm.name} onChange={e => setStyleForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Look Urbain, Tenue Décontractée..." />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs hud-text">Description</Label>
+              <Textarea value={styleForm.description} onChange={e => setStyleForm(f => ({ ...f, description: e.target.value }))} rows={2} placeholder="Inspirations, ambiance..." />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs hud-text">Image d'ambiance</Label>
+              <FileDropZone
+                accept={['image']}
+                folder="styles"
+                currentFile={styleForm.image}
+                onUpload={url => setStyleForm(f => ({ ...f, image: url }))}
+                label="Photo éditorial (optionnel)"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch checked={styleForm.isActive} onCheckedChange={v => setStyleForm(f => ({ ...f, isActive: v }))} />
+              <Label className="text-sm">Actif</Label>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs hud-text">Produits du style ({styleForm.productIds.length} sélectionné(s))</Label>
+              <div className="max-h-[260px] overflow-y-auto space-y-1 border border-border rounded-lg p-2">
+                {products.map(p => {
+                  const selected = styleForm.productIds.includes(p.id);
+                  return (
+                    <div
+                      key={p.id}
+                      className={`flex items-center gap-3 p-2 rounded cursor-pointer transition-colors ${selected ? 'bg-primary/10 border border-primary/30' : 'hover:bg-muted/50'}`}
+                      onClick={() => setStyleForm(f => ({
+                        ...f,
+                        productIds: selected
+                          ? f.productIds.filter(id => id !== p.id)
+                          : [...f.productIds, p.id],
+                      }))}
+                    >
+                      <img src={p.image} alt={p.name} className="w-10 h-10 object-cover rounded" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{p.name}</p>
+                        <p className="text-xs text-muted-foreground">{p.salePrice ?? p.price}€</p>
+                      </div>
+                      {selected && <Check className="h-4 w-4 text-primary shrink-0" />}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-4 border-t border-border">
+              <Button variant="outline" onClick={() => setStyleDialogOpen(false)}>Annuler</Button>
+              <Button
+                disabled={!styleForm.name}
+                onClick={async () => {
+                  try {
+                    if (editingStyle) {
+                      await updateStyle.mutateAsync({ id: editingStyle.id, ...styleForm });
+                      toast({ title: 'Style mis à jour' });
+                    } else {
+                      await createStyle.mutateAsync(styleForm);
+                      toast({ title: 'Style créé' });
+                    }
+                    setStyleDialogOpen(false);
+                  } catch {
+                    toast({ title: 'Erreur', variant: 'destructive' });
+                  }
+                }}
+              >
+                {editingStyle ? 'Mettre à jour' : 'Créer le style'}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

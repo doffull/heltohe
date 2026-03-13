@@ -13,12 +13,13 @@ import { cn } from '@/lib/utils';
 import { HeroSlide, HUDStat, HUDButton, MannequinHotspotConfig, Category, MarkerType } from '@/types';
 import {
   Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Eye, EyeOff,
-  LayoutDashboard, ImagePlay, PanelTop, Image, PanelLeft, Grid3x3, Crosshair, BookOpen,
+  LayoutDashboard, ImagePlay, PanelTop, Image, PanelLeft, Grid3x3, Crosshair, BookOpen, Save, Loader2,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { HeaderDesignTab } from '@/components/admin/HeaderDesignTab';
 import { useProducts } from '@/hooks/useProducts';
+import { useSaveDesignSettings } from '@/hooks/useDesignSettings';
 
 function generateId() {
   return `id-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
@@ -1776,14 +1777,39 @@ const TAB_COMPONENTS: Record<string, React.ComponentType> = {
 
 export default function AdminDesign() {
   const [activeTab, setActiveTab] = useState('disposition');
+  const { designSettings } = useApp();
+  const saveDesign = useSaveDesignSettings();
   const ActiveComponent = TAB_COMPONENTS[activeTab] || DispositionTab;
+
+  const handleSave = async () => {
+    try {
+      await saveDesign.mutateAsync(designSettings);
+      toast.success('Design sauvegardé !');
+    } catch {
+      toast.error('Erreur lors de la sauvegarde');
+    }
+  };
 
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Design & Visuels</h1>
-        <p className="text-muted-foreground text-sm mt-1">Personnalisez l'apparence complète de votre boutique</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Design & Visuels</h1>
+          <p className="text-muted-foreground text-sm mt-1">Personnalisez l'apparence complète de votre boutique</p>
+        </div>
+        <Button
+          onClick={handleSave}
+          disabled={saveDesign.isPending}
+          className="chamfer-hud-sm gap-2"
+        >
+          {saveDesign.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4" />
+          )}
+          Sauvegarder
+        </Button>
       </div>
 
       {/* Two-column layout */}

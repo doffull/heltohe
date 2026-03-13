@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Sparkles } from 'lucide-react';
+import { ArrowLeft, Sparkles, ShoppingCart } from 'lucide-react';
 import { useProduct } from '@/hooks/useProducts';
 import { useCart } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,8 @@ import ProductImageGallery from '@/components/product/ProductImageGallery';
 import ProductInfo from '@/components/product/ProductInfo';
 import ProductOptions from '@/components/product/ProductOptions';
 import RelatedProducts from '@/components/product/RelatedProducts';
+import { useProductLooks } from '@/hooks/useProductLooks';
+import { useProducts } from '@/hooks/useProducts';
 
 export default function ProductDetail() {
   const { slugOrId, id } = useParams<{ slugOrId?: string; id?: string }>();
@@ -166,6 +168,9 @@ export default function ProductDetail() {
 
         {/* Related products */}
         <RelatedProducts category={product.category} currentId={product.id} />
+
+        {/* Complete the look */}
+        <CompleteLook productId={product.id} onAddToCart={addItem} />
       </div>
 
       {/* Floating Color Variant Popup — visible when product has colors */}
@@ -177,6 +182,97 @@ export default function ProductDetail() {
         />
       )}
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Complete The Look Section                                            */
+/* ------------------------------------------------------------------ */
+function CompleteLook({ productId, onAddToCart }: { productId: string; onAddToCart: (item: any) => Promise<void> }) {
+  const { data: looks = [] } = useProductLooks();
+  const { data: allProducts = [] } = useProducts();
+  const { toast } = useToast();
+
+  // Find looks that include this product
+  const myLooks = looks.filter(l => l.isActive && l.productIds.includes(productId));
+  if (myLooks.length === 0) return null;
+
+  // Get all other products from those looks (deduplicated, excluding current product)
+  const otherProductIds = [...new Set(myLooks.flatMap(l => l.productIds.filter(id => id !== productId)))];
+  const lookProducts = allProducts.filter(p => otherProductIds.includes(p.id));
+
+  if (lookProducts.length === 0) return null;
+
+  const handleAdd = async (p: typeof lookProducts[0]) => {
+    await onAddToCart({
+      productId: p.id,
+      name: p.name,
+      price: p.price,
+      salePrice: p.salePrice,
+      image: p.image,
+      quantity: 1,
+    });
+    toast({ title: `${p.name} ajouté au panier` });
+  };
+
+  return (
+    <motion.section
+      className="mt-12"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3 }}
+    >
+      <div className="flex items-center gap-3 mb-6">
+        <ShoppingCart className="h-5 w-5 text-primary" />
+        <h2 className="text-xl font-bold hud-text">COMPLÉTER LE LOOK</h2>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        {lookProducts.map((p) => (
+          <motion.div
+            key={p.id}
+            className="chamfer-hud bg-card/30 overflow-hidden group"
+            whileHover={{ scale: 1.02 }}
+            transition={{ duration: 0.2 }}
+          >
+            <div className="aspect-square overflow-hidden relative">
+              <img
+                src={p.image}
+                alt={p.name}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              {p.salePrice && (
+                <span className="absolute top-2 left-2 bg-destructive text-destructive-foreground text-[10px] px-1.5 py-0.5 chamfer-hud-sm font-bold">
+                  SOLDE
+                </span>
+              )}
+            </div>
+            <div className="p-3 space-y-2">
+              <p className="text-sm font-bold truncate">{p.name}</p>
+              {p.subtitle && <p className="text-xs text-muted-foreground truncate">{p.subtitle}</p>}
+              <div className="flex items-center gap-2">
+                {p.salePrice ? (
+                  <>
+                    <span className="font-bold text-sm text-primary">{p.salePrice}€</span>
+                    <span className="text-xs line-through text-muted-foreground">{p.price}€</span>
+                  </>
+                ) : (
+                  <span className="font-bold text-sm">{p.price}€</span>
+                )}
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full chamfer-hud-sm text-xs h-8"
+                onClick={() => handleAdd(p)}
+              >
+                <ShoppingCart className="h-3 w-3 mr-1" />
+                Ajouter
+              </Button>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </motion.section>
   );
 }
 
