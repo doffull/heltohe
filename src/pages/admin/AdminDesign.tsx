@@ -342,6 +342,31 @@ function LogoTab() {
 
   return (
     <div className="space-y-6">
+      {/* Live Preview */}
+      {designSettings.hudLogo && (
+        <Card className="border-2 border-primary/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Eye className="h-4 w-4 text-primary" />
+              Aperçu du logo actuel
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Dark background preview */}
+              <div className="rounded-lg p-6 flex items-center justify-center bg-black border border-border">
+                <img src={designSettings.hudLogo} alt="Logo" className="h-12 w-auto object-contain max-w-[160px]" />
+              </div>
+              {/* Light background preview */}
+              <div className="rounded-lg p-6 flex items-center justify-center bg-white border border-border">
+                <img src={designSettings.hudLogo} alt="Logo" className="h-12 w-auto object-contain max-w-[160px]" />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2 text-center">Fond sombre / Fond clair</p>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Brand Identity */}
         <Card>
@@ -392,7 +417,7 @@ function LogoTab() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Logo principal</CardTitle>
-              <CardDescription>Header et sidebar</CardDescription>
+              <CardDescription>Utilisé dans le header, la sidebar et le splash screen. PNG, JPG, SVG recommandé.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <FileDropZone
@@ -400,7 +425,7 @@ function LogoTab() {
                 folder="branding"
                 currentFile={designSettings.hudLogo}
                 onUpload={(url) => updateDesignSettings({ hudLogo: url })}
-                label="PNG, JPG, GIF, SVG"
+                label="Glissez votre logo ici ou cliquez — PNG, JPG, SVG, GIF"
               />
               <div className="flex items-center justify-between">
                 <Label>Afficher le logo</Label>

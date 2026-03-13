@@ -15,7 +15,7 @@ interface FileDropZoneProps {
 }
 
 const MIME_MAP: Record<string, string[]> = {
-  image: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+  image: ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'],
   video: ['video/mp4', 'video/webm'],
   audio: ['audio/mpeg', 'audio/wav', 'audio/ogg'],
 };
@@ -26,10 +26,14 @@ function getAcceptString(accept?: string[]): string {
 }
 
 function getFileType(url: string): 'image' | 'video' | 'audio' | 'unknown' {
-  const ext = url.split('.').pop()?.toLowerCase() || '';
-  if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) return 'image';
+  // Strip query params before checking extension
+  const cleanUrl = url.split('?')[0];
+  const ext = cleanUrl.split('.').pop()?.toLowerCase() || '';
+  if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'].includes(ext)) return 'image';
   if (['mp4', 'webm'].includes(ext)) return 'video';
   if (['mp3', 'wav', 'ogg'].includes(ext)) return 'audio';
+  // Fallback: check if URL contains image-related paths
+  if (url.includes('/branding/') || url.includes('/logo')) return 'image';
   return 'unknown';
 }
 
@@ -73,8 +77,19 @@ export function FileDropZone({
     <div className={cn("relative", className)}>
       {currentFile ? (
         <div className="relative border border-border rounded-lg overflow-hidden bg-muted">
-          {fileType === 'image' && (
-            <img src={currentFile} alt="" className="w-full h-40 object-cover" />
+          {(fileType === 'image' || fileType === 'unknown') && (
+            <div className="w-full h-40 flex items-center justify-center bg-muted p-2">
+              <img
+                src={currentFile}
+                alt=""
+                className="max-w-full max-h-full object-contain"
+                onError={(e) => {
+                  // If image fails to load, show fallback
+                  (e.target as HTMLImageElement).style.display = 'none';
+                  (e.target as HTMLImageElement).parentElement!.innerHTML += '<span class="text-xs text-muted-foreground">Aperçu non disponible</span>';
+                }}
+              />
+            </div>
           )}
           {fileType === 'video' && (
             <video src={currentFile} className="w-full h-40 object-cover" controls muted />
@@ -82,11 +97,6 @@ export function FileDropZone({
           {fileType === 'audio' && (
             <div className="h-40 flex items-center justify-center p-4">
               <audio src={currentFile} controls className="w-full" />
-            </div>
-          )}
-          {fileType === 'unknown' && (
-            <div className="h-40 flex items-center justify-center text-muted-foreground">
-              Fichier uploadé
             </div>
           )}
           <Button

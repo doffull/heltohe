@@ -89,7 +89,7 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
           <img
             src={logo}
             alt="Logo"
-            className="h-16 w-auto object-contain logo-visibility-filter"
+            className="h-16 w-auto object-contain"
           />
         ) : (
           <span className="text-3xl font-bold tracking-widest uppercase">HMP</span>
