@@ -64,7 +64,19 @@ export function ProductSections() {
                     // {section.id.toUpperCase()}_SECTION
                   </h2>
                   <h3 className="text-2xl font-bold tracking-tight">
-                    {section.title}
+                    <InlineEditable
+                      fieldKey={`section-title-${section.id}`}
+                      value={section.title}
+                      onChange={(v) => {
+                        const next = designSettings.homeSections.map(s =>
+                          s.id === section.id ? { ...s, title: v } : s
+                        );
+                        updateDesignSettings({ homeSections: next });
+                        setIsDirty(true);
+                      }}
+                      as="span"
+                      className="text-2xl font-bold tracking-tight"
+                    />
                   </h3>
                 </div>
                 <button
