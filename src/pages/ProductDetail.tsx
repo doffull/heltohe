@@ -168,6 +168,9 @@ export default function ProductDetail() {
 
         {/* Related products */}
         <RelatedProducts category={product.category} currentId={product.id} />
+
+        {/* Complete the look */}
+        <CompleteLook productId={product.id} onAddToCart={addItem} />
       </div>
 
       {/* Floating Color Variant Popup — visible when product has colors */}
