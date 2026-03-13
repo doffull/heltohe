@@ -36,7 +36,7 @@ export function Sidebar() {
             <img 
               src={designSettings.hudLogo} 
               alt="Logo" 
-              className="h-8 lg:h-10 w-auto max-w-[120px] object-contain logo-visibility-filter"
+              className="h-8 lg:h-10 w-auto max-w-[120px] object-contain"
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
           ) : (
