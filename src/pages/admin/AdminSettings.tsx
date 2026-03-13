@@ -11,12 +11,15 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAdminConfig, useSaveAdminConfig } from '@/hooks/useAdminConfig';
 
 // CategoryForm moved to CategoryFormDialog component
 
 export default function AdminSettings() {
   const { toast } = useToast();
   const { designSettings, updateDesignSettings } = useApp();
+  const { data: adminConfig } = useAdminConfig();
+  const saveAdminConfig = useSaveAdminConfig();
 
   // Categories
   const { data: categories = [], isLoading } = useCategories();
