@@ -267,7 +267,13 @@ export default function AdminProducts() {
         </div>
       </div>
 
-      {/* Filters */}
+      <Tabs defaultValue="products">
+        <TabsList className="bg-muted/50">
+          <TabsTrigger value="products" className="gap-2"><Package className="h-4 w-4" />Produits</TabsTrigger>
+          <TabsTrigger value="looks" className="gap-2"><Layers2 className="h-4 w-4" />Looks</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="products" className="space-y-4 mt-4">
       <div className="chamfer-hud bg-card/50 p-4 flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
