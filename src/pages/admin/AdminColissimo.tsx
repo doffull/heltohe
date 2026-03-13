@@ -1281,8 +1281,8 @@ function ConfigurationTab() {
               </div>
             </div>
           </div>
-          <Button onClick={handleSave} disabled={save.isPending} className="gap-2">
-            {save.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          <Button onClick={handleSave} disabled={saveAdminConfig.isPending} className="gap-2">
+            {saveAdminConfig.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Sauvegarder
           </Button>
         </CardContent>
