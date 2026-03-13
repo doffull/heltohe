@@ -10,48 +10,54 @@ import { InlineEditable } from '@/components/visual-editor/InlineEditable';
 import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
 
 export function HeroSlider() {
-  const { designSettings, setCurrentView } = useApp();
+  const { designSettings, updateDesignSettings, setCurrentView } = useApp();
   const { heroSlides, sliderAutoPlay, sliderSpeed, showSliderOverlay, sliderGrayscale } = designSettings;
   const [currentIndex, setCurrentIndex] = useState(0);
   const { scrollY } = useScroll();
   const isMobile = useIsMobile();
-  
+  const { isOpen, setIsDirty } = useVisualEditor();
+
   // Parallax transforms for 3 layers
   const bgY = useTransform(scrollY, [0, 600], [0, 120]);
   const mgY = useTransform(scrollY, [0, 600], [0, 60]);
   const fgY = useTransform(scrollY, [0, 600], [0, 20]);
   const bgScale = useTransform(scrollY, [0, 600], [1, 1.1]);
-  
+
   useEffect(() => {
     if (!sliderAutoPlay || heroSlides.length <= 1) return;
-    
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % heroSlides.length);
     }, sliderSpeed);
-    
     return () => clearInterval(interval);
   }, [sliderAutoPlay, sliderSpeed, heroSlides.length]);
-  
+
   const goToSlide = (index: number) => setCurrentIndex(index);
   const goToPrev = () => setCurrentIndex((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
   const goToNext = () => setCurrentIndex((prev) => (prev + 1) % heroSlides.length);
-  
+
   if (heroSlides.length === 0) return null;
-  
+
   const currentSlide = heroSlides[currentIndex];
-  
+
+  // Helper to update a specific field of the current slide
+  function updateCurrentSlide(changes: Partial<HeroSlide>) {
+    const next = heroSlides.map((s, i) => i === currentIndex ? { ...s, ...changes } : s);
+    updateDesignSettings({ heroSlides: next });
+    setIsDirty(true);
+  }
+
   // Determine which media to show based on mobile
   const useMobileMedia = isMobile && currentSlide.mobileImage;
   const bgMedia = useMobileMedia
     ? currentSlide.mobileImage!
     : (currentSlide.backgroundMedia || currentSlide.media);
-  
+
   // Determine media type for mobile
   const mobileIsVideo = currentSlide.mobileMediaType === 'video';
   const effectiveMediaType = useMobileMedia
     ? (mobileIsVideo ? 'video' : 'image')
     : currentSlide.mediaType;
-  
+
   // Determine objectFit/objectPosition
   const objectFit = useMobileMedia
     ? (currentSlide.mobileObjectFit || 'cover')
@@ -59,11 +65,11 @@ export function HeroSlider() {
   const objectPosition = useMobileMedia
     ? (currentSlide.mobileObjectPosition || 'center')
     : (currentSlide.objectPosition || 'center');
-  
+
   return (
     <div className="relative h-[55vh] sm:h-[70vh] lg:h-[80vh] overflow-hidden">
       {/* Background Layer (slowest parallax) */}
-      <motion.div 
+      <motion.div
         className={cn(
           "absolute inset-0 transition-all duration-1000",
           sliderGrayscale && "grayscale"
@@ -89,7 +95,7 @@ export function HeroSlider() {
 
       {/* Midground Layer */}
       {!useMobileMedia && currentSlide.midgroundMedia && (
-        <motion.div 
+        <motion.div
           className="absolute inset-0 z-[1]"
           style={{ y: mgY }}
         >
@@ -103,7 +109,7 @@ export function HeroSlider() {
 
       {/* Foreground Layer (fastest parallax) */}
       {!useMobileMedia && currentSlide.foregroundMedia && (
-        <motion.div 
+        <motion.div
           className="absolute inset-0 z-[2]"
           style={{ y: fgY }}
         >
@@ -114,47 +120,70 @@ export function HeroSlider() {
           />
         </motion.div>
       )}
-        
+
       {/* Overlay */}
-      <div 
+      <div
         className={cn(
           "absolute inset-0 z-[3]",
-          showSliderOverlay 
+          showSliderOverlay
             ? "bg-gradient-to-r from-background via-background/70 to-transparent"
             : "bg-gradient-to-t from-background via-background/50 to-transparent"
         )}
       />
-      
+
       {/* Content */}
       <div className="relative z-10 h-full flex flex-col justify-center px-6 lg:px-16">
         <div className="max-w-2xl space-y-6 animate-slide-in-left">
-          <div 
-            className="hud-text text-sm tracking-[0.3em] text-primary"
+          {/* Subtitle — inline editable */}
+          <InlineEditable
+            fieldKey={`hero-subtitle-${currentIndex}`}
+            value={currentSlide.subtitle || ''}
+            onChange={(v) => updateCurrentSlide({ subtitle: v })}
+            as="div"
+            className="hud-text text-sm tracking-[0.3em]"
             style={{ color: currentSlide.accentColor }}
-          >
-            {currentSlide.subtitle}
-          </div>
-          
+          />
+
+          {/* Title — inline editable */}
           <h1 className="text-2xl sm:text-4xl lg:text-6xl xl:text-7xl font-bold tracking-tight">
-            <span className="glitch-effect" data-text={currentSlide.title}>
-              {currentSlide.title}
-            </span>
+            <InlineEditable
+              fieldKey={`hero-title-${currentIndex}`}
+              value={currentSlide.title || ''}
+              onChange={(v) => updateCurrentSlide({ title: v })}
+              as="span"
+              className={cn(
+                "glitch-effect",
+                isOpen && "!no-underline"
+              )}
+              style={isOpen ? undefined : undefined}
+            >
+              <span className="glitch-effect" data-text={currentSlide.title}>
+                {currentSlide.title}
+              </span>
+            </InlineEditable>
           </h1>
-          
+
+          {/* CTA button — inline editable label */}
           <Button
-            onClick={() => setCurrentView('Shop')}
+            onClick={() => { if (!isOpen) setCurrentView('Shop'); }}
             className={cn(
               "chamfer-hud px-5 py-4 sm:px-8 sm:py-6 hud-text text-xs sm:text-sm tracking-wider",
               "bg-primary text-primary-foreground hover:bg-primary/90",
-              "transition-all duration-300 hover:scale-105"
+              "transition-all duration-300 hover:scale-105",
+              isOpen && "cursor-default hover:scale-100"
             )}
             style={{ backgroundColor: currentSlide.accentColor }}
           >
-            {currentSlide.ctaText}
+            <InlineEditable
+              fieldKey={`hero-cta-${currentIndex}`}
+              value={currentSlide.ctaText || ''}
+              onChange={(v) => updateCurrentSlide({ ctaText: v })}
+              as="span"
+            />
           </Button>
         </div>
       </div>
-      
+
       {/* Navigation arrows */}
       {heroSlides.length > 1 && (
         <>
@@ -172,7 +201,7 @@ export function HeroSlider() {
           </button>
         </>
       )}
-      
+
       {/* Dots */}
       {heroSlides.length > 1 && (
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3">
@@ -182,21 +211,29 @@ export function HeroSlider() {
               onClick={() => goToSlide(index)}
               className={cn(
                 "w-2 h-2 transition-all duration-300",
-                index === currentIndex 
-                  ? "w-8 bg-primary" 
+                index === currentIndex
+                  ? "w-8 bg-primary"
                   : "bg-muted-foreground/50 hover:bg-muted-foreground"
               )}
             />
           ))}
         </div>
       )}
-      
+
       {/* Slide counter */}
       <div className="absolute bottom-8 right-8 z-20 hud-text text-sm text-muted-foreground">
         <span className="text-primary">{String(currentIndex + 1).padStart(2, '0')}</span>
         <span className="mx-2">/</span>
         <span>{String(heroSlides.length).padStart(2, '0')}</span>
       </div>
+
+      {/* Visual editor hint overlay */}
+      {isOpen && (
+        <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 bg-primary/90 text-primary-foreground text-[10px] font-bold px-2.5 py-1 rounded-full pointer-events-none">
+          <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+          Cliquez sur un texte pour l'éditer
+        </div>
+      )}
     </div>
   );
 }
