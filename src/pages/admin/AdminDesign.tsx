@@ -78,59 +78,87 @@ function HeroSliderTab() {
 
   return (
     <div className="space-y-6">
-      {/* Presets */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Presets rapides</CardTitle>
+      {/* Header section */}
+      <div className="rounded-xl bg-gradient-to-r from-primary/20 via-primary/10 to-transparent border border-primary/20 p-4 flex items-center justify-between">
+        <div>
+          <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+            <ImagePlay className="h-4 w-4 text-primary" />
+            Hero Slider
+          </h3>
+          <p className="text-xs text-muted-foreground mt-0.5">Slides avec 3 couches de parallaxe</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="rounded-full bg-primary/20 text-primary text-xs font-bold px-3 py-1 border border-primary/30">
+            {slides.length} slide{slides.length !== 1 ? 's' : ''}
+          </span>
+          <Button onClick={addSlide} size="sm" className="bg-primary text-primary-foreground">
+            <Plus className="h-4 w-4 mr-1.5" /> Ajouter
+          </Button>
+        </div>
+      </div>
+
+      {/* Presets rapides */}
+      <Card className="border-accent/20">
+        <CardHeader className="pb-3 bg-gradient-to-r from-accent/10 to-transparent rounded-t-lg">
+          <CardTitle className="text-sm font-semibold uppercase tracking-wider text-accent-foreground/70 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-primary inline-block" />
+            Presets rapides
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+        <CardContent className="pt-3">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
             {[
-              { id: 'fullscreen', name: 'Plein écran',  desc: '100vh, texte en bas à gauche', height: '100vh', grayscale: false, speed: 6000 },
-              { id: 'half',       name: 'Demi-écran',   desc: '60vh, texte centré',            height: '60vh',  grayscale: false, speed: 6000 },
-              { id: 'banner',     name: 'Bannière',     desc: '40vh, compact',                 height: '40vh',  grayscale: false, speed: 5000 },
-              { id: 'cinematic',  name: 'Cinématique',  desc: '80vh, N&B, lent',               height: '80vh',  grayscale: true,  speed: 10000 },
-              { id: 'minimal',    name: 'Minimal',      desc: '50vh, image seule',             height: '50vh',  grayscale: false, speed: 8000 },
+              { id: 'fullscreen', name: 'Plein écran',  desc: '100vh',  height: '100vh', grayscale: false, speed: 6000,  color: 'from-blue-500/10' },
+              { id: 'half',       name: 'Demi-écran',   desc: '60vh',   height: '60vh',  grayscale: false, speed: 6000,  color: 'from-emerald-500/10' },
+              { id: 'banner',     name: 'Bannière',     desc: '40vh',   height: '40vh',  grayscale: false, speed: 5000,  color: 'from-amber-500/10' },
+              { id: 'cinematic',  name: 'Cinématique',  desc: '80vh N&B', height: '80vh', grayscale: true, speed: 10000, color: 'from-purple-500/10' },
+              { id: 'minimal',    name: 'Minimal',      desc: '50vh',   height: '50vh',  grayscale: false, speed: 8000,  color: 'from-rose-500/10' },
             ].map((p) => (
               <button
                 key={p.id}
                 onClick={() => {
                   updateDesignSettings({ sliderHeight: p.height, sliderGrayscale: p.grayscale, sliderSpeed: p.speed } as any);
-                  toast.success(`Preset Hero "${p.name}" appliqué`);
+                  toast.success(`Preset "${p.name}" appliqué`);
                 }}
-                className="border-2 border-border hover:border-primary/50 rounded-lg p-3 text-left transition-all"
+                className={cn(
+                  "border border-border hover:border-primary/50 rounded-lg p-3 text-left transition-all bg-gradient-to-br to-transparent",
+                  p.color
+                )}
               >
-                <p className="text-sm font-bold">{p.name}</p>
-                <p className="text-xs text-muted-foreground">{p.desc}</p>
+                <p className="text-xs font-bold">{p.name}</p>
+                <p className="text-[10px] text-muted-foreground">{p.desc}</p>
               </button>
             ))}
           </div>
         </CardContent>
       </Card>
 
-      {/* Slider Settings */}
+      {/* Paramètres globaux */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Paramètres du Slider</CardTitle>
+        <CardHeader className="pb-3 bg-gradient-to-r from-secondary/50 to-transparent rounded-t-lg">
+          <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-muted-foreground inline-block" />
+            Paramètres globaux
+          </CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label>Lecture automatique</Label>
+        <CardContent className="pt-3 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between py-1 border-b border-border/40">
+              <Label className="text-sm">Lecture automatique</Label>
               <Switch
                 checked={designSettings.sliderAutoPlay}
                 onCheckedChange={(v) => updateDesignSettings({ sliderAutoPlay: v })}
               />
             </div>
-            <div className="flex items-center justify-between">
-              <Label>Overlay gradient</Label>
+            <div className="flex items-center justify-between py-1 border-b border-border/40">
+              <Label className="text-sm">Overlay gradient</Label>
               <Switch
                 checked={designSettings.showSliderOverlay}
                 onCheckedChange={(v) => updateDesignSettings({ showSliderOverlay: v })}
               />
             </div>
-            <div className="flex items-center justify-between">
-              <Label>Noir & blanc</Label>
+            <div className="flex items-center justify-between py-1">
+              <Label className="text-sm">Noir & blanc</Label>
               <Switch
                 checked={designSettings.sliderGrayscale}
                 onCheckedChange={(v) => updateDesignSettings({ sliderGrayscale: v })}
@@ -139,7 +167,7 @@ function HeroSliderTab() {
           </div>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Vitesse ({(designSettings.sliderSpeed / 1000).toFixed(1)}s)</Label>
+              <Label className="text-xs text-muted-foreground">Vitesse : {(designSettings.sliderSpeed / 1000).toFixed(1)}s</Label>
               <Slider
                 value={[designSettings.sliderSpeed]}
                 min={2000} max={15000} step={500}
@@ -147,7 +175,7 @@ function HeroSliderTab() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Opacité ({Math.round((designSettings.sliderImageOpacity ?? 1) * 100)}%)</Label>
+              <Label className="text-xs text-muted-foreground">Opacité : {Math.round((designSettings.sliderImageOpacity ?? 1) * 100)}%</Label>
               <Slider
                 value={[(designSettings.sliderImageOpacity ?? 1) * 100]}
                 min={10} max={100} step={5}
@@ -158,178 +186,250 @@ function HeroSliderTab() {
         </CardContent>
       </Card>
 
-      {/* Slides */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">Slides</h3>
-          <p className="text-sm text-muted-foreground">Configurez chaque slide avec 3 couches de profondeur</p>
-        </div>
-        <Button onClick={addSlide} size="sm">
-          <Plus className="h-4 w-4 mr-2" /> Ajouter
-        </Button>
-      </div>
-
-      {slides.map((slide, index) => (
-        <Card key={slide.id} className="relative">
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2">
+      {/* Slides list */}
+      {slides.map((slide, index) => {
+        const bgMedia = slide.backgroundMedia || slide.media;
+        const isVideo = slide.mediaType === 'video';
+        const accent = slide.accentColor || '#3b82f6';
+        return (
+          <Card key={slide.id} className="relative overflow-hidden border-2" style={{ borderColor: `${accent}33` }}>
+            {/* Slide header with accent color */}
+            <div
+              className="px-4 py-3 flex items-center justify-between"
+              style={{ background: `linear-gradient(90deg, ${accent}22, transparent)`, borderBottom: `1px solid ${accent}22` }}
+            >
+              <div className="flex items-center gap-2">
                 <GripVertical className="h-4 w-4 text-muted-foreground" />
-                Slide {index + 1}
-              </CardTitle>
+                <span className="text-xs font-bold uppercase tracking-widest" style={{ color: accent }}>
+                  Slide {index + 1}
+                </span>
+                {bgMedia && (
+                  <span className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full">
+                    {isVideo ? '🎬 Vidéo' : '🖼 Image'}
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveSlide(index, -1)} disabled={index === 0}>
-                  <ChevronUp className="h-4 w-4" />
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => moveSlide(index, -1)} disabled={index === 0}>
+                  <ChevronUp className="h-3.5 w-3.5" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveSlide(index, 1)} disabled={index === slides.length - 1}>
-                  <ChevronDown className="h-4 w-4" />
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => moveSlide(index, 1)} disabled={index === slides.length - 1}>
+                  <ChevronDown className="h-3.5 w-3.5" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeSlide(index)}>
-                  <Trash2 className="h-4 w-4" />
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => removeSlide(index)}>
+                  <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label className="text-xs font-medium mb-2 block">Arrière-plan (fond)</Label>
-                <FileDropZone
-                  accept={['image', 'video']}
-                  folder="hero/background"
-                  currentFile={slide.backgroundMedia || slide.media}
-                  onUpload={(url) => {
-                    const isVideo = /\.(mp4|webm|mov|ogg)$/i.test(url);
-                    updateSlide(index, { backgroundMedia: url, media: url || slide.media, mediaType: isVideo ? 'video' : 'image' });
-                  }}
-                  label="Fond (défilement lent)"
-                />
-              </div>
-              <div>
-                <Label className="text-xs font-medium mb-2 block">Plan intermédiaire</Label>
-                <FileDropZone
-                  accept={['image']}
-                  folder="hero/midground"
-                  currentFile={slide.midgroundMedia}
-                  onUpload={(url) => updateSlide(index, { midgroundMedia: url })}
-                  label="Décor (défilement moyen)"
-                />
-              </div>
-              <div>
-                <Label className="text-xs font-medium mb-2 block">Premier plan</Label>
-                <FileDropZone
-                  accept={['image']}
-                  folder="hero/foreground"
-                  currentFile={slide.foregroundMedia}
-                  onUpload={(url) => updateSlide(index, { foregroundMedia: url })}
-                  label="Sujet (défilement rapide)"
-                />
-              </div>
-            </div>
-            <div>
-              <Label className="text-xs font-medium mb-2 block">Média mobile (optionnel)</Label>
-              <FileDropZone
-                accept={['image', 'video']}
-                folder="hero/mobile"
-                currentFile={(slide as any).mobileImage}
-                onUpload={(url) => {
-                  const isVideo = /\.(mp4|webm|mov|ogg)$/i.test(url);
-                  updateSlide(index, { mobileImage: url, mobileMediaType: isVideo ? 'video' : 'image' } as any);
-                }}
-                label="Image ou vidéo mobile"
-              />
-              <p className="text-xs text-muted-foreground mt-1">Si vide, le média desktop sera utilisé.</p>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="space-y-1">
-                <Label className="text-xs">Affichage desktop</Label>
-                <Select value={slide.objectFit || 'cover'} onValueChange={(v) => updateSlide(index, { objectFit: v as any })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cover">Cover</SelectItem>
-                    <SelectItem value="contain">Contain</SelectItem>
-                    <SelectItem value="fill">Remplir</SelectItem>
-                    <SelectItem value="none">Original</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Position desktop</Label>
-                <Select value={slide.objectPosition || 'center'} onValueChange={(v) => updateSlide(index, { objectPosition: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="center">Centre</SelectItem>
-                    <SelectItem value="top">Haut</SelectItem>
-                    <SelectItem value="bottom">Bas</SelectItem>
-                    <SelectItem value="left">Gauche</SelectItem>
-                    <SelectItem value="right">Droite</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Affichage mobile</Label>
-                <Select value={slide.mobileObjectFit || 'cover'} onValueChange={(v) => updateSlide(index, { mobileObjectFit: v as any })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cover">Cover</SelectItem>
-                    <SelectItem value="contain">Contain</SelectItem>
-                    <SelectItem value="fill">Remplir</SelectItem>
-                    <SelectItem value="none">Original</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Position mobile</Label>
-                <Select value={slide.mobileObjectPosition || 'center'} onValueChange={(v) => updateSlide(index, { mobileObjectPosition: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="center">Centre</SelectItem>
-                    <SelectItem value="top">Haut</SelectItem>
-                    <SelectItem value="bottom">Bas</SelectItem>
-                    <SelectItem value="left">Gauche</SelectItem>
-                    <SelectItem value="right">Droite</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Titre</Label>
-                <Input value={slide.title} onChange={(e) => updateSlide(index, { title: e.target.value })} />
-              </div>
-              <div className="space-y-2">
-                <Label>Sous-titre</Label>
-                <Input value={slide.subtitle} onChange={(e) => updateSlide(index, { subtitle: e.target.value })} />
-              </div>
-              <div className="space-y-2">
-                <Label>Texte du bouton</Label>
-                <Input value={slide.ctaText} onChange={(e) => updateSlide(index, { ctaText: e.target.value })} />
-              </div>
-              <div className="space-y-2">
-                <Label>Couleur d'accent</Label>
-                <div className="flex gap-2">
-                  <input
-                    type="color"
-                    value={slide.accentColor || '#3b82f6'}
-                    onChange={(e) => updateSlide(index, { accentColor: e.target.value })}
-                    className="h-10 w-14 cursor-pointer rounded border border-border"
-                  />
-                  <Input
-                    value={slide.accentColor || '#3b82f6'}
-                    onChange={(e) => updateSlide(index, { accentColor: e.target.value })}
-                    className="flex-1"
-                  />
+
+            <CardContent className="pt-4 space-y-5">
+              {/* ── Live mini-preview 16:9 ── */}
+              <div className="rounded-lg overflow-hidden border border-border/40 bg-muted" style={{ aspectRatio: '16/9', position: 'relative' }}>
+                {bgMedia ? (
+                  isVideo ? (
+                    <video src={bgMedia} className="w-full h-full object-cover" muted />
+                  ) : (
+                    <img src={bgMedia} alt={slide.title} className="w-full h-full object-cover" style={{ objectPosition: slide.objectPosition || 'center' }} />
+                  )
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+                    Aucune image — ajoutez un fond ci-dessous
+                  </div>
+                )}
+                {/* Overlay preview */}
+                <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent pointer-events-none" />
+                {/* Text preview */}
+                <div className="absolute bottom-2 left-3 pointer-events-none">
+                  <p className="text-[8px] font-bold uppercase tracking-widest" style={{ color: accent }}>{slide.subtitle || 'Sous-titre'}</p>
+                  <p className="text-[11px] font-bold text-white leading-tight mt-0.5">{slide.title || 'Titre'}</p>
+                  <div className="mt-1 px-2 py-0.5 text-[8px] font-bold uppercase rounded" style={{ backgroundColor: accent, color: '#fff' }}>
+                    {slide.ctaText || 'CTA'}
+                  </div>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+
+              {/* ── Médias 3 couches ── */}
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/40 pb-1 mb-3">
+                  Couches parallaxe
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-xs font-medium mb-1.5 block text-blue-400/80">🏔 Fond (lent)</Label>
+                    <FileDropZone
+                      accept={['image', 'video']}
+                      folder="hero/background"
+                      currentFile={slide.backgroundMedia || slide.media || ''}
+                      onUpload={(url) => {
+                        if (!url) {
+                          // Clear both fields when removing
+                          updateSlide(index, { backgroundMedia: '', media: '', mediaType: 'image' });
+                        } else {
+                          const isVid = /\.(mp4|webm|mov|ogg)$/i.test(url);
+                          updateSlide(index, { backgroundMedia: url, media: url, mediaType: isVid ? 'video' : 'image' });
+                        }
+                      }}
+                      label="Fond (défilement lent)"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium mb-1.5 block text-emerald-400/80">🌿 Intermédiaire</Label>
+                    <FileDropZone
+                      accept={['image']}
+                      folder="hero/midground"
+                      currentFile={slide.midgroundMedia || ''}
+                      onUpload={(url) => updateSlide(index, { midgroundMedia: url })}
+                      label="Décor (défilement moyen)"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium mb-1.5 block text-amber-400/80">✨ Premier plan</Label>
+                    <FileDropZone
+                      accept={['image']}
+                      folder="hero/foreground"
+                      currentFile={slide.foregroundMedia || ''}
+                      onUpload={(url) => updateSlide(index, { foregroundMedia: url })}
+                      label="Sujet (rapide)"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Mobile ── */}
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/40 pb-1 mb-3">
+                  Média mobile (optionnel)
+                </p>
+                <FileDropZone
+                  accept={['image', 'video']}
+                  folder="hero/mobile"
+                  currentFile={(slide as any).mobileImage || ''}
+                  onUpload={(url) => {
+                    const isVid = /\.(mp4|webm|mov|ogg)$/i.test(url);
+                    updateSlide(index, { mobileImage: url, mobileMediaType: isVid ? 'video' : 'image' } as any);
+                  }}
+                  label="Image ou vidéo mobile (si vide → desktop utilisé)"
+                />
+              </div>
+
+              {/* ── Affichage ── */}
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/40 pb-1 mb-3">
+                  Affichage & position
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Desktop fit</Label>
+                    <Select value={slide.objectFit || 'cover'} onValueChange={(v) => updateSlide(index, { objectFit: v as any })}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cover">Cover</SelectItem>
+                        <SelectItem value="contain">Contain</SelectItem>
+                        <SelectItem value="fill">Remplir</SelectItem>
+                        <SelectItem value="none">Original</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Desktop position</Label>
+                    <Select value={slide.objectPosition || 'center'} onValueChange={(v) => updateSlide(index, { objectPosition: v })}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="center">Centre</SelectItem>
+                        <SelectItem value="top">Haut</SelectItem>
+                        <SelectItem value="bottom">Bas</SelectItem>
+                        <SelectItem value="left">Gauche</SelectItem>
+                        <SelectItem value="right">Droite</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Mobile fit</Label>
+                    <Select value={slide.mobileObjectFit || 'cover'} onValueChange={(v) => updateSlide(index, { mobileObjectFit: v as any })}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cover">Cover</SelectItem>
+                        <SelectItem value="contain">Contain</SelectItem>
+                        <SelectItem value="fill">Remplir</SelectItem>
+                        <SelectItem value="none">Original</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Mobile position</Label>
+                    <Select value={slide.mobileObjectPosition || 'center'} onValueChange={(v) => updateSlide(index, { mobileObjectPosition: v })}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="center">Centre</SelectItem>
+                        <SelectItem value="top">Haut</SelectItem>
+                        <SelectItem value="bottom">Bas</SelectItem>
+                        <SelectItem value="left">Gauche</SelectItem>
+                        <SelectItem value="right">Droite</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Texte & couleur ── */}
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/40 pb-1 mb-3">
+                  Contenu textuel
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Titre</Label>
+                    <Input
+                      value={slide.title}
+                      onChange={(e) => updateSlide(index, { title: e.target.value })}
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Sous-titre</Label>
+                    <Input
+                      value={slide.subtitle}
+                      onChange={(e) => updateSlide(index, { subtitle: e.target.value })}
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Texte du bouton CTA</Label>
+                    <Input
+                      value={slide.ctaText}
+                      onChange={(e) => updateSlide(index, { ctaText: e.target.value })}
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Couleur d'accent</Label>
+                    <div className="flex gap-2">
+                      <input
+                        type="color"
+                        value={slide.accentColor || '#3b82f6'}
+                        onChange={(e) => updateSlide(index, { accentColor: e.target.value })}
+                        className="h-9 w-12 cursor-pointer rounded border border-border flex-shrink-0"
+                      />
+                      <Input
+                        value={slide.accentColor || '#3b82f6'}
+                        onChange={(e) => updateSlide(index, { accentColor: e.target.value })}
+                        className="flex-1 h-9"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
 
       {slides.length === 0 && (
-        <Card className="border-dashed">
-          <CardContent className="py-12 text-center text-muted-foreground">
-            Aucune slide configurée. Ajoutez-en une pour commencer.
+        <Card className="border-dashed border-2">
+          <CardContent className="py-16 text-center">
+            <ImagePlay className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+            <p className="text-muted-foreground text-sm">Aucune slide configurée.</p>
+            <p className="text-muted-foreground/60 text-xs mt-1">Cliquez sur "Ajouter" pour créer votre première slide.</p>
           </CardContent>
         </Card>
       )}
