@@ -263,39 +263,13 @@
     box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
   }
 
-  /* Logo wrapper - Beveled octagonal shape */
-  .logo-wrapper {
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100px;
-    width: 180px;
-    background-color: hsl(var(--background));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 100;
-    clip-path: polygon(
-      0% 0%,
-      calc(100% - var(--logo-bevel-size)) 0%,
-      100% var(--logo-bevel-size),
-      100% 100%,
-      var(--logo-bevel-size) 100%,
-      0% calc(100% - var(--logo-bevel-size))
-    );
-    box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1);
-  }
-
+  /* Logo link - simple styles */
   .logo-link {
     text-decoration: none;
     color: hsl(var(--foreground));
-    font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
-    font-weight: bold;
-    font-size: 1.1rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    padding: 0 10px;
     transition: opacity 0.2s ease;
+    display: flex;
+    align-items: center;
   }
 
   .logo-link:hover {
@@ -303,6 +277,11 @@
   }
 
   .logo-text {
+    font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+    font-weight: bold;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     white-space: nowrap;
   }
 

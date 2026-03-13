@@ -157,26 +157,6 @@ export function MainLayout({ children }: MainLayoutProps) {
         </div>
       )}
 
-      {/* Logo Wrapper - Only on home page with sidebar */}
-      {designSettings.showLogo !== false && showSidebar && (
-        <div className={cn(
-          "logo-wrapper hidden lg:flex transition-all duration-500",
-          sidebarActive ? "lg:ml-[35%]" : "lg:ml-0"
-        )}>
-          <Link to="/" className="logo-link">
-            {designSettings.hudLogo ? (
-              <img 
-                src={designSettings.hudLogo} 
-                alt="Logo" 
-                className="h-10 w-auto object-contain"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-              />
-            ) : (
-              <span className="logo-text">{(designSettings as any).siteName || 'Helvetica-MP'}</span>
-            )}
-          </Link>
-        </div>
-      )}
 
       <header
         className={cn(
@@ -196,10 +176,10 @@ export function MainLayout({ children }: MainLayoutProps) {
             headerPreset === 'centered' ? "flex-col justify-center gap-1 h-auto py-3 lg:py-4" : "",
             headerPreset === 'fullwidth' ? "gap-6" : "",
           )}>
-            {/* Logo in header - always visible when no sidebar, or on mobile */}
+            {/* Logo in header - always visible on all pages */}
             <Link to="/" className={cn(
-              "flex items-center gap-2",
-              headerPreset === 'centered' ? "" : (showSidebar ? "lg:hidden mr-auto" : "mr-auto")
+              "flex items-center gap-2 mr-auto",
+              headerPreset === 'centered' ? "justify-center" : ""
             )}>
               {designSettings.showLogo !== false && designSettings.hudLogo ? (
                 <img 
