@@ -188,6 +188,8 @@ function settingsToDb(s: DesignSettings) {
     presets: s.presets as unknown as Json,
     schedules: s.schedules as unknown as Json,
     pages: s.pages as unknown as Json,
+    // Mannequin hotspots
+    mannequin_hotspots: s.mannequinHotspots as unknown as Json,
   };
 }
 
