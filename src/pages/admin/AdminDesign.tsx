@@ -13,12 +13,13 @@ import { cn } from '@/lib/utils';
 import { HeroSlide, HUDStat, HUDButton, MannequinHotspotConfig, Category, MarkerType } from '@/types';
 import {
   Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Eye, EyeOff,
-  LayoutDashboard, ImagePlay, PanelTop, Image, PanelLeft, Grid3x3, Crosshair, BookOpen,
+  LayoutDashboard, ImagePlay, PanelTop, Image, PanelLeft, Grid3x3, Crosshair, BookOpen, Save, Loader2,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { HeaderDesignTab } from '@/components/admin/HeaderDesignTab';
 import { useProducts } from '@/hooks/useProducts';
+import { useSaveDesignSettings } from '@/hooks/useDesignSettings';
 
 function generateId() {
   return `id-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
