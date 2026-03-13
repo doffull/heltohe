@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { MannequinHotspots } from './MannequinHotspot';
 import { SidebarProductHUD } from './SidebarProductHUD';
 import { ChatBotWidget } from './ChatBotWidget';
+import { InlineEditable } from '@/components/visual-editor/InlineEditable';
 import { 
   Search, 
   ShoppingBag, 
