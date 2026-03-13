@@ -80,10 +80,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const saveDesignSettings = useSaveDesignSettings();
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Sync cloud → local on load
+  // Sync cloud → local ONLY on first load (avoid overwriting user edits)
+  const initializedRef = useRef(false);
   useEffect(() => {
-    if (dbSettings) {
-      setDesignSettingsLocal(prev => ({ ...INITIAL_DESIGN_SETTINGS, ...dbSettings, ...prev === INITIAL_DESIGN_SETTINGS ? dbSettings : {} }));
+    if (dbSettings && !initializedRef.current) {
+      initializedRef.current = true;
       setDesignSettingsLocal(dbSettings);
     }
   }, [dbSettings]);

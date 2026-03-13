@@ -7,16 +7,18 @@ import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Eye, Monitor, PanelTop } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import type React from 'react';
 
 type HeaderPreset = 'classic' | 'centered' | 'minimal' | 'fullwidth' | 'transparent';
 
-const PRESETS: { id: HeaderPreset; name: string; description: string; preview: React.ReactNode }[] = [
+const PRESETS: { id: HeaderPreset; name: string; description: string; color: string; preview: React.ReactNode }[] = [
   {
     id: 'classic',
     name: 'Classique',
-    description: 'Logo à gauche, nav au centre, icônes à droite',
+    description: 'Logo à gauche, nav au centre',
+    color: 'from-blue-500/15',
     preview: (
       <div className="flex items-center justify-between h-full px-2">
         <div className="w-6 h-3 bg-foreground/70 rounded-sm" />
@@ -36,6 +38,7 @@ const PRESETS: { id: HeaderPreset; name: string; description: string; preview: R
     id: 'centered',
     name: 'Centré',
     description: 'Logo centré, navigation en dessous',
+    color: 'from-violet-500/15',
     preview: (
       <div className="flex flex-col items-center justify-center h-full gap-1">
         <div className="w-8 h-3 bg-foreground/70 rounded-sm" />
@@ -50,7 +53,8 @@ const PRESETS: { id: HeaderPreset; name: string; description: string; preview: R
   {
     id: 'minimal',
     name: 'Minimal',
-    description: 'Logo + icônes uniquement, nav dans le burger',
+    description: 'Logo + icônes, nav burger',
+    color: 'from-emerald-500/15',
     preview: (
       <div className="flex items-center justify-between h-full px-2">
         <div className="w-6 h-3 bg-foreground/70 rounded-sm" />
@@ -68,6 +72,7 @@ const PRESETS: { id: HeaderPreset; name: string; description: string; preview: R
     id: 'fullwidth',
     name: 'Full-width',
     description: 'Navigation étalée avec logo inline',
+    color: 'from-amber-500/15',
     preview: (
       <div className="flex items-center justify-between h-full px-1">
         <div className="w-5 h-2.5 bg-foreground/70 rounded-sm" />
@@ -87,7 +92,8 @@ const PRESETS: { id: HeaderPreset; name: string; description: string; preview: R
   {
     id: 'transparent',
     name: 'Transparent',
-    description: 'Header transparent, se fond dans le hero',
+    description: 'Se fond dans le hero',
+    color: 'from-sky-500/15',
     preview: (
       <div className="flex items-center justify-between h-full px-2 bg-gradient-to-b from-foreground/10 to-transparent">
         <div className="w-6 h-3 bg-foreground/50 rounded-sm" />
@@ -156,104 +162,215 @@ export function HeaderDesignTab() {
     updateDesignSettings({ topBanner: { ...topBanner, ...updates } } as any);
   };
 
+  // Determine what nav items to preview
+  const navPreviewItems = headerNavItems.length > 0
+    ? headerNavItems.slice(0, 4)
+    : [{ label: 'Accueil', href: '/' }, { label: 'Boutique', href: '/boutique' }];
+
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold">Configuration du Header</h3>
-        <p className="text-sm text-muted-foreground">Presets, navigation, bandeau promo et couleurs</p>
+      {/* Section header */}
+      <div className="rounded-xl bg-gradient-to-r from-primary/20 via-primary/10 to-transparent border border-primary/20 p-4 flex items-center gap-3">
+        <PanelTop className="h-5 w-5 text-primary flex-shrink-0" />
+        <div>
+          <h3 className="text-base font-bold text-foreground">Configuration du Header</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">Presets, navigation, bandeau promo et couleurs</p>
+        </div>
       </div>
 
-      {/* Preset Grid */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Presets</CardTitle>
-          <CardDescription>Cliquez pour appliquer un style de header</CardDescription>
+      {/* ── LIVE PREVIEW ── */}
+      <Card className="border-2 border-primary/20 overflow-hidden">
+        <CardHeader className="pb-2 bg-gradient-to-r from-primary/10 to-transparent">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Eye className="h-4 w-4 text-primary" />
+            Aperçu en direct
+          </CardTitle>
+          <CardDescription className="text-xs">Reflète vos réglages actuels</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <CardContent className="p-0">
+          {/* Top banner preview */}
+          {topBanner.enabled && topBanner.text && (
+            <div
+              className="px-4 py-1.5 text-center text-xs font-medium"
+              style={{ backgroundColor: topBanner.bgColor || '#000', color: topBanner.textColor || '#fff' }}
+            >
+              {topBanner.text}
+            </div>
+          )}
+          {/* Header preview */}
+          <div
+            className="h-14 flex items-center px-5 border-b border-border/30"
+            style={{
+              backgroundColor: headerBgColor || 'hsl(var(--background))',
+              color: headerTextColor || 'hsl(var(--foreground))',
+            }}
+          >
+            {currentPreset === 'centered' ? (
+              <div className="w-full flex flex-col items-center justify-center gap-1">
+                {designSettings.hudLogo ? (
+                  <img src={designSettings.hudLogo} alt="logo" className="h-5 w-auto object-contain max-w-[80px]" />
+                ) : (
+                  <span className="text-xs font-bold uppercase tracking-widest opacity-80">
+                    {designSettings.siteName || 'MARQUE'}
+                  </span>
+                )}
+                <div className="flex items-center gap-3">
+                  {navPreviewItems.map((item, i) => (
+                    <span key={i} className="text-[10px] opacity-60">{item.label}</span>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="w-full flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {designSettings.hudLogo ? (
+                    <img src={designSettings.hudLogo} alt="logo" className="h-7 w-auto object-contain max-w-[80px]" />
+                  ) : (
+                    <span className="text-xs font-bold uppercase tracking-widest opacity-80">
+                      {designSettings.siteName || 'MARQUE'}
+                    </span>
+                  )}
+                </div>
+                {currentPreset !== 'minimal' && (
+                  <div className="flex items-center gap-4">
+                    {navPreviewItems.map((item, i) => (
+                      <span key={i} className="text-[11px] opacity-60">{item.label}</span>
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-center gap-2 opacity-50">
+                  <div className="w-4 h-4 rounded-full border border-current" />
+                  <div className="w-4 h-4 rounded-full border border-current" />
+                </div>
+              </div>
+            )}
+          </div>
+          {/* Hero area hint */}
+          <div className="h-10 bg-gradient-to-b from-muted/30 to-transparent flex items-center justify-center">
+            <span className="text-[10px] text-muted-foreground/40 uppercase tracking-widest">zone hero</span>
+          </div>
+          <div className="px-4 pb-3 flex items-center gap-2 flex-wrap pt-2">
+            <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+              Preset : <strong>{currentPreset}</strong>
+            </span>
+            <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+              {headerFixed ? '📌 Fixe' : '🔓 Normal'}
+            </span>
+            {headerBgColor && (
+              <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full flex items-center gap-1">
+                <span className="w-2.5 h-2.5 rounded-full inline-block border border-border" style={{ backgroundColor: headerBgColor }} />
+                Fond personnalisé
+              </span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── PRESETS ── */}
+      <Card>
+        <CardHeader className="pb-3 bg-gradient-to-r from-blue-500/10 to-transparent rounded-t-lg">
+          <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />
+            Presets de layout
+          </CardTitle>
+          <CardDescription className="text-xs">Cliquez pour appliquer instantanément</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-3">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
             {PRESETS.map((preset) => (
               <button
                 key={preset.id}
                 onClick={() => applyPreset(preset.id)}
                 className={cn(
-                  "border-2 rounded-lg p-3 transition-all text-left",
+                  "border-2 rounded-xl p-3 transition-all text-left bg-gradient-to-br to-transparent",
+                  preset.color,
                   currentPreset === preset.id
-                    ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                    ? "border-primary ring-2 ring-primary/20"
                     : "border-border hover:border-primary/50"
                 )}
               >
-                <div className="h-12 bg-secondary rounded mb-2 overflow-hidden">
+                <div className="h-11 bg-secondary/80 rounded-lg mb-2 overflow-hidden border border-border/30">
                   {preset.preview}
                 </div>
-                <p className="text-sm font-bold">{preset.name}</p>
-                <p className="text-xs text-muted-foreground">{preset.description}</p>
+                <p className="text-xs font-bold">{preset.name}</p>
+                <p className="text-[10px] text-muted-foreground leading-tight">{preset.description}</p>
+                {currentPreset === preset.id && (
+                  <span className="inline-block mt-1 text-[9px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-bold">
+                    Actif
+                  </span>
+                )}
               </button>
             ))}
           </div>
         </CardContent>
       </Card>
 
-      {/* Navigation Items */}
+      {/* ── NAVIGATION ── */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Liens de navigation</CardTitle>
-          <CardDescription>Choisissez les liens affichés dans le header. Laissez vide pour les liens par défaut.</CardDescription>
+        <CardHeader className="pb-3 bg-gradient-to-r from-emerald-500/10 to-transparent rounded-t-lg">
+          <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+            Liens de navigation
+          </CardTitle>
+          <CardDescription className="text-xs">Choisissez les liens affichés dans le header</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="pt-3 space-y-4">
           {/* System links */}
           <div>
-            <Label className="text-xs font-semibold uppercase tracking-wider mb-2 block">Pages système</Label>
+            <Label className="text-xs font-semibold uppercase tracking-wider mb-2 block text-muted-foreground">Pages système</Label>
             <div className="space-y-2">
               {SYSTEM_LINKS.map((link) => (
-                <label key={link.href} className="flex items-center gap-2 cursor-pointer">
+                <label key={link.href} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded-lg px-2 py-1.5 transition-colors">
                   <Checkbox
                     checked={isNavItemSelected(link.href)}
                     onCheckedChange={() => toggleNavItem(link.label, link.href)}
                   />
-                  <span className="text-sm">{link.label}</span>
-                  <span className="text-xs text-muted-foreground">({link.href})</span>
+                  <span className="text-sm font-medium">{link.label}</span>
+                  <span className="text-xs text-muted-foreground ml-auto font-mono">{link.href}</span>
                 </label>
               ))}
             </div>
           </div>
 
           {/* Category links */}
-          <div>
-            <Label className="text-xs font-semibold uppercase tracking-wider mb-2 block">Catégories</Label>
-            <div className="space-y-2">
-              {categories.filter(c => !c.parentId).map((cat) => (
-                <label key={cat.id} className="flex items-center gap-2 cursor-pointer">
-                  <Checkbox
-                    checked={isNavItemSelected(`/boutique?category=${cat.title}`)}
-                    onCheckedChange={() => toggleNavItem(cat.title, `/boutique?category=${cat.title}`)}
-                  />
-                  <span className="text-sm">{cat.title}</span>
-                </label>
-              ))}
+          {categories.filter(c => !c.parentId).length > 0 && (
+            <div>
+              <Label className="text-xs font-semibold uppercase tracking-wider mb-2 block text-muted-foreground">Catégories</Label>
+              <div className="space-y-2">
+                {categories.filter(c => !c.parentId).map((cat) => (
+                  <label key={cat.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded-lg px-2 py-1.5 transition-colors">
+                    <Checkbox
+                      checked={isNavItemSelected(`/boutique?category=${cat.title}`)}
+                      onCheckedChange={() => toggleNavItem(cat.title, `/boutique?category=${cat.title}`)}
+                    />
+                    <span className="text-sm font-medium">{cat.title}</span>
+                  </label>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Custom links */}
           {headerNavItems.length > 0 && (
             <div>
-              <Label className="text-xs font-semibold uppercase tracking-wider mb-2 block">Liens personnalisés</Label>
+              <Label className="text-xs font-semibold uppercase tracking-wider mb-2 block text-muted-foreground">Liens actifs & personnalisés</Label>
               <div className="space-y-2">
                 {headerNavItems.map((item: any, index: number) => (
-                  <div key={index} className="flex items-center gap-2">
+                  <div key={index} className="flex items-center gap-2 bg-muted/30 rounded-lg p-2">
                     <Input
                       value={item.label}
                       onChange={(e) => updateNavItem(index, { label: e.target.value })}
                       placeholder="Label"
-                      className="flex-1"
+                      className="flex-1 h-8 text-sm bg-background"
                     />
                     <Input
                       value={item.href}
                       onChange={(e) => updateNavItem(index, { href: e.target.value })}
                       placeholder="URL"
-                      className="flex-1"
+                      className="flex-1 h-8 text-sm bg-background font-mono"
                     />
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive shrink-0" onClick={() => removeNavItem(item.href)}>
-                      <Trash2 className="h-4 w-4" />
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10 shrink-0" onClick={() => removeNavItem(item.href)}>
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 ))}
@@ -261,59 +378,70 @@ export function HeaderDesignTab() {
             </div>
           )}
 
-          <Button variant="outline" size="sm" onClick={addCustomNavItem}>
-            <Plus className="h-4 w-4 mr-2" /> Ajouter un lien
+          <Button variant="outline" size="sm" onClick={addCustomNavItem} className="w-full">
+            <Plus className="h-4 w-4 mr-2" /> Ajouter un lien personnalisé
           </Button>
         </CardContent>
       </Card>
 
-      {/* Top Banner */}
+      {/* ── TOP BANNER ── */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Bandeau supérieur</CardTitle>
-          <CardDescription>Barre promotionnelle au-dessus du header</CardDescription>
+        <CardHeader className="pb-3 bg-gradient-to-r from-amber-500/10 to-transparent rounded-t-lg">
+          <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
+            Bandeau supérieur
+          </CardTitle>
+          <CardDescription className="text-xs">Barre promotionnelle au-dessus du header</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label>Activer le bandeau</Label>
+        <CardContent className="pt-3 space-y-4">
+          <div className="flex items-center justify-between py-1">
+            <Label className="text-sm">Activer le bandeau</Label>
             <Switch
               checked={topBanner.enabled}
               onCheckedChange={(v) => updateTopBanner({ enabled: v })}
             />
           </div>
-          {/* Banner Presets */}
-          {topBanner.enabled && (
-            <div>
-              <Label className="text-xs font-semibold uppercase tracking-wider mb-2 block">Presets bannière</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { id: 'promo', name: 'Promo simple', bg: '#f5f5f5', text: '#000000' },
-                  { id: 'urgent', name: 'Urgent', bg: '#dc2626', text: '#ffffff' },
-                  { id: 'elegant', name: 'Élégant', bg: '#000000', text: '#d4a843' },
-                ].map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => {
-                      updateTopBanner({ bgColor: p.bg, textColor: p.text });
-                      toast.success(`Preset "${p.name}" appliqué`);
-                    }}
-                    className="border border-border hover:border-primary/50 rounded p-2 text-left transition-all"
-                  >
-                    <div className="h-4 rounded mb-1" style={{ backgroundColor: p.bg, border: '1px solid #ddd' }} />
-                    <p className="text-xs font-medium">{p.name}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
           {topBanner.enabled && (
             <>
+              {/* Mini preview */}
+              {topBanner.text && (
+                <div
+                  className="rounded-lg px-4 py-2 text-center text-xs font-medium border border-border/20"
+                  style={{ backgroundColor: topBanner.bgColor || '#000', color: topBanner.textColor || '#fff' }}
+                >
+                  {topBanner.text}
+                </div>
+              )}
+              {/* Presets */}
+              <div>
+                <Label className="text-xs font-semibold uppercase tracking-wider mb-2 block text-muted-foreground">Presets couleurs</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'neutral', name: 'Neutre', bg: '#f5f5f5', text: '#000000' },
+                    { id: 'urgent',  name: 'Urgent', bg: '#dc2626', text: '#ffffff' },
+                    { id: 'elegant', name: 'Élégant', bg: '#000000', text: '#d4a843' },
+                  ].map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => {
+                        updateTopBanner({ bgColor: p.bg, textColor: p.text });
+                        toast.success(`Couleur "${p.name}" appliquée`);
+                      }}
+                      className="border border-border hover:border-primary/50 rounded-lg p-2 text-left transition-all overflow-hidden"
+                    >
+                      <div className="h-5 rounded mb-1.5" style={{ backgroundColor: p.bg, border: '1px solid #ddd' }} />
+                      <p className="text-[10px] font-medium">{p.name}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="space-y-2">
                 <Label className="text-xs">Texte du bandeau</Label>
                 <Input
                   value={topBanner.text}
                   onChange={(e) => updateTopBanner({ text: e.target.value })}
-                  placeholder="Ex: Livraison gratuite dès 50€"
+                  placeholder="Ex: Livraison gratuite dès 50€ 🚚"
+                  className="h-9"
                 />
               </div>
               <div className="space-y-2">
@@ -322,31 +450,32 @@ export function HeaderDesignTab() {
                   value={topBanner.link || ''}
                   onChange={(e) => updateTopBanner({ link: e.target.value })}
                   placeholder="/boutique"
+                  className="h-9 font-mono text-sm"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs">Couleur de fond</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Fond</Label>
                   <div className="flex gap-2">
                     <input
                       type="color"
                       value={topBanner.bgColor || '#000000'}
                       onChange={(e) => updateTopBanner({ bgColor: e.target.value })}
-                      className="h-10 w-14 cursor-pointer rounded border border-border"
+                      className="h-9 w-12 cursor-pointer rounded border border-border flex-shrink-0"
                     />
-                    <Input value={topBanner.bgColor || ''} onChange={(e) => updateTopBanner({ bgColor: e.target.value })} className="flex-1" />
+                    <Input value={topBanner.bgColor || ''} onChange={(e) => updateTopBanner({ bgColor: e.target.value })} className="flex-1 h-9 font-mono text-xs" />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-xs">Couleur du texte</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Texte</Label>
                   <div className="flex gap-2">
                     <input
                       type="color"
                       value={topBanner.textColor || '#ffffff'}
                       onChange={(e) => updateTopBanner({ textColor: e.target.value })}
-                      className="h-10 w-14 cursor-pointer rounded border border-border"
+                      className="h-9 w-12 cursor-pointer rounded border border-border flex-shrink-0"
                     />
-                    <Input value={topBanner.textColor || ''} onChange={(e) => updateTopBanner({ textColor: e.target.value })} className="flex-1" />
+                    <Input value={topBanner.textColor || ''} onChange={(e) => updateTopBanner({ textColor: e.target.value })} className="flex-1 h-9 font-mono text-xs" />
                   </div>
                 </div>
               </div>
@@ -355,63 +484,65 @@ export function HeaderDesignTab() {
         </CardContent>
       </Card>
 
-      {/* Custom Colors */}
+      {/* ── PERSONNALISATION ── */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Personnalisation</CardTitle>
-          <CardDescription>Couleurs et comportement du header</CardDescription>
+        <CardHeader className="pb-3 bg-gradient-to-r from-violet-500/10 to-transparent rounded-t-lg">
+          <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-violet-500 inline-block" />
+            Couleurs & comportement
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-xs">Couleur de fond</Label>
+        <CardContent className="pt-3 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Fond du header</Label>
               <div className="flex gap-2">
                 <input
                   type="color"
                   value={headerBgColor || '#000000'}
                   onChange={(e) => updateDesignSettings({ headerBgColor: e.target.value } as any)}
-                  className="h-10 w-14 cursor-pointer rounded border border-border"
+                  className="h-9 w-12 cursor-pointer rounded border border-border flex-shrink-0"
                 />
                 <Input
                   value={headerBgColor}
                   onChange={(e) => updateDesignSettings({ headerBgColor: e.target.value } as any)}
                   placeholder="Auto (thème)"
-                  className="flex-1"
+                  className="flex-1 h-9 font-mono text-xs"
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Couleur du texte</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Texte du header</Label>
               <div className="flex gap-2">
                 <input
                   type="color"
                   value={headerTextColor || '#ffffff'}
                   onChange={(e) => updateDesignSettings({ headerTextColor: e.target.value } as any)}
-                  className="h-10 w-14 cursor-pointer rounded border border-border"
+                  className="h-9 w-12 cursor-pointer rounded border border-border flex-shrink-0"
                 />
                 <Input
                   value={headerTextColor}
                   onChange={(e) => updateDesignSettings({ headerTextColor: e.target.value } as any)}
                   placeholder="Auto (thème)"
-                  className="flex-1"
+                  className="flex-1 h-9 font-mono text-xs"
                 />
               </div>
             </div>
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between py-1 border-t border-border/30">
             <div>
-              <Label>Header fixe (sticky)</Label>
-              <p className="text-xs text-muted-foreground">Le header reste visible lors du scroll</p>
+              <Label className="text-sm">Header fixe (sticky)</Label>
+              <p className="text-xs text-muted-foreground">Reste visible lors du scroll</p>
             </div>
             <Switch
               checked={headerFixed}
               onCheckedChange={(v) => updateDesignSettings({ headerFixed: v } as any)}
             />
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between py-1 border-t border-border/30">
             <div>
-              <Label>Afficher le logo dans le header</Label>
-              <p className="text-xs text-muted-foreground">Masquer le logo pour un look minimal</p>
+              <Label className="text-sm">Afficher le logo</Label>
+              <p className="text-xs text-muted-foreground">Masquer pour un look minimal</p>
             </div>
             <Switch
               checked={designSettings.showLogo !== false}

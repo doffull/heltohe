@@ -206,7 +206,7 @@ export function useDesignSettings() {
       if (!data) return null;
       return dbToSettings(data as Record<string, unknown>);
     },
-    staleTime: 1000 * 60 * 5, // 5 min cache
+    staleTime: 0, // Always fresh — local state is source of truth after init
   });
 }
 

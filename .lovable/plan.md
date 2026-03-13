@@ -1,75 +1,103 @@
 
+## Thinking
 
-## Audit complet — bugs identifiés + refonte UI
+The user wants to:
+1. Upload a product mockup image (like the Marco jacket shown)
+2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
+3. Automatically generates a fully interactive, dynamic product page from it
 
----
+The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
 
-### Bug 1 — Titre/sous-titre du Hero ne persiste pas (critique)
+1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
+   - Accepts an image (jpg/png/webp)
+   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
+   - Also extracts the **color variants** as `colorOptions` with proper hex values
+   - Returns a structured product object ready to pre-fill the ProductForm
 
-**Cause racine confirmée :** `AppContext.tsx` ligne 86-87 :
-```typescript
-// Ligne 86 — ternaire mal formé, résultat toujours ignoré
-setDesignSettingsLocal(prev => ({ ...INITIAL_DESIGN_SETTINGS, ...dbSettings, ...prev === INITIAL_DESIGN_SETTINGS ? dbSettings : {} }));
-// Ligne 87 — ÉCRASE immédiatement avec dbSettings bruts depuis la DB
-setDesignSettingsLocal(dbSettings);
-```
-Le double `setDesignSettingsLocal` fait que lors de chaque rechargement, la DB regagne toujours. La séquence exacte du bug :
-1. User tape un nouveau titre → `updateDesignSettings` → debounce 800ms → `saveDesignSettings.mutate` → sauvegardé OK en DB
-2. Après sauvegarde, `onSuccess` appelle `queryClient.invalidateQueries` → `dbSettings` se rafraîchit → `useEffect` ligne 84 se redéclenche → `setDesignSettingsLocal(dbSettings)` est appelé **mais** `dbSettings` contient les nouvelles données… **sauf si** la Query Cache `staleTime: 5min` retourne les anciennes données
+2. **Add "Importer Maquette IA" button** in AdminProducts that:
+   - Opens a dialog with a dropzone accepting images
+   - Sends image to the edge function
+   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
+   - Lets admin review/edit before confirming creation
+   - On confirm: creates the product in the DB with all extracted data
 
-**Vrai problème :** La Query a `staleTime: 1000 * 60 * 5` (5 minutes). Après `invalidateQueries`, React Query marque la query comme stale et la refetch, mais si l'utilisateur a fait plusieurs modifications pendant ces 5 minutes avec le debounce à 800ms, il est possible que la dernière mutation parte avec un `designSettings` stale (capturé par la closure du `useCallback`). De plus le double `setDesignSettingsLocal` est une race condition.
+3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
 
-**Fix :** Simplifier l'effet de sync — ne remplacer les settings locaux depuis la DB **que si** ce sont encore les `INITIAL_DESIGN_SETTINGS` (premier chargement uniquement). Après ça, ne plus jamais overrider le local depuis le remote. Réduire le `staleTime` à 0 ou retirer le cache.
+Looking at the Marco image:
+- Product name: MARCO
+- Brand: Helvetica Mountain Pioneers x PEGASWOES  
+- Season: HIVER 2026
+- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
+- Sizes: XS, S, M, L, XL, XXL
+- Composition: 100% POLYESTER
+- Tags: limited edition
 
----
+## Plan
 
-### Bug 2 — Bouton croix rouge "Arrière-plan" ne supprime pas l'image
+### 1. New edge function `analyze-product-image`
+New file: `supabase/functions/analyze-product-image/index.ts`
 
-**Cause racine :** `FileDropZone.handleRemove` appelle `onUpload('')` (ligne 71). Le handler `onUpload` du fond dans `HeroSliderTab` (ligne 201-204) :
-```typescript
-onUpload={(url) => {
-  const isVideo = /\.(mp4|webm|mov|ogg)$/i.test(url);
-  updateSlide(index, { backgroundMedia: url, media: url || slide.media, ... });
-}}
-```
-Quand `url = ''` (suppression) : `url || slide.media` garde **l'ancien** `slide.media`, donc `media` ne se vide jamais. Et `currentFile={slide.backgroundMedia || slide.media}` — si `backgroundMedia` vaut `''`, le fallback `|| slide.media` continue d'afficher l'image. L'UI ne reflète donc jamais la suppression.
+Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
+- name, subtitle, price (ask to estimate if not found), category
+- sizes (exact text from image)
+- colors with **hex values** from the color swatches visible in image
+- colorOptions: [{color: "#hex", label: "nom"}]
+- material/composition
+- description (generated from visual)
+- sku (auto-generated)
+- tags (e.g., "limited edition" if spotted)
+- Any brand/collection info → subtitle
 
-**Fix :** Passer `onUpload` un `url | null` ou gérer explicitement le cas `url === ''` pour vider les deux champs (`backgroundMedia: '', media: ''`). Et dans `currentFile`, utiliser `slide.backgroundMedia || slide.media || ''` proprement.
+### 2. New UI component `ImportMockupDialog.tsx`
+In `src/components/admin/ImportMockupDialog.tsx`:
+- Image dropzone (jpg/png/webp/gif up to 10MB)
+- Preview of uploaded image
+- "Analyser avec l'IA" button
+- Loading state with animated scan effect
+- Results preview:
+  - Product name, subtitle
+  - Price field (editable, since AI may not find it)
+  - Color swatches preview
+  - Size badges preview
+  - Material info
+  - Generated description
+- "Créer ce produit" confirm button
+- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
 
----
+### 3. AdminProducts integration
+- Add "Importer Maquette IA" button next to existing "Importer PDF" button
+- Opens the new ImportMockupDialog
+- After product created, show toast + option to go to product detail
 
-### Plan d'implémentation
+### Files to create/modify
+- `supabase/functions/analyze-product-image/index.ts` — new edge function
+- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
+- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
 
-**4 fichiers à modifier :**
+## Implementation Steps
 
-**1. `src/context/AppContext.tsx`**
-- Supprimer le double `setDesignSettingsLocal`. Remplacer par : initialiser depuis DB une seule fois au premier chargement.
-- Supprimer `staleTime: 5min` sur le hook `useDesignSettings` ou le réduire à 30s.
+### Step 1: Edge function `analyze-product-image`
+Input: `{ imageBase64: string, mimeType: string }`
+Prompt to Gemini Pro Vision:
+- Extract all visible product info
+- Extract hex colors from color swatches
+- Generate description if not present
+- Output strict JSON matching `ExtractedProductData` schema
 
-**2. `src/pages/admin/AdminDesign.tsx` — `HeroSliderTab`**
-- Corriger `onUpload` du fond (backgroundMedia) : quand `url === ''`, mettre `backgroundMedia: '', media: ''`.
-- Ajouter un live preview du slider dans le panneau — un mini-aperçu en haut de chaque slide card (preview 16:9 avec le titre/image actuelle).
-- Refonte UI : ajouter des couleurs d'accent + séparation visuelle claire entre les sections (couleurs de header de card, badges de statut par slide).
+### Step 2: `ImportMockupDialog` component
+States:
+- `file`, `preview` (image URL)
+- `analyzing` (loading state)
+- `extracted` (ExtractedProductData | null)
+- `editableData` (form state to review/edit before import)
 
-**3. `src/components/admin/HeaderDesignTab.tsx`**
-- Refonte UI : ajouter un live preview du header en haut de la section (mini header visuel qui reflète en temps réel le preset sélectionné, la couleur de fond, la couleur du texte et le logo actuel).
-- Améliorer la présentation des presets avec des couleurs distinctes.
+UX Flow:
+1. Drag & drop or click to upload image
+2. Preview appears
+3. Click "Analyser avec IA" → loading scan animation
+4. Results appear: color swatches, size badges, all info
+5. User can edit price/name if needed
+6. Click "Créer le produit" → uploads image to storage, creates product, success
 
-**4. `src/hooks/useDesignSettings.ts`**
-- Réduire `staleTime` de 5 minutes à 0 pour que la DB soit toujours fraîche après save.
-
----
-
-### Refonte UI demandée
-
-**Hero Slider tab :**
-- Header de section coloré (gradient primaire) avec badge de compteur de slides
-- Chaque slide card avec un en-tête de couleur (couleur d'accent de la slide)
-- Mini preview 16:9 en haut de chaque card affichant l'image de fond + titre superposé
-
-**Header tab :**
-- Bloc "Live Preview" fixe en haut : rendu miniature du header avec les vrais couleurs, logo et liens
-- Fond coloré différent pour chaque section (Presets / Navigation / Bandeau / Couleurs)
-
-Ces 2 sections sont les seules modifiées (Disposition non touchée comme demandé).
-
+### Step 3: AdminProducts button
+Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)
