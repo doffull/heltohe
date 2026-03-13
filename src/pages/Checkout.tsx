@@ -51,6 +51,7 @@ export default function Checkout() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { designSettings } = useApp();
+  const { data: adminConfig } = useAdminConfig();
   const { items, subtotal, promoDiscount, promoCode, total, clearCart } = useCart();
 
   const [step, setStep] = useState<Step>('address');
