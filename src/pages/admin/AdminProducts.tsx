@@ -54,6 +54,15 @@ export default function AdminProducts() {
   const bulkDelete = useBulkDeleteProducts();
   const bulkUpdate = useBulkUpdateProducts();
 
+  // Looks
+  const { data: looks = [], isLoading: loadingLooks } = useProductLooks();
+  const createLook = useCreateProductLook();
+  const updateLook = useUpdateProductLook();
+  const deleteLook = useDeleteProductLook();
+  const [lookDialogOpen, setLookDialogOpen] = useState(false);
+  const [editingLook, setEditingLook] = useState<ProductLook | null>(null);
+  const [lookForm, setLookForm] = useState({ name: '', description: '', productIds: [] as string[], isActive: true });
+
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [stockFilter, setStockFilter] = useState<string>('all');
