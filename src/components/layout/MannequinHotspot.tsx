@@ -11,13 +11,6 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Move,
 };
 
-const DEFAULT_HOTSPOTS: MannequinHotspotConfig[] = [
-  { id: 'collar', x: '50%', y: '15%', label: 'COL TECHNIQUE', details: 'Protection coupe-vent intégrée', icon: 'Shield', enabled: true },
-  { id: 'pocket', x: '30%', y: '45%', label: 'POCHE TACTIQUE', details: 'Accès rapide sécurisé', icon: 'Package', enabled: true },
-  { id: 'fabric', x: '70%', y: '60%', label: 'TISSU TECHNIQUE', details: 'Gore-Tex Pro imperméabilité', icon: 'Layers', enabled: true },
-  { id: 'hem', x: '50%', y: '85%', label: 'OURLET AJUSTABLE', details: 'Cordon élastique intégré', icon: 'Move', enabled: true },
-];
-
 function getMediaType(url: string): 'video' | 'image' {
   const ext = url.split('.').pop()?.toLowerCase() || '';
   if (['mp4', 'webm', 'ogg'].includes(ext)) return 'video';
@@ -162,12 +155,10 @@ export function MannequinHotspots() {
   // Respect the global "showOverlays" toggle
   if (!designSettings.showOverlays) return null;
 
-  const allHotspots = designSettings.mannequinHotspots?.length > 0
-    ? designSettings.mannequinHotspots
-    : DEFAULT_HOTSPOTS;
+  // Use only persisted hotspots — no hardcoded fallback
+  const hotspots = (designSettings.mannequinHotspots || []).filter(h => h.enabled !== false);
 
-  // Filter only enabled hotspots
-  const hotspots = allHotspots.filter(h => h.enabled !== false);
+  if (hotspots.length === 0) return null;
 
   return (
     <>
