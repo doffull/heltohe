@@ -641,11 +641,7 @@
   transform: translateY(-50%) translateX(-5px);
 }
 
-/* Universal logo visibility filter — readable on both white and dark backgrounds */
+/* Universal logo visibility — no filter, clean display */
 .logo-visibility-filter {
-  filter:
-    drop-shadow(0 0 1px #ffffff)
-    drop-shadow(0 0 2px #ffffff)
-    drop-shadow(0 0 2px #000000)
-    drop-shadow(0 0 4px #000000);
+  /* No forced filters — logo is displayed as-is */
 }
