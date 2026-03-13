@@ -1,103 +1,95 @@
 
-## Thinking
 
-The user wants to:
-1. Upload a product mockup image (like the Marco jacket shown)
-2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
-3. Automatically generates a fully interactive, dynamic product page from it
+## Three features to build
 
-The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
+---
 
-1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
-   - Accepts an image (jpg/png/webp)
-   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
-   - Also extracts the **color variants** as `colorOptions` with proper hex values
-   - Returns a structured product object ready to pre-fill the ProductForm
+### 1 — Bouton Save + persistance des hotspots (bug critique)
 
-2. **Add "Importer Maquette IA" button** in AdminProducts that:
-   - Opens a dialog with a dropzone accepting images
-   - Sends image to the edge function
-   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
-   - Lets admin review/edit before confirming creation
-   - On confirm: creates the product in the DB with all extracted data
+**Cause racine du bug hotspots :**
+- `mannequinHotspots` n'est **jamais sauvegardé en base**. La fonction `settingsToDb` dans `useDesignSettings.ts` ne contient pas `mannequin_hotspots`.
+- La colonne n'existe pas non plus dans `design_settings`.
+- Résultat : à chaque rechargement, les hotspots tombent sur `INITIAL_DESIGN_SETTINGS` (4 hotspots hardcodés). Les suppressions sont perdues.
 
-3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
+**Fixes :**
 
-Looking at the Marco image:
-- Product name: MARCO
-- Brand: Helvetica Mountain Pioneers x PEGASWOES  
-- Season: HIVER 2026
-- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
-- Sizes: XS, S, M, L, XL, XXL
-- Composition: 100% POLYESTER
-- Tags: limited edition
+**DB** : Ajouter une colonne `mannequin_hotspots jsonb` à `design_settings` avec `DEFAULT '[]'`.
 
-## Plan
+**`useDesignSettings.ts`** :
+- `dbToSettings` : lire `db.mannequin_hotspots`
+- `settingsToDb` : écrire `mannequin_hotspots: s.mannequinHotspots as unknown as Json`
 
-### 1. New edge function `analyze-product-image`
-New file: `supabase/functions/analyze-product-image/index.ts`
+**`MannequinHotspot.tsx`** : Supprimer le fallback sur `DEFAULT_HOTSPOTS`. Si le tableau est vide, ne rien afficher.
 
-Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
-- name, subtitle, price (ask to estimate if not found), category
-- sizes (exact text from image)
-- colors with **hex values** from the color swatches visible in image
-- colorOptions: [{color: "#hex", label: "nom"}]
-- material/composition
-- description (generated from visual)
-- sku (auto-generated)
-- tags (e.g., "limited edition" if spotted)
-- Any brand/collection info → subtitle
+**Bouton Save explicite** dans `AdminDesign.tsx` : Un bouton "Sauvegarder" fixe en haut du panneau droit qui appelle `saveDesignSettings.mutate(designSettings)` immédiatement (pas de debounce). Avec état `isPending` pour le spinner. Toast de confirmation.
 
-### 2. New UI component `ImportMockupDialog.tsx`
-In `src/components/admin/ImportMockupDialog.tsx`:
-- Image dropzone (jpg/png/webp/gif up to 10MB)
-- Preview of uploaded image
-- "Analyser avec l'IA" button
-- Loading state with animated scan effect
-- Results preview:
-  - Product name, subtitle
-  - Price field (editable, since AI may not find it)
-  - Color swatches preview
-  - Size badges preview
-  - Material info
-  - Generated description
-- "Créer ce produit" confirm button
-- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
+---
 
-### 3. AdminProducts integration
-- Add "Importer Maquette IA" button next to existing "Importer PDF" button
-- Opens the new ImportMockupDialog
-- After product created, show toast + option to go to product detail
+### 2 — Associations produits (Looks / Ensembles)
 
-### Files to create/modify
-- `supabase/functions/analyze-product-image/index.ts` — new edge function
-- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
-- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
+**Nouveau concept : "Looks"** — Associer plusieurs produits pour les vendre ensemble ou séparément.
 
-## Implementation Steps
+**DB** : Nouvelle table `product_looks` :
+```sql
+CREATE TABLE product_looks (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  product_ids uuid[] NOT NULL DEFAULT '{}',
+  created_at timestamptz DEFAULT now()
+);
+```
+RLS : Admins gèrent, public peut lire.
 
-### Step 1: Edge function `analyze-product-image`
-Input: `{ imageBase64: string, mimeType: string }`
-Prompt to Gemini Pro Vision:
-- Extract all visible product info
-- Extract hex colors from color swatches
-- Generate description if not present
-- Output strict JSON matching `ExtractedProductData` schema
+**Admin** : Nouvel onglet "Looks" dans `AdminProducts` (ou section dans ProductForm) :
+- Liste des looks créés (nom + miniatures produits associés)
+- Bouton "Créer un look" → modal avec :
+  - Champ nom du look (ex : "Tenue Hiver", "Set Casual")
+  - Sélecteur multi-produits (avec images, prix)
+  - Prévisualisation des produits sélectionnés
 
-### Step 2: `ImportMockupDialog` component
-States:
-- `file`, `preview` (image URL)
-- `analyzing` (loading state)
-- `extracted` (ExtractedProductData | null)
-- `editableData` (form state to review/edit before import)
+**Fiche produit** (`ProductDetail.tsx`) :
+- Si le produit fait partie d'un look → section "Compléter le look" affichant les autres produits du même look avec leur prix et bouton ajout panier individuel.
 
-UX Flow:
-1. Drag & drop or click to upload image
-2. Preview appears
-3. Click "Analyser avec IA" → loading scan animation
-4. Results appear: color swatches, size badges, all info
-5. User can edit price/name if needed
-6. Click "Créer le produit" → uploads image to storage, creates product, success
+**Hook** : `useProductLooks` (CRUD complet).
 
-### Step 3: AdminProducts button
-Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)
+---
+
+### 3 — Styles visuels (Lookbook / Styles)
+
+**Concept : "Styles"** — Des fiches éditoriales associant un nom de style, une image d'ambiance et plusieurs produits.
+
+**DB** : Nouvelle table `product_styles` :
+```sql
+CREATE TABLE product_styles (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  description text,
+  image text,
+  product_ids uuid[] NOT NULL DEFAULT '{}',
+  is_active boolean DEFAULT true,
+  created_at timestamptz DEFAULT now()
+);
+```
+
+**Admin** : Section "Styles / Looks éditoriaux" dans `AdminMarketing` ou onglet dédié dans `AdminProducts` :
+- Créer/éditer des styles avec image d'ambiance + sélection de produits
+- Toggle actif/inactif
+
+**Affichage** : Section "Nos styles" sur la page d'accueil (si activé dans homeSections) ou sur la page produit.
+
+---
+
+## Fichiers à modifier / créer
+
+| Fichier | Action |
+|---|---|
+| `supabase/migrations/...` | Ajouter colonne `mannequin_hotspots`, créer `product_looks`, créer `product_styles` |
+| `src/hooks/useDesignSettings.ts` | Lire/écrire `mannequin_hotspots` |
+| `src/components/layout/MannequinHotspot.tsx` | Supprimer fallback `DEFAULT_HOTSPOTS` |
+| `src/pages/admin/AdminDesign.tsx` | Bouton Save explicite |
+| `src/hooks/useProductLooks.ts` | Nouveau hook CRUD looks |
+| `src/pages/admin/AdminProducts.tsx` | Onglet / section "Looks" |
+| `src/pages/ProductDetail.tsx` | Section "Compléter le look" |
+| `src/hooks/useProductStyles.ts` | Nouveau hook CRUD styles |
+| `src/pages/admin/AdminMarketing.tsx` | Section gestion des styles |
+
