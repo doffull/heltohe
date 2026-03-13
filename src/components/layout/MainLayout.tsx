@@ -176,10 +176,10 @@ export function MainLayout({ children }: MainLayoutProps) {
             headerPreset === 'centered' ? "flex-col justify-center gap-1 h-auto py-3 lg:py-4" : "",
             headerPreset === 'fullwidth' ? "gap-6" : "",
           )}>
-            {/* Logo in header - always visible when no sidebar, or on mobile */}
+            {/* Logo in header - always visible on all pages */}
             <Link to="/" className={cn(
-              "flex items-center gap-2",
-              headerPreset === 'centered' ? "" : (showSidebar ? "lg:hidden mr-auto" : "mr-auto")
+              "flex items-center gap-2 mr-auto",
+              headerPreset === 'centered' ? "justify-center" : ""
             )}>
               {designSettings.showLogo !== false && designSettings.hudLogo ? (
                 <img 
