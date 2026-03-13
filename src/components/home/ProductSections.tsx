@@ -3,6 +3,8 @@ import { useApp } from '@/context/AppContext';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { ProductGrid } from '@/components/products/ProductCard';
+import { InlineEditable } from '@/components/visual-editor/InlineEditable';
+import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
 
 export function ProductSections() {
   const { designSettings, products, navigateToCategory, language } = useApp();
