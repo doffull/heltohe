@@ -6,6 +6,8 @@ import { HeroSlide } from '@/types';
 import { Button } from '@/components/ui/button';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { InlineEditable } from '@/components/visual-editor/InlineEditable';
+import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
 
 export function HeroSlider() {
   const { designSettings, setCurrentView } = useApp();
