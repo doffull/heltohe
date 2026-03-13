@@ -191,7 +191,7 @@ export default function Checkout() {
           shippingCost: result.shippingCost,
           total: result.total,
           deliveryMode,
-          adminEmail: designSettings.adminNotificationEmail || undefined,
+          adminEmail: adminConfig?.adminNotificationEmail || undefined,
         },
       }).catch(() => {/* non-blocking, swallow silently */});
 
