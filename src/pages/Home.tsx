@@ -22,29 +22,29 @@ import catEnfant from '@/assets/categories/cat-enfant.jpg';
 import catAccessoires from '@/assets/categories/cat-accessoires.jpg';
 
 const DEFAULT_HERO_SLIDES = [
-  {
-    image: heroImage1,
-    title: 'COLLECTION\nHIVER 2026',
-    subtitle: 'ÉQUIPEMENT TECHNIQUE PREMIUM',
-    cta: 'Découvrir',
-  },
-  {
-    image: heroImage2,
-    title: 'NOUVELLE\nCOLLECTION',
-    subtitle: 'ÉLÉGANCE & PERFORMANCE',
-    cta: 'Explorer',
-  },
-];
+{
+  image: heroImage1,
+  title: 'COLLECTION\nHIVER 2026',
+  subtitle: 'ÉQUIPEMENT TECHNIQUE PREMIUM',
+  cta: 'Découvrir'
+},
+{
+  image: heroImage2,
+  title: 'NOUVELLE\nCOLLECTION',
+  subtitle: 'ÉLÉGANCE & PERFORMANCE',
+  cta: 'Explorer'
+}];
+
 
 const FALLBACK_CATEGORIES = [
-  { title: 'Homme', image: catHomme, href: '/boutique/homme' },
-  { title: 'Femme', image: catFemme, href: '/boutique/femme' },
-  { title: 'Enfant', image: catEnfant, href: '/boutique/enfant' },
-  { title: 'Accessoires', image: catAccessoires, href: '/boutique/accessoires' },
-];
+{ title: 'Homme', image: catHomme, href: '/boutique/homme' },
+{ title: 'Femme', image: catFemme, href: '/boutique/femme' },
+{ title: 'Enfant', image: catEnfant, href: '/boutique/enfant' },
+{ title: 'Accessoires', image: catAccessoires, href: '/boutique/accessoires' }];
+
 
 // Reusable scroll-reveal wrapper
-function RevealSection({ children, className, delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
+function RevealSection({ children, className, delay = 0 }: {children: React.ReactNode;className?: string;delay?: number;}) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-80px" });
 
@@ -54,15 +54,15 @@ function RevealSection({ children, className, delay = 0 }: { children: React.Rea
       initial={{ opacity: 0, y: 60 }}
       animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 60 }}
       transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay }}
-      className={className}
-    >
+      className={className}>
+      
       {children}
-    </motion.div>
-  );
+    </motion.div>);
+
 }
 
 // Staggered children container
-function StaggerContainer({ children, className }: { children: React.ReactNode; className?: string }) {
+function StaggerContainer({ children, className }: {children: React.ReactNode;className?: string;}) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-60px" });
 
@@ -73,21 +73,21 @@ function StaggerContainer({ children, className }: { children: React.ReactNode; 
       animate={isInView ? "visible" : "hidden"}
       variants={{
         hidden: {},
-        visible: { transition: { staggerChildren: 0.12 } },
+        visible: { transition: { staggerChildren: 0.12 } }
       }}
-      className={className}
-    >
+      className={className}>
+      
       {children}
-    </motion.div>
-  );
+    </motion.div>);
+
 }
 
 const cardVariants = {
   hidden: { opacity: 0, y: 50, scale: 0.95 },
   visible: {
     opacity: 1, y: 0, scale: 1,
-    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const },
-  },
+    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const }
+  }
 };
 
 export default function Home() {
@@ -106,25 +106,25 @@ export default function Home() {
   const sliderHeight = (designSettings as any).sliderHeight || '100vh';
 
   // Determine slides: use admin-configured slides if they have valid media, otherwise use defaults
-  const adminSlides = designSettings.heroSlides?.filter(s => s.media || s.backgroundMedia);
+  const adminSlides = designSettings.heroSlides?.filter((s) => s.media || s.backgroundMedia);
   const hasAdminSlides = adminSlides && adminSlides.length > 0;
-  
+
   // Build unified slide array
-  const heroSlides = hasAdminSlides 
-    ? adminSlides.map(s => {
-        const desktopImage = s.backgroundMedia || s.media;
-        return {
-          image: (isMobile && s.mobileImage) ? s.mobileImage : desktopImage,
-          midgroundMedia: s.midgroundMedia,
-          foregroundMedia: s.foregroundMedia,
-          title: s.title || '',
-          subtitle: s.subtitle || '',
-          cta: s.ctaText || 'Découvrir',
-          accentColor: s.accentColor,
-          mediaType: s.mediaType || 'image' as const,
-        };
-      })
-    : DEFAULT_HERO_SLIDES;
+  const heroSlides = hasAdminSlides ?
+  adminSlides.map((s) => {
+    const desktopImage = s.backgroundMedia || s.media;
+    return {
+      image: isMobile && s.mobileImage ? s.mobileImage : desktopImage,
+      midgroundMedia: s.midgroundMedia,
+      foregroundMedia: s.foregroundMedia,
+      title: s.title || '',
+      subtitle: s.subtitle || '',
+      cta: s.ctaText || 'Découvrir',
+      accentColor: s.accentColor,
+      mediaType: s.mediaType || 'image' as const
+    };
+  }) :
+  DEFAULT_HERO_SLIDES;
 
   const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -137,14 +137,14 @@ export default function Home() {
   const heroScale = useTransform(scrollYProgress, [0, 1], [1.1, 1.3]);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
 
-  const sliderSpeed = hasAdminSlides ? (designSettings.sliderSpeed || 6000) : 6000;
+  const sliderSpeed = hasAdminSlides ? designSettings.sliderSpeed || 6000 : 6000;
   const autoPlay = hasAdminSlides ? designSettings.sliderAutoPlay !== false : true;
 
   // Auto-play slider
   useEffect(() => {
     if (!autoPlay || heroSlides.length <= 1) return;
     const timer = setInterval(() => {
-      setCurrentSlide(prev => (prev + 1) % heroSlides.length);
+      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
     }, sliderSpeed);
     return () => clearInterval(timer);
   }, [autoPlay, sliderSpeed, heroSlides.length]);
@@ -159,11 +159,11 @@ export default function Home() {
       price: product.price,
       salePrice: product.salePrice,
       image: product.image,
-      quantity: 1,
+      quantity: 1
     });
     toast({
       title: 'Ajouté au panier',
-      description: `${product.name} a été ajouté à votre panier`,
+      description: `${product.name} a été ajouté à votre panier`
     });
   };
 
@@ -175,88 +175,88 @@ export default function Home() {
       <PromoBanner />
       {/* ═══════════════ HERO PARALLAX ═══════════════ */}
       <section ref={heroRef} className={cn("relative overflow-hidden", hasAdminSlides && designSettings.sliderGrayscale && "grayscale")} style={{ height: sliderHeight }}>
-        {heroSlides.map((s, i) => (
-          <div
-            key={i}
-            className={cn(
-              "absolute inset-0 transition-opacity duration-1000",
-              i === currentSlide ? "opacity-100" : "opacity-0"
-            )}
-          >
+        {heroSlides.map((s, i) =>
+        <div
+          key={i}
+          className={cn(
+            "absolute inset-0 transition-opacity duration-1000",
+            i === currentSlide ? "opacity-100" : "opacity-0"
+          )}>
+          
             {/* Background Layer (slowest parallax) */}
-            {('mediaType' in s && s.mediaType === 'video') ? (
-              <motion.div className="absolute inset-0 will-change-transform" style={{ y: heroY, scale: heroScale }}>
+            {'mediaType' in s && s.mediaType === 'video' ?
+          <motion.div className="absolute inset-0 will-change-transform" style={{ y: heroY, scale: heroScale }}>
                 <video src={s.image} autoPlay muted loop playsInline className="w-full h-full object-cover" />
-              </motion.div>
-            ) : (
-              <motion.div
-                className="absolute inset-0 bg-cover bg-center will-change-transform"
-                style={{
-                  backgroundImage: `url(${s.image})`,
-                  y: heroY,
-                  scale: heroScale,
-                }}
-              />
-            )}
+              </motion.div> :
+
+          <motion.div
+            className="absolute inset-0 bg-cover bg-center will-change-transform"
+            style={{
+              backgroundImage: `url(${s.image})`,
+              y: heroY,
+              scale: heroScale
+            }} />
+
+          }
             
             {/* Midground Layer */}
-            {'midgroundMedia' in s && (s as any).midgroundMedia && (
-              <motion.div className="absolute inset-0 z-[1] will-change-transform" style={{ y: heroMgY }}>
+            {'midgroundMedia' in s && (s as any).midgroundMedia &&
+          <motion.div className="absolute inset-0 z-[1] will-change-transform" style={{ y: heroMgY }}>
                 <img src={(s as any).midgroundMedia} alt="" className="w-full h-full object-cover" />
               </motion.div>
-            )}
+          }
             
             {/* Foreground Layer */}
-            {'foregroundMedia' in s && (s as any).foregroundMedia && (
-              <motion.div className="absolute inset-0 z-[2] will-change-transform" style={{ y: heroFgY }}>
+            {'foregroundMedia' in s && (s as any).foregroundMedia &&
+          <motion.div className="absolute inset-0 z-[2] will-change-transform" style={{ y: heroFgY }}>
                 <img src={(s as any).foregroundMedia} alt="" className="w-full h-full object-contain" />
               </motion.div>
-            )}
+          }
           </div>
-        ))}
+        )}
 
         {/* Overlays removed per design choice */}
 
         <motion.div
           style={{ opacity: heroOpacity }}
-          className="relative z-20 h-full flex flex-col justify-end pb-16 lg:pb-24 px-4 lg:px-16"
-        >
+          className="relative z-20 h-full flex flex-col justify-end pb-16 lg:pb-24 px-4 lg:px-16">
+          
           <div className="max-w-3xl space-y-6">
             <motion.p
               key={`sub-${currentSlide}`}
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="font-mono text-xs tracking-[0.4em] text-muted-foreground uppercase"
-            >
+              className="font-mono text-xs tracking-[0.4em] uppercase text-slate-50">
+              
               {slide.subtitle}
             </motion.p>
             <h1 className="text-2xl sm:text-5xl md:text-7xl xl:text-8xl font-bold uppercase leading-[0.9] tracking-tighter">
-              {slide.title.split('\n').map((line, i) => (
-                <motion.span
-                  key={`${currentSlide}-${i}`}
-                  className="block"
-                  initial={{ opacity: 0, y: 40, clipPath: "inset(0 0 100% 0)" }}
-                  animate={{ opacity: 1, y: 0, clipPath: "inset(0 0 0% 0)" }}
-                  transition={{ duration: 0.8, delay: 0.3 + i * 0.15, ease: [0.22, 1, 0.36, 1] }}
-                >
-                  {i === 1 ? (
-                    <span className="text-muted-foreground">{line}</span>
-                  ) : line}
+              {slide.title.split('\n').map((line, i) =>
+              <motion.span
+                key={`${currentSlide}-${i}`}
+                className="block text-white"
+                initial={{ opacity: 0, y: 40, clipPath: "inset(0 0 100% 0)" }}
+                animate={{ opacity: 1, y: 0, clipPath: "inset(0 0 0% 0)" }}
+                transition={{ duration: 0.8, delay: 0.3 + i * 0.15, ease: [0.22, 1, 0.36, 1] }}>
+                
+                  {i === 1 ?
+                <span className="text-muted-foreground">{line}</span> :
+                line}
                 </motion.span>
-              ))}
+              )}
             </h1>
             <motion.div
               key={`cta-${currentSlide}`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.7 }}
-            >
+              transition={{ duration: 0.6, delay: 0.7 }}>
+              
               <Button
                 size="lg"
                 className="h-14 px-10 uppercase tracking-[0.2em] text-sm trapezoid-btn glow-hover"
-                onClick={() => navigate('/boutique')}
-              >
+                onClick={() => navigate('/boutique')}>
+                
                 {slide.cta}
                 <ArrowRight className="ml-3 h-5 w-5" />
               </Button>
@@ -264,7 +264,7 @@ export default function Home() {
           </div>
 
           <div className="absolute bottom-8 right-8 flex items-center gap-3 z-30">
-            <button onClick={() => setCurrentSlide(prev => (prev - 1 + heroSlides.length) % heroSlides.length)} className="w-10 h-10 border border-foreground/30 flex items-center justify-center hover:bg-foreground/10 transition-colors">
+            <button onClick={() => setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length)} className="w-10 h-10 border border-foreground/30 flex items-center justify-center hover:bg-foreground/10 transition-colors">
               <ChevronLeft className="h-4 w-4" />
             </button>
             <span className="font-mono text-sm tabular-nums">
@@ -272,7 +272,7 @@ export default function Home() {
               <span className="text-muted-foreground mx-1">/</span>
               <span className="text-muted-foreground">{String(heroSlides.length).padStart(2, '0')}</span>
             </span>
-            <button onClick={() => setCurrentSlide(prev => (prev + 1) % heroSlides.length)} className="w-10 h-10 border border-foreground/30 flex items-center justify-center hover:bg-foreground/10 transition-colors">
+            <button onClick={() => setCurrentSlide((prev) => (prev + 1) % heroSlides.length)} className="w-10 h-10 border border-foreground/30 flex items-center justify-center hover:bg-foreground/10 transition-colors">
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
@@ -281,14 +281,14 @@ export default function Home() {
         <motion.div
           className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30"
           animate={{ opacity: [0.3, 1, 0.3] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
+          transition={{ duration: 2, repeat: Infinity }}>
+          
           <div className="w-px h-16 bg-foreground/20 relative overflow-hidden">
             <motion.div
               className="absolute top-0 left-0 w-full bg-foreground"
               animate={{ height: ["0%", "100%", "0%"], top: ["0%", "0%", "100%"] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            />
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }} />
+            
           </div>
         </motion.div>
       </section>
@@ -317,27 +317,27 @@ export default function Home() {
             "grid-cols-2 lg:grid-cols-4"
           )}>
             {(() => {
-              const rootCats = dbCategories.filter(c => !c.parentId);
-              const cats = rootCats.length > 0
-                ? rootCats.map(c => ({ title: c.title, image: c.image || '/placeholder.svg', href: `/boutique/${c.slug || encodeURIComponent(c.title.toLowerCase())}` }))
-                : designSettings.categories?.length > 0
-                  ? designSettings.categories.map(c => ({ title: c.title, image: c.image, href: `/boutique/${encodeURIComponent(c.title.toLowerCase())}` }))
-                  : FALLBACK_CATEGORIES;
+              const rootCats = dbCategories.filter((c) => !c.parentId);
+              const cats = rootCats.length > 0 ?
+              rootCats.map((c) => ({ title: c.title, image: c.image || '/placeholder.svg', href: `/boutique/${c.slug || encodeURIComponent(c.title.toLowerCase())}` })) :
+              designSettings.categories?.length > 0 ?
+              designSettings.categories.map((c) => ({ title: c.title, image: c.image, href: `/boutique/${encodeURIComponent(c.title.toLowerCase())}` })) :
+              FALLBACK_CATEGORIES;
               return cats;
             })().map((cat) => {
               const ar = (designSettings as any).categoryLayout?.aspectRatio || '3/4';
               return (
-              <motion.div key={cat.title} variants={cardVariants}>
+                <motion.div key={cat.title} variants={cardVariants}>
                 <Link
-                  to={cat.href}
-                  className={cn("group relative overflow-hidden bevel-corners block", `aspect-[${ar}]`)}
-                  style={{ aspectRatio: ar }}
-                >
+                    to={cat.href}
+                    className={cn("group relative overflow-hidden bevel-corners block", `aspect-[${ar}]`)}
+                    style={{ aspectRatio: ar }}>
+                    
                   <img
-                    src={cat.image}
-                    alt={cat.title}
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  />
+                      src={cat.image}
+                      alt={cat.title}
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                    
                   <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/20 to-transparent" />
                   <div className="absolute inset-0 border-2 border-transparent group-hover:border-foreground/40 transition-colors duration-300 bevel-corners" />
                   <div className="absolute bottom-0 left-0 right-0 p-5 lg:p-6">
@@ -347,8 +347,8 @@ export default function Home() {
                     <div className="mt-2 h-0.5 w-0 bg-background group-hover:w-12 transition-all duration-500" />
                   </div>
                 </Link>
-              </motion.div>
-              );
+              </motion.div>);
+
             })}
           </StaggerContainer>
         </div>
@@ -366,8 +366,8 @@ export default function Home() {
               <Button
                 variant="outline"
                 className="hidden md:flex uppercase tracking-wider"
-                onClick={() => navigate('/boutique')}
-              >
+                onClick={() => navigate('/boutique')}>
+                
                 Tout voir
                 <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
@@ -375,55 +375,55 @@ export default function Home() {
           </RevealSection>
 
           <StaggerContainer className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-            {featuredProducts.map((product) => (
-              <motion.div
-                key={product.id}
-                variants={cardVariants}
-                whileHover={{ y: -8, transition: { duration: 0.3 } }}
-                className="group bg-background bevel-corners overflow-hidden border border-border hover:border-foreground hover:shadow-hmp-lg transition-colors"
-              >
+            {featuredProducts.map((product) =>
+            <motion.div
+              key={product.id}
+              variants={cardVariants}
+              whileHover={{ y: -8, transition: { duration: 0.3 } }}
+              className="group bg-background bevel-corners overflow-hidden border border-border hover:border-foreground hover:shadow-hmp-lg transition-colors">
+              
                 <div
-                  className="relative aspect-[3/4] overflow-hidden cursor-pointer"
-                  onClick={() => navigate(`/boutique/${product.id}`)}
-                >
+                className="relative aspect-[3/4] overflow-hidden cursor-pointer"
+                onClick={() => navigate(`/boutique/${product.id}`)}>
+                
                   <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  />
-                  {product.salePrice && (
-                    <div className="absolute top-3 left-3 bg-foreground text-background px-2 py-1 text-[10px] font-bold uppercase">
+                  src={product.image}
+                  alt={product.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                
+                  {product.salePrice &&
+                <div className="absolute top-3 left-3 bg-foreground text-background px-2 py-1 text-[10px] font-bold uppercase">
                       Promo
                     </div>
-                  )}
-                  {product.stock <= 5 && product.stock > 0 && (
-                    <div className="absolute top-3 right-3 bg-destructive text-destructive-foreground px-2 py-1 text-[10px] uppercase">
+                }
+                  {product.stock <= 5 && product.stock > 0 &&
+                <div className="absolute top-3 right-3 bg-destructive text-destructive-foreground px-2 py-1 text-[10px] uppercase">
                       Stock limité
                     </div>
-                  )}
+                }
                 </div>
                 <div className="p-4">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{product.category}</p>
                   <h3 className="text-sm font-bold uppercase tracking-tight truncate">{product.name}</h3>
                   <div className="flex items-center gap-2 mt-2">
-                    {product.salePrice ? (
-                      <>
+                    {product.salePrice ?
+                  <>
                         <span className="text-base font-bold">{product.salePrice}€</span>
                         <span className="text-xs text-muted-foreground line-through">{product.price}€</span>
-                      </>
-                    ) : (
-                      <span className="text-base font-bold">{product.price}€</span>
-                    )}
+                      </> :
+
+                  <span className="text-base font-bold">{product.price}€</span>
+                  }
                   </div>
                 </div>
                 <button
-                  className="product-card-footer text-xs"
-                  onClick={() => handleAddToCart(product)}
-                >
+                className="product-card-footer text-xs"
+                onClick={() => handleAddToCart(product)}>
+                
                   Ajouter au panier
                 </button>
               </motion.div>
-            ))}
+            )}
           </StaggerContainer>
 
           <div className="text-center mt-6 md:hidden">
@@ -446,22 +446,22 @@ export default function Home() {
           </RevealSection>
 
           <StaggerContainer className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6">
-            {newArrivals.map((product) => (
-              <motion.div
-                key={product.id}
-                variants={cardVariants}
-                whileHover={{ y: -6, transition: { duration: 0.3 } }}
-                className="group bg-card bevel-corners-sm overflow-hidden border border-border hover:border-foreground transition-colors"
-              >
+            {newArrivals.map((product) =>
+            <motion.div
+              key={product.id}
+              variants={cardVariants}
+              whileHover={{ y: -6, transition: { duration: 0.3 } }}
+              className="group bg-card bevel-corners-sm overflow-hidden border border-border hover:border-foreground transition-colors">
+              
                 <div
-                  className="relative aspect-square overflow-hidden cursor-pointer"
-                  onClick={() => navigate(`/boutique/${product.id}`)}
-                >
+                className="relative aspect-square overflow-hidden cursor-pointer"
+                onClick={() => navigate(`/boutique/${product.id}`)}>
+                
                   <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
+                  src={product.image}
+                  alt={product.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                
                 </div>
                 <div className="p-4">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{product.category}</p>
@@ -472,7 +472,7 @@ export default function Home() {
                   Ajouter au panier
                 </button>
               </motion.div>
-            ))}
+            )}
           </StaggerContainer>
 
           <RevealSection delay={0.3} className="text-center mt-4 lg:mt-6">
@@ -480,8 +480,8 @@ export default function Home() {
               size="lg"
               variant="outline"
               className="uppercase tracking-wider"
-              onClick={() => navigate('/boutique')}
-            >
+              onClick={() => navigate('/boutique')}>
+              
               Voir toute la collection
               <ChevronRight className="ml-2 h-5 w-5" />
             </Button>
@@ -516,19 +516,19 @@ export default function Home() {
                 } catch {
                   toast({ title: 'Erreur', description: 'Une erreur est survenue.', variant: 'destructive' });
                 }
-              }}
-            >
+              }}>
+              
               <input
                 type="email"
                 placeholder="votre@email.com"
                 required
-                className="flex-1 h-12 px-4 bg-background text-foreground border-0"
-              />
+                className="flex-1 h-12 px-4 bg-background text-foreground border-0" />
+              
               <Button
                 type="submit"
                 size="lg"
-                className="h-12 bg-background text-foreground hover:bg-background/90"
-              >
+                className="h-12 bg-background text-foreground hover:bg-background/90">
+                
                 S'inscrire
               </Button>
             </form>
@@ -538,6 +538,6 @@ export default function Home() {
 
       {/* ═══════════════ POPUP BANNER ═══════════════ */}
       <PopupBanner />
-    </div>
-  );
+    </div>);
+
 }
