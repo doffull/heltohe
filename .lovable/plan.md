@@ -1,83 +1,103 @@
 
-## Éditeur visuel temps réel — Plan d'implémentation
+## Thinking
 
-### Concept
-Un bouton flottant à gauche du site (visible uniquement pour les admins connectés) ouvre un panneau d'édition latéral qui permet de modifier directement le contenu de la page visible :
-- **Textes** : titres, sous-titres, CTA du Hero
-- **Couleurs** : accentColor, headerBgColor, headerTextColor
-- **Images** : hero background, logo
-- **Sections** : toggle visibilité des sections homepage
-- **Disposition** : colonnes catégories, hauteur slider
-- **Ajout de sections** : ajouter des sections produits à la page d'accueil
+The user wants to:
+1. Upload a product mockup image (like the Marco jacket shown)
+2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
+3. Automatically generates a fully interactive, dynamic product page from it
 
-Tout changement est appliqué **immédiatement en temps réel** (via `updateDesignSettings` déjà dans AppContext) et sauvegardé avec un bouton Save dans le panneau.
+The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
 
-### Architecture
+1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
+   - Accepts an image (jpg/png/webp)
+   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
+   - Also extracts the **color variants** as `colorOptions` with proper hex values
+   - Returns a structured product object ready to pre-fill the ProductForm
 
-```text
-src/components/visual-editor/
-  VisualEditorProvider.tsx   — contexte (isOpen, selectedElement, mode)
-  VisualEditorToggle.tsx     — bouton flottant gauche (visible admins seulement)
-  VisualEditorPanel.tsx      — panneau latéral gauche coulissant
-  tabs/
-    HeroEditorTab.tsx        — édition slides hero (titre, sous-titre, CTA, couleur accent)
-    ColorsEditorTab.tsx      — couleurs globales (accent, header bg/text)
-    SectionsEditorTab.tsx    — toggle sections homepage + ajout
-    LayoutEditorTab.tsx      — hauteur slider, colonnes catégories, espacement
-```
+2. **Add "Importer Maquette IA" button** in AdminProducts that:
+   - Opens a dialog with a dropzone accepting images
+   - Sends image to the edge function
+   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
+   - Lets admin review/edit before confirming creation
+   - On confirm: creates the product in the DB with all extracted data
 
-### Intégration dans App.tsx
-Le `VisualEditorToggle` + `VisualEditorPanel` sont ajoutés dans `AppShell` (après AnimatedRoutes), enveloppés dans un `VisualEditorProvider`. Ils ne se montent que si `isAdmin === true`.
+3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
 
-### Bouton flottant
-- Position fixe : `left-4, top-1/2` — vertical centré, côté gauche
-- Icône : `Pencil` ou `Wand2` de lucide-react
-- Fond : `bg-primary text-primary-foreground` avec effet glow
-- Badge "LIVE" animé quand le panneau est ouvert
-- Z-index : `z-[80]` (au-dessus de tout sauf modales)
+Looking at the Marco image:
+- Product name: MARCO
+- Brand: Helvetica Mountain Pioneers x PEGASWOES  
+- Season: HIVER 2026
+- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
+- Sizes: XS, S, M, L, XL, XXL
+- Composition: 100% POLYESTER
+- Tags: limited edition
 
-### Panneau (VisualEditorPanel)
-- Largeur fixe : `w-80` (320px), slide depuis la gauche
-- Fond : `bg-background border-r border-border`
-- 4 onglets : **Hero** | **Couleurs** | **Sections** | **Disposition**
-- Header du panneau avec : titre "Éditeur Live", badge vert "LIVE", bouton Sauvegarder + bouton Fermer
+## Plan
 
-### Onglet Hero
-- Liste des slides (accordéon léger)
-- Par slide : Titre (`<input>`), Sous-titre (`<input>`), CTA text (`<input>`), Couleur accent (`<input type="color">`)
-- Changements → `updateDesignSettings({ heroSlides: [...] })` → se reflète en temps réel sur le site
+### 1. New edge function `analyze-product-image`
+New file: `supabase/functions/analyze-product-image/index.ts`
 
-### Onglet Couleurs
-- Couleur accent : `input[type=color]` → `updateDesignSettings({ accentColor })`
-- Couleur fond header : `input[type=color]` → `updateDesignSettings({ headerBgColor })`
-- Couleur texte header : `input[type=color]` → `updateDesignSettings({ headerTextColor })`
-- Preset header rapide : 4 boutons (Classic / Transparent / Dark / Light)
+Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
+- name, subtitle, price (ask to estimate if not found), category
+- sizes (exact text from image)
+- colors with **hex values** from the color swatches visible in image
+- colorOptions: [{color: "#hex", label: "nom"}]
+- material/composition
+- description (generated from visual)
+- sku (auto-generated)
+- tags (e.g., "limited edition" if spotted)
+- Any brand/collection info → subtitle
 
-### Onglet Sections
-- Liste des `homeSections` avec toggle on/off par section
-- Bouton "Ajouter une section" → modal simple (nom + tag produit)
-- Changements → `updateDesignSettings({ homeSections })`
+### 2. New UI component `ImportMockupDialog.tsx`
+In `src/components/admin/ImportMockupDialog.tsx`:
+- Image dropzone (jpg/png/webp/gif up to 10MB)
+- Preview of uploaded image
+- "Analyser avec l'IA" button
+- Loading state with animated scan effect
+- Results preview:
+  - Product name, subtitle
+  - Price field (editable, since AI may not find it)
+  - Color swatches preview
+  - Size badges preview
+  - Material info
+  - Generated description
+- "Créer ce produit" confirm button
+- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
 
-### Onglet Disposition
-- Hauteur slider : select (50vh / 70vh / 85vh / 100vh)
-- Colonnes catégories : slider 2–4
-- Espacement site : select (compact / normal / spacious)
+### 3. AdminProducts integration
+- Add "Importer Maquette IA" button next to existing "Importer PDF" button
+- Opens the new ImportMockupDialog
+- After product created, show toast + option to go to product detail
 
-### Sauvegarde
-- Bouton "💾 Sauvegarder" dans le header du panneau → `saveDesignSettings.mutate(designSettings)` avec toast confirmation
-- Indicateur de modifications non sauvegardées (point orange)
+### Files to create/modify
+- `supabase/functions/analyze-product-image/index.ts` — new edge function
+- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
+- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
 
-### Fichiers à créer/modifier
+## Implementation Steps
 
-| Fichier | Action |
-|---|---|
-| `src/components/visual-editor/VisualEditorProvider.tsx` | Nouveau — contexte open/close |
-| `src/components/visual-editor/VisualEditorToggle.tsx` | Nouveau — bouton flottant |
-| `src/components/visual-editor/VisualEditorPanel.tsx` | Nouveau — panneau principal |
-| `src/components/visual-editor/tabs/HeroEditorTab.tsx` | Nouveau |
-| `src/components/visual-editor/tabs/ColorsEditorTab.tsx` | Nouveau |
-| `src/components/visual-editor/tabs/SectionsEditorTab.tsx` | Nouveau |
-| `src/components/visual-editor/tabs/LayoutEditorTab.tsx` | Nouveau |
-| `src/App.tsx` | Ajouter `VisualEditorProvider` + `VisualEditorToggle` + `VisualEditorPanel` dans AppShell |
+### Step 1: Edge function `analyze-product-image`
+Input: `{ imageBase64: string, mimeType: string }`
+Prompt to Gemini Pro Vision:
+- Extract all visible product info
+- Extract hex colors from color swatches
+- Generate description if not present
+- Output strict JSON matching `ExtractedProductData` schema
 
-Aucune modification de base de données requise — utilise `updateDesignSettings` + `useSaveDesignSettings` déjà en place.
+### Step 2: `ImportMockupDialog` component
+States:
+- `file`, `preview` (image URL)
+- `analyzing` (loading state)
+- `extracted` (ExtractedProductData | null)
+- `editableData` (form state to review/edit before import)
+
+UX Flow:
+1. Drag & drop or click to upload image
+2. Preview appears
+3. Click "Analyser avec IA" → loading scan animation
+4. Results appear: color swatches, size badges, all info
+5. User can edit price/name if needed
+6. Click "Créer le produit" → uploads image to storage, creates product, success
+
+### Step 3: AdminProducts button
+Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)
