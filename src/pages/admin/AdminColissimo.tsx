@@ -28,6 +28,7 @@ import {
 import { useOrders } from '@/hooks/useOrders';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDesignSettings, useSaveDesignSettings } from '@/hooks/useDesignSettings';
+import { useAdminConfig, useSaveAdminConfig } from '@/hooks/useAdminConfig';
 import { Order } from '@/types';
 
 // Leaflet
