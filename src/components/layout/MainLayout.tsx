@@ -209,7 +209,6 @@ export function MainLayout({ children }: MainLayoutProps) {
                     "w-auto object-contain",
                     headerPreset === 'centered' ? "h-8 lg:h-12" : "h-8 lg:h-10"
                   )}
-                  style={{ filter: 'drop-shadow(0 0 6px rgba(0,0,0,0.5)) drop-shadow(0 0 12px rgba(0,0,0,0.3))' }}
                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                 />
               ) : (
