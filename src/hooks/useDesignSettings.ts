@@ -101,6 +101,8 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     presets: (db.presets as typeof base.presets) || base.presets,
     schedules: (db.schedules as typeof base.schedules) || base.schedules,
     pages: (db.pages as typeof base.pages) || base.pages,
+    // Mannequin hotspots — persist & restore from DB
+    mannequinHotspots: (db.mannequin_hotspots as typeof base.mannequinHotspots) ?? [],
   };
 }
 
