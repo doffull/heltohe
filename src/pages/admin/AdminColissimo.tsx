@@ -1309,11 +1309,12 @@ function ConfigurationTab() {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function AdminColissimo() {
+  const { data: adminConfig } = useAdminConfig();
   const { data: settings } = useDesignSettings();
-  const senderName = (settings as any)?.colissimo_sender_name || settings?.siteName || 'LVTK6 Concept Store';
-  const senderAddress = (settings as any)?.colissimo_sender_address || '1 Rue de la Paix';
-  const senderZip = (settings as any)?.colissimo_sender_zip || '75001';
-  const senderCity = (settings as any)?.colissimo_sender_city || 'Paris';
+  const senderName = adminConfig?.colissimoSenderName || settings?.siteName || 'LVTK6 Concept Store';
+  const senderAddress = adminConfig?.colissimoSenderAddress || '1 Rue de la Paix';
+  const senderZip = adminConfig?.colissimoSenderZip || '75001';
+  const senderCity = adminConfig?.colissimoSenderCity || 'Paris';
 
   return (
     <div className="space-y-6">
