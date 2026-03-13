@@ -15,7 +15,7 @@ interface FileDropZoneProps {
 }
 
 const MIME_MAP: Record<string, string[]> = {
-  image: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+  image: ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'],
   video: ['video/mp4', 'video/webm'],
   audio: ['audio/mpeg', 'audio/wav', 'audio/ogg'],
 };
@@ -26,10 +26,14 @@ function getAcceptString(accept?: string[]): string {
 }
 
 function getFileType(url: string): 'image' | 'video' | 'audio' | 'unknown' {
-  const ext = url.split('.').pop()?.toLowerCase() || '';
-  if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) return 'image';
+  // Strip query params before checking extension
+  const cleanUrl = url.split('?')[0];
+  const ext = cleanUrl.split('.').pop()?.toLowerCase() || '';
+  if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'].includes(ext)) return 'image';
   if (['mp4', 'webm'].includes(ext)) return 'video';
   if (['mp3', 'wav', 'ogg'].includes(ext)) return 'audio';
+  // Fallback: check if URL contains image-related paths
+  if (url.includes('/branding/') || url.includes('/logo')) return 'image';
   return 'unknown';
 }
 
