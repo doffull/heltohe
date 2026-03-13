@@ -157,26 +157,6 @@ export function MainLayout({ children }: MainLayoutProps) {
         </div>
       )}
 
-      {/* Logo Wrapper - Only on home page with sidebar */}
-      {designSettings.showLogo !== false && showSidebar && (
-        <div className={cn(
-          "logo-wrapper hidden lg:flex transition-all duration-500",
-          sidebarActive ? "lg:ml-[35%]" : "lg:ml-0"
-        )}>
-          <Link to="/" className="logo-link">
-            {designSettings.hudLogo ? (
-              <img 
-                src={designSettings.hudLogo} 
-                alt="Logo" 
-                className="h-10 w-auto object-contain"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-              />
-            ) : (
-              <span className="logo-text">{(designSettings as any).siteName || 'Helvetica-MP'}</span>
-            )}
-          </Link>
-        </div>
-      )}
 
       <header
         className={cn(
