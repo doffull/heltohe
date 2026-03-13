@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Sparkles } from 'lucide-react';
+import { ArrowLeft, Sparkles, ShoppingCart } from 'lucide-react';
 import { useProduct } from '@/hooks/useProducts';
 import { useCart } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,8 @@ import ProductImageGallery from '@/components/product/ProductImageGallery';
 import ProductInfo from '@/components/product/ProductInfo';
 import ProductOptions from '@/components/product/ProductOptions';
 import RelatedProducts from '@/components/product/RelatedProducts';
+import { useProductLooks } from '@/hooks/useProductLooks';
+import { useProducts } from '@/hooks/useProducts';
 
 export default function ProductDetail() {
   const { slugOrId, id } = useParams<{ slugOrId?: string; id?: string }>();
