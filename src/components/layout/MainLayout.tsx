@@ -70,11 +70,15 @@ export function MainLayout({ children }: MainLayoutProps) {
   const footerLogo = (designSettings as any).footerLogo || '';
   const headerNavItems: { label: string; href: string }[] = (designSettings as any).headerNavItems;
 
+  // Normalize slug helper — identical to CategoryPageRouter for consistency
+  const normalizeSlug = (s: string) =>
+    s.toLowerCase().replace(/\s+/g, '-').replace(/[àâä]/g, 'a').replace(/[éèêë]/g, 'e').replace(/[îï]/g, 'i').replace(/[ôö]/g, 'o').replace(/[ùûü]/g, 'u').replace(/ç/g, 'c');
+
   // Build dynamic nav items with DB categories
   const categoryNavItems = dbCategories
     .filter(c => !c.parentId)
     .map(c => ({
-      href: `/${c.slug || encodeURIComponent(c.title.toLowerCase())}`,
+      href: `/${c.slug || normalizeSlug(c.title)}`,
       label: c.title,
     }));
 

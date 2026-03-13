@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useCategories } from '@/hooks/useCategories';
 import { usePage } from '@/hooks/usePages';
 import { useEffect } from 'react';
@@ -6,13 +6,27 @@ import Shop from './Shop';
 import PageRenderer from '@/components/page/PageRenderer';
 import NotFound from './NotFound';
 
+// Normalize accented characters + whitespace → kebab — must match MainLayout normalizeSlug
+const normalizeSlug = (s: string) =>
+  s.toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[àâä]/g, 'a')
+    .replace(/[éèêë]/g, 'e')
+    .replace(/[îï]/g, 'i')
+    .replace(/[ôö]/g, 'o')
+    .replace(/[ùûü]/g, 'u')
+    .replace(/ç/g, 'c');
+
 export default function CategoryPageRouter() {
   const { categorySlug } = useParams<{ categorySlug: string }>();
   const { data: categories = [], isLoading: catsLoading } = useCategories();
   const { data: customPage, isLoading: pageLoading } = usePage(categorySlug || '');
 
-  // Find matching category
-  const category = categories.find(c => c.slug === categorySlug);
+  // Robust matching: exact slug → normalized title fallback
+  const category = categories.find(c =>
+    c.slug === categorySlug ||
+    normalizeSlug(c.title) === normalizeSlug(categorySlug || '')
+  );
 
   // SEO
   useEffect(() => {
