@@ -7,9 +7,13 @@ import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import { SidebarProvider } from "@/context/SidebarContext";
 import { AppProvider, useApp } from "@/context/AppContext";
+import { useAuth } from "@/context/AuthContext";
 import { useDesignSettings } from "@/hooks/useDesignSettings";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { VisualEditorProvider } from "@/components/visual-editor/VisualEditorProvider";
+import { VisualEditorToggle } from "@/components/visual-editor/VisualEditorToggle";
+import { VisualEditorPanel } from "@/components/visual-editor/VisualEditorPanel";
 
 // Pages
 import Home from "./pages/Home";
