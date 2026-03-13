@@ -138,20 +138,34 @@ function AnimatedRoutes() {
  * AppShell — rendered inside BrowserRouter so useNavigate (used by AppProvider) works,
  * and all children are inside AppProvider so useApp() works.
  */
+function AdminVisualEditor() {
+  const { isAdmin } = useAuth();
+  if (!isAdmin) return null;
+  return (
+    <>
+      <VisualEditorToggle />
+      <VisualEditorPanel />
+    </>
+  );
+}
+
 function AppShell() {
   const [showSplash, setShowSplash] = useState(true);
   return (
     <AppProvider>
-      <TooltipProvider>
-        <FaviconManager />
-        <Toaster />
-        <Sonner />
-        <ScrollToTop />
-        <AnimatePresence>
-          {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
-        </AnimatePresence>
-        <AnimatedRoutes />
-      </TooltipProvider>
+      <VisualEditorProvider>
+        <TooltipProvider>
+          <FaviconManager />
+          <Toaster />
+          <Sonner />
+          <ScrollToTop />
+          <AnimatePresence>
+            {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
+          </AnimatePresence>
+          <AnimatedRoutes />
+          <AdminVisualEditor />
+        </TooltipProvider>
+      </VisualEditorProvider>
     </AppProvider>
   );
 }
