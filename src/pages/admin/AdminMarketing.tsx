@@ -3,14 +3,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useBanners, useCreateBanner, useUpdateBanner, useDeleteBanner, BannerRecord } from '@/hooks/useBanners';
 import { usePromoCodes, useCreatePromoCode, useUpdatePromoCode, useDeletePromoCode, PromoCode } from '@/hooks/usePromoCodes';
 import { useNewsletters, useDeleteNewsletter } from '@/hooks/useNewsletters';
+import { useProductStyles, useCreateProductStyle, useUpdateProductStyle, useDeleteProductStyle, ProductStyle } from '@/hooks/useProductStyles';
+import { useProducts } from '@/hooks/useProducts';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import { FileDropZone } from '@/components/admin/FileDropZone';
 import { 
   Plus, Trash2, Pencil, Image, Tag, Mail, 
-  MoreHorizontal, Megaphone 
+  MoreHorizontal, Megaphone, Palette, Check
 } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
