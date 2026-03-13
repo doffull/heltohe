@@ -7,10 +7,11 @@ import { InlineEditable } from '@/components/visual-editor/InlineEditable';
 import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
 
 export function ProductSections() {
-  const { designSettings, products, navigateToCategory, language } = useApp();
+  const { designSettings, updateDesignSettings, products, navigateToCategory, language } = useApp();
   const navigate = useNavigate();
   const { addItem } = useCart();
   const { toast } = useToast();
+  const { setIsDirty } = useVisualEditor();
   const { homeSections } = designSettings;
 
   const byTag = (tag: string) => products.filter(p => p.tags?.includes(tag));
