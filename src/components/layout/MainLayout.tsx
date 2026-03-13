@@ -559,7 +559,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                 <img 
                   src={footerLogo || designSettings.hudLogo} 
                   alt="Logo" 
-                  className="h-10 w-auto object-contain mb-4 lg:mb-6 logo-visibility-filter" 
+                  className="h-10 w-auto object-contain mb-4 lg:mb-6" 
                 />
               ) : (
                 <div className="w-10 h-10 lg:w-12 lg:h-12 bg-background border-2 border-foreground flex items-center justify-center transform rotate-45 mb-4 lg:mb-6">
