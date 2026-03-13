@@ -181,7 +181,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               "flex items-center gap-2 mr-auto",
               headerPreset === 'centered' ? "justify-center" : ""
             )}>
-              {designSettings.showLogo !== false && designSettings.hudLogo ? (
+              {designSettings.hudLogo ? (
                 <img 
                   src={designSettings.hudLogo} 
                   alt="Logo" 
@@ -189,14 +189,11 @@ export function MainLayout({ children }: MainLayoutProps) {
                     "w-auto object-contain",
                     headerPreset === 'centered' ? "h-8 lg:h-12" : "h-8 lg:h-10"
                   )}
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                 />
               ) : (
-                designSettings.showLogo !== false && (
-                  <span className="font-bold text-base tracking-wider uppercase">
-                    {(designSettings as any).siteName || 'HMP'}
-                  </span>
-                )
+                <span className="font-bold text-base tracking-wider uppercase">
+                  {(designSettings as any).siteName || 'LVTK6'}
+                </span>
               )}
             </Link>
 
