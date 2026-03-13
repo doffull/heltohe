@@ -188,6 +188,7 @@ function PromoForm({ promo, onSubmit, onCancel }: {
 // ── MAIN COMPONENT ──
 export default function AdminMarketing() {
   const { toast } = useToast();
+  const { data: products = [] } = useProducts();
 
   // Banners
   const { data: banners = [], isLoading: loadingBanners } = useBanners();
@@ -208,6 +209,15 @@ export default function AdminMarketing() {
   // Newsletter
   const { data: subs = [], isLoading: loadingSubs } = useNewsletters();
   const deleteNewsletter = useDeleteNewsletter();
+
+  // Styles
+  const { data: styles = [], isLoading: loadingStyles } = useProductStyles();
+  const createStyle = useCreateProductStyle();
+  const updateStyle = useUpdateProductStyle();
+  const deleteStyle = useDeleteProductStyle();
+  const [styleDialogOpen, setStyleDialogOpen] = useState(false);
+  const [editingStyle, setEditingStyle] = useState<ProductStyle | null>(null);
+  const [styleForm, setStyleForm] = useState({ name: '', description: '', image: '', productIds: [] as string[], isActive: true });
 
   // Banner handlers
   const handleBannerSubmit = async (data: Omit<BannerRecord, 'id'>) => {
