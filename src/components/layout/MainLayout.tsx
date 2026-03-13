@@ -94,24 +94,24 @@ export function MainLayout({ children }: MainLayoutProps) {
   // Auto-open sidebar after configurable delay on home page
   // sidebarReappearDelay: number (ms) or 0 = OFF
   const sidebarReappearDelay = (designSettings as any).sidebarReappearDelay ?? (designSettings as any).sidebarDelay ?? 10000;
-  // Desktop auto-open
+  // Desktop auto-open — always respect admin-configured delay, no cap
   useEffect(() => {
     if (!isMobile && isHomePage && sidebarReappearDelay > 0 && !desktopSidebarOpen) {
       const timer = setTimeout(() => {
         setDesktopSidebarOpen(true);
         setSidebarClosedByUser(false);
-      }, sidebarClosedByUser ? sidebarReappearDelay : Math.min(sidebarReappearDelay, 3000));
+      }, sidebarReappearDelay);
       return () => clearTimeout(timer);
     }
   }, [isMobile, isHomePage, sidebarReappearDelay, sidebarClosedByUser, desktopSidebarOpen]);
 
-  // Mobile auto-open
+  // Mobile auto-open — always respect admin-configured delay, no cap
   useEffect(() => {
     if (isMobile && isHomePage && sidebarReappearDelay > 0 && !sidebarOpen) {
       const timer = setTimeout(() => {
         setSidebarOpen(true);
         setMobileSidebarClosedByUser(false);
-      }, mobileSidebarClosedByUser ? sidebarReappearDelay : 3000);
+      }, sidebarReappearDelay);
       return () => clearTimeout(timer);
     }
   }, [isMobile, isHomePage, sidebarReappearDelay, mobileSidebarClosedByUser, sidebarOpen]);
