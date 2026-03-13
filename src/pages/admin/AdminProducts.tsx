@@ -452,6 +452,82 @@ export default function AdminProducts() {
           </div>
         )}
       </div>
+        </TabsContent>
+
+        {/* ── LOOKS TAB ── */}
+        <TabsContent value="looks" className="space-y-4 mt-4">
+          <div className="flex justify-end">
+            <Button
+              onClick={() => {
+                setEditingLook(null);
+                setLookForm({ name: '', description: '', productIds: [], isActive: true });
+                setLookDialogOpen(true);
+              }}
+              className="chamfer-hud-sm"
+            >
+              <Plus className="h-4 w-4 mr-2" />Nouveau look
+            </Button>
+          </div>
+          <div className="chamfer-hud bg-card/50 overflow-hidden">
+            {loadingLooks ? (
+              <div className="p-12 text-center"><div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto" /></div>
+            ) : looks.length === 0 ? (
+              <div className="p-12 text-center">
+                <Layers2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">Aucun look créé</p>
+                <p className="text-xs text-muted-foreground mt-1">Associez plusieurs produits pour les vendre ensemble</p>
+              </div>
+            ) : (
+              <div className="space-y-3 p-4">
+                {looks.map((look) => {
+                  const lookProducts = products.filter(p => look.productIds.includes(p.id));
+                  return (
+                    <div key={look.id} className="border border-border rounded-lg p-4 flex items-start gap-4 hover:bg-muted/20">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <p className="font-bold text-sm">{look.name}</p>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${look.isActive ? 'bg-green-500/20 text-green-500' : 'bg-muted text-muted-foreground'}`}>
+                            {look.isActive ? 'Actif' : 'Inactif'}
+                          </span>
+                        </div>
+                        {look.description && <p className="text-xs text-muted-foreground mb-2">{look.description}</p>}
+                        <div className="flex gap-2 flex-wrap">
+                          {lookProducts.map(p => (
+                            <div key={p.id} className="flex items-center gap-1 bg-muted/50 rounded px-2 py-1">
+                              <img src={p.image} alt={p.name} className="w-6 h-6 object-cover rounded-sm" />
+                              <span className="text-xs truncate max-w-[80px]">{p.name}</span>
+                            </div>
+                          ))}
+                          {look.productIds.length > lookProducts.length && (
+                            <span className="text-xs text-muted-foreground px-2 py-1">+{look.productIds.length - lookProducts.length} autre(s)</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                          setEditingLook(look);
+                          setLookForm({ name: look.name, description: look.description || '', productIds: look.productIds, isActive: look.isActive });
+                          setLookDialogOpen(true);
+                        }}>
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => {
+                          if (confirm('Supprimer ce look ?')) {
+                            await deleteLook.mutateAsync(look.id);
+                            toast({ title: 'Look supprimé' });
+                          }
+                        }}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Product Form Dialog */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
@@ -460,6 +536,78 @@ export default function AdminProducts() {
             <DialogTitle className="hud-text">{editingProduct ? 'MODIFIER LE PRODUIT' : 'NOUVEAU PRODUIT'}</DialogTitle>
           </DialogHeader>
           <ProductForm product={editingProduct || undefined} onSubmit={editingProduct ? handleUpdate : handleCreate} onCancel={() => setIsFormOpen(false)} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Look Dialog */}
+      <Dialog open={lookDialogOpen} onOpenChange={setLookDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="hud-text">{editingLook ? 'MODIFIER LE LOOK' : 'NOUVEAU LOOK'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs hud-text">Nom du look *</Label>
+              <Input value={lookForm.name} onChange={e => setLookForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Tenue Hiver, Set Casual..." />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs hud-text">Description</Label>
+              <Textarea value={lookForm.description} onChange={e => setLookForm(f => ({ ...f, description: e.target.value }))} placeholder="Description facultative..." rows={2} />
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch checked={lookForm.isActive} onCheckedChange={v => setLookForm(f => ({ ...f, isActive: v }))} />
+              <Label className="text-sm">Actif</Label>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs hud-text">Produits associés ({lookForm.productIds.length} sélectionné(s))</Label>
+              <div className="max-h-[280px] overflow-y-auto space-y-1 border border-border rounded-lg p-2">
+                {products.map(p => {
+                  const selected = lookForm.productIds.includes(p.id);
+                  return (
+                    <div
+                      key={p.id}
+                      className={`flex items-center gap-3 p-2 rounded cursor-pointer transition-colors ${selected ? 'bg-primary/10 border border-primary/30' : 'hover:bg-muted/50'}`}
+                      onClick={() => setLookForm(f => ({
+                        ...f,
+                        productIds: selected
+                          ? f.productIds.filter(id => id !== p.id)
+                          : [...f.productIds, p.id],
+                      }))}
+                    >
+                      <img src={p.image} alt={p.name} className="w-10 h-10 object-cover rounded" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{p.name}</p>
+                        <p className="text-xs text-muted-foreground">{p.salePrice ?? p.price}€</p>
+                      </div>
+                      {selected && <Check className="h-4 w-4 text-primary shrink-0" />}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-4 border-t border-border">
+              <Button variant="outline" onClick={() => setLookDialogOpen(false)}>Annuler</Button>
+              <Button
+                disabled={!lookForm.name || lookForm.productIds.length < 2}
+                onClick={async () => {
+                  try {
+                    if (editingLook) {
+                      await updateLook.mutateAsync({ id: editingLook.id, ...lookForm });
+                      toast({ title: 'Look mis à jour' });
+                    } else {
+                      await createLook.mutateAsync(lookForm);
+                      toast({ title: 'Look créé' });
+                    }
+                    setLookDialogOpen(false);
+                  } catch {
+                    toast({ title: 'Erreur', variant: 'destructive' });
+                  }
+                }}
+              >
+                {editingLook ? 'Mettre à jour' : 'Créer le look'}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
