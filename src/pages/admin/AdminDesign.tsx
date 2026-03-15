@@ -910,23 +910,20 @@ function SidebarLivePreview() {
 
   const hasBrand = brandName || brandSubtitle;
 
-  const BrandBlockPreview = () => {
-    if (!hasBrand) return null;
-    return (
-      <div>
-        {brandName && (
-          <p className="font-bold text-[9px] tracking-[0.12em] uppercase" style={{ color: 'rgba(255,255,255,0.95)' }}>
-            {brandName}
-          </p>
-        )}
-        {brandSubtitle && (
-          <p className="font-mono text-[7px] tracking-[0.18em] uppercase" style={{ color: 'rgba(255,255,255,0.5)' }}>
-            {brandSubtitle}
-          </p>
-        )}
-      </div>
-    );
-  };
+  const brandBlockPreview = hasBrand ? (
+    <div>
+      {brandName && (
+        <p className="font-bold text-[9px] tracking-[0.12em] uppercase" style={{ color: 'rgba(255,255,255,0.95)' }}>
+          {brandName}
+        </p>
+      )}
+      {brandSubtitle && (
+        <p className="font-mono text-[7px] tracking-[0.18em] uppercase" style={{ color: 'rgba(255,255,255,0.5)' }}>
+          {brandSubtitle}
+        </p>
+      )}
+    </div>
+  ) : null;
 
   const filledColor = designSettings.statBarFilledColor || '#ffffff';
   const emptyColor = designSettings.statBarEmptyColor || 'rgba(255,255,255,0.15)';
@@ -972,7 +969,7 @@ function SidebarLivePreview() {
 
           {/* Top zone */}
           <div className="flex items-start justify-between">
-            {brandPosition === 'top' && <BrandBlockPreview />}
+            {brandPosition === 'top' && brandBlockPreview}
             {brandPosition !== 'top' && <div />}
             {(designSettings as any).showSidebarProductNumber !== false && product?.sku && (
               <div className="bg-foreground flex items-center justify-center px-1.5 py-0.5 ml-auto">
@@ -985,7 +982,7 @@ function SidebarLivePreview() {
 
           {/* Center zone */}
           <div className="flex-1 flex flex-col justify-center gap-2 py-2">
-            {brandPosition === 'center' && <BrandBlockPreview />}
+            {brandPosition === 'center' && brandBlockPreview}
 
             {/* Product card */}
             {(designSettings as any).showSidebarProductCard !== false && product && (
@@ -1053,7 +1050,7 @@ function SidebarLivePreview() {
 
           {/* Bottom zone */}
           <div className="space-y-2">
-            {brandPosition === 'bottom' && <BrandBlockPreview />}
+            {brandPosition === 'bottom' && brandBlockPreview}
 
             {/* CTA buttons */}
             {designSettings.hudButtons && designSettings.hudButtons.length > 0 && (

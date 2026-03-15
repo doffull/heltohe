@@ -1,0 +1,1 @@
+ALTER TABLE public.design_settings ADD COLUMN IF NOT EXISTS sidebar_brand_position TEXT DEFAULT 'top';
