@@ -1,103 +1,54 @@
 
-## Thinking
+## Audit complet — Résultats
 
-The user wants to:
-1. Upload a product mockup image (like the Marco jacket shown)
-2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
-3. Automatically generates a fully interactive, dynamic product page from it
+### Problème 1 (Données) : La page "Femme" a un `category_id = NULL`
+La page `/femme` dans la table `pages` n'est pas rattachée à la catégorie Femme. Les 3 autres (Homme, Enfant, Accessoire) sont correctement liées. C'est une donnée corrompue à corriger par migration SQL.
 
-The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
+### Problème 2 (UX) : Aucune visibilité dans l'admin sur l'état de liaison
+Dans **Admin > Design > Catégories**, il n'y a aucun indicateur qui montre si une catégorie a une page dédiée configurée ou non. L'utilisateur ne sait pas si "Femme" est liée à une page. Il faut afficher un badge vert/rouge et un bouton direct "Créer la page" ou "Ouvrir la page".
 
-1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
-   - Accepts an image (jpg/png/webp)
-   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
-   - Also extracts the **color variants** as `colorOptions` with proper hex values
-   - Returns a structured product object ready to pre-fill the ProductForm
+### Problème 3 (UX) : Le formulaire catégorie indique `/boutique/{slug}` comme URL
+`CategoryFormDialog` affiche `lvtk6.com/boutique/{slug}` dans l'aperçu SEO — c'est faux, les catégories se trouvent à `/{slug}` (ex: `/homme`). Cela confond l'utilisateur.
 
-2. **Add "Importer Maquette IA" button** in AdminProducts that:
-   - Opens a dialog with a dropzone accepting images
-   - Sends image to the edge function
-   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
-   - Lets admin review/edit before confirming creation
-   - On confirm: creates the product in the DB with all extracted data
+### Problème 4 (UX) : Flux déconnecté entre Catégories et Pages
+Créer une catégorie dans Admin > Design > Catégories ne crée **pas** automatiquement la page dédiée. L'utilisateur doit aller séparément dans Admin > Pages pour créer manuellement la page et la lier. Ce flux doit être automatisé.
 
-3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
+---
 
-Looking at the Marco image:
-- Product name: MARCO
-- Brand: Helvetica Mountain Pioneers x PEGASWOES  
-- Season: HIVER 2026
-- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
-- Sizes: XS, S, M, L, XL, XXL
-- Composition: 100% POLYESTER
-- Tags: limited edition
+## Plan de correction
 
-## Plan
+### Fix 1 — Migration SQL (immédiat)
+Corriger `category_id = NULL` sur la page "Femme" : `UPDATE pages SET category_id = 'be35aabf-...' WHERE slug = 'femme'`.
 
-### 1. New edge function `analyze-product-image`
-New file: `supabase/functions/analyze-product-image/index.ts`
+### Fix 2 — Indicateur de liaison dans Admin > Design > Catégories
+Dans `SortableCategoryCard` / `CategoriesTab` dans `AdminDesign.tsx` : pour chaque catégorie, afficher :
+- **Badge vert "Page liée"** si une page existe dans `pages` avec `category_id = cat.id`
+- **Badge rouge "Aucune page"** + bouton **"Créer la page"** si aucune page
+- Bouton **"Éditer la page"** si la page existe → ouvre directement l'édition
 
-Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
-- name, subtitle, price (ask to estimate if not found), category
-- sizes (exact text from image)
-- colors with **hex values** from the color swatches visible in image
-- colorOptions: [{color: "#hex", label: "nom"}]
-- material/composition
-- description (generated from visual)
-- sku (auto-generated)
-- tags (e.g., "limited edition" if spotted)
-- Any brand/collection info → subtitle
+Pour ça, la `CategoriesTab` récupère aussi `usePages()` pour faire le matching.
 
-### 2. New UI component `ImportMockupDialog.tsx`
-In `src/components/admin/ImportMockupDialog.tsx`:
-- Image dropzone (jpg/png/webp/gif up to 10MB)
-- Preview of uploaded image
-- "Analyser avec l'IA" button
-- Loading state with animated scan effect
-- Results preview:
-  - Product name, subtitle
-  - Price field (editable, since AI may not find it)
-  - Color swatches preview
-  - Size badges preview
-  - Material info
-  - Generated description
-- "Créer ce produit" confirm button
-- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
+### Fix 3 — Auto-création de page lors de la création d'une catégorie
+Dans le `onSubmit` de `CategoriesTab` dans `AdminDesign.tsx` : après `createCategory.mutate(...)`, créer automatiquement une entrée dans `pages` avec `type: 'category'`, `slug: cat.slug`, `category_id: cat.id`, `is_published: true`.
 
-### 3. AdminProducts integration
-- Add "Importer Maquette IA" button next to existing "Importer PDF" button
-- Opens the new ImportMockupDialog
-- After product created, show toast + option to go to product detail
+### Fix 4 — Corriger l'aperçu URL dans `CategoryFormDialog`
+Changer `lvtk6.com/boutique/{slug}` → `lvtk6.com/{slug}` dans l'aperçu Google du formulaire.
 
-### Files to create/modify
-- `supabase/functions/analyze-product-image/index.ts` — new edge function
-- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
-- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
+---
 
-## Implementation Steps
+## Fichiers à modifier
 
-### Step 1: Edge function `analyze-product-image`
-Input: `{ imageBase64: string, mimeType: string }`
-Prompt to Gemini Pro Vision:
-- Extract all visible product info
-- Extract hex colors from color swatches
-- Generate description if not present
-- Output strict JSON matching `ExtractedProductData` schema
+| Fichier | Action |
+|---|---|
+| `supabase/migrations/` | Fix `category_id = NULL` sur page Femme |
+| `src/pages/admin/AdminDesign.tsx` | (1) Badge liaison page par catégorie + bouton Créer/Éditer ; (2) Auto-créer page lors de création catégorie |
+| `src/components/admin/CategoryFormDialog.tsx` | Fix URL aperçu SEO : `/boutique/{slug}` → `/{slug}` |
 
-### Step 2: `ImportMockupDialog` component
-States:
-- `file`, `preview` (image URL)
-- `analyzing` (loading state)
-- `extracted` (ExtractedProductData | null)
-- `editableData` (form state to review/edit before import)
+---
 
-UX Flow:
-1. Drag & drop or click to upload image
-2. Preview appears
-3. Click "Analyser avec IA" → loading scan animation
-4. Results appear: color swatches, size badges, all info
-5. User can edit price/name if needed
-6. Click "Créer le produit" → uploads image to storage, creates product, success
+## Résultat
 
-### Step 3: AdminProducts button
-Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)
+- Toutes les catégories (Homme, Femme, Enfant, Accessoire) mèneront vers leur page dédiée quand on clique sur la vignette
+- Dans Admin > Design > Catégories, chaque vignette affiche clairement si sa page est configurée ou non
+- Créer une nouvelle catégorie crée automatiquement sa page dédiée
+- L'URL affichée dans le formulaire est la bonne (`/homme`, `/femme`, etc.)
