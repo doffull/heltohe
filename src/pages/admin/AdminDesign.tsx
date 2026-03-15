@@ -882,6 +882,213 @@ function isPresetActive(presetSettings: Record<string, any>, designSettings: any
   });
 }
 
+// ─── Sidebar Live Preview ───
+const PREVIEW_DEFAULT_STATS = [
+  { label: 'Durabilité', value: 85 },
+  { label: 'Qualité/prix', value: 45 },
+  { label: 'Tendance', value: 92 },
+];
+
+function SidebarLivePreview() {
+  const { designSettings } = useApp();
+  const { data: products = [] } = useProducts();
+  const product = products[0] ?? null;
+
+  const brandPosition = (designSettings as any).sidebarBrandPosition ?? 'top';
+  const stats = designSettings.stats && designSettings.stats.length > 0 ? designSettings.stats : PREVIEW_DEFAULT_STATS;
+  const sizes = designSettings.sidebarSizes && designSettings.sidebarSizes.length > 0
+    ? designSettings.sidebarSizes
+    : ['S', 'M', 'L', 'XL'];
+
+  const sidebarBg = designSettings.sidebarBg || '#0a0a0a';
+  const sidebarImage = designSettings.sidebarImage || null;
+  const sidebarImageOpacity = designSettings.sidebarImageOpacity ?? 1;
+  const sidebarGradient = designSettings.sidebarGradient ?? false;
+  const brandName = designSettings.sidebarBrandName || '';
+  const brandSubtitle = designSettings.sidebarBrandSubtitle || '';
+  const infoText = designSettings.sidebarInfoText || '';
+
+  const hasBrand = brandName || brandSubtitle;
+
+  const BrandBlockPreview = () => {
+    if (!hasBrand) return null;
+    return (
+      <div>
+        {brandName && (
+          <p className="font-bold text-[9px] tracking-[0.12em] uppercase" style={{ color: 'rgba(255,255,255,0.95)' }}>
+            {brandName}
+          </p>
+        )}
+        {brandSubtitle && (
+          <p className="font-mono text-[7px] tracking-[0.18em] uppercase" style={{ color: 'rgba(255,255,255,0.5)' }}>
+            {brandSubtitle}
+          </p>
+        )}
+      </div>
+    );
+  };
+
+  const filledColor = designSettings.statBarFilledColor || '#ffffff';
+  const emptyColor = designSettings.statBarEmptyColor || 'rgba(255,255,255,0.15)';
+
+  return (
+    <div className="sticky top-6 xl:order-last">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Aperçu live</span>
+        <span className="h-px flex-1 bg-border" />
+        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-semibold text-primary uppercase tracking-wider">
+          <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+          Live
+        </span>
+      </div>
+
+      {/* Sidebar simulation at ~260px natural width, tall aspect */}
+      <div
+        className="relative w-full overflow-hidden rounded-lg border border-border shadow-xl"
+        style={{ aspectRatio: '9 / 20', background: sidebarBg }}
+      >
+        {/* Background image */}
+        {sidebarImage && (
+          <img
+            src={sidebarImage}
+            alt="Sidebar background"
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{ opacity: sidebarImageOpacity }}
+          />
+        )}
+
+        {/* Gradient overlay */}
+        {sidebarGradient && (
+          <div
+            className="absolute inset-0"
+            style={{
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.7) 100%)',
+            }}
+          />
+        )}
+
+        {/* HUD content overlay */}
+        <div className="absolute inset-0 flex flex-col justify-between p-3" style={{ paddingTop: '2rem' }}>
+
+          {/* Top zone */}
+          <div className="flex items-start justify-between">
+            {brandPosition === 'top' && <BrandBlockPreview />}
+            {brandPosition !== 'top' && <div />}
+            {(designSettings as any).showSidebarProductNumber !== false && product?.sku && (
+              <div className="bg-foreground flex items-center justify-center px-1.5 py-0.5 ml-auto">
+                <span className="font-mono text-[8px] font-bold text-background">
+                  {product.sku.split('-').pop()?.replace(/\D/g, '').padStart(3, '0') || '001'}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Center zone */}
+          <div className="flex-1 flex flex-col justify-center gap-2 py-2">
+            {brandPosition === 'center' && <BrandBlockPreview />}
+
+            {/* Product card */}
+            {(designSettings as any).showSidebarProductCard !== false && product && (
+              <div className="bg-background/10 backdrop-blur-sm border border-white/10 rounded p-2 space-y-1">
+                <p className="font-bold text-[9px] uppercase tracking-wider text-white leading-tight line-clamp-1">
+                  {product.name}
+                </p>
+                {product.subtitle && (
+                  <p className="font-mono text-[7px] text-white/50 line-clamp-1">{product.subtitle}</p>
+                )}
+                <div className="flex items-center gap-1.5 mt-1">
+                  {product.salePrice && product.salePrice < product.price ? (
+                    <>
+                      <span className="font-bold text-[9px] text-white">{product.salePrice}€</span>
+                      <span className="text-[7px] text-white/40 line-through">{product.price}€</span>
+                    </>
+                  ) : (
+                    <span className="font-bold text-[9px] text-white">{product.price}€</span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Size badges */}
+            {(designSettings as any).showSidebarSizes !== false && (
+              <div className="flex flex-wrap gap-1">
+                {sizes.slice(0, 4).map((size: string) => (
+                  <div key={size} className="flex flex-col items-center bg-background/10 border border-white/10 px-1.5 py-0.5">
+                    <span className="font-mono text-[6px] tracking-wider text-white/50">Taille</span>
+                    <span className="font-bold text-[8px] uppercase text-white">{size}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Stats */}
+            {(designSettings as any).showSidebarStats !== false && (
+              <div className="space-y-1.5 mt-1">
+                <div className="flex items-center gap-1.5">
+                  <p className="font-mono text-[7px] tracking-[0.18em] uppercase text-white/60">Caractéristiques</p>
+                  <div className="h-px flex-1 bg-white/20" />
+                </div>
+                {stats.slice(0, 3).map((stat: { label: string; value: number }, i: number) => (
+                  <div key={i} className="space-y-0.5">
+                    <div className="flex justify-between">
+                      <span className="font-mono text-[7px] uppercase tracking-wider text-white/70">{stat.label}</span>
+                      <span className="font-mono text-[7px] text-white/50">{stat.value}%</span>
+                    </div>
+                    <div className="flex gap-0.5">
+                      {Array.from({ length: 10 }).map((_, idx) => (
+                        <div
+                          key={idx}
+                          className="h-1 flex-1 rounded-[1px]"
+                          style={{
+                            backgroundColor: idx < Math.round((stat.value / 100) * 10) ? filledColor : emptyColor,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Bottom zone */}
+          <div className="space-y-2">
+            {brandPosition === 'bottom' && <BrandBlockPreview />}
+
+            {/* CTA buttons */}
+            {designSettings.hudButtons && designSettings.hudButtons.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {designSettings.hudButtons.slice(0, 2).map((btn) => (
+                  <div
+                    key={btn.id}
+                    className="px-2 py-1 text-[7px] font-bold uppercase tracking-wider"
+                    style={{ backgroundColor: btn.style.bg, color: btn.style.text }}
+                  >
+                    {btn.label}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Info bar */}
+            {infoText && (
+              <p className="font-mono text-[7px] tracking-[0.18em] uppercase text-white/40">{infoText}</p>
+            )}
+          </div>
+        </div>
+
+        {/* "APERÇU LIVE" watermark badge */}
+        <div className="absolute top-2 right-2 bg-primary/80 backdrop-blur-sm px-1.5 py-0.5 rounded-sm">
+          <span className="font-mono text-[7px] font-bold tracking-widest uppercase text-primary-foreground">Aperçu</span>
+        </div>
+      </div>
+
+      {/* Info note */}
+      <p className="text-[10px] text-muted-foreground mt-2 text-center">Mise à jour en temps réel</p>
+    </div>
+  );
+}
+
 // ─── Sidebar Tab ───
 function SidebarTab() {
   const { designSettings, updateDesignSettings } = useApp();
@@ -927,11 +1134,8 @@ function SidebarTab() {
     toast.success('Bouton supprimé');
   };
 
-  const sliderEnabled = (designSettings as any).sidebarSliderEnabled !== false;
-  const sliderSpeed   = (designSettings as any).sidebarSliderSpeed ?? 6000;
-  const sliderMax     = (designSettings as any).sidebarSliderMaxProducts ?? 5;
-
   return (
+    <div className="grid grid-cols-1 xl:grid-cols-[1fr_240px] gap-6 items-start">
     <div className="space-y-6">
 
       {/* ── Presets ── */}
@@ -1341,6 +1545,10 @@ function SidebarTab() {
           )}
         </CardContent>
       </Card>
+    </div>
+
+      {/* Live Preview — sticky right column */}
+      <SidebarLivePreview />
     </div>
   );
 }
