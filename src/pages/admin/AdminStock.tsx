@@ -709,11 +709,36 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
 
   return (
     <motion.div {...fadeIn} transition={{ duration: 0.4 }} className="space-y-4">
+      {/* Orphan products banner */}
+      {(() => {
+        const inventoryProductIds = new Set((inventory as InventoryItem[]).map((i: InventoryItem) => i.product_id));
+        const orphanCount = (products as ProductRow[]).filter((p: ProductRow) => !inventoryProductIds.has(p.id)).length;
+        return orphanCount > 0 ? (
+          <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-sm">
+            <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0" />
+            <span className="text-yellow-700 dark:text-yellow-400 flex-1">
+              <strong>{orphanCount} produit{orphanCount > 1 ? 's' : ''}</strong> présent{orphanCount > 1 ? 's' : ''} dans le catalogue mais absent{orphanCount > 1 ? 's' : ''} de l'inventaire.
+            </span>
+            <Button size="sm" variant="outline" className="gap-2 border-yellow-500/40 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-500/20" onClick={handleSyncProducts} disabled={syncing}>
+              <RefreshCw className={cn("h-3.5 w-3.5", syncing && "animate-spin")} />
+              {syncing ? 'Synchronisation…' : 'Synchroniser maintenant'}
+            </Button>
+          </div>
+        ) : null;
+      })()}
+
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <h2 className="text-2xl font-bold tracking-tight">Inventaire Global</h2>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
+          <h2 className="text-2xl font-bold tracking-tight">Inventaire Global</h2>
+          <Badge variant="secondary" className="font-mono">{items.length} produits</Badge>
+        </div>
+        <div className="flex flex-wrap gap-2">
           <Button className="gap-2" onClick={() => { setEditTarget(null); setProductDialogOpen(true); }}>
             <Plus className="h-4 w-4" /> Ajouter un produit
+          </Button>
+          <Button variant="outline" className="gap-2" onClick={handleSyncProducts} disabled={syncing}>
+            <RefreshCw className={cn("h-3.5 w-3.5", syncing && "animate-spin")} />
+            {syncing ? 'Sync…' : 'Sync Produits'}
           </Button>
           <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
             <Upload className="h-4 w-4" /> Importer fichier
