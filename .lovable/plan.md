@@ -1,52 +1,103 @@
 
-## Problèmes identifiés (audit complet)
+## Thinking
 
-### Problème 1 — "Slider de produits" (rotation automatique) : à supprimer
-Dans `AdminDesign.tsx` lignes 991-1034, il y a une carte **"Slider de produits"** avec un toggle "Activer le slider automatique", vitesse de rotation, et nombre de produits max. L'utilisateur veut une **seule image fixe** dans la sidebar, pas de rotation multi-produits. → Supprimer cette carte entière.
+The user wants to:
+1. Upload a product mockup image (like the Marco jacket shown)
+2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
+3. Automatically generates a fully interactive, dynamic product page from it
 
-Dans `SidebarProductHUD.tsx`, la logique `sidebarSliderEnabled`, `sliderProducts`, `hasMultiple`, `activeIndex`, `isTransitioning` doit être simplifiée pour **toujours afficher un seul produit** (le produit survolé / sélectionné, ou le premier produit de la liste).
+The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
 
-### Problème 2 — "Réapparition automatique" dupliquée : à fusionner
-Dans `AdminDesign.tsx` :
-- **Première occurrence** : lignes 1038-1067 (dans une grid `lg:grid-cols-2` avec "Apparence")
-- **Deuxième occurrence** : lignes 1101-1132 (dans un `div` séparé avec une autre carte "Apparence")
+1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
+   - Accepts an image (jpg/png/webp)
+   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
+   - Also extracts the **color variants** as `colorOptions` with proper hex values
+   - Returns a structured product object ready to pre-fill the ProductForm
 
-C'est exactement le même bloc copié deux fois. → Supprimer la deuxième occurrence (lignes 1101-1165), garder uniquement la première.
+2. **Add "Importer Maquette IA" button** in AdminProducts that:
+   - Opens a dialog with a dropzone accepting images
+   - Sends image to the edge function
+   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
+   - Lets admin review/edit before confirming creation
+   - On confirm: creates the product in the DB with all extracted data
 
-### Problème 3 — Nom de marque / sous-titre s'affiche même quand vide
-Dans `SidebarProductHUD.tsx` lignes 189-194 :
-```tsx
-{designSettings.sidebarBrandName || 'LVTK6'}   // fallback hardcodé
-{designSettings.sidebarBrandSubtitle || 'NOUVELLE ÉDITION'}  // fallback hardcodé
-```
-Ces fallbacks affichent toujours "LVTK6" et "NOUVELLE ÉDITION" même quand l'utilisateur a tout effacé. → Remplacer par un rendu conditionnel : **n'afficher que si la valeur est non-vide**.
+3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
 
-Même correction dans le `ProductSlide` (ligne 49) : `{designSettings.sidebarBrandName || 'LVTK6'}` → conditionnel.
+Looking at the Marco image:
+- Product name: MARCO
+- Brand: Helvetica Mountain Pioneers x PEGASWOES  
+- Season: HIVER 2026
+- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
+- Sizes: XS, S, M, L, XL, XXL
+- Composition: 100% POLYESTER
+- Tags: limited edition
 
-Aussi dans `initialData.ts` lignes 200-201 : les valeurs par défaut `'LVTK6'` et `'NEW EDITION'` doivent être remplacées par des chaînes vides `''` pour que les utilisateurs qui n'ont jamais touché ces champs voient aussi rien.
+## Plan
 
-### Problème 4 — Positionnement nom de marque / sous-titre
-Actuellement le nom de marque est dans la **"Top Zone"** (`pt-28`, position fixe en haut) par-dessus le logo header. L'utilisateur veut pouvoir **choisir la position** (haut, milieu, bas).
+### 1. New edge function `analyze-product-image`
+New file: `supabase/functions/analyze-product-image/index.ts`
 
-**Solution** : Ajouter dans `AdminDesign.tsx` un sélecteur de position (3 boutons : Haut / Milieu / Bas) pour le bloc "Identité de marque". Persister dans `designSettings.sidebarBrandPosition` (nouveau champ : `'top' | 'center' | 'bottom'`). Dans `SidebarProductHUD.tsx`, utiliser cette valeur pour rendre le bloc dans la zone correspondante (top / center / bottom).
+Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
+- name, subtitle, price (ask to estimate if not found), category
+- sizes (exact text from image)
+- colors with **hex values** from the color swatches visible in image
+- colorOptions: [{color: "#hex", label: "nom"}]
+- material/composition
+- description (generated from visual)
+- sku (auto-generated)
+- tags (e.g., "limited edition" if spotted)
+- Any brand/collection info → subtitle
 
----
+### 2. New UI component `ImportMockupDialog.tsx`
+In `src/components/admin/ImportMockupDialog.tsx`:
+- Image dropzone (jpg/png/webp/gif up to 10MB)
+- Preview of uploaded image
+- "Analyser avec l'IA" button
+- Loading state with animated scan effect
+- Results preview:
+  - Product name, subtitle
+  - Price field (editable, since AI may not find it)
+  - Color swatches preview
+  - Size badges preview
+  - Material info
+  - Generated description
+- "Créer ce produit" confirm button
+- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
 
-## Fichiers à modifier
+### 3. AdminProducts integration
+- Add "Importer Maquette IA" button next to existing "Importer PDF" button
+- Opens the new ImportMockupDialog
+- After product created, show toast + option to go to product detail
 
-| Fichier | Action |
-|---|---|
-| `src/pages/admin/AdminDesign.tsx` | Supprimer la carte "Slider de produits" ; supprimer le doublon "Réapparition automatique" ; ajouter sélecteur de position brand |
-| `src/components/layout/SidebarProductHUD.tsx` | Supprimer logique slider multi-produits ; rendre brandName/brandSubtitle conditionnellement ; respecter `sidebarBrandPosition` |
-| `src/data/initialData.ts` | Mettre `sidebarBrandName: ''` et `sidebarBrandSubtitle: ''` par défaut |
-| `src/types/index.ts` | Ajouter `sidebarBrandPosition?: 'top' | 'center' | 'bottom'` à `DesignSettings` |
-| `src/hooks/useDesignSettings.ts` | Mapper `sidebar_brand_position` en DB ↔ settings |
+### Files to create/modify
+- `supabase/functions/analyze-product-image/index.ts` — new edge function
+- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
+- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
 
-## Schéma DB
-Pas de migration nécessaire — `sidebar_brand_name` et `sidebar_brand_subtitle` sont déjà persistés en DB. Pour `sidebarBrandPosition`, on peut le stocker dans un champ existant JSONB ou utiliser `as any` comme les autres champs dynamiques — pas besoin de nouvelle colonne.
+## Implementation Steps
 
-## Résultat
-- Sidebar affiche **1 seul produit** (plus de rotation automatique)  
-- **1 seul** bloc "Réapparition automatique" dans l'admin  
-- Si nom de marque/sous-titre vides → **rien ne s'affiche** sur la sidebar  
-- Sélecteur Haut / Milieu / Bas pour positionner les textes de marque sur l'image
+### Step 1: Edge function `analyze-product-image`
+Input: `{ imageBase64: string, mimeType: string }`
+Prompt to Gemini Pro Vision:
+- Extract all visible product info
+- Extract hex colors from color swatches
+- Generate description if not present
+- Output strict JSON matching `ExtractedProductData` schema
+
+### Step 2: `ImportMockupDialog` component
+States:
+- `file`, `preview` (image URL)
+- `analyzing` (loading state)
+- `extracted` (ExtractedProductData | null)
+- `editableData` (form state to review/edit before import)
+
+UX Flow:
+1. Drag & drop or click to upload image
+2. Preview appears
+3. Click "Analyser avec IA" → loading scan animation
+4. Results appear: color swatches, size badges, all info
+5. User can edit price/name if needed
+6. Click "Créer le produit" → uploads image to storage, creates product, success
+
+### Step 3: AdminProducts button
+Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)

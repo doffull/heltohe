@@ -103,6 +103,8 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     pages: (db.pages as typeof base.pages) || base.pages,
     // Mannequin hotspots — persist & restore from DB
     mannequinHotspots: (db.mannequin_hotspots as typeof base.mannequinHotspots) ?? [],
+    // Sidebar brand position
+    sidebarBrandPosition: (((db as any).sidebar_brand_position as string) || 'top') as 'top' | 'center' | 'bottom',
   };
 }
 
@@ -190,6 +192,8 @@ function settingsToDb(s: DesignSettings) {
     pages: s.pages as unknown as Json,
     // Mannequin hotspots
     mannequin_hotspots: s.mannequinHotspots as unknown as Json,
+    // Sidebar brand position
+    sidebar_brand_position: (s as any).sidebarBrandPosition ?? 'top',
   };
 }
 
