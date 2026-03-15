@@ -310,6 +310,14 @@ export interface DesignSettings {
   colissimo_sender_address?: string;
   colissimo_sender_zip?: string;
   colissimo_sender_city?: string;
+
+  // Global color overrides (hex) — applied as CSS variable overrides on :root
+  globalBgColor?: string;
+  globalTextColor?: string;
+  globalCardColor?: string;
+  globalMutedColor?: string;
+  footerBgColor?: string;
+  footerTextColor?: string;
 }
 
 export type MarkerType = 'dot' | 'cross' | 'diamond' | 'square' | 'ring';
