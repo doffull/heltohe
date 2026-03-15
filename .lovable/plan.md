@@ -1,103 +1,157 @@
 
-## Thinking
+## Analyse des problèmes
 
-The user wants to:
-1. Upload a product mockup image (like the Marco jacket shown)
-2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
-3. Automatically generates a fully interactive, dynamic product page from it
+### Problème 1 — Clic catégorie → redirige vers Boutique au lieu de /homme, /femme
 
-The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
+**Cause identifiée** : Dans `CategoryGrid.tsx`, le clic appelle `navigateToCategory(category.title)`. Dans `AppContext.tsx`, `navigateToCategory` cherche `allCategories.find(c => c.title === category)` puis utilise `cat?.slug`. Si la catégorie n'a **pas de slug défini** en DB (champ `slug` null), elle fait `encodeURIComponent(category.toLowerCase())` → `/homme`. Ça devrait marcher.
 
-1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
-   - Accepts an image (jpg/png/webp)
-   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
-   - Also extracts the **color variants** as `colorOptions` with proper hex values
-   - Returns a structured product object ready to pre-fill the ProductForm
+**Mais** : la route dans `App.tsx` est `/:categorySlug` qui capture aussi `/boutique`, `/panier`, `/auth`, etc. La route `/boutique/:slugOrId` existe, donc `/boutique` est bien pris, mais les catégories comme `/homme` doivent atterrir sur `CategoryPageRouter`. **Le vrai problème** : si la catégorie s'appelle "Homme" mais n'a pas de slug défini, `encodeURIComponent("homme")` = `homme` → navigate vers `/homme`. `CategoryPageRouter` reçoit `categorySlug = "homme"` et cherche `c.slug === "homme"` OU `normalizeSlug(c.title) === normalizeSlug("homme")`. Si le titre en DB est "Homme" → `normalizeSlug("Homme") = "homme"` → ça devrait matcher.
 
-2. **Add "Importer Maquette IA" button** in AdminProducts that:
-   - Opens a dialog with a dropzone accepting images
-   - Sends image to the edge function
-   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
-   - Lets admin review/edit before confirming creation
-   - On confirm: creates the product in the DB with all extracted data
+**Vérification plus précise** : le `useCategories` hook a `queryKey: ['admin-categories']`. L'AppContext utilise aussi `useCategories` pour `navigateToCategory`. Ils partagent le cache → ok.
 
-3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
+**Problème réel probable** : Les catégories en DB n'ont peut-être pas de slug. Le `navigateToCategory` fait `cat?.slug || encodeURIComponent(category.toLowerCase())`. Si `cat` est undefined (parce que `allCategories` est vide au moment du clic — race condition), il navigue vers `/boutique` (via le `setCurrentView('Shop')` + `navigate('/boutique')` du `else`).
 
-Looking at the Marco image:
-- Product name: MARCO
-- Brand: Helvetica Mountain Pioneers x PEGASWOES  
-- Season: HIVER 2026
-- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
-- Sizes: XS, S, M, L, XL, XXL
-- Composition: 100% POLYESTER
-- Tags: limited edition
+**Wait** — re-lire le code : 
+```js
+if (category === 'Tout') {
+  navigate('/boutique');
+} else {
+  const cat = allCategories.find(c => c.title === category);
+  const slug = cat?.slug || encodeURIComponent(category.toLowerCase());
+  navigate(`/${slug}`);
+}
+```
 
-## Plan
+Si `allCategories` est vide au moment du clic, `cat` est undefined → `slug = encodeURIComponent("Homme".toLowerCase()) = "homme"` → navigate vers `/homme`. C'est correct.
 
-### 1. New edge function `analyze-product-image`
-New file: `supabase/functions/analyze-product-image/index.ts`
+**Mais attendez** — `CategoryGrid` appelle `navigateToCategory(category.title)` UNIQUEMENT si `!isEditorOpen`. Et le clic check `if (isEditorOpen) startEdit(...)`. 
 
-Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
-- name, subtitle, price (ask to estimate if not found), category
-- sizes (exact text from image)
-- colors with **hex values** from the color swatches visible in image
-- colorOptions: [{color: "#hex", label: "nom"}]
-- material/composition
-- description (generated from visual)
-- sku (auto-generated)
-- tags (e.g., "limited edition" if spotted)
-- Any brand/collection info → subtitle
+**Vrai problème trouvé** : Dans `CategoryGrid`, la ligne de navigation utilise `navigateToCategory(category.title)`. La fonction `navigateToCategory` navigue vers `/${slug}`. Mais si le titre est "Homme", slug sera "homme" → `/homme`. La route `/:categorySlug` dans App.tsx devrait catcher ça.
 
-### 2. New UI component `ImportMockupDialog.tsx`
-In `src/components/admin/ImportMockupDialog.tsx`:
-- Image dropzone (jpg/png/webp/gif up to 10MB)
-- Preview of uploaded image
-- "Analyser avec l'IA" button
-- Loading state with animated scan effect
-- Results preview:
-  - Product name, subtitle
-  - Price field (editable, since AI may not find it)
-  - Color swatches preview
-  - Size badges preview
-  - Material info
-  - Generated description
-- "Créer ce produit" confirm button
-- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
+**MAIS** : si les catégories en DB ont des titres avec accents ou espaces ("Vêtements Homme"), le `encodeURIComponent` produira quelque chose de différent de ce que `normalizeSlug` génère dans `CategoryPageRouter`. C'est là le bug principal.
 
-### 3. AdminProducts integration
-- Add "Importer Maquette IA" button next to existing "Importer PDF" button
-- Opens the new ImportMockupDialog
-- After product created, show toast + option to go to product detail
+**Solution** : S'assurer que le slug utilisé dans `navigateToCategory` correspond exactement à celui généré par `normalizeSlug` dans `CategoryPageRouter`. On doit utiliser le même `normalizeSlug` dans les deux endroits pour construire l'URL.
 
-### Files to create/modify
-- `supabase/functions/analyze-product-image/index.ts` — new edge function
-- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
-- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
+### Problème 2 — Gestion produits en vedette / dernières arrivées sur la page d'accueil
 
-## Implementation Steps
+L'actuelle `ProductSections` dans `homeSections` utilise un système de tags fixes (`top`, `trending`, `style`, `promo`). Il faut une interface admin dans le **tableau de bord** (AdminDashboard) pour :
+- Marquer des produits comme "en vedette" (featured) ou "nouvelle arrivée" (new)
+- Ces produits apparaissent dans les sections correspondantes sur la page d'accueil
 
-### Step 1: Edge function `analyze-product-image`
-Input: `{ imageBase64: string, mimeType: string }`
-Prompt to Gemini Pro Vision:
-- Extract all visible product info
-- Extract hex colors from color swatches
-- Generate description if not present
-- Output strict JSON matching `ExtractedProductData` schema
+### Problème 3 — Couleurs globales du site personnalisables
 
-### Step 2: `ImportMockupDialog` component
-States:
-- `file`, `preview` (image URL)
-- `analyzing` (loading state)
-- `extracted` (ExtractedProductData | null)
-- `editableData` (form state to review/edit before import)
+Actuellement les couleurs CSS (`--background`, `--foreground`, `--primary`, etc.) sont fixes dans `index.css`. Il faut une **section Couleurs** dans Admin Design qui permette de changer :
+- Couleur de fond du site
+- Couleur du texte principal
+- Couleur primaire/accent
+- Couleur des liens
+- Couleur des textes du header/nav
+- Couleur du footer
+- Mode clair/sombre
 
-UX Flow:
-1. Drag & drop or click to upload image
-2. Preview appears
-3. Click "Analyser avec IA" → loading scan animation
-4. Results appear: color swatches, size badges, all info
-5. User can edit price/name if needed
-6. Click "Créer le produit" → uploads image to storage, creates product, success
+Les changements doivent être appliqués via CSS variables dynamiquement (via `style` sur `:root` ou via `designSettings`).
 
-### Step 3: AdminProducts button
-Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)
+---
+
+## Plan d'implémentation
+
+### Fix 1 — Navigation catégories (Bug critique)
+
+**Fichier : `src/context/AppContext.tsx`**
+
+Ajouter la même `normalizeSlug` function que dans `CategoryPageRouter` et l'utiliser pour construire l'URL :
+
+```js
+const normalizeSlug = (s: string) =>
+  s.toLowerCase().replace(/\s+/g, '-')
+   .replace(/[àâä]/g, 'a').replace(/[éèêë]/g, 'e')
+   .replace(/[îï]/g, 'i').replace(/[ôö]/g, 'o')
+   .replace(/[ùûü]/g, 'u').replace(/ç/g, 'c');
+
+const navigateToCategory = (category: string) => {
+  if (category === 'Tout') { navigate('/boutique'); return; }
+  const cat = allCategories.find(c => c.title === category);
+  // Use explicit slug, or normalize title — always matches CategoryPageRouter logic
+  const slug = cat?.slug || normalizeSlug(category);
+  navigate(`/${slug}`);
+};
+```
+
+Aussi vérifier : si les catégories DB ont un slug stocké, il faut que `CategoryPageRouter` matche bien ce slug. On doit s'assurer que lors de la création d'une catégorie, le slug est bien auto-généré depuis le titre.
+
+**Fichier : `src/components/admin/CategoryFormDialog.tsx`** — vérifier que le slug est auto-généré à partir du titre si vide.
+
+### Fix 2 — Section "Produits en vedette" dans AdminDashboard
+
+**Fichier : `src/pages/admin/AdminDashboard.tsx`**
+
+Ajouter un 3ème bloc "GESTION PAGE D'ACCUEIL" avec deux onglets :
+- **Produits en vedette** : liste de produits avec checkbox "featured" → met à jour le tag `featured` sur le produit
+- **Nouvelles arrivées** : liste avec checkbox "new" → tag `new`
+
+Les produits taggés apparaissent dans les sections correspondantes sur la page d'accueil.
+
+**Fichier : `src/components/home/ProductSections.tsx`**
+
+Ajouter des sections pour les tags `featured` et `new` dans `sectionProducts`.
+
+**Fichier : `src/hooks/useProducts.ts`** — vérifier que les tags sont bien persistés.
+
+### Fix 3 — Palette de couleurs globale dans Admin Design
+
+**Nouveau fichier : `src/components/admin/ColorsTab.tsx`** (ou section dans AdminDesign)
+
+Ajouter un onglet **"Couleurs"** dans la nav de AdminDesign avec :
+
+**Groupe 1 — Site global**
+- Fond du site (`--background`)
+- Texte principal (`--foreground`)
+- Couleur primaire/accent (`--primary`)
+- Fond carte (`--card`)
+- Texte secondaire (`--muted-foreground`)
+
+**Groupe 2 — Header**
+- Fond header (déjà géré via `headerBgColor`)
+- Texte navigation (déjà `headerTextColor`)
+- Couleur liens actifs
+
+**Groupe 3 — Footer**
+- Fond footer
+- Texte footer
+
+**Stockage** : dans `designSettings` via des clés comme `globalBgColor`, `globalTextColor`, `globalPrimaryColor`, etc.
+
+**Application dynamique** : dans `MainLayout.tsx`, injecter un `<style>` tag dans le `<head>` qui override les CSS variables :
+
+```jsx
+useEffect(() => {
+  const root = document.documentElement;
+  if (designSettings.globalBgColor) root.style.setProperty('--background', hexToHsl(designSettings.globalBgColor));
+  if (designSettings.globalTextColor) root.style.setProperty('--foreground', hexToHsl(designSettings.globalTextColor));
+  // ...
+}, [designSettings]);
+```
+
+Il faut une fonction `hexToHsl` car les CSS variables sont en format HSL.
+
+---
+
+## Fichiers à modifier
+
+| Fichier | Action |
+|---|---|
+| `src/context/AppContext.tsx` | Corriger `navigateToCategory` avec normalizeSlug |
+| `src/components/admin/CategoryFormDialog.tsx` | Vérifier auto-génération slug |
+| `src/pages/admin/AdminDashboard.tsx` | Ajouter section gestion page d'accueil |
+| `src/components/home/ProductSections.tsx` | Ajouter sections featured/new |
+| `src/pages/admin/AdminDesign.tsx` | Ajouter onglet "Couleurs" globales |
+| `src/components/layout/MainLayout.tsx` | Appliquer CSS variables dynamiques |
+| `src/types/index.ts` | Ajouter champs couleurs dans DesignSettings |
+
+---
+
+## Ce que ça change concrètement
+
+1. **Clic sur "Homme"** → va sur `/homme` (page catégorie dédiée avec header image + produits filtrés) — jamais sur `/boutique`
+2. **AdminDashboard** : nouvelle section "Page d'accueil" pour cocher les produits en vedette et nouvelles arrivées → s'affichent sur la homepage
+3. **Admin Design → Couleurs** : nouveaux pickers pour fond du site, texte, primaire, header, footer — tout le site se recolore instantanément
