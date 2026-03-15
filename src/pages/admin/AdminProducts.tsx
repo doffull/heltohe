@@ -477,12 +477,12 @@ export default function AdminProducts() {
                             className="w-16 h-7 text-xs text-right border border-primary rounded px-1 bg-background"
                             autoFocus
                           />
-                          <button onClick={() => handleSaveInlineStock(product.id)} className="text-green-500 hover:text-green-400 text-xs">✓</button>
+                          <button onClick={() => handleSaveInlineStock(product.id)} className="text-primary hover:text-primary/80 text-xs">✓</button>
                           <button onClick={() => setEditingStockId(null)} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
                         </div>
                       ) : (
                         <span
-                          className={`text-sm font-bold cursor-pointer hover:underline decoration-dotted ${product.stock === 0 ? 'text-destructive' : product.stock <= 5 ? 'text-yellow-500' : 'text-green-500'}`}
+                          className={`text-sm font-bold cursor-pointer hover:underline decoration-dotted ${product.stock === 0 ? 'text-destructive' : product.stock <= 5 ? 'text-yellow-500' : 'text-green-400'}`}
                           onClick={() => { setEditingStockId(product.id); setEditingStockValue(product.stock); }}
                           title="Cliquer pour modifier le stock"
                         >
