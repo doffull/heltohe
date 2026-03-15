@@ -29,6 +29,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 // Admin Pages
 import AdminDashboard from './AdminDashboard';
+import AdminAudit from './AdminAudit';
 import AdminProducts from './AdminProducts';
 import AdminOrders from './AdminOrders';
 import AdminCustomers from './AdminCustomers';
