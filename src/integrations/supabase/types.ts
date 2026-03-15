@@ -442,6 +442,7 @@ export type Database = {
           show_unit_id: boolean | null
           sidebar_bg: string | null
           sidebar_brand_name: string | null
+          sidebar_brand_position: string | null
           sidebar_brand_subtitle: string | null
           sidebar_gradient: boolean | null
           sidebar_image: string | null
@@ -528,6 +529,7 @@ export type Database = {
           show_unit_id?: boolean | null
           sidebar_bg?: string | null
           sidebar_brand_name?: string | null
+          sidebar_brand_position?: string | null
           sidebar_brand_subtitle?: string | null
           sidebar_gradient?: boolean | null
           sidebar_image?: string | null
@@ -614,6 +616,7 @@ export type Database = {
           show_unit_id?: boolean | null
           sidebar_bg?: string | null
           sidebar_brand_name?: string | null
+          sidebar_brand_position?: string | null
           sidebar_brand_subtitle?: string | null
           sidebar_gradient?: boolean | null
           sidebar_image?: string | null
