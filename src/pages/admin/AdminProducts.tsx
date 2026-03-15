@@ -79,7 +79,13 @@ export default function AdminProducts() {
   const [editingStockId, setEditingStockId] = useState<string | null>(null);
   const [editingStockValue, setEditingStockValue] = useState<number>(0);
 
+  // Inventory/stock dialog from product row
+  const [stockDialogOpen, setStockDialogOpen] = useState(false);
+  const [stockDialogEdit, setStockDialogEdit] = useState<{ inventoryId: string; productId: string } | null>(null);
+  const [stockDialogLocations, setStockDialogLocations] = useState<{ id: string; type: string }[]>([]);
+
   // Bulk edit state
+
   const [bulkCategory, setBulkCategory] = useState('__unchanged__');
   const [bulkPrice, setBulkPrice] = useState('');
   const [bulkStock, setBulkStock] = useState('');
