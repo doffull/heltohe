@@ -14,7 +14,7 @@ import { HeroSlide, HUDStat, HUDButton, MannequinHotspotConfig, Category, Marker
 import {
   Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Eye, EyeOff,
   LayoutDashboard, ImagePlay, PanelTop, Image, PanelLeft, Grid3x3, Crosshair, BookOpen, Save, Loader2,
-  Pencil, Check, X, Palette,
+  Pencil, Check, X, Palette, RotateCcw,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
