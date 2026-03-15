@@ -37,10 +37,10 @@ const DEFAULT_HERO_SLIDES = [
 
 
 const FALLBACK_CATEGORIES = [
-{ title: 'Homme', image: catHomme, href: '/boutique/homme' },
-{ title: 'Femme', image: catFemme, href: '/boutique/femme' },
-{ title: 'Enfant', image: catEnfant, href: '/boutique/enfant' },
-{ title: 'Accessoires', image: catAccessoires, href: '/boutique/accessoires' }];
+{ title: 'Homme', image: catHomme, href: '/homme' },
+{ title: 'Femme', image: catFemme, href: '/femme' },
+{ title: 'Enfant', image: catEnfant, href: '/enfant' },
+{ title: 'Accessoires', image: catAccessoires, href: '/accessoires' }];
 
 
 // Reusable scroll-reveal wrapper
