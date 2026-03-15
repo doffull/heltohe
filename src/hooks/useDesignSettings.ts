@@ -192,6 +192,8 @@ function settingsToDb(s: DesignSettings) {
     pages: s.pages as unknown as Json,
     // Mannequin hotspots
     mannequin_hotspots: s.mannequinHotspots as unknown as Json,
+    // Sidebar brand position
+    sidebar_brand_position: (s as any).sidebarBrandPosition ?? 'top',
   };
 }
 
