@@ -910,23 +910,20 @@ function SidebarLivePreview() {
 
   const hasBrand = brandName || brandSubtitle;
 
-  const BrandBlockPreview = () => {
-    if (!hasBrand) return null;
-    return (
-      <div>
-        {brandName && (
-          <p className="font-bold text-[9px] tracking-[0.12em] uppercase" style={{ color: 'rgba(255,255,255,0.95)' }}>
-            {brandName}
-          </p>
-        )}
-        {brandSubtitle && (
-          <p className="font-mono text-[7px] tracking-[0.18em] uppercase" style={{ color: 'rgba(255,255,255,0.5)' }}>
-            {brandSubtitle}
-          </p>
-        )}
-      </div>
-    );
-  };
+  const brandBlockPreview = hasBrand ? (
+    <div>
+      {brandName && (
+        <p className="font-bold text-[9px] tracking-[0.12em] uppercase" style={{ color: 'rgba(255,255,255,0.95)' }}>
+          {brandName}
+        </p>
+      )}
+      {brandSubtitle && (
+        <p className="font-mono text-[7px] tracking-[0.18em] uppercase" style={{ color: 'rgba(255,255,255,0.5)' }}>
+          {brandSubtitle}
+        </p>
+      )}
+    </div>
+  ) : null;
 
   const filledColor = designSettings.statBarFilledColor || '#ffffff';
   const emptyColor = designSettings.statBarEmptyColor || 'rgba(255,255,255,0.15)';
