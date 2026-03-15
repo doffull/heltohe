@@ -1570,9 +1570,11 @@ function SortableCategoryCard({
 function CategoriesTab() {
   const { designSettings, updateDesignSettings } = useApp();
   const { data: dbCategories = [] } = useCategories();
+  const { data: allPages = [] } = usePages();
   const createCategory = useCreateCategory();
   const updateCategory = useUpdateCategory();
   const deleteCategory = useDeleteCategory();
+  const upsertPage = useUpsertPage();
   const [editCat, setEditCat] = useState<CategoryRecord | undefined>(undefined);
   const [formOpen, setFormOpen] = useState(false);
 
@@ -1585,17 +1587,37 @@ function CategoriesTab() {
   const rootCats = dbCategories.filter(c => !c.parentId).sort((a, b) => a.sortOrder - b.sortOrder);
   const subCats = dbCategories.filter(c => !!c.parentId);
 
+  // Build a map: categoryId → page
+  const pagesByCategoryId = new Map(
+    allPages.filter(p => p.categoryId).map(p => [p.categoryId!, { id: p.id, slug: p.slug }])
+  );
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     const oldIndex = rootCats.findIndex(c => c.id === active.id);
     const newIndex = rootCats.findIndex(c => c.id === over.id);
     const reordered = arrayMove(rootCats, oldIndex, newIndex);
-    // Persist new sort_order for each
     reordered.forEach((cat, idx) => {
       if (cat.sortOrder !== idx) {
         updateCategory.mutate({ ...cat, sortOrder: idx });
       }
+    });
+  }
+
+  // Create a dedicated page for a category
+  function handleCreatePage(cat: CategoryRecord) {
+    const slug = cat.slug || cat.title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+    upsertPage.mutate({
+      title: cat.title,
+      slug,
+      type: 'category',
+      categoryId: cat.id,
+      isPublished: true,
+      sections: [],
+    }, {
+      onSuccess: () => toast.success(`Page "/${slug}" créée et liée à ${cat.title}`),
+      onError: (e: any) => toast.error(`Erreur: ${e.message}`),
     });
   }
 
@@ -1652,6 +1674,7 @@ function CategoriesTab() {
               <div key={cat.id}>
                 <SortableCategoryCard
                   cat={cat}
+                  linkedPage={pagesByCategoryId.get(cat.id) || null}
                   onEdit={(c) => { setEditCat(c); setFormOpen(true); }}
                   onDelete={(id) => {
                     if (!confirm('Supprimer cette catégorie ?')) return;
@@ -1660,6 +1683,7 @@ function CategoriesTab() {
                       onError: () => toast.error('Erreur lors de la suppression'),
                     });
                   }}
+                  onCreatePage={handleCreatePage}
                 />
                 {/* Sub-categories */}
                 {subCats.filter(s => s.parentId === cat.id).map(sub => (
@@ -1703,8 +1727,27 @@ function CategoriesTab() {
               onError: () => toast.error('Erreur lors de la mise à jour'),
             });
           } else {
+            // Create category then auto-create its page
             createCategory.mutate({ ...data, sortOrder: rootCats.length }, {
-              onSuccess: () => { toast.success('Catégorie créée'); setFormOpen(false); },
+              onSuccess: () => {
+                toast.success('Catégorie créée');
+                setFormOpen(false);
+                // Auto-create the dedicated page after a brief delay to let the category be saved
+                // (the page will be linked via slug matching, not categoryId, until the user refreshes)
+                if (data.slug) {
+                  setTimeout(() => {
+                    upsertPage.mutate({
+                      title: data.title,
+                      slug: data.slug!,
+                      type: 'category',
+                      isPublished: true,
+                      sections: [],
+                    }, {
+                      onSuccess: () => toast.success(`Page "/${data.slug}" créée automatiquement`),
+                    });
+                  }, 500);
+                }
+              },
               onError: () => toast.error('Erreur lors de la création'),
             });
           }
