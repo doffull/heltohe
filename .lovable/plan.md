@@ -1,103 +1,59 @@
 
-## Thinking
+## Analyse de la situation actuelle
 
-The user wants to:
-1. Upload a product mockup image (like the Marco jacket shown)
-2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
-3. Automatically generates a fully interactive, dynamic product page from it
+**Ce qui existe déjà :**
 
-The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
+1. **`InventoryProductDialog.tsx`** (dans `/admin/stock`) : gestion complète du stock par taille et couleur — grille variantes couleur×taille, stock par taille seule, stock par couleur seule. Mais c'est uniquement accessible depuis `/admin/stock → Inventaire Global`. Les utilisateurs ne le trouvent pas depuis `/admin/produits`.
 
-1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
-   - Accepts an image (jpg/png/webp)
-   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
-   - Also extracts the **color variants** as `colorOptions` with proper hex values
-   - Returns a structured product object ready to pre-fill the ProductForm
+2. **`ProductForm.tsx`** (dans `/admin/produits`) : formulaire produit qui gère les tailles disponibles et les couleurs, mais le stock est un **chiffre global unique** — pas de ventilation par taille/couleur.
 
-2. **Add "Importer Maquette IA" button** in AdminProducts that:
-   - Opens a dialog with a dropzone accepting images
-   - Sends image to the edge function
-   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
-   - Lets admin review/edit before confirming creation
-   - On confirm: creates the product in the DB with all extracted data
+3. **Suppression en masse** : déjà implémentée via `useBulkDeleteProducts` et bouton "Supprimer" dans la barre bulk. **Fonctionne déjà.**
 
-3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
+4. **Suppression individuelle** : déjà présente dans le menu dropdown de chaque produit.
 
-Looking at the Marco image:
-- Product name: MARCO
-- Brand: Helvetica Mountain Pioneers x PEGASWOES  
-- Season: HIVER 2026
-- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
-- Sizes: XS, S, M, L, XL, XXL
-- Composition: 100% POLYESTER
-- Tags: limited edition
+**Ce qui manque :**
+
+- Dans `/admin/produits`, la fiche produit (ProductForm) ne permet pas de définir le **stock par taille** et **stock par couleur** — seulement un stock global.
+- Pas d'accès direct depuis la liste produits vers la gestion stock par variante.
+
+---
 
 ## Plan
 
-### 1. New edge function `analyze-product-image`
-New file: `supabase/functions/analyze-product-image/index.ts`
+### 1 — Ajouter le stock par variante dans `ProductForm.tsx`
 
-Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
-- name, subtitle, price (ask to estimate if not found), category
-- sizes (exact text from image)
-- colors with **hex values** from the color swatches visible in image
-- colorOptions: [{color: "#hex", label: "nom"}]
-- material/composition
-- description (generated from visual)
-- sku (auto-generated)
-- tags (e.g., "limited edition" if spotted)
-- Any brand/collection info → subtitle
+Après la section "TAILLES DISPONIBLES" et "OPTIONS COULEURS", ajouter dynamiquement une section **"// STOCK PAR VARIANTE"** qui s'affiche selon les tailles/couleurs renseignées :
 
-### 2. New UI component `ImportMockupDialog.tsx`
-In `src/components/admin/ImportMockupDialog.tsx`:
-- Image dropzone (jpg/png/webp/gif up to 10MB)
-- Preview of uploaded image
-- "Analyser avec l'IA" button
-- Loading state with animated scan effect
-- Results preview:
-  - Product name, subtitle
-  - Price field (editable, since AI may not find it)
-  - Color swatches preview
-  - Size badges preview
-  - Material info
-  - Generated description
-- "Créer ce produit" confirm button
-- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
+- **Tailles + Couleurs** → grille tableau (couleur en ligne × taille en colonne) avec `Input` number dans chaque cellule
+- **Tailles seulement** → liste simple : `XS: [__]  S: [__]  M: [__]` etc.
+- **Couleurs seulement** → liste : swatch + nom + `Input`
+- **Aucune variante** → champ stock global (déjà présent)
 
-### 3. AdminProducts integration
-- Add "Importer Maquette IA" button next to existing "Importer PDF" button
-- Opens the new ImportMockupDialog
-- After product created, show toast + option to go to product detail
+Ces données sont stockées dans `attributes` du produit sous la clé `variantStock` (JSON), ou mieux : on synchronise directement avec `stock_levels` en base de données au moment du save.
 
-### Files to create/modify
-- `supabase/functions/analyze-product-image/index.ts` — new edge function
-- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
-- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
+**Option retenue** : stocker les stocks variantes dans `stock_levels` (la vraie table) via l'inventaire, exactement comme `InventoryProductDialog` le fait — en réutilisant la même logique dans `handleCreate`/`handleUpdate` d'`AdminProducts.tsx`.
 
-## Implementation Steps
+### 2 — Bouton rapide "Gérer stock" depuis la liste produits
 
-### Step 1: Edge function `analyze-product-image`
-Input: `{ imageBase64: string, mimeType: string }`
-Prompt to Gemini Pro Vision:
-- Extract all visible product info
-- Extract hex colors from color swatches
-- Generate description if not present
-- Output strict JSON matching `ExtractedProductData` schema
+Dans le menu dropdown de chaque produit (côté "ACTIONS"), ajouter un item **"Gérer le stock"** qui ouvre `InventoryProductDialog` en mode édition. Il faut juste récupérer l'`inventoryId` correspondant au `productId`.
 
-### Step 2: `ImportMockupDialog` component
-States:
-- `file`, `preview` (image URL)
-- `analyzing` (loading state)
-- `extracted` (ExtractedProductData | null)
-- `editableData` (form state to review/edit before import)
+### 3 — Confirmer que la suppression en masse fonctionne
 
-UX Flow:
-1. Drag & drop or click to upload image
-2. Preview appears
-3. Click "Analyser avec IA" → loading scan animation
-4. Results appear: color swatches, size badges, all info
-5. User can edit price/name if needed
-6. Click "Créer le produit" → uploads image to storage, creates product, success
+La suppression en masse est déjà codée (`handleBulkDelete` + `useBulkDeleteProducts`). Elle s'affiche dès qu'un produit est coché. **Aucun changement nécessaire** — juste informer l'utilisateur.
 
-### Step 3: AdminProducts button
-Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)
+---
+
+## Fichiers à modifier
+
+| Fichier | Action |
+|---|---|
+| `src/components/admin/ProductForm.tsx` | Ajouter section stock par variante (grille taille×couleur, ou par taille seule, ou couleur seule) |
+| `src/pages/admin/AdminProducts.tsx` | (1) Passer les données stock variante lors du create/update vers stock_levels ; (2) Ajouter "Gérer le stock" dans le dropdown → ouvre InventoryProductDialog |
+
+---
+
+## Ce que ça change concrètement
+
+1. **Fiche produit** : dès qu'on coche des tailles ET des couleurs, une grille apparaît pour saisir le stock de chaque combinaison (ex: Noir XL = 10, Noir M = 5, Blanc L = 8…)
+2. **Liste produits** → menu "···" → "Gérer le stock" → ouvre directement le dialogue stock complet avec les variantes existantes
+3. **Suppression en masse** : déjà fonctionnelle (cocher des produits → barre jaune apparaît avec bouton "Supprimer")
