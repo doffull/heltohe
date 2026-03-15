@@ -982,7 +982,7 @@ function SidebarLivePreview() {
 
           {/* Center zone */}
           <div className="flex-1 flex flex-col justify-center gap-2 py-2">
-            {brandPosition === 'center' && <BrandBlockPreview />}
+            {brandPosition === 'center' && brandBlockPreview}
 
             {/* Product card */}
             {(designSettings as any).showSidebarProductCard !== false && product && (
