@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Plus, Search, Pencil, Trash2, MoreHorizontal, Package, Upload, FileText, X, Check, Filter, Wand2, Copy, Tag, DollarSign, Archive, Layers2
+  Plus, Search, Pencil, Trash2, MoreHorizontal, Package, Upload, FileText, X, Check, Filter, Wand2, Copy, Tag, DollarSign, Archive, Layers2, Boxes
 } from 'lucide-react';
 import { ImportMockupDialog } from '@/components/admin/ImportMockupDialog';
 import {
@@ -26,7 +26,8 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { ProductForm } from '@/components/admin/ProductForm';
+import { ProductForm, VariantStockData } from '@/components/admin/ProductForm';
+import { InventoryProductDialog } from '@/components/admin/InventoryProductDialog';
 import { Textarea } from '@/components/ui/textarea';
 
 interface ExtractedProduct {
@@ -78,7 +79,13 @@ export default function AdminProducts() {
   const [editingStockId, setEditingStockId] = useState<string | null>(null);
   const [editingStockValue, setEditingStockValue] = useState<number>(0);
 
+  // Inventory/stock dialog from product row
+  const [stockDialogOpen, setStockDialogOpen] = useState(false);
+  const [stockDialogEdit, setStockDialogEdit] = useState<{ inventoryId: string; productId: string } | null>(null);
+  const [stockDialogLocations, setStockDialogLocations] = useState<{ id: string; type: string }[]>([]);
+
   // Bulk edit state
+
   const [bulkCategory, setBulkCategory] = useState('__unchanged__');
   const [bulkPrice, setBulkPrice] = useState('');
   const [bulkStock, setBulkStock] = useState('');
@@ -160,22 +167,44 @@ export default function AdminProducts() {
     }
   };
 
-  const handleCreate = async (data: Omit<Product, 'id'>) => {
+  const handleCreate = async (data: Omit<Product, 'id'>, variantStock?: VariantStockData) => {
     try {
       const created = await createProduct.mutateAsync(data);
       toast({ title: 'Produit créé' });
       setIsFormOpen(false);
-      // Auto-sync to inventory/stock central
+      // Auto-sync to inventory/stock central with variant stock
       try {
         const { data: webLoc } = await supabase.from('locations').select('id').eq('type', 'web').maybeSingle();
         if (webLoc && created?.id) {
           const { data: inv } = await supabase.from('inventory').insert({
             product_id: created.id, sku: data.sku, name: data.name, channel: 'b2c', threshold: 10,
           }).select('id').single();
-          if (inv && data.stock > 0) {
-            await supabase.from('stock_levels').insert({
-              inventory_id: inv.id, location_id: webLoc.id, quantity: data.stock, reserved: 0,
-            });
+          if (inv) {
+            const hasSizes = data.sizes && data.sizes.length > 0;
+            const hasColors = data.colorOptions && data.colorOptions.length > 0;
+            const stockInserts: any[] = [];
+
+            if (hasSizes && hasColors && variantStock?.variantGrid) {
+              for (const [color, sizes] of Object.entries(variantStock.variantGrid)) {
+                for (const [size, qty] of Object.entries(sizes)) {
+                  if (qty > 0) stockInserts.push({ inventory_id: inv.id, location_id: webLoc.id, quantity: qty, reserved: 0, size, color, stocked_at: new Date().toISOString() });
+                }
+              }
+            } else if (hasSizes && !hasColors && variantStock?.sizeStockMap) {
+              for (const [size, qty] of Object.entries(variantStock.sizeStockMap)) {
+                if (qty > 0) stockInserts.push({ inventory_id: inv.id, location_id: webLoc.id, quantity: qty, reserved: 0, size, stocked_at: new Date().toISOString() });
+              }
+            } else if (!hasSizes && hasColors && variantStock?.colorStockMap) {
+              for (const [color, qty] of Object.entries(variantStock.colorStockMap)) {
+                if (qty > 0) stockInserts.push({ inventory_id: inv.id, location_id: webLoc.id, quantity: qty, reserved: 0, color, stocked_at: new Date().toISOString() });
+              }
+            } else if (data.stock > 0) {
+              stockInserts.push({ inventory_id: inv.id, location_id: webLoc.id, quantity: data.stock, reserved: 0, stocked_at: new Date().toISOString() });
+            }
+
+            if (stockInserts.length > 0) {
+              await supabase.from('stock_levels').insert(stockInserts);
+            }
           }
         }
       } catch { /* silent — stock sync is non-critical */ }
@@ -195,6 +224,32 @@ export default function AdminProducts() {
       toast({ title: 'Erreur', variant: 'destructive' });
     }
   };
+
+  const handleOpenStockDialog = async (product: Product) => {
+    // Load locations
+    const { data: locs } = await supabase.from('locations').select('id, type').eq('is_active', true);
+    setStockDialogLocations(locs || []);
+    // Find existing inventory for this product
+    const { data: inv } = await supabase.from('inventory').select('id').eq('product_id', product.id).maybeSingle();
+    if (inv) {
+      setStockDialogEdit({ inventoryId: inv.id, productId: product.id });
+    } else {
+      // Create inventory entry on-the-fly if missing
+      const { data: webLoc } = await supabase.from('locations').select('id').eq('type', 'web').maybeSingle();
+      if (webLoc) {
+        const { data: newInv } = await supabase.from('inventory').insert({
+          product_id: product.id, sku: product.sku, name: product.name, channel: 'b2c', threshold: 10,
+        }).select('id').single();
+        if (newInv) setStockDialogEdit({ inventoryId: newInv.id, productId: product.id });
+      } else {
+        toast({ title: 'Aucun emplacement Web configuré', description: 'Créez d\'abord un emplacement de type "web" dans Stock', variant: 'destructive' });
+        return;
+      }
+    }
+    setStockDialogOpen(true);
+  };
+
+
 
   const handleDelete = async (id: string) => {
     if (!confirm('Supprimer ce produit ?')) return;
@@ -422,12 +477,12 @@ export default function AdminProducts() {
                             className="w-16 h-7 text-xs text-right border border-primary rounded px-1 bg-background"
                             autoFocus
                           />
-                          <button onClick={() => handleSaveInlineStock(product.id)} className="text-green-500 hover:text-green-400 text-xs">✓</button>
+                          <button onClick={() => handleSaveInlineStock(product.id)} className="text-primary hover:text-primary/80 text-xs">✓</button>
                           <button onClick={() => setEditingStockId(null)} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
                         </div>
                       ) : (
                         <span
-                          className={`text-sm font-bold cursor-pointer hover:underline decoration-dotted ${product.stock === 0 ? 'text-destructive' : product.stock <= 5 ? 'text-yellow-500' : 'text-green-500'}`}
+                          className={`text-sm font-bold cursor-pointer hover:underline decoration-dotted ${product.stock === 0 ? 'text-destructive' : product.stock <= 5 ? 'text-yellow-500' : 'text-green-400'}`}
                           onClick={() => { setEditingStockId(product.id); setEditingStockValue(product.stock); }}
                           title="Cliquer pour modifier le stock"
                         >
@@ -438,11 +493,12 @@ export default function AdminProducts() {
                     <td className="p-4 text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => { setEditingProduct(product); setIsFormOpen(true); }}><Pencil className="h-4 w-4 mr-2" />Modifier</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDuplicate(product)}><Copy className="h-4 w-4 mr-2" />Dupliquer</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDelete(product.id)} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" />Supprimer</DropdownMenuItem>
-                        </DropdownMenuContent>
+                         <DropdownMenuContent align="end">
+                           <DropdownMenuItem onClick={() => { setEditingProduct(product); setIsFormOpen(true); }}><Pencil className="h-4 w-4 mr-2" />Modifier</DropdownMenuItem>
+                           <DropdownMenuItem onClick={() => handleOpenStockDialog(product)}><Boxes className="h-4 w-4 mr-2" />Gérer le stock</DropdownMenuItem>
+                           <DropdownMenuItem onClick={() => handleDuplicate(product)}><Copy className="h-4 w-4 mr-2" />Dupliquer</DropdownMenuItem>
+                           <DropdownMenuItem onClick={() => handleDelete(product.id)} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" />Supprimer</DropdownMenuItem>
+                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
                   </tr>
@@ -679,6 +735,15 @@ export default function AdminProducts() {
           setIsMockupDialogOpen(false);
           navigate(`/boutique/${productId}?new=1`);
         }}
+      />
+
+      {/* Stock / Inventory Dialog */}
+      <InventoryProductDialog
+        open={stockDialogOpen}
+        onOpenChange={(open) => { setStockDialogOpen(open); if (!open) setStockDialogEdit(null); }}
+        onSaved={() => { setStockDialogOpen(false); setStockDialogEdit(null); toast({ title: 'Stock mis à jour' }); }}
+        locations={stockDialogLocations}
+        editData={stockDialogEdit}
       />
     </div>
   );
