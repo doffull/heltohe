@@ -577,10 +577,16 @@ export function MainLayout({ children }: MainLayoutProps) {
       </main>
 
       {/* Footer */}
-      <footer className={cn(
-        "bg-secondary border-t border-border py-8 mt-4 lg:py-16 lg:mt-10 transition-all duration-500",
-        sidebarActive ? "lg:ml-[35%]" : "lg:ml-0"
-      )}>
+      <footer
+        className={cn(
+          "border-t border-border py-8 mt-4 lg:py-16 lg:mt-10 transition-all duration-500",
+          sidebarActive ? "lg:ml-[35%]" : "lg:ml-0"
+        )}
+        style={{
+          backgroundColor: ds.footerBgColor || undefined,
+          color: ds.footerTextColor || undefined,
+        }}
+      >
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 lg:gap-12">
             {/* Brand */}
