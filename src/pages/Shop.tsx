@@ -143,14 +143,16 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-12">
-        {/* Header */}
-        <div className="mb-10">
-          <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-2">// CATALOGUE</p>
-          <h1 className="text-5xl font-bold uppercase tracking-tight mb-2">Boutique</h1>
-          <p className="text-muted-foreground">
-            {filteredProducts.length} produit{filteredProducts.length !== 1 ? 's' : ''} disponible{filteredProducts.length !== 1 ? 's' : ''}
-          </p>
-        </div>
+        {/* Header — hidden when a CategoryPageRouter provides its own hero */}
+        {!hideHeader && (
+          <div className="mb-10">
+            <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-2">// CATALOGUE</p>
+            <h1 className="text-5xl font-bold uppercase tracking-tight mb-2">Boutique</h1>
+            <p className="text-muted-foreground">
+              {filteredProducts.length} produit{filteredProducts.length !== 1 ? 's' : ''} disponible{filteredProducts.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+        )}
 
         {/* Filters Bar */}
         <div className="bg-secondary/50 p-4 lg:p-6 mb-6 lg:mb-8 bevel-corners">
