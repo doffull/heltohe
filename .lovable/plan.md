@@ -1,103 +1,118 @@
 
-## Thinking
+## Aperçu Live Sidebar — Plan d'implémentation
 
-The user wants to:
-1. Upload a product mockup image (like the Marco jacket shown)
-2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
-3. Automatically generates a fully interactive, dynamic product page from it
+### Contexte technique
 
-The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
+- `SidebarTab` dans `AdminDesign.tsx` (lignes 886-1346) est un composant autonome qui lit `designSettings` depuis `useApp()`
+- `SidebarProductHUD` et `StatBar` lisent aussi `designSettings` depuis `useApp()` — ils réagissent déjà aux changements en temps réel
+- Le layout AdminDesign est en 2 colonnes : nav gauche (w-52) + contenu droit (flex-1)
+- Les CSS classes `sidebar-product-card`, `sidebar-size-badge` etc. sont dans `index.css` (n'ont pas de fichier séparé visible — injectées globalement)
 
-1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
-   - Accepts an image (jpg/png/webp)
-   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
-   - Also extracts the **color variants** as `colorOptions` with proper hex values
-   - Returns a structured product object ready to pre-fill the ProductForm
+### Approche : Split-view dans SidebarTab
 
-2. **Add "Importer Maquette IA" button** in AdminProducts that:
-   - Opens a dialog with a dropzone accepting images
-   - Sends image to the edge function
-   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
-   - Lets admin review/edit before confirming creation
-   - On confirm: creates the product in the DB with all extracted data
+Au lieu d'ajouter un layout 3 colonnes (trop étroit), le `SidebarTab` adopte un **layout 2 colonnes** interne :
+- **Colonne gauche** : tous les contrôles existants (inchangés)
+- **Colonne droite** : panneau d'aperçu fixe, sticky, qui simule la sidebar du site
 
-3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
+L'aperçu est une **miniature proportionnelle** de la sidebar réelle (ratio 9:16, fond = `sidebarBg`, image + gradient + contenu HUD). Puisque `SidebarProductHUD` lit `designSettings` directement, il réagira **instantanément** sans aucun wiring supplémentaire.
 
-Looking at the Marco image:
-- Product name: MARCO
-- Brand: Helvetica Mountain Pioneers x PEGASWOES  
-- Season: HIVER 2026
-- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
-- Sizes: XS, S, M, L, XL, XXL
-- Composition: 100% POLYESTER
-- Tags: limited edition
+```text
+┌──────────────────────────────────────────────────────────┐
+│  Admin > Design > Sidebar                                │
+│                                                          │
+│  ┌─────────────────────────┐  ┌──────────────────────┐  │
+│  │  Contrôles (existants)  │  │  Aperçu live         │  │
+│  │                         │  │  ┌────────────────┐  │  │
+│  │  Presets                │  │  │  [image fond]  │  │  │
+│  │  Réapparition           │  │  │                │  │  │
+│  │  Apparence              │  │  │  Nom marque    │  │  │
+│  │  Images mannequin       │  │  │  Carte produit │  │  │
+│  │  Identité de marque     │  │  │  Tailles       │  │  │
+│  │  Éléments visibles      │  │  │  Stats         │  │  │
+│  │  Barres de stats        │  │  │  Boutons CTA   │  │  │
+│  │  Boutons                │  │  └────────────────┘  │  │
+│  │                         │  │  (sticky, ratio 9:16) │  │
+│  └─────────────────────────┘  └──────────────────────┘  │
+└──────────────────────────────────────────────────────────┘
+```
 
-## Plan
+### Composant `SidebarLivePreview`
 
-### 1. New edge function `analyze-product-image`
-New file: `supabase/functions/analyze-product-image/index.ts`
+Nouveau composant autonome à créer dans `AdminDesign.tsx` (au-dessus de `SidebarTab`) :
 
-Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
-- name, subtitle, price (ask to estimate if not found), category
-- sizes (exact text from image)
-- colors with **hex values** from the color swatches visible in image
-- colorOptions: [{color: "#hex", label: "nom"}]
-- material/composition
-- description (generated from visual)
-- sku (auto-generated)
-- tags (e.g., "limited edition" if spotted)
-- Any brand/collection info → subtitle
+**Rendu** :
+- Conteneur `sticky top-6` avec ratio `aspect-[9/20]` environ (simulation d'une sidebar tall)
+- Fond = `designSettings.sidebarBg` + gradient conditionnel
+- Image de fond = `designSettings.sidebarImage` avec `opacity = sidebarImageOpacity`
+- Overlay `SidebarProductHUD` en `position: absolute inset-0` — lit déjà `designSettings`
+- Badge `APERÇU LIVE` dans le coin supérieur gauche
+- Indication `w-[280px]` représentant la largeur réelle
 
-### 2. New UI component `ImportMockupDialog.tsx`
-In `src/components/admin/ImportMockupDialog.tsx`:
-- Image dropzone (jpg/png/webp/gif up to 10MB)
-- Preview of uploaded image
-- "Analyser avec l'IA" button
-- Loading state with animated scan effect
-- Results preview:
-  - Product name, subtitle
-  - Price field (editable, since AI may not find it)
-  - Color swatches preview
-  - Size badges preview
-  - Material info
-  - Generated description
-- "Créer ce produit" confirm button
-- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
+**Attention** : `SidebarProductHUD` utilise `useNavigate` et `useSidebarOptional`. Pour éviter des erreurs dans ce contexte admin, le preview sera un composant simplifié qui **ré-implémente** le rendu visuel directement (sans navigate, sans context de sidebar) en utilisant les mêmes classes et structure que `SidebarProductHUD` mais en mode read-only.
 
-### 3. AdminProducts integration
-- Add "Importer Maquette IA" button next to existing "Importer PDF" button
-- Opens the new ImportMockupDialog
-- After product created, show toast + option to go to product detail
+On copie la logique visuelle de `BrandBlock`, `ProductSlide` (sans navigate), et le bloc stats/boutons — tout s'alimente de `designSettings` + 1er produit disponible depuis `useProducts()`.
 
-### Files to create/modify
-- `supabase/functions/analyze-product-image/index.ts` — new edge function
-- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
-- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
+### Modification de `SidebarTab`
 
-## Implementation Steps
+Wrapper le contenu existant dans une grille 2 colonnes :
 
-### Step 1: Edge function `analyze-product-image`
-Input: `{ imageBase64: string, mimeType: string }`
-Prompt to Gemini Pro Vision:
-- Extract all visible product info
-- Extract hex colors from color swatches
-- Generate description if not present
-- Output strict JSON matching `ExtractedProductData` schema
+```tsx
+// Avant : <div className="space-y-6">
+// Après :
+<div className="grid grid-cols-1 xl:grid-cols-[1fr_280px] gap-6 items-start">
+  <div className="space-y-6">
+    {/* tous les contrôles existants — inchangés */}
+  </div>
+  <SidebarLivePreview />
+</div>
+```
 
-### Step 2: `ImportMockupDialog` component
-States:
-- `file`, `preview` (image URL)
-- `analyzing` (loading state)
-- `extracted` (ExtractedProductData | null)
-- `editableData` (form state to review/edit before import)
+À `xl` (≥1280px) : la preview s'affiche à côté. En dessous : elle se replie en haut (ordre inversé avec `xl:order-last`).
 
-UX Flow:
-1. Drag & drop or click to upload image
-2. Preview appears
-3. Click "Analyser avec IA" → loading scan animation
-4. Results appear: color swatches, size badges, all info
-5. User can edit price/name if needed
-6. Click "Créer le produit" → uploads image to storage, creates product, success
+### Fichiers à modifier
 
-### Step 3: AdminProducts button
-Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)
+| Fichier | Action |
+|---|---|
+| `src/pages/admin/AdminDesign.tsx` | Ajouter `SidebarLivePreview` + wrapper 2 colonnes dans `SidebarTab` |
+
+Un seul fichier. Pas de DB, pas de nouveaux hooks.
+
+### Détails du preview component
+
+```tsx
+function SidebarLivePreview() {
+  const { designSettings } = useApp();
+  const { data: products = [] } = useProducts();
+  const product = products[0] ?? null;
+  const brandPosition = designSettings.sidebarBrandPosition ?? 'top';
+  const stats = designSettings.stats?.length > 0 ? designSettings.stats : DEFAULT_STATS;
+  const sizes = designSettings.sidebarSizes?.length > 0 ? designSettings.sidebarSizes : ['S', 'M', 'L', 'XL'];
+
+  return (
+    <div className="sticky top-6 xl:order-last">
+      {/* Badge APERÇU LIVE */}
+      {/* Conteneur ratio sidebar */}
+      <div style={{ background: sidebarBg, ... }} className="relative overflow-hidden rounded-lg border">
+        {/* Image fond */}
+        {sidebarImage && <img ... style={{ opacity: sidebarImageOpacity }} />}
+        {/* Gradient overlay */}
+        {sidebarGradient && <div style={{ gradient }} />}
+        {/* Contenu HUD en superposition */}
+        <div className="absolute inset-0 p-3 pt-8 flex flex-col justify-between text-[0.6em]">
+          {/* Top zone */}
+          {/* Center zone : produit + stats */}
+          {/* Bottom zone : boutons + info */}
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+Le texte sera mis à l'échelle avec `transform: scale(0.65)` ou `text-[0.6em]` pour que tout tienne dans le 280px de largeur tout en restant lisible.
+
+### Résultat
+
+- Chaque modification (couleur fond, toggle éléments, opacité image, texte marque, position, stats) se reflète **instantanément** dans l'aperçu sans rechargement
+- Le preview est sticky : il reste visible en scrollant dans les contrôles
+- Aucune régression sur les contrôles existants
