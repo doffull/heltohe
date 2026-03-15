@@ -1449,10 +1449,14 @@ function SortableCategoryCard({
   cat,
   onEdit,
   onDelete,
+  linkedPage,
+  onCreatePage,
 }: {
   cat: CategoryRecord;
   onEdit: (cat: CategoryRecord) => void;
   onDelete: (id: string) => void;
+  linkedPage?: { id: string; slug: string } | null;
+  onCreatePage: (cat: CategoryRecord) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
@@ -1509,22 +1513,54 @@ function SortableCategoryCard({
         >
           <GripVertical className="h-4 w-4 text-foreground" />
         </div>
-        {/* Sub-categories badge */}
-        {/* badge not available here, skipped */}
+
+        {/* Page link status badge */}
+        <div className="absolute top-2 right-2">
+          {linkedPage ? (
+            <Badge variant="outline" className="text-[10px] bg-green-500/20 text-green-400 border-green-500/40 gap-1">
+              <Check className="h-2.5 w-2.5" /> Page liée
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-[10px] bg-destructive/20 text-destructive border-destructive/40 gap-1">
+              <AlertCircle className="h-2.5 w-2.5" /> Aucune page
+            </Badge>
+          )}
+        </div>
       </div>
 
       {/* Info row */}
-      <div className="p-3 flex items-center gap-2">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold truncate">{cat.title}</p>
-          {cat.slug && <p className="text-xs text-muted-foreground font-mono truncate">/{cat.slug}</p>}
+      <div className="p-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold truncate">{cat.title}</p>
+            {cat.slug && <p className="text-xs text-muted-foreground font-mono truncate">/{cat.slug}</p>}
+          </div>
+          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => onEdit(cat)}>
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-destructive" onClick={() => onDelete(cat.id)}>
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
         </div>
-        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => onEdit(cat)}>
-          <Pencil className="h-3.5 w-3.5" />
-        </Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-destructive" onClick={() => onDelete(cat.id)}>
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
+
+        {/* Page action button */}
+        {linkedPage ? (
+          <a
+            href={`/admin/pages?edit=${linkedPage.id}`}
+            className="flex items-center gap-1.5 text-[11px] text-primary hover:underline"
+          >
+            <ExternalLink className="h-3 w-3" /> Éditer la page dédiée
+          </a>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full h-7 text-[11px] gap-1.5"
+            onClick={() => onCreatePage(cat)}
+          >
+            <Plus className="h-3 w-3" /> Créer la page
+          </Button>
+        )}
       </div>
     </div>
   );
