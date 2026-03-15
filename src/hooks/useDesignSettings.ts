@@ -103,6 +103,8 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     pages: (db.pages as typeof base.pages) || base.pages,
     // Mannequin hotspots — persist & restore from DB
     mannequinHotspots: (db.mannequin_hotspots as typeof base.mannequinHotspots) ?? [],
+    // Sidebar brand position
+    sidebarBrandPosition: ((db as any).sidebar_brand_position as string) ?? 'top',
   };
 }
 
