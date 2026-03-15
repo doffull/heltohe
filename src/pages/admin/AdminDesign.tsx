@@ -1546,6 +1546,10 @@ function SidebarTab() {
         </CardContent>
       </Card>
     </div>
+
+      {/* Live Preview — sticky right column */}
+      <SidebarLivePreview />
+    </div>
   );
 }
 
