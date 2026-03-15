@@ -10,13 +10,32 @@ import { FileDropZone } from '@/components/admin/FileDropZone';
 
 interface ProductFormProps {
   product?: Product;
-  onSubmit: (product: Omit<Product, 'id'> | Product) => void;
+  onSubmit: (product: Omit<Product, 'id'> | Product, variantStock?: VariantStockData) => void;
   onCancel: () => void;
   isLoading?: boolean;
 }
 
+export interface VariantStockData {
+  /** couleur × taille → quantité */
+  variantGrid: Record<string, Record<string, number>>;
+  /** taille seule → quantité */
+  sizeStockMap: Record<string, number>;
+  /** couleur seule → quantité */
+  colorStockMap: Record<string, number>;
+  /** stock global (aucune variante) */
+  globalStock: number;
+}
+
 const CATEGORIES = ['Homme', 'Femme', 'Enfant', 'Accessoires'];
 const DEFAULT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+
+const COLOR_HEX_MAP: Record<string, string> = {
+  '#000000': '#000000', '#ffffff': '#ffffff',
+};
+
+function colorSwatch(hex: string) {
+  return hex && hex.startsWith('#') ? hex : '#888888';
+}
 
 export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductFormProps) {
   const [formData, setFormData] = useState({
@@ -38,6 +57,11 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
     videoUrl: '',
     tags: [] as string[],
   });
+
+  // Variant stock state (local to form — passed up on submit)
+  const [variantGrid, setVariantGrid] = useState<Record<string, Record<string, number>>>({});
+  const [sizeStockMap, setSizeStockMap] = useState<Record<string, number>>({});
+  const [colorStockMap, setColorStockMap] = useState<Record<string, number>>({});
 
   const [newAttrKey, setNewAttrKey] = useState('');
   const [newAttrValue, setNewAttrValue] = useState('');
@@ -76,11 +100,18 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
       videoUrl: formData.videoUrl || undefined,
       tags: formData.tags,
     };
-    
+
+    const variantStockData: VariantStockData = {
+      variantGrid,
+      sizeStockMap,
+      colorStockMap,
+      globalStock: formData.stock,
+    };
+
     if (product) {
-      onSubmit({ ...submitData, id: product.id });
+      onSubmit({ ...submitData, id: product.id }, variantStockData);
     } else {
-      onSubmit(submitData);
+      onSubmit(submitData, variantStockData);
     }
   };
 
@@ -130,6 +161,10 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
       return { ...prev, attributes: rest };
     });
   };
+
+  // Derived helpers for the stock grid
+  const hasSizes = formData.sizes.length > 0;
+  const hasColors = formData.colors.length > 0;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
@@ -263,11 +298,11 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         </div>
       </div>
 
-      {/* Pricing & Stock */}
+      {/* Pricing */}
       <div className="space-y-4">
-        <h4 className="hud-text text-xs text-primary">// PRIX & STOCK</h4>
+        <h4 className="hud-text text-xs text-primary">// PRIX</h4>
         
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="hud-text text-xs">Prix (€) *</Label>
             <Input
@@ -290,18 +325,6 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
               className="bg-secondary/50 border-border/30"
               min={0}
               step={0.01}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label className="hud-text text-xs">Stock *</Label>
-            <Input
-              type="number"
-              value={formData.stock}
-              onChange={(e) => setFormData(prev => ({ ...prev, stock: Number(e.target.value) }))}
-              className="bg-secondary/50 border-border/30"
-              min={0}
-              required
             />
           </div>
         </div>
@@ -438,6 +461,158 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
                 </div>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── STOCK PAR VARIANTE ── */}
+      <div className="space-y-4">
+        <h4 className="hud-text text-xs text-primary">// STOCK</h4>
+
+        {/* Tailles × Couleurs → grille */}
+        {hasSizes && hasColors ? (
+          <div className="space-y-2">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+              Stock par taille &amp; couleur
+            </p>
+            <div className="border border-border/30 rounded overflow-auto max-h-56">
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="bg-muted/40">
+                    <th className="text-left py-2 px-3 font-medium hud-text">Couleur</th>
+                    {formData.sizes.map(s => (
+                      <th key={s} className="text-center py-2 px-2 font-medium hud-text">{s}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {formData.colorOptions.map((opt) => (
+                    <tr key={opt.color} className="border-t border-border/20">
+                      <td className="py-1.5 px-3">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="w-3 h-3 rounded-full shrink-0 border border-border/50"
+                            style={{ backgroundColor: colorSwatch(opt.color) }}
+                          />
+                          <span className="truncate max-w-[80px]">{opt.label}</span>
+                        </div>
+                      </td>
+                      {formData.sizes.map(size => (
+                        <td key={size} className="text-center py-1 px-1">
+                          <Input
+                            type="number"
+                            min={0}
+                            value={variantGrid[opt.color]?.[size] ?? 0}
+                            onChange={e => {
+                              const val = Math.max(0, parseInt(e.target.value) || 0);
+                              setVariantGrid(prev => ({
+                                ...prev,
+                                [opt.color]: { ...prev[opt.color], [size]: val },
+                              }));
+                            }}
+                            className="w-14 h-6 text-center text-xs p-0 mx-auto bg-secondary/50 border-border/30"
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                  {/* Fallback rows for colors without colorOptions label */}
+                  {formData.colors
+                    .filter(c => !formData.colorOptions.find(o => o.color === c))
+                    .map(color => (
+                      <tr key={color} className="border-t border-border/20">
+                        <td className="py-1.5 px-3">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="w-3 h-3 rounded-full shrink-0 border border-border/50"
+                              style={{ backgroundColor: colorSwatch(color) }}
+                            />
+                            <span className="truncate max-w-[80px]">{color}</span>
+                          </div>
+                        </td>
+                        {formData.sizes.map(size => (
+                          <td key={size} className="text-center py-1 px-1">
+                            <Input
+                              type="number"
+                              min={0}
+                              value={variantGrid[color]?.[size] ?? 0}
+                              onChange={e => {
+                                const val = Math.max(0, parseInt(e.target.value) || 0);
+                                setVariantGrid(prev => ({
+                                  ...prev,
+                                  [color]: { ...prev[color], [size]: val },
+                                }));
+                              }}
+                              className="w-14 h-6 text-center text-xs p-0 mx-auto bg-secondary/50 border-border/30"
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : hasSizes && !hasColors ? (
+          /* Tailles seules */
+          <div className="space-y-2">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Stock par taille</p>
+            <div className="grid grid-cols-3 gap-2">
+              {formData.sizes.map(size => (
+                <div key={size} className="flex items-center gap-2 bg-secondary/20 border border-border/30 px-3 py-2">
+                  <span className="text-xs font-bold hud-text w-8 shrink-0">{size}</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={sizeStockMap[size] ?? 0}
+                    onChange={e => setSizeStockMap(prev => ({
+                      ...prev,
+                      [size]: Math.max(0, parseInt(e.target.value) || 0),
+                    }))}
+                    className="h-7 text-xs bg-secondary/50 border-border/30"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : !hasSizes && hasColors ? (
+          /* Couleurs seules */
+          <div className="space-y-2">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Stock par couleur</p>
+            <div className="space-y-1.5">
+              {formData.colorOptions.map(opt => (
+                <div key={opt.color} className="flex items-center gap-3 bg-secondary/20 border border-border/30 px-3 py-2">
+                  <span
+                    className="w-4 h-4 rounded-sm shrink-0 border border-border/50"
+                    style={{ backgroundColor: colorSwatch(opt.color) }}
+                  />
+                  <span className="text-xs flex-1 truncate">{opt.label}</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={colorStockMap[opt.color] ?? 0}
+                    onChange={e => setColorStockMap(prev => ({
+                      ...prev,
+                      [opt.color]: Math.max(0, parseInt(e.target.value) || 0),
+                    }))}
+                    className="w-20 h-7 text-xs bg-secondary/50 border-border/30"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          /* Stock global */
+          <div className="space-y-2">
+            <Label className="hud-text text-xs">Stock global *</Label>
+            <Input
+              type="number"
+              value={formData.stock}
+              onChange={(e) => setFormData(prev => ({ ...prev, stock: Number(e.target.value) }))}
+              className="bg-secondary/50 border-border/30"
+              min={0}
+              required
+            />
           </div>
         )}
       </div>
