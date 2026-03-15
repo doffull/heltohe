@@ -725,8 +725,7 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
               {syncing ? 'Synchronisation…' : 'Synchroniser maintenant'}
             </Button>
           </div>
-        ) : null;
-      })()}
+      )}
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
