@@ -46,6 +46,7 @@ const NAV_ITEMS = [
   { key: 'hero',        label: 'Hero Slider',  icon: ImagePlay,       desc: 'Slides & parallaxe' },
   { key: 'header',      label: 'Header',       icon: PanelTop,        desc: 'Barre de navigation' },
   { key: 'logo',        label: 'Logo & Marque',icon: Image,           desc: 'Identité visuelle' },
+  { key: 'couleurs',    label: 'Couleurs',     icon: Palette,         desc: 'Palette & thème' },
   { key: 'sidebar',     label: 'Sidebar',      icon: PanelLeft,       desc: 'Panneau latéral' },
   { key: 'categories',  label: 'Catégories',   icon: Grid3x3,         desc: 'Grille d\'accueil' },
   { key: 'hotspots',    label: 'Hotspots',     icon: Crosshair,       desc: 'Points interactifs' },
