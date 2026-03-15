@@ -149,9 +149,14 @@ export function CategoryFormDialog({ open, onOpenChange, category, categories, o
                   value={form.slug}
                   onChange={(e) => setForm(p => ({ ...p, slug: e.target.value }))}
                   placeholder="auto-généré"
-                  className="bg-secondary/50 font-mono text-xs"
+                  className={`bg-secondary/50 font-mono text-xs ${slugConflict ? 'border-destructive' : ''}`}
                 />
-                <p className="text-[10px] text-muted-foreground font-mono">/boutique/{form.slug || '...'}</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] text-muted-foreground font-mono">/boutique/{form.slug || '...'}</p>
+                  {slugConflict && (
+                    <p className="text-[10px] text-destructive font-mono">Slug déjà utilisé</p>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">
