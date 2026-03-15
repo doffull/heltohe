@@ -1441,29 +1441,128 @@ const CATEGORY_PRESETS = [
   { id: 'wide',     name: '2 colonnes larges',  description: '2 colonnes, ratio 16:9',    columns: 2, aspectRatio: '16/9', gap: 'lg' },
 ];
 
+// ─── Sortable category card ───
+function SortableCategoryCard({
+  cat,
+  onEdit,
+  onDelete,
+}: {
+  cat: CategoryRecord;
+  onEdit: (cat: CategoryRecord) => void;
+  onDelete: (id: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  const updateCategory = useUpdateCategory();
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "group relative rounded-xl overflow-hidden border border-border bg-card",
+        "transition-shadow hover:shadow-md",
+        isDragging && "shadow-xl ring-2 ring-primary/40"
+      )}
+    >
+      {/* Image background */}
+      <div className="relative h-32 bg-muted overflow-hidden">
+        {cat.image ? (
+          <img src={cat.image} alt={cat.title} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">Pas d'image</div>
+        )}
+        {/* Quick image upload overlay */}
+        <label className="absolute inset-0 flex items-center justify-center bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+          <div className="flex flex-col items-center gap-1 text-foreground">
+            <Image className="h-5 w-5" />
+            <span className="text-[10px] font-semibold">Changer l'image</span>
+          </div>
+          <input
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const { supabase } = await import('@/integrations/supabase/client');
+              const ext = file.name.split('.').pop();
+              const path = `categories/${Date.now()}.${ext}`;
+              const { data, error } = await supabase.storage.from('media').upload(path, file, { upsert: true });
+              if (error) { toast.error('Erreur upload'); return; }
+              const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(data.path);
+              updateCategory.mutate({ ...cat, image: publicUrl }, {
+                onSuccess: () => toast.success('Image mise à jour'),
+                onError: () => toast.error('Erreur de sauvegarde'),
+              });
+            }}
+          />
+        </label>
+        {/* Drag handle */}
+        <div
+          {...attributes}
+          {...listeners}
+          className="absolute top-2 left-2 p-1 bg-background/70 rounded cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <GripVertical className="h-4 w-4 text-foreground" />
+        </div>
+        {/* Sub-categories badge */}
+        {/* badge not available here, skipped */}
+      </div>
+
+      {/* Info row */}
+      <div className="p-3 flex items-center gap-2">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold truncate">{cat.title}</p>
+          {cat.slug && <p className="text-xs text-muted-foreground font-mono truncate">/{cat.slug}</p>}
+        </div>
+        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => onEdit(cat)}>
+          <Pencil className="h-3.5 w-3.5" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-destructive" onClick={() => onDelete(cat.id)}>
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Categories Tab ───
 function CategoriesTab() {
   const { designSettings, updateDesignSettings } = useApp();
-  const categories = designSettings.categories || [];
+  const { data: dbCategories = [] } = useCategories();
+  const createCategory = useCreateCategory();
+  const updateCategory = useUpdateCategory();
+  const deleteCategory = useDeleteCategory();
+  const [editCat, setEditCat] = useState<CategoryRecord | undefined>(undefined);
+  const [formOpen, setFormOpen] = useState(false);
 
-  const updateCategory = (index: number, updates: Partial<Category>) => {
-    const newCats = [...categories];
-    newCats[index] = { ...newCats[index], ...updates };
-    updateDesignSettings({ categories: newCats });
-  };
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
-  const addCategory = () => {
-    updateDesignSettings({ categories: [...categories, { id: generateId(), title: 'Nouvelle catégorie', image: '' }] });
-    toast.success('Catégorie ajoutée');
-  };
+  // Separate root and sub-categories
+  const rootCats = dbCategories.filter(c => !c.parentId).sort((a, b) => a.sortOrder - b.sortOrder);
+  const subCats = dbCategories.filter(c => !!c.parentId);
 
-  const removeCategory = (index: number) => {
-    updateDesignSettings({ categories: categories.filter((_, i) => i !== index) });
-    toast.success('Catégorie supprimée');
-  };
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = rootCats.findIndex(c => c.id === active.id);
+    const newIndex = rootCats.findIndex(c => c.id === over.id);
+    const reordered = arrayMove(rootCats, oldIndex, newIndex);
+    // Persist new sort_order for each
+    reordered.forEach((cat, idx) => {
+      if (cat.sortOrder !== idx) {
+        updateCategory.mutate({ ...cat, sortOrder: idx });
+      }
+    });
+  }
 
   return (
     <div className="space-y-6">
+      {/* Grid layout presets */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Disposition de la grille</CardTitle>
@@ -1496,42 +1595,82 @@ function CategoriesTab() {
         </CardContent>
       </Card>
 
+      {/* DB Categories management */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Catégories</h3>
-          <p className="text-sm text-muted-foreground">Vignettes affichées sur la page d'accueil</p>
+          <h3 className="text-lg font-semibold">Catégories ({rootCats.length})</h3>
+          <p className="text-sm text-muted-foreground">Glissez pour réordonner · Survolez une carte pour changer l'image</p>
         </div>
-        <Button onClick={addCategory} size="sm">
-          <Plus className="h-4 w-4 mr-2" /> Ajouter
+        <Button size="sm" onClick={() => { setEditCat(undefined); setFormOpen(true); }}>
+          <Plus className="h-4 w-4 mr-1.5" /> Nouvelle catégorie
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {categories.map((cat, index) => (
-          <Card key={cat.id}>
-            <CardContent className="pt-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <Input
-                  value={cat.title}
-                  onChange={(e) => updateCategory(index, { title: e.target.value })}
-                  placeholder="Titre"
-                  className="flex-1"
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={rootCats.map(c => c.id)} strategy={verticalListSortingStrategy}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {rootCats.map(cat => (
+              <div key={cat.id}>
+                <SortableCategoryCard
+                  cat={cat}
+                  onEdit={(c) => { setEditCat(c); setFormOpen(true); }}
+                  onDelete={(id) => {
+                    if (!confirm('Supprimer cette catégorie ?')) return;
+                    deleteCategory.mutate(id, {
+                      onSuccess: () => toast.success('Catégorie supprimée'),
+                      onError: () => toast.error('Erreur lors de la suppression'),
+                    });
+                  }}
                 />
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeCategory(index)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {/* Sub-categories */}
+                {subCats.filter(s => s.parentId === cat.id).map(sub => (
+                  <div key={sub.id} className="mt-2 ml-4 rounded-lg border border-border bg-muted/30 flex items-center gap-2 px-3 py-2">
+                    {sub.image && <img src={sub.image} alt={sub.title} className="h-8 w-8 rounded object-cover" />}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium truncate">{sub.title}</p>
+                      {sub.slug && <p className="text-[10px] text-muted-foreground font-mono">/{sub.slug}</p>}
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setEditCat(sub); setFormOpen(true); }}>
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => {
+                      if (!confirm('Supprimer ?')) return;
+                      deleteCategory.mutate(sub.id);
+                    }}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
               </div>
-              <FileDropZone
-                accept={['image']}
-                folder="categories"
-                currentFile={cat.image}
-                onUpload={(url) => updateCategory(index, { image: url })}
-                label="Image de la catégorie"
-              />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+            ))}
+            {rootCats.length === 0 && (
+              <div className="col-span-3 border-2 border-dashed border-border rounded-xl p-10 text-center text-muted-foreground text-sm">
+                Aucune catégorie. Cliquez sur "Nouvelle catégorie" pour commencer.
+              </div>
+            )}
+          </div>
+        </SortableContext>
+      </DndContext>
+
+      <CategoryFormDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        category={editCat}
+        categories={dbCategories}
+        onSubmit={(data) => {
+          if (editCat) {
+            updateCategory.mutate({ ...data, id: editCat.id }, {
+              onSuccess: () => { toast.success('Catégorie mise à jour'); setFormOpen(false); },
+              onError: () => toast.error('Erreur lors de la mise à jour'),
+            });
+          } else {
+            createCategory.mutate({ ...data, sortOrder: rootCats.length }, {
+              onSuccess: () => { toast.success('Catégorie créée'); setFormOpen(false); },
+              onError: () => toast.error('Erreur lors de la création'),
+            });
+          }
+        }}
+      />
     </div>
   );
 }
