@@ -714,12 +714,12 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
         const inventoryProductIds = new Set((inventory as InventoryItem[]).map((i: InventoryItem) => i.product_id));
         const orphanCount = (products as ProductRow[]).filter((p: ProductRow) => !inventoryProductIds.has(p.id)).length;
         return orphanCount > 0 ? (
-          <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-sm">
-            <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0" />
-            <span className="text-yellow-700 dark:text-yellow-400 flex-1">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/10 border border-primary/30 text-sm">
+            <AlertTriangle className="h-4 w-4 text-primary shrink-0" />
+            <span className="text-foreground flex-1">
               <strong>{orphanCount} produit{orphanCount > 1 ? 's' : ''}</strong> présent{orphanCount > 1 ? 's' : ''} dans le catalogue mais absent{orphanCount > 1 ? 's' : ''} de l'inventaire.
             </span>
-            <Button size="sm" variant="outline" className="gap-2 border-yellow-500/40 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-500/20" onClick={handleSyncProducts} disabled={syncing}>
+            <Button size="sm" variant="outline" className="gap-2" onClick={handleSyncProducts} disabled={syncing}>
               <RefreshCw className={cn("h-3.5 w-3.5", syncing && "animate-spin")} />
               {syncing ? 'Synchronisation…' : 'Synchroniser maintenant'}
             </Button>
