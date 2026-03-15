@@ -137,15 +137,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const { data: allCategories = [] } = useCategories();
 
+  // Shared normalizeSlug — must match CategoryPageRouter exactly
+  const normalizeSlug = (s: string) =>
+    s.toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[àâä]/g, 'a')
+      .replace(/[éèêë]/g, 'e')
+      .replace(/[îï]/g, 'i')
+      .replace(/[ôö]/g, 'o')
+      .replace(/[ùûü]/g, 'u')
+      .replace(/ç/g, 'c');
+
   const navigateToCategory = useCallback((category: string) => {
     setCurrentCategory(category);
-    setCurrentView('Shop');
     if (category === 'Tout') {
+      setCurrentView('Shop');
       navigate('/boutique');
     } else {
+      setCurrentView('Shop');
       const cat = allCategories.find(c => c.title === category);
-      const slug = cat?.slug || encodeURIComponent(category.toLowerCase());
-      // Clean URL: /homme, /femme etc. (no /boutique prefix)
+      // Use DB slug if available, otherwise normalize title (same algo as CategoryPageRouter)
+      const slug = cat?.slug || normalizeSlug(category);
       navigate(`/${slug}`);
     }
   }, [navigate, allCategories]);

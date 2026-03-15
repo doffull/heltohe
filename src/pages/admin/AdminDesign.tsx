@@ -14,7 +14,7 @@ import { HeroSlide, HUDStat, HUDButton, MannequinHotspotConfig, Category, Marker
 import {
   Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Eye, EyeOff,
   LayoutDashboard, ImagePlay, PanelTop, Image, PanelLeft, Grid3x3, Crosshair, BookOpen, Save, Loader2,
-  Pencil, Check, X,
+  Pencil, Check, X, Palette, RotateCcw,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
@@ -46,6 +46,7 @@ const NAV_ITEMS = [
   { key: 'hero',        label: 'Hero Slider',  icon: ImagePlay,       desc: 'Slides & parallaxe' },
   { key: 'header',      label: 'Header',       icon: PanelTop,        desc: 'Barre de navigation' },
   { key: 'logo',        label: 'Logo & Marque',icon: Image,           desc: 'Identité visuelle' },
+  { key: 'couleurs',    label: 'Couleurs',     icon: Palette,         desc: 'Palette & thème' },
   { key: 'sidebar',     label: 'Sidebar',      icon: PanelLeft,       desc: 'Panneau latéral' },
   { key: 'categories',  label: 'Catégories',   icon: Grid3x3,         desc: 'Grille d\'accueil' },
   { key: 'hotspots',    label: 'Hotspots',     icon: Crosshair,       desc: 'Points interactifs' },
@@ -2017,12 +2018,144 @@ function DispositionTab() {
   );
 }
 
+// ─── Colours Tab ───
+function CouleursTab() {
+  const { designSettings, updateDesignSettings } = useApp();
+  const ds = designSettings as any;
+
+  const HEADER_PRESETS = [
+    { label: 'Classic', value: 'classic', bg: '#ffffff', text: '#000000' },
+    { label: 'Dark', value: 'dark', bg: '#0a0a0a', text: '#ffffff' },
+    { label: 'Trans.', value: 'transparent', bg: 'transparent', text: '#ffffff' },
+    { label: 'Light', value: 'minimal', bg: '#f5f5f5', text: '#111111' },
+  ];
+
+  function update(key: string, value: string) {
+    updateDesignSettings({ [key]: value } as any);
+  }
+  function reset(key: string) {
+    updateDesignSettings({ [key]: '' } as any);
+  }
+
+  interface ColorRowProps { label: string; value: string; onChange: (v: string) => void; onReset?: () => void; }
+  function ColorRow({ label, value, onChange, onReset }: ColorRowProps) {
+    const display = value === 'transparent' ? '#ffffff' : (value || '#ffffff');
+    return (
+      <div className="flex items-center gap-3 py-2.5 border-b border-border last:border-0">
+        <div className="flex-1">
+          <p className="text-sm font-medium">{label}</p>
+          <p className="text-xs text-muted-foreground font-mono">{value || '— thème par défaut'}</p>
+        </div>
+        {onReset && (
+          <button onClick={onReset} title="Réinitialiser" className="p-1.5 text-muted-foreground hover:text-foreground transition-colors rounded hover:bg-muted">
+            <RotateCcw className="h-3.5 w-3.5" />
+          </button>
+        )}
+        <input
+          type="color"
+          value={display}
+          onChange={e => onChange(e.target.value)}
+          className="w-9 h-8 rounded cursor-pointer border border-border bg-transparent flex-shrink-0"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <div>
+        <h2 className="text-lg font-bold mb-1">Couleurs & Thème</h2>
+        <p className="text-sm text-muted-foreground">Personnalisez toutes les couleurs de votre site. Cliquez sur 🔄 pour réinitialiser au thème par défaut.</p>
+      </div>
+
+      {/* Header */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Header / Navigation</CardTitle>
+          <CardDescription>Presets et couleurs de la barre de navigation</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-4 gap-2">
+            {HEADER_PRESETS.map(preset => {
+              const isActive = ds.headerPreset === preset.value;
+              return (
+                <button
+                  key={preset.value}
+                  onClick={() => updateDesignSettings({ headerPreset: preset.value, headerBgColor: preset.bg, headerTextColor: preset.text } as any)}
+                  className={`py-2.5 rounded text-xs font-semibold border transition-all ${isActive ? 'border-primary bg-primary text-primary-foreground' : 'border-border hover:border-primary/40'}`}
+                  style={{
+                    background: isActive ? undefined : preset.bg === 'transparent' ? 'repeating-linear-gradient(45deg, #ccc 0, #ccc 2px, #fff 0, #fff 8px)' : preset.bg,
+                    color: isActive ? undefined : preset.text === '#ffffff' ? '#000' : preset.text,
+                  }}
+                >
+                  {preset.label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="divide-y divide-border border border-border rounded px-3">
+            <ColorRow label="Fond du header" value={ds.headerBgColor || ''} onChange={v => update('headerBgColor', v)} onReset={() => reset('headerBgColor')} />
+            <ColorRow label="Texte & liens du header" value={ds.headerTextColor || ''} onChange={v => update('headerTextColor', v)} onReset={() => reset('headerTextColor')} />
+          </div>
+          {/* Live header preview */}
+          <div className="rounded border border-border overflow-hidden" style={{ backgroundColor: ds.headerBgColor === 'transparent' ? 'rgba(0,0,0,0.5)' : (ds.headerBgColor || '#ffffff') }}>
+            <div className="flex items-center justify-between px-4 py-2.5">
+              {ds.hudLogo ? (
+                <img src={ds.hudLogo} alt="Logo" className="h-6 w-auto object-contain" />
+              ) : (
+                <span className="text-sm font-bold" style={{ color: ds.headerTextColor || '#000000' }}>{ds.siteName || 'MARQUE'}</span>
+              )}
+              <div className="flex gap-4">
+                {['Homme', 'Femme', 'Boutique', 'Contact'].map(item => (
+                  <span key={item} className="text-xs font-medium" style={{ color: ds.headerTextColor || '#000000' }}>{item}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Global site */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Couleurs globales du site</CardTitle>
+          <CardDescription>Fond, texte, accent — s'appliquent sur toutes les pages</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="divide-y divide-border border border-border rounded px-3">
+            <ColorRow label="Couleur primaire / accent" value={ds.accentColor || ''} onChange={v => update('accentColor', v)} onReset={() => reset('accentColor')} />
+            <ColorRow label="Fond du site" value={ds.globalBgColor || ''} onChange={v => update('globalBgColor', v)} onReset={() => reset('globalBgColor')} />
+            <ColorRow label="Texte principal" value={ds.globalTextColor || ''} onChange={v => update('globalTextColor', v)} onReset={() => reset('globalTextColor')} />
+            <ColorRow label="Fond des cartes / sections" value={ds.globalCardColor || ''} onChange={v => update('globalCardColor', v)} onReset={() => reset('globalCardColor')} />
+            <ColorRow label="Texte secondaire (muted)" value={ds.globalMutedColor || ''} onChange={v => update('globalMutedColor', v)} onReset={() => reset('globalMutedColor')} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Footer */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Footer</CardTitle>
+          <CardDescription>Couleurs du pied de page</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="divide-y divide-border border border-border rounded px-3">
+            <ColorRow label="Fond du footer" value={ds.footerBgColor || ''} onChange={v => update('footerBgColor', v)} onReset={() => reset('footerBgColor')} />
+            <ColorRow label="Texte du footer" value={ds.footerTextColor || ''} onChange={v => update('footerTextColor', v)} onReset={() => reset('footerTextColor')} />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 // ─── Main Page ───
 const TAB_COMPONENTS: Record<string, React.ComponentType> = {
   disposition: DispositionTab,
   hero:        HeroSliderTab,
   header:      HeaderDesignTab,
   logo:        LogoTab,
+  couleurs:    CouleursTab,
   sidebar:     SidebarTab,
   categories:  CategoriesTab,
   hotspots:    HotspotsTab,
