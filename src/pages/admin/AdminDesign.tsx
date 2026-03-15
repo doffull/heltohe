@@ -969,7 +969,7 @@ function SidebarLivePreview() {
 
           {/* Top zone */}
           <div className="flex items-start justify-between">
-            {brandPosition === 'top' && <BrandBlockPreview />}
+            {brandPosition === 'top' && brandBlockPreview}
             {brandPosition !== 'top' && <div />}
             {(designSettings as any).showSidebarProductNumber !== false && product?.sku && (
               <div className="bg-foreground flex items-center justify-center px-1.5 py-0.5 ml-auto">
