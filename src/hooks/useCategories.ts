@@ -49,9 +49,9 @@ export function useCreateCategory() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (cat: Omit<CategoryRecord, 'id'>) => {
-      const { error } = await supabase.from('categories').insert({
+      const buildPayload = (slug: string | null) => ({
         title: cat.title,
-        slug: cat.slug || null,
+        slug: slug || null,
         image: cat.image || null,
         sort_order: cat.sortOrder,
         display_size: cat.displaySize || 'medium',
@@ -61,6 +61,24 @@ export function useCreateCategory() {
         meta_description: cat.metaDescription || null,
         seo_keywords: cat.seoKeywords || null,
       } as any);
+
+      const { error } = await supabase.from('categories').insert(buildPayload(cat.slug || null));
+
+      // Handle duplicate slug: retry with suffixed slug
+      if (error?.code === '23505' && error.message?.includes('slug')) {
+        const baseSlug = cat.slug || cat.title.toLowerCase().replace(/\s+/g, '-');
+        // Fetch existing slugs to find next available suffix
+        const { data: existing } = await supabase.from('categories').select('slug');
+        const slugSet = new Set((existing || []).map((c: any) => c.slug));
+        let suffix = 2;
+        let candidate = `${baseSlug}-${suffix}`;
+        while (slugSet.has(candidate)) { suffix++; candidate = `${baseSlug}-${suffix}`; }
+
+        const { error: retryError } = await supabase.from('categories').insert(buildPayload(candidate));
+        if (retryError) throw retryError;
+        return;
+      }
+
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-categories'] }),

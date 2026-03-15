@@ -52,16 +52,27 @@ export function CategoryFormDialog({ open, onOpenChange, category, categories, o
   // Auto-generate slug from title
   useEffect(() => {
     if (!category && form.title && !form.slug) {
-      const autoSlug = form.title
+      const base = form.title
         .toLowerCase()
         .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
         .replace(/[^a-z0-9\s-]/g, '')
         .replace(/\s+/g, '-');
-      setForm(p => ({ ...p, slug: autoSlug }));
+      // Find an available slug that doesn't conflict with existing ones
+      const existingSlugs = new Set(categories.map(c => c.slug).filter(Boolean));
+      let candidate = base;
+      let suffix = 2;
+      while (existingSlugs.has(candidate)) {
+        candidate = `${base}-${suffix}`;
+        suffix++;
+      }
+      setForm(p => ({ ...p, slug: candidate }));
     }
-  }, [form.title, category]);
+  }, [form.title, category, categories]);
 
   const parentOptions = categories.filter(c => !c.parentId && c.id !== category?.id);
+  const slugConflict = !!form.slug && categories.some(
+    c => c.slug === form.slug && c.id !== category?.id
+  );
 
   const handleAiSeo = async () => {
     if (!form.title) {
@@ -138,9 +149,14 @@ export function CategoryFormDialog({ open, onOpenChange, category, categories, o
                   value={form.slug}
                   onChange={(e) => setForm(p => ({ ...p, slug: e.target.value }))}
                   placeholder="auto-généré"
-                  className="bg-secondary/50 font-mono text-xs"
+                  className={`bg-secondary/50 font-mono text-xs ${slugConflict ? 'border-destructive' : ''}`}
                 />
-                <p className="text-[10px] text-muted-foreground font-mono">/boutique/{form.slug || '...'}</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] text-muted-foreground font-mono">/boutique/{form.slug || '...'}</p>
+                  {slugConflict && (
+                    <p className="text-[10px] text-destructive font-mono">Slug déjà utilisé</p>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">
