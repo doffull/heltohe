@@ -434,6 +434,52 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
   const boutiqueLocations = locations.filter((l: Location) => l.type === 'boutique');
   const webLocation = locations.find((l: Location) => l.type === 'web');
 
+  // ── Sync: create inventory + stock_levels for products not yet in inventory ──
+  const handleSyncProducts = async () => {
+    setSyncing(true);
+    try {
+      const inventoryProductIds = new Set((inventory as InventoryItem[]).map((i: InventoryItem) => i.product_id));
+      const orphanProducts = (products as ProductRow[]).filter((p: ProductRow) => !inventoryProductIds.has(p.id));
+
+      if (orphanProducts.length === 0) {
+        toast({ title: 'Tous les produits sont déjà synchronisés ✓' });
+        setSyncing(false);
+        return;
+      }
+
+      let synced = 0;
+      for (const p of orphanProducts) {
+        const { data: inv, error: invErr } = await supabase.from('inventory').insert({
+          product_id: p.id, sku: p.sku, name: p.name, channel: 'b2c', threshold: 10,
+        }).select('id').single();
+        if (invErr || !inv) continue;
+
+        if (webLocation) {
+          await supabase.from('stock_levels').insert({
+            inventory_id: inv.id, location_id: webLocation.id,
+            quantity: 0, reserved: 0,
+          });
+          if (p.sizes && p.sizes.length > 0) {
+            for (const size of p.sizes) {
+              await supabase.from('stock_levels').insert({
+                inventory_id: inv.id, location_id: webLocation.id,
+                quantity: 0, reserved: 0, size, color: null,
+              });
+            }
+          }
+        }
+        synced++;
+      }
+
+      toast({ title: `${synced} produit${synced > 1 ? 's' : ''} synchronisé${synced > 1 ? 's' : ''} avec succès` });
+      onRefresh();
+    } catch (err: any) {
+      toast({ title: 'Erreur de synchronisation', description: err.message, variant: 'destructive' });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const handleOpenTransfer = (item: InventoryItem) => {
     setTransferTarget(item);
     setTransferQty(1);
