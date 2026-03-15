@@ -341,6 +341,75 @@ function KpiCard({ title, value, icon, variant }: { title: string; value: number
   );
 }
 
+// ── Inline editable stock cell for a variant ──
+function VariantStockCell({ level, inventoryId, locationId, size, color, onRefresh }: {
+  level?: StockLevel; inventoryId: string; locationId: string;
+  size: string | null; color: string | null; onRefresh: () => void;
+}) {
+  const { toast } = useToast();
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState<number>(level?.quantity ?? 0);
+  const [saving, setSaving] = useState(false);
+
+  const qty = level?.quantity ?? 0;
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      if (level) {
+        await supabase.from('stock_levels').update({ quantity: val, updated_at: new Date().toISOString() }).eq('id', level.id);
+      } else {
+        await supabase.from('stock_levels').insert({
+          inventory_id: inventoryId, location_id: locationId,
+          size, color, quantity: val, reserved: 0,
+          stocked_at: new Date().toISOString(),
+        });
+      }
+      toast({ title: 'Stock mis à jour' });
+      setEditing(false);
+      onRefresh();
+    } catch (err: any) {
+      toast({ title: 'Erreur', description: err.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1 justify-end">
+        <Input
+          type="number" min={0} value={val}
+          onChange={e => setVal(Number(e.target.value))}
+          className="w-14 h-6 text-xs text-right px-1.5"
+          autoFocus
+          onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }}
+        />
+        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleSave} disabled={saving}>
+          <Check className="h-3 w-3 text-primary" />
+        </Button>
+        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditing(false)}>
+          <X className="h-3 w-3" />
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => { setVal(qty); setEditing(true); }}
+      className={cn(
+        "font-mono text-xs font-semibold cursor-pointer hover:text-primary transition-colors px-1 py-0.5 rounded hover:bg-primary/10 group/cell",
+        qty === 0 ? "text-destructive/60" : "text-foreground/80"
+      )}
+      title="Cliquer pour modifier"
+    >
+      {qty}
+      <Pencil className="h-2.5 w-2.5 ml-1 inline opacity-0 group-hover/cell:opacity-50 transition-opacity" />
+    </button>
+  );
+}
+
 // ── Inventory with Import ──
 function InventoryView({ items, stockLevels, locations, channelFilter, setChannelFilter, searchTerm, setSearchTerm, getStockForItem, inventory, onRefresh, products }: any) {
   const { toast } = useToast();
