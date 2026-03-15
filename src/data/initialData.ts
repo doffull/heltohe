@@ -197,8 +197,8 @@ export const INITIAL_DESIGN_SETTINGS: DesignSettings = {
   hudLogo: 'https://pkxusmhvzcqfozzykjzy.supabase.co/storage/v1/object/sign/LOGO/logo%20runningrtg.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9hZTA1ZTc0OC0yOWIwLTQ2OWQtYTEyNy0yZThlZDYzNDAyZTEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJMT0dPL2xvZ28gcnVubmluZ3J0Zy5wbmciLCJpYXQiOjE3Njk3ODY5MjAsImV4cCI6MTgwMTMyMjkyMH0.oBKyGYVRKMOpBCuZrlGH0EpzyZjGiMZ6pkjQ-tsHUYs',
   
   // Sidebar Product Card HUD
-  sidebarBrandName: 'LVTK6',
-  sidebarBrandSubtitle: 'NEW EDITION',
+  sidebarBrandName: '',
+  sidebarBrandSubtitle: '',
   showSidebarProductNumber: true,
   showSidebarSizes: true,
   showSidebarGallery: true,

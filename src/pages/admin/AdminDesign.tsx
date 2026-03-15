@@ -1101,7 +1101,7 @@ function SidebarTab() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Identité de marque</CardTitle>
-              <CardDescription>Textes affichés en haut de la sidebar</CardDescription>
+              <CardDescription>Laissez vide pour ne rien afficher sur la sidebar</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="space-y-1">
@@ -1109,7 +1109,7 @@ function SidebarTab() {
                 <Input
                   value={designSettings.sidebarBrandName || ''}
                   onChange={(e) => updateDesignSettings({ sidebarBrandName: e.target.value })}
-                  placeholder="LVTK6"
+                  placeholder="(vide = rien n'est affiché)"
                 />
               </div>
               <div className="space-y-1">
@@ -1117,15 +1117,35 @@ function SidebarTab() {
                 <Input
                   value={designSettings.sidebarBrandSubtitle || ''}
                   onChange={(e) => updateDesignSettings({ sidebarBrandSubtitle: e.target.value })}
-                  placeholder="NEW EDITION"
+                  placeholder="(vide = rien n'est affiché)"
                 />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Position sur l'image</Label>
+                <div className="flex gap-2">
+                  {[
+                    { label: 'Haut', value: 'top' },
+                    { label: 'Milieu', value: 'center' },
+                    { label: 'Bas', value: 'bottom' },
+                  ].map(opt => (
+                    <Button
+                      key={opt.value}
+                      size="sm"
+                      variant={((designSettings as any).sidebarBrandPosition ?? 'top') === opt.value ? 'default' : 'outline'}
+                      onClick={() => updateDesignSettings({ sidebarBrandPosition: opt.value } as any)}
+                      className="flex-1"
+                    >
+                      {opt.label}
+                    </Button>
+                  ))}
+                </div>
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Texte info (bas)</Label>
                 <Input
                   value={designSettings.sidebarInfoText || ''}
                   onChange={(e) => updateDesignSettings({ sidebarInfoText: e.target.value })}
-                  placeholder="Model 001"
+                  placeholder="(vide = rien n'est affiché)"
                 />
               </div>
             </CardContent>

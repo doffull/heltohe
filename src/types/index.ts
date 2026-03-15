@@ -259,6 +259,9 @@ export interface DesignSettings {
   sidebarProductTitle: string;
   sidebarProductDescription: string;
 
+  // Sidebar brand block position
+  sidebarBrandPosition?: 'top' | 'center' | 'bottom';
+
   // Sidebar multi-product slider
   sidebarSliderEnabled?: boolean;
   sidebarSliderSpeed?: number; // ms between slides
