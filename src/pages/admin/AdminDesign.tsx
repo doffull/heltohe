@@ -14,9 +14,10 @@ import { HeroSlide, HUDStat, HUDButton, MannequinHotspotConfig, Category, Marker
 import {
   Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Eye, EyeOff,
   LayoutDashboard, ImagePlay, PanelTop, Image, PanelLeft, Grid3x3, Crosshair, BookOpen, Save, Loader2,
-  Pencil, Check, X, Palette, RotateCcw,
+  Pencil, Check, X, Palette, RotateCcw, ExternalLink, AlertCircle,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { HeaderDesignTab } from '@/components/admin/HeaderDesignTab';
 import { useProducts } from '@/hooks/useProducts';
@@ -26,6 +27,7 @@ import {
   useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory,
   CategoryRecord,
 } from '@/hooks/useCategories';
+import { usePages, useUpsertPage } from '@/hooks/usePages';
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
   useSensor, useSensors, DragEndEvent,
@@ -1447,10 +1449,14 @@ function SortableCategoryCard({
   cat,
   onEdit,
   onDelete,
+  linkedPage,
+  onCreatePage,
 }: {
   cat: CategoryRecord;
   onEdit: (cat: CategoryRecord) => void;
   onDelete: (id: string) => void;
+  linkedPage?: { id: string; slug: string } | null;
+  onCreatePage: (cat: CategoryRecord) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
@@ -1507,22 +1513,54 @@ function SortableCategoryCard({
         >
           <GripVertical className="h-4 w-4 text-foreground" />
         </div>
-        {/* Sub-categories badge */}
-        {/* badge not available here, skipped */}
+
+        {/* Page link status badge */}
+        <div className="absolute top-2 right-2">
+          {linkedPage ? (
+            <Badge variant="outline" className="text-[10px] bg-green-500/20 text-green-400 border-green-500/40 gap-1">
+              <Check className="h-2.5 w-2.5" /> Page liée
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-[10px] bg-destructive/20 text-destructive border-destructive/40 gap-1">
+              <AlertCircle className="h-2.5 w-2.5" /> Aucune page
+            </Badge>
+          )}
+        </div>
       </div>
 
       {/* Info row */}
-      <div className="p-3 flex items-center gap-2">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold truncate">{cat.title}</p>
-          {cat.slug && <p className="text-xs text-muted-foreground font-mono truncate">/{cat.slug}</p>}
+      <div className="p-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold truncate">{cat.title}</p>
+            {cat.slug && <p className="text-xs text-muted-foreground font-mono truncate">/{cat.slug}</p>}
+          </div>
+          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => onEdit(cat)}>
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-destructive" onClick={() => onDelete(cat.id)}>
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
         </div>
-        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => onEdit(cat)}>
-          <Pencil className="h-3.5 w-3.5" />
-        </Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-destructive" onClick={() => onDelete(cat.id)}>
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
+
+        {/* Page action button */}
+        {linkedPage ? (
+          <a
+            href={`/admin/pages?edit=${linkedPage.id}`}
+            className="flex items-center gap-1.5 text-[11px] text-primary hover:underline"
+          >
+            <ExternalLink className="h-3 w-3" /> Éditer la page dédiée
+          </a>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full h-7 text-[11px] gap-1.5"
+            onClick={() => onCreatePage(cat)}
+          >
+            <Plus className="h-3 w-3" /> Créer la page
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -1532,9 +1570,11 @@ function SortableCategoryCard({
 function CategoriesTab() {
   const { designSettings, updateDesignSettings } = useApp();
   const { data: dbCategories = [] } = useCategories();
+  const { data: allPages = [] } = usePages();
   const createCategory = useCreateCategory();
   const updateCategory = useUpdateCategory();
   const deleteCategory = useDeleteCategory();
+  const upsertPage = useUpsertPage();
   const [editCat, setEditCat] = useState<CategoryRecord | undefined>(undefined);
   const [formOpen, setFormOpen] = useState(false);
 
@@ -1547,17 +1587,37 @@ function CategoriesTab() {
   const rootCats = dbCategories.filter(c => !c.parentId).sort((a, b) => a.sortOrder - b.sortOrder);
   const subCats = dbCategories.filter(c => !!c.parentId);
 
+  // Build a map: categoryId → page
+  const pagesByCategoryId = new Map(
+    allPages.filter(p => p.categoryId).map(p => [p.categoryId!, { id: p.id, slug: p.slug }])
+  );
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     const oldIndex = rootCats.findIndex(c => c.id === active.id);
     const newIndex = rootCats.findIndex(c => c.id === over.id);
     const reordered = arrayMove(rootCats, oldIndex, newIndex);
-    // Persist new sort_order for each
     reordered.forEach((cat, idx) => {
       if (cat.sortOrder !== idx) {
         updateCategory.mutate({ ...cat, sortOrder: idx });
       }
+    });
+  }
+
+  // Create a dedicated page for a category
+  function handleCreatePage(cat: CategoryRecord) {
+    const slug = cat.slug || cat.title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+    upsertPage.mutate({
+      title: cat.title,
+      slug,
+      type: 'category',
+      categoryId: cat.id,
+      isPublished: true,
+      sections: [],
+    }, {
+      onSuccess: () => toast.success(`Page "/${slug}" créée et liée à ${cat.title}`),
+      onError: (e: any) => toast.error(`Erreur: ${e.message}`),
     });
   }
 
@@ -1614,6 +1674,7 @@ function CategoriesTab() {
               <div key={cat.id}>
                 <SortableCategoryCard
                   cat={cat}
+                  linkedPage={pagesByCategoryId.get(cat.id) || null}
                   onEdit={(c) => { setEditCat(c); setFormOpen(true); }}
                   onDelete={(id) => {
                     if (!confirm('Supprimer cette catégorie ?')) return;
@@ -1622,6 +1683,7 @@ function CategoriesTab() {
                       onError: () => toast.error('Erreur lors de la suppression'),
                     });
                   }}
+                  onCreatePage={handleCreatePage}
                 />
                 {/* Sub-categories */}
                 {subCats.filter(s => s.parentId === cat.id).map(sub => (
@@ -1665,8 +1727,27 @@ function CategoriesTab() {
               onError: () => toast.error('Erreur lors de la mise à jour'),
             });
           } else {
+            // Create category then auto-create its page
             createCategory.mutate({ ...data, sortOrder: rootCats.length }, {
-              onSuccess: () => { toast.success('Catégorie créée'); setFormOpen(false); },
+              onSuccess: () => {
+                toast.success('Catégorie créée');
+                setFormOpen(false);
+                // Auto-create the dedicated page after a brief delay to let the category be saved
+                // (the page will be linked via slug matching, not categoryId, until the user refreshes)
+                if (data.slug) {
+                  setTimeout(() => {
+                    upsertPage.mutate({
+                      title: data.title,
+                      slug: data.slug!,
+                      type: 'category',
+                      isPublished: true,
+                      sections: [],
+                    }, {
+                      onSuccess: () => toast.success(`Page "/${data.slug}" créée automatiquement`),
+                    });
+                  }, 500);
+                }
+              },
               onError: () => toast.error('Erreur lors de la création'),
             });
           }
