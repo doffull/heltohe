@@ -344,6 +344,7 @@ function KpiCard({ title, value, icon, variant }: { title: string; value: number
 // ── Inventory with Import ──
 function InventoryView({ items, stockLevels, locations, channelFilter, setChannelFilter, searchTerm, setSearchTerm, getStockForItem, inventory, onRefresh, products }: any) {
   const { toast } = useToast();
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [importOpen, setImportOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [extractedProducts, setExtractedProducts] = useState<any[]>([]);
