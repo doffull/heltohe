@@ -988,51 +988,6 @@ function SidebarTab() {
         </CardContent>
       </Card>
 
-      {/* ── Slider de produits ── */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Slider de produits</CardTitle>
-          <CardDescription>Rotation automatique des produits dans la sidebar</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label>Activer le slider automatique</Label>
-            <Switch
-              checked={sliderEnabled}
-              onCheckedChange={(v) => updateDesignSettings({ sidebarSliderEnabled: v } as any)}
-            />
-          </div>
-          {sliderEnabled && (
-            <>
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Vitesse de rotation</Label>
-                <div className="flex gap-2">
-                  {[{ label: '3s', value: 3000 }, { label: '5s', value: 5000 }, { label: '8s', value: 8000 }, { label: '12s', value: 12000 }].map(opt => (
-                    <Button
-                      key={opt.value}
-                      size="sm"
-                      variant={sliderSpeed === opt.value ? 'default' : 'outline'}
-                      onClick={() => updateDesignSettings({ sidebarSliderSpeed: opt.value } as any)}
-                      className="flex-1"
-                    >
-                      {opt.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Produits maximum : <span className="font-bold text-foreground">{sliderMax}</span></Label>
-                <Slider
-                  value={[sliderMax]}
-                  min={1} max={10} step={1}
-                  onValueChange={([v]) => updateDesignSettings({ sidebarSliderMaxProducts: v } as any)}
-                />
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
       {/* ── Row 2: Réapparition + Apparence ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
@@ -1096,72 +1051,6 @@ function SidebarTab() {
             </div>
           </CardContent>
         </Card>
-      </div>
-
-        <div className="space-y-4">
-          {/* Réapparition */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Réapparition automatique</CardTitle>
-              <CardDescription>Délai avant réouverture après fermeture</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label>Activée</Label>
-                <Switch
-                  checked={((designSettings as any).sidebarReappearDelay ?? 10000) > 0}
-                  onCheckedChange={(checked) => updateDesignSettings({ sidebarReappearDelay: checked ? 30000 : 0 } as any)}
-                />
-              </div>
-              {((designSettings as any).sidebarReappearDelay ?? 10000) > 0 && (
-                <div className="flex gap-2">
-                  {[{ label: '10s', value: 10000 }, { label: '30s', value: 30000 }, { label: '1 min', value: 60000 }].map(opt => (
-                    <Button
-                      key={opt.value}
-                      size="sm"
-                      variant={((designSettings as any).sidebarReappearDelay ?? 10000) === opt.value ? 'default' : 'outline'}
-                      onClick={() => updateDesignSettings({ sidebarReappearDelay: opt.value } as any)}
-                      className="flex-1"
-                    >
-                      {opt.label}
-                    </Button>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Apparence */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Apparence</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Couleur de fond</Label>
-                <div className="flex gap-2">
-                  <input
-                    type="color"
-                    value={designSettings.sidebarBg}
-                    onChange={(e) => updateDesignSettings({ sidebarBg: e.target.value })}
-                    className="h-9 w-12 cursor-pointer rounded border border-border"
-                  />
-                  <Input
-                    value={designSettings.sidebarBg}
-                    onChange={(e) => updateDesignSettings({ sidebarBg: e.target.value })}
-                    className="flex-1 h-9"
-                  />
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <Label>Dégradé</Label>
-                <Switch
-                  checked={designSettings.sidebarGradient}
-                  onCheckedChange={(v) => updateDesignSettings({ sidebarGradient: v })}
-                />
-              </div>
-            </CardContent>
-          </Card>
       </div>
 
       {/* ── Row 3: Images mannequin + Identité de marque ── */}
