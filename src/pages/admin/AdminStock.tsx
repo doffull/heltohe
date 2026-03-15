@@ -423,6 +423,7 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
   const [editTarget, setEditTarget] = useState<{ inventoryId: string; productId: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<InventoryItem | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   // ── Transfer state ──
   const [transferTarget, setTransferTarget] = useState<InventoryItem | null>(null);
