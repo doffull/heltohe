@@ -56,6 +56,7 @@ const SIDEBAR_ITEMS = [
   { icon: Truck, label: 'Colissimo', href: '/admin/colissimo' },
   { icon: Bot, label: 'Chatbot', href: '/admin/chatbot' },
   { icon: ShoppingBag, label: 'WooCommerce', href: '/admin/woocommerce' },
+  { icon: ClipboardCheck, label: 'Audit', href: '/admin/audit' },
   { icon: Settings, label: 'Paramètres', href: '/admin/parametres' },
 ];
 
