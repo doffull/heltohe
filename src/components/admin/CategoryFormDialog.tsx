@@ -52,14 +52,22 @@ export function CategoryFormDialog({ open, onOpenChange, category, categories, o
   // Auto-generate slug from title
   useEffect(() => {
     if (!category && form.title && !form.slug) {
-      const autoSlug = form.title
+      const base = form.title
         .toLowerCase()
         .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
         .replace(/[^a-z0-9\s-]/g, '')
         .replace(/\s+/g, '-');
-      setForm(p => ({ ...p, slug: autoSlug }));
+      // Find an available slug that doesn't conflict with existing ones
+      const existingSlugs = new Set(categories.map(c => c.slug).filter(Boolean));
+      let candidate = base;
+      let suffix = 2;
+      while (existingSlugs.has(candidate)) {
+        candidate = `${base}-${suffix}`;
+        suffix++;
+      }
+      setForm(p => ({ ...p, slug: candidate }));
     }
-  }, [form.title, category]);
+  }, [form.title, category, categories]);
 
   const parentOptions = categories.filter(c => !c.parentId && c.id !== category?.id);
 
