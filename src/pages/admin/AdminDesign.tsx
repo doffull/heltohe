@@ -1050,7 +1050,7 @@ function SidebarLivePreview() {
 
           {/* Bottom zone */}
           <div className="space-y-2">
-            {brandPosition === 'bottom' && <BrandBlockPreview />}
+            {brandPosition === 'bottom' && brandBlockPreview}
 
             {/* CTA buttons */}
             {designSettings.hudButtons && designSettings.hudButtons.length > 0 && (
