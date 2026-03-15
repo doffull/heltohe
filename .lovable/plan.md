@@ -1,59 +1,103 @@
 
+## Thinking
 
-## What the user wants
+The user wants to:
+1. Upload a product mockup image (like the Marco jacket shown)
+2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
+3. Automatically generates a fully interactive, dynamic product page from it
 
-Looking at the screenshot carefully: it shows a **WooCommerce-like expandable product list** in the stock/inventory section where:
-- Each product row has a **parent row** (product header — teal/cyan background with checkbox, product image, name, icon, SKU, and total stock like "0 | 77")
-- Below each parent row are **expandable child rows** — one per size variant (XS, S, L, M, XL, XXL) with individual quantities (8, 14, 18, 18, 12, 7)
-- The child rows show the same product image, size label (↑ Xs, ↑ S, etc.), SKU, price €199.00, and stock quantity per size
-- All rows have checkboxes on the left
+The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
 
-The user also wants:
-1. This WooCommerce-style expandable variant view **in Admin > Stock (Inventaire Global)** — not just a tooltip, but actual expandable rows showing stock per size/variant
-2. Verify bulk deletion in Admin > Produits works (already implemented)
-3. Verify "Gérer le stock" button works (already implemented)
-4. Verify variant stock grid in product form works (already implemented)
+1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
+   - Accepts an image (jpg/png/webp)
+   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
+   - Also extracts the **color variants** as `colorOptions` with proper hex values
+   - Returns a structured product object ready to pre-fill the ProductForm
 
-For points 2-4: the code shows these ARE already implemented. The issue is the expandable WooCommerce-style variant rows in the inventory view.
+2. **Add "Importer Maquette IA" button** in AdminProducts that:
+   - Opens a dialog with a dropzone accepting images
+   - Sends image to the edge function
+   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
+   - Lets admin review/edit before confirming creation
+   - On confirm: creates the product in the DB with all extracted data
 
-## What needs to change
+3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
 
-The `InventoryView` in `AdminStock.tsx` currently shows products with stock numbers in cells and a tooltip on hover to see variant breakdown. The user wants an **expandable row system** like WooCommerce where clicking a product row expands to show individual size rows below.
+Looking at the Marco image:
+- Product name: MARCO
+- Brand: Helvetica Mountain Pioneers x PEGASWOES  
+- Season: HIVER 2026
+- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
+- Sizes: XS, S, M, L, XL, XXL
+- Composition: 100% POLYESTER
+- Tags: limited edition
 
-### Changes to `AdminStock.tsx` — `InventoryView` + `InventoryTable`
+## Plan
 
-Transform the inventory table so:
+### 1. New edge function `analyze-product-image`
+New file: `supabase/functions/analyze-product-image/index.ts`
 
-1. **Parent row** (product level): checkbox, image, product name, SKU, channel, total stock per location. Has a **chevron expand button**.
-2. **Child rows** (per variant): when expanded, show one row per size (and optionally per color) with individual stock quantities. Each child row has: image (smaller), size label with arrow icon like screenshot, SKU, price, stock per location.
-3. The expand/collapse is toggled by clicking the chevron or the row.
-4. The "Edit" cells remain clickable in child rows to edit individual variant stock.
+Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
+- name, subtitle, price (ask to estimate if not found), category
+- sizes (exact text from image)
+- colors with **hex values** from the color swatches visible in image
+- colorOptions: [{color: "#hex", label: "nom"}]
+- material/composition
+- description (generated from visual)
+- sku (auto-generated)
+- tags (e.g., "limited edition" if spotted)
+- Any brand/collection info → subtitle
 
-### Implementation approach
+### 2. New UI component `ImportMockupDialog.tsx`
+In `src/components/admin/ImportMockupDialog.tsx`:
+- Image dropzone (jpg/png/webp/gif up to 10MB)
+- Preview of uploaded image
+- "Analyser avec l'IA" button
+- Loading state with animated scan effect
+- Results preview:
+  - Product name, subtitle
+  - Price field (editable, since AI may not find it)
+  - Color swatches preview
+  - Size badges preview
+  - Material info
+  - Generated description
+- "Créer ce produit" confirm button
+- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
 
-**Minimal change**: Modify the `InventoryView`'s table rendering in `AdminStock.tsx` to:
+### 3. AdminProducts integration
+- Add "Importer Maquette IA" button next to existing "Importer PDF" button
+- Opens the new ImportMockupDialog
+- After product created, show toast + option to go to product detail
 
-1. Add `expandedRows` state (Set of inventory IDs).
-2. For each `InventoryItem` row, render the parent row with a `ChevronRight`/`ChevronDown` toggle.
-3. When expanded, inject child rows (`<tr>` elements with indentation/bg) for each size variant from `stockLevels` filtered by that inventory ID. Each child row shows: image (w-8 h-8), size with ↑ prefix, same SKU, price from matched product, stock quantity (editable inline).
-4. The child rows match the teal/cyan aesthetic of the screenshot with a slightly different background (e.g., `bg-primary/5`).
-5. The total cell in parent row shows format `reserved | quantity` like the screenshot's "0 | 77".
+### Files to create/modify
+- `supabase/functions/analyze-product-image/index.ts` — new edge function
+- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
+- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
 
-## Files to change
+## Implementation Steps
 
-| File | Change |
-|---|---|
-| `src/pages/admin/AdminStock.tsx` | Modify `InventoryView` table to add expandable variant rows (WooCommerce style) |
+### Step 1: Edge function `analyze-product-image`
+Input: `{ imageBase64: string, mimeType: string }`
+Prompt to Gemini Pro Vision:
+- Extract all visible product info
+- Extract hex colors from color swatches
+- Generate description if not present
+- Output strict JSON matching `ExtractedProductData` schema
 
-## Technical detail
+### Step 2: `ImportMockupDialog` component
+States:
+- `file`, `preview` (image URL)
+- `analyzing` (loading state)
+- `extracted` (ExtractedProductData | null)
+- `editableData` (form state to review/edit before import)
 
-In the `InventoryView` function, the table rows are rendered in the `.map((item: InventoryItem) => {...})` block around line 655. I'll:
+UX Flow:
+1. Drag & drop or click to upload image
+2. Preview appears
+3. Click "Analyser avec IA" → loading scan animation
+4. Results appear: color swatches, size badges, all info
+5. User can edit price/name if needed
+6. Click "Créer le produit" → uploads image to storage, creates product, success
 
-1. Add `expandedItems` state (`Set<string>`)
-2. For the parent row: add a `ChevronDown/Right` button in first cell, style parent row distinctly
-3. After the parent `<tr>`, conditionally render child `<tr>` rows for each variant (size or size+color combination) from `stockLevels` where `inventory_id === item.id` and `location_id === webLocation?.id`
-4. Child rows: indented, lighter bg (`bg-primary/5`), show ↑ icon + size label, stock quantity editable inline
-5. Parent row shows aggregated total in format `0 | total`
-
-This gives an exact WooCommerce-like look matching the screenshot — expandable per-size rows under each product.
-
+### Step 3: AdminProducts button
+Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)
