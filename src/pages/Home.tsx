@@ -319,9 +319,9 @@ export default function Home() {
             {(() => {
               const rootCats = dbCategories.filter((c) => !c.parentId);
               const cats = rootCats.length > 0 ?
-              rootCats.map((c) => ({ title: c.title, image: c.image || '/placeholder.svg', href: `/boutique/${c.slug || encodeURIComponent(c.title.toLowerCase())}` })) :
+              rootCats.map((c) => ({ title: c.title, image: c.image || '/placeholder.svg', href: `/${c.slug || encodeURIComponent(c.title.toLowerCase())}` })) :
               designSettings.categories?.length > 0 ?
-              designSettings.categories.map((c) => ({ title: c.title, image: c.image, href: `/boutique/${encodeURIComponent(c.title.toLowerCase())}` })) :
+              designSettings.categories.map((c) => ({ title: c.title, image: c.image, href: `/${encodeURIComponent(c.title.toLowerCase())}` })) :
               FALLBACK_CATEGORIES;
               return cats;
             })().map((cat) => {
