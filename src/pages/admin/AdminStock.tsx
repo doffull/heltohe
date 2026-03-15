@@ -423,6 +423,7 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
   const [editTarget, setEditTarget] = useState<{ inventoryId: string; productId: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<InventoryItem | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   // ── Transfer state ──
   const [transferTarget, setTransferTarget] = useState<InventoryItem | null>(null);
@@ -432,6 +433,52 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
 
   const boutiqueLocations = locations.filter((l: Location) => l.type === 'boutique');
   const webLocation = locations.find((l: Location) => l.type === 'web');
+
+  // ── Sync: create inventory + stock_levels for products not yet in inventory ──
+  const handleSyncProducts = async () => {
+    setSyncing(true);
+    try {
+      const inventoryProductIds = new Set((inventory as InventoryItem[]).map((i: InventoryItem) => i.product_id));
+      const orphanProducts = (products as ProductRow[]).filter((p: ProductRow) => !inventoryProductIds.has(p.id));
+
+      if (orphanProducts.length === 0) {
+        toast({ title: 'Tous les produits sont déjà synchronisés ✓' });
+        setSyncing(false);
+        return;
+      }
+
+      let synced = 0;
+      for (const p of orphanProducts) {
+        const { data: inv, error: invErr } = await supabase.from('inventory').insert({
+          product_id: p.id, sku: p.sku, name: p.name, channel: 'b2c', threshold: 10,
+        }).select('id').single();
+        if (invErr || !inv) continue;
+
+        if (webLocation) {
+          await supabase.from('stock_levels').insert({
+            inventory_id: inv.id, location_id: webLocation.id,
+            quantity: 0, reserved: 0,
+          });
+          if (p.sizes && p.sizes.length > 0) {
+            for (const size of p.sizes) {
+              await supabase.from('stock_levels').insert({
+                inventory_id: inv.id, location_id: webLocation.id,
+                quantity: 0, reserved: 0, size, color: null,
+              });
+            }
+          }
+        }
+        synced++;
+      }
+
+      toast({ title: `${synced} produit${synced > 1 ? 's' : ''} synchronisé${synced > 1 ? 's' : ''} avec succès` });
+      onRefresh();
+    } catch (err: any) {
+      toast({ title: 'Erreur de synchronisation', description: err.message, variant: 'destructive' });
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const handleOpenTransfer = (item: InventoryItem) => {
     setTransferTarget(item);
@@ -660,13 +707,38 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
     }
   };
 
+  // Pre-compute orphan count before return (avoids IIFE in JSX)
+  const inventoryProductIds = new Set((inventory as InventoryItem[]).map((i: InventoryItem) => i.product_id));
+  const orphanCount = (products as ProductRow[]).filter((p: ProductRow) => !inventoryProductIds.has(p.id)).length;
+
   return (
     <motion.div {...fadeIn} transition={{ duration: 0.4 }} className="space-y-4">
+      {/* Orphan products banner */}
+      {orphanCount > 0 && (
+          <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/10 border border-primary/30 text-sm">
+            <AlertTriangle className="h-4 w-4 text-primary shrink-0" />
+            <span className="text-foreground flex-1">
+              <strong>{orphanCount} produit{orphanCount > 1 ? 's' : ''}</strong> présent{orphanCount > 1 ? 's' : ''} dans le catalogue mais absent{orphanCount > 1 ? 's' : ''} de l'inventaire.
+            </span>
+            <Button size="sm" variant="outline" className="gap-2" onClick={handleSyncProducts} disabled={syncing}>
+              <RefreshCw className={cn("h-3.5 w-3.5", syncing && "animate-spin")} />
+              {syncing ? 'Synchronisation…' : 'Synchroniser maintenant'}
+            </Button>
+          </div>
+      )}
+
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <h2 className="text-2xl font-bold tracking-tight">Inventaire Global</h2>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
+          <h2 className="text-2xl font-bold tracking-tight">Inventaire Global</h2>
+          <Badge variant="secondary" className="font-mono">{items.length} produits</Badge>
+        </div>
+        <div className="flex flex-wrap gap-2">
           <Button className="gap-2" onClick={() => { setEditTarget(null); setProductDialogOpen(true); }}>
             <Plus className="h-4 w-4" /> Ajouter un produit
+          </Button>
+          <Button variant="outline" className="gap-2" onClick={handleSyncProducts} disabled={syncing}>
+            <RefreshCw className={cn("h-3.5 w-3.5", syncing && "animate-spin")} />
+            {syncing ? 'Sync…' : 'Sync Produits'}
           </Button>
           <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
             <Upload className="h-4 w-4" /> Importer fichier
