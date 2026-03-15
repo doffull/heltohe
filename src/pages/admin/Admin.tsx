@@ -20,7 +20,8 @@ import {
   Warehouse,
   ShoppingBag,
   Bot,
-  Truck
+  Truck,
+  ClipboardCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -28,6 +29,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 // Admin Pages
 import AdminDashboard from './AdminDashboard';
+import AdminAudit from './AdminAudit';
 import AdminProducts from './AdminProducts';
 import AdminOrders from './AdminOrders';
 import AdminCustomers from './AdminCustomers';
@@ -54,6 +56,7 @@ const SIDEBAR_ITEMS = [
   { icon: Truck, label: 'Colissimo', href: '/admin/colissimo' },
   { icon: Bot, label: 'Chatbot', href: '/admin/chatbot' },
   { icon: ShoppingBag, label: 'WooCommerce', href: '/admin/woocommerce' },
+  { icon: ClipboardCheck, label: 'Audit', href: '/admin/audit' },
   { icon: Settings, label: 'Paramètres', href: '/admin/parametres' },
 ];
 
@@ -187,6 +190,7 @@ export default function Admin() {
             <Route path="colissimo/*" element={<AdminColissimo />} />
             <Route path="chatbot/*" element={<AdminChatbot />} />
             <Route path="woocommerce/*" element={<AdminWooCommerce />} />
+            <Route path="audit/*" element={<AdminAudit />} />
             <Route path="parametres/*" element={<AdminSettings />} />
           </Routes>
         </div>
