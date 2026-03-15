@@ -1,103 +1,52 @@
 
-## Thinking
+## Diagnostic précis
 
-The user wants to:
-1. Upload a product mockup image (like the Marco jacket shown)
-2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
-3. Automatically generates a fully interactive, dynamic product page from it
+### Erreur DB confirmée
+```
+duplicate key value violates unique constraint "categories_slug_unique"
+```
+Il y a une **contrainte unique** sur `categories.slug` (index `categories_slug_unique` — partiel sur les slugs non null). L'erreur se produit à **deux niveaux** :
 
-The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
+1. **Le trigger `generate_category_slug`** s'exécute en BEFORE INSERT et génère un slug automatiquement.
+2. **Le frontend** génère aussi un slug dans `CategoryFormDialog` via l'auto-slug et l'envoie déjà rempli.
+3. **Le trigger `auto_create_category_page`** fait un `INSERT INTO pages` avec ce même slug — mais si une page avec ce slug existe déjà (ex: suite à une création partielle précédente), ça peut aussi faire échouer la transaction entière.
 
-1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
-   - Accepts an image (jpg/png/webp)
-   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
-   - Also extracts the **color variants** as `colorOptions` with proper hex values
-   - Returns a structured product object ready to pre-fill the ProductForm
+**Scénario d'échec** : L'utilisateur tente de créer une catégorie avec un slug déjà existant en DB (ex: retenter après une erreur partielle, ou deux catégories avec des noms similaires).
 
-2. **Add "Importer Maquette IA" button** in AdminProducts that:
-   - Opens a dialog with a dropzone accepting images
-   - Sends image to the edge function
-   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
-   - Lets admin review/edit before confirming creation
-   - On confirm: creates the product in the DB with all extracted data
+### RLS Policy issue secondaire
+La policy `Admins can manage categories` a `with_check = NULL`. Pour les INSERTs dans PostgreSQL via Supabase, une policy `ALL` sans `WITH CHECK` explicite peut utiliser le `USING` comme `WITH CHECK`, ce qui dans ce cas (`has_role(auth.uid(), 'admin')`) devrait fonctionner. C'est moins critique mais doit être corrigé.
 
-3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
+## Plan de corrections
 
-Looking at the Marco image:
-- Product name: MARCO
-- Brand: Helvetica Mountain Pioneers x PEGASWOES  
-- Season: HIVER 2026
-- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
-- Sizes: XS, S, M, L, XL, XXL
-- Composition: 100% POLYESTER
-- Tags: limited edition
+### Fix 1 — Rendre le slug unique côté frontend (avant envoi)
+Dans `useCategories.ts` (hook `useCreateCategory`), **si le slug est déjà pris, ajouter un suffixe numérique**. Mais le vrai fix est dans `CategoryFormDialog` : si le slug auto-généré existe déjà parmi les catégories, on appende `-2`, `-3`, etc.
 
-## Plan
+### Fix 2 — Gérer le conflit de slug côté DB (ON CONFLICT DO NOTHING → RENAME)
+Le trigger `auto_create_category_page` fait déjà `ON CONFLICT (slug) DO NOTHING` pour les pages → ok.
 
-### 1. New edge function `analyze-product-image`
-New file: `supabase/functions/analyze-product-image/index.ts`
+Mais l'index `categories_slug_unique` lui-même bloque si le slug est dupliqué. **Solution propre** : dans `useCreateCategory`, si l'erreur est `23505` (unique violation), on retente avec un slug suffixé.
 
-Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
-- name, subtitle, price (ask to estimate if not found), category
-- sizes (exact text from image)
-- colors with **hex values** from the color swatches visible in image
-- colorOptions: [{color: "#hex", label: "nom"}]
-- material/composition
-- description (generated from visual)
-- sku (auto-generated)
-- tags (e.g., "limited edition" if spotted)
-- Any brand/collection info → subtitle
+### Fix 3 — Correction RLS `WITH CHECK`
+Recréer la policy `Admins can manage categories` avec un `WITH CHECK` explicite :
+```sql
+DROP POLICY IF EXISTS "Admins can manage categories" ON public.categories;
+CREATE POLICY "Admins can manage categories" ON public.categories
+  FOR ALL TO public
+  USING (has_role(auth.uid(), 'admin'::app_role))
+  WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
+```
 
-### 2. New UI component `ImportMockupDialog.tsx`
-In `src/components/admin/ImportMockupDialog.tsx`:
-- Image dropzone (jpg/png/webp/gif up to 10MB)
-- Preview of uploaded image
-- "Analyser avec l'IA" button
-- Loading state with animated scan effect
-- Results preview:
-  - Product name, subtitle
-  - Price field (editable, since AI may not find it)
-  - Color swatches preview
-  - Size badges preview
-  - Material info
-  - Generated description
-- "Créer ce produit" confirm button
-- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
+## Fichiers à modifier
 
-### 3. AdminProducts integration
-- Add "Importer Maquette IA" button next to existing "Importer PDF" button
-- Opens the new ImportMockupDialog
-- After product created, show toast + option to go to product detail
+| Fichier | Action |
+|---|---|
+| `supabase/migrations/` | Recréer RLS policy avec `WITH CHECK` explicite |
+| `src/hooks/useCategories.ts` | Dans `useCreateCategory`, gérer l'erreur de slug dupliqué avec retry |
+| `src/components/admin/CategoryFormDialog.tsx` | Recevoir la liste des slugs existants + afficher un avertissement si le slug est déjà pris |
+| `src/pages/admin/AdminDesign.tsx` | Passer `dbCategories` au dialog pour la validation de slug |
 
-### Files to create/modify
-- `supabase/functions/analyze-product-image/index.ts` — new edge function
-- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
-- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
+## Comportement après fix
 
-## Implementation Steps
-
-### Step 1: Edge function `analyze-product-image`
-Input: `{ imageBase64: string, mimeType: string }`
-Prompt to Gemini Pro Vision:
-- Extract all visible product info
-- Extract hex colors from color swatches
-- Generate description if not present
-- Output strict JSON matching `ExtractedProductData` schema
-
-### Step 2: `ImportMockupDialog` component
-States:
-- `file`, `preview` (image URL)
-- `analyzing` (loading state)
-- `extracted` (ExtractedProductData | null)
-- `editableData` (form state to review/edit before import)
-
-UX Flow:
-1. Drag & drop or click to upload image
-2. Preview appears
-3. Click "Analyser avec IA" → loading scan animation
-4. Results appear: color swatches, size badges, all info
-5. User can edit price/name if needed
-6. Click "Créer le produit" → uploads image to storage, creates product, success
-
-### Step 3: AdminProducts button
-Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)
+- Créer "Homme 2" → slug `homme-2` généré automatiquement sans erreur même si `homme` existe
+- Retenter une catégorie qui avait échoué → suffixe `-2` ajouté automatiquement
+- La RLS policy bloque correctement les non-admins en INSERT aussi
