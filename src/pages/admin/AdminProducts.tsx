@@ -26,7 +26,8 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { ProductForm } from '@/components/admin/ProductForm';
+import { ProductForm, VariantStockData } from '@/components/admin/ProductForm';
+import { InventoryProductDialog } from '@/components/admin/InventoryProductDialog';
 import { Textarea } from '@/components/ui/textarea';
 
 interface ExtractedProduct {
