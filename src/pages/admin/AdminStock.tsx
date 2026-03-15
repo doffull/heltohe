@@ -707,13 +707,14 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
     }
   };
 
+  // Pre-compute orphan count before return (avoids IIFE in JSX)
+  const inventoryProductIds = new Set((inventory as InventoryItem[]).map((i: InventoryItem) => i.product_id));
+  const orphanCount = (products as ProductRow[]).filter((p: ProductRow) => !inventoryProductIds.has(p.id)).length;
+
   return (
     <motion.div {...fadeIn} transition={{ duration: 0.4 }} className="space-y-4">
       {/* Orphan products banner */}
-      {(() => {
-        const inventoryProductIds = new Set((inventory as InventoryItem[]).map((i: InventoryItem) => i.product_id));
-        const orphanCount = (products as ProductRow[]).filter((p: ProductRow) => !inventoryProductIds.has(p.id)).length;
-        return orphanCount > 0 ? (
+      {orphanCount > 0 && (
           <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/10 border border-primary/30 text-sm">
             <AlertTriangle className="h-4 w-4 text-primary shrink-0" />
             <span className="text-foreground flex-1">
