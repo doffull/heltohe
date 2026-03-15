@@ -27,7 +27,7 @@ const SORT_OPTIONS = [
   { value: 'name', label: 'Nom A-Z' },
 ];
 
-export default function Shop({ categoryFromSlug }: { categoryFromSlug?: string }) {
+export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlug?: string; hideHeader?: boolean }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
