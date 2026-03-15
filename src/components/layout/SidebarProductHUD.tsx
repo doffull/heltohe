@@ -1,11 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
 import { useSidebarOptional } from '@/context/SidebarContext';
 import { Product } from '@/types';
 import { Play, ChevronLeft, ChevronRight } from 'lucide-react';
 import { StatBar } from './StatBar';
-import { cn } from '@/lib/utils';
 
 const DEFAULT_STATS = [
   { label: 'Durabilité', value: 85 },
@@ -28,10 +27,6 @@ function ProductSlide({ product, designSettings }: { product: Product; designSet
   }
   const safeGalleryIndex = galleryImages.length > 0 ? galleryIndex % galleryImages.length : 0;
 
-  const productNumber = product.sku
-    ? product.sku.split('-').pop()?.replace(/\D/g, '').padStart(3, '0') || '001'
-    : '001';
-
   const sizes = designSettings.sidebarSizes?.length > 0
     ? designSettings.sidebarSizes
     : (product.sizes || ['S', 'M', 'L', 'XL']);
@@ -41,15 +36,17 @@ function ProductSlide({ product, designSettings }: { product: Product; designSet
       {/* Product Info Card */}
       {designSettings.showSidebarProductCard && (
         <div className="sidebar-product-card">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-6 h-6 bg-foreground/80 flex items-center justify-center bevel-corners-sm">
-              <Play className="h-3 w-3 text-background fill-background" />
+          {designSettings.sidebarBrandName && (
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-6 h-6 bg-foreground/80 flex items-center justify-center bevel-corners-sm">
+                <Play className="h-3 w-3 text-background fill-background" />
+              </div>
+              <span className="font-mono text-[10px] tracking-[0.15em] uppercase text-foreground/60">
+                {designSettings.sidebarBrandName}
+              </span>
             </div>
-            <span className="font-mono text-[10px] tracking-[0.15em] uppercase text-foreground/60">
-              {designSettings.sidebarBrandName || 'LVTK6'}
-            </span>
-          </div>
-          <h3 
+          )}
+          <h3
             className="font-bold text-base uppercase tracking-wider text-foreground mb-1 cursor-pointer hover:text-primary transition-colors"
             onClick={() => navigate(`/produit/${product.id}`)}
           >
@@ -124,47 +121,42 @@ function ProductSlide({ product, designSettings }: { product: Product; designSet
   );
 }
 
+function BrandBlock({ designSettings }: { designSettings: any }) {
+  const brandName = designSettings.sidebarBrandName;
+  const brandSubtitle = designSettings.sidebarBrandSubtitle;
+
+  if (!brandName && !brandSubtitle) return null;
+
+  return (
+    <div>
+      {brandName && (
+        <h2 className="font-bold text-lg tracking-[0.15em] uppercase text-foreground">
+          {brandName}
+        </h2>
+      )}
+      {brandSubtitle && (
+        <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-foreground/50">
+          {brandSubtitle}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function SidebarProductHUD() {
   const { designSettings, selectedProduct, products } = useApp();
   const sidebarContext = useSidebarOptional();
   const navigate = useNavigate();
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [isTransitioning, setIsTransitioning] = useState(false);
 
-  const sliderEnabled = designSettings.sidebarSliderEnabled !== false;
-  const sliderSpeed = designSettings.sidebarSliderSpeed || 6000;
-  const maxProducts = designSettings.sidebarSliderMaxProducts || 5;
-
-  // Build product list for the slider
-  const sliderProducts = products.slice(0, maxProducts);
-  const hasMultiple = sliderProducts.length > 1 && sliderEnabled;
-
-  // If a product is hovered, show it instead of the slider
+  // If a product is hovered, show it instead of the first product
   const hoveredProduct = sidebarContext?.hoveredProduct;
-  const manualProduct = hoveredProduct || selectedProduct;
+  const activeProduct: Product | null = hoveredProduct || selectedProduct || products[0] || null;
 
-  // Auto-cycle through products
-  useEffect(() => {
-    if (!hasMultiple || manualProduct) return;
-    const timer = setInterval(() => {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setActiveIndex(prev => (prev + 1) % sliderProducts.length);
-        setIsTransitioning(false);
-      }, 300);
-    }, sliderSpeed);
-    return () => clearInterval(timer);
-  }, [hasMultiple, sliderSpeed, sliderProducts.length, manualProduct]);
+  const brandPosition = (designSettings as any).sidebarBrandPosition ?? 'top';
 
-  const activeProduct: Product | null = manualProduct || sliderProducts[activeIndex] || null;
-
-  const goTo = useCallback((index: number) => {
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setActiveIndex(index);
-      setIsTransitioning(false);
-    }, 300);
-  }, []);
+  const productNumber = activeProduct?.sku
+    ? activeProduct.sku.split('-').pop()?.replace(/\D/g, '').padStart(3, '0') || '001'
+    : '001';
 
   // Stats from admin settings or context
   const stats = designSettings.stats && designSettings.stats.length > 0
@@ -177,22 +169,12 @@ export function SidebarProductHUD() {
         ]
       : DEFAULT_STATS;
 
-  const productNumber = activeProduct?.sku
-    ? activeProduct.sku.split('-').pop()?.replace(/\D/g, '').padStart(3, '0') || '001'
-    : '001';
-
   return (
     <div className="relative z-20 h-full flex flex-col justify-between p-6 pt-28">
-      {/* Top Zone: Brand + Product Number */}
+      {/* Top Zone */}
       <div className="flex items-start justify-between">
-        <div>
-          <h2 className="font-bold text-lg tracking-[0.15em] uppercase text-foreground">
-            {designSettings.sidebarBrandName || 'LVTK6'}
-          </h2>
-          <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-foreground/50">
-            {designSettings.sidebarBrandSubtitle || 'NOUVELLE ÉDITION'}
-          </span>
-        </div>
+        {brandPosition === 'top' && <BrandBlock designSettings={designSettings} />}
+        {brandPosition !== 'top' && <div />}
 
         {designSettings.showSidebarProductNumber && (
           <div className="sidebar-product-number">
@@ -203,40 +185,19 @@ export function SidebarProductHUD() {
         )}
       </div>
 
-      {/* Center Zone: Product Slider */}
+      {/* Center Zone: Product + optional brand */}
       <div className="flex-1 flex flex-col justify-center gap-4">
-        {activeProduct && (
-          <div className={cn(
-            "transition-all duration-300",
-            isTransitioning ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"
-          )}>
-            <ProductSlide product={activeProduct} designSettings={designSettings} />
-          </div>
-        )}
+        {brandPosition === 'center' && <BrandBlock designSettings={designSettings} />}
 
-        {/* Navigation Dots */}
-        {hasMultiple && !manualProduct && (
-          <div className="flex items-center justify-center gap-2 mt-2">
-            {sliderProducts.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => goTo(index)}
-                className={cn(
-                  "transition-all duration-300",
-                  index === activeIndex
-                    ? "w-6 h-1.5 bg-foreground"
-                    : "w-1.5 h-1.5 bg-foreground/30 hover:bg-foreground/50"
-                )}
-              />
-            ))}
-          </div>
+        {activeProduct && (
+          <ProductSlide product={activeProduct} designSettings={designSettings} />
         )}
 
         {/* Stats */}
         {designSettings.showSidebarStats && (
           <div className="mt-4">
             <div className="mb-3">
-            <h3 className="font-mono text-[11px] tracking-[0.2em] uppercase text-foreground/70 mb-1">
+              <h3 className="font-mono text-[11px] tracking-[0.2em] uppercase text-foreground/70 mb-1">
                 Caractéristiques
               </h3>
               <div className="w-8 h-px bg-foreground/30" />
@@ -253,8 +214,10 @@ export function SidebarProductHUD() {
         )}
       </div>
 
-      {/* Bottom Zone: HUD Buttons + Info */}
+      {/* Bottom Zone: brand (if bottom), HUD Buttons + Info */}
       <div className="space-y-3">
+        {brandPosition === 'bottom' && <BrandBlock designSettings={designSettings} />}
+
         {/* HUD Buttons */}
         {designSettings.hudButtons && designSettings.hudButtons.length > 0 && (
           <div className="flex flex-wrap gap-2">
@@ -277,9 +240,11 @@ export function SidebarProductHUD() {
 
         {/* Info bar */}
         <div className="flex items-center justify-between">
-          <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-foreground/40">
-            {designSettings.sidebarInfoText || `Model ${productNumber}`}
-          </span>
+          {designSettings.sidebarInfoText ? (
+            <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-foreground/40">
+              {designSettings.sidebarInfoText}
+            </span>
+          ) : <span />}
           {activeProduct && (
             <span className="font-mono text-[10px] text-foreground/30">
               {activeProduct.category}
