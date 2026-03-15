@@ -621,14 +621,12 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
       <Card className="overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="border-b-2">
+              <TableHead className="w-8 pl-3" />
               <TableHead className="w-12">Image</TableHead>
-              <TableHead>Produit</TableHead>
+              <TableHead>Produit / Variante</TableHead>
               <TableHead>SKU</TableHead>
               <TableHead>Canal</TableHead>
-              <TableHead>Tailles</TableHead>
-              <TableHead>Couleurs</TableHead>
-              {/* Dynamic per-location stock columns */}
               {webLocation && (
                 <TableHead className="text-right whitespace-nowrap">
                   <span className="inline-flex items-center justify-end gap-1 text-primary">
@@ -652,112 +650,113 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
           </TableHeader>
           <TableBody>
             {items.length === 0 ? (
-              <TableRow><TableCell colSpan={7 + (webLocation ? 1 : 0) + boutiqueLocations.length} className="text-center text-muted-foreground py-8">Aucun produit en inventaire</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8 + (webLocation ? 1 : 0) + boutiqueLocations.length} className="text-center text-muted-foreground py-8">Aucun produit en inventaire</TableCell></TableRow>
             ) : items.map((item: InventoryItem) => {
               const total = getStockForItem(item.id);
+              const reserved = stockLevels.filter((sl: StockLevel) => sl.inventory_id === item.id).reduce((s: number, sl: StockLevel) => s + sl.reserved, 0);
               const isLow = total < item.threshold;
               const matchedProduct = (products as ProductRow[])?.find(p => p.id === item.product_id);
               const webQty = webLocation ? getStockForItem(item.id, webLocation.id) : null;
-              return (
-                <TableRow key={item.id}>
+              const isExpanded = expandedItems.has(item.id);
+
+              // Build variant rows from stock_levels for this item
+              const variantLevels = stockLevels.filter((sl: StockLevel) => sl.inventory_id === item.id && (sl.size || sl.color));
+              // Unique variant keys
+              const uniqueVariants = Array.from(
+                new Map(variantLevels.map((sl: StockLevel) => {
+                  const key = [sl.color, sl.size].filter(Boolean).join('|');
+                  return [key, { color: sl.color, size: sl.size }];
+                })).values()
+              );
+
+              const toggleExpand = () => {
+                setExpandedItems(prev => {
+                  const next = new Set(prev);
+                  next.has(item.id) ? next.delete(item.id) : next.add(item.id);
+                  return next;
+                });
+              };
+
+              const hasVariants = uniqueVariants.length > 0;
+
+              return [
+                // ── Parent Row ──
+                <TableRow
+                  key={item.id}
+                  className={cn(
+                    "group transition-colors",
+                    isExpanded && "bg-primary/5 border-b-0",
+                    hasVariants && "cursor-pointer hover:bg-primary/5"
+                  )}
+                  onClick={hasVariants ? toggleExpand : undefined}
+                >
+                  {/* Expand chevron */}
+                  <TableCell className="w-8 pl-3 pr-0">
+                    {hasVariants ? (
+                      <button
+                        className="flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
+                        onClick={e => { e.stopPropagation(); toggleExpand(); }}
+                      >
+                        {isExpanded
+                          ? <ChevronDown className="h-4 w-4 text-primary" />
+                          : <ChevronRight className="h-4 w-4" />
+                        }
+                      </button>
+                    ) : (
+                      <span className="w-4 inline-block" />
+                    )}
+                  </TableCell>
                   <TableCell>
                     {matchedProduct?.image && matchedProduct.image !== '/placeholder.svg' ? (
-                      <img src={matchedProduct.image} alt={item.name} className="w-8 h-8 rounded object-cover border border-border" />
+                      <img src={matchedProduct.image} alt={item.name} className="w-9 h-9 rounded object-cover border border-border" />
                     ) : (
-                      <div className="w-8 h-8 rounded bg-muted flex items-center justify-center">
+                      <div className="w-9 h-9 rounded bg-muted flex items-center justify-center">
                         <Package className="h-4 w-4 text-muted-foreground" />
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="font-medium">{item.name}</TableCell>
+                  <TableCell>
+                    <div>
+                      <p className="font-semibold text-sm leading-tight">{item.name}</p>
+                      {hasVariants && (
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          {uniqueVariants.length} variante{uniqueVariants.length > 1 ? 's' : ''} — cliquer pour détailler
+                        </p>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="font-mono text-xs text-muted-foreground">{item.sku}</TableCell>
-                  <TableCell><Badge variant="outline">{item.channel.toUpperCase()}</Badge></TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-0.5">
-                      {matchedProduct?.sizes?.map((s: string) => (
-                        <span key={s} className="px-1.5 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground rounded">{s}</span>
-                      ))}
-                    </div>
+                  <TableCell onClick={e => e.stopPropagation()}>
+                    <Badge variant="outline">{item.channel.toUpperCase()}</Badge>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex gap-0.5">
-                      {matchedProduct?.colors?.map((c: string) => (
-                        <ColorSwatch key={c} color={c} size={16} />
-                      ))}
-                    </div>
-                  </TableCell>
-                  {/* Per-location stock cells with variant breakdown tooltip */}
-                  {webLocation && (() => {
-                    const levels = stockLevels.filter((sl: StockLevel) => sl.inventory_id === item.id && sl.location_id === webLocation.id && sl.quantity > 0);
-                    const hasVariants = levels.some((sl: StockLevel) => sl.size || sl.color);
-                    return (
-                      <TableCell className="text-right font-mono">
-                        <UITooltip>
-                          <TooltipTrigger asChild>
-                            <span className={cn("text-sm font-semibold cursor-default", webQty === 0 ? "text-destructive/70" : "text-primary")}>
-                              {webQty ?? 0}
-                            </span>
-                          </TooltipTrigger>
-                          {hasVariants && (
-                            <TooltipContent side="left" className="max-w-48">
-                              <p className="text-xs font-semibold mb-1 text-muted-foreground">Web — répartition</p>
-                              <div className="space-y-0.5">
-                                {levels.map((sl: StockLevel, i: number) => (
-                                  <div key={i} className="flex items-center justify-between gap-3 text-xs">
-                                    <span className="text-muted-foreground">
-                                      {[sl.color, sl.size].filter(Boolean).join(' / ') || 'Sans variante'}
-                                    </span>
-                                    <span className="font-mono font-semibold">×{sl.quantity}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </TooltipContent>
-                          )}
-                        </UITooltip>
-                      </TableCell>
-                    );
-                  })()}
+                  {/* Per-location totals */}
+                  {webLocation && (
+                    <TableCell className="text-right font-mono" onClick={e => e.stopPropagation()}>
+                      <span className={cn("text-sm font-bold", webQty === 0 ? "text-destructive/70" : "text-primary")}>
+                        {reserved > 0 ? `${reserved} | ` : ''}{webQty ?? 0}
+                      </span>
+                    </TableCell>
+                  )}
                   {boutiqueLocations.map((loc: Location) => {
                     const locQty = getStockForItem(item.id, loc.id);
-                    const levels = stockLevels.filter((sl: StockLevel) => sl.inventory_id === item.id && sl.location_id === loc.id && sl.quantity > 0);
-                    const hasVariants = levels.some((sl: StockLevel) => sl.size || sl.color);
                     return (
-                      <TableCell key={loc.id} className="text-right font-mono">
-                        <UITooltip>
-                          <TooltipTrigger asChild>
-                            <span className={cn("text-sm font-semibold cursor-default", locQty === 0 ? "text-muted-foreground/40" : "text-foreground")}>
-                              {locQty}
-                            </span>
-                          </TooltipTrigger>
-                          {hasVariants && (
-                            <TooltipContent side="left" className="max-w-48">
-                              <p className="text-xs font-semibold mb-1 text-muted-foreground">{loc.name} — répartition</p>
-                              <div className="space-y-0.5">
-                                {levels.map((sl: StockLevel, i: number) => (
-                                  <div key={i} className="flex items-center justify-between gap-3 text-xs">
-                                    <span className="text-muted-foreground">
-                                      {[sl.color, sl.size].filter(Boolean).join(' / ') || 'Sans variante'}
-                                    </span>
-                                    <span className="font-mono font-semibold">×{sl.quantity}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </TooltipContent>
-                          )}
-                        </UITooltip>
+                      <TableCell key={loc.id} className="text-right font-mono" onClick={e => e.stopPropagation()}>
+                        <span className={cn("text-sm font-semibold", locQty === 0 ? "text-muted-foreground/40" : "text-foreground")}>
+                          {locQty}
+                        </span>
                       </TableCell>
                     );
                   })}
-                  <TableCell className="text-right font-mono font-bold">{total}</TableCell>
-                  <TableCell className="text-right font-mono text-muted-foreground">{item.threshold}</TableCell>
-                  <TableCell>
+                  <TableCell className="text-right font-mono font-bold" onClick={e => e.stopPropagation()}>{total}</TableCell>
+                  <TableCell className="text-right font-mono text-muted-foreground" onClick={e => e.stopPropagation()}>{item.threshold}</TableCell>
+                  <TableCell onClick={e => e.stopPropagation()}>
                     {isLow ? (
                       <Badge variant="destructive" className="animate-pulse">Bas</Badge>
                     ) : (
                       <Badge variant="secondary">OK</Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right" onClick={e => e.stopPropagation()}>
                     <div className="flex justify-end gap-1">
                       <UITooltip>
                         <TooltipTrigger asChild>
@@ -780,8 +779,108 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                       </Button>
                     </div>
                   </TableCell>
-                </TableRow>
-              );
+                </TableRow>,
+
+                // ── Child Variant Rows ──
+                ...(isExpanded && hasVariants ? uniqueVariants.map((variant: { color: string | null; size: string | null }, vi: number) => {
+                  const varKey = [variant.color, variant.size].filter(Boolean).join(' / ') || 'Sans variante';
+                  const varLabel = [variant.color, variant.size].filter(Boolean).join(' ');
+                  const webVariantLevel = webLocation
+                    ? stockLevels.find((sl: StockLevel) =>
+                        sl.inventory_id === item.id &&
+                        sl.location_id === webLocation.id &&
+                        sl.size === variant.size &&
+                        sl.color === variant.color
+                      )
+                    : null;
+                  const webVariantQty = webVariantLevel?.quantity ?? 0;
+                  const isVariantLow = webVariantQty === 0;
+
+                  return (
+                    <TableRow
+                      key={`${item.id}-variant-${vi}`}
+                      className={cn(
+                        "bg-primary/[0.03] border-b border-primary/10",
+                        vi === uniqueVariants.length - 1 && "border-b-2 border-border"
+                      )}
+                    >
+                      {/* Indent indicator */}
+                      <TableCell className="pl-3 pr-0 w-8">
+                        <div className="w-4 h-full flex items-center justify-center">
+                          <div className="w-px h-4 bg-primary/30 mx-auto" />
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {matchedProduct?.image && matchedProduct.image !== '/placeholder.svg' ? (
+                          <img src={matchedProduct.image} alt={varLabel} className="w-7 h-7 rounded object-cover border border-primary/20 opacity-80" />
+                        ) : (
+                          <div className="w-7 h-7 rounded bg-muted/50 flex items-center justify-center">
+                            <Package className="h-3 w-3 text-muted-foreground/50" />
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2 pl-3">
+                          {variant.color && <ColorSwatch color={variant.color} size={12} />}
+                          <span className="text-xs font-medium text-foreground/80">
+                            ↑ {variant.size || variant.color || 'Sans variante'}
+                          </span>
+                          {variant.size && variant.color && (
+                            <span className="text-[10px] text-muted-foreground">{variant.color}</span>
+                          )}
+                          {isVariantLow && (
+                            <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4">Rupture</Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-[10px] text-muted-foreground/70">{item.sku}</TableCell>
+                      <TableCell />
+                      {/* Web variant qty */}
+                      {webLocation && (
+                        <TableCell className="text-right">
+                          <VariantStockCell
+                            level={webVariantLevel}
+                            inventoryId={item.id}
+                            locationId={webLocation.id}
+                            size={variant.size}
+                            color={variant.color}
+                            onRefresh={onRefresh}
+                          />
+                        </TableCell>
+                      )}
+                      {boutiqueLocations.map((loc: Location) => {
+                        const boutVariantLevel = stockLevels.find((sl: StockLevel) =>
+                          sl.inventory_id === item.id &&
+                          sl.location_id === loc.id &&
+                          sl.size === variant.size &&
+                          sl.color === variant.color
+                        );
+                        return (
+                          <TableCell key={loc.id} className="text-right">
+                            <VariantStockCell
+                              level={boutVariantLevel}
+                              inventoryId={item.id}
+                              locationId={loc.id}
+                              size={variant.size}
+                              color={variant.color}
+                              onRefresh={onRefresh}
+                            />
+                          </TableCell>
+                        );
+                      })}
+                      {/* Total for this variant */}
+                      <TableCell className="text-right font-mono text-xs font-semibold text-foreground/70">
+                        {stockLevels
+                          .filter((sl: StockLevel) => sl.inventory_id === item.id && sl.size === variant.size && sl.color === variant.color)
+                          .reduce((s: number, sl: StockLevel) => s + sl.quantity, 0)}
+                      </TableCell>
+                      <TableCell />
+                      <TableCell />
+                      <TableCell />
+                    </TableRow>
+                  );
+                }) : [])
+              ];
             })}
           </TableBody>
         </Table>
