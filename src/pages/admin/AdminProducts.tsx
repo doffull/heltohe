@@ -167,22 +167,44 @@ export default function AdminProducts() {
     }
   };
 
-  const handleCreate = async (data: Omit<Product, 'id'>) => {
+  const handleCreate = async (data: Omit<Product, 'id'>, variantStock?: VariantStockData) => {
     try {
       const created = await createProduct.mutateAsync(data);
       toast({ title: 'Produit créé' });
       setIsFormOpen(false);
-      // Auto-sync to inventory/stock central
+      // Auto-sync to inventory/stock central with variant stock
       try {
         const { data: webLoc } = await supabase.from('locations').select('id').eq('type', 'web').maybeSingle();
         if (webLoc && created?.id) {
           const { data: inv } = await supabase.from('inventory').insert({
             product_id: created.id, sku: data.sku, name: data.name, channel: 'b2c', threshold: 10,
           }).select('id').single();
-          if (inv && data.stock > 0) {
-            await supabase.from('stock_levels').insert({
-              inventory_id: inv.id, location_id: webLoc.id, quantity: data.stock, reserved: 0,
-            });
+          if (inv) {
+            const hasSizes = data.sizes && data.sizes.length > 0;
+            const hasColors = data.colorOptions && data.colorOptions.length > 0;
+            const stockInserts: any[] = [];
+
+            if (hasSizes && hasColors && variantStock?.variantGrid) {
+              for (const [color, sizes] of Object.entries(variantStock.variantGrid)) {
+                for (const [size, qty] of Object.entries(sizes)) {
+                  if (qty > 0) stockInserts.push({ inventory_id: inv.id, location_id: webLoc.id, quantity: qty, reserved: 0, size, color, stocked_at: new Date().toISOString() });
+                }
+              }
+            } else if (hasSizes && !hasColors && variantStock?.sizeStockMap) {
+              for (const [size, qty] of Object.entries(variantStock.sizeStockMap)) {
+                if (qty > 0) stockInserts.push({ inventory_id: inv.id, location_id: webLoc.id, quantity: qty, reserved: 0, size, stocked_at: new Date().toISOString() });
+              }
+            } else if (!hasSizes && hasColors && variantStock?.colorStockMap) {
+              for (const [color, qty] of Object.entries(variantStock.colorStockMap)) {
+                if (qty > 0) stockInserts.push({ inventory_id: inv.id, location_id: webLoc.id, quantity: qty, reserved: 0, color, stocked_at: new Date().toISOString() });
+              }
+            } else if (data.stock > 0) {
+              stockInserts.push({ inventory_id: inv.id, location_id: webLoc.id, quantity: data.stock, reserved: 0, stocked_at: new Date().toISOString() });
+            }
+
+            if (stockInserts.length > 0) {
+              await supabase.from('stock_levels').insert(stockInserts);
+            }
           }
         }
       } catch { /* silent — stock sync is non-critical */ }
@@ -202,6 +224,32 @@ export default function AdminProducts() {
       toast({ title: 'Erreur', variant: 'destructive' });
     }
   };
+
+  const handleOpenStockDialog = async (product: Product) => {
+    // Load locations
+    const { data: locs } = await supabase.from('locations').select('id, type').eq('is_active', true);
+    setStockDialogLocations(locs || []);
+    // Find existing inventory for this product
+    const { data: inv } = await supabase.from('inventory').select('id').eq('product_id', product.id).maybeSingle();
+    if (inv) {
+      setStockDialogEdit({ inventoryId: inv.id, productId: product.id });
+    } else {
+      // Create inventory entry on-the-fly if missing
+      const { data: webLoc } = await supabase.from('locations').select('id').eq('type', 'web').maybeSingle();
+      if (webLoc) {
+        const { data: newInv } = await supabase.from('inventory').insert({
+          product_id: product.id, sku: product.sku, name: product.name, channel: 'b2c', threshold: 10,
+        }).select('id').single();
+        if (newInv) setStockDialogEdit({ inventoryId: newInv.id, productId: product.id });
+      } else {
+        toast({ title: 'Aucun emplacement Web configuré', description: 'Créez d\'abord un emplacement de type "web" dans Stock', variant: 'destructive' });
+        return;
+      }
+    }
+    setStockDialogOpen(true);
+  };
+
+
 
   const handleDelete = async (id: string) => {
     if (!confirm('Supprimer ce produit ?')) return;
