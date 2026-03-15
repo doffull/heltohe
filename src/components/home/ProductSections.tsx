@@ -16,12 +16,16 @@ export function ProductSections() {
 
   const byTag = (tag: string) => products.filter(p => p.tags?.includes(tag));
 
+  const featuredTagged = byTag('featured');
+  const newTagged = byTag('new');
   const topTagged = byTag('top');
   const trendingTagged = byTag('trending');
   const styleTagged = byTag('style');
   const promoTagged = byTag('promo');
 
   const sectionProducts: Record<string, typeof products> = {
+    featured: featuredTagged.length > 0 ? featuredTagged.slice(0, 8) : products.slice(0, 4),
+    new: newTagged.length > 0 ? newTagged.slice(0, 8) : products.slice(0, 4),
     top: topTagged.length > 0 ? topTagged.slice(0, 8) : products.slice(0, 4),
     trending: trendingTagged.length > 0 ? trendingTagged.slice(0, 8) : products.filter(p => p.stock > 10).slice(0, 4),
     style: styleTagged.length > 0 ? styleTagged.slice(0, 8) : products.filter(p => p.category === 'Homme').slice(0, 4),
