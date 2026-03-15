@@ -154,6 +154,13 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
           </div>
         )}
 
+        {/* Product count when header is hidden */}
+        {hideHeader && (
+          <p className="text-sm text-muted-foreground mb-4">
+            {filteredProducts.length} produit{filteredProducts.length !== 1 ? 's' : ''} disponible{filteredProducts.length !== 1 ? 's' : ''}
+          </p>
+        )}
+
         {/* Filters Bar */}
         <div className="bg-secondary/50 p-4 lg:p-6 mb-6 lg:mb-8 bevel-corners">
           <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 lg:gap-4">
