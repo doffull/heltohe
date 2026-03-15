@@ -190,6 +190,7 @@ export default function Admin() {
             <Route path="colissimo/*" element={<AdminColissimo />} />
             <Route path="chatbot/*" element={<AdminChatbot />} />
             <Route path="woocommerce/*" element={<AdminWooCommerce />} />
+            <Route path="audit/*" element={<AdminAudit />} />
             <Route path="parametres/*" element={<AdminSettings />} />
           </Routes>
         </div>
