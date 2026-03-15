@@ -14,9 +14,10 @@ import { HeroSlide, HUDStat, HUDButton, MannequinHotspotConfig, Category, Marker
 import {
   Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Eye, EyeOff,
   LayoutDashboard, ImagePlay, PanelTop, Image, PanelLeft, Grid3x3, Crosshair, BookOpen, Save, Loader2,
-  Pencil, Check, X, Palette, RotateCcw,
+  Pencil, Check, X, Palette, RotateCcw, ExternalLink, AlertCircle,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { HeaderDesignTab } from '@/components/admin/HeaderDesignTab';
 import { useProducts } from '@/hooks/useProducts';
@@ -26,6 +27,7 @@ import {
   useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory,
   CategoryRecord,
 } from '@/hooks/useCategories';
+import { usePages, useUpsertPage } from '@/hooks/usePages';
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
   useSensor, useSensors, DragEndEvent,
