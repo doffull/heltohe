@@ -70,6 +70,9 @@ export function CategoryFormDialog({ open, onOpenChange, category, categories, o
   }, [form.title, category, categories]);
 
   const parentOptions = categories.filter(c => !c.parentId && c.id !== category?.id);
+  const slugConflict = !!form.slug && categories.some(
+    c => c.slug === form.slug && c.id !== category?.id
+  );
 
   const handleAiSeo = async () => {
     if (!form.title) {
