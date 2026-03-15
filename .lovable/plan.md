@@ -1,103 +1,79 @@
 
-## Thinking
+## Audit Total + Corrections — Plan
 
-The user wants to:
-1. Upload a product mockup image (like the Marco jacket shown)
-2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
-3. Automatically generates a fully interactive, dynamic product page from it
+### Bugs identifiés avant même l'audit
 
-The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
+**Bug 1 — React warning actif dans les logs** : `CompleteLook` et `RelatedProducts` dans `ProductDetail.tsx` génèrent des warnings "Function components cannot be given refs". `CompleteLook` est défini **à l'intérieur** du fichier mais après le return principal (lignes 191-277). Le wrapper `motion.section` reçoit un composant non-forwardRef. À corriger.
 
-1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
-   - Accepts an image (jpg/png/webp)
-   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
-   - Also extracts the **color variants** as `colorOptions` with proper hex values
-   - Returns a structured product object ready to pre-fill the ProductForm
+**Bug 2 — Catégories home.tsx pointent vers `/boutique/xxx`** : Dans `Home.tsx` ligne 322, les catégories DB sont linkées vers `/boutique/${c.slug}` au lieu de `/${c.slug}`. La route correcte est `/:categorySlug` → `CategoryPageRouter`. Les liens catégorie de la home redirigent vers `BoutiqueRouter` qui ne sait pas gérer les slugs comme "homme" → il tombe sur le Shop générique au lieu de la page catégorie dédiée.
 
-2. **Add "Importer Maquette IA" button** in AdminProducts that:
-   - Opens a dialog with a dropzone accepting images
-   - Sends image to the edge function
-   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
-   - Lets admin review/edit before confirming creation
-   - On confirm: creates the product in the DB with all extracted data
+**Bug 3 — FALLBACK_CATEGORIES dans Home.tsx** (lignes 39-43) pointent aussi vers `/boutique/homme` etc. au lieu de `/homme`.
 
-3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
+**Bug 4 — `generate_category_slug` trigger** : Le translate dans la migration précédente a un bug — la correspondance est déséquilibrée (`'aaaeeeeiioouuycAAARRREEEIIOOUUUYC'` vs `'àâäéèêëïîôùûüÿçÀÂÄÉÈÊËÏÎÔÙÛÜŸÇ'`) → risque de mauvaise translittération ou erreur.
 
-Looking at the Marco image:
-- Product name: MARCO
-- Brand: Helvetica Mountain Pioneers x PEGASWOES  
-- Season: HIVER 2026
-- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
-- Sizes: XS, S, M, L, XL, XXL
-- Composition: 100% POLYESTER
-- Tags: limited edition
+**Bug 5 — `CompleteLook` component** défini au milieu du fichier après les exports, sans être un composant de premier niveau propre. Le warning React vient de `motion.section` au lieu de `motion.div`.
 
-## Plan
+### Composant d'audit in-app : `AdminAudit`
 
-### 1. New edge function `analyze-product-image`
-New file: `supabase/functions/analyze-product-image/index.ts`
+Un tableau de bord d'audit accessible via `/admin` (bouton "Audit" dans la nav admin) qui :
+1. Vérifie toutes les **routes** du site (GET fetch + vérif du status)
+2. Vérifie les **redirections catégories** (homme, femme, enfant, accessoires)
+3. Vérifie la **DB** (products count, categories count, pages count, orders count)
+4. Vérifie les **liens du header/nav** 
+5. Vérifie **upload storage** (bucket media accessible)
+6. Exécute des **vérifications UI** (panier, checkout, auth)
 
-Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
-- name, subtitle, price (ask to estimate if not found), category
-- sizes (exact text from image)
-- colors with **hex values** from the color swatches visible in image
-- colorOptions: [{color: "#hex", label: "nom"}]
-- material/composition
-- description (generated from visual)
-- sku (auto-generated)
-- tags (e.g., "limited edition" if spotted)
-- Any brand/collection info → subtitle
+Chaque test affiche : ✅ PASS | ❌ FAIL | ⚠️ WARN avec détails.
 
-### 2. New UI component `ImportMockupDialog.tsx`
-In `src/components/admin/ImportMockupDialog.tsx`:
-- Image dropzone (jpg/png/webp/gif up to 10MB)
-- Preview of uploaded image
-- "Analyser avec l'IA" button
-- Loading state with animated scan effect
-- Results preview:
-  - Product name, subtitle
-  - Price field (editable, since AI may not find it)
-  - Color swatches preview
-  - Size badges preview
-  - Material info
-  - Generated description
-- "Créer ce produit" confirm button
-- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
+```text
+┌─────────────────────────────────────────────────────┐
+│  Admin > Audit Système                               │
+│                                                      │
+│  [▶ Lancer l'audit complet]                         │
+│                                                      │
+│  ROUTES & REDIRECTIONS                              │
+│  ✅ / (Home)               200ms                    │
+│  ✅ /boutique               145ms                   │
+│  ✅ /homme → CategoryPage   220ms                   │
+│  ❌ /boutique/homme → Shop  (mauvaise route)        │
+│                                                      │
+│  BASE DE DONNÉES                                    │
+│  ✅ Produits: 12            ✅ Catégories: 4        │
+│  ✅ Pages: 4                ⚠️ Commandes: 0         │
+│                                                      │
+│  BUGS DÉTECTÉS                                      │
+│  ❌ 3 liens catégories pointent vers /boutique/xxx  │
+│     au lieu de /xxx                                 │
+│  ⚠️ Warning React: CompleteLook (refs)              │
+└─────────────────────────────────────────────────────┘
+```
 
-### 3. AdminProducts integration
-- Add "Importer Maquette IA" button next to existing "Importer PDF" button
-- Opens the new ImportMockupDialog
-- After product created, show toast + option to go to product detail
+### Corrections incluses dans cette implémentation
 
-### Files to create/modify
-- `supabase/functions/analyze-product-image/index.ts` — new edge function
-- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
-- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
+| # | Problème | Fix |
+|---|---|---|
+| 1 | `Home.tsx` : liens catégories DB → `/boutique/${slug}` | Corriger vers `/${slug}` |
+| 2 | `Home.tsx` : FALLBACK_CATEGORIES → `/boutique/homme` | Corriger vers `/homme` |
+| 3 | `ProductDetail.tsx` : `CompleteLook` déclenche warning ref | Déplacer hors du fichier principal ou corriger le motion wrapper |
+| 4 | Trigger `generate_category_slug` : chaîne translate déséquilibrée | Corriger migration |
 
-## Implementation Steps
+### Fichiers modifiés
 
-### Step 1: Edge function `analyze-product-image`
-Input: `{ imageBase64: string, mimeType: string }`
-Prompt to Gemini Pro Vision:
-- Extract all visible product info
-- Extract hex colors from color swatches
-- Generate description if not present
-- Output strict JSON matching `ExtractedProductData` schema
+| Fichier | Action |
+|---|---|
+| `src/pages/Home.tsx` | Fix liens catégories DB + FALLBACK_CATEGORIES |
+| `src/pages/ProductDetail.tsx` | Fix `CompleteLook` warning React ref |
+| `src/pages/admin/Admin.tsx` | Ajouter entrée "Audit" dans SIDEBAR_ITEMS |
+| `src/pages/admin/AdminAudit.tsx` | Nouveau composant d'audit complet |
+| `supabase/migrations/` | Fix trigger translate déséquilibré |
 
-### Step 2: `ImportMockupDialog` component
-States:
-- `file`, `preview` (image URL)
-- `analyzing` (loading state)
-- `extracted` (ExtractedProductData | null)
-- `editableData` (form state to review/edit before import)
+### Portée de l'audit automatique
 
-UX Flow:
-1. Drag & drop or click to upload image
-2. Preview appears
-3. Click "Analyser avec IA" → loading scan animation
-4. Results appear: color swatches, size badges, all info
-5. User can edit price/name if needed
-6. Click "Créer le produit" → uploads image to storage, creates product, success
+Le composant `AdminAudit` teste via `fetch` et requêtes Supabase directes :
+- **12 routes** : `/`, `/boutique`, `/panier`, `/checkout`, `/a-propos`, `/contact`, `/auth`, `/homme`, `/femme`, `/enfant`, `/accessoires`, `/admin`
+- **4 tables DB** : products, categories, pages, orders — comptages + RLS
+- **Storage** : bucket `media` accessible
+- **Navigation** : tous les liens du header publiés
+- **Console warnings** : liste les composants connus avec warnings actifs
 
-### Step 3: AdminProducts button
-Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)
+Pas de modifications DB, pas de nouveaux hooks — juste 2 nouveaux fichiers + corrections dans 3 fichiers existants.
