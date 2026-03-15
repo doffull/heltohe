@@ -736,6 +736,15 @@ export default function AdminProducts() {
           navigate(`/boutique/${productId}?new=1`);
         }}
       />
+
+      {/* Stock / Inventory Dialog */}
+      <InventoryProductDialog
+        open={stockDialogOpen}
+        onOpenChange={(open) => { setStockDialogOpen(open); if (!open) setStockDialogEdit(null); }}
+        onSaved={() => { setStockDialogOpen(false); setStockDialogEdit(null); toast({ title: 'Stock mis à jour' }); }}
+        locations={stockDialogLocations}
+        editData={stockDialogEdit}
+      />
     </div>
   );
 }
