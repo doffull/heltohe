@@ -177,6 +177,7 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
   const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({});
   const [pdfCache, setPdfCache] = useState<Record<string, string>>({}); // orderId → base64
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkPrintLoading, setBulkPrintLoading] = useState(false);
   const [bulkAction, setBulkAction] = useState('');
   const [page, setPage] = useState(1);
   const [sortKey, setSortKey] = useState<SortKey>('date');
@@ -185,6 +186,7 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
   const [importText, setImportText] = useState('');
   const [importLoading, setImportLoading] = useState(false);
   const [refreshLoading, setRefreshLoading] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const countries = Array.from(new Set(orders.map((o: Order) => o.customer?.country).filter(Boolean)));
   const shippingMethods = Array.from(new Set(orders.map((o: Order) => o.shippingCarrier || o.paymentMethod).filter(Boolean)));
@@ -295,6 +297,136 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
     queryClient.invalidateQueries({ queryKey: ['orders'] });
   }
 
+  async function handleBulkPrint() {
+    const selectedOrders = paginated.filter((o: Order) => selected.has(o.id));
+    if (!selectedOrders.length) return;
+    setBulkPrintLoading(true);
+    try {
+      const pdfs: string[] = [];
+      for (const order of selectedOrders) {
+        const cacheKey = order.id;
+        if (pdfCache[cacheKey]) {
+          pdfs.push(pdfCache[cacheKey]);
+        } else if (order.trackingNumber) {
+          // No cached PDF — regenerate (retrigger via API)
+          try {
+            const res = await supabase.functions.invoke('colissimo-proxy', {
+              body: {
+                action: 'generateLabel',
+                senderName, senderAddress, senderZip, senderCity,
+                isReturn: false,
+                order: {
+                  orderNumber: order.orderNumber,
+                  customer: {
+                    name: order.customer.name,
+                    email: order.customer.email,
+                    phone: order.customer.phone,
+                    address: order.customer.address,
+                    city: order.customer.city,
+                    zip: order.customer.zip,
+                  },
+                },
+              },
+            });
+            if (res.data?.pdfBase64) {
+              setPdfCache(c => ({ ...c, [cacheKey]: res.data.pdfBase64 }));
+              pdfs.push(res.data.pdfBase64);
+            }
+          } catch {
+            // skip orders where generation fails
+          }
+        } else {
+          // No tracking yet — generate fresh label
+          try {
+            const res = await supabase.functions.invoke('colissimo-proxy', {
+              body: {
+                action: 'generateLabel',
+                senderName, senderAddress, senderZip, senderCity,
+                isReturn: false,
+                order: {
+                  orderNumber: order.orderNumber,
+                  customer: {
+                    name: order.customer.name,
+                    email: order.customer.email,
+                    phone: order.customer.phone,
+                    address: order.customer.address,
+                    city: order.customer.city,
+                    zip: order.customer.zip,
+                  },
+                },
+              },
+            });
+            if (res.data?.success && res.data.pdfBase64) {
+              const { trackingNumber, pdfBase64 } = res.data;
+              if (trackingNumber) {
+                await supabase.from('orders').update({
+                  tracking_number: trackingNumber,
+                  shipping_carrier: 'Colissimo',
+                  status: 'Shipped',
+                }).eq('id', order.id);
+              }
+              setPdfCache(c => ({ ...c, [cacheKey]: pdfBase64 }));
+              pdfs.push(pdfBase64);
+            }
+          } catch {
+            // skip
+          }
+        }
+      }
+
+      if (!pdfs.length) {
+        toast({ title: 'Aucune étiquette disponible', description: 'Aucune étiquette n\'a pu être générée pour la sélection.', variant: 'destructive' });
+        return;
+      }
+
+      // Build combined print page
+      const embedsHtml = pdfs.map((pdf, i) =>
+        `<embed src="data:application/pdf;base64,${pdf}" type="application/pdf" width="100%" height="100%" style="display:block;${i < pdfs.length - 1 ? 'page-break-after:always;' : ''}"/>`
+      ).join('\n');
+
+      const html = `<!DOCTYPE html><html><head><title>Étiquettes Colissimo</title><style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{background:#fff}
+        .page{width:10cm;height:15cm;page-break-after:always;overflow:hidden}
+        .page:last-child{page-break-after:auto}
+        embed{width:100%;height:100%}
+        @media print{.page{page-break-after:always}}
+      </style></head><body>
+        ${pdfs.map((pdf, i) =>
+          `<div class="page"><embed src="data:application/pdf;base64,${pdf}" type="application/pdf" width="100%" height="100%"/></div>`
+        ).join('\n')}
+        <script>window.onload=function(){setTimeout(function(){window.print();},600);}<\/script>
+      </body></html>`;
+
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const win = window.open(url, '_blank');
+      if (!win) {
+        toast({ title: 'Fenêtre bloquée', description: 'Autorisez les popups pour imprimer les étiquettes.', variant: 'destructive' });
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    } catch (e: any) {
+      toast({ title: 'Erreur impression', description: e.message, variant: 'destructive' });
+    } finally {
+      setBulkPrintLoading(false);
+    }
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(selected);
+    try {
+      const { error } = await supabase.from('orders').delete().in('id', ids);
+      if (error) throw error;
+      toast({ title: `${ids.length} commande(s) supprimée(s)` });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      setSelected(new Set());
+      setDeleteConfirmOpen(false);
+    } catch (e: any) {
+      toast({ title: 'Erreur suppression', description: e.message, variant: 'destructive' });
+    }
+  }
+
   async function applyBulkAction() {
     if (!bulkAction || !selected.size) return;
     if (bulkAction === 'generate') {
@@ -303,6 +435,8 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
       for (const order of toProcess) await generateLabel(order);
       setSelected(new Set());
       setBulkLoading(false);
+    } else if (bulkAction === 'print_bulk') {
+      await handleBulkPrint();
     } else if (bulkAction === 'ship') {
       for (const id of selected) {
         await supabase.from('orders').update({ status: 'Shipped', shipping_carrier: 'Colissimo' }).eq('id', id);
@@ -317,6 +451,9 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
       toast({ title: `Suivi supprimé pour ${selected.size} commande(s)` });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       setSelected(new Set());
+    } else if (bulkAction === 'delete_orders') {
+      setDeleteConfirmOpen(true);
+      return; // don't reset bulkAction yet
     }
     setBulkAction('');
   }
@@ -398,17 +535,19 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
       <div className="flex flex-wrap items-center gap-2 bg-muted/30 border border-border rounded-lg px-3 py-2">
         {/* Bulk actions */}
         <Select value={bulkAction} onValueChange={setBulkAction}>
-          <SelectTrigger className="h-8 w-44 text-xs">
+          <SelectTrigger className="h-8 w-52 text-xs">
             <SelectValue placeholder="Actions groupées" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="generate">Générer les étiquettes</SelectItem>
+            <SelectItem value="print_bulk">Imprimer les étiquettes</SelectItem>
             <SelectItem value="ship">Marquer expédiées</SelectItem>
             <SelectItem value="delete">Supprimer les suivis</SelectItem>
+            <SelectItem value="delete_orders">Supprimer les commandes</SelectItem>
           </SelectContent>
         </Select>
-        <Button size="sm" variant="secondary" className="h-8 text-xs" onClick={applyBulkAction} disabled={!bulkAction || !selected.size || bulkLoading}>
-          {bulkLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+        <Button size="sm" variant="secondary" className="h-8 text-xs" onClick={applyBulkAction} disabled={!bulkAction || !selected.size || bulkLoading || bulkPrintLoading}>
+          {(bulkLoading || bulkPrintLoading) ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
           Appliquer
         </Button>
 
@@ -714,6 +853,30 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
             <Button onClick={handleImport} disabled={importLoading || !importText.trim()} className="gap-2">
               {importLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
               Importer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete orders confirmation dialog */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={open => { setDeleteConfirmOpen(open); if (!open) setBulkAction(''); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Supprimer {selected.size} commande{selected.size > 1 ? 's' : ''} ?
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2 text-sm text-muted-foreground">
+            Cette action est <strong className="text-foreground">irréversible</strong>. Les commandes sélectionnées seront définitivement supprimées de la base de données.
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDeleteConfirmOpen(false); setBulkAction(''); }}>
+              Annuler
+            </Button>
+            <Button variant="destructive" onClick={handleBulkDelete} className="gap-2">
+              <Trash2 className="h-4 w-4" />
+              Supprimer définitivement
             </Button>
           </DialogFooter>
         </DialogContent>
