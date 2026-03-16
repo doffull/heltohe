@@ -28,6 +28,11 @@ import Admin from "./pages/admin/Admin";
 import NotFound from "./pages/NotFound";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
+import CGV from "./pages/legal/CGV";
+import Confidentialite from "./pages/legal/Confidentialite";
+import Cookies from "./pages/legal/Cookies";
+import Retours from "./pages/legal/Retours";
+import MentionsLegales from "./pages/legal/MentionsLegales";
 
 // Layout
 import { MainLayout } from "./components/layout/MainLayout";

@@ -666,8 +666,23 @@ export function MainLayout({ children }: MainLayoutProps) {
             </div>
           </div>
           
-          <div className="border-t border-border mt-8 lg:mt-12 pt-6 lg:pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs lg:text-sm text-muted-foreground">
-            <p>© 2026 HELVETICA-MP. Tous droits réservés.</p>
+          {/* Legal Links */}
+          <div className="border-t border-border mt-8 lg:mt-10 pt-6">
+            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
+              <Link to="/mentions-legales" className="hover:text-foreground transition-colors">Mentions légales</Link>
+              <span className="text-border">·</span>
+              <Link to="/cgv" className="hover:text-foreground transition-colors">CGV</Link>
+              <span className="text-border">·</span>
+              <Link to="/confidentialite" className="hover:text-foreground transition-colors">Politique de confidentialité</Link>
+              <span className="text-border">·</span>
+              <Link to="/cookies" className="hover:text-foreground transition-colors">Cookies</Link>
+              <span className="text-border">·</span>
+              <Link to="/retours" className="hover:text-foreground transition-colors">Retours & Échanges</Link>
+            </div>
+          </div>
+
+          <div className="border-t border-border mt-4 pt-4 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
+            <p>© {new Date().getFullYear()} HELVETICA-MP. Tous droits réservés.</p>
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setLanguage(language === 'FR' ? 'EN' : 'FR')}
