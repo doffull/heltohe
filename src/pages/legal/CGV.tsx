@@ -1,12 +1,24 @@
 import { LegalLayout } from './LegalLayout';
+import { useLegalInfo } from '@/hooks/useLegalInfo';
+
+function NC({ value }: { value: string }) {
+  if (value !== '[Non configuré]') return <>{value}</>;
+  return (
+    <span className="inline-flex items-center gap-1 bg-orange-500/15 text-orange-500 border border-orange-500/30 text-[11px] font-mono px-1.5 py-0.5 rounded">
+      Non configuré
+    </span>
+  );
+}
 
 export default function CGV() {
+  const info = useLegalInfo();
+
   return (
     <LegalLayout title="Conditions Générales de Vente" lastUpdated="Mars 2026">
       <h2>Article 1 — Objet</h2>
       <p>
         Les présentes Conditions Générales de Vente (CGV) régissent les ventes de produits effectuées sur ce site entre
-        [Nom de la société] (ci-après "le Vendeur") et tout client non professionnel (ci-après "le Client"). Toute
+        <NC value={info.companyName} /> (ci-après "le Vendeur") et tout client non professionnel (ci-après "le Client"). Toute
         commande passée sur ce site implique l'acceptation pleine et entière des présentes CGV.
       </p>
 
@@ -69,7 +81,7 @@ export default function CGV() {
       </p>
       <p>
         Pour exercer ce droit, le Client doit notifier sa décision de rétractation par email à{' '}
-        <a href="mailto:retours@votre-site.fr">retours@votre-site.fr</a> ou via le formulaire de contact, puis retourner
+        <a href={`mailto:${info.returnEmail}`}><NC value={info.returnEmail} /></a> ou via le formulaire de contact, puis retourner
         les articles dans leur état d'origine. Les frais de retour sont à la charge du Client.
       </p>
       <p>
@@ -86,7 +98,7 @@ export default function CGV() {
       <h2>Article 9 — Service client</h2>
       <p>
         Pour toute question ou réclamation, notre service client est joignable à :{' '}
-        <a href="mailto:contact@votre-site.fr">contact@votre-site.fr</a>. Nous nous engageons à répondre dans un délai
+        <a href={`mailto:${info.contactEmail}`}><NC value={info.contactEmail} /></a>. Nous nous engageons à répondre dans un délai
         de 48 heures ouvrées.
       </p>
 

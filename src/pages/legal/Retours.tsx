@@ -1,6 +1,18 @@
 import { LegalLayout } from './LegalLayout';
+import { useLegalInfo } from '@/hooks/useLegalInfo';
+
+function NC({ value }: { value: string }) {
+  if (value !== '[Non configuré]') return <>{value}</>;
+  return (
+    <span className="inline-flex items-center gap-1 bg-orange-500/15 text-orange-500 border border-orange-500/30 text-[11px] font-mono px-1.5 py-0.5 rounded">
+      Non configuré
+    </span>
+  );
+}
 
 export default function Retours() {
+  const info = useLegalInfo();
+
   return (
     <LegalLayout title="Retours & Échanges" lastUpdated="Mars 2026">
       <p>
@@ -27,7 +39,7 @@ export default function Retours() {
       <ul>
         <li>
           <strong>Étape 1</strong> — Contactez notre service client à{' '}
-          <a href="mailto:retours@votre-site.fr">retours@votre-site.fr</a> en indiquant votre numéro de commande et
+          <a href={`mailto:${info.returnEmail}`}><NC value={info.returnEmail} /></a> en indiquant votre numéro de commande et
           la raison du retour.
         </li>
         <li>
@@ -84,15 +96,15 @@ export default function Retours() {
       <h2>Article défectueux ou erreur de commande</h2>
       <p>
         Si vous avez reçu un article défectueux ou ne correspondant pas à votre commande, contactez-nous dans les 48h
-        suivant la réception à <a href="mailto:retours@votre-site.fr">retours@votre-site.fr</a> avec des photos de
+        suivant la réception à <a href={`mailto:${info.returnEmail}`}><NC value={info.returnEmail} /></a> avec des photos de
         l'article. Nous prendrons en charge les frais de retour et procéderons à un remplacement ou un remboursement
         complet selon votre préférence.
       </p>
 
       <h2>Contact service retours</h2>
       <p>
-        Email : <a href="mailto:retours@votre-site.fr">retours@votre-site.fr</a><br />
-        Téléphone : [+33 X XX XX XX XX] (du lundi au vendredi, 9h–18h)<br />
+        Email : <a href={`mailto:${info.returnEmail}`}><NC value={info.returnEmail} /></a><br />
+        Téléphone : <NC value={info.contactPhone} /> (du lundi au vendredi, 9h–18h)<br />
         Délai de réponse : sous 48h ouvrées
       </p>
     </LegalLayout>
