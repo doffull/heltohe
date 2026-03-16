@@ -535,17 +535,19 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
       <div className="flex flex-wrap items-center gap-2 bg-muted/30 border border-border rounded-lg px-3 py-2">
         {/* Bulk actions */}
         <Select value={bulkAction} onValueChange={setBulkAction}>
-          <SelectTrigger className="h-8 w-44 text-xs">
+          <SelectTrigger className="h-8 w-52 text-xs">
             <SelectValue placeholder="Actions groupées" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="generate">Générer les étiquettes</SelectItem>
+            <SelectItem value="print_bulk">Imprimer les étiquettes</SelectItem>
             <SelectItem value="ship">Marquer expédiées</SelectItem>
             <SelectItem value="delete">Supprimer les suivis</SelectItem>
+            <SelectItem value="delete_orders">Supprimer les commandes</SelectItem>
           </SelectContent>
         </Select>
-        <Button size="sm" variant="secondary" className="h-8 text-xs" onClick={applyBulkAction} disabled={!bulkAction || !selected.size || bulkLoading}>
-          {bulkLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+        <Button size="sm" variant="secondary" className="h-8 text-xs" onClick={applyBulkAction} disabled={!bulkAction || !selected.size || bulkLoading || bulkPrintLoading}>
+          {(bulkLoading || bulkPrintLoading) ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
           Appliquer
         </Button>
 
