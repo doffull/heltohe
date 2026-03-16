@@ -409,6 +409,158 @@ export default function AdminSettings() {
             )}
           </div>
         </TabsContent>
+
+        {/* ── LEGAL TAB ── */}
+        <TabsContent value="legal" className="space-y-4">
+          <div className="chamfer-hud bg-card/50 p-6 space-y-6">
+            <div>
+              <h3 className="text-lg font-bold hud-text">INFORMATIONS LÉGALES DE LA SOCIÉTÉ</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Ces informations sont affichées automatiquement sur toutes les pages légales (Mentions légales, CGV, etc.).
+                Les champs non remplis apparaîtront en orange sur les pages légales.
+              </p>
+            </div>
+
+            {/* Identité société */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="hud-text text-xs">Raison sociale / Nom de la société</Label>
+                <Input
+                  value={(designSettings as any).legalCompanyName ?? ''}
+                  onChange={e => updateDesignSettings({ legalCompanyName: e.target.value } as any)}
+                  placeholder="ACME SAS, Jean Dupont..."
+                  className="bg-secondary/50 border-border/30"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="hud-text text-xs">Forme juridique</Label>
+                <Input
+                  value={(designSettings as any).legalCompanyForm ?? ''}
+                  onChange={e => updateDesignSettings({ legalCompanyForm: e.target.value } as any)}
+                  placeholder="SARL, SAS, Auto-entrepreneur..."
+                  className="bg-secondary/50 border-border/30"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="hud-text text-xs">Capital social (€)</Label>
+                <Input
+                  value={(designSettings as any).legalCapital ?? ''}
+                  onChange={e => updateDesignSettings({ legalCapital: e.target.value } as any)}
+                  placeholder="10 000"
+                  className="bg-secondary/50 border-border/30"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="hud-text text-xs">Directeur de la publication</Label>
+                <Input
+                  value={(designSettings as any).legalDirector ?? ''}
+                  onChange={e => updateDesignSettings({ legalDirector: e.target.value } as any)}
+                  placeholder="Prénom Nom"
+                  className="bg-secondary/50 border-border/30"
+                />
+              </div>
+            </div>
+
+            {/* Siège social */}
+            <div>
+              <h4 className="text-sm font-semibold hud-text mb-3 uppercase tracking-wide">Siège social</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2 sm:col-span-3">
+                  <Label className="hud-text text-xs">Adresse (rue)</Label>
+                  <Input
+                    value={(designSettings as any).legalAddress ?? ''}
+                    onChange={e => updateDesignSettings({ legalAddress: e.target.value } as any)}
+                    placeholder="12 rue de la Paix"
+                    className="bg-secondary/50 border-border/30"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="hud-text text-xs">Code postal</Label>
+                  <Input
+                    value={(designSettings as any).legalZip ?? ''}
+                    onChange={e => updateDesignSettings({ legalZip: e.target.value } as any)}
+                    placeholder="75001"
+                    className="bg-secondary/50 border-border/30"
+                  />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label className="hud-text text-xs">Ville</Label>
+                  <Input
+                    value={(designSettings as any).legalCity ?? ''}
+                    onChange={e => updateDesignSettings({ legalCity: e.target.value } as any)}
+                    placeholder="Paris"
+                    className="bg-secondary/50 border-border/30"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Immatriculation */}
+            <div>
+              <h4 className="text-sm font-semibold hud-text mb-3 uppercase tracking-wide">Immatriculation</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="hud-text text-xs">SIRET</Label>
+                  <Input
+                    value={(designSettings as any).legalSiret ?? ''}
+                    onChange={e => updateDesignSettings({ legalSiret: e.target.value } as any)}
+                    placeholder="XXX XXX XXX XXXXX"
+                    className="bg-secondary/50 border-border/30"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="hud-text text-xs">RCS (Ville + numéro)</Label>
+                  <Input
+                    value={(designSettings as any).legalRcs ?? ''}
+                    onChange={e => updateDesignSettings({ legalRcs: e.target.value } as any)}
+                    placeholder="Paris B 123 456 789"
+                    className="bg-secondary/50 border-border/30"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="hud-text text-xs">N° TVA intracommunautaire</Label>
+                  <Input
+                    value={(designSettings as any).legalVat ?? ''}
+                    onChange={e => updateDesignSettings({ legalVat: e.target.value } as any)}
+                    placeholder="FR XX XXX XXX XXX"
+                    className="bg-secondary/50 border-border/30"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Contacts légaux */}
+            <div>
+              <h4 className="text-sm font-semibold hud-text mb-3 uppercase tracking-wide">Contacts légaux</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="hud-text text-xs">Email RGPD / Protection des données</Label>
+                  <Input
+                    type="email"
+                    value={(designSettings as any).legalRgpdEmail ?? ''}
+                    onChange={e => updateDesignSettings({ legalRgpdEmail: e.target.value } as any)}
+                    placeholder="rgpd@votredomaine.com"
+                    className="bg-secondary/50 border-border/30"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="hud-text text-xs">Email service retours</Label>
+                  <Input
+                    type="email"
+                    value={(designSettings as any).legalReturnEmail ?? ''}
+                    onChange={e => updateDesignSettings({ legalReturnEmail: e.target.value } as any)}
+                    placeholder="retours@votredomaine.com"
+                    className="bg-secondary/50 border-border/30"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground border-t border-border pt-4">
+              Ces informations sont sauvegardées automatiquement. Elles remplacent les mentions "[Non configuré]" sur les pages légales publiques.
+            </p>
+          </div>
+        </TabsContent>
       </Tabs>
 
       <CategoryFormDialog
