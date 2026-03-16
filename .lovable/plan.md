@@ -1,103 +1,75 @@
 
-## Thinking
+## Plan : Impression en masse + Suppression en masse — Colissimo
 
-The user wants to:
-1. Upload a product mockup image (like the Marco jacket shown)
-2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
-3. Automatically generates a fully interactive, dynamic product page from it
+### Contexte
 
-The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
+Le composant `CommandesTab` dans `AdminColissimo.tsx` (1377 lignes) possède déjà :
+- Un select d'actions groupées (`bulkAction`) avec `generate`, `ship`, `delete` (supprime uniquement les numéros de suivi)
+- Une fonction `generateLabel` qui génère 1 étiquette et met le PDF en cache dans `pdfCache`
+- `downloadPdf` et `printPdf` pour agir sur un PDF base64
 
-1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
-   - Accepts an image (jpg/png/webp)
-   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
-   - Also extracts the **color variants** as `colorOptions` with proper hex values
-   - Returns a structured product object ready to pre-fill the ProductForm
+### Ce qui manque
 
-2. **Add "Importer Maquette IA" button** in AdminProducts that:
-   - Opens a dialog with a dropzone accepting images
-   - Sends image to the edge function
-   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
-   - Lets admin review/edit before confirming creation
-   - On confirm: creates the product in the DB with all extracted data
+**1. Impression en masse** : Générer les étiquettes de toutes les commandes sélectionnées → combiner tous les PDFs en une seule fenêtre d'impression. Technique : créer une page HTML avec des `<iframe>` ou des `<img>` encodés en data:URI pour chaque PDF, et déclencher `window.print()`. Comme les PDFs Colissimo sont au format 10×15, on les affichera dans un iframe combiné.
 
-3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
+**2. Suppression en masse des commandes** : Supprimer définitivement les commandes sélectionnées de la table `orders` (RLS DELETE admin OK). Nécessite une dialog de confirmation avec le compte des commandes à supprimer.
 
-Looking at the Marco image:
-- Product name: MARCO
-- Brand: Helvetica Mountain Pioneers x PEGASWOES  
-- Season: HIVER 2026
-- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
-- Sizes: XS, S, M, L, XL, XXL
-- Composition: 100% POLYESTER
-- Tags: limited edition
+### Modifications dans `AdminColissimo.tsx`
 
-## Plan
+**A. Nouveau state**
+- `deleteConfirmOpen: boolean` — dialog confirmation suppression en masse
+- `bulkPrintLoading: boolean` — état chargement pour l'impression groupée
 
-### 1. New edge function `analyze-product-image`
-New file: `supabase/functions/analyze-product-image/index.ts`
+**B. Nouvelle function `handleBulkPrint()`**
+```
+Pour chaque commande sélectionnée:
+  1. Si PDF déjà en cache → l'utiliser
+  2. Sinon → appeler generateLabel() et récupérer le PDF
+Combiner tous les PDFs en une page HTML multi-pages et appeler window.print()
+```
+Technique : ouvrir une fenêtre popup avec un `<iframe>` par PDF (ou une page contenant chaque PDF base64 dans un `<embed>` avec `page-break-after`).
 
-Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
-- name, subtitle, price (ask to estimate if not found), category
-- sizes (exact text from image)
-- colors with **hex values** from the color swatches visible in image
-- colorOptions: [{color: "#hex", label: "nom"}]
-- material/composition
-- description (generated from visual)
-- sku (auto-generated)
-- tags (e.g., "limited edition" if spotted)
-- Any brand/collection info → subtitle
+**C. Nouvelle function `handleBulkDelete()`**
+```
+await supabase.from('orders').delete().in('id', Array.from(selected))
+Vider la sélection
+Invalider le cache React Query
+Toast de confirmation
+```
 
-### 2. New UI component `ImportMockupDialog.tsx`
-In `src/components/admin/ImportMockupDialog.tsx`:
-- Image dropzone (jpg/png/webp/gif up to 10MB)
-- Preview of uploaded image
-- "Analyser avec l'IA" button
-- Loading state with animated scan effect
-- Results preview:
-  - Product name, subtitle
-  - Price field (editable, since AI may not find it)
-  - Color swatches preview
-  - Size badges preview
-  - Material info
-  - Generated description
-- "Créer ce produit" confirm button
-- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
+**D. Modifier le Select d'actions groupées**
+Ajouter 2 nouvelles options :
+- `print_bulk` → "Imprimer les étiquettes en masse"
+- `delete_orders` → "Supprimer les commandes"
 
-### 3. AdminProducts integration
-- Add "Importer Maquette IA" button next to existing "Importer PDF" button
-- Opens the new ImportMockupDialog
-- After product created, show toast + option to go to product detail
+**E. `applyBulkAction` — gérer les 2 nouveaux cas**
+- `print_bulk` : appeler `handleBulkPrint()`
+- `delete_orders` : ouvrir `deleteConfirmOpen` (pas d'action directe)
 
-### Files to create/modify
-- `supabase/functions/analyze-product-image/index.ts` — new edge function
-- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
-- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
+**F. Dialog de confirmation suppression**
+```
+"Supprimer {N} commande(s) ?"
+"Cette action est irréversible. Les commandes seront définitivement supprimées."
+[Annuler] [Supprimer définitivement]
+```
 
-## Implementation Steps
+### Impression groupée — technique retenue
 
-### Step 1: Edge function `analyze-product-image`
-Input: `{ imageBase64: string, mimeType: string }`
-Prompt to Gemini Pro Vision:
-- Extract all visible product info
-- Extract hex colors from color swatches
-- Generate description if not present
-- Output strict JSON matching `ExtractedProductData` schema
+Générer un blob HTML contenant :
+```html
+<html><body style="margin:0">
+  <embed src="data:application/pdf;base64,{PDF1}" width="100%" height="100%" style="page-break-after:always" />
+  <embed src="data:application/pdf;base64,{PDF2}" width="100%" height="100%" />
+</body></html>
+```
+Ouvrir dans `window.open()` puis déclencher `window.print()`.
 
-### Step 2: `ImportMockupDialog` component
-States:
-- `file`, `preview` (image URL)
-- `analyzing` (loading state)
-- `extracted` (ExtractedProductData | null)
-- `editableData` (form state to review/edit before import)
+Pour les commandes sans PDF en cache, le système va d'abord générer l'étiquette via l'API Colissimo (séquentiellement), puis imprimer tout en une fois. Un loader s'affiche pendant la génération.
 
-UX Flow:
-1. Drag & drop or click to upload image
-2. Preview appears
-3. Click "Analyser avec IA" → loading scan animation
-4. Results appear: color swatches, size badges, all info
-5. User can edit price/name if needed
-6. Click "Créer le produit" → uploads image to storage, creates product, success
+### Seul fichier modifié
 
-### Step 3: AdminProducts button
-Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)
+| Fichier | Changements |
+|---|---|
+| `src/pages/admin/AdminColissimo.tsx` | + 2 nouvelles actions groupées, + dialog confirmation delete, + fonction `handleBulkPrint`, + fonction `handleBulkDelete` |
+
+Pas de migration DB nécessaire — la RLS DELETE admin est déjà en place sur la table `orders`.
