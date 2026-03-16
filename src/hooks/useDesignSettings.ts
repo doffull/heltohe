@@ -207,6 +207,19 @@ function settingsToDb(s: DesignSettings) {
     mannequin_hotspots: s.mannequinHotspots as unknown as Json,
     // Sidebar brand position
     sidebar_brand_position: (s as any).sidebarBrandPosition ?? 'top',
+    // Legal / company info
+    legal_company_name: s.legalCompanyName ?? '',
+    legal_company_form: s.legalCompanyForm ?? '',
+    legal_capital: s.legalCapital ?? '',
+    legal_address: s.legalAddress ?? '',
+    legal_zip: s.legalZip ?? '',
+    legal_city: s.legalCity ?? '',
+    legal_siret: s.legalSiret ?? '',
+    legal_rcs: s.legalRcs ?? '',
+    legal_vat: s.legalVat ?? '',
+    legal_director: s.legalDirector ?? '',
+    legal_rgpd_email: s.legalRgpdEmail ?? '',
+    legal_return_email: s.legalReturnEmail ?? '',
   };
 }
 
