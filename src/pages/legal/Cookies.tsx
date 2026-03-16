@@ -1,12 +1,24 @@
 import { LegalLayout } from './LegalLayout';
+import { useLegalInfo } from '@/hooks/useLegalInfo';
+
+function NC({ value }: { value: string }) {
+  if (value !== '[Non configuré]') return <>{value}</>;
+  return (
+    <span className="inline-flex items-center gap-1 bg-orange-500/15 text-orange-500 border border-orange-500/30 text-[11px] font-mono px-1.5 py-0.5 rounded">
+      Non configuré
+    </span>
+  );
+}
 
 export default function Cookies() {
+  const info = useLegalInfo();
+
   return (
     <LegalLayout title="Politique Cookies" lastUpdated="Mars 2026">
       <p>
         Ce site utilise des cookies et technologies similaires pour améliorer votre expérience de navigation, analyser
         l'utilisation du site et personnaliser le contenu. La présente politique explique ce que sont les cookies, comment
-        nous les utilisons et comment vous pouvez les gérer.
+        <NC value={info.companyName} /> les utilise et comment vous pouvez les gérer.
       </p>
 
       <h2>Qu'est-ce qu'un cookie ?</h2>
@@ -96,7 +108,7 @@ export default function Cookies() {
       <h2>Contact</h2>
       <p>
         Pour toute question relative à notre utilisation des cookies, contactez-nous à :{' '}
-        <a href="mailto:rgpd@votre-site.fr">rgpd@votre-site.fr</a>
+        <a href={`mailto:${info.rgpdEmail}`}><NC value={info.rgpdEmail} /></a>
       </p>
 
       <p>

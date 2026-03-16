@@ -422,6 +422,18 @@ export type Database = {
           hud_logo: string | null
           id: string
           is_slideshow_active: boolean | null
+          legal_address: string | null
+          legal_capital: string | null
+          legal_city: string | null
+          legal_company_form: string | null
+          legal_company_name: string | null
+          legal_director: string | null
+          legal_rcs: string | null
+          legal_return_email: string | null
+          legal_rgpd_email: string | null
+          legal_siret: string | null
+          legal_vat: string | null
+          legal_zip: string | null
           logo_style: Json | null
           mannequin_hotspots: Json
           mobile_sidebar_image: string | null
@@ -509,6 +521,18 @@ export type Database = {
           hud_logo?: string | null
           id?: string
           is_slideshow_active?: boolean | null
+          legal_address?: string | null
+          legal_capital?: string | null
+          legal_city?: string | null
+          legal_company_form?: string | null
+          legal_company_name?: string | null
+          legal_director?: string | null
+          legal_rcs?: string | null
+          legal_return_email?: string | null
+          legal_rgpd_email?: string | null
+          legal_siret?: string | null
+          legal_vat?: string | null
+          legal_zip?: string | null
           logo_style?: Json | null
           mannequin_hotspots?: Json
           mobile_sidebar_image?: string | null
@@ -596,6 +620,18 @@ export type Database = {
           hud_logo?: string | null
           id?: string
           is_slideshow_active?: boolean | null
+          legal_address?: string | null
+          legal_capital?: string | null
+          legal_city?: string | null
+          legal_company_form?: string | null
+          legal_company_name?: string | null
+          legal_director?: string | null
+          legal_rcs?: string | null
+          legal_return_email?: string | null
+          legal_rgpd_email?: string | null
+          legal_siret?: string | null
+          legal_vat?: string | null
+          legal_zip?: string | null
           logo_style?: Json | null
           mannequin_hotspots?: Json
           mobile_sidebar_image?: string | null

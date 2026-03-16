@@ -321,6 +321,20 @@ export interface DesignSettings {
   globalMutedColor?: string;
   footerBgColor?: string;
   footerTextColor?: string;
+
+  // Legal / company info (shown on legal pages, configurable in Admin > Paramètres > Légal)
+  legalCompanyName?: string;
+  legalCompanyForm?: string;
+  legalCapital?: string;
+  legalAddress?: string;
+  legalZip?: string;
+  legalCity?: string;
+  legalSiret?: string;
+  legalRcs?: string;
+  legalVat?: string;
+  legalDirector?: string;
+  legalRgpdEmail?: string;
+  legalReturnEmail?: string;
 }
 
 export type MarkerType = 'dot' | 'cross' | 'diamond' | 'square' | 'ring';

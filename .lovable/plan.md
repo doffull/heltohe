@@ -1,86 +1,103 @@
 
-## Plan : Informations légales configurables depuis Admin > Paramètres
+## Thinking
 
-### Analyse de la situation
+The user wants to:
+1. Upload a product mockup image (like the Marco jacket shown)
+2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
+3. Automatically generates a fully interactive, dynamic product page from it
 
-**`admin_config` table** (colonnes actuelles) : `config_key`, `admin_notification_email`, `colissimo_sender_*` — **aucun champ légal**.
+The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
 
-**`design_settings` table** : contient déjà `site_name`, `contact_email`, `contact_phone` — ces champs sont publics (RLS SELECT = true), donc utilisables dans les pages légales.
+1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
+   - Accepts an image (jpg/png/webp)
+   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
+   - Also extracts the **color variants** as `colorOptions` with proper hex values
+   - Returns a structured product object ready to pre-fill the ProductForm
 
-**`admin_config`** est privée (SELECT admin seulement) → parfait pour stocker SIRET, TVA, forme juridique, adresse légale, capital social, directeur de publication — données sensibles visibles uniquement dans les pages légales publiques.
+2. **Add "Importer Maquette IA" button** in AdminProducts that:
+   - Opens a dialog with a dropzone accepting images
+   - Sends image to the edge function
+   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
+   - Lets admin review/edit before confirming creation
+   - On confirm: creates the product in the DB with all extracted data
 
-**Problème** : `admin_config` a une RLS `ALL` pour admins mais **aucune policy SELECT publique**. Pour que les pages légales lisent ces données côté public, il faut soit :
-- A) Ajouter une policy SELECT publique sur `admin_config` pour des colonnes spécifiques
-- B) Utiliser `design_settings` (déjà SELECT public) pour les données légales
+3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
 
-**Décision** : Utiliser **`design_settings`** pour les infos légales — il est déjà public, déjà chargé globalement via `useDesignSettings`, et le site_name/contact sont déjà là. Les champs légaux (SIRET, TVA, etc.) ne sont pas "sensibles" car ils apparaissent sur les pages légales publiques.
+Looking at the Marco image:
+- Product name: MARCO
+- Brand: Helvetica Mountain Pioneers x PEGASWOES  
+- Season: HIVER 2026
+- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
+- Sizes: XS, S, M, L, XL, XXL
+- Composition: 100% POLYESTER
+- Tags: limited edition
 
-### Migration DB : ajouter colonnes légales à `design_settings`
+## Plan
 
-```sql
-ALTER TABLE design_settings
-  ADD COLUMN IF NOT EXISTS legal_company_name text DEFAULT '',
-  ADD COLUMN IF NOT EXISTS legal_company_form text DEFAULT '',
-  ADD COLUMN IF NOT EXISTS legal_capital text DEFAULT '',
-  ADD COLUMN IF NOT EXISTS legal_address text DEFAULT '',
-  ADD COLUMN IF NOT EXISTS legal_zip text DEFAULT '',
-  ADD COLUMN IF NOT EXISTS legal_city text DEFAULT '',
-  ADD COLUMN IF NOT EXISTS legal_siret text DEFAULT '',
-  ADD COLUMN IF NOT EXISTS legal_rcs text DEFAULT '',
-  ADD COLUMN IF NOT EXISTS legal_vat text DEFAULT '',
-  ADD COLUMN IF NOT EXISTS legal_director text DEFAULT '',
-  ADD COLUMN IF NOT EXISTS legal_rgpd_email text DEFAULT '',
-  ADD COLUMN IF NOT EXISTS legal_return_email text DEFAULT '';
-```
+### 1. New edge function `analyze-product-image`
+New file: `supabase/functions/analyze-product-image/index.ts`
 
-### Hook `useDesignSettings` — ajouter les nouveaux champs
+Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
+- name, subtitle, price (ask to estimate if not found), category
+- sizes (exact text from image)
+- colors with **hex values** from the color swatches visible in image
+- colorOptions: [{color: "#hex", label: "nom"}]
+- material/composition
+- description (generated from visual)
+- sku (auto-generated)
+- tags (e.g., "limited edition" if spotted)
+- Any brand/collection info → subtitle
 
-`src/hooks/useDesignSettings.ts` + `src/types/index.ts` : ajouter les champs `legalCompanyName`, `legalCompanyForm`, `legalCapital`, `legalAddress`, `legalZip`, `legalCity`, `legalSiret`, `legalRcs`, `legalVat`, `legalDirector`, `legalRgpdEmail`, `legalReturnEmail` au type `DesignSettings`.
+### 2. New UI component `ImportMockupDialog.tsx`
+In `src/components/admin/ImportMockupDialog.tsx`:
+- Image dropzone (jpg/png/webp/gif up to 10MB)
+- Preview of uploaded image
+- "Analyser avec l'IA" button
+- Loading state with animated scan effect
+- Results preview:
+  - Product name, subtitle
+  - Price field (editable, since AI may not find it)
+  - Color swatches preview
+  - Size badges preview
+  - Material info
+  - Generated description
+- "Créer ce produit" confirm button
+- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
 
-### Admin > Paramètres — nouvel onglet "Mentions légales"
+### 3. AdminProducts integration
+- Add "Importer Maquette IA" button next to existing "Importer PDF" button
+- Opens the new ImportMockupDialog
+- After product created, show toast + option to go to product detail
 
-Dans `AdminSettings.tsx`, ajouter un 4ème onglet **"Légal"** avec :
-- Nom de la société / Raison sociale
-- Forme juridique (SARL, SAS, auto-entrepreneur...)
-- Capital social
-- Adresse du siège social (rue, CP, ville)
-- SIRET
-- RCS
-- N° TVA intracommunautaire
-- Directeur de publication
-- Email RGPD
-- Email retours
+### Files to create/modify
+- `supabase/functions/analyze-product-image/index.ts` — new edge function
+- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
+- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
 
-Ces champs se sauvegardent via `updateDesignSettings` (auto-save) exactement comme les champs nom/téléphone existants.
+## Implementation Steps
 
-### Pages légales — remplacer les placeholders
+### Step 1: Edge function `analyze-product-image`
+Input: `{ imageBase64: string, mimeType: string }`
+Prompt to Gemini Pro Vision:
+- Extract all visible product info
+- Extract hex colors from color swatches
+- Generate description if not present
+- Output strict JSON matching `ExtractedProductData` schema
 
-Créer un hook `useLegalInfo()` dans `src/hooks/useLegalInfo.ts` qui retourne les infos depuis `useDesignSettings` avec fallbacks clairs (`[Non configuré]`).
+### Step 2: `ImportMockupDialog` component
+States:
+- `file`, `preview` (image URL)
+- `analyzing` (loading state)
+- `extracted` (ExtractedProductData | null)
+- `editableData` (form state to review/edit before import)
 
-Mettre à jour les 5 pages légales pour utiliser ce hook :
-- `MentionsLegales.tsx` → société, SIRET, RCS, TVA, adresse, directeur, hébergeur
-- `CGV.tsx` → nom société, email retours, email contact
-- `Confidentialite.tsx` → nom société, adresse, email RGPD
-- `Cookies.tsx` → nom société
-- `Retours.tsx` → email retours, délai, adresse
+UX Flow:
+1. Drag & drop or click to upload image
+2. Preview appears
+3. Click "Analyser avec IA" → loading scan animation
+4. Results appear: color swatches, size badges, all info
+5. User can edit price/name if needed
+6. Click "Créer le produit" → uploads image to storage, creates product, success
 
-### Fichiers à modifier/créer
-
-| Fichier | Action |
-|---|---|
-| `supabase/migrations/` | ADD COLUMN legal_* sur `design_settings` |
-| `src/types/index.ts` | Ajouter champs `legal*` à `DesignSettings` |
-| `src/hooks/useDesignSettings.ts` | Mapper les nouveaux champs DB ↔ type |
-| `src/hooks/useLegalInfo.ts` | Nouveau hook centralisant les infos légales |
-| `src/pages/admin/AdminSettings.tsx` | Nouvel onglet "Légal" avec 12 champs |
-| `src/pages/legal/MentionsLegales.tsx` | Remplacer placeholders par données dynamiques |
-| `src/pages/legal/CGV.tsx` | Remplacer placeholders |
-| `src/pages/legal/Confidentialite.tsx` | Remplacer placeholders |
-| `src/pages/legal/Cookies.tsx` | Remplacer placeholders |
-| `src/pages/legal/Retours.tsx` | Remplacer placeholders |
-
-### Résultat attendu
-
-- Admin remplit ses infos légales une seule fois dans **Admin > Paramètres > Légal**
-- Toutes les pages légales publiques affichent dynamiquement ces informations
-- Les champs non remplis affichent un badge `[Non configuré]` en orange pour signaler à l'admin ce qui manque
+### Step 3: AdminProducts button
+Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)

@@ -1,10 +1,22 @@
 import { LegalLayout } from './LegalLayout';
+import { useLegalInfo } from '@/hooks/useLegalInfo';
+
+function NC({ value }: { value: string }) {
+  if (value !== '[Non configuré]') return <>{value}</>;
+  return (
+    <span className="inline-flex items-center gap-1 bg-orange-500/15 text-orange-500 border border-orange-500/30 text-[11px] font-mono px-1.5 py-0.5 rounded">
+      Non configuré
+    </span>
+  );
+}
 
 export default function Confidentialite() {
+  const info = useLegalInfo();
+
   return (
     <LegalLayout title="Politique de Confidentialité" lastUpdated="Mars 2026">
       <p>
-        La présente politique de confidentialité décrit comment [Nom de la société] (ci-après "nous") collecte, utilise
+        La présente politique de confidentialité décrit comment <NC value={info.companyName} /> (ci-après "nous") collecte, utilise
         et protège vos données personnelles conformément au Règlement Général sur la Protection des Données (RGPD) et à
         la loi Informatique et Libertés.
       </p>
@@ -12,9 +24,9 @@ export default function Confidentialite() {
       <h2>1. Responsable du traitement</h2>
       <p>
         Le responsable du traitement des données est :<br />
-        <strong>[Nom de la société]</strong><br />
-        [Adresse]<br />
-        Email : <a href="mailto:rgpd@votre-site.fr">rgpd@votre-site.fr</a>
+        <strong><NC value={info.companyName} /></strong><br />
+        <NC value={info.fullAddress} /><br />
+        Email : <a href={`mailto:${info.rgpdEmail}`}><NC value={info.rgpdEmail} /></a>
       </p>
 
       <h2>2. Données collectées</h2>
@@ -80,7 +92,7 @@ export default function Confidentialite() {
       </ul>
       <p>
         Pour exercer ces droits, contactez-nous à :{' '}
-        <a href="mailto:rgpd@votre-site.fr">rgpd@votre-site.fr</a>. Vous pouvez également déposer une réclamation auprès
+        <a href={`mailto:${info.rgpdEmail}`}><NC value={info.rgpdEmail} /></a>. Vous pouvez également déposer une réclamation auprès
         de la CNIL (<a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer">www.cnil.fr</a>).
       </p>
 

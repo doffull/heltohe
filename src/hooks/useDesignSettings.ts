@@ -105,6 +105,19 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     mannequinHotspots: (db.mannequin_hotspots as typeof base.mannequinHotspots) ?? [],
     // Sidebar brand position
     sidebarBrandPosition: (((db as any).sidebar_brand_position as string) || 'top') as 'top' | 'center' | 'bottom',
+    // Legal / company info
+    legalCompanyName: (db.legal_company_name as string) ?? '',
+    legalCompanyForm: (db.legal_company_form as string) ?? '',
+    legalCapital: (db.legal_capital as string) ?? '',
+    legalAddress: (db.legal_address as string) ?? '',
+    legalZip: (db.legal_zip as string) ?? '',
+    legalCity: (db.legal_city as string) ?? '',
+    legalSiret: (db.legal_siret as string) ?? '',
+    legalRcs: (db.legal_rcs as string) ?? '',
+    legalVat: (db.legal_vat as string) ?? '',
+    legalDirector: (db.legal_director as string) ?? '',
+    legalRgpdEmail: (db.legal_rgpd_email as string) ?? '',
+    legalReturnEmail: (db.legal_return_email as string) ?? '',
   };
 }
 
@@ -194,6 +207,19 @@ function settingsToDb(s: DesignSettings) {
     mannequin_hotspots: s.mannequinHotspots as unknown as Json,
     // Sidebar brand position
     sidebar_brand_position: (s as any).sidebarBrandPosition ?? 'top',
+    // Legal / company info
+    legal_company_name: s.legalCompanyName ?? '',
+    legal_company_form: s.legalCompanyForm ?? '',
+    legal_capital: s.legalCapital ?? '',
+    legal_address: s.legalAddress ?? '',
+    legal_zip: s.legalZip ?? '',
+    legal_city: s.legalCity ?? '',
+    legal_siret: s.legalSiret ?? '',
+    legal_rcs: s.legalRcs ?? '',
+    legal_vat: s.legalVat ?? '',
+    legal_director: s.legalDirector ?? '',
+    legal_rgpd_email: s.legalRgpdEmail ?? '',
+    legal_return_email: s.legalReturnEmail ?? '',
   };
 }
 
