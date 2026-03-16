@@ -177,6 +177,7 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
   const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({});
   const [pdfCache, setPdfCache] = useState<Record<string, string>>({}); // orderId → base64
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkPrintLoading, setBulkPrintLoading] = useState(false);
   const [bulkAction, setBulkAction] = useState('');
   const [page, setPage] = useState(1);
   const [sortKey, setSortKey] = useState<SortKey>('date');
@@ -185,6 +186,7 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
   const [importText, setImportText] = useState('');
   const [importLoading, setImportLoading] = useState(false);
   const [refreshLoading, setRefreshLoading] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const countries = Array.from(new Set(orders.map((o: Order) => o.customer?.country).filter(Boolean)));
   const shippingMethods = Array.from(new Set(orders.map((o: Order) => o.shippingCarrier || o.paymentMethod).filter(Boolean)));
