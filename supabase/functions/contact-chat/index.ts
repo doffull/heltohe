@@ -23,9 +23,61 @@ Si tu ne sais pas, propose de contacter le service client par email. Ne promets 
 const MAX_MESSAGES = 20;
 const MAX_CONTENT_LENGTH = 4000;
 
+// ── In-memory rate limiter ─────────────────────────────────────────────────
+// Keyed by IP address. Allows MAX_REQUESTS per WINDOW_MS rolling window.
+const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 20;
+
+interface RateEntry {
+  count: number;
+  windowStart: number;
+}
+const rateLimitMap = new Map<string, RateEntry>();
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+
+  if (!entry || now - entry.windowStart >= RATE_LIMIT_WINDOW_MS) {
+    // New window
+    rateLimitMap.set(ip, { count: 1, windowStart: now });
+    return false;
+  }
+
+  entry.count += 1;
+  if (entry.count > MAX_REQUESTS_PER_WINDOW) {
+    return true;
+  }
+  return false;
+}
+
+// Periodically purge stale entries to avoid unbounded memory growth
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of rateLimitMap.entries()) {
+    if (now - entry.windowStart >= RATE_LIMIT_WINDOW_MS * 2) {
+      rateLimitMap.delete(ip);
+    }
+  }
+}, RATE_LIMIT_WINDOW_MS * 2);
+// ──────────────────────────────────────────────────────────────────────────
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Rate limiting by IP
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+    req.headers.get("cf-connecting-ip") ??
+    "unknown";
+
+  if (isRateLimited(ip)) {
+    return new Response(
+      JSON.stringify({ error: "Trop de requêtes, veuillez réessayer dans un moment." }),
+      { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 
   try {
