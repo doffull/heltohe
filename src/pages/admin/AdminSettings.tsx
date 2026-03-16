@@ -56,6 +56,7 @@ export default function AdminSettings() {
           <TabsTrigger value="categories" className="gap-2"><LayoutGrid className="h-4 w-4" />Catégories</TabsTrigger>
           <TabsTrigger value="customization" className="gap-2"><Paintbrush className="h-4 w-4" />Personnalisation</TabsTrigger>
           <TabsTrigger value="general" className="gap-2"><Settings className="h-4 w-4" />Général</TabsTrigger>
+          <TabsTrigger value="legal" className="gap-2"><Scale className="h-4 w-4" />Légal</TabsTrigger>
         </TabsList>
 
         {/* ── CATEGORIES TAB ── */}
