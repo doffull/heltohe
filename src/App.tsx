@@ -120,7 +120,7 @@ function AnimatedRoutes() {
         exit="exit"
         transition={pageTransition}
       >
-        <Routes location={location}>
+          <Routes location={location}>
           <Route path="/" element={<MainLayout><Home /></MainLayout>} />
           <Route path="/boutique" element={<MainLayout><Shop /></MainLayout>} />
           <Route path="/boutique/:slugOrId" element={<MainLayout><BoutiqueRouter /></MainLayout>} />
@@ -131,6 +131,12 @@ function AnimatedRoutes() {
           <Route path="/auth" element={<Auth />} />
           <Route path="/compte/*" element={<MainLayout><Account /></MainLayout>} />
           <Route path="/admin/*" element={<Admin />} />
+          {/* Legal pages */}
+          <Route path="/cgv" element={<MainLayout><CGV /></MainLayout>} />
+          <Route path="/confidentialite" element={<MainLayout><Confidentialite /></MainLayout>} />
+          <Route path="/cookies" element={<MainLayout><Cookies /></MainLayout>} />
+          <Route path="/retours" element={<MainLayout><Retours /></MainLayout>} />
+          <Route path="/mentions-legales" element={<MainLayout><MentionsLegales /></MainLayout>} />
           <Route path="/:categorySlug" element={<MainLayout><CategoryPageRouter /></MainLayout>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
