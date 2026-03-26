@@ -769,6 +769,33 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
               <SelectItem value="both">B2B+B2C</SelectItem>
             </SelectContent>
           </Select>
+          {boutiqueLocations.length > 0 && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2 text-xs h-10">
+                  <Store className="h-3.5 w-3.5" />
+                  Boutiques {selectedBoutiques.size > 0 ? `(${selectedBoutiques.size})` : ''}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-2" align="start">
+                <p className="text-xs font-medium text-muted-foreground px-2 py-1 mb-1">Afficher les colonnes :</p>
+                {boutiqueLocations.map((loc: Location) => (
+                  <label key={loc.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
+                    <Checkbox
+                      checked={selectedBoutiques.has(loc.id)}
+                      onCheckedChange={() => toggleBoutiqueFilter(loc.id)}
+                    />
+                    {loc.name}
+                  </label>
+                ))}
+                {selectedBoutiques.size > 0 && (
+                  <Button variant="ghost" size="sm" className="w-full mt-1 text-xs" onClick={() => setSelectedBoutiques(new Set())}>
+                    Tout masquer
+                  </Button>
+                )}
+              </PopoverContent>
+            </Popover>
+          )}
         </div>
       </div>
 
