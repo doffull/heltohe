@@ -32,6 +32,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 type Location = {
   id: string; name: string; type: string; city: string | null; address: string | null; is_active: boolean;
@@ -430,9 +431,21 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
   const [transferQty, setTransferQty] = useState(1);
   const [transferDestId, setTransferDestId] = useState('');
   const [transferring, setTransferring] = useState(false);
+  const [selectedBoutiques, setSelectedBoutiques] = useState<Set<string>>(new Set());
 
   const boutiqueLocations = locations.filter((l: Location) => l.type === 'boutique');
   const webLocation = locations.find((l: Location) => l.type === 'web');
+
+  const toggleBoutiqueFilter = (locId: string) => {
+    setSelectedBoutiques(prev => {
+      const next = new Set(prev);
+      next.has(locId) ? next.delete(locId) : next.add(locId);
+      return next;
+    });
+  };
+
+  const visibleBoutiques = boutiqueLocations.filter((l: Location) => selectedBoutiques.has(l.id));
+  const hiddenBoutiques = boutiqueLocations.filter((l: Location) => !selectedBoutiques.has(l.id));
 
   // ── Sync: create inventory + stock_levels for products not yet in inventory ──
   const handleSyncProducts = async () => {
