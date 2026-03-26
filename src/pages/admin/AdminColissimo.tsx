@@ -686,9 +686,15 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
                     {order.id.slice(0, 8)}
                   </TableCell>
 
-                  {/* Order number */}
+                  {/* Order number — clickable link to admin orders */}
                   <TableCell>
-                    <span className="font-semibold text-sm text-primary">#{order.orderNumber}</span>
+                    <a
+                      href={`/admin?tab=orders&search=${encodeURIComponent(order.orderNumber)}`}
+                      className="font-semibold text-sm text-primary hover:underline"
+                      title="Voir la commande"
+                    >
+                      #{order.orderNumber}
+                    </a>
                   </TableCell>
 
                   {/* Date */}
