@@ -926,7 +926,35 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                       </span>
                     </TableCell>
                   )}
-                  {boutiqueLocations.map((loc: Location) => {
+                  {/* Aggregated hidden boutiques column */}
+                  {hiddenBoutiques.length > 0 && (
+                    <TableCell className="text-right font-mono" onClick={e => e.stopPropagation()}>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button className={cn(
+                            "text-sm font-semibold cursor-pointer hover:text-primary transition-colors px-1 py-0.5 rounded hover:bg-primary/10",
+                            hiddenBoutiques.reduce((s: number, loc: Location) => s + getStockForItem(item.id, loc.id), 0) === 0 ? "text-muted-foreground/40" : "text-foreground"
+                          )}>
+                            {hiddenBoutiques.reduce((s: number, loc: Location) => s + getStockForItem(item.id, loc.id), 0)}
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-52 p-2" align="end">
+                          <p className="text-xs font-medium text-muted-foreground px-1 mb-1.5">Détail par boutique</p>
+                          {hiddenBoutiques.map((loc: Location) => {
+                            const locQty = getStockForItem(item.id, loc.id);
+                            return (
+                              <div key={loc.id} className="flex items-center justify-between px-1 py-1 text-sm">
+                                <span className="text-muted-foreground truncate mr-2">{loc.name}</span>
+                                <span className={cn("font-mono font-semibold", locQty === 0 ? "text-muted-foreground/40" : "text-foreground")}>{locQty}</span>
+                              </div>
+                            );
+                          })}
+                        </PopoverContent>
+                      </Popover>
+                    </TableCell>
+                  )}
+                  {/* Visible (filtered) boutique columns */}
+                  {visibleBoutiques.map((loc: Location) => {
                     const locQty = getStockForItem(item.id, loc.id);
                     return (
                       <TableCell key={loc.id} className="text-right font-mono" onClick={e => e.stopPropagation()}>
