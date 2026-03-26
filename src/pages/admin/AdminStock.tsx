@@ -1065,7 +1065,42 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                           />
                         </TableCell>
                       )}
-                      {boutiqueLocations.map((loc: Location) => {
+                      {/* Aggregated hidden boutiques for variant */}
+                      {hiddenBoutiques.length > 0 && (
+                        <TableCell className="text-right">
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button className="text-xs font-mono font-semibold cursor-pointer hover:text-primary transition-colors px-1 py-0.5 rounded hover:bg-primary/10">
+                                {hiddenBoutiques.reduce((s: number, loc: Location) => {
+                                  const lvl = stockLevels.find((sl: StockLevel) =>
+                                    sl.inventory_id === item.id && sl.location_id === loc.id &&
+                                    sl.size === variant.size && sl.color === variant.color
+                                  );
+                                  return s + (lvl?.quantity ?? 0);
+                                }, 0)}
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-52 p-2" align="end">
+                              <p className="text-xs font-medium text-muted-foreground px-1 mb-1.5">Détail par boutique</p>
+                              {hiddenBoutiques.map((loc: Location) => {
+                                const lvl = stockLevels.find((sl: StockLevel) =>
+                                  sl.inventory_id === item.id && sl.location_id === loc.id &&
+                                  sl.size === variant.size && sl.color === variant.color
+                                );
+                                const q = lvl?.quantity ?? 0;
+                                return (
+                                  <div key={loc.id} className="flex items-center justify-between px-1 py-1 text-sm">
+                                    <span className="text-muted-foreground truncate mr-2">{loc.name}</span>
+                                    <span className={cn("font-mono font-semibold", q === 0 ? "text-muted-foreground/40" : "text-foreground")}>{q}</span>
+                                  </div>
+                                );
+                              })}
+                            </PopoverContent>
+                          </Popover>
+                        </TableCell>
+                      )}
+                      {/* Visible boutique columns for variant */}
+                      {visibleBoutiques.map((loc: Location) => {
                         const boutVariantLevel = stockLevels.find((sl: StockLevel) =>
                           sl.inventory_id === item.id &&
                           sl.location_id === loc.id &&
