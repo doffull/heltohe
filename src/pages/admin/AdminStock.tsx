@@ -815,7 +815,15 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                   </span>
                 </TableHead>
               )}
-              {boutiqueLocations.map((loc: Location) => (
+              {hiddenBoutiques.length > 0 && (
+                <TableHead className="text-right whitespace-nowrap text-xs">
+                  <span className="inline-flex items-center justify-end gap-1">
+                    <Store className="h-3 w-3 text-muted-foreground" />
+                    Boutiques ({hiddenBoutiques.length})
+                  </span>
+                </TableHead>
+              )}
+              {visibleBoutiques.map((loc: Location) => (
                 <TableHead key={loc.id} className="text-right whitespace-nowrap text-xs">
                   <span className="inline-flex items-center justify-end gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground inline-block shrink-0" />
@@ -831,7 +839,7 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
           </TableHeader>
           <TableBody>
             {items.length === 0 ? (
-              <TableRow><TableCell colSpan={8 + (webLocation ? 1 : 0) + boutiqueLocations.length} className="text-center text-muted-foreground py-8">Aucun produit en inventaire</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8 + (webLocation ? 1 : 0) + (hiddenBoutiques.length > 0 ? 1 : 0) + visibleBoutiques.length} className="text-center text-muted-foreground py-8">Aucun produit en inventaire</TableCell></TableRow>
             ) : items.map((item: InventoryItem) => {
               const total = getStockForItem(item.id);
               const reserved = stockLevels.filter((sl: StockLevel) => sl.inventory_id === item.id).reduce((s: number, sl: StockLevel) => s + sl.reserved, 0);
