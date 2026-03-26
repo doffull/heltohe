@@ -32,6 +32,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 type Location = {
   id: string; name: string; type: string; city: string | null; address: string | null; is_active: boolean;
@@ -430,9 +431,21 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
   const [transferQty, setTransferQty] = useState(1);
   const [transferDestId, setTransferDestId] = useState('');
   const [transferring, setTransferring] = useState(false);
+  const [selectedBoutiques, setSelectedBoutiques] = useState<Set<string>>(new Set());
 
   const boutiqueLocations = locations.filter((l: Location) => l.type === 'boutique');
   const webLocation = locations.find((l: Location) => l.type === 'web');
+
+  const toggleBoutiqueFilter = (locId: string) => {
+    setSelectedBoutiques(prev => {
+      const next = new Set(prev);
+      next.has(locId) ? next.delete(locId) : next.add(locId);
+      return next;
+    });
+  };
+
+  const visibleBoutiques = boutiqueLocations.filter((l: Location) => selectedBoutiques.has(l.id));
+  const hiddenBoutiques = boutiqueLocations.filter((l: Location) => !selectedBoutiques.has(l.id));
 
   // ── Sync: create inventory + stock_levels for products not yet in inventory ──
   const handleSyncProducts = async () => {
@@ -756,6 +769,33 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
               <SelectItem value="both">B2B+B2C</SelectItem>
             </SelectContent>
           </Select>
+          {boutiqueLocations.length > 0 && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2 text-xs h-10">
+                  <Store className="h-3.5 w-3.5" />
+                  Boutiques {selectedBoutiques.size > 0 ? `(${selectedBoutiques.size})` : ''}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-2" align="start">
+                <p className="text-xs font-medium text-muted-foreground px-2 py-1 mb-1">Afficher les colonnes :</p>
+                {boutiqueLocations.map((loc: Location) => (
+                  <label key={loc.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
+                    <Checkbox
+                      checked={selectedBoutiques.has(loc.id)}
+                      onCheckedChange={() => toggleBoutiqueFilter(loc.id)}
+                    />
+                    {loc.name}
+                  </label>
+                ))}
+                {selectedBoutiques.size > 0 && (
+                  <Button variant="ghost" size="sm" className="w-full mt-1 text-xs" onClick={() => setSelectedBoutiques(new Set())}>
+                    Tout masquer
+                  </Button>
+                )}
+              </PopoverContent>
+            </Popover>
+          )}
         </div>
       </div>
 
@@ -775,7 +815,15 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                   </span>
                 </TableHead>
               )}
-              {boutiqueLocations.map((loc: Location) => (
+              {hiddenBoutiques.length > 0 && (
+                <TableHead className="text-right whitespace-nowrap text-xs">
+                  <span className="inline-flex items-center justify-end gap-1">
+                    <Store className="h-3 w-3 text-muted-foreground" />
+                    Boutiques ({hiddenBoutiques.length})
+                  </span>
+                </TableHead>
+              )}
+              {visibleBoutiques.map((loc: Location) => (
                 <TableHead key={loc.id} className="text-right whitespace-nowrap text-xs">
                   <span className="inline-flex items-center justify-end gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground inline-block shrink-0" />
@@ -791,7 +839,7 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
           </TableHeader>
           <TableBody>
             {items.length === 0 ? (
-              <TableRow><TableCell colSpan={8 + (webLocation ? 1 : 0) + boutiqueLocations.length} className="text-center text-muted-foreground py-8">Aucun produit en inventaire</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8 + (webLocation ? 1 : 0) + (hiddenBoutiques.length > 0 ? 1 : 0) + visibleBoutiques.length} className="text-center text-muted-foreground py-8">Aucun produit en inventaire</TableCell></TableRow>
             ) : items.map((item: InventoryItem) => {
               const total = getStockForItem(item.id);
               const reserved = stockLevels.filter((sl: StockLevel) => sl.inventory_id === item.id).reduce((s: number, sl: StockLevel) => s + sl.reserved, 0);
@@ -878,7 +926,35 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                       </span>
                     </TableCell>
                   )}
-                  {boutiqueLocations.map((loc: Location) => {
+                  {/* Aggregated hidden boutiques column */}
+                  {hiddenBoutiques.length > 0 && (
+                    <TableCell className="text-right font-mono" onClick={e => e.stopPropagation()}>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button className={cn(
+                            "text-sm font-semibold cursor-pointer hover:text-primary transition-colors px-1 py-0.5 rounded hover:bg-primary/10",
+                            hiddenBoutiques.reduce((s: number, loc: Location) => s + getStockForItem(item.id, loc.id), 0) === 0 ? "text-muted-foreground/40" : "text-foreground"
+                          )}>
+                            {hiddenBoutiques.reduce((s: number, loc: Location) => s + getStockForItem(item.id, loc.id), 0)}
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-52 p-2" align="end">
+                          <p className="text-xs font-medium text-muted-foreground px-1 mb-1.5">Détail par boutique</p>
+                          {hiddenBoutiques.map((loc: Location) => {
+                            const locQty = getStockForItem(item.id, loc.id);
+                            return (
+                              <div key={loc.id} className="flex items-center justify-between px-1 py-1 text-sm">
+                                <span className="text-muted-foreground truncate mr-2">{loc.name}</span>
+                                <span className={cn("font-mono font-semibold", locQty === 0 ? "text-muted-foreground/40" : "text-foreground")}>{locQty}</span>
+                              </div>
+                            );
+                          })}
+                        </PopoverContent>
+                      </Popover>
+                    </TableCell>
+                  )}
+                  {/* Visible (filtered) boutique columns */}
+                  {visibleBoutiques.map((loc: Location) => {
                     const locQty = getStockForItem(item.id, loc.id);
                     return (
                       <TableCell key={loc.id} className="text-right font-mono" onClick={e => e.stopPropagation()}>
@@ -989,7 +1065,42 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                           />
                         </TableCell>
                       )}
-                      {boutiqueLocations.map((loc: Location) => {
+                      {/* Aggregated hidden boutiques for variant */}
+                      {hiddenBoutiques.length > 0 && (
+                        <TableCell className="text-right">
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button className="text-xs font-mono font-semibold cursor-pointer hover:text-primary transition-colors px-1 py-0.5 rounded hover:bg-primary/10">
+                                {hiddenBoutiques.reduce((s: number, loc: Location) => {
+                                  const lvl = stockLevels.find((sl: StockLevel) =>
+                                    sl.inventory_id === item.id && sl.location_id === loc.id &&
+                                    sl.size === variant.size && sl.color === variant.color
+                                  );
+                                  return s + (lvl?.quantity ?? 0);
+                                }, 0)}
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-52 p-2" align="end">
+                              <p className="text-xs font-medium text-muted-foreground px-1 mb-1.5">Détail par boutique</p>
+                              {hiddenBoutiques.map((loc: Location) => {
+                                const lvl = stockLevels.find((sl: StockLevel) =>
+                                  sl.inventory_id === item.id && sl.location_id === loc.id &&
+                                  sl.size === variant.size && sl.color === variant.color
+                                );
+                                const q = lvl?.quantity ?? 0;
+                                return (
+                                  <div key={loc.id} className="flex items-center justify-between px-1 py-1 text-sm">
+                                    <span className="text-muted-foreground truncate mr-2">{loc.name}</span>
+                                    <span className={cn("font-mono font-semibold", q === 0 ? "text-muted-foreground/40" : "text-foreground")}>{q}</span>
+                                  </div>
+                                );
+                              })}
+                            </PopoverContent>
+                          </Popover>
+                        </TableCell>
+                      )}
+                      {/* Visible boutique columns for variant */}
+                      {visibleBoutiques.map((loc: Location) => {
                         const boutVariantLevel = stockLevels.find((sl: StockLevel) =>
                           sl.inventory_id === item.id &&
                           sl.location_id === loc.id &&

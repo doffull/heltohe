@@ -686,9 +686,15 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
                     {order.id.slice(0, 8)}
                   </TableCell>
 
-                  {/* Order number */}
+                  {/* Order number — clickable link to admin orders */}
                   <TableCell>
-                    <span className="font-semibold text-sm text-primary">#{order.orderNumber}</span>
+                    <a
+                      href={`/admin?tab=orders&search=${encodeURIComponent(order.orderNumber)}`}
+                      className="font-semibold text-sm text-primary hover:underline"
+                      title="Voir la commande"
+                    >
+                      #{order.orderNumber}
+                    </a>
                   </TableCell>
 
                   {/* Date */}
@@ -1064,6 +1070,7 @@ function HistoriqueBordereauxTab() {
   const { toast } = useToast();
   const [bordereaux, setBordereaux] = useState<Bordereau[]>([]);
   const [loading, setLoading] = useState(true);
+  const [detailBordereau, setDetailBordereau] = useState<Bordereau | null>(null);
 
   async function fetchBordereaux() {
     setLoading(true);
@@ -1079,6 +1086,28 @@ function HistoriqueBordereauxTab() {
     if (error) { toast({ title: 'Erreur suppression', variant: 'destructive' }); return; }
     toast({ title: 'Bordereau supprimé' });
     fetchBordereaux();
+  }
+
+  function downloadBordereauTxt(b: Bordereau) {
+    const lines = [
+      `BORDEREAU DE DÉPÔT COLISSIMO — ${new Date(b.bordereau_date).toLocaleDateString('fr-FR')}`,
+      '',
+      `Nombre de colis: ${b.package_count}`,
+      `Créé le: ${new Date(b.created_at).toLocaleString('fr-FR')}`,
+      '',
+      'Numéros de suivi:',
+      ...(b.tracking_numbers || []).map((t: string, i: number) => `  ${i + 1}. ${t}`),
+      '',
+      'Signature: ___________________________',
+      'Date de dépôt: ___________________________',
+    ];
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bordereau_${b.bordereau_date}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -1119,7 +1148,7 @@ function HistoriqueBordereauxTab() {
               </TableRow>
             )}
             {bordereaux.map((b) => (
-              <TableRow key={b.id}>
+              <TableRow key={b.id} className="cursor-pointer hover:bg-muted/30" onClick={() => setDetailBordereau(b)}>
                 <TableCell className="font-medium">
                   {new Date(b.bordereau_date).toLocaleDateString('fr-FR')}
                 </TableCell>
@@ -1141,7 +1170,7 @@ function HistoriqueBordereauxTab() {
                 <TableCell className="text-xs text-muted-foreground">
                   {new Date(b.created_at).toLocaleString('fr-FR')}
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right" onClick={e => e.stopPropagation()}>
                   <div className="flex items-center justify-end gap-2">
                     {b.pdf_base64 && (
                       <Button
@@ -1154,6 +1183,15 @@ function HistoriqueBordereauxTab() {
                         PDF
                       </Button>
                     )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 text-xs h-7"
+                      onClick={() => downloadBordereauTxt(b)}
+                    >
+                      <Download className="h-3 w-3" />
+                      TXT
+                    </Button>
                     <Button
                       size="sm"
                       variant="ghost"
@@ -1169,6 +1207,66 @@ function HistoriqueBordereauxTab() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Bordereau detail dialog */}
+      <Dialog open={!!detailBordereau} onOpenChange={open => { if (!open) setDetailBordereau(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Bordereau du {detailBordereau ? new Date(detailBordereau.bordereau_date).toLocaleDateString('fr-FR') : ''}
+            </DialogTitle>
+          </DialogHeader>
+          {detailBordereau && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 text-sm">
+                <span className="text-muted-foreground">Colis:</span>
+                <Badge variant="secondary">{detailBordereau.package_count}</Badge>
+                <span className="text-muted-foreground">Créé le:</span>
+                <span>{new Date(detailBordereau.created_at).toLocaleString('fr-FR')}</span>
+              </div>
+              <div>
+                <p className="text-sm font-medium mb-2">Numéros de suivi ({(detailBordereau.tracking_numbers || []).length})</p>
+                <div className="max-h-60 overflow-y-auto space-y-1.5 border border-border rounded-lg p-3">
+                  {(detailBordereau.tracking_numbers || []).map((t: string, i: number) => (
+                    <div key={t} className="flex items-center justify-between gap-2 text-sm">
+                      <span className="text-muted-foreground text-xs">{i + 1}.</span>
+                      <a
+                        href={`https://www.laposte.fr/particulier/outils/suivre-vos-envois?code=${t}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono text-primary hover:underline flex-1"
+                      >
+                        {t}
+                      </a>
+                      <a
+                        href={`https://www.laposte.fr/particulier/outils/suivre-vos-envois?code=${t}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <DialogFooter>
+                {detailBordereau.pdf_base64 && (
+                  <Button variant="outline" className="gap-1.5" onClick={() => downloadPdf(detailBordereau.pdf_base64!, `bordereau_${detailBordereau.bordereau_date}.pdf`)}>
+                    <Download className="h-4 w-4" />
+                    Télécharger PDF
+                  </Button>
+                )}
+                <Button variant="outline" className="gap-1.5" onClick={() => downloadBordereauTxt(detailBordereau)}>
+                  <Download className="h-4 w-4" />
+                  Télécharger TXT
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
