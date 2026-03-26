@@ -1,103 +1,37 @@
 
-## Thinking
 
-The user wants to:
-1. Upload a product mockup image (like the Marco jacket shown)
-2. AI analyzes the image's "DNA" (colors, sizes, product name, composition, etc.)
-3. Automatically generates a fully interactive, dynamic product page from it
+## Plan : Compacter l'inventaire global + Vérifier l'espace Colissimo
 
-The existing `parse-products-pdf` edge function already handles image analysis with Gemini. I need to:
+### Problème 1 : Inventaire Global — colonnes boutiques trop nombreuses
 
-1. **Extend the existing edge function** OR create a new `parse-product-image` edge function that:
-   - Accepts an image (jpg/png/webp)
-   - Uses Gemini vision to extract: product name, subtitle, price, colors (with hex codes!), sizes, composition/material, description, category, SKU
-   - Also extracts the **color variants** as `colorOptions` with proper hex values
-   - Returns a structured product object ready to pre-fill the ProductForm
+Actuellement, chaque boutique physique (Cap 3000, Caréssenat, etc.) est une colonne séparée dans le tableau d'inventaire (lignes 778-785 de `AdminStock.tsx`). Avec beaucoup de boutiques, le tableau déborde horizontalement.
 
-2. **Add "Importer Maquette IA" button** in AdminProducts that:
-   - Opens a dialog with a dropzone accepting images
-   - Sends image to the edge function
-   - Shows a preview of what was extracted (product name, colors swatches, sizes, material, etc.)
-   - Lets admin review/edit before confirming creation
-   - On confirm: creates the product in the DB with all extracted data
+**Solution** : Remplacer les colonnes individuelles par boutique par un système compact :
 
-3. **Enrich color extraction**: The AI should extract the actual hex colors visible in the mockup image's color swatches, so the product page shows real color swatches matching the mockup.
+1. **Ajouter un filtre de localisation** : un `Select` multi-valeur permettant de choisir quelles boutiques afficher comme colonnes. Par défaut, seule la colonne "Web" + une colonne "Boutiques" (agrégée) sont visibles.
 
-Looking at the Marco image:
-- Product name: MARCO
-- Brand: Helvetica Mountain Pioneers x PEGASWOES  
-- Season: HIVER 2026
-- Colors: Noir (#1a1a1a), Bordeaux (#6B2235), Marine (#1a2744), Beige/Taupe (#A08B6E), Kaki (#5C6648), Gris (#6B7280)
-- Sizes: XS, S, M, L, XL, XXL
-- Composition: 100% POLYESTER
-- Tags: limited edition
+2. **Colonne agrégée "Boutiques"** : affiche le total stock de toutes les boutiques pour chaque produit. Au clic, un popover/tooltip détaille le stock par boutique.
 
-## Plan
+3. **Filtre boutique** : un `Select` permet de sélectionner 1 ou plusieurs boutiques spécifiques à afficher comme colonnes supplémentaires. Les boutiques non sélectionnées restent dans le total agrégé.
 
-### 1. New edge function `analyze-product-image`
-New file: `supabase/functions/analyze-product-image/index.ts`
+Résultat : le tableau tient en une page avec les colonnes `Image | Produit | SKU | Canal | Web | Boutiques (total) | Total | Seuil | Statut | Actions`. Si l'admin veut le détail d'une boutique spécifique, il la sélectionne dans le filtre.
 
-Uses Gemini 2.5 Pro (best vision model) to analyze the image and extract:
-- name, subtitle, price (ask to estimate if not found), category
-- sizes (exact text from image)
-- colors with **hex values** from the color swatches visible in image
-- colorOptions: [{color: "#hex", label: "nom"}]
-- material/composition
-- description (generated from visual)
-- sku (auto-generated)
-- tags (e.g., "limited edition" if spotted)
-- Any brand/collection info → subtitle
+Même traitement pour les lignes de variantes (enfants).
 
-### 2. New UI component `ImportMockupDialog.tsx`
-In `src/components/admin/ImportMockupDialog.tsx`:
-- Image dropzone (jpg/png/webp/gif up to 10MB)
-- Preview of uploaded image
-- "Analyser avec l'IA" button
-- Loading state with animated scan effect
-- Results preview:
-  - Product name, subtitle
-  - Price field (editable, since AI may not find it)
-  - Color swatches preview
-  - Size badges preview
-  - Material info
-  - Generated description
-- "Créer ce produit" confirm button
-- On confirm: calls `useCreateProduct` + uploads image to storage + opens `ProductForm` pre-filled for final review
+### Problème 2 : Colissimo — vérification et corrections
 
-### 3. AdminProducts integration
-- Add "Importer Maquette IA" button next to existing "Importer PDF" button
-- Opens the new ImportMockupDialog
-- After product created, show toast + option to go to product detail
+**A. Historique des bordereaux — accès détail + téléchargement**
+- Actuellement : on voit la date, le nombre de colis, 3 numéros de suivi max, et un bouton PDF (seulement si `pdf_base64` existe, ce qui n'est jamais le cas car l'API Colissimo ne renvoie pas de PDF pour les bordereaux).
+- **Correction** : Ajouter un dialog "Détail du bordereau" au clic sur une ligne, affichant tous les numéros de suivi avec liens de suivi La Poste. Ajouter un bouton "Télécharger (TXT)" qui génère un fichier texte du bordereau même sans PDF.
 
-### Files to create/modify
-- `supabase/functions/analyze-product-image/index.ts` — new edge function
-- `src/components/admin/ImportMockupDialog.tsx` — new UI dialog
-- `src/pages/admin/AdminProducts.tsx` — add button + import dialog
+**B. Commandes — clic sur une commande**
+- Actuellement : les commandes dans l'onglet Colissimo n'ont pas de lien vers la fiche commande dans Admin > Commandes.
+- **Correction** : Rendre le numéro de commande cliquable (lien vers `/admin` onglet commandes avec filtre, ou ouvrir un dialog résumé de la commande).
 
-## Implementation Steps
+### Fichiers modifiés
 
-### Step 1: Edge function `analyze-product-image`
-Input: `{ imageBase64: string, mimeType: string }`
-Prompt to Gemini Pro Vision:
-- Extract all visible product info
-- Extract hex colors from color swatches
-- Generate description if not present
-- Output strict JSON matching `ExtractedProductData` schema
+| Fichier | Changement |
+|---|---|
+| `src/pages/admin/AdminStock.tsx` | Remplacer colonnes boutiques individuelles par colonne agrégée + filtre + popover détail |
+| `src/pages/admin/AdminColissimo.tsx` | Ajouter dialog détail bordereau + bouton téléchargement TXT + lien commande cliquable |
 
-### Step 2: `ImportMockupDialog` component
-States:
-- `file`, `preview` (image URL)
-- `analyzing` (loading state)
-- `extracted` (ExtractedProductData | null)
-- `editableData` (form state to review/edit before import)
-
-UX Flow:
-1. Drag & drop or click to upload image
-2. Preview appears
-3. Click "Analyser avec IA" → loading scan animation
-4. Results appear: color swatches, size badges, all info
-5. User can edit price/name if needed
-6. Click "Créer le produit" → uploads image to storage, creates product, success
-
-### Step 3: AdminProducts button
-Add "Importer Maquette" button with `Wand2` icon (magic wand for AI)
