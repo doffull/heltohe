@@ -494,6 +494,9 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ═══════════════ LOYALTY BANNER ═══════════════ */}
+      <LoyaltyBanner />
+
       {/* ═══════════════ NEWSLETTER CTA ═══════════════ */}
       <RevealSection>
         <section className={cn(sectionPy, "bg-foreground text-background")}>
