@@ -24,6 +24,7 @@ function dbToAppProduct(db: Record<string, unknown>): Product {
     attributes: (db.attributes as Record<string, string>) || {},
     videoUrl: (db.video_url as string) || undefined,
     tags: (db.tags as string[]) || [],
+    promoEndsAt: (db.promo_ends_at as string) || undefined,
   };
 }
 
@@ -47,6 +48,7 @@ function appToDbProduct(product: Partial<Product>) {
     attributes: (product.attributes || {}) as unknown as Json,
     video_url: product.videoUrl || null,
     tags: product.tags || [],
+    promo_ends_at: product.promoEndsAt || null,
     is_active: true,
   };
 }

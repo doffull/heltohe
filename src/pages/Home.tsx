@@ -12,6 +12,8 @@ import { motion, useScroll, useTransform, useInView } from 'framer-motion';
 import { useRef } from 'react';
 import PromoBanner from '@/components/home/PromoBanner';
 import PopupBanner from '@/components/home/PopupBanner';
+import { PromoCountdown } from '@/components/home/PromoCountdown';
+import { LoyaltyBanner } from '@/components/home/LoyaltyBanner';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 import heroImage1 from '@/assets/hero/hero-1.jpg';
@@ -435,6 +437,9 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ═══════════════ FLASH PROMOS ═══════════════ */}
+      <PromoCountdown />
+
       {/* ═══════════════ NEW ARRIVALS ═══════════════ */}
       <section className={sectionPy}>
         <div className="container mx-auto px-4">
@@ -488,6 +493,9 @@ export default function Home() {
           </RevealSection>
         </div>
       </section>
+
+      {/* ═══════════════ LOYALTY BANNER ═══════════════ */}
+      <LoyaltyBanner />
 
       {/* ═══════════════ NEWSLETTER CTA ═══════════════ */}
       <RevealSection>

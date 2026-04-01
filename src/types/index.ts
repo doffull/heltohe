@@ -28,6 +28,7 @@ export interface Product {
   attributes?: Record<string, string>;
   videoUrl?: string;
   tags?: string[];
+  promoEndsAt?: string;
 }
 
 export interface OrderItem {
