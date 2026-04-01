@@ -1,37 +1,69 @@
 
+## Plan : Sécurité HIBP + Nettoyage images + Gestion homepage admin complète
 
-## Plan : Compacter l'inventaire global + Vérifier l'espace Colissimo
+### 1. Protection mots de passe compromis (HIBP)
 
-### Problème 1 : Inventaire Global — colonnes boutiques trop nombreuses
+**Action manuelle requise** : Cette fonctionnalité ne peut pas être activée par code. Vous devez l'activer vous-même :
+- Allez dans **Lovable Cloud > Users > Auth Settings** (icône engrenage) > **Email settings** > activez **Password HIBP Check**.
+- Une fois fait, le warning de sécurité disparaîtra automatiquement au prochain scan.
 
-Actuellement, chaque boutique physique (Cap 3000, Caréssenat, etc.) est une colonne séparée dans le tableau d'inventaire (lignes 778-785 de `AdminStock.tsx`). Avec beaucoup de boutiques, le tableau déborde horizontalement.
+### 2. Nettoyage des images inutilisées
 
-**Solution** : Remplacer les colonnes individuelles par boutique par un système compact :
+Les fichiers suivants dans `src/assets/products/` ne sont importés nulle part dans le code et seront supprimés :
+- `marco-mockup.jpg`, `accessoire-montre.jpg`, `accessoire-sac.jpg`, `enfant-doudoune.jpg`, `enfant-impermeable.jpg`, `enfant-sneakers.jpg`, `femme-bomber.jpg`, `femme-legging.jpg`, `femme-manteau-blanc.jpg`, `homme-cargo-pants.jpg`, `homme-hoodie.jpg`, `homme-veste-tech.jpg`
 
-1. **Ajouter un filtre de localisation** : un `Select` multi-valeur permettant de choisir quelles boutiques afficher comme colonnes. Par défaut, seule la colonne "Web" + une colonne "Boutiques" (agrégée) sont visibles.
+Le dossier `src/assets/products/` entier sera supprimé. Les images hero et catégories restent car elles sont utilisées comme fallbacks dans `Home.tsx`.
 
-2. **Colonne agrégée "Boutiques"** : affiche le total stock de toutes les boutiques pour chaque produit. Au clic, un popover/tooltip détaille le stock par boutique.
+### 3. Gestion des Promos avec Chronomètre (Admin Dashboard)
 
-3. **Filtre boutique** : un `Select` permet de sélectionner 1 ou plusieurs boutiques spécifiques à afficher comme colonnes supplémentaires. Les boutiques non sélectionnées restent dans le total agrégé.
+**Nouveau composant dans `AdminDashboard.tsx`** : `PromoManagement`
+- Section dédiée pour gérer les produits en promotion et en vedette
+- Onglets : **Promos** | **En vedette** | **Nouveautés** | **Tendances**
+- Pour les promos : possibilité de définir un **prix promo + date de fin** → le chronomètre countdown apparaîtra sur la homepage
+- Toggle rapide pour ajouter/retirer un produit d'une section
 
-Résultat : le tableau tient en une page avec les colonnes `Image | Produit | SKU | Canal | Web | Boutiques (total) | Total | Seuil | Statut | Actions`. Si l'admin veut le détail d'une boutique spécifique, il la sélectionne dans le filtre.
+**Modification de la table `products`** (migration) :
+- Ajout colonne `promo_ends_at TIMESTAMP WITH TIME ZONE` — date de fin de la promo pour le countdown
 
-Même traitement pour les lignes de variantes (enfants).
+### 4. Countdown Promo sur la Homepage
 
-### Problème 2 : Colissimo — vérification et corrections
+**Nouveau composant `PromoCountdown.tsx`** dans `src/components/home/` :
+- Affiche un décompte (jours, heures, minutes, secondes) pour les produits ayant un `promo_ends_at` dans le futur
+- S'affiche dans une section dédiée "OFFRES FLASH" sur la homepage, avec les produits en promo et leur timer
+- Carrousel horizontal de cartes produits avec badge countdown
 
-**A. Historique des bordereaux — accès détail + téléchargement**
-- Actuellement : on voit la date, le nombre de colis, 3 numéros de suivi max, et un bouton PDF (seulement si `pdf_base64` existe, ce qui n'est jamais le cas car l'API Colissimo ne renvoie pas de PDF pour les bordereaux).
-- **Correction** : Ajouter un dialog "Détail du bordereau" au clic sur une ligne, affichant tous les numéros de suivi avec liens de suivi La Poste. Ajouter un bouton "Télécharger (TXT)" qui génère un fichier texte du bordereau même sans PDF.
+### 5. Programme de Fidélité visible sur la Homepage
 
-**B. Commandes — clic sur une commande**
-- Actuellement : les commandes dans l'onglet Colissimo n'ont pas de lien vers la fiche commande dans Admin > Commandes.
-- **Correction** : Rendre le numéro de commande cliquable (lien vers `/admin` onglet commandes avec filtre, ou ouvrir un dialog résumé de la commande).
+**Nouveau composant `LoyaltyBanner.tsx`** dans `src/components/home/` :
+- Bandeau/section sur la homepage présentant le programme de fidélité
+- Affiche les paliers (Bronze, Silver, Gold, Platinum) avec les avantages
+- Si l'utilisateur est connecté : affiche ses points actuels et son tier
+- CTA "Rejoindre le programme" → redirige vers `/compte/fidelite`
 
-### Fichiers modifiés
+### 6. Gestion complète de la Homepage (Admin Dashboard)
 
-| Fichier | Changement |
+**Refonte du composant `HomepageManagement` dans `AdminDashboard.tsx`** pour être un centre de contrôle complet, style Shopify :
+
+- **Sections de la homepage** : réordonner, activer/désactiver les sections (Hero, Catégories, Produits en vedette, Promos Flash, Fidélité, Newsletter, Nouveautés)
+- **Produits par section** : assigner des produits à chaque section via recherche + toggle (existant, étendu)
+- **Promos Flash** : créer/gérer les promos avec countdown (nouveau)
+- **Programme Fidélité** : activer/désactiver la section fidélité sur la homepage
+
+Interface en onglets dans un panel élargi.
+
+### Fichiers modifiés/créés
+
+| Fichier | Action |
 |---|---|
-| `src/pages/admin/AdminStock.tsx` | Remplacer colonnes boutiques individuelles par colonne agrégée + filtre + popover détail |
-| `src/pages/admin/AdminColissimo.tsx` | Ajouter dialog détail bordereau + bouton téléchargement TXT + lien commande cliquable |
+| `src/assets/products/*` | Suppression (12 fichiers) |
+| `src/pages/admin/AdminDashboard.tsx` | Refonte HomepageManagement → ajout onglets Promos, Sections, Fidélité |
+| `src/components/home/PromoCountdown.tsx` | Création — section promos flash avec countdown |
+| `src/components/home/LoyaltyBanner.tsx` | Création — bandeau fidélité homepage |
+| `src/pages/Home.tsx` | Ajout sections PromoCountdown + LoyaltyBanner |
+| `src/types/index.ts` | Ajout `promoEndsAt` au type Product |
+| `src/hooks/useProducts.ts` | Mapper `promo_ends_at` |
+| Migration SQL | Ajout `promo_ends_at` à la table `products` |
 
+### Sécurité
+
+Le warning `has_role_definer` est déjà documenté comme intentionnel avec audit log. Le warning `SUPA_auth_leaked_password_protection` nécessite une action manuelle (voir point 1).
