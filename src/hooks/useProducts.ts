@@ -48,6 +48,7 @@ function appToDbProduct(product: Partial<Product>) {
     attributes: (product.attributes || {}) as unknown as Json,
     video_url: product.videoUrl || null,
     tags: product.tags || [],
+    promo_ends_at: product.promoEndsAt || null,
     is_active: true,
   };
 }
