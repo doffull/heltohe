@@ -4,66 +4,49 @@
 ### 1. Protection mots de passe compromis (HIBP)
 
 **Action manuelle requise** : Cette fonctionnalité ne peut pas être activée par code. Vous devez l'activer vous-même :
-- Allez dans **Lovable Cloud > Users > Auth Settings** (icône engrenage) > **Email settings** > activez **Password HIBP Check**.
-- Une fois fait, le warning de sécurité disparaîtra automatiquement au prochain scan.
+- Allez dans **Lovable Cloud > Users > Auth Settings** (icone engrenage) > **Email settings** > activez **Password HIBP Check**.
 
 ### 2. Nettoyage des images inutilisées
 
-Les fichiers suivants dans `src/assets/products/` ne sont importés nulle part dans le code et seront supprimés :
-- `marco-mockup.jpg`, `accessoire-montre.jpg`, `accessoire-sac.jpg`, `enfant-doudoune.jpg`, `enfant-impermeable.jpg`, `enfant-sneakers.jpg`, `femme-bomber.jpg`, `femme-legging.jpg`, `femme-manteau-blanc.jpg`, `homme-cargo-pants.jpg`, `homme-hoodie.jpg`, `homme-veste-tech.jpg`
+Les 12 fichiers dans `src/assets/products/` ne sont importés nulle part dans le code. Le dossier entier sera supprimé. Les images hero et catégories restent (utilisées comme fallbacks dans `Home.tsx`).
 
-Le dossier `src/assets/products/` entier sera supprimé. Les images hero et catégories restent car elles sont utilisées comme fallbacks dans `Home.tsx`.
+### 3. Colonne `promo_ends_at` sur la table `products`
 
-### 3. Gestion des Promos avec Chronomètre (Admin Dashboard)
+Migration SQL ajoutant `promo_ends_at TIMESTAMP WITH TIME ZONE` pour permettre les promos avec countdown. Mise à jour du type `Product` et du hook `useProducts` pour mapper ce champ.
 
-**Nouveau composant dans `AdminDashboard.tsx`** : `PromoManagement`
-- Section dédiée pour gérer les produits en promotion et en vedette
-- Onglets : **Promos** | **En vedette** | **Nouveautés** | **Tendances**
-- Pour les promos : possibilité de définir un **prix promo + date de fin** → le chronomètre countdown apparaîtra sur la homepage
-- Toggle rapide pour ajouter/retirer un produit d'une section
+### 4. Section "Offres Flash" avec Countdown sur la Homepage
 
-**Modification de la table `products`** (migration) :
-- Ajout colonne `promo_ends_at TIMESTAMP WITH TIME ZONE` — date de fin de la promo pour le countdown
+Nouveau composant `PromoCountdown.tsx` dans `src/components/home/` :
+- Filtre les produits ayant `salePrice` + `promoEndsAt` dans le futur
+- Affiche un décompte dynamique (J, H, M, S) sur chaque carte produit
+- Carrousel horizontal avec badge countdown animé
+- Intégré dans `Home.tsx` entre les catégories et les produits en vedette
 
-### 4. Countdown Promo sur la Homepage
+### 5. Bandeau Fidélité sur la Homepage
 
-**Nouveau composant `PromoCountdown.tsx`** dans `src/components/home/` :
-- Affiche un décompte (jours, heures, minutes, secondes) pour les produits ayant un `promo_ends_at` dans le futur
-- S'affiche dans une section dédiée "OFFRES FLASH" sur la homepage, avec les produits en promo et leur timer
-- Carrousel horizontal de cartes produits avec badge countdown
+Nouveau composant `LoyaltyBanner.tsx` dans `src/components/home/` :
+- Présente les 4 paliers (Bronze, Silver, Gold, Platinum) avec avantages
+- Si connecté : affiche les points de l'utilisateur et son tier actuel
+- CTA vers `/compte/fidelite`
+- Intégré dans `Home.tsx` après les produits
 
-### 5. Programme de Fidélité visible sur la Homepage
+### 6. Refonte HomepageManagement dans le Dashboard Admin
 
-**Nouveau composant `LoyaltyBanner.tsx`** dans `src/components/home/` :
-- Bandeau/section sur la homepage présentant le programme de fidélité
-- Affiche les paliers (Bronze, Silver, Gold, Platinum) avec les avantages
-- Si l'utilisateur est connecté : affiche ses points actuels et son tier
-- CTA "Rejoindre le programme" → redirige vers `/compte/fidelite`
-
-### 6. Gestion complète de la Homepage (Admin Dashboard)
-
-**Refonte du composant `HomepageManagement` dans `AdminDashboard.tsx`** pour être un centre de contrôle complet, style Shopify :
-
-- **Sections de la homepage** : réordonner, activer/désactiver les sections (Hero, Catégories, Produits en vedette, Promos Flash, Fidélité, Newsletter, Nouveautés)
-- **Produits par section** : assigner des produits à chaque section via recherche + toggle (existant, étendu)
-- **Promos Flash** : créer/gérer les promos avec countdown (nouveau)
-- **Programme Fidélité** : activer/désactiver la section fidélité sur la homepage
-
-Interface en onglets dans un panel élargi.
+Remplacement du composant existant par un centre de contrôle complet :
+- **Onglet Sections** : réordonner/activer les sections de la homepage (Hero, Catégories, Promos Flash, Vedettes, Nouveautés, Fidélité, Newsletter)
+- **Onglet Produits** : assigner des produits à chaque section via recherche + toggle (existant, conservé et étendu avec tags `promo`, `trending`, `style`)
+- **Onglet Promos Flash** : liste des produits avec `salePrice`, possibilité de définir `promo_ends_at` (date picker) pour chaque produit promo
+- **Onglet Fidélité** : toggle on/off de la section fidélité sur la homepage
 
 ### Fichiers modifiés/créés
 
 | Fichier | Action |
 |---|---|
-| `src/assets/products/*` | Suppression (12 fichiers) |
-| `src/pages/admin/AdminDashboard.tsx` | Refonte HomepageManagement → ajout onglets Promos, Sections, Fidélité |
-| `src/components/home/PromoCountdown.tsx` | Création — section promos flash avec countdown |
-| `src/components/home/LoyaltyBanner.tsx` | Création — bandeau fidélité homepage |
-| `src/pages/Home.tsx` | Ajout sections PromoCountdown + LoyaltyBanner |
-| `src/types/index.ts` | Ajout `promoEndsAt` au type Product |
+| `src/assets/products/*` (12 fichiers) | Suppression |
+| Migration SQL | Ajout `promo_ends_at` sur `products` |
+| `src/types/index.ts` | Ajout `promoEndsAt?: string` au type Product |
 | `src/hooks/useProducts.ts` | Mapper `promo_ends_at` |
-| Migration SQL | Ajout `promo_ends_at` à la table `products` |
-
-### Sécurité
-
-Le warning `has_role_definer` est déjà documenté comme intentionnel avec audit log. Le warning `SUPA_auth_leaked_password_protection` nécessite une action manuelle (voir point 1).
+| `src/components/home/PromoCountdown.tsx` | Nouveau — section promos flash countdown |
+| `src/components/home/LoyaltyBanner.tsx` | Nouveau — bandeau fidélité |
+| `src/pages/Home.tsx` | Intégration PromoCountdown + LoyaltyBanner |
+| `src/pages/admin/AdminDashboard.tsx` | Refonte HomepageManagement avec 4 onglets |
