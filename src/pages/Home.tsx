@@ -437,6 +437,9 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ═══════════════ FLASH PROMOS ═══════════════ */}
+      <PromoCountdown />
+
       {/* ═══════════════ NEW ARRIVALS ═══════════════ */}
       <section className={sectionPy}>
         <div className="container mx-auto px-4">
