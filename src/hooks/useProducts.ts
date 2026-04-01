@@ -24,6 +24,7 @@ function dbToAppProduct(db: Record<string, unknown>): Product {
     attributes: (db.attributes as Record<string, string>) || {},
     videoUrl: (db.video_url as string) || undefined,
     tags: (db.tags as string[]) || [],
+    promoEndsAt: (db.promo_ends_at as string) || undefined,
   };
 }
 
