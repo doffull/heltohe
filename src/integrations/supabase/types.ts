@@ -1119,6 +1119,7 @@ export type Database = {
           material: string | null
           name: string
           price: number
+          promo_ends_at: string | null
           sale_price: number | null
           sizes: string[] | null
           sku: string
@@ -1142,6 +1143,7 @@ export type Database = {
           material?: string | null
           name: string
           price: number
+          promo_ends_at?: string | null
           sale_price?: number | null
           sizes?: string[] | null
           sku: string
@@ -1165,6 +1167,7 @@ export type Database = {
           material?: string | null
           name?: string
           price?: number
+          promo_ends_at?: string | null
           sale_price?: number | null
           sizes?: string[] | null
           sku?: string
