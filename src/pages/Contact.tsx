@@ -84,6 +84,7 @@ export default function Contact() {
   const [form, setForm] = useState({ name: '', email: '', message: '' });
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Chatbot
   const [messages, setMessages] = useState<Msg[]>([
