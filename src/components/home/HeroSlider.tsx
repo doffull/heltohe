@@ -89,6 +89,7 @@ export function HeroSlider() {
             alt={currentSlide.title}
             className="w-full h-full"
             style={{ objectFit, objectPosition }}
+            fetchPriority="high"
           />
         )}
       </motion.div>

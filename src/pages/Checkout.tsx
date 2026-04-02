@@ -334,46 +334,46 @@ export default function Checkout() {
                   ADRESSE DE LIVRAISON
                 </h2>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="hud-text text-xs">PRÉNOM *</Label>
-                    <Input value={form.firstName} onChange={e => updateForm('firstName', e.target.value)} className="bg-secondary/50" />
+                    <Input value={form.firstName} onChange={e => updateForm('firstName', e.target.value)} className="bg-secondary/50" maxLength={100} />
                   </div>
                   <div className="space-y-2">
                     <Label className="hud-text text-xs">NOM *</Label>
-                    <Input value={form.lastName} onChange={e => updateForm('lastName', e.target.value)} className="bg-secondary/50" />
+                    <Input value={form.lastName} onChange={e => updateForm('lastName', e.target.value)} className="bg-secondary/50" maxLength={100} />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="hud-text text-xs">EMAIL *</Label>
-                    <Input type="email" value={form.email} onChange={e => updateForm('email', e.target.value)} className="bg-secondary/50" />
+                    <Input type="email" value={form.email} onChange={e => updateForm('email', e.target.value)} className="bg-secondary/50" maxLength={255} />
                   </div>
                   <div className="space-y-2">
                     <Label className="hud-text text-xs">TÉLÉPHONE</Label>
-                    <Input type="tel" value={form.phone} onChange={e => updateForm('phone', e.target.value)} className="bg-secondary/50" />
+                    <Input type="tel" value={form.phone} onChange={e => updateForm('phone', e.target.value)} className="bg-secondary/50" maxLength={20} />
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label className="hud-text text-xs">ADRESSE *</Label>
-                  <Input value={form.address} onChange={e => updateForm('address', e.target.value)} placeholder="Numéro et nom de rue" className="bg-secondary/50" />
+                  <Input value={form.address} onChange={e => updateForm('address', e.target.value)} placeholder="Numéro et nom de rue" className="bg-secondary/50" maxLength={300} />
                 </div>
 
                 <div className="space-y-2">
                   <Label className="hud-text text-xs">COMPLÉMENT D'ADRESSE</Label>
-                  <Input value={form.address2} onChange={e => updateForm('address2', e.target.value)} placeholder="Appartement, étage, etc." className="bg-secondary/50" />
+                  <Input value={form.address2} onChange={e => updateForm('address2', e.target.value)} placeholder="Appartement, étage, etc." className="bg-secondary/50" maxLength={200} />
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label className="hud-text text-xs">CODE POSTAL *</Label>
-                    <Input value={form.zip} onChange={e => updateForm('zip', e.target.value)} className="bg-secondary/50" />
+                    <Input value={form.zip} onChange={e => updateForm('zip', e.target.value)} className="bg-secondary/50" maxLength={10} />
                   </div>
-                  <div className="space-y-2 col-span-2">
+                  <div className="space-y-2 col-span-1 sm:col-span-2">
                     <Label className="hud-text text-xs">VILLE *</Label>
-                    <Input value={form.city} onChange={e => updateForm('city', e.target.value)} className="bg-secondary/50" />
+                    <Input value={form.city} onChange={e => updateForm('city', e.target.value)} className="bg-secondary/50" maxLength={100} />
                   </div>
                 </div>
 
