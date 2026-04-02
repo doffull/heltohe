@@ -225,37 +225,48 @@ export default function Contact() {
                   <motion.form key="form" onSubmit={handleFormSubmit} className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label htmlFor="name" className="text-xs hud-text uppercase tracking-wider">Nom</Label>
+                        <Label htmlFor="name" className="text-xs hud-text uppercase tracking-wider">Nom *</Label>
                         <Input
                           id="name"
                           value={form.name}
-                          onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
+                          onChange={(e) => { setForm(f => ({ ...f, name: e.target.value })); setFormErrors(prev => ({ ...prev, name: '' })); }}
                           placeholder="Votre nom"
+                          maxLength={100}
                           required
+                          className={formErrors.name ? 'border-destructive' : ''}
                         />
+                        {formErrors.name && <p className="text-xs text-destructive">{formErrors.name}</p>}
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="email" className="text-xs hud-text uppercase tracking-wider">Email</Label>
+                        <Label htmlFor="email" className="text-xs hud-text uppercase tracking-wider">Email *</Label>
                         <Input
                           id="email"
                           type="email"
                           value={form.email}
-                          onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))}
+                          onChange={(e) => { setForm(f => ({ ...f, email: e.target.value })); setFormErrors(prev => ({ ...prev, email: '' })); }}
                           placeholder="votre@email.com"
+                          maxLength={255}
                           required
+                          className={formErrors.email ? 'border-destructive' : ''}
                         />
+                        {formErrors.email && <p className="text-xs text-destructive">{formErrors.email}</p>}
                       </div>
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="message" className="text-xs hud-text uppercase tracking-wider">Message</Label>
+                      <Label htmlFor="message" className="text-xs hud-text uppercase tracking-wider">Message *</Label>
                       <Textarea
                         id="message"
                         value={form.message}
-                        onChange={(e) => setForm(f => ({ ...f, message: e.target.value }))}
+                        onChange={(e) => { setForm(f => ({ ...f, message: e.target.value })); setFormErrors(prev => ({ ...prev, message: '' })); }}
                         placeholder="Votre message..."
-                        className="min-h-[120px] resize-none"
+                        className={cn("min-h-[120px] resize-none", formErrors.message && 'border-destructive')}
+                        maxLength={2000}
                         required
                       />
+                      <div className="flex justify-between">
+                        {formErrors.message && <p className="text-xs text-destructive">{formErrors.message}</p>}
+                        <p className="text-xs text-muted-foreground ml-auto">{form.message.length}/2000</p>
+                      </div>
                     </div>
                     <Button type="submit" disabled={sending} className="w-full">
                       {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
