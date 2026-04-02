@@ -98,9 +98,22 @@ export default function Contact() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    if (!form.name.trim()) errors.name = 'Le nom est requis';
+    else if (form.name.length > 100) errors.name = 'Le nom ne doit pas dépasser 100 caractères';
+    if (!form.email.trim()) errors.email = 'L\'email est requis';
+    else if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(form.email)) errors.email = 'Email invalide';
+    if (!form.message.trim()) errors.message = 'Le message est requis';
+    else if (form.message.length > 2000) errors.message = 'Le message ne doit pas dépasser 2000 caractères';
+    return errors;
+  };
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.message) return;
+    const errors = validateForm();
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) return;
     setSending(true);
     const { error } = await supabase.from('messages').insert({
       name: form.name,
