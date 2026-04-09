@@ -138,7 +138,7 @@ export default function Contact() {
       toast({ title: 'Erreur', description: 'Impossible d\'envoyer le message.', variant: 'destructive' });
     } else {
       setSent(true);
-      setForm({ name: '', email: '', message: '' });
+      setForm({ name: '', email: '', message: '', website: '' });
     }
   };
 
