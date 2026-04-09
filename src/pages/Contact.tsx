@@ -81,10 +81,11 @@ export default function Contact() {
   const { toast } = useToast();
 
   // Contact form
-  const [form, setForm] = useState({ name: '', email: '', message: '' });
+  const [form, setForm] = useState({ name: '', email: '', message: '', website: '' });
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [lastSubmitTime, setLastSubmitTime] = useState(0);
 
   // Chatbot
   const [messages, setMessages] = useState<Msg[]>([
@@ -111,10 +112,22 @@ export default function Contact() {
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Honeypot: if the hidden field is filled, silently reject
+    if (form.website) {
+      setSent(true);
+      return;
+    }
+    // Rate limiting: minimum 10s between submissions
+    const now = Date.now();
+    if (now - lastSubmitTime < 10000) {
+      toast({ title: 'Veuillez patienter', description: 'Attendez quelques secondes avant de renvoyer un message.', variant: 'destructive' });
+      return;
+    }
     const errors = validateForm();
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) return;
     setSending(true);
+    setLastSubmitTime(now);
     const { error } = await supabase.from('messages').insert({
       name: form.name,
       email: form.email,

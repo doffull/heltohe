@@ -2,6 +2,7 @@ import { DesignSettings, Product, Order } from '@/types';
 
 const DEFAULT_HUD_BG = '#2c3e50';
 const DEFAULT_HUD_TEXT = '#ffffff';
+const PLACEHOLDER = '/placeholder.svg';
 
 export const INITIAL_PRODUCTS: Product[] = [
   {
@@ -9,7 +10,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     name: 'Parka Glacier Ops',
     subtitle: 'PROTECTION THERMIQUE EXTRÊME',
     price: 450,
-    image: 'https://images.unsplash.com/photo-1539533113208-f6df8cc8b543?auto=format&fit=crop&q=80&w=800',
+    image: PLACEHOLDER,
     category: 'Homme',
     stock: 12,
     sku: 'GLC-OPS-001',
@@ -19,8 +20,8 @@ export const INITIAL_PRODUCTS: Product[] = [
     sizes: ['S', 'M', 'L', 'XL'],
     colors: ['#000000', '#FFFFFF'],
     colorOptions: [
-      { color: '#000000', label: 'Noir Obsidian', image: 'https://images.unsplash.com/photo-1539533113208-f6df8cc8b543?auto=format&fit=crop&q=80&w=800' },
-      { color: '#FFFFFF', label: 'Blanc Arctique', image: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&q=80&w=800' }
+      { color: '#000000', label: 'Noir Obsidian', image: PLACEHOLDER },
+      { color: '#FFFFFF', label: 'Blanc Arctique', image: PLACEHOLDER }
     ],
     attributes: { 'Imperméabilité': 'Niveau 5', 'Thermique': 'Extrême' }
   },
@@ -29,7 +30,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     name: 'Doudoune Valkyrie',
     subtitle: 'AÉRODYNAMISME URBAIN',
     price: 320,
-    image: 'https://images.unsplash.com/photo-1544923246-77307dd654cb?auto=format&fit=crop&q=80&w=800',
+    image: PLACEHOLDER,
     category: 'Femme',
     stock: 8,
     sku: 'VLK-DWN-002',
@@ -38,8 +39,8 @@ export const INITIAL_PRODUCTS: Product[] = [
     sizes: ['XS', 'S', 'M'],
     colors: ['#FFFFFF', '#808080'],
     colorOptions: [
-      { color: '#FFFFFF', label: 'Neige Pure', image: 'https://images.unsplash.com/photo-1544923246-77307dd654cb?auto=format&fit=crop&q=80&w=800' },
-      { color: '#808080', label: 'Gris Urbain', image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=800' }
+      { color: '#FFFFFF', label: 'Neige Pure', image: PLACEHOLDER },
+      { color: '#808080', label: 'Gris Urbain', image: PLACEHOLDER }
     ],
     attributes: { 'Coupe-vent': 'Oui', 'Poids': 'Ultraléger' }
   },
@@ -49,7 +50,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     subtitle: 'SYSTÈME DE STOCKAGE MODULAIRE',
     price: 180,
     salePrice: 145,
-    image: 'https://images.unsplash.com/photo-1596706915222-77777174955b?auto=format&fit=crop&q=80&w=800',
+    image: PLACEHOLDER,
     category: 'Homme',
     stock: 15,
     sku: 'TAC-UTL-003',
@@ -64,7 +65,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     name: 'Bomber Shadow Ops',
     subtitle: 'INFILTRATION URBAINE',
     price: 280,
-    image: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&q=80&w=800',
+    image: PLACEHOLDER,
     category: 'Homme',
     stock: 3,
     sku: 'SHD-BOM-004',
@@ -79,7 +80,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     name: 'Cargo Recon Elite',
     subtitle: 'MOBILITÉ TACTIQUE',
     price: 160,
-    image: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?auto=format&fit=crop&q=80&w=800',
+    image: PLACEHOLDER,
     category: 'Homme',
     stock: 20,
     sku: 'RCN-CRG-005',
@@ -95,7 +96,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     subtitle: 'PROTECTION CLIMATIQUE AVANCÉE',
     price: 390,
     salePrice: 312,
-    image: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&q=80&w=800',
+    image: PLACEHOLDER,
     category: 'Femme',
     stock: 6,
     sku: 'AUR-TCH-006',
@@ -128,7 +129,7 @@ export const INITIAL_ORDERS: Order[] = [
         name: 'Parka Glacier Ops', 
         price: 450, 
         quantity: 1, 
-        image: 'https://images.unsplash.com/photo-1539533113208-f6df8cc8b543?auto=format&fit=crop&q=80&w=800', 
+        image: PLACEHOLDER, 
         size: 'L', 
         color: 'Noir' 
       }
@@ -161,7 +162,7 @@ export const INITIAL_ORDERS: Order[] = [
         name: 'Doudoune Valkyrie', 
         price: 320, 
         quantity: 1, 
-        image: 'https://images.unsplash.com/photo-1544923246-77307dd654cb?auto=format&fit=crop&q=80&w=800', 
+        image: PLACEHOLDER, 
         size: 'S', 
         color: 'Blanc' 
       },
@@ -171,7 +172,7 @@ export const INITIAL_ORDERS: Order[] = [
         name: 'Gilet Tactique Utility', 
         price: 145, 
         quantity: 2, 
-        image: 'https://images.unsplash.com/photo-1596706915222-77777174955b?auto=format&fit=crop&q=80&w=800', 
+        image: PLACEHOLDER, 
         size: 'M' 
       }
     ],
@@ -194,7 +195,7 @@ export const INITIAL_DESIGN_SETTINGS: DesignSettings = {
   showOverlays: true,
   sidebarGradient: true,
   gradientIntensity: 40,
-  hudLogo: 'https://pkxusmhvzcqfozzykjzy.supabase.co/storage/v1/object/sign/LOGO/logo%20runningrtg.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9hZTA1ZTc0OC0yOWIwLTQ2OWQtYTEyNy0yZThlZDYzNDAyZTEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJMT0dPL2xvZ28gcnVubmluZ3J0Zy5wbmciLCJpYXQiOjE3Njk3ODY5MjAsImV4cCI6MTgwMTMyMjkyMH0.oBKyGYVRKMOpBCuZrlGH0EpzyZjGiMZ6pkjQ-tsHUYs',
+  hudLogo: '',
   
   // Sidebar Product Card HUD
   sidebarBrandName: '',
@@ -206,10 +207,8 @@ export const INITIAL_DESIGN_SETTINGS: DesignSettings = {
   showSidebarStats: true,
   sidebarInfoText: '',
   
-  backgroundMedia: [
-    { id: '1', url: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=1200', type: 'image', isCover: true }
-  ],
-  isSlideshowActive: true,
+  backgroundMedia: [],
+  isSlideshowActive: false,
   slideshowSpeed: 5000,
 
   unitIdLabel: 'IDENTIFIANT SYSTÈME',
@@ -270,28 +269,7 @@ export const INITIAL_DESIGN_SETTINGS: DesignSettings = {
     pos: { top: 50, right: 5 },
     fontSize: 10
   },
-  heroSlides: [
-    { 
-      id: 'slide-1', 
-      media: 'https://images.unsplash.com/photo-1523398002811-999ca8dec234?auto=format&fit=crop&q=80&w=2000', 
-      mediaType: 'image',
-      title: 'PRÊT POUR LE FUTUR', 
-      subtitle: 'ÉQUIPEMENT TACTIQUE AVANCÉ', 
-      ctaText: 'VOIR LA COLLECTION',
-      ctaUrl: '/shop',
-      accentColor: '#3b82f6'
-    },
-    { 
-      id: 'slide-2', 
-      media: 'https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&q=80&w=2000', 
-      mediaType: 'image',
-      title: 'COQUES ADAPTATIVES', 
-      subtitle: 'COUCHES RÉSISTANTES AUX INTEMPÉRIES', 
-      ctaText: 'VOIR LES VESTES',
-      ctaUrl: '/shop',
-      accentColor: '#10b981'
-    }
-  ],
+  heroSlides: [],
   socialLinks: [
     { label: 'INSTAGRAM', url: '#' },
     { label: 'TWITTER', url: '#' },
@@ -306,10 +284,10 @@ export const INITIAL_DESIGN_SETTINGS: DesignSettings = {
   schedules: [], 
   
   categories: [
-    { id: 'cat-men', title: 'Homme', image: 'https://images.unsplash.com/photo-1617137968427-85924c800a22?auto=format&fit=crop&q=80&w=800' },
-    { id: 'cat-women', title: 'Femme', image: 'https://images.unsplash.com/photo-1532453288672-3a27e9be9efd?auto=format&fit=crop&q=80&w=800' },
-    { id: 'cat-children', title: 'Enfant', image: 'https://images.unsplash.com/photo-1519238263496-6362d74c1123?auto=format&fit=crop&q=80&w=800' },
-    { id: 'cat-accessories', title: 'Accessoires', image: 'https://images.unsplash.com/photo-1523170335258-f5ed11844a49?auto=format&fit=crop&q=80&w=800' }
+    { id: 'cat-men', title: 'Homme', image: PLACEHOLDER },
+    { id: 'cat-women', title: 'Femme', image: PLACEHOLDER },
+    { id: 'cat-children', title: 'Enfant', image: PLACEHOLDER },
+    { id: 'cat-accessories', title: 'Accessoires', image: PLACEHOLDER }
   ],
   homeSections: [
     { id: 'top', title: 'Meilleures Ventes de la Semaine', isVisible: true },
@@ -320,18 +298,7 @@ export const INITIAL_DESIGN_SETTINGS: DesignSettings = {
   
   pages: {
     'home': {
-      heroSlides: [
-        { 
-          id: 'slide-1', 
-          media: 'https://images.unsplash.com/photo-1523398002811-999ca8dec234?auto=format&fit=crop&q=80&w=2000', 
-          mediaType: 'image',
-          title: 'PRÊT POUR LE FUTUR', 
-          subtitle: 'ÉQUIPEMENT TACTIQUE AVANCÉ', 
-          ctaText: 'VOIR LA COLLECTION',
-          ctaUrl: '/shop',
-          accentColor: '#3b82f6'
-        }
-      ]
+      heroSlides: []
     }
   },
   colorDisplayMode: 'swatches',
