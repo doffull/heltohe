@@ -330,6 +330,7 @@ export type Database = {
           id: string
           payment_methods: Json
           relay_enabled: boolean
+          relay_map_settings: Json
           shipping_home_price: number
           shipping_relay_price: number
           updated_at: string
@@ -343,6 +344,7 @@ export type Database = {
           id?: string
           payment_methods?: Json
           relay_enabled?: boolean
+          relay_map_settings?: Json
           shipping_home_price?: number
           shipping_relay_price?: number
           updated_at?: string
@@ -356,6 +358,7 @@ export type Database = {
           id?: string
           payment_methods?: Json
           relay_enabled?: boolean
+          relay_map_settings?: Json
           shipping_home_price?: number
           shipping_relay_price?: number
           updated_at?: string
