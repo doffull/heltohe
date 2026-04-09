@@ -4,6 +4,7 @@ import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
 import { useAdminConfig } from '@/hooks/useAdminConfig';
+import { useCheckoutConfig } from '@/hooks/useCheckoutConfig';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,11 +28,7 @@ import { cn } from '@/lib/utils';
 type DeliveryMode = 'home' | 'relay';
 type Step = 'address' | 'delivery' | 'confirmation';
 
-const COLISSIMO_RATES = {
-  home: 6.5,
-  relay: 4.5,
-  free_threshold: 200,
-};
+// Rates loaded dynamically from DB via useCheckoutConfig
 
 interface RelayPoint {
   identifiant: string;
