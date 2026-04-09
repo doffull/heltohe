@@ -49,6 +49,7 @@ export default function Checkout() {
   const { user } = useAuth();
   const { designSettings } = useApp();
   const { data: adminConfig } = useAdminConfig();
+  const { data: checkoutConfig } = useCheckoutConfig();
   const { items, subtotal, promoDiscount, promoCode, total, clearCart } = useCart();
 
   const [step, setStep] = useState<Step>('address');
@@ -75,7 +76,12 @@ export default function Checkout() {
     relayInfo: '',
   });
 
-  const shippingCost = subtotal >= COLISSIMO_RATES.free_threshold ? 0 : COLISSIMO_RATES[deliveryMode];
+  const rates = {
+    home: checkoutConfig?.shippingHomePrice ?? 6.5,
+    relay: checkoutConfig?.shippingRelayPrice ?? 4.5,
+    free_threshold: checkoutConfig?.freeShippingThreshold ?? 200,
+  };
+  const shippingCost = subtotal >= rates.free_threshold ? 0 : rates[deliveryMode];
   const orderTotal = subtotal - promoDiscount + shippingCost;
   const tax = orderTotal * 0.2 / 1.2;
 
