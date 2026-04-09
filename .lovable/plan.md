@@ -1,52 +1,57 @@
 
-## Plan : Sécurité HIBP + Nettoyage images + Gestion homepage admin complète
 
-### 1. Protection mots de passe compromis (HIBP)
+## Plan : Nettoyage images template + Google Auth + Sécurité + Audit complet
 
-**Action manuelle requise** : Cette fonctionnalité ne peut pas être activée par code. Vous devez l'activer vous-même :
-- Allez dans **Lovable Cloud > Users > Auth Settings** (icone engrenage) > **Email settings** > activez **Password HIBP Check**.
+### 1. Supprimer toutes les images Unsplash du code
 
-### 2. Nettoyage des images inutilisées
+Le fichier `src/data/initialData.ts` contient **85 références Unsplash** : images produits fictifs, slides hero, catégories, commandes fictives, et fond de sidebar. Ces données servaient de template initial.
 
-Les 12 fichiers dans `src/assets/products/` ne sont importés nulle part dans le code. Le dossier entier sera supprimé. Les images hero et catégories restent (utilisées comme fallbacks dans `Home.tsx`).
+**Actions :**
+- Remplacer toutes les URLs Unsplash par `'/placeholder.svg'` dans `initialData.ts` (produits, commandes, heroSlides, backgroundMedia, categories, pages)
+- Les images `src/assets/hero/` et `src/assets/categories/` sont des fichiers locaux utilisés comme fallback dans `Home.tsx` — **à conserver** uniquement si ce sont vos propres images. Si ce sont des images trouvées sur Internet, elles seront aussi remplacées par des placeholders gris génériques
+- Le site charge ses vraies données depuis la base de données (produits, catégories, slides hero configurés via l'admin). Le `initialData.ts` ne sert que de fallback quand la base est vide
 
-### 3. Colonne `promo_ends_at` sur la table `products`
+### 2. Connexion Google OAuth
 
-Migration SQL ajoutant `promo_ends_at TIMESTAMP WITH TIME ZONE` pour permettre les promos avec countdown. Mise à jour du type `Product` et du hook `useProducts` pour mapper ce champ.
+Lovable Cloud gère automatiquement Google OAuth. 
 
-### 4. Section "Offres Flash" avec Countdown sur la Homepage
+**Actions :**
+- Configurer le Social Auth via l'outil dédié (génère le module `src/integrations/lovable/`)
+- Ajouter un bouton "Se connecter avec Google" sur la page `Auth.tsx` utilisant `lovable.auth.signInWithOAuth("google")`
+- Le bouton sera ajouté sous les formulaires login et inscription
 
-Nouveau composant `PromoCountdown.tsx` dans `src/components/home/` :
-- Filtre les produits ayant `salePrice` + `promoEndsAt` dans le futur
-- Affiche un décompte dynamique (J, H, M, S) sur chaque carte produit
-- Carrousel horizontal avec badge countdown animé
-- Intégré dans `Home.tsx` entre les catégories et les produits en vedette
+### 3. Sécurité renforcée
 
-### 5. Bandeau Fidélité sur la Homepage
+L'admin est déjà protégé (vérification `isAdmin` + RLS + `has_role` RPC). Renforcements supplémentaires :
 
-Nouveau composant `LoyaltyBanner.tsx` dans `src/components/home/` :
-- Présente les 4 paliers (Bronze, Silver, Gold, Platinum) avec avantages
-- Si connecté : affiche les points de l'utilisateur et son tier actuel
-- CTA vers `/compte/fidelite`
-- Intégré dans `Home.tsx` après les produits
+**Actions :**
+- **Rate limiting** sur le formulaire de contact : ajouter un délai minimum entre soumissions (anti-spam côté client)
+- **Honeypot field** sur les formulaires publics (contact, inscription newsletter) : champ invisible qui piège les bots
+- **CSRF-like protection** : les formulaires Supabase sont déjà protégés par le JWT, mais on ajoutera une validation anti-bot sur les formulaires anonymes
+- **Audit de sécurité** : lancer un scan de sécurité complet et corriger les findings restants
+- Activer HIBP reste une action manuelle (Cloud > Users > Auth Settings)
 
-### 6. Refonte HomepageManagement dans le Dashboard Admin
+> Note : les captchas externes (reCAPTCHA, hCaptcha) nécessitent des clés API tierces. Le honeypot + rate limiting offrent une protection anti-bot efficace sans dépendance externe.
 
-Remplacement du composant existant par un centre de contrôle complet :
-- **Onglet Sections** : réordonner/activer les sections de la homepage (Hero, Catégories, Promos Flash, Vedettes, Nouveautés, Fidélité, Newsletter)
-- **Onglet Produits** : assigner des produits à chaque section via recherche + toggle (existant, conservé et étendu avec tags `promo`, `trending`, `style`)
-- **Onglet Promos Flash** : liste des produits avec `salePrice`, possibilité de définir `promo_ends_at` (date picker) pour chaque produit promo
-- **Onglet Fidélité** : toggle on/off de la section fidélité sur la homepage
+### 4. Audit des redirections, liens et catégories
+
+**Actions :**
+- Vérifier que toutes les routes dans `App.tsx` pointent vers des composants existants
+- Vérifier la cohérence entre les catégories en base et les slugs de navigation
+- Vérifier les liens du footer, header, et menus
+- Vérifier que les pages légales sont accessibles
+- Vérifier les liens cassés dans le code (URLs mortes, routes inexistantes)
+- Documenter les résultats dans un rapport d'audit
 
 ### Fichiers modifiés/créés
 
 | Fichier | Action |
 |---|---|
-| `src/assets/products/*` (12 fichiers) | Suppression |
-| Migration SQL | Ajout `promo_ends_at` sur `products` |
-| `src/types/index.ts` | Ajout `promoEndsAt?: string` au type Product |
-| `src/hooks/useProducts.ts` | Mapper `promo_ends_at` |
-| `src/components/home/PromoCountdown.tsx` | Nouveau — section promos flash countdown |
-| `src/components/home/LoyaltyBanner.tsx` | Nouveau — bandeau fidélité |
-| `src/pages/Home.tsx` | Intégration PromoCountdown + LoyaltyBanner |
-| `src/pages/admin/AdminDashboard.tsx` | Refonte HomepageManagement avec 4 onglets |
+| `src/data/initialData.ts` | Remplacer toutes les URLs Unsplash par placeholders |
+| `src/assets/hero/*`, `src/assets/categories/*` | Supprimer si images Internet, sinon conserver |
+| `src/pages/Auth.tsx` | Ajouter bouton Google OAuth |
+| `src/pages/Contact.tsx` | Ajouter honeypot + rate limiting anti-bot |
+| `src/components/layout/Footer.tsx` | Vérifier/corriger les liens |
+| `src/components/layout/Header.tsx` | Vérifier/corriger les liens de navigation |
+| Scan sécurité | Lancer et corriger les findings |
+
