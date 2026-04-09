@@ -1,66 +1,65 @@
 
 
-## Plan : Espace Admin "Commandes & Livraison"
+## Plan : Passerelles de paiement e-commerce + Personnalisation carte Points Relais
 
-### Contexte
-Les tarifs Colissimo sont actuellement codés en dur dans `Checkout.tsx` (`home: 6.5€`, `relay: 4.5€`, `seuil: 200€`). Il n'existe aucun espace admin pour gérer le tunnel d'achat.
+### 1. Refonte de l'onglet Paiement dans AdminCheckout
 
-### 1. Nouvelle table `checkout_config` en base de données
+Remplacer la liste simple de moyens de paiement par un catalogue de **passerelles e-commerce pré-configurées** :
 
-Migration SQL pour stocker tous les paramètres configurables du checkout :
-- `shipping_home_price` (NUMERIC, défaut 6.50)
-- `shipping_relay_price` (NUMERIC, défaut 4.50)  
-- `free_shipping_threshold` (NUMERIC, défaut 200)
-- `payment_methods` (JSONB — liste des modes de paiement activés avec labels)
-- `checkout_message` (TEXT — message personnalisé affiché sur la page de confirmation)
-- `relay_enabled` (BOOLEAN, défaut true)
-- `home_delivery_enabled` (BOOLEAN, défaut true)
-- RLS : admin-only pour write, public read
+**Passerelles incluses :**
+- **Stripe** — Cartes, Apple Pay, Google Pay
+- **PayPlug** — Solution française, cartes bancaires
+- **Mollie** — Multi-méthodes (CB, iDEAL, Bancontact, etc.)
+- **Klarna** — Paiement en 3x/4x, pay later
+- **PayPal** — Paiement en ligne classique
+- **Virement bancaire** — Manuel (existant)
 
-### 2. Hook `useCheckoutConfig`
+Chaque passerelle aura :
+- Un toggle on/off
+- Un champ pour la clé API publique (publishable key)
+- Un champ pour la clé API secrète (secret key) — stocké via les secrets backend
+- Un indicateur de statut (configuré / non configuré)
+- Un lien vers la documentation du fournisseur
 
-Nouveau hook dans `src/hooks/useCheckoutConfig.ts` :
-- `useCheckoutConfig()` — query pour lire la config
-- `useSaveCheckoutConfig()` — mutation upsert
+Les clés secrètes seront sauvegardées dans `checkout_config.payment_methods` (JSONB enrichi). Les clés réellement sensibles (secret keys) seront stockées côté serveur uniquement via les secrets Supabase lorsque l'utilisateur les configurera.
 
-### 3. Nouvelle page admin `/admin/checkout`
+**Structure JSONB enrichie pour `payment_methods` :**
+```json
+[
+  { "key": "stripe", "label": "Stripe", "enabled": false, "publicKey": "", "configured": false },
+  { "key": "payplug", "label": "PayPlug", "enabled": false, "publicKey": "", "configured": false },
+  { "key": "mollie", "label": "Mollie", "enabled": false, "publicKey": "", "configured": false },
+  { "key": "klarna", "label": "Klarna", "enabled": false, "publicKey": "", "configured": false },
+  { "key": "paypal", "label": "PayPal", "enabled": false, "publicKey": "", "configured": false },
+  { "key": "bank_transfer", "label": "Virement bancaire", "enabled": true, "configured": true }
+]
+```
 
-Nouveau fichier `src/pages/admin/AdminCheckout.tsx` avec 4 onglets :
+### 2. Personnalisation de la carte Points Relais dans AdminColissimo
 
-**Onglet Livraison** :
-- Prix Colissimo domicile (input numérique)
-- Prix Colissimo point relais (input numérique)
-- Seuil de livraison gratuite (input numérique)
-- Toggle activer/désactiver chaque mode
+Ajouter un onglet ou une section dans l'onglet "Points Relais" de `AdminColissimo.tsx` pour personnaliser l'apparence de la carte Leaflet :
 
-**Onglet Paiement** :
-- Liste des moyens de paiement avec toggle on/off (virement bancaire, etc.)
-- Note : l'intégration bancaire réelle (SogeCommerce, Stripe) nécessite des clés API tierces — cette section prépare l'infrastructure
+- Couleur des marqueurs (couleur primaire du marqueur sélectionné, couleur des marqueurs standards)
+- Style de la carte (tile layer : clair/sombre/standard)
+- Zoom par défaut
+- Rayon de recherche par défaut
 
-**Onglet Points Relais** :
-- Toggle activation des points relais
-- Lien vers la configuration Colissimo existante (`/admin/colissimo`)
+Ces paramètres seront stockés dans `checkout_config` via un nouveau champ JSONB `relay_map_settings`.
 
-**Onglet Apparence** :
-- Message de confirmation personnalisable
-- Aperçu du tunnel de commande
+### 3. Migration SQL
 
-### 4. Intégration dans le checkout
+Ajouter la colonne `relay_map_settings` (JSONB) à la table `checkout_config` avec un défaut raisonnable.
 
-Modifier `Checkout.tsx` pour lire les tarifs depuis `useCheckoutConfig()` au lieu des constantes codées en dur `COLISSIMO_RATES`.
+### 4. Intégration dans le checkout client
 
-### 5. Route et navigation
-
-- Ajouter la route `/admin/checkout/*` dans `Admin.tsx`
-- Ajouter l'entrée dans `SIDEBAR_ITEMS` avec icône `ShoppingCart` (ou `CreditCard`)
+Modifier `Checkout.tsx` pour lire `relay_map_settings` et appliquer le style de carte choisi par l'admin lors de la sélection de point relais (si une carte Leaflet y est ajoutée ultérieurement).
 
 ### Fichiers modifiés/créés
 
 | Fichier | Action |
 |---|---|
-| Migration SQL | Créer table `checkout_config` |
-| `src/hooks/useCheckoutConfig.ts` | Nouveau — hook CRUD |
-| `src/pages/admin/AdminCheckout.tsx` | Nouveau — page admin 4 onglets |
-| `src/pages/admin/Admin.tsx` | Ajouter route + sidebar |
-| `src/pages/Checkout.tsx` | Lire tarifs depuis la config DB |
+| Migration SQL | Ajouter `relay_map_settings` à `checkout_config` |
+| `src/hooks/useCheckoutConfig.ts` | Enrichir le type `PaymentMethod` + mapper `relay_map_settings` |
+| `src/pages/admin/AdminCheckout.tsx` | Refonte onglet Paiement avec catalogue passerelles |
+| `src/pages/admin/AdminColissimo.tsx` | Section personnalisation carte dans onglet Points Relais |
 
