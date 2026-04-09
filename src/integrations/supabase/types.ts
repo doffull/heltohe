@@ -1487,16 +1487,11 @@ export type Database = {
       design_settings_public: {
         Row: {
           accent_color: string | null
-          admin_notification_email: string | null
           background_media: Json | null
           background_watermark: string | null
           category_columns: number | null
           category_layout: Json | null
           click_scale: number | null
-          colissimo_sender_address: string | null
-          colissimo_sender_city: string | null
-          colissimo_sender_name: string | null
-          colissimo_sender_zip: string | null
           contact_email: string | null
           contact_phone: string | null
           created_at: string | null
@@ -1586,16 +1581,11 @@ export type Database = {
         }
         Insert: {
           accent_color?: string | null
-          admin_notification_email?: never
           background_media?: Json | null
           background_watermark?: string | null
           category_columns?: number | null
           category_layout?: Json | null
           click_scale?: number | null
-          colissimo_sender_address?: never
-          colissimo_sender_city?: never
-          colissimo_sender_name?: never
-          colissimo_sender_zip?: never
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string | null
@@ -1685,16 +1675,11 @@ export type Database = {
         }
         Update: {
           accent_color?: string | null
-          admin_notification_email?: never
           background_media?: Json | null
           background_watermark?: string | null
           category_columns?: number | null
           category_layout?: Json | null
           click_scale?: number | null
-          colissimo_sender_address?: never
-          colissimo_sender_city?: never
-          colissimo_sender_name?: never
-          colissimo_sender_zip?: never
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string | null

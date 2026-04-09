@@ -81,10 +81,11 @@ export default function Contact() {
   const { toast } = useToast();
 
   // Contact form
-  const [form, setForm] = useState({ name: '', email: '', message: '' });
+  const [form, setForm] = useState({ name: '', email: '', message: '', website: '' });
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [lastSubmitTime, setLastSubmitTime] = useState(0);
 
   // Chatbot
   const [messages, setMessages] = useState<Msg[]>([
@@ -111,10 +112,22 @@ export default function Contact() {
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Honeypot: if the hidden field is filled, silently reject
+    if (form.website) {
+      setSent(true);
+      return;
+    }
+    // Rate limiting: minimum 10s between submissions
+    const now = Date.now();
+    if (now - lastSubmitTime < 10000) {
+      toast({ title: 'Veuillez patienter', description: 'Attendez quelques secondes avant de renvoyer un message.', variant: 'destructive' });
+      return;
+    }
     const errors = validateForm();
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) return;
     setSending(true);
+    setLastSubmitTime(now);
     const { error } = await supabase.from('messages').insert({
       name: form.name,
       email: form.email,
@@ -125,7 +138,7 @@ export default function Contact() {
       toast({ title: 'Erreur', description: 'Impossible d\'envoyer le message.', variant: 'destructive' });
     } else {
       setSent(true);
-      setForm({ name: '', email: '', message: '' });
+      setForm({ name: '', email: '', message: '', website: '' });
     }
   };
 
@@ -267,6 +280,19 @@ export default function Contact() {
                         {formErrors.message && <p className="text-xs text-destructive">{formErrors.message}</p>}
                         <p className="text-xs text-muted-foreground ml-auto">{form.message.length}/2000</p>
                       </div>
+                    </div>
+                    {/* Honeypot - hidden from real users */}
+                    <div className="absolute opacity-0 h-0 overflow-hidden" aria-hidden="true" tabIndex={-1}>
+                      <label htmlFor="website">Website</label>
+                      <input
+                        id="website"
+                        name="website"
+                        type="text"
+                        value={form.website}
+                        onChange={(e) => setForm(f => ({ ...f, website: e.target.value }))}
+                        autoComplete="off"
+                        tabIndex={-1}
+                      />
                     </div>
                     <Button type="submit" disabled={sending} className="w-full">
                       {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}

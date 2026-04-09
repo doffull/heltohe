@@ -16,22 +16,17 @@ import { PromoCountdown } from '@/components/home/PromoCountdown';
 import { LoyaltyBanner } from '@/components/home/LoyaltyBanner';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-import heroImage1 from '@/assets/hero/hero-1.jpg';
-import heroImage2 from '@/assets/hero/hero-2.jpg';
-import catHomme from '@/assets/categories/cat-homme.jpg';
-import catFemme from '@/assets/categories/cat-femme.jpg';
-import catEnfant from '@/assets/categories/cat-enfant.jpg';
-import catAccessoires from '@/assets/categories/cat-accessoires.jpg';
+const PLACEHOLDER = '/placeholder.svg';
 
 const DEFAULT_HERO_SLIDES = [
 {
-  image: heroImage1,
+  image: PLACEHOLDER,
   title: 'COLLECTION\nHIVER 2026',
   subtitle: 'ÉQUIPEMENT TECHNIQUE PREMIUM',
   cta: 'Découvrir'
 },
 {
-  image: heroImage2,
+  image: PLACEHOLDER,
   title: 'NOUVELLE\nCOLLECTION',
   subtitle: 'ÉLÉGANCE & PERFORMANCE',
   cta: 'Explorer'
@@ -39,10 +34,10 @@ const DEFAULT_HERO_SLIDES = [
 
 
 const FALLBACK_CATEGORIES = [
-{ title: 'Homme', image: catHomme, href: '/homme' },
-{ title: 'Femme', image: catFemme, href: '/femme' },
-{ title: 'Enfant', image: catEnfant, href: '/enfant' },
-{ title: 'Accessoires', image: catAccessoires, href: '/accessoires' }];
+{ title: 'Homme', image: PLACEHOLDER, href: '/homme' },
+{ title: 'Femme', image: PLACEHOLDER, href: '/femme' },
+{ title: 'Enfant', image: PLACEHOLDER, href: '/enfant' },
+{ title: 'Accessoires', image: PLACEHOLDER, href: '/accessoires' }];
 
 
 // Reusable scroll-reveal wrapper
