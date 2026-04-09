@@ -107,7 +107,8 @@ Deno.serve(async (req) => {
 
     // ─── ACTION: GET RELAY POINTS ─────────────────────────────────────────────
     if (action === 'getRelayPoints') {
-      const { zipCode, city = '', countryCode = 'FR' } = body;
+      const { zipCode, city = '-', countryCode = 'FR' } = body;
+      const safeCity = city.trim() || '-';
 
       if (!zipCode) {
         return new Response(JSON.stringify({ error: 'zipCode is required' }), {
@@ -127,7 +128,7 @@ Deno.serve(async (req) => {
       <password>${escapeXml(COLISSIMO_PASSWORD)}</password>
       <address></address>
       <zipCode>${escapeXml(zipCode)}</zipCode>
-      <city>${escapeXml(city)}</city>
+      <city>${escapeXml(safeCity)}</city>
       <countryCode>${escapeXml(countryCode)}</countryCode>
       <weight>1</weight>
       <shippingDate>${shippingDate}</shippingDate>
