@@ -77,7 +77,7 @@ export function useSaveCheckoutConfig() {
       };
       const { error } = await supabase
         .from('checkout_config')
-        .upsert(payload, { onConflict: 'config_key' });
+        .upsert(payload as any, { onConflict: 'config_key' });
       if (error) throw error;
     },
     onSuccess: () => {
