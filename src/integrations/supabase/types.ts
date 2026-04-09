@@ -320,6 +320,48 @@ export type Database = {
         }
         Relationships: []
       }
+      checkout_config: {
+        Row: {
+          checkout_message: string | null
+          config_key: string
+          created_at: string
+          free_shipping_threshold: number
+          home_delivery_enabled: boolean
+          id: string
+          payment_methods: Json
+          relay_enabled: boolean
+          shipping_home_price: number
+          shipping_relay_price: number
+          updated_at: string
+        }
+        Insert: {
+          checkout_message?: string | null
+          config_key?: string
+          created_at?: string
+          free_shipping_threshold?: number
+          home_delivery_enabled?: boolean
+          id?: string
+          payment_methods?: Json
+          relay_enabled?: boolean
+          shipping_home_price?: number
+          shipping_relay_price?: number
+          updated_at?: string
+        }
+        Update: {
+          checkout_message?: string | null
+          config_key?: string
+          created_at?: string
+          free_shipping_threshold?: number
+          home_delivery_enabled?: boolean
+          id?: string
+          payment_methods?: Json
+          relay_enabled?: boolean
+          shipping_home_price?: number
+          shipping_relay_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       colissimo_bordereaux: {
         Row: {
           bordereau_date: string

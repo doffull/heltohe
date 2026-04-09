@@ -21,7 +21,8 @@ import {
   ShoppingBag,
   Bot,
   Truck,
-  ClipboardCheck
+  ClipboardCheck,
+  CreditCard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -42,11 +43,13 @@ import AdminStock from './AdminStock';
 import AdminWooCommerce from './AdminWooCommerce';
 import AdminChatbot from './AdminChatbot';
 import AdminColissimo from './AdminColissimo';
+import AdminCheckout from './AdminCheckout';
 
 const SIDEBAR_ITEMS = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/admin' },
   { icon: Package, label: 'Produits', href: '/admin/produits' },
   { icon: ShoppingCart, label: 'Commandes', href: '/admin/commandes' },
+  { icon: CreditCard, label: 'Checkout & Livraison', href: '/admin/checkout' },
   { icon: Users, label: 'Clients', href: '/admin/clients' },
   { icon: FileText, label: 'Pages', href: '/admin/pages' },
   { icon: FolderOpen, label: 'Média', href: '/admin/media' },
@@ -180,6 +183,7 @@ export default function Admin() {
             <Route index element={<AdminDashboard />} />
             <Route path="produits/*" element={<AdminProducts />} />
             <Route path="commandes/*" element={<AdminOrders />} />
+            <Route path="checkout/*" element={<AdminCheckout />} />
             <Route path="clients/*" element={<AdminCustomers />} />
             <Route path="pages/*" element={<AdminPages />} />
             <Route path="media/*" element={<AdminMedia />} />
