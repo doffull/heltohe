@@ -5,7 +5,37 @@ export interface PaymentMethod {
   key: string;
   label: string;
   enabled: boolean;
+  publicKey?: string;
+  configured?: boolean;
+  description?: string;
+  docUrl?: string;
+  icon?: string;
 }
+
+export interface RelayMapSettings {
+  markerColor: string;
+  selectedMarkerColor: string;
+  tileStyle: 'standard' | 'light' | 'dark';
+  defaultZoom: number;
+  searchRadius: number;
+}
+
+export const DEFAULT_RELAY_MAP_SETTINGS: RelayMapSettings = {
+  markerColor: '#3B82F6',
+  selectedMarkerColor: '#EF4444',
+  tileStyle: 'standard',
+  defaultZoom: 13,
+  searchRadius: 10,
+};
+
+export const PAYMENT_GATEWAYS: PaymentMethod[] = [
+  { key: 'stripe', label: 'Stripe', enabled: false, configured: false, publicKey: '', description: 'Cartes, Apple Pay, Google Pay', docUrl: 'https://stripe.com/docs', icon: '💳' },
+  { key: 'payplug', label: 'PayPlug', enabled: false, configured: false, publicKey: '', description: 'Solution française, cartes bancaires', docUrl: 'https://docs.payplug.com', icon: '🇫🇷' },
+  { key: 'mollie', label: 'Mollie', enabled: false, configured: false, publicKey: '', description: 'CB, iDEAL, Bancontact, etc.', docUrl: 'https://docs.mollie.com', icon: '🔄' },
+  { key: 'klarna', label: 'Klarna', enabled: false, configured: false, publicKey: '', description: 'Paiement en 3x/4x, pay later', docUrl: 'https://docs.klarna.com', icon: '🛍️' },
+  { key: 'paypal', label: 'PayPal', enabled: false, configured: false, publicKey: '', description: 'Paiement en ligne classique', docUrl: 'https://developer.paypal.com', icon: '🅿️' },
+  { key: 'bank_transfer', label: 'Virement bancaire', enabled: true, configured: true, publicKey: '', description: 'Paiement manuel par virement', icon: '🏦' },
+];
 
 export interface CheckoutConfig {
   id?: string;
@@ -16,6 +46,7 @@ export interface CheckoutConfig {
   relayEnabled: boolean;
   paymentMethods: PaymentMethod[];
   checkoutMessage: string;
+  relayMapSettings: RelayMapSettings;
 }
 
 const DEFAULT_CONFIG: CheckoutConfig = {
@@ -24,12 +55,21 @@ const DEFAULT_CONFIG: CheckoutConfig = {
   freeShippingThreshold: 200,
   homeDeliveryEnabled: true,
   relayEnabled: true,
-  paymentMethods: [
-    { key: 'bank_transfer', label: 'Virement bancaire', enabled: true },
-    { key: 'check', label: 'Chèque', enabled: false },
-  ],
+  paymentMethods: PAYMENT_GATEWAYS,
   checkoutMessage: '',
+  relayMapSettings: DEFAULT_RELAY_MAP_SETTINGS,
 };
+
+function mergePaymentMethods(saved: PaymentMethod[] | null): PaymentMethod[] {
+  const base = PAYMENT_GATEWAYS.map(gw => ({ ...gw }));
+  if (!saved || !Array.isArray(saved)) return base;
+  const savedMap = new Map(saved.map(pm => [pm.key, pm]));
+  return base.map(gw => {
+    const s = savedMap.get(gw.key);
+    if (s) return { ...gw, ...s, description: gw.description, docUrl: gw.docUrl, icon: gw.icon };
+    return gw;
+  });
+}
 
 function dbToConfig(db: Record<string, unknown>): CheckoutConfig {
   return {
@@ -39,8 +79,9 @@ function dbToConfig(db: Record<string, unknown>): CheckoutConfig {
     freeShippingThreshold: Number(db.free_shipping_threshold) || 200,
     homeDeliveryEnabled: db.home_delivery_enabled as boolean ?? true,
     relayEnabled: db.relay_enabled as boolean ?? true,
-    paymentMethods: (db.payment_methods as PaymentMethod[]) || DEFAULT_CONFIG.paymentMethods,
+    paymentMethods: mergePaymentMethods(db.payment_methods as PaymentMethod[] | null),
     checkoutMessage: (db.checkout_message as string) || '',
+    relayMapSettings: (db.relay_map_settings as RelayMapSettings) || DEFAULT_RELAY_MAP_SETTINGS,
   };
 }
 
@@ -74,6 +115,7 @@ export function useSaveCheckoutConfig() {
         relay_enabled: config.relayEnabled,
         payment_methods: config.paymentMethods as unknown,
         checkout_message: config.checkoutMessage,
+        relay_map_settings: config.relayMapSettings as unknown,
       };
       const { error } = await supabase
         .from('checkout_config')
