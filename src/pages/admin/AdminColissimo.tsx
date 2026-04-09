@@ -1281,6 +1281,32 @@ function PointsRelaisTab() {
   const [selected, setSelected] = useState<string | null>(null);
   const mapRef = useRef<L.Map | null>(null);
 
+  // Map settings from checkout config
+  const { data: checkoutConfig } = useCheckoutConfig();
+  const saveCheckoutConfig = useSaveCheckoutConfig();
+  const mapSettings = checkoutConfig?.relayMapSettings || DEFAULT_RELAY_MAP_SETTINGS;
+
+  const [localMapSettings, setLocalMapSettings] = useState(mapSettings);
+  useEffect(() => {
+    if (checkoutConfig?.relayMapSettings) setLocalMapSettings(checkoutConfig.relayMapSettings);
+  }, [checkoutConfig?.relayMapSettings]);
+
+  const handleSaveMapSettings = async () => {
+    if (!checkoutConfig) return;
+    try {
+      await saveCheckoutConfig.mutateAsync({ ...checkoutConfig, relayMapSettings: localMapSettings });
+      toast({ title: 'Paramètres de la carte sauvegardés' });
+    } catch {
+      toast({ title: 'Erreur', variant: 'destructive' });
+    }
+  };
+
+  const tileUrl = localMapSettings.tileStyle === 'dark'
+    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+    : localMapSettings.tileStyle === 'light'
+    ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+
   const hasCoords = (p: RelayPoint) =>
     p.lat && p.lng && !isNaN(parseFloat(p.lat)) && !isNaN(parseFloat(p.lng));
 
@@ -1311,14 +1337,73 @@ function PointsRelaisTab() {
     }
   };
 
+  const createMarkerIcon = (color: string) => {
+    return L.divIcon({
+      className: 'custom-marker',
+      html: `<div style="width:24px;height:24px;border-radius:50%;background:${color};border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>`,
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+    });
+  };
+
   const firstWithCoords = points.find(hasCoords);
   const mapCenter: [number, number] = firstWithCoords
     ? [parseFloat(firstWithCoords.lat), parseFloat(firstWithCoords.lng)]
     : [46.6, 2.3];
-  const mapZoom = firstWithCoords ? 13 : 5;
+  const mapZoom = firstWithCoords ? localMapSettings.defaultZoom : 5;
 
   return (
     <div className="space-y-4">
+      {/* Map Settings Card */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Settings2 className="h-4 w-4" /> Personnalisation de la carte
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Couleur marqueurs</Label>
+              <div className="flex items-center gap-2">
+                <input type="color" value={localMapSettings.markerColor} onChange={e => setLocalMapSettings(s => ({ ...s, markerColor: e.target.value }))} className="w-8 h-8 rounded cursor-pointer border border-border" />
+                <Input value={localMapSettings.markerColor} onChange={e => setLocalMapSettings(s => ({ ...s, markerColor: e.target.value }))} className="flex-1" maxLength={7} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Couleur marqueur sélectionné</Label>
+              <div className="flex items-center gap-2">
+                <input type="color" value={localMapSettings.selectedMarkerColor} onChange={e => setLocalMapSettings(s => ({ ...s, selectedMarkerColor: e.target.value }))} className="w-8 h-8 rounded cursor-pointer border border-border" />
+                <Input value={localMapSettings.selectedMarkerColor} onChange={e => setLocalMapSettings(s => ({ ...s, selectedMarkerColor: e.target.value }))} className="flex-1" maxLength={7} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Style de carte</Label>
+              <select
+                value={localMapSettings.tileStyle}
+                onChange={e => setLocalMapSettings(s => ({ ...s, tileStyle: e.target.value as 'standard' | 'light' | 'dark' }))}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="standard">Standard</option>
+                <option value="light">Clair</option>
+                <option value="dark">Sombre</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Zoom par défaut</Label>
+              <Input type="number" min="5" max="18" value={localMapSettings.defaultZoom} onChange={e => setLocalMapSettings(s => ({ ...s, defaultZoom: parseInt(e.target.value) || 13 }))} />
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <Button size="sm" onClick={handleSaveMapSettings} disabled={saveCheckoutConfig.isPending}>
+              {saveCheckoutConfig.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
+              Sauvegarder la carte
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Search */}
       <Card>
         <CardContent className="p-4">
           <div className="flex gap-3">
@@ -1347,10 +1432,15 @@ function PointsRelaisTab() {
             <MapContainer center={mapCenter} zoom={mapZoom} style={{ width: '100%', height: '100%' }} ref={mapRef}>
               <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                url={tileUrl}
               />
               {points.filter(hasCoords).map(p => (
-                <Marker key={p.identifiant} position={[parseFloat(p.lat), parseFloat(p.lng)]} eventHandlers={{ click: () => selectPoint(p.identifiant) }}>
+                <Marker
+                  key={p.identifiant}
+                  position={[parseFloat(p.lat), parseFloat(p.lng)]}
+                  icon={createMarkerIcon(selected === p.identifiant ? localMapSettings.selectedMarkerColor : localMapSettings.markerColor)}
+                  eventHandlers={{ click: () => selectPoint(p.identifiant) }}
+                >
                   <Popup>
                     <div className="text-xs space-y-0.5 min-w-36">
                       <p className="font-bold text-sm">{p.nom}</p>
