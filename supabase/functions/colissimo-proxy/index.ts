@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
       <password>${escapeXml(COLISSIMO_PASSWORD)}</password>
       <address></address>
       <zipCode>${escapeXml(zipCode)}</zipCode>
-      <city>${escapeXml(city)}</city>
+      <city>${escapeXml(safeCity)}</city>
       <countryCode>${escapeXml(countryCode)}</countryCode>
       <weight>1</weight>
       <shippingDate>${shippingDate}</shippingDate>
