@@ -281,6 +281,19 @@ export default function Contact() {
                         <p className="text-xs text-muted-foreground ml-auto">{form.message.length}/2000</p>
                       </div>
                     </div>
+                    {/* Honeypot - hidden from real users */}
+                    <div className="absolute opacity-0 h-0 overflow-hidden" aria-hidden="true" tabIndex={-1}>
+                      <label htmlFor="website">Website</label>
+                      <input
+                        id="website"
+                        name="website"
+                        type="text"
+                        value={form.website}
+                        onChange={(e) => setForm(f => ({ ...f, website: e.target.value }))}
+                        autoComplete="off"
+                        tabIndex={-1}
+                      />
+                    </div>
                     <Button type="submit" disabled={sending} className="w-full">
                       {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
                       Envoyer le message
