@@ -1,57 +1,66 @@
 
 
-## Plan : Nettoyage images template + Google Auth + Sécurité + Audit complet
+## Plan : Espace Admin "Commandes & Livraison"
 
-### 1. Supprimer toutes les images Unsplash du code
+### Contexte
+Les tarifs Colissimo sont actuellement codés en dur dans `Checkout.tsx` (`home: 6.5€`, `relay: 4.5€`, `seuil: 200€`). Il n'existe aucun espace admin pour gérer le tunnel d'achat.
 
-Le fichier `src/data/initialData.ts` contient **85 références Unsplash** : images produits fictifs, slides hero, catégories, commandes fictives, et fond de sidebar. Ces données servaient de template initial.
+### 1. Nouvelle table `checkout_config` en base de données
 
-**Actions :**
-- Remplacer toutes les URLs Unsplash par `'/placeholder.svg'` dans `initialData.ts` (produits, commandes, heroSlides, backgroundMedia, categories, pages)
-- Les images `src/assets/hero/` et `src/assets/categories/` sont des fichiers locaux utilisés comme fallback dans `Home.tsx` — **à conserver** uniquement si ce sont vos propres images. Si ce sont des images trouvées sur Internet, elles seront aussi remplacées par des placeholders gris génériques
-- Le site charge ses vraies données depuis la base de données (produits, catégories, slides hero configurés via l'admin). Le `initialData.ts` ne sert que de fallback quand la base est vide
+Migration SQL pour stocker tous les paramètres configurables du checkout :
+- `shipping_home_price` (NUMERIC, défaut 6.50)
+- `shipping_relay_price` (NUMERIC, défaut 4.50)  
+- `free_shipping_threshold` (NUMERIC, défaut 200)
+- `payment_methods` (JSONB — liste des modes de paiement activés avec labels)
+- `checkout_message` (TEXT — message personnalisé affiché sur la page de confirmation)
+- `relay_enabled` (BOOLEAN, défaut true)
+- `home_delivery_enabled` (BOOLEAN, défaut true)
+- RLS : admin-only pour write, public read
 
-### 2. Connexion Google OAuth
+### 2. Hook `useCheckoutConfig`
 
-Lovable Cloud gère automatiquement Google OAuth. 
+Nouveau hook dans `src/hooks/useCheckoutConfig.ts` :
+- `useCheckoutConfig()` — query pour lire la config
+- `useSaveCheckoutConfig()` — mutation upsert
 
-**Actions :**
-- Configurer le Social Auth via l'outil dédié (génère le module `src/integrations/lovable/`)
-- Ajouter un bouton "Se connecter avec Google" sur la page `Auth.tsx` utilisant `lovable.auth.signInWithOAuth("google")`
-- Le bouton sera ajouté sous les formulaires login et inscription
+### 3. Nouvelle page admin `/admin/checkout`
 
-### 3. Sécurité renforcée
+Nouveau fichier `src/pages/admin/AdminCheckout.tsx` avec 4 onglets :
 
-L'admin est déjà protégé (vérification `isAdmin` + RLS + `has_role` RPC). Renforcements supplémentaires :
+**Onglet Livraison** :
+- Prix Colissimo domicile (input numérique)
+- Prix Colissimo point relais (input numérique)
+- Seuil de livraison gratuite (input numérique)
+- Toggle activer/désactiver chaque mode
 
-**Actions :**
-- **Rate limiting** sur le formulaire de contact : ajouter un délai minimum entre soumissions (anti-spam côté client)
-- **Honeypot field** sur les formulaires publics (contact, inscription newsletter) : champ invisible qui piège les bots
-- **CSRF-like protection** : les formulaires Supabase sont déjà protégés par le JWT, mais on ajoutera une validation anti-bot sur les formulaires anonymes
-- **Audit de sécurité** : lancer un scan de sécurité complet et corriger les findings restants
-- Activer HIBP reste une action manuelle (Cloud > Users > Auth Settings)
+**Onglet Paiement** :
+- Liste des moyens de paiement avec toggle on/off (virement bancaire, etc.)
+- Note : l'intégration bancaire réelle (SogeCommerce, Stripe) nécessite des clés API tierces — cette section prépare l'infrastructure
 
-> Note : les captchas externes (reCAPTCHA, hCaptcha) nécessitent des clés API tierces. Le honeypot + rate limiting offrent une protection anti-bot efficace sans dépendance externe.
+**Onglet Points Relais** :
+- Toggle activation des points relais
+- Lien vers la configuration Colissimo existante (`/admin/colissimo`)
 
-### 4. Audit des redirections, liens et catégories
+**Onglet Apparence** :
+- Message de confirmation personnalisable
+- Aperçu du tunnel de commande
 
-**Actions :**
-- Vérifier que toutes les routes dans `App.tsx` pointent vers des composants existants
-- Vérifier la cohérence entre les catégories en base et les slugs de navigation
-- Vérifier les liens du footer, header, et menus
-- Vérifier que les pages légales sont accessibles
-- Vérifier les liens cassés dans le code (URLs mortes, routes inexistantes)
-- Documenter les résultats dans un rapport d'audit
+### 4. Intégration dans le checkout
+
+Modifier `Checkout.tsx` pour lire les tarifs depuis `useCheckoutConfig()` au lieu des constantes codées en dur `COLISSIMO_RATES`.
+
+### 5. Route et navigation
+
+- Ajouter la route `/admin/checkout/*` dans `Admin.tsx`
+- Ajouter l'entrée dans `SIDEBAR_ITEMS` avec icône `ShoppingCart` (ou `CreditCard`)
 
 ### Fichiers modifiés/créés
 
 | Fichier | Action |
 |---|---|
-| `src/data/initialData.ts` | Remplacer toutes les URLs Unsplash par placeholders |
-| `src/assets/hero/*`, `src/assets/categories/*` | Supprimer si images Internet, sinon conserver |
-| `src/pages/Auth.tsx` | Ajouter bouton Google OAuth |
-| `src/pages/Contact.tsx` | Ajouter honeypot + rate limiting anti-bot |
-| `src/components/layout/Footer.tsx` | Vérifier/corriger les liens |
-| `src/components/layout/Header.tsx` | Vérifier/corriger les liens de navigation |
-| Scan sécurité | Lancer et corriger les findings |
+| Migration SQL | Créer table `checkout_config` |
+| `src/hooks/useCheckoutConfig.ts` | Nouveau — hook CRUD |
+| `src/pages/admin/AdminCheckout.tsx` | Nouveau — page admin 4 onglets |
+| `src/pages/admin/Admin.tsx` | Ajouter route + sidebar |
+| `src/pages/Checkout.tsx` | Lire tarifs depuis la config DB |
 
