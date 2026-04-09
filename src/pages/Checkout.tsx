@@ -430,7 +430,7 @@ export default function Checkout() {
                           </div>
                         </div>
                         <span className="font-bold text-sm">
-                          {subtotal >= COLISSIMO_RATES.free_threshold ? <span className="text-primary">GRATUIT</span> : `${COLISSIMO_RATES.relay.toFixed(2)}€`}
+                          {subtotal >= rates.free_threshold ? <span className="text-primary">GRATUIT</span> : `${rates.relay.toFixed(2)}€`}
                         </span>
                       </div>
                     </button>
@@ -536,17 +536,17 @@ export default function Checkout() {
                         </div>
                       </div>
                       <span className="font-bold text-sm">
-                        {subtotal >= COLISSIMO_RATES.free_threshold ? <span className="text-primary">GRATUIT</span> : `${COLISSIMO_RATES.home.toFixed(2)}€`}
+                        {subtotal >= rates.free_threshold ? <span className="text-primary">GRATUIT</span> : `${rates.home.toFixed(2)}€`}
                       </span>
                     </div>
                   </button>
                 </div>
 
-                {subtotal < COLISSIMO_RATES.free_threshold && (
+                {subtotal < rates.free_threshold && (
                   <div className="bg-primary/10 border border-primary/20 px-4 py-3 chamfer-hud-sm">
                     <p className="text-xs text-primary">
                       <Truck className="h-3 w-3 inline mr-1" />
-                      Plus que {(COLISSIMO_RATES.free_threshold - subtotal).toFixed(2)}€ d'achats pour la livraison gratuite !
+                      Plus que {(rates.free_threshold - subtotal).toFixed(2)}€ d'achats pour la livraison gratuite !
                     </p>
                   </div>
                 )}
