@@ -107,7 +107,8 @@ Deno.serve(async (req) => {
 
     // ─── ACTION: GET RELAY POINTS ─────────────────────────────────────────────
     if (action === 'getRelayPoints') {
-      const { zipCode, city = '', countryCode = 'FR' } = body;
+      const { zipCode, city = '-', countryCode = 'FR' } = body;
+      const safeCity = city.trim() || '-';
 
       if (!zipCode) {
         return new Response(JSON.stringify({ error: 'zipCode is required' }), {
