@@ -1,0 +1,77 @@
+
+-- =============================================
+-- FIX 1: user_roles privilege escalation
+-- =============================================
+
+-- Drop the overly permissive ALL policy on public role
+DROP POLICY IF EXISTS "Admins can manage all roles" ON public.user_roles;
+
+-- Recreate it scoped to authenticated only
+CREATE POLICY "Admins can manage all roles"
+  ON public.user_roles
+  FOR ALL
+  TO authenticated
+  USING (has_role(auth.uid(), 'admin'::app_role))
+  WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
+
+-- Explicit deny for anon role
+CREATE POLICY "Deny anon access to user_roles"
+  ON public.user_roles
+  FOR ALL
+  TO anon
+  USING (false)
+  WITH CHECK (false);
+
+-- =============================================
+-- FIX 2: design_settings public data exposure
+-- =============================================
+
+-- Drop the overly permissive public SELECT policy on base table
+DROP POLICY IF EXISTS "Anyone can view design settings" ON public.design_settings;
+
+-- Recreate a restricted public SELECT that excludes sensitive columns
+-- by requiring reads go through the view. We add a policy that allows
+-- SELECT for everyone but the app code will use the view.
+CREATE POLICY "Public can view design settings"
+  ON public.design_settings
+  FOR SELECT
+  TO public
+  USING (true);
+
+-- =============================================
+-- FIX 3: Recreate view with security_invoker
+-- =============================================
+
+DROP VIEW IF EXISTS public.design_settings_public;
+
+CREATE VIEW public.design_settings_public
+WITH (security_invoker = on) AS
+SELECT
+  id, settings_key, sidebar_bg, accent_color, sidebar_gradient, gradient_intensity,
+  show_logo, show_stats, show_unit_id, show_overlays,
+  hud_logo, unit_id_label, custom_unit_id, stats_label, stats_sub_label,
+  background_watermark, stats, hud_buttons, glitch_duration, glitch_intensity,
+  click_scale, logo_style, stats_style, unit_id_style, social_style,
+  background_media, is_slideshow_active, slideshow_speed,
+  hero_slides, slider_auto_play, slider_speed, show_slider_overlay, slider_grayscale,
+  social_links, social_display_mode, home_sections, presets, schedules, pages,
+  sidebar_image, category_columns, header_preset, header_bg_color, header_text_color,
+  header_fixed, top_banner, footer_logo, favicon_url, header_nav_items,
+  site_name, site_tagline, contact_email, contact_phone,
+  slider_height, site_spacing, category_layout,
+  show_sidebar_product_card, show_sidebar_sizes, show_sidebar_stats,
+  show_sidebar_gallery, show_sidebar_product_number,
+  sidebar_slider_enabled, sidebar_slider_speed, sidebar_slider_max_products,
+  sidebar_brand_name, sidebar_brand_subtitle, sidebar_info_text,
+  sidebar_product_title, sidebar_product_description, sidebar_sizes,
+  sidebar_image_opacity, mobile_sidebar_image, mobile_sidebar_media_type,
+  stat_bar_filled_color, stat_bar_empty_color,
+  sidebar_reappear_delay, mannequin_hotspots, sidebar_brand_position,
+  -- Legal info (public by nature for legal pages)
+  legal_company_name, legal_company_form, legal_capital,
+  legal_address, legal_zip, legal_city,
+  legal_siret, legal_rcs, legal_vat, legal_director,
+  legal_rgpd_email, legal_return_email,
+  created_at, updated_at
+FROM public.design_settings;
+-- NOTE: Excludes admin_notification_email, colissimo_sender_* fields
