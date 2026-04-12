@@ -438,6 +438,7 @@ export type Database = {
         Row: {
           accent_color: string | null
           admin_notification_email: string | null
+          admin_section_colors: Json
           background_media: Json | null
           background_watermark: string | null
           category_columns: number | null
@@ -537,6 +538,7 @@ export type Database = {
         Insert: {
           accent_color?: string | null
           admin_notification_email?: string | null
+          admin_section_colors?: Json
           background_media?: Json | null
           background_watermark?: string | null
           category_columns?: number | null
@@ -636,6 +638,7 @@ export type Database = {
         Update: {
           accent_color?: string | null
           admin_notification_email?: string | null
+          admin_section_colors?: Json
           background_media?: Json | null
           background_watermark?: string | null
           category_columns?: number | null
@@ -974,6 +977,7 @@ export type Database = {
           tracking_number: string | null
           updated_at: string
           user_id: string | null
+          validation_flags: Json
         }
         Insert: {
           created_at?: string
@@ -999,6 +1003,7 @@ export type Database = {
           tracking_number?: string | null
           updated_at?: string
           user_id?: string | null
+          validation_flags?: Json
         }
         Update: {
           created_at?: string
@@ -1024,6 +1029,7 @@ export type Database = {
           tracking_number?: string | null
           updated_at?: string
           user_id?: string | null
+          validation_flags?: Json
         }
         Relationships: []
       }
