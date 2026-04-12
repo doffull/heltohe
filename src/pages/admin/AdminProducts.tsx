@@ -73,6 +73,7 @@ export default function AdminProducts() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
   const [isMockupDialogOpen, setIsMockupDialogOpen] = useState(false);
+  const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [extractedProducts, setExtractedProducts] = useState<ExtractedProduct[]>([]);
   const [isImporting, setIsImporting] = useState(false);
