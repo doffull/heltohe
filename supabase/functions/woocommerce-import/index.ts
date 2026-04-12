@@ -21,59 +21,150 @@ Deno.serve(async (req) => {
   );
 
   // Validate admin
-  const anonClient = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_ANON_KEY')!,
-    { global: { headers: { Authorization: authHeader } } }
-  );
   const token = authHeader.replace('Bearer ', '');
-  const { data: claimsData } = await anonClient.auth.getClaims(token);
-  if (!claimsData?.claims?.sub) {
+  const { data: { user }, error: userErr } = await supabase.auth.getUser(token);
+  if (userErr || !user) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
   }
-  const userId = claimsData.claims.sub;
+  const userId = user.id;
   const { data: roleCheck } = await supabase.from('user_roles').select('role').eq('user_id', userId).eq('role', 'admin').maybeSingle();
   if (!roleCheck) {
     return new Response(JSON.stringify({ error: 'Forbidden — admin only' }), { status: 403, headers: corsHeaders });
   }
 
   const body = await req.json();
-  const { storeUrl, consumerKey, consumerSecret, importProducts, importOrders, importCustomers } = body;
+  const { storeUrl, consumerKey, consumerSecret, importProducts, importOrders, importCustomers, mode } = body;
 
   if (!storeUrl || !consumerKey || !consumerSecret) {
     return new Response(JSON.stringify({ error: 'Missing credentials' }), { status: 400, headers: corsHeaders });
   }
 
-  const authParam = `consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`;
-  const wcFetch = async (path: string) => {
-    const res = await fetch(`${storeUrl}/wp-json/wc/v3/${path}?per_page=100&${authParam}`);
+  const cleanUrl = storeUrl.replace(/\/+$/, '');
+  const authParam = `consumer_key=${encodeURIComponent(consumerKey)}&consumer_secret=${encodeURIComponent(consumerSecret)}`;
+
+  const wcFetch = async (path: string, page = 1) => {
+    const res = await fetch(`${cleanUrl}/wp-json/wc/v3/${path}?per_page=100&page=${page}&${authParam}`);
     if (!res.ok) throw new Error(`WC API error ${res.status} for ${path}`);
-    return res.json();
+    const totalPages = parseInt(res.headers.get('x-wp-totalpages') || '1');
+    const data = await res.json();
+    return { data, totalPages };
   };
 
+  const wcFetchAll = async (path: string) => {
+    const all: any[] = [];
+    let page = 1;
+    let totalPages = 1;
+    do {
+      const result = await wcFetch(path, page);
+      all.push(...result.data);
+      totalPages = result.totalPages;
+      page++;
+    } while (page <= totalPages);
+    return all;
+  };
+
+  // ─── Map a WC product to our DB format ─────────────────────────────
+  function mapWcProduct(p: any) {
+    const allImages = (p.images || []).map((img: any) => img.src).filter(Boolean);
+    const sizeAttr = p.attributes?.find((a: any) => 
+      a.name?.toLowerCase().includes('taille') || a.name?.toLowerCase() === 'size'
+    );
+    const colorAttr = p.attributes?.find((a: any) => 
+      a.name?.toLowerCase().includes('couleur') || a.name?.toLowerCase() === 'color'
+    );
+    const otherAttrs: Record<string, string> = {};
+    (p.attributes || []).forEach((a: any) => {
+      if (a !== sizeAttr && a !== colorAttr) {
+        otherAttrs[a.name] = (a.options || []).join(', ');
+      }
+    });
+
+    return {
+      name: p.name || 'Sans titre',
+      sku: p.sku || `wc-${p.id}`,
+      price: parseFloat(p.regular_price || p.price || '0'),
+      sale_price: p.sale_price ? parseFloat(p.sale_price) : null,
+      image: allImages[0] || '',
+      images: allImages,
+      category: p.categories?.map((c: any) => c.name).join(', ') || 'Divers',
+      stock: p.stock_quantity ?? 0,
+      description: p.description?.replace(/<[^>]*>/g, '') || null,
+      short_description: p.short_description?.replace(/<[^>]*>/g, '') || null,
+      is_active: p.status === 'publish',
+      sizes: sizeAttr?.options || [],
+      colors: colorAttr?.options || [],
+      attributes: otherAttrs,
+      tags: (p.tags || []).map((t: any) => t.name),
+      weight: p.weight || null,
+      dimensions: p.dimensions || null,
+      wc_id: p.id,
+    };
+  }
+
+  // ─── PREVIEW MODE ──────────────────────────────────────────────────
+  if (mode === 'preview') {
+    try {
+      const wcProducts = await wcFetchAll('products');
+      const mapped = wcProducts.map(mapWcProduct);
+
+      // Check which SKUs already exist
+      const skus = mapped.map((m: any) => m.sku);
+      const { data: existingProducts } = await supabase
+        .from('products')
+        .select('sku, id, name, price, sale_price, image, stock, category, description')
+        .in('sku', skus);
+
+      const existingMap = new Map((existingProducts || []).map((p: any) => [p.sku, p]));
+
+      const preview = mapped.map((m: any) => ({
+        ...m,
+        isDuplicate: existingMap.has(m.sku),
+        localProduct: existingMap.get(m.sku) || null,
+      }));
+
+      return new Response(JSON.stringify({ products: preview }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    } catch (e: any) {
+      return new Response(JSON.stringify({ error: e.message }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+  }
+
+  // ─── IMPORT MODE (default) ─────────────────────────────────────────
   const result: { products?: number; orders?: number; customers?: number; errors: string[] } = { errors: [] };
 
-  // ─── Import Products ──────────────────────────────────────────────
   if (importProducts) {
     try {
-      const wcProducts = await wcFetch('products');
-      const mapped = wcProducts.map((p: any) => ({
-        name: p.name || 'Sans titre',
-        sku: p.sku || `wc-${p.id}`,
-        price: parseFloat(p.regular_price || p.price || '0'),
-        sale_price: p.sale_price ? parseFloat(p.sale_price) : null,
-        image: p.images?.[0]?.src || '',
-        category: p.categories?.[0]?.name || 'Divers',
-        stock: p.stock_quantity ?? 0,
-        description: p.description?.replace(/<[^>]*>/g, '') || null,
-        is_active: p.status === 'publish',
-        sizes: p.attributes?.find((a: any) => a.name?.toLowerCase().includes('taille'))?.options || [],
-        colors: p.attributes?.find((a: any) => a.name?.toLowerCase().includes('couleur'))?.options || [],
-      }));
+      // Accept selectedSkus to import only specific products
+      const selectedSkus: string[] | undefined = body.selectedSkus;
+      const wcProducts = await wcFetchAll('products');
+      let mapped = wcProducts.map(mapWcProduct);
+
+      if (selectedSkus && selectedSkus.length > 0) {
+        mapped = mapped.filter((m: any) => selectedSkus.includes(m.sku));
+      }
 
       let count = 0;
       for (const product of mapped) {
-        const { error } = await supabase.from('products').upsert(product, { onConflict: 'sku' });
+        const dbProduct = {
+          name: product.name,
+          sku: product.sku,
+          price: product.price,
+          sale_price: product.sale_price,
+          image: product.image,
+          category: product.category,
+          stock: product.stock,
+          description: product.description,
+          is_active: product.is_active,
+          sizes: product.sizes,
+          colors: product.colors,
+          attributes: product.attributes,
+          tags: product.tags,
+        };
+        const { error } = await supabase.from('products').upsert(dbProduct, { onConflict: 'sku' });
         if (error) result.errors.push(`Produit ${product.name}: ${error.message}`);
         else count++;
       }
@@ -86,7 +177,7 @@ Deno.serve(async (req) => {
   // ─── Import Orders ────────────────────────────────────────────────
   if (importOrders) {
     try {
-      const wcOrders = await wcFetch('orders');
+      const wcOrders = await wcFetchAll('orders');
       let count = 0;
       for (const o of wcOrders) {
         const orderNumber = `WC-${o.id}`;
@@ -126,12 +217,10 @@ Deno.serve(async (req) => {
   // ─── Import Customers ─────────────────────────────────────────────
   if (importCustomers) {
     try {
-      const wcCustomers = await wcFetch('customers');
+      const wcCustomers = await wcFetchAll('customers');
       let count = 0;
       for (const c of wcCustomers) {
         if (!c.email) continue;
-        // Use a stable UUID derived from email (we can't link to auth.users without a sign-up, so we use a placeholder user_id)
-        // We store customers with a deterministic UUID based on WC id
         const fakeUserId = `00000000-0000-0000-${String(c.id).padStart(4, '0')}-000000000000`;
         const payload = {
           email: c.email,
