@@ -204,14 +204,17 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
               </Button>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2 mt-4 lg:mt-6">
+          <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-4 lg:mt-6">
             {CATEGORIES.map((cat) => (
               <Button
                 key={cat}
                 variant={selectedCategory === cat ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => { setSelectedCategory(cat); setSelectedSubCategory(null); }}
-                className="uppercase tracking-wider text-xs"
+                className={cn(
+                  "uppercase tracking-wider text-[10px] sm:text-xs px-2.5 py-1.5 sm:px-3 sm:py-2 h-auto",
+                  selectedCategory !== cat && "bg-secondary/40 border-border/40 text-muted-foreground hover:bg-secondary/70"
+                )}
               >
                 {cat}
               </Button>
