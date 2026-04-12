@@ -321,6 +321,9 @@ export default function AdminProducts() {
           <p className="text-muted-foreground mt-1">{products.length} produits au catalogue</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsSyncDialogOpen(true)} className="chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10">
+            <RefreshCw className="h-4 w-4 mr-2" />Sync WordPress
+          </Button>
           <Button variant="outline" onClick={() => setIsMockupDialogOpen(true)} className="chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10">
             <Wand2 className="h-4 w-4 mr-2" />Importer Maquette IA
           </Button>
