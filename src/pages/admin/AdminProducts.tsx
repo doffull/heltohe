@@ -750,6 +750,8 @@ export default function AdminProducts() {
         locations={stockDialogLocations}
         editData={stockDialogEdit}
       />
+
+      <WordPressSyncDialog open={isSyncDialogOpen} onOpenChange={setIsSyncDialogOpen} />
     </div>
   );
 }
