@@ -2475,15 +2475,15 @@ export default function AdminDesign() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-4 lg:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold">Design & Visuels</h1>
-          <p className="text-muted-foreground text-sm mt-1">Personnalisez l'apparence complète de votre boutique</p>
+          <h1 className="text-xl lg:text-2xl font-bold">Design & Visuels</h1>
+          <p className="text-muted-foreground text-xs lg:text-sm mt-1">Personnalisez l'apparence de votre boutique</p>
         </div>
         <Button
           onClick={handleSave}
           disabled={saveDesign.isPending}
-          className="chamfer-hud-sm gap-2"
+          className="chamfer-hud-sm gap-2 w-full sm:w-auto"
         >
           {saveDesign.isPending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
