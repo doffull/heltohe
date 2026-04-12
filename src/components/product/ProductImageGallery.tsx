@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ZoomIn, ZoomOut, Play, Image as ImageIcon } from 'lucide-react';
+import { ZoomIn, ZoomOut, Play, Image as ImageIcon, X } from 'lucide-react';
 import { ColorOption } from '@/types';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ProductImageGalleryProps {
   image: string;
@@ -32,11 +33,14 @@ export default function ProductImageGallery({
   selectedColor,
   onColorChange,
 }: ProductImageGalleryProps) {
+  const isMobile = useIsMobile();
   const [activeMedia, setActiveMedia] = useState<'image' | 'video'>('image');
   const [isZoomed, setIsZoomed] = useState(false);
+  const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const lastTapRef = useRef(0);
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!containerRef.current || !isZoomed || activeMedia !== 'image') return;
@@ -58,6 +62,20 @@ export default function ProductImageGallery({
     setIsZoomed(false);
   };
 
+  // Handle double-tap on mobile to open fullscreen
+  const handleTap = useCallback(() => {
+    if (activeMedia !== 'image') return;
+    if (isMobile) {
+      const now = Date.now();
+      if (now - lastTapRef.current < 300) {
+        setFullscreenOpen(true);
+      }
+      lastTapRef.current = now;
+    } else {
+      setIsZoomed(!isZoomed);
+    }
+  }, [activeMedia, isMobile, isZoomed]);
+
   // Determine which color image to show (if colorOptions have images)
   const activeColorOption = colorOptions.find(c => c.color === selectedColor);
   const displayImage = (activeColorOption?.image) || image;
@@ -67,8 +85,8 @@ export default function ProductImageGallery({
       {/* Main media area */}
       <motion.div
         ref={containerRef}
-        className={`relative chamfer-hud-lg overflow-hidden bg-card/30 aspect-square ${activeMedia === 'image' ? 'cursor-crosshair' : ''}`}
-        onClick={() => activeMedia === 'image' && setIsZoomed(!isZoomed)}
+        className={`relative chamfer-hud-lg overflow-hidden bg-card/30 aspect-square ${activeMedia === 'image' ? (isMobile ? '' : 'cursor-crosshair') : ''}`}
+        onClick={handleTap}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => isZoomed && setIsZoomed(false)}
         initial={{ opacity: 0, x: -40 }}
@@ -83,7 +101,7 @@ export default function ProductImageGallery({
               alt={name}
               className="w-full h-full object-cover"
               initial={{ opacity: 0, scale: 1.03 }}
-              animate={{ opacity: 1, scale: isZoomed ? 2.5 : 1 }}
+              animate={{ opacity: 1, scale: isZoomed ? 3.5 : 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
               style={isZoomed ? {
@@ -178,12 +196,57 @@ export default function ProductImageGallery({
           </motion.div>
         )}
 
+        {/* Mobile double-tap hint */}
+        {isMobile && activeMedia === 'image' && (
+          <motion.div
+            className="absolute bottom-4 right-4 bg-background/80 backdrop-blur-sm px-2.5 py-1.5 rounded-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+          >
+            <span className="text-[10px] text-muted-foreground">Double-tap pour zoomer</span>
+          </motion.div>
+        )}
+
         {/* HUD corner accents */}
         <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-primary/40" />
         <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-primary/40" />
         <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-primary/40" />
         <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-primary/40" />
       </motion.div>
+
+      {/* Fullscreen zoom overlay for mobile */}
+      <AnimatePresence>
+        {fullscreenOpen && (
+          <motion.div
+            className="fixed inset-0 z-50 bg-background/95 backdrop-blur-md flex items-center justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setFullscreenOpen(false)}
+          >
+            <button
+              className="absolute top-4 right-4 z-10 w-10 h-10 bg-foreground/10 backdrop-blur-sm rounded-full flex items-center justify-center"
+              onClick={() => setFullscreenOpen(false)}
+            >
+              <X className="h-5 w-5 text-foreground" />
+            </button>
+            <div
+              className="w-full h-full overflow-auto"
+              style={{ touchAction: 'manipulation' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={displayImage}
+                alt={name}
+                className="w-full min-h-full object-contain"
+                style={{ touchAction: 'pinch-zoom', maxWidth: 'none', width: '200%', marginLeft: '-50%' }}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Thumbnail strip */}
       <motion.div

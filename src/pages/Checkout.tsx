@@ -293,16 +293,16 @@ export default function Checkout() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Retour au panier
           </Button>
-          <h1 className="text-3xl font-bold hud-text flex items-center gap-3">
-            <ClipboardCheck className="h-8 w-8 text-primary" />
+          <h1 className="text-xl sm:text-3xl font-bold hud-text flex items-center gap-2 sm:gap-3 flex-wrap">
+            <ClipboardCheck className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
             FINALISER LA COMMANDE
           </h1>
         </div>
 
         {/* Progress steps */}
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center gap-2 sm:gap-4 mb-8">
           {steps.map((s, i) => (
-            <div key={s} className="flex items-center gap-2">
+            <div key={s} className="flex items-center gap-1 sm:gap-2">
               <button
                 onClick={() => {
                   if (s === 'address') setStep('address');

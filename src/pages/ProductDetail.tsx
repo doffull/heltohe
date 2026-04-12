@@ -32,7 +32,7 @@ export default function ProductDetail() {
   const imageRef = useRef<HTMLDivElement>(null);
 
   const scrollToImage = useCallback(() => {
-    imageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    imageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, []);
 
   const handleColorChange = useCallback((color: string) => {
@@ -139,7 +139,7 @@ export default function ProductDetail() {
 
         <div className="grid lg:grid-cols-2 gap-6 lg:gap-12">
           {/* Left: Image Gallery — ref for scroll target */}
-          <div ref={imageRef}>
+          <div ref={imageRef} style={{ scrollMarginTop: '80px' }}>
             <ProductImageGallery
               image={product.image}
               name={product.name}

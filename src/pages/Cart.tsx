@@ -84,7 +84,7 @@ export default function Cart() {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <Button
               variant="ghost"
@@ -94,10 +94,10 @@ export default function Cart() {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Retour
             </Button>
-            <h1 className="text-3xl font-bold hud-text flex items-center gap-3">
-              <ShoppingCart className="h-8 w-8 text-primary" />
+            <h1 className="text-xl sm:text-3xl font-bold hud-text flex items-center gap-2 sm:gap-3 flex-wrap">
+              <ShoppingCart className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
               MON PANIER
-              <span className="text-sm font-normal text-muted-foreground">
+              <span className="text-xs sm:text-sm font-normal text-muted-foreground">
                 ({itemCount} {itemCount > 1 ? 'articles' : 'article'})
               </span>
             </h1>
@@ -107,7 +107,7 @@ export default function Cart() {
             variant="outline"
             size="sm"
             onClick={clearCart}
-            className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+            className="text-destructive hover:bg-destructive hover:text-destructive-foreground self-start sm:self-auto"
           >
             <Trash2 className="h-4 w-4 mr-2" />
             Vider le panier
