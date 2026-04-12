@@ -17,6 +17,7 @@ import {
   Plus, Search, Pencil, Trash2, MoreHorizontal, Package, Upload, FileText, X, Check, Filter, Wand2, Copy, Tag, DollarSign, Archive, Layers2, Boxes
 } from 'lucide-react';
 import { ImportMockupDialog } from '@/components/admin/ImportMockupDialog';
+import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
