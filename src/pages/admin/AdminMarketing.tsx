@@ -49,7 +49,7 @@ function BannerForm({ banner, onSubmit, onCancel }: {
 
   return (
     <form onSubmit={(e) => { e.preventDefault(); onSubmit(form); }} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label className="hud-text text-xs">Titre</Label>
           <Input value={form.title} onChange={(e) => setForm(p => ({ ...p, title: e.target.value }))} />
@@ -76,7 +76,7 @@ function BannerForm({ banner, onSubmit, onCancel }: {
         <Input value={form.image} onChange={(e) => setForm(p => ({ ...p, image: e.target.value }))} />
         {form.image && <img src={form.image} alt="Preview" className="h-20 object-cover border border-border" />}
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label className="hud-text text-xs">Lien</Label>
           <Input value={form.link} onChange={(e) => setForm(p => ({ ...p, link: e.target.value }))} />
@@ -86,7 +86,7 @@ function BannerForm({ banner, onSubmit, onCancel }: {
           <Input value={form.buttonText} onChange={(e) => setForm(p => ({ ...p, buttonText: e.target.value }))} />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label className="hud-text text-xs">Position</Label>
           <Input type="number" value={form.position} onChange={(e) => setForm(p => ({ ...p, position: Number(e.target.value) }))} />
@@ -138,7 +138,7 @@ function PromoForm({ promo, onSubmit, onCancel }: {
 
   return (
     <form onSubmit={(e) => { e.preventDefault(); onSubmit(form); }} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label className="hud-text text-xs">Code *</Label>
           <Input value={form.code} onChange={(e) => setForm(p => ({ ...p, code: e.target.value.toUpperCase() }))} required />
@@ -159,7 +159,7 @@ function PromoForm({ promo, onSubmit, onCancel }: {
         <Label className="hud-text text-xs">Description</Label>
         <Input value={form.description} onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))} />
       </div>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label className="hud-text text-xs">Valeur *</Label>
           <Input type="number" value={form.value} onChange={(e) => setForm(p => ({ ...p, value: Number(e.target.value) }))} required />
@@ -254,16 +254,16 @@ export default function AdminMarketing() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold hud-text">MARKETING</h1>
-        <p className="text-muted-foreground mt-1">Bannières, codes promo et newsletter</p>
+        <h1 className="text-xl sm:text-3xl font-bold hud-text">MARKETING</h1>
+        <p className="text-muted-foreground text-xs sm:text-sm mt-1">Bannières, codes promo et newsletter</p>
       </div>
 
       <Tabs defaultValue="banners">
-        <TabsList className="bg-muted/50">
-          <TabsTrigger value="banners" className="gap-2"><Image className="h-4 w-4" />Bannières</TabsTrigger>
-          <TabsTrigger value="promos" className="gap-2"><Tag className="h-4 w-4" />Codes Promo</TabsTrigger>
-          <TabsTrigger value="newsletter" className="gap-2"><Mail className="h-4 w-4" />Newsletter</TabsTrigger>
-          <TabsTrigger value="styles" className="gap-2"><Palette className="h-4 w-4" />Styles</TabsTrigger>
+        <TabsList className="bg-muted/50 flex flex-wrap h-auto gap-1">
+          <TabsTrigger value="banners" className="gap-1.5 text-xs sm:text-sm"><Image className="h-3.5 w-3.5" />Bannières</TabsTrigger>
+          <TabsTrigger value="promos" className="gap-1.5 text-xs sm:text-sm"><Tag className="h-3.5 w-3.5" />Promos</TabsTrigger>
+          <TabsTrigger value="newsletter" className="gap-1.5 text-xs sm:text-sm"><Mail className="h-3.5 w-3.5" />Newsletter</TabsTrigger>
+          <TabsTrigger value="styles" className="gap-1.5 text-xs sm:text-sm"><Palette className="h-3.5 w-3.5" />Styles</TabsTrigger>
         </TabsList>
 
         {/* ── BANNERS TAB ── */}
@@ -283,7 +283,7 @@ export default function AdminMarketing() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full min-w-[600px]">
                   <thead className="bg-muted/50 border-b border-border">
                     <tr>
                       <th className="text-left p-4 text-xs font-bold hud-text">BANNIÈRE</th>
@@ -356,7 +356,7 @@ export default function AdminMarketing() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full min-w-[600px]">
                   <thead className="bg-muted/50 border-b border-border">
                     <tr>
                       <th className="text-left p-4 text-xs font-bold hud-text">CODE</th>
@@ -433,7 +433,7 @@ export default function AdminMarketing() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full min-w-[500px]">
                   <thead className="bg-muted/50 border-b border-border">
                     <tr>
                       <th className="text-left p-4 text-xs font-bold hud-text">EMAIL</th>

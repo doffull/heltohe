@@ -315,23 +315,23 @@ export default function AdminProducts() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold hud-text">PRODUITS</h1>
-          <p className="text-muted-foreground mt-1">{products.length} produits au catalogue</p>
+          <h1 className="text-xl sm:text-3xl font-bold hud-text">PRODUITS</h1>
+          <p className="text-muted-foreground text-xs sm:text-sm mt-1">{products.length} produits au catalogue</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsSyncDialogOpen(true)} className="chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10">
-            <RefreshCw className="h-4 w-4 mr-2" />Sync WordPress
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={() => setIsSyncDialogOpen(true)} className="chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10 text-xs">
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" />Sync WP
           </Button>
-          <Button variant="outline" onClick={() => setIsMockupDialogOpen(true)} className="chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10">
-            <Wand2 className="h-4 w-4 mr-2" />Importer Maquette IA
+          <Button variant="outline" size="sm" onClick={() => setIsMockupDialogOpen(true)} className="chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10 text-xs">
+            <Wand2 className="h-3.5 w-3.5 mr-1.5" />Maquette IA
           </Button>
-          <Button variant="outline" onClick={() => setIsPdfDialogOpen(true)} className="chamfer-hud-sm">
-            <Upload className="h-4 w-4 mr-2" />Importer PDF
+          <Button variant="outline" size="sm" onClick={() => setIsPdfDialogOpen(true)} className="chamfer-hud-sm text-xs">
+            <Upload className="h-3.5 w-3.5 mr-1.5" />PDF
           </Button>
-          <Button onClick={() => { setEditingProduct(null); setIsFormOpen(true); }} className="chamfer-hud-sm">
-            <Plus className="h-4 w-4 mr-2" />Ajouter
+          <Button size="sm" onClick={() => { setEditingProduct(null); setIsFormOpen(true); }} className="chamfer-hud-sm text-xs">
+            <Plus className="h-3.5 w-3.5 mr-1.5" />Ajouter
           </Button>
         </div>
       </div>
@@ -343,37 +343,39 @@ export default function AdminProducts() {
         </TabsList>
 
         <TabsContent value="products" className="space-y-4 mt-4">
-      <div className="chamfer-hud bg-card/50 p-4 flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
+      <div className="chamfer-hud bg-card/50 p-3 lg:p-4 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 lg:gap-3">
+        <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Rechercher par nom ou SKU..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
+          <Input placeholder="Rechercher..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
         </div>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-[150px]"><Filter className="h-3 w-3 mr-2" /><SelectValue placeholder="Catégorie" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Toutes</SelectItem>
-            {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={stockFilter} onValueChange={setStockFilter}>
-          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Stock" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tout stock</SelectItem>
-            <SelectItem value="in">En stock</SelectItem>
-            <SelectItem value="low">Stock faible</SelectItem>
-            <SelectItem value="out">Rupture</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Trier" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="newest">Plus récents</SelectItem>
-            <SelectItem value="name">Nom A-Z</SelectItem>
-            <SelectItem value="price-asc">Prix croissant</SelectItem>
-            <SelectItem value="price-desc">Prix décroissant</SelectItem>
-            <SelectItem value="stock-asc">Stock croissant</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex flex-wrap gap-2">
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-full sm:w-[140px]"><Filter className="h-3 w-3 mr-1" /><SelectValue placeholder="Catégorie" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes</SelectItem>
+              {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={stockFilter} onValueChange={setStockFilter}>
+            <SelectTrigger className="w-full sm:w-[130px]"><SelectValue placeholder="Stock" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tout stock</SelectItem>
+              <SelectItem value="in">En stock</SelectItem>
+              <SelectItem value="low">Stock faible</SelectItem>
+              <SelectItem value="out">Rupture</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-full sm:w-[140px]"><SelectValue placeholder="Trier" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Plus récents</SelectItem>
+              <SelectItem value="name">Nom A-Z</SelectItem>
+              <SelectItem value="price-asc">Prix croissant</SelectItem>
+              <SelectItem value="price-desc">Prix décroissant</SelectItem>
+              <SelectItem value="stock-asc">Stock croissant</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Bulk Actions */}
@@ -431,7 +433,7 @@ export default function AdminProducts() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[700px]">
               <thead className="bg-muted/50 border-b border-border">
                 <tr>
                   <th className="p-4 w-10"><Checkbox checked={allSelected} onCheckedChange={toggleAll} /></th>
