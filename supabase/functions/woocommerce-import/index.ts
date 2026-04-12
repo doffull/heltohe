@@ -20,20 +20,18 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   );
 
-  // Validate admin
   const token = authHeader.replace('Bearer ', '');
   const { data: { user }, error: userErr } = await supabase.auth.getUser(token);
   if (userErr || !user) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
   }
-  const userId = user.id;
-  const { data: roleCheck } = await supabase.from('user_roles').select('role').eq('user_id', userId).eq('role', 'admin').maybeSingle();
+  const { data: roleCheck } = await supabase.from('user_roles').select('role').eq('user_id', user.id).eq('role', 'admin').maybeSingle();
   if (!roleCheck) {
     return new Response(JSON.stringify({ error: 'Forbidden — admin only' }), { status: 403, headers: corsHeaders });
   }
 
   const body = await req.json();
-  const { storeUrl, consumerKey, consumerSecret, importProducts, importOrders, importCustomers, mode } = body;
+  const { storeUrl, consumerKey, consumerSecret, importProducts, importOrders, importCustomers, importStock, mode } = body;
 
   if (!storeUrl || !consumerKey || !consumerSecret) {
     return new Response(JSON.stringify({ error: 'Missing credentials' }), { status: 400, headers: corsHeaders });
@@ -63,13 +61,12 @@ Deno.serve(async (req) => {
     return all;
   };
 
-  // ─── Map a WC product to our DB format ─────────────────────────────
   function mapWcProduct(p: any) {
     const allImages = (p.images || []).map((img: any) => img.src).filter(Boolean);
-    const sizeAttr = p.attributes?.find((a: any) => 
+    const sizeAttr = p.attributes?.find((a: any) =>
       a.name?.toLowerCase().includes('taille') || a.name?.toLowerCase() === 'size'
     );
-    const colorAttr = p.attributes?.find((a: any) => 
+    const colorAttr = p.attributes?.find((a: any) =>
       a.name?.toLowerCase().includes('couleur') || a.name?.toLowerCase() === 'color'
     );
     const otherAttrs: Record<string, string> = {};
@@ -78,7 +75,6 @@ Deno.serve(async (req) => {
         otherAttrs[a.name] = (a.options || []).join(', ');
       }
     });
-
     return {
       name: p.name || 'Sans titre',
       sku: p.sku || `wc-${p.id}`,
@@ -101,68 +97,165 @@ Deno.serve(async (req) => {
     };
   }
 
-  // ─── PREVIEW MODE ──────────────────────────────────────────────────
+  function mapWcCustomer(c: any) {
+    return {
+      name: `${c.first_name || ''} ${c.last_name || ''}`.trim() || c.email,
+      email: c.email,
+      first_name: c.first_name || null,
+      last_name: c.last_name || null,
+      phone: c.billing?.phone || null,
+      total_spent: parseFloat(c.total_spent || '0'),
+      orders_count: c.orders_count || 0,
+      wc_id: c.id,
+      isDuplicate: false,
+    };
+  }
+
+  function mapWcOrder(o: any) {
+    return {
+      order_number: `WC-${o.id}`,
+      name: `${o.billing?.first_name || ''} ${o.billing?.last_name || ''}`.trim(),
+      customer_name: `${o.billing?.first_name || ''} ${o.billing?.last_name || ''}`.trim(),
+      customer_email: o.billing?.email || '',
+      customer_phone: o.billing?.phone || null,
+      customer_address: o.billing?.address_1 || '',
+      customer_city: o.billing?.city || '',
+      customer_zip: o.billing?.postcode || '',
+      customer_country: o.billing?.country || 'FR',
+      subtotal: parseFloat(o.subtotal || '0'),
+      tax: parseFloat(o.total_tax || '0'),
+      shipping_cost: parseFloat(o.shipping_total || '0'),
+      total: parseFloat(o.total || '0'),
+      status: mapWcStatus(o.status),
+      payment_status: o.date_paid ? 'Paid' : 'Pending',
+      payment_method: o.payment_method_title || null,
+      items: o.line_items?.map((li: any) => ({
+        productId: li.product_id?.toString(),
+        name: li.name,
+        price: parseFloat(li.price || '0'),
+        quantity: li.quantity,
+      })) || [],
+      date_created: o.date_created,
+      wc_id: o.id,
+      isDuplicate: false,
+    };
+  }
+
+  // ─── PREVIEW PRODUCTS ─────────────────────────────────────────────
   if (mode === 'preview') {
     try {
       const wcProducts = await wcFetchAll('products');
       const mapped = wcProducts.map(mapWcProduct);
-
-      // Check which SKUs already exist
       const skus = mapped.map((m: any) => m.sku);
       const { data: existingProducts } = await supabase
         .from('products')
         .select('sku, id, name, price, sale_price, image, stock, category, description')
         .in('sku', skus);
-
       const existingMap = new Map((existingProducts || []).map((p: any) => [p.sku, p]));
-
       const preview = mapped.map((m: any) => ({
         ...m,
         isDuplicate: existingMap.has(m.sku),
         localProduct: existingMap.get(m.sku) || null,
       }));
-
       return new Response(JSON.stringify({ products: preview }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } catch (e: any) {
-      return new Response(JSON.stringify({ error: e.message }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
   }
 
-  // ─── IMPORT MODE (default) ─────────────────────────────────────────
-  const result: { products?: number; orders?: number; customers?: number; errors: string[] } = { errors: [] };
+  // ─── PREVIEW CUSTOMERS ────────────────────────────────────────────
+  if (mode === 'preview-customers') {
+    try {
+      const wcCustomers = await wcFetchAll('customers');
+      const mapped = wcCustomers.filter((c: any) => c.email).map(mapWcCustomer);
+      const emails = mapped.map((m: any) => m.email);
+      const { data: existing } = await supabase.from('customers').select('email, id, first_name, last_name, total_spent').in('email', emails);
+      const existingMap = new Map((existing || []).map((c: any) => [c.email, c]));
+      const preview = mapped.map((m: any) => ({
+        ...m,
+        isDuplicate: existingMap.has(m.email),
+        localProduct: existingMap.get(m.email) || null,
+      }));
+      return new Response(JSON.stringify({ customers: preview }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    } catch (e: any) {
+      return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+  }
+
+  // ─── PREVIEW ORDERS ───────────────────────────────────────────────
+  if (mode === 'preview-orders') {
+    try {
+      const wcOrders = await wcFetchAll('orders');
+      const mapped = wcOrders.map(mapWcOrder);
+      const orderNumbers = mapped.map((m: any) => m.order_number);
+      const { data: existing } = await supabase.from('orders').select('order_number, id, customer_name, total, status').in('order_number', orderNumbers);
+      const existingMap = new Map((existing || []).map((o: any) => [o.order_number, o]));
+      const preview = mapped.map((m: any) => ({
+        ...m,
+        isDuplicate: existingMap.has(m.order_number),
+        localProduct: existingMap.get(m.order_number) || null,
+      }));
+      return new Response(JSON.stringify({ orders: preview }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    } catch (e: any) {
+      return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+  }
+
+  // ─── PREVIEW STOCK ────────────────────────────────────────────────
+  if (mode === 'preview-stock') {
+    try {
+      const wcProducts = await wcFetchAll('products');
+      const mapped = wcProducts.map((p: any) => ({
+        name: p.name || 'Sans titre',
+        sku: p.sku || `wc-${p.id}`,
+        stock: p.stock_quantity ?? 0,
+        manage_stock: p.manage_stock,
+        image: (p.images || [])[0]?.src || '',
+        wc_id: p.id,
+        isDuplicate: false,
+      }));
+      const skus = mapped.map((m: any) => m.sku);
+      const { data: existing } = await supabase.from('products').select('sku, stock, name').in('sku', skus);
+      const existingMap = new Map((existing || []).map((p: any) => [p.sku, p]));
+      const preview = mapped.map((m: any) => ({
+        ...m,
+        isDuplicate: existingMap.has(m.sku),
+        localProduct: existingMap.get(m.sku) || null,
+      }));
+      return new Response(JSON.stringify({ stock: preview }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    } catch (e: any) {
+      return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+  }
+
+  // ─── IMPORT MODE ──────────────────────────────────────────────────
+  const result: { products?: number; orders?: number; customers?: number; stock?: number; errors: string[] } = { errors: [] };
 
   if (importProducts) {
     try {
-      // Accept selectedSkus to import only specific products
       const selectedSkus: string[] | undefined = body.selectedSkus;
       const wcProducts = await wcFetchAll('products');
       let mapped = wcProducts.map(mapWcProduct);
-
       if (selectedSkus && selectedSkus.length > 0) {
         mapped = mapped.filter((m: any) => selectedSkus.includes(m.sku));
       }
-
       let count = 0;
       for (const product of mapped) {
         const dbProduct = {
-          name: product.name,
-          sku: product.sku,
-          price: product.price,
-          sale_price: product.sale_price,
-          image: product.image,
-          category: product.category,
-          stock: product.stock,
-          description: product.description,
-          is_active: product.is_active,
-          sizes: product.sizes,
-          colors: product.colors,
-          attributes: product.attributes,
-          tags: product.tags,
+          name: product.name, sku: product.sku, price: product.price,
+          sale_price: product.sale_price, image: product.image,
+          category: product.category, stock: product.stock,
+          description: product.description, is_active: product.is_active,
+          sizes: product.sizes, colors: product.colors,
+          attributes: product.attributes, tags: product.tags,
         };
         const { error } = await supabase.from('products').upsert(dbProduct, { onConflict: 'sku' });
         if (error) result.errors.push(`Produit ${product.name}: ${error.message}`);
@@ -174,38 +267,32 @@ Deno.serve(async (req) => {
     }
   }
 
-  // ─── Import Orders ────────────────────────────────────────────────
   if (importOrders) {
     try {
       const wcOrders = await wcFetchAll('orders');
       let count = 0;
       for (const o of wcOrders) {
-        const orderNumber = `WC-${o.id}`;
+        const mapped = mapWcOrder(o);
         const payload = {
-          order_number: orderNumber,
-          customer_name: `${o.billing?.first_name || ''} ${o.billing?.last_name || ''}`.trim(),
-          customer_email: o.billing?.email || '',
-          customer_phone: o.billing?.phone || null,
-          customer_address: o.billing?.address_1 || '',
-          customer_city: o.billing?.city || '',
-          customer_zip: o.billing?.postcode || '',
-          customer_country: o.billing?.country || 'FR',
-          subtotal: parseFloat(o.subtotal || '0'),
-          tax: parseFloat(o.total_tax || '0'),
-          shipping_cost: parseFloat(o.shipping_total || '0'),
-          total: parseFloat(o.total || '0'),
-          status: mapWcStatus(o.status),
-          payment_status: o.payment_method ? 'Paid' : 'Pending',
-          payment_method: o.payment_method_title || null,
-          items: o.line_items?.map((li: any) => ({
-            productId: li.product_id?.toString(),
-            name: li.name,
-            price: parseFloat(li.price || '0'),
-            quantity: li.quantity,
-          })) || [],
+          order_number: mapped.order_number,
+          customer_name: mapped.customer_name,
+          customer_email: mapped.customer_email,
+          customer_phone: mapped.customer_phone,
+          customer_address: mapped.customer_address,
+          customer_city: mapped.customer_city,
+          customer_zip: mapped.customer_zip,
+          customer_country: mapped.customer_country,
+          subtotal: mapped.subtotal,
+          tax: mapped.tax,
+          shipping_cost: mapped.shipping_cost,
+          total: mapped.total,
+          status: mapped.status,
+          payment_status: mapped.payment_status,
+          payment_method: mapped.payment_method,
+          items: mapped.items,
         };
         const { error } = await supabase.from('orders').upsert(payload, { onConflict: 'order_number' });
-        if (error) result.errors.push(`Commande WC-${o.id}: ${error.message}`);
+        if (error) result.errors.push(`Commande ${mapped.order_number}: ${error.message}`);
         else count++;
       }
       result.orders = count;
@@ -214,7 +301,6 @@ Deno.serve(async (req) => {
     }
   }
 
-  // ─── Import Customers ─────────────────────────────────────────────
   if (importCustomers) {
     try {
       const wcCustomers = await wcFetchAll('customers');
@@ -240,6 +326,23 @@ Deno.serve(async (req) => {
     }
   }
 
+  if (importStock) {
+    try {
+      const wcProducts = await wcFetchAll('products');
+      let count = 0;
+      for (const p of wcProducts) {
+        const sku = p.sku || `wc-${p.id}`;
+        const qty = p.stock_quantity ?? 0;
+        const { error } = await supabase.from('products').update({ stock: qty }).eq('sku', sku);
+        if (error) result.errors.push(`Stock ${sku}: ${error.message}`);
+        else count++;
+      }
+      result.stock = count;
+    } catch (e: any) {
+      result.errors.push(`Stocks: ${e.message}`);
+    }
+  }
+
   return new Response(JSON.stringify(result), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
@@ -247,13 +350,8 @@ Deno.serve(async (req) => {
 
 function mapWcStatus(status: string): string {
   const map: Record<string, string> = {
-    pending: 'Pending',
-    processing: 'Processing',
-    'on-hold': 'On Hold',
-    completed: 'Delivered',
-    cancelled: 'Cancelled',
-    refunded: 'Refunded',
-    failed: 'Cancelled',
+    pending: 'Pending', processing: 'Processing', 'on-hold': 'On Hold',
+    completed: 'Delivered', cancelled: 'Cancelled', refunded: 'Refunded', failed: 'Cancelled',
   };
   return map[status] || 'Pending';
 }
