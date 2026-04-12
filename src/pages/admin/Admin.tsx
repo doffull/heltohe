@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { useDesignSettings } from '@/hooks/useDesignSettings';
 import { 
   LayoutDashboard, 
   Package, 
@@ -45,11 +46,29 @@ import AdminChatbot from './AdminChatbot';
 import AdminColissimo from './AdminColissimo';
 import AdminCheckout from './AdminCheckout';
 
+export const DEFAULT_SECTION_COLORS: Record<string, string> = {
+  '/admin': '#6B7280',
+  '/admin/produits': '#3B82F6',
+  '/admin/commandes': '#F59E0B',
+  '/admin/checkout': '#10B981',
+  '/admin/clients': '#8B5CF6',
+  '/admin/pages': '#6366F1',
+  '/admin/media': '#EC4899',
+  '/admin/marketing': '#EF4444',
+  '/admin/design': '#06B6D4',
+  '/admin/stock': '#D97706',
+  '/admin/colissimo': '#EAB308',
+  '/admin/chatbot': '#14B8A6',
+  '/admin/woocommerce': '#7C3AED',
+  '/admin/audit': '#6B7280',
+  '/admin/parametres': '#64748B',
+};
+
 const SIDEBAR_ITEMS = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/admin' },
   { icon: Package, label: 'Produits', href: '/admin/produits' },
   { icon: ShoppingCart, label: 'Commandes', href: '/admin/commandes' },
-  { icon: CreditCard, label: 'Checkout & Livraison', href: '/admin/checkout' },
+  { icon: CreditCard, label: 'Checkout', href: '/admin/checkout' },
   { icon: Users, label: 'Clients', href: '/admin/clients' },
   { icon: FileText, label: 'Pages', href: '/admin/pages' },
   { icon: FolderOpen, label: 'Média', href: '/admin/media' },
@@ -63,42 +82,52 @@ const SIDEBAR_ITEMS = [
   { icon: Settings, label: 'Paramètres', href: '/admin/parametres' },
 ];
 
+function getActiveHref(pathname: string): string {
+  if (pathname === '/admin') return '/admin';
+  const match = SIDEBAR_ITEMS.find(item => item.href !== '/admin' && pathname.startsWith(item.href));
+  return match?.href || '/admin';
+}
 
-function SidebarContent({ user, signOut, location }: { user: any; signOut: () => void; location: any }) {
+function SidebarContent({ user, signOut, location, sectionColors }: { user: any; signOut: () => void; location: any; sectionColors: Record<string, string> }) {
+  const activeHref = getActiveHref(location.pathname);
+
   return (
     <>
-      {/* Logo */}
-      <div className="p-6 border-b border-border">
+      <div className="p-4 lg:p-6 border-b border-border">
         <Link to="/admin" className="flex items-center gap-3">
-          <Shield className="h-8 w-8 text-primary" />
+          <Shield className="h-7 w-7 lg:h-8 lg:w-8 text-primary" />
           <div>
-            <span className="text-lg font-bold hud-text">LVTK6</span>
-            <p className="text-xs text-muted-foreground">ADMIN PANEL</p>
+            <span className="text-base lg:text-lg font-bold hud-text">LVTK6</span>
+            <p className="text-[10px] lg:text-xs text-muted-foreground">ADMIN PANEL</p>
           </div>
         </Link>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 p-3 lg:p-4 space-y-0.5 overflow-y-auto">
         {SIDEBAR_ITEMS.map((item) => {
-          const isActive = location.pathname === item.href || 
-            (item.href !== '/admin' && location.pathname.startsWith(item.href));
+          const isActive = activeHref === item.href;
+          const color = sectionColors[item.href] || DEFAULT_SECTION_COLORS[item.href] || '#6B7280';
           
           return (
             <Link
               key={item.href}
               to={item.href}
               className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-lg transition-all group",
+                "flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-all group text-sm",
                 isActive 
-                  ? "bg-primary text-primary-foreground" 
+                  ? "text-white font-semibold" 
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
+              style={isActive ? { backgroundColor: color } : undefined}
             >
-              <item.icon className="h-5 w-5" />
-              <span className="text-sm font-medium">{item.label}</span>
+              <div
+                className="w-1.5 h-1.5 rounded-full shrink-0"
+                style={{ backgroundColor: isActive ? '#fff' : color }}
+              />
+              <item.icon className="h-4 w-4 shrink-0" />
+              <span className="truncate">{item.label}</span>
               <ChevronRight className={cn(
-                "h-4 w-4 ml-auto transition-transform",
+                "h-3.5 w-3.5 ml-auto shrink-0 transition-transform",
                 isActive ? "rotate-90" : "group-hover:translate-x-1"
               )} />
             </Link>
@@ -106,26 +135,15 @@ function SidebarContent({ user, signOut, location }: { user: any; signOut: () =>
         })}
       </nav>
 
-      {/* Footer */}
-      <div className="p-4 border-t border-border">
-        <div className="mb-4 px-4">
+      <div className="p-3 lg:p-4 border-t border-border">
+        <div className="mb-3 px-3">
           <p className="text-xs text-muted-foreground truncate">{user.email}</p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1"
-            onClick={() => window.location.href = '/'}
-          >
+          <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={() => window.location.href = '/'}>
             Voir le site
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={signOut}
-            className="text-destructive hover:bg-destructive/10"
-          >
+          <Button variant="ghost" size="icon" onClick={signOut} className="text-destructive hover:bg-destructive/10">
             <LogOut className="h-4 w-4" />
           </Button>
         </div>
@@ -137,7 +155,16 @@ function SidebarContent({ user, signOut, location }: { user: any; signOut: () =>
 export default function Admin() {
   const location = useLocation();
   const { user, isAdmin, isLoading, signOut } = useAuth();
+  const { data: designSettings } = useDesignSettings();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const sectionColors: Record<string, string> = {
+    ...DEFAULT_SECTION_COLORS,
+    ...((designSettings as any)?.admin_section_colors || {}),
+  };
+
+  const activeHref = getActiveHref(location.pathname);
+  const activeColor = sectionColors[activeHref] || '#6B7280';
 
   if (isLoading) {
     return (
@@ -156,29 +183,31 @@ export default function Admin() {
   return (
     <div className="min-h-screen bg-background flex">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex fixed left-0 top-0 h-full w-64 bg-card border-r border-border flex-col z-50">
-        <SidebarContent user={user} signOut={signOut} location={location} />
+      <aside className="hidden lg:flex fixed left-0 top-0 h-full w-60 bg-card border-r border-border flex-col z-50">
+        <SidebarContent user={user} signOut={signOut} location={location} sectionColors={sectionColors} />
       </aside>
 
       {/* Mobile Header */}
-      <div className="fixed top-0 left-0 right-0 h-16 bg-card border-b border-border z-50 lg:hidden flex items-center px-4 gap-3">
+      <div className="fixed top-0 left-0 right-0 h-14 bg-card border-b border-border z-50 lg:hidden flex items-center px-3 gap-2">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="h-9 w-9">
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-64 p-0 flex flex-col">
-            <SidebarContent user={user} signOut={signOut} location={location} />
+            <SidebarContent user={user} signOut={signOut} location={location} sectionColors={sectionColors} />
           </SheetContent>
         </Sheet>
-        <Shield className="h-6 w-6 text-primary" />
-        <span className="font-bold hud-text">LVTK6 ADMIN</span>
+        <Shield className="h-5 w-5 text-primary" />
+        <span className="font-bold hud-text text-sm">LVTK6 ADMIN</span>
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-64 pt-16 lg:pt-0">
-        <div className="p-4 lg:p-8">
+      <main className="flex-1 lg:ml-60 pt-14 lg:pt-0">
+        {/* Colored top border */}
+        <div className="h-1 w-full" style={{ backgroundColor: activeColor }} />
+        <div className="p-3 lg:p-8">
           <Routes>
             <Route index element={<AdminDashboard />} />
             <Route path="produits/*" element={<AdminProducts />} />
