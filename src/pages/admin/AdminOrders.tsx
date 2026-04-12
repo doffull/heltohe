@@ -383,42 +383,49 @@ export default function AdminOrders() {
   const getStatusInfo = (status: OrderStatus) => STATUS_OPTIONS.find(o => o.value === status) || STATUS_OPTIONS[0];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold hud-text">COMMANDES</h1>
-        <p className="text-muted-foreground mt-1">{orders.length} commandes au total</p>
+    <div className="space-y-4 lg:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div>
+          <h1 className="text-xl lg:text-3xl font-bold hud-text">COMMANDES</h1>
+          <p className="text-muted-foreground text-xs lg:text-sm mt-1">{orders.length} commandes au total</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => setSyncOpen(true)} className="w-full sm:w-auto gap-2">
+          <RefreshCw className="h-4 w-4" /> Sync WordPress
+        </Button>
       </div>
 
       {/* Filters */}
-      <div className="chamfer-hud bg-card/50 p-4 flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
+      <div className="chamfer-hud bg-card/50 p-3 lg:p-4 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 lg:gap-3">
+        <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="N° commande, client..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[150px]"><Filter className="h-3 w-3 mr-2" /><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous statuts</SelectItem>
-            {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-          <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous paiements</SelectItem>
-            {PAYMENT_STATUS_OPTIONS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-[160px]"><ArrowUpDown className="h-3 w-3 mr-2" /><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="date-desc">Date (récent → ancien)</SelectItem>
-            <SelectItem value="date-asc">Date (ancien → récent)</SelectItem>
-            <SelectItem value="total-desc">Total (haut → bas)</SelectItem>
-            <SelectItem value="total-asc">Total (bas → haut)</SelectItem>
-            <SelectItem value="status">Par statut</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex flex-wrap gap-2">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full sm:w-[140px]"><Filter className="h-3 w-3 mr-1" /><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous statuts</SelectItem>
+              {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+            <SelectTrigger className="w-full sm:w-[140px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous paiements</SelectItem>
+              {PAYMENT_STATUS_OPTIONS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-full sm:w-[150px]"><ArrowUpDown className="h-3 w-3 mr-1" /><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date-desc">Récent → Ancien</SelectItem>
+              <SelectItem value="date-asc">Ancien → Récent</SelectItem>
+              <SelectItem value="total-desc">Total ↓</SelectItem>
+              <SelectItem value="total-asc">Total ↑</SelectItem>
+              <SelectItem value="status">Par statut</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Bulk Actions */}
