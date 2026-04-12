@@ -14,7 +14,7 @@ import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
 import { 
   Package, Clock, Truck, CheckCircle, XCircle, Eye, FileText, Save, Printer, Mail, ExternalLink, Trash2,
   CreditCard, Banknote, MapPin, FileDown, Tag, Search, Filter, Loader2, RefreshCw, CheckSquare, ArrowUpDown,
-  UserCheck, DollarSign, Send
+  UserCheck, DollarSign, Send, Check
 } from 'lucide-react';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -658,6 +658,8 @@ export default function AdminOrders() {
           )}
         </DialogContent>
       </Dialog>
+
+      <WordPressSyncDialog open={syncOpen} onOpenChange={setSyncOpen} syncType="orders" />
     </div>
   );
 }
