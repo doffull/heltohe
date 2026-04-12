@@ -513,54 +513,54 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
   return (
     <div className="space-y-4">
       {/* Page-level header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold">Commandes Colissimo</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-base sm:text-lg font-semibold">Commandes Colissimo</h2>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             {counts.to_ship} à expédier · {counts.in_transit} en transit · {counts.delivered} livrées
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={handleRefreshStatuses} disabled={refreshLoading} className="gap-1.5">
-            {refreshLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-            Mettre à jour les statuts
+          <Button variant="outline" size="sm" onClick={handleRefreshStatuses} disabled={refreshLoading} className="gap-1 text-xs">
+            {refreshLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+            MAJ statuts
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="gap-1.5">
-            <Upload className="h-3.5 w-3.5" />
-            Importer des numéros de suivi
+          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="gap-1 text-xs">
+            <Upload className="h-3 w-3" />
+            Importer suivis
           </Button>
         </div>
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2 bg-muted/30 border border-border rounded-lg px-3 py-2">
+      <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 bg-muted/30 border border-border rounded-lg px-3 py-2">
         {/* Bulk actions */}
-        <Select value={bulkAction} onValueChange={setBulkAction}>
-          <SelectTrigger className="h-8 w-52 text-xs">
-            <SelectValue placeholder="Actions groupées" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="generate">Générer les étiquettes</SelectItem>
-            <SelectItem value="print_bulk">Imprimer les étiquettes</SelectItem>
-            <SelectItem value="ship">Marquer expédiées</SelectItem>
-            <SelectItem value="delete">Supprimer les suivis</SelectItem>
-            <SelectItem value="delete_orders">Supprimer les commandes</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button size="sm" variant="secondary" className="h-8 text-xs" onClick={applyBulkAction} disabled={!bulkAction || !selected.size || bulkLoading || bulkPrintLoading}>
-          {(bulkLoading || bulkPrintLoading) ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-          Appliquer
-        </Button>
+        <div className="flex gap-2 items-center">
+          <Select value={bulkAction} onValueChange={setBulkAction}>
+            <SelectTrigger className="h-8 w-full sm:w-44 text-xs">
+              <SelectValue placeholder="Actions groupées" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="generate">Générer étiquettes</SelectItem>
+              <SelectItem value="print_bulk">Imprimer étiquettes</SelectItem>
+              <SelectItem value="ship">Marquer expédiées</SelectItem>
+              <SelectItem value="delete">Supprimer suivis</SelectItem>
+              <SelectItem value="delete_orders">Supprimer commandes</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button size="sm" variant="secondary" className="h-8 text-xs" onClick={applyBulkAction} disabled={!bulkAction || !selected.size || bulkLoading || bulkPrintLoading}>
+            {(bulkLoading || bulkPrintLoading) ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+            OK
+          </Button>
+          <button
+            className="flex items-center gap-1 text-xs text-primary hover:underline"
+            onClick={() => setShowFilters(f => !f)}
+          >
+            <Filter className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{showFilters ? 'Masquer' : 'Filtres'}</span>
+          </button>
+        </div>
 
-        <button
-          className="flex items-center gap-1.5 text-xs text-primary hover:underline ml-1"
-          onClick={() => setShowFilters(f => !f)}
-        >
-          <Filter className="h-3.5 w-3.5" />
-          {showFilters ? 'Masquer les filtres' : 'Afficher les filtres'}
-        </button>
-
-        {/* spacer */}
         <div className="flex-1" />
 
         {/* Search */}
@@ -568,7 +568,7 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             placeholder="Rechercher..."
-            className="pl-8 h-8 text-xs w-48"
+            className="pl-8 h-8 text-xs w-full sm:w-48"
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
           />
@@ -580,8 +580,8 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <span>{sorted.length} éléments</span>
+        <div className="flex items-center gap-1 text-xs text-muted-foreground justify-center sm:justify-end">
+          <span>{sorted.length}</span>
           <button onClick={() => setPage(1)} disabled={page === 1} className="p-1 hover:text-foreground disabled:opacity-30"><ChevronsLeft className="h-3.5 w-3.5" /></button>
           <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-1 hover:text-foreground disabled:opacity-30"><ChevronLeft className="h-3.5 w-3.5" /></button>
           <span>{page}/{totalPages}</span>
@@ -641,7 +641,7 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
       )}
 
       {/* Table */}
-      <div className="border border-border rounded-lg overflow-hidden">
+      <div className="border border-border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">

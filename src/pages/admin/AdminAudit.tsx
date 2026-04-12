@@ -382,25 +382,25 @@ export default function AdminAudit() {
   const globalStatus: Status = failCount > 0 ? 'fail' : warnCount > 0 ? 'warn' : pendingCount > 0 ? 'pending' : 'pass';
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Audit Système</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Test automatique de {totalCount} vérifications — routes, base de données, stockage, logique métier
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Audit Système</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+            {totalCount} vérifications — routes, DB, stockage, logique
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={reset} disabled={running}>
-            <RotateCcw className="h-4 w-4 mr-2" />
-            Réinitialiser
+          <Button variant="outline" size="sm" onClick={reset} disabled={running} className="text-xs">
+            <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+            Reset
           </Button>
-          <Button onClick={runAudit} disabled={running} size="sm">
+          <Button onClick={runAudit} disabled={running} size="sm" className="text-xs">
             {running ? (
-              <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />En cours…</>
+              <><RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />En cours…</>
             ) : (
-              <><Play className="h-4 w-4 mr-2" />Lancer l'audit</>
+              <><Play className="h-3.5 w-3.5 mr-1.5" />Lancer</>
             )}
           </Button>
         </div>
@@ -489,20 +489,20 @@ export default function AdminAudit() {
               {group.expanded && (
                 <div className="border-t border-border divide-y divide-border/50">
                   {group.tests.map(test => (
-                    <div key={test.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
+                    <div key={test.id} className="flex flex-wrap items-start sm:items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 text-sm">
                       <StatusIcon status={test.status} />
                       <span className={cn(
-                        'flex-1 font-medium',
+                        'flex-1 min-w-0 font-medium text-xs sm:text-sm',
                         test.status === 'fail' && 'text-destructive',
                         test.status === 'warn' && 'text-yellow-500',
                         test.status === 'pass' && 'text-foreground',
                         test.status === 'pending' && 'text-muted-foreground',
                       )}>{test.label}</span>
                       {test.detail && (
-                        <span className="text-xs text-muted-foreground truncate max-w-[280px]">{test.detail}</span>
+                        <span className="text-[10px] sm:text-xs text-muted-foreground truncate max-w-full sm:max-w-[280px] w-full sm:w-auto pl-6 sm:pl-0">{test.detail}</span>
                       )}
                       {test.ms !== undefined && (
-                        <span className="font-mono text-xs text-muted-foreground ml-2">{test.ms}ms</span>
+                        <span className="font-mono text-[10px] sm:text-xs text-muted-foreground">{test.ms}ms</span>
                       )}
                     </div>
                   ))}
@@ -514,11 +514,11 @@ export default function AdminAudit() {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-6 text-xs text-muted-foreground pt-2 border-t border-border">
-        <div className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> Réussi</div>
-        <div className="flex items-center gap-1.5"><XCircle className="h-3.5 w-3.5 text-destructive" /> Échec</div>
-        <div className="flex items-center gap-1.5"><AlertTriangle className="h-3.5 w-3.5 text-yellow-500" /> Avertissement</div>
-        <div className="flex items-center gap-1.5"><div className="h-3.5 w-3.5 rounded-full border-2 border-border" /> En attente</div>
+      <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-[10px] sm:text-xs text-muted-foreground pt-2 border-t border-border">
+        <div className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-green-500" /> Réussi</div>
+        <div className="flex items-center gap-1"><XCircle className="h-3 w-3 text-destructive" /> Échec</div>
+        <div className="flex items-center gap-1"><AlertTriangle className="h-3 w-3 text-yellow-500" /> Avertissement</div>
+        <div className="flex items-center gap-1"><div className="h-3 w-3 rounded-full border-2 border-border" /> En attente</div>
       </div>
     </div>
   );

@@ -95,12 +95,12 @@ export default function AdminPages() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Pages</h1>
-          <p className="text-sm text-muted-foreground">{pages.length} page{pages.length !== 1 ? 's' : ''}</p>
+          <h1 className="text-xl sm:text-2xl font-bold">Pages</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">{pages.length} page{pages.length !== 1 ? 's' : ''}</p>
         </div>
-        <Button onClick={openNew} className="gap-2"><Plus className="h-4 w-4" /> Nouvelle page</Button>
+        <Button onClick={openNew} className="gap-2 w-full sm:w-auto" size="sm"><Plus className="h-4 w-4" /> Nouvelle page</Button>
       </div>
 
       {/* Filters */}
@@ -151,24 +151,24 @@ export default function AdminPages() {
           </div>
         ) : (
           filteredPages.map(page => (
-            <div key={page.id} className={`flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/30 transition-colors ${selectedIds.has(page.id) ? 'border-primary bg-primary/5' : 'border-border'}`}>
-              <Checkbox checked={selectedIds.has(page.id)} onCheckedChange={() => toggle(page.id)} />
+            <div key={page.id} className={`flex items-start gap-3 p-3 sm:p-4 border rounded-lg hover:bg-muted/30 transition-colors ${selectedIds.has(page.id) ? 'border-primary bg-primary/5' : 'border-border'}`}>
+              <Checkbox checked={selectedIds.has(page.id)} onCheckedChange={() => toggle(page.id)} className="mt-1" />
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-medium truncate">{page.title}</h3>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full ${page.type === 'category' ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                    {page.type === 'category' ? 'Catégorie' : 'Personnalisée'}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <h3 className="font-medium truncate text-sm">{page.title}</h3>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap ${page.type === 'category' ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                    {page.type === 'category' ? 'Catégorie' : 'Custom'}
                   </span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full ${page.isPublished ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap ${page.isPublished ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
                     {page.isPublished ? 'Publiée' : 'Brouillon'}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">/{page.slug} · {page.sections.length} section{page.sections.length !== 1 ? 's' : ''}</p>
+                <p className="text-xs text-muted-foreground mt-1 truncate">/{page.slug} · {page.sections.length} section{page.sections.length !== 1 ? 's' : ''}</p>
               </div>
-              <div className="flex gap-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => window.open(`/boutique/${page.slug}`, '_blank')}><ExternalLink className="h-3.5 w-3.5" /></Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(page)}><Pencil className="h-3.5 w-3.5" /></Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(page.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+              <div className="flex gap-0.5 shrink-0">
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.open(`/boutique/${page.slug}`, '_blank')}><ExternalLink className="h-3.5 w-3.5" /></Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(page)}><Pencil className="h-3.5 w-3.5" /></Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(page.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
               </div>
             </div>
           ))

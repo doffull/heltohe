@@ -95,31 +95,32 @@ export default function AdminChatbot() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold hud-text flex items-center gap-3">
-            <Bot className="h-8 w-8 text-primary" />
-            CHATBOT HELVETICA
+          <h1 className="text-xl sm:text-3xl font-bold hud-text flex items-center gap-2 sm:gap-3">
+            <Bot className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+            CHATBOT
           </h1>
-          <p className="text-muted-foreground mt-1">Gérez votre assistant virtuel</p>
+          <p className="text-muted-foreground text-xs sm:text-sm mt-1">Gérez votre assistant virtuel</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={() => setIsActive(!isActive)}
-            className="flex items-center gap-2 text-sm font-medium"
+            className="flex items-center gap-1.5 text-sm font-medium"
           >
             {isActive ? (
-              <><ToggleRight className="h-6 w-6 text-primary" /><span className="text-primary">Actif</span></>
+              <><ToggleRight className="h-5 w-5 text-primary" /><span className="text-primary text-xs sm:text-sm">Actif</span></>
             ) : (
-              <><ToggleLeft className="h-6 w-6 text-muted-foreground" /><span className="text-muted-foreground">Inactif</span></>
+              <><ToggleLeft className="h-5 w-5 text-muted-foreground" /><span className="text-muted-foreground text-xs sm:text-sm">Inactif</span></>
             )}
           </button>
           <Button
             onClick={() => updateConfig.mutate()}
             disabled={updateConfig.isPending || !config}
             className="chamfer-hud-sm"
+            size="sm"
           >
-            <Save className="h-4 w-4 mr-2" />
+            <Save className="h-3.5 w-3.5 mr-1.5" />
             {updateConfig.isPending ? 'Sauvegarde...' : 'Sauvegarder'}
           </Button>
         </div>
@@ -135,7 +136,7 @@ export default function AdminChatbot() {
         {/* PERSONALITY */}
         <TabsContent value="personality" className="space-y-4 mt-4">
           <div className="chamfer-hud bg-card/50 p-6 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="hud-text text-xs">NOM DU BOT</Label>
                 <Input
@@ -227,7 +228,7 @@ export default function AdminChatbot() {
 
         {/* STATS */}
         <TabsContent value="stats" className="space-y-4 mt-4">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="chamfer-hud bg-card/50 p-6 text-center">
               <p className="text-3xl font-bold hud-text text-primary">{logs.length}</p>
               <p className="text-xs text-muted-foreground mt-1">CONVERSATIONS</p>
