@@ -14,9 +14,10 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Plus, Search, Pencil, Trash2, MoreHorizontal, Package, Upload, FileText, X, Check, Filter, Wand2, Copy, Tag, DollarSign, Archive, Layers2, Boxes
+  Plus, Search, Pencil, Trash2, MoreHorizontal, Package, Upload, FileText, X, Check, Filter, Wand2, Copy, Tag, DollarSign, Archive, Layers2, Boxes, RefreshCw
 } from 'lucide-react';
 import { ImportMockupDialog } from '@/components/admin/ImportMockupDialog';
+import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -72,6 +73,7 @@ export default function AdminProducts() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
   const [isMockupDialogOpen, setIsMockupDialogOpen] = useState(false);
+  const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [extractedProducts, setExtractedProducts] = useState<ExtractedProduct[]>([]);
   const [isImporting, setIsImporting] = useState(false);
@@ -319,6 +321,9 @@ export default function AdminProducts() {
           <p className="text-muted-foreground mt-1">{products.length} produits au catalogue</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsSyncDialogOpen(true)} className="chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10">
+            <RefreshCw className="h-4 w-4 mr-2" />Sync WordPress
+          </Button>
           <Button variant="outline" onClick={() => setIsMockupDialogOpen(true)} className="chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10">
             <Wand2 className="h-4 w-4 mr-2" />Importer Maquette IA
           </Button>
@@ -745,6 +750,8 @@ export default function AdminProducts() {
         locations={stockDialogLocations}
         editData={stockDialogEdit}
       />
+
+      <WordPressSyncDialog open={isSyncDialogOpen} onOpenChange={setIsSyncDialogOpen} />
     </div>
   );
 }
