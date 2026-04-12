@@ -405,10 +405,10 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 lg:space-y-8">
       <div>
-        <h1 className="text-3xl font-bold hud-text">DASHBOARD</h1>
-        <p className="text-muted-foreground mt-1">Vue d'ensemble de votre activité</p>
+        <h1 className="text-xl lg:text-3xl font-bold hud-text">DASHBOARD</h1>
+        <p className="text-muted-foreground text-xs lg:text-sm mt-1">Vue d'ensemble de votre activité</p>
       </div>
 
       {/* Stats Grid */}

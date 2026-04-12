@@ -75,13 +75,13 @@ export default function AdminCheckout() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 lg:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold hud-text">Commandes & Livraison</h1>
-          <p className="text-sm text-muted-foreground">Gérez les tarifs, passerelles de paiement et le tunnel de commande</p>
+          <h1 className="text-xl lg:text-2xl font-bold hud-text">Commandes & Livraison</h1>
+          <p className="text-xs lg:text-sm text-muted-foreground">Gérez les tarifs, passerelles de paiement et le tunnel de commande</p>
         </div>
-        <Button onClick={handleSave} disabled={saveConfig.isPending}>
+        <Button onClick={handleSave} disabled={saveConfig.isPending} className="w-full sm:w-auto">
           {saveConfig.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
           Sauvegarder
         </Button>
