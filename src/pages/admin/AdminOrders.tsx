@@ -136,7 +136,50 @@ export default function AdminOrders() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('date-desc');
+  const [trackingInput, setTrackingInput] = useState<string>('');
+  const [trackingOrderId, setTrackingOrderId] = useState<string | null>(null);
+  const [syncOpen, setSyncOpen] = useState(false);
 
+  // Quick validation helpers
+  const getValidationFlags = (order: Order): { identity: boolean; payment: boolean; shipping: boolean } => {
+    const flags = (order as any).validationFlags || (order as any).validation_flags;
+    return flags || { identity: false, payment: false, shipping: false };
+  };
+
+  const handleQuickValidate = async (order: Order, flag: 'identity' | 'payment' | 'shipping', value?: string) => {
+    const currentFlags = getValidationFlags(order);
+    const newFlags = { ...currentFlags, [flag]: true };
+    
+    try {
+      const updates: any = { id: order.id };
+      
+      if (flag === 'payment') {
+        updates.paymentStatus = 'Paid';
+      }
+      if (flag === 'shipping' && value) {
+        updates.trackingNumber = value;
+        updates.status = 'Shipped';
+      }
+      
+      // Update validation_flags via direct supabase call
+      await supabase.from('orders').update({ validation_flags: newFlags }).eq('id', order.id);
+      
+      if (Object.keys(updates).length > 1) {
+        await updateOrder.mutateAsync(updates);
+      }
+
+      // Auto-complete if all 3 validated
+      if (newFlags.identity && newFlags.payment && newFlags.shipping) {
+        await updateOrder.mutateAsync({ id: order.id, status: 'Delivered' });
+        toast({ title: '✅ Commande validée complètement' });
+      } else {
+        const labels = { identity: 'Identité', payment: 'Paiement', shipping: 'Expédition' };
+        toast({ title: `✓ ${labels[flag]} validé` });
+      }
+    } catch {
+      toast({ title: 'Erreur', variant: 'destructive' });
+    }
+  };
   let filteredOrders = orders.filter(o => {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
