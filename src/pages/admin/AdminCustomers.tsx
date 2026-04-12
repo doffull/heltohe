@@ -5,8 +5,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
 import { 
-  Users, Search, Mail, Phone, Crown, TrendingUp, Eye, Trash2, Filter, ArrowUpDown
+  Users, Search, Mail, Phone, Crown, TrendingUp, Eye, Trash2, Filter, ArrowUpDown, RefreshCw
 } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -32,6 +33,7 @@ export default function AdminCustomers() {
   const [tierFilter, setTierFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('name');
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerRecord | null>(null);
+  const [syncOpen, setSyncOpen] = useState(false);
 
   let filtered = customers.filter(c => {
     if (searchQuery) {
@@ -74,43 +76,48 @@ export default function AdminCustomers() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 lg:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h1 className="text-3xl font-bold hud-text">CLIENTS</h1>
-          <p className="text-muted-foreground mt-1">{customers.length} clients enregistrés</p>
+          <h1 className="text-xl lg:text-3xl font-bold hud-text">CLIENTS</h1>
+          <p className="text-muted-foreground text-xs lg:text-sm mt-1">{customers.length} clients enregistrés</p>
         </div>
+        <Button variant="outline" size="sm" onClick={() => setSyncOpen(true)} className="w-full sm:w-auto gap-2">
+          <RefreshCw className="h-4 w-4" /> Sync WordPress
+        </Button>
       </div>
 
       {/* Filters */}
-      <div className="chamfer-hud bg-card/50 p-4 flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-md">
+      <div className="chamfer-hud bg-card/50 p-3 lg:p-4 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 lg:gap-3">
+        <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Rechercher par nom ou email..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
         </div>
-        <Select value={tierFilter} onValueChange={setTierFilter}>
-          <SelectTrigger className="w-[150px]"><Filter className="h-3 w-3 mr-2" /><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous niveaux</SelectItem>
-            <SelectItem value="bronze">Bronze</SelectItem>
-            <SelectItem value="silver">Silver</SelectItem>
-            <SelectItem value="gold">Gold</SelectItem>
-            <SelectItem value="platinum">Platinum</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-[180px]"><ArrowUpDown className="h-3 w-3 mr-2" /><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="name">Nom A-Z</SelectItem>
-            <SelectItem value="spent-desc">Dépenses (haut → bas)</SelectItem>
-            <SelectItem value="spent-asc">Dépenses (bas → haut)</SelectItem>
-            <SelectItem value="points-desc">Points fidélité</SelectItem>
-            <SelectItem value="date-desc">Inscription récente</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex flex-wrap gap-2">
+          <Select value={tierFilter} onValueChange={setTierFilter}>
+            <SelectTrigger className="w-full sm:w-[140px]"><Filter className="h-3 w-3 mr-1" /><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous niveaux</SelectItem>
+              <SelectItem value="bronze">Bronze</SelectItem>
+              <SelectItem value="silver">Silver</SelectItem>
+              <SelectItem value="gold">Gold</SelectItem>
+              <SelectItem value="platinum">Platinum</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-full sm:w-[160px]"><ArrowUpDown className="h-3 w-3 mr-1" /><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name">Nom A-Z</SelectItem>
+              <SelectItem value="spent-desc">Dépenses ↓</SelectItem>
+              <SelectItem value="spent-asc">Dépenses ↑</SelectItem>
+              <SelectItem value="points-desc">Points fidélité</SelectItem>
+              <SelectItem value="date-desc">Inscription récente</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      <div className="grid sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {['bronze', 'silver', 'gold', 'platinum'].map(tier => {
           const tierCount = customers.filter(c => c.loyaltyTier === tier).length;
           return (

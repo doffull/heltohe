@@ -10,9 +10,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
 import { 
   Package, Clock, Truck, CheckCircle, XCircle, Eye, FileText, Save, Printer, Mail, ExternalLink, Trash2,
-  CreditCard, Banknote, MapPin, FileDown, Tag, Search, Filter, Loader2, RefreshCw, CheckSquare, ArrowUpDown
+  CreditCard, Banknote, MapPin, FileDown, Tag, Search, Filter, Loader2, RefreshCw, CheckSquare, ArrowUpDown,
+  UserCheck, DollarSign, Send, Check
 } from 'lucide-react';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -134,7 +136,50 @@ export default function AdminOrders() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('date-desc');
+  const [trackingInput, setTrackingInput] = useState<string>('');
+  const [trackingOrderId, setTrackingOrderId] = useState<string | null>(null);
+  const [syncOpen, setSyncOpen] = useState(false);
 
+  // Quick validation helpers
+  const getValidationFlags = (order: Order): { identity: boolean; payment: boolean; shipping: boolean } => {
+    const flags = (order as any).validationFlags || (order as any).validation_flags;
+    return flags || { identity: false, payment: false, shipping: false };
+  };
+
+  const handleQuickValidate = async (order: Order, flag: 'identity' | 'payment' | 'shipping', value?: string) => {
+    const currentFlags = getValidationFlags(order);
+    const newFlags = { ...currentFlags, [flag]: true };
+    
+    try {
+      const updates: any = { id: order.id };
+      
+      if (flag === 'payment') {
+        updates.paymentStatus = 'Paid';
+      }
+      if (flag === 'shipping' && value) {
+        updates.trackingNumber = value;
+        updates.status = 'Shipped';
+      }
+      
+      // Update validation_flags via direct supabase call
+      await supabase.from('orders').update({ validation_flags: newFlags }).eq('id', order.id);
+      
+      if (Object.keys(updates).length > 1) {
+        await updateOrder.mutateAsync(updates);
+      }
+
+      // Auto-complete if all 3 validated
+      if (newFlags.identity && newFlags.payment && newFlags.shipping) {
+        await updateOrder.mutateAsync({ id: order.id, status: 'Delivered' });
+        toast({ title: '✅ Commande validée complètement' });
+      } else {
+        const labels = { identity: 'Identité', payment: 'Paiement', shipping: 'Expédition' };
+        toast({ title: `✓ ${labels[flag]} validé` });
+      }
+    } catch {
+      toast({ title: 'Erreur', variant: 'destructive' });
+    }
+  };
   let filteredOrders = orders.filter(o => {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -338,42 +383,49 @@ export default function AdminOrders() {
   const getStatusInfo = (status: OrderStatus) => STATUS_OPTIONS.find(o => o.value === status) || STATUS_OPTIONS[0];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold hud-text">COMMANDES</h1>
-        <p className="text-muted-foreground mt-1">{orders.length} commandes au total</p>
+    <div className="space-y-4 lg:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div>
+          <h1 className="text-xl lg:text-3xl font-bold hud-text">COMMANDES</h1>
+          <p className="text-muted-foreground text-xs lg:text-sm mt-1">{orders.length} commandes au total</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => setSyncOpen(true)} className="w-full sm:w-auto gap-2">
+          <RefreshCw className="h-4 w-4" /> Sync WordPress
+        </Button>
       </div>
 
       {/* Filters */}
-      <div className="chamfer-hud bg-card/50 p-4 flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
+      <div className="chamfer-hud bg-card/50 p-3 lg:p-4 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 lg:gap-3">
+        <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="N° commande, client..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[150px]"><Filter className="h-3 w-3 mr-2" /><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous statuts</SelectItem>
-            {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-          <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous paiements</SelectItem>
-            {PAYMENT_STATUS_OPTIONS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-[160px]"><ArrowUpDown className="h-3 w-3 mr-2" /><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="date-desc">Date (récent → ancien)</SelectItem>
-            <SelectItem value="date-asc">Date (ancien → récent)</SelectItem>
-            <SelectItem value="total-desc">Total (haut → bas)</SelectItem>
-            <SelectItem value="total-asc">Total (bas → haut)</SelectItem>
-            <SelectItem value="status">Par statut</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex flex-wrap gap-2">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full sm:w-[140px]"><Filter className="h-3 w-3 mr-1" /><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous statuts</SelectItem>
+              {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+            <SelectTrigger className="w-full sm:w-[140px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous paiements</SelectItem>
+              {PAYMENT_STATUS_OPTIONS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-full sm:w-[150px]"><ArrowUpDown className="h-3 w-3 mr-1" /><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date-desc">Récent → Ancien</SelectItem>
+              <SelectItem value="date-asc">Ancien → Récent</SelectItem>
+              <SelectItem value="total-desc">Total ↓</SelectItem>
+              <SelectItem value="total-asc">Total ↑</SelectItem>
+              <SelectItem value="status">Par statut</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Bulk Actions */}
@@ -397,80 +449,68 @@ export default function AdminOrders() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[700px]">
               <thead className="bg-muted/50 border-b border-border">
                 <tr>
-                  <th className="p-4 w-10"><Checkbox checked={allSelected} onCheckedChange={toggleAll} /></th>
-                  <th className="text-left p-4 text-xs font-bold hud-text">N° COMMANDE</th>
-                  <th className="text-left p-4 text-xs font-bold hud-text">CLIENT</th>
-                  <th className="text-left p-4 text-xs font-bold hud-text">DATE</th>
-                  <th className="text-right p-4 text-xs font-bold hud-text">TOTAL</th>
-                  <th className="text-left p-4 text-xs font-bold hud-text">STATUT</th>
-                  <th className="text-left p-4 text-xs font-bold hud-text">PAIEMENT</th>
-                  <th className="text-right p-4 text-xs font-bold hud-text">ACTIONS</th>
+                  <th className="p-3 w-8"><Checkbox checked={allSelected} onCheckedChange={toggleAll} /></th>
+                  <th className="text-left p-3 text-xs font-bold hud-text">COMMANDE</th>
+                  <th className="text-left p-3 text-xs font-bold hud-text">CLIENT</th>
+                  <th className="text-right p-3 text-xs font-bold hud-text">TOTAL</th>
+                  <th className="text-left p-3 text-xs font-bold hud-text">STATUT</th>
+                  <th className="text-center p-3 text-xs font-bold hud-text">VALIDATION</th>
+                  <th className="text-right p-3 text-xs font-bold hud-text">ACTIONS</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredOrders.map((order) => {
                   const statusInfo = getStatusInfo(order.status);
                   const StatusIcon = statusInfo.icon;
+                  const flags = getValidationFlags(order);
+                  const allValid = flags.identity && flags.payment && flags.shipping;
                   return (
                     <tr key={order.id} className={`border-b border-border last:border-0 hover:bg-muted/30 ${selectedIds.has(order.id) ? 'bg-primary/5' : ''}`}>
-                      <td className="p-4"><Checkbox checked={selectedIds.has(order.id)} onCheckedChange={() => toggle(order.id)} /></td>
-                      <td className="p-4"><code className="text-sm font-bold">{order.orderNumber}</code></td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <span className="text-base">{getCountryFlag(order.customer.country)}</span>
-                          <div>
-                            <p className="font-medium text-sm">{order.customer.name}</p>
-                            <p className="text-xs text-muted-foreground">{order.customer.email}</p>
-                          </div>
+                      <td className="p-3"><Checkbox checked={selectedIds.has(order.id)} onCheckedChange={() => toggle(order.id)} /></td>
+                      <td className="p-3">
+                        <code className="text-xs font-bold">{order.orderNumber}</code>
+                        <p className="text-[10px] text-muted-foreground">{timeAgo(order.date)}</p>
+                      </td>
+                      <td className="p-3">
+                        <p className="font-medium text-xs">{order.customer.name}</p>
+                        <p className="text-[10px] text-muted-foreground truncate max-w-[120px]">{order.customer.email}</p>
+                      </td>
+                      <td className="p-3 text-right"><span className="text-sm font-bold">{order.total.toFixed(2)}€</span></td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-1">
+                          <StatusIcon className={`h-3 w-3 ${statusInfo.color}`} />
+                          <span className={`text-[10px] font-bold ${statusInfo.color}`}>{statusInfo.label}</span>
                         </div>
                       </td>
-                      <td className="p-4">
-                        <p className="text-xs text-muted-foreground">{timeAgo(order.date)}</p>
-                        <p className="text-[10px] text-muted-foreground/60">{new Date(order.date).toLocaleDateString('fr-FR')}</p>
-                      </td>
-                      <td className="p-4 text-right"><span className="text-sm font-bold">{order.total.toFixed(2)}€</span></td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-1.5">
-                          <StatusIcon className={`h-3.5 w-3.5 ${statusInfo.color}`} />
-                          <span className={`text-xs font-bold ${statusInfo.color}`}>{statusInfo.label}</span>
-                        </div>
-                        {order.shippingCarrier && (
-                          <div className="flex items-center gap-1 mt-0.5 text-muted-foreground">
-                            {getShippingIcon(order.shippingCarrier)}
-                            <span className="text-[10px]">{order.shippingCarrier}</span>
-                          </div>
-                        )}
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          {getPaymentIcon(order.paymentMethod)}
-                          <span className={`text-xs font-bold ${order.paymentStatus === 'Paid' ? 'text-green-500' : order.paymentStatus === 'Failed' ? 'text-destructive' : 'text-yellow-500'}`}>
-                            {PAYMENT_STATUS_OPTIONS.find(o => o.value === order.paymentStatus)?.label || order.paymentStatus}
-                          </span>
-                          {order.paymentStatus !== 'Paid' && (
-                            <button
-                              onClick={() => handleMarkAsPaid(order)}
-                              disabled={isMarkingPaid}
-                              className="text-[10px] text-green-500 hover:text-green-400 underline"
-                              title="Marquer comme payé"
-                            >
-                              Marquer payé
+                      <td className="p-3">
+                        <div className="flex items-center gap-1 justify-center">
+                          <button onClick={() => !flags.identity && handleQuickValidate(order, 'identity')} disabled={flags.identity} className={`flex items-center gap-0.5 px-1.5 py-1 rounded text-[10px] font-bold transition-all ${flags.identity ? 'bg-blue-500 text-white' : 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 border border-blue-500/30'}`} title="Identité">
+                            <UserCheck className="h-3 w-3" />{flags.identity && <Check className="h-2.5 w-2.5" />}
+                          </button>
+                          <button onClick={() => !flags.payment && handleQuickValidate(order, 'payment')} disabled={flags.payment} className={`flex items-center gap-0.5 px-1.5 py-1 rounded text-[10px] font-bold transition-all ${flags.payment ? 'bg-green-500 text-white' : 'bg-green-500/10 text-green-500 hover:bg-green-500/20 border border-green-500/30'}`} title="Paiement">
+                            <DollarSign className="h-3 w-3" />{flags.payment && <Check className="h-2.5 w-2.5" />}
+                          </button>
+                          {trackingOrderId === order.id ? (
+                            <div className="flex items-center gap-1">
+                              <Input value={trackingInput} onChange={e => setTrackingInput(e.target.value)} placeholder="N° suivi" className="h-6 w-20 text-[10px] px-1" autoFocus onKeyDown={e => { if (e.key === 'Enter' && trackingInput) { handleQuickValidate(order, 'shipping', trackingInput); setTrackingOrderId(null); setTrackingInput(''); }}} />
+                              <button onClick={() => { if (trackingInput) { handleQuickValidate(order, 'shipping', trackingInput); setTrackingOrderId(null); setTrackingInput(''); }}} className="p-1 bg-purple-500 text-white rounded"><Check className="h-2.5 w-2.5" /></button>
+                            </div>
+                          ) : (
+                            <button onClick={() => { if (!flags.shipping) { setTrackingOrderId(order.id); setTrackingInput(order.trackingNumber || ''); }}} disabled={flags.shipping} className={`flex items-center gap-0.5 px-1.5 py-1 rounded text-[10px] font-bold transition-all ${flags.shipping ? 'bg-purple-500 text-white' : 'bg-purple-500/10 text-purple-500 hover:bg-purple-500/20 border border-purple-500/30'}`} title="Expédition">
+                              <Send className="h-3 w-3" />{flags.shipping && <Check className="h-2.5 w-2.5" />}
                             </button>
                           )}
+                          {allValid && <span className="text-green-500 font-bold text-[10px]">✓</span>}
                         </div>
                       </td>
-                      <td className="p-4 text-right">
-                        <div className="flex gap-1 justify-end">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openDetail(order)} title="Voir"><Eye className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openPrintWindow(generateInvoiceHTML(order))} title="Facture"><FileText className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openPrintWindow(generateDeliverySlipHTML(order))} title="Bon de livraison"><FileDown className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openPrintWindow(generateShippingLabelHTML(order))} title="Étiquette"><Tag className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => window.location.href = `mailto:${order.customer.email}?subject=Commande ${order.orderNumber}`} title="Contacter">
-                            <Mail className="h-4 w-4" />
-                          </Button>
+                      <td className="p-3 text-right">
+                        <div className="flex gap-0.5 justify-end">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openDetail(order)} title="Voir"><Eye className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openPrintWindow(generateInvoiceHTML(order))} title="Facture"><FileText className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.location.href = `mailto:${order.customer.email}`} title="Email"><Mail className="h-3.5 w-3.5" /></Button>
                         </div>
                       </td>
                     </tr>
@@ -618,6 +658,8 @@ export default function AdminOrders() {
           )}
         </DialogContent>
       </Dialog>
+
+      <WordPressSyncDialog open={syncOpen} onOpenChange={setSyncOpen} syncType="orders" />
     </div>
   );
 }

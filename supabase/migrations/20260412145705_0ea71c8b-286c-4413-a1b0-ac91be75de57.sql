@@ -1,0 +1,2 @@
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS validation_flags jsonb NOT NULL DEFAULT '{"identity": false, "payment": false, "shipping": false}';
+ALTER TABLE public.design_settings ADD COLUMN IF NOT EXISTS admin_section_colors jsonb NOT NULL DEFAULT '{}';
