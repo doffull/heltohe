@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { InventoryProductDialog } from '@/components/admin/InventoryProductDialog';
+import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
 import { useAuth } from '@/context/AuthContext';
 import {
   BarChart3, Package, Store, ArrowLeftRight, AlertTriangle,
@@ -128,6 +129,7 @@ export default function AdminStock() {
   const [channelFilter, setChannelFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [lastSync, setLastSync] = useState<Date>(new Date());
+  const [syncOpen, setSyncOpen] = useState(false);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -203,7 +205,7 @@ export default function AdminStock() {
   if (loading) return <StockSkeleton />;
 
   return (
-    <div className="flex gap-6">
+    <div className="flex flex-col md:flex-row gap-4 md:gap-6">
       {/* Sidebar nav */}
       <div className="hidden md:flex flex-col gap-1 w-52 shrink-0">
         {VIEWS.map(v => (
@@ -217,17 +219,28 @@ export default function AdminStock() {
             {v.label}
           </Button>
         ))}
-        <div className="mt-4 px-3">
+        <div className="mt-4 px-3 space-y-2">
           <p className="text-xs text-muted-foreground">Dernière sync</p>
           <p className="text-xs font-mono text-muted-foreground">{lastSync.toLocaleTimeString('fr-FR')}</p>
-          <Button variant="outline" size="sm" className="mt-2 w-full gap-2" onClick={fetchAll}>
+          <Button variant="outline" size="sm" className="w-full gap-2" onClick={fetchAll}>
             <RefreshCw className="h-3 w-3" /> Rafraîchir
+          </Button>
+          <Button variant="outline" size="sm" className="w-full gap-2" onClick={() => setSyncOpen(true)}>
+            <RefreshCw className="h-3 w-3" /> Sync WordPress
           </Button>
         </div>
       </div>
 
       {/* Mobile tabs */}
-      <div className="md:hidden w-full">
+      <div className="md:hidden w-full space-y-2">
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" className="flex-1 gap-1 text-xs" onClick={() => setSyncOpen(true)}>
+            <RefreshCw className="h-3 w-3" /> Sync WP
+          </Button>
+          <Button variant="outline" size="sm" className="flex-1 gap-1 text-xs" onClick={fetchAll}>
+            <RefreshCw className="h-3 w-3" /> Rafraîchir
+          </Button>
+        </div>
         <Tabs value={view} onValueChange={setView}>
           <TabsList className="w-full grid grid-cols-5">
             {VIEWS.map(v => <TabsTrigger key={v.key} value={v.key} className="text-[10px] px-1"><v.icon className="h-4 w-4" /></TabsTrigger>)}
@@ -245,6 +258,8 @@ export default function AdminStock() {
           {view === 'history' && <HistoryView key="hist" inventory={inventory} locations={locations} />}
         </AnimatePresence>
       </div>
+
+      <WordPressSyncDialog open={syncOpen} onOpenChange={setSyncOpen} syncType="stock" />
     </div>
   );
 }

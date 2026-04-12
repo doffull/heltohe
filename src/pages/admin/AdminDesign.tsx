@@ -53,6 +53,7 @@ const NAV_ITEMS = [
   { key: 'categories',  label: 'Catégories',   icon: Grid3x3,         desc: 'Grille d\'accueil' },
   { key: 'hotspots',    label: 'Hotspots',     icon: Crosshair,       desc: 'Points interactifs' },
   { key: 'catalogue',   label: 'Catalogue',    icon: BookOpen,        desc: 'Affichage produits' },
+  { key: 'admin-colors', label: 'Couleurs Admin', icon: Palette,      desc: 'Sections du dashboard' },
 ];
 
 // ─── Hero Slider Tab ───
@@ -2345,6 +2346,104 @@ function CouleursTab() {
 }
 
 // ─── Main Page ───
+// ─── Admin Colors Tab ───
+function AdminColorsTab() {
+  const { designSettings, updateDesignSettings } = useApp();
+
+  const DEFAULT_COLORS: Record<string, string> = {
+    '/admin': '#6B7280', '/admin/produits': '#3B82F6', '/admin/commandes': '#F59E0B',
+    '/admin/checkout': '#10B981', '/admin/clients': '#8B5CF6', '/admin/pages': '#6366F1',
+    '/admin/media': '#EC4899', '/admin/marketing': '#EF4444', '/admin/design': '#06B6D4',
+    '/admin/stock': '#D97706', '/admin/colissimo': '#EAB308', '/admin/chatbot': '#14B8A6',
+    '/admin/woocommerce': '#7C3AED', '/admin/audit': '#6B7280', '/admin/parametres': '#64748B',
+  };
+
+  const savedColors: Record<string, string> = (designSettings as any).adminSectionColors || {};
+  const colors = { ...DEFAULT_COLORS, ...savedColors };
+
+  const SECTIONS = [
+    { href: '/admin', label: 'Dashboard' },
+    { href: '/admin/produits', label: 'Produits' },
+    { href: '/admin/commandes', label: 'Commandes' },
+    { href: '/admin/checkout', label: 'Checkout' },
+    { href: '/admin/clients', label: 'Clients' },
+    { href: '/admin/pages', label: 'Pages' },
+    { href: '/admin/media', label: 'Média' },
+    { href: '/admin/marketing', label: 'Marketing' },
+    { href: '/admin/design', label: 'Design' },
+    { href: '/admin/stock', label: 'Stock' },
+    { href: '/admin/colissimo', label: 'Colissimo' },
+    { href: '/admin/chatbot', label: 'Chatbot' },
+    { href: '/admin/woocommerce', label: 'WooCommerce' },
+    { href: '/admin/audit', label: 'Audit' },
+    { href: '/admin/parametres', label: 'Paramètres' },
+  ];
+
+  const handleColorChange = (href: string, color: string) => {
+    const newColors = { ...savedColors, [href]: color };
+    updateDesignSettings({ adminSectionColors: newColors } as any);
+  };
+
+  const handleReset = () => {
+    updateDesignSettings({ adminSectionColors: {} } as any);
+    toast.success('Couleurs réinitialisées');
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <CardTitle className="text-sm font-semibold">Couleurs des sections admin</CardTitle>
+              <CardDescription>Personnalisez la couleur de chaque section du tableau de bord</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleReset} className="gap-2">
+              <RotateCcw className="h-3 w-3" /> Réinitialiser
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {SECTIONS.map((section) => (
+              <div key={section.href} className="flex items-center gap-3 p-3 rounded-lg border border-border">
+                <input
+                  type="color"
+                  value={colors[section.href] || '#6B7280'}
+                  onChange={(e) => handleColorChange(section.href, e.target.value)}
+                  className="w-8 h-8 rounded cursor-pointer border-0 p-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{section.label}</p>
+                  <p className="text-xs text-muted-foreground font-mono">{colors[section.href]}</p>
+                </div>
+                <div className="w-3 h-8 rounded" style={{ backgroundColor: colors[section.href] }} />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Live preview */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm font-semibold">Aperçu sidebar</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-card border border-border rounded-lg p-2 max-w-xs">
+            {SECTIONS.slice(0, 8).map((section) => (
+              <div key={section.href} className="flex items-center gap-2 px-3 py-2 rounded text-sm">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: colors[section.href] }} />
+                <span className="text-muted-foreground text-xs">{section.label}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 const TAB_COMPONENTS: Record<string, React.ComponentType> = {
   disposition: DispositionTab,
   hero:        HeroSliderTab,
@@ -2355,6 +2454,7 @@ const TAB_COMPONENTS: Record<string, React.ComponentType> = {
   categories:  CategoriesTab,
   hotspots:    HotspotsTab,
   catalogue:   CatalogueTab,
+  'admin-colors': AdminColorsTab,
 };
 
 export default function AdminDesign() {
@@ -2375,15 +2475,15 @@ export default function AdminDesign() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-4 lg:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold">Design & Visuels</h1>
-          <p className="text-muted-foreground text-sm mt-1">Personnalisez l'apparence complète de votre boutique</p>
+          <h1 className="text-xl lg:text-2xl font-bold">Design & Visuels</h1>
+          <p className="text-muted-foreground text-xs lg:text-sm mt-1">Personnalisez l'apparence de votre boutique</p>
         </div>
         <Button
           onClick={handleSave}
           disabled={saveDesign.isPending}
-          className="chamfer-hud-sm gap-2"
+          className="chamfer-hud-sm gap-2 w-full sm:w-auto"
         >
           {saveDesign.isPending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -2394,10 +2494,24 @@ export default function AdminDesign() {
         </Button>
       </div>
 
+      {/* Mobile tab selector */}
+      <div className="md:hidden mb-4">
+        <Select value={activeTab} onValueChange={setActiveTab}>
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {NAV_ITEMS.map((item) => (
+              <SelectItem key={item.key} value={item.key}>{item.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Two-column layout */}
       <div className="flex gap-6 min-h-0">
-        {/* Left nav */}
-        <nav className="w-52 shrink-0">
+        {/* Left nav - hidden on mobile */}
+        <nav className="w-52 shrink-0 hidden md:block">
           <div className="flex flex-col gap-1 sticky top-4">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
