@@ -2349,10 +2349,17 @@ function CouleursTab() {
 // ─── Admin Colors Tab ───
 function AdminColorsTab() {
   const { designSettings, updateDesignSettings } = useApp();
-  const { DEFAULT_SECTION_COLORS } = require('@/pages/admin/Admin');
+
+  const DEFAULT_COLORS: Record<string, string> = {
+    '/admin': '#6B7280', '/admin/produits': '#3B82F6', '/admin/commandes': '#F59E0B',
+    '/admin/checkout': '#10B981', '/admin/clients': '#8B5CF6', '/admin/pages': '#6366F1',
+    '/admin/media': '#EC4899', '/admin/marketing': '#EF4444', '/admin/design': '#06B6D4',
+    '/admin/stock': '#D97706', '/admin/colissimo': '#EAB308', '/admin/chatbot': '#14B8A6',
+    '/admin/woocommerce': '#7C3AED', '/admin/audit': '#6B7280', '/admin/parametres': '#64748B',
+  };
 
   const savedColors: Record<string, string> = (designSettings as any).adminSectionColors || {};
-  const colors = { ...DEFAULT_SECTION_COLORS, ...savedColors };
+  const colors = { ...DEFAULT_COLORS, ...savedColors };
 
   const SECTIONS = [
     { href: '/admin', label: 'Dashboard' },
