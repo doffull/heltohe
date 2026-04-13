@@ -228,7 +228,7 @@ export function useDesignSettings() {
     queryKey: ['design_settings'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('design_settings')
+        .from('design_settings_public')
         .select('*')
         .eq('settings_key', 'main')
         .maybeSingle();
