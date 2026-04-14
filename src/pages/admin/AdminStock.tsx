@@ -1138,7 +1138,10 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                       <p className="font-semibold text-sm leading-tight">{item.name}</p>
                       {hasVariants && (
                         <p className="text-[10px] text-muted-foreground mt-0.5">
-                          {uniqueVariants.length} variante{uniqueVariants.length > 1 ? 's' : ''} — cliquer pour détailler
+                          {uniqueSizes.length > 0 ? `${uniqueSizes.length} taille${uniqueSizes.length > 1 ? 's' : ''}` : ''}
+                          {uniqueSizes.length > 0 && productColors.length > 0 ? ' × ' : ''}
+                          {productColors.length > 0 ? `${productColors.length} couleur${productColors.length > 1 ? 's' : ''}` : ''}
+                          {' — cliquer pour détailler'}
                         </p>
                       )}
                     </div>
