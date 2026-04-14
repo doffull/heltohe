@@ -1080,15 +1080,14 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
               const webQty = webLocation ? getStockForItem(item.id, webLocation.id) : null;
               const isExpanded = expandedItems.has(item.id);
 
-              // Build variant rows from stock_levels for this item
+              // Build unique sizes for grouped display
               const variantLevels = stockLevels.filter((sl: StockLevel) => sl.inventory_id === item.id && (sl.size || sl.color));
-              // Unique variant keys
-              const uniqueVariants = Array.from(
-                new Map(variantLevels.map((sl: StockLevel) => {
-                  const key = [sl.color, sl.size].filter(Boolean).join('|');
-                  return [key, { color: sl.color, size: sl.size }];
-                })).values()
-              );
+              const productColors = matchedProduct?.colors && matchedProduct.colors.length > 0 ? matchedProduct.colors : [];
+              const uniqueSizes = Array.from(new Set(
+                variantLevels.map((sl: StockLevel) => sl.size).filter((s): s is string => !!s)
+              ));
+              const hasColorsOnly = uniqueSizes.length === 0 && productColors.length > 0;
+              const hasVariants = uniqueSizes.length > 0 || hasColorsOnly || variantLevels.length > 0;
 
               const toggleExpand = () => {
                 setExpandedItems(prev => {
@@ -1097,8 +1096,6 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                   return next;
                 });
               };
-
-              const hasVariants = uniqueVariants.length > 0;
 
               return [
                 // ── Parent Row ──
