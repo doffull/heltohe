@@ -357,6 +357,56 @@ function KpiCard({ title, value, icon, variant }: { title: string; value: number
   );
 }
 
+// ── Color stock popover for parent row swatch ──
+function ColorStockPopover({ color, inventoryId, stockLevels, webLocationId, onRefresh }: {
+  color: string; inventoryId: string; stockLevels: StockLevel[];
+  webLocationId: string | undefined; onRefresh: () => void;
+}) {
+  const { toast } = useToast();
+  const colorLevels = stockLevels.filter((sl: StockLevel) => sl.inventory_id === inventoryId && sl.color === color);
+  const totalQty = colorLevels.reduce((s, sl) => s + sl.quantity, 0);
+  const webLevels = webLocationId ? colorLevels.filter(sl => sl.location_id === webLocationId) : [];
+  const webQty = webLevels.reduce((s, sl) => s + sl.quantity, 0);
+
+  // Group by size for detail
+  const bySizeMap = new Map<string, number>();
+  for (const sl of colorLevels) {
+    const key = sl.size || '—';
+    bySizeMap.set(key, (bySizeMap.get(key) || 0) + sl.quantity);
+  }
+  const bySize = Array.from(bySizeMap.entries());
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button className="group/cs relative" title={`${color}: ${totalQty} en stock`} onClick={e => e.stopPropagation()}>
+          <ColorSwatch color={color} size={20} />
+          <span className="absolute -top-1.5 -right-1.5 bg-foreground text-background text-[8px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center leading-none">
+            {totalQty > 99 ? '99+' : totalQty}
+          </span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-48 p-2" align="start" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-2 mb-2">
+          <ColorSwatch color={color} size={14} />
+          <span className="font-semibold text-sm">{color}</span>
+          <span className="ml-auto font-mono text-xs text-muted-foreground">Total: {totalQty}</span>
+        </div>
+        {bySize.length > 0 && (
+          <div className="space-y-0.5">
+            {bySize.map(([size, qty]) => (
+              <div key={size} className="flex items-center justify-between text-xs px-1 py-0.5">
+                <span className="text-muted-foreground">{size}</span>
+                <span className={cn("font-mono font-semibold", qty === 0 ? "text-destructive/60" : "text-foreground")}>{qty}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 // ── Inline editable variant label (size/color) ──
 function VariantLabelEditor({ stockLevelIds, currentSize, currentColor, inventoryId, onRefresh }: {
   stockLevelIds: string[]; currentSize: string | null; currentColor: string | null;
@@ -407,10 +457,13 @@ function VariantLabelEditor({ stockLevelIds, currentSize, currentColor, inventor
     <div className="flex items-center gap-2 pl-3 group/vl">
       {currentColor && <ColorSwatch color={currentColor} size={12} />}
       <span className="text-xs font-medium text-foreground/80">
-        ↑ {currentSize || currentColor || 'Sans variante'}
+        {currentSize || ''}
       </span>
-      {currentSize && currentColor && (
+      {currentColor && (
         <span className="text-[10px] text-muted-foreground">{currentColor}</span>
+      )}
+      {!currentSize && !currentColor && (
+        <span className="text-xs text-muted-foreground">Sans variante</span>
       )}
       <button
         onClick={e => { e.stopPropagation(); setSize(currentSize || ''); setColor(currentColor || ''); setEditing(true); }}
@@ -569,6 +622,41 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
       toast({ title: 'Erreur de synchronisation', description: err.message, variant: 'destructive' });
     } finally {
       setSyncing(false);
+    }
+  };
+
+  // ── Resync: create missing size×color stock_levels for existing inventory items ──
+  const [resyncing, setResyncing] = useState(false);
+  const handleResyncVariants = async () => {
+    setResyncing(true);
+    try {
+      let created = 0;
+      for (const inv of (inventory as InventoryItem[])) {
+        const prod = (products as ProductRow[]).find(p => p.id === inv.product_id);
+        if (!prod) continue;
+        const sizes = prod.sizes && prod.sizes.length > 0 ? prod.sizes : [null];
+        const colors = prod.colors && prod.colors.length > 0 ? prod.colors : [null];
+        const existingLevels = (stockLevels as StockLevel[]).filter(sl => sl.inventory_id === inv.id);
+
+        for (const sz of sizes) {
+          for (const col of colors) {
+            const exists = existingLevels.some(sl => sl.size === sz && sl.color === col);
+            if (!exists && webLocation) {
+              await supabase.from('stock_levels').insert({
+                inventory_id: inv.id, location_id: webLocation.id,
+                quantity: 0, reserved: 0, size: sz, color: col,
+              });
+              created++;
+            }
+          }
+        }
+      }
+      toast({ title: created > 0 ? `${created} variante${created > 1 ? 's' : ''} créée${created > 1 ? 's' : ''}` : 'Toutes les variantes sont déjà synchronisées ✓' });
+      onRefresh();
+    } catch (err: any) {
+      toast({ title: 'Erreur', description: err.message, variant: 'destructive' });
+    } finally {
+      setResyncing(false);
     }
   };
 
@@ -832,6 +920,10 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
             <RefreshCw className={cn("h-3.5 w-3.5", syncing && "animate-spin")} />
             {syncing ? 'Sync…' : 'Sync Produits'}
           </Button>
+          <Button variant="outline" className="gap-2" onClick={handleResyncVariants} disabled={resyncing}>
+            <RefreshCw className={cn("h-3.5 w-3.5", resyncing && "animate-spin")} />
+            {resyncing ? 'Resync…' : 'Resync Variantes'}
+          </Button>
           <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
             <Upload className="h-4 w-4" /> Importer fichier
           </Button>
@@ -885,6 +977,7 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
               <TableHead className="w-8 pl-3" />
               <TableHead className="w-12">Image</TableHead>
               <TableHead>Produit / Variante</TableHead>
+              <TableHead>Couleurs</TableHead>
               <TableHead>Canal</TableHead>
               {webLocation && (
                 <TableHead className="text-right whitespace-nowrap">
@@ -989,6 +1082,25 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                         <p className="text-[10px] text-muted-foreground mt-0.5">
                           {uniqueVariants.length} variante{uniqueVariants.length > 1 ? 's' : ''} — cliquer pour détailler
                         </p>
+                      )}
+                    </div>
+                  </TableCell>
+                  {/* Color swatches */}
+                  <TableCell onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {matchedProduct?.colors && matchedProduct.colors.length > 0 ? (
+                        matchedProduct.colors.map((c: string) => (
+                          <ColorStockPopover
+                            key={c}
+                            color={c}
+                            inventoryId={item.id}
+                            stockLevels={stockLevels}
+                            webLocationId={webLocation?.id}
+                            onRefresh={onRefresh}
+                          />
+                        ))
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground">—</span>
                       )}
                     </div>
                   </TableCell>
@@ -1126,6 +1238,10 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                         {isVariantLow && (
                           <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4 ml-3">Rupture</Badge>
                         )}
+                      </TableCell>
+                      {/* Couleurs - show swatch for this variant */}
+                      <TableCell>
+                        {variant.color && <ColorSwatch color={variant.color} size={14} />}
                       </TableCell>
                       <TableCell />
                       {/* Web variant qty */}
