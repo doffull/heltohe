@@ -357,6 +357,72 @@ function KpiCard({ title, value, icon, variant }: { title: string; value: number
   );
 }
 
+// ── Inline editable variant label (size/color) ──
+function VariantLabelEditor({ stockLevelIds, currentSize, currentColor, inventoryId, onRefresh }: {
+  stockLevelIds: string[]; currentSize: string | null; currentColor: string | null;
+  inventoryId: string; onRefresh: () => void;
+}) {
+  const { toast } = useToast();
+  const [editing, setEditing] = useState(false);
+  const [size, setSize] = useState(currentSize || '');
+  const [color, setColor] = useState(currentColor || '');
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      for (const id of stockLevelIds) {
+        await supabase.from('stock_levels').update({
+          size: size.trim() || null,
+          color: color.trim() || null,
+          updated_at: new Date().toISOString(),
+        }).eq('id', id);
+      }
+      toast({ title: 'Variante mise à jour' });
+      setEditing(false);
+      onRefresh();
+    } catch (err: any) {
+      toast({ title: 'Erreur', description: err.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1 pl-3 flex-wrap">
+        {currentSize !== null && (
+          <Input value={size} onChange={e => setSize(e.target.value)} placeholder="Taille" className="w-16 h-6 text-xs px-1.5" autoFocus onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }} />
+        )}
+        {currentColor !== null && (
+          <Input value={color} onChange={e => setColor(e.target.value)} placeholder="Couleur" className="w-20 h-6 text-xs px-1.5" onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }} />
+        )}
+        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleSave} disabled={saving}><Check className="h-3 w-3 text-primary" /></Button>
+        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditing(false)}><X className="h-3 w-3" /></Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2 pl-3 group/vl">
+      {currentColor && <ColorSwatch color={currentColor} size={12} />}
+      <span className="text-xs font-medium text-foreground/80">
+        ↑ {currentSize || currentColor || 'Sans variante'}
+      </span>
+      {currentSize && currentColor && (
+        <span className="text-[10px] text-muted-foreground">{currentColor}</span>
+      )}
+      <button
+        onClick={e => { e.stopPropagation(); setSize(currentSize || ''); setColor(currentColor || ''); setEditing(true); }}
+        className="opacity-0 group-hover/vl:opacity-60 hover:!opacity-100 transition-opacity"
+        title="Modifier la variante"
+      >
+        <Pencil className="h-3 w-3 text-muted-foreground" />
+      </button>
+    </div>
+  );
+}
+
 // ── Inline editable stock cell for a variant ──
 function VariantStockCell({ level, inventoryId, locationId, size, color, onRefresh }: {
   level?: StockLevel; inventoryId: string; locationId: string;
@@ -483,15 +549,13 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
         if (invErr || !inv) continue;
 
         if (webLocation) {
-          await supabase.from('stock_levels').insert({
-            inventory_id: inv.id, location_id: webLocation.id,
-            quantity: 0, reserved: 0,
-          });
-          if (p.sizes && p.sizes.length > 0) {
-            for (const size of p.sizes) {
+          const sizes = p.sizes && p.sizes.length > 0 ? p.sizes : [null];
+          const colors = p.colors && p.colors.length > 0 ? p.colors : [null];
+          for (const size of sizes) {
+            for (const color of colors) {
               await supabase.from('stock_levels').insert({
                 inventory_id: inv.id, location_id: webLocation.id,
-                quantity: 0, reserved: 0, size, color: null,
+                quantity: 0, reserved: 0, size, color,
               });
             }
           }
@@ -821,7 +885,6 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
               <TableHead className="w-8 pl-3" />
               <TableHead className="w-12">Image</TableHead>
               <TableHead>Produit / Variante</TableHead>
-              <TableHead>SKU</TableHead>
               <TableHead>Canal</TableHead>
               {webLocation && (
                 <TableHead className="text-right whitespace-nowrap">
@@ -929,7 +992,6 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">{item.sku}</TableCell>
                   <TableCell onClick={e => e.stopPropagation()}>
                     <Badge variant="outline">{item.channel.toUpperCase()}</Badge>
                   </TableCell>
@@ -1052,20 +1114,19 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2 pl-3">
-                          {variant.color && <ColorSwatch color={variant.color} size={12} />}
-                          <span className="text-xs font-medium text-foreground/80">
-                            ↑ {variant.size || variant.color || 'Sans variante'}
-                          </span>
-                          {variant.size && variant.color && (
-                            <span className="text-[10px] text-muted-foreground">{variant.color}</span>
-                          )}
-                          {isVariantLow && (
-                            <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4">Rupture</Badge>
-                          )}
-                        </div>
+                        <VariantLabelEditor
+                          stockLevelIds={stockLevels
+                            .filter((sl: StockLevel) => sl.inventory_id === item.id && sl.size === variant.size && sl.color === variant.color)
+                            .map((sl: StockLevel) => sl.id)}
+                          currentSize={variant.size}
+                          currentColor={variant.color}
+                          inventoryId={item.id}
+                          onRefresh={onRefresh}
+                        />
+                        {isVariantLow && (
+                          <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4 ml-3">Rupture</Badge>
+                        )}
                       </TableCell>
-                      <TableCell className="font-mono text-[10px] text-muted-foreground/70">{item.sku}</TableCell>
                       <TableCell />
                       {/* Web variant qty */}
                       {webLocation && (
