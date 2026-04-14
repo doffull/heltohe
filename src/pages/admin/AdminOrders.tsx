@@ -564,9 +564,44 @@ export default function AdminOrders() {
                       </td>
                       <td className="p-3">
                         <div className="flex items-center gap-1 justify-center">
-                          <button onClick={() => !flags.identity && handleQuickValidate(order, 'identity')} disabled={flags.identity} className={`flex items-center gap-0.5 px-1.5 py-1 rounded text-[10px] font-bold transition-all ${flags.identity ? 'bg-blue-500 text-white' : 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 border border-blue-500/30'}`} title="Identité">
-                            <UserCheck className="h-3 w-3" />{flags.identity && <Check className="h-2.5 w-2.5" />}
-                          </button>
+                          <Popover open={verificationPopoverOpen === order.id} onOpenChange={(open) => { if (!open) setVerificationPopoverOpen(null); }}>
+                            <PopoverTrigger asChild>
+                              <button 
+                                onClick={() => !flags.identity && handleAIVerify(order)} 
+                                disabled={flags.identity || verifyingOrderId === order.id} 
+                                className={`flex items-center gap-0.5 px-1.5 py-1 rounded text-[10px] font-bold transition-all ${flags.identity ? 'bg-blue-500 text-white' : 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 border border-blue-500/30'}`} 
+                                title="Vérification IA"
+                              >
+                                {verifyingOrderId === order.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShieldCheck className="h-3 w-3" />}
+                                {flags.identity && <Check className="h-2.5 w-2.5" />}
+                              </button>
+                            </PopoverTrigger>
+                            {verificationResult && verificationPopoverOpen === order.id && (
+                              <PopoverContent className="w-72 p-3 space-y-2">
+                                <div className="flex items-center gap-2">
+                                  {verificationResult.status === 'valid' && <CheckCircle className="h-4 w-4 text-green-500" />}
+                                  {verificationResult.status === 'warning' && <AlertTriangle className="h-4 w-4 text-yellow-500" />}
+                                  {verificationResult.status === 'invalid' && <XOctagon className="h-4 w-4 text-destructive" />}
+                                  <span className="font-bold text-sm">Score: {verificationResult.score}/100</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground">{verificationResult.summary}</p>
+                                {verificationResult.issues?.length > 0 && (
+                                  <div className="space-y-1">
+                                    {verificationResult.issues.map((issue: any, i: number) => (
+                                      <div key={i} className={`text-[10px] p-1.5 rounded ${issue.severity === 'error' ? 'bg-destructive/10 text-destructive' : issue.severity === 'warning' ? 'bg-yellow-500/10 text-yellow-600' : 'bg-muted text-muted-foreground'}`}>
+                                        <strong>{issue.field}:</strong> {issue.message}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                {verificationResult.status !== 'valid' && !flags.identity && (
+                                  <Button size="sm" variant="outline" className="w-full text-xs" onClick={() => { handleQuickValidate(order, 'identity'); setVerificationPopoverOpen(null); }}>
+                                    Forcer la validation
+                                  </Button>
+                                )}
+                              </PopoverContent>
+                            )}
+                          </Popover>
                           <button onClick={() => !flags.payment && handleQuickValidate(order, 'payment')} disabled={flags.payment} className={`flex items-center gap-0.5 px-1.5 py-1 rounded text-[10px] font-bold transition-all ${flags.payment ? 'bg-green-500 text-white' : 'bg-green-500/10 text-green-500 hover:bg-green-500/20 border border-green-500/30'}`} title="Paiement">
                             <DollarSign className="h-3 w-3" />{flags.payment && <Check className="h-2.5 w-2.5" />}
                           </button>
