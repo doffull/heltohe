@@ -1,39 +1,50 @@
 
 
-## Plan : Pastilles couleur sur les lignes produit + gestion stock par combinaison taille×couleur
+## Plan : Regrouper les variantes par taille avec pastilles couleur inline
 
-### Problème
-Quand on expand un produit dans l'inventaire global, seules les tailles s'affichent comme variantes. Les couleurs du produit ne sont pas visibles sous forme de pastilles sur la ligne parent, et les combinaisons taille×couleur ne sont pas toutes créées comme `stock_levels`.
+### Problème actuel
+Quand on expand un produit, chaque combinaison taille×couleur est affichée sur sa propre ligne (ex: Noir/XS, Gris/XS, Blanc/XS, Noir/S, Gris/S, Blanc/S...). Pour un produit avec 6 tailles et 6 couleurs, cela fait 36 lignes — beaucoup trop long.
 
-### Changements prévus dans `src/pages/admin/AdminStock.tsx`
+### Solution
+Regrouper par **taille** : chaque ligne enfant = une taille (XS, S, M, L...). À côté du nom de la taille, afficher les **pastilles couleur** avec le stock de chaque couleur pour cette taille. Cliquer sur une pastille ouvre un petit popover inline pour modifier la quantité de stock de cette combinaison taille×couleur.
 
-**A. Pastilles couleur sur la ligne parent (entre Produit et Canal)**
+### Structure visuelle après changement
 
-Sur chaque ligne produit parent, ajouter une colonne "Couleurs" affichant des pastilles rondes colorées correspondant aux couleurs du produit (`matchedProduct.colors`). Chaque pastille est cliquable et ouvre un petit popover permettant de :
-- Voir le stock total pour cette couleur (toutes tailles confondues)
-- Modifier rapidement le stock de cette couleur (en un clic, même logique que `VariantStockCell`)
+```text
+▼ Marco                    [pastilles parent]  B2C   12   0   12   10   OK
+  ├─ XS  ●2 ●0 ●1 ●3                               6    0    6
+  ├─ S   ●1 ●0 ●2 ●0                               3    0    3
+  ├─ M   ●0 ●1 ●1 ●1                               3    0    3
+  └─ XL  ...                                        ...
+```
 
-Ajout d'un `TableHead` "Couleurs" dans le header entre "Produit / Variante" et "Canal".
+Chaque ● est une pastille couleur cliquable. Au clic → popover avec le nom de la couleur, la quantité actuelle, et un champ pour la modifier.
 
-**B. Lignes variantes enfants : afficher taille + couleur avec pastille**
+### Changements dans `src/pages/admin/AdminStock.tsx`
 
-Dans les lignes enfants (variant rows), améliorer `VariantLabelEditor` pour afficher clairement :
-- La pastille couleur à gauche
-- Le nom de la taille (S, M, L...)
-- Le nom de la couleur en texte
-- Le crayon d'édition inline (déjà existant)
+**A. Nouveau composant `SizeColorStockCell`**
+- Reçoit : inventoryId, size, couleurs du produit, stockLevels, webLocationId, onRefresh
+- Affiche des pastilles couleur avec badge de quantité
+- Au clic sur une pastille → popover avec input pour modifier le stock de cette combinaison taille×couleur
+- Bouton crayon + save inline
 
-**C. Sync : créer les combinaisons taille×couleur manquantes**
+**B. Refactorer les lignes enfant (variant rows)**
+- Au lieu de boucler sur `uniqueVariants` (toutes les combinaisons), boucler sur les **tailles uniques** du produit
+- Chaque ligne de taille affiche :
+  - La taille (XS, S, M...)
+  - Les pastilles couleur avec stock inline (`SizeColorStockCell`)
+  - Le total Web pour cette taille (toutes couleurs)
+  - Les totaux boutiques pour cette taille
+- Si le produit n'a pas de couleurs, garder le comportement actuel (simple ligne par taille)
+- Si le produit n'a pas de tailles mais a des couleurs, afficher une seule ligne avec les pastilles couleur
 
-Le sync (`handleSyncProducts`) crée déjà des combinaisons taille×couleur (lignes 552-561). Ajouter un bouton "Resync variantes" qui, pour les produits déjà en inventaire, crée les `stock_levels` manquants pour les nouvelles combinaisons taille×couleur ajoutées au produit.
-
-**D. Header table : ajouter la colonne Couleurs**
-
-Nouvelle colonne dans le header et dans les rows (parent + enfant).
+**C. Conserver le `VariantLabelEditor` pour l'édition du nom de taille**
+- Le crayon à côté du nom de taille permet de renommer la taille
+- La modification des couleurs se fait via les pastilles
 
 ### Fichiers modifiés
 
 | Fichier | Changement |
 |---|---|
-| `src/pages/admin/AdminStock.tsx` | Ajouter colonne Couleurs avec pastilles cliquables sur parent rows, améliorer variant rows, ajouter resync variantes |
+| `src/pages/admin/AdminStock.tsx` | Nouveau composant `SizeColorStockCell`, refactorer les variant rows pour regrouper par taille avec pastilles couleur cliquables |
 
