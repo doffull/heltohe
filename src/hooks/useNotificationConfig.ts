@@ -23,7 +23,7 @@ export function useNotificationConfig() {
         .eq('config_key', 'main')
         .maybeSingle();
       if (error) throw error;
-      return data as NotificationConfig | null;
+      return data as unknown as NotificationConfig | null;
     },
   });
 }

@@ -36,8 +36,8 @@ export default function AdminNotifications() {
   const [channels, setChannels] = useState({ email: true, sms: false });
   const [smsFromNumber, setSmsFromNumber] = useState('');
   const [triggers, setTriggers] = useState({ identity: false, payment: false, all: true });
-  const [emailTemplates, setEmailTemplates] = useState(DEFAULT_EMAIL_TEMPLATES);
-  const [smsTemplates, setSmsTemplates] = useState(DEFAULT_SMS_TEMPLATES);
+  const [emailTemplates, setEmailTemplates] = useState<Record<string, { subject: string; body: string }>>(DEFAULT_EMAIL_TEMPLATES);
+  const [smsTemplates, setSmsTemplates] = useState<Record<string, string>>(DEFAULT_SMS_TEMPLATES);
 
   useEffect(() => {
     if (config) {
