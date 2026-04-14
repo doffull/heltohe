@@ -483,15 +483,13 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
         if (invErr || !inv) continue;
 
         if (webLocation) {
-          await supabase.from('stock_levels').insert({
-            inventory_id: inv.id, location_id: webLocation.id,
-            quantity: 0, reserved: 0,
-          });
-          if (p.sizes && p.sizes.length > 0) {
-            for (const size of p.sizes) {
+          const sizes = p.sizes && p.sizes.length > 0 ? p.sizes : [null];
+          const colors = p.colors && p.colors.length > 0 ? p.colors : [null];
+          for (const size of sizes) {
+            for (const color of colors) {
               await supabase.from('stock_levels').insert({
                 inventory_id: inv.id, location_id: webLocation.id,
-                quantity: 0, reserved: 0, size, color: null,
+                quantity: 0, reserved: 0, size, color,
               });
             }
           }
@@ -821,7 +819,6 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
               <TableHead className="w-8 pl-3" />
               <TableHead className="w-12">Image</TableHead>
               <TableHead>Produit / Variante</TableHead>
-              <TableHead>SKU</TableHead>
               <TableHead>Canal</TableHead>
               {webLocation && (
                 <TableHead className="text-right whitespace-nowrap">
@@ -929,7 +926,6 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">{item.sku}</TableCell>
                   <TableCell onClick={e => e.stopPropagation()}>
                     <Badge variant="outline">{item.channel.toUpperCase()}</Badge>
                   </TableCell>
@@ -1065,7 +1061,6 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="font-mono text-[10px] text-muted-foreground/70">{item.sku}</TableCell>
                       <TableCell />
                       {/* Web variant qty */}
                       {webLocation && (
