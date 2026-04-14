@@ -42,7 +42,14 @@ Deno.serve(async (req) => {
 
   const wcFetch = async (path: string, page = 1) => {
     const res = await fetch(`${cleanUrl}/wp-json/wc/v3/${path}?per_page=100&page=${page}&${authParam}`);
-    if (!res.ok) throw new Error(`WC API error ${res.status} for ${path}`);
+    if (!res.ok) {
+      const statusCode = res.status;
+      const errorText = await res.text().catch(() => '');
+      if (statusCode >= 500) {
+        throw new WcServiceError(`Le serveur WooCommerce est temporairement indisponible (erreur ${statusCode}). Réessayez dans quelques instants.`, statusCode);
+      }
+      throw new Error(`Erreur API WooCommerce ${statusCode} pour ${path}: ${errorText.substring(0, 200)}`);
+    }
     const totalPages = parseInt(res.headers.get('x-wp-totalpages') || '1');
     const data = await res.json();
     return { data, totalPages };
