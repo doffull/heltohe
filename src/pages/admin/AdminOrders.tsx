@@ -143,6 +143,10 @@ export default function AdminOrders() {
   const [trackingInput, setTrackingInput] = useState<string>('');
   const [trackingOrderId, setTrackingOrderId] = useState<string | null>(null);
   const [syncOpen, setSyncOpen] = useState(false);
+  const [verifyingOrderId, setVerifyingOrderId] = useState<string | null>(null);
+  const [verificationResult, setVerificationResult] = useState<any>(null);
+  const [verificationPopoverOpen, setVerificationPopoverOpen] = useState<string | null>(null);
+  const { data: notifConfig } = useNotificationConfig();
 
   // Quick validation helpers
   const getValidationFlags = (order: Order): { identity: boolean; payment: boolean; shipping: boolean } => {
