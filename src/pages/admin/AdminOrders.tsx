@@ -14,7 +14,7 @@ import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
 import { 
   Package, Clock, Truck, CheckCircle, XCircle, Eye, FileText, Save, Printer, Mail, ExternalLink, Trash2,
   CreditCard, Banknote, MapPin, FileDown, Tag, Search, Filter, Loader2, RefreshCw, CheckSquare, ArrowUpDown,
-  UserCheck, DollarSign, Send, Check
+  UserCheck, DollarSign, Send, Check, ShieldCheck, AlertTriangle, XOctagon
 } from 'lucide-react';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -22,6 +22,10 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
+import { useNotificationConfig } from '@/hooks/useNotificationConfig';
 
 const STATUS_OPTIONS: { value: OrderStatus; label: string; icon: typeof Clock; color: string }[] = [
   { value: 'Pending', label: 'En attente', icon: Clock, color: 'text-yellow-500' },
@@ -139,11 +143,80 @@ export default function AdminOrders() {
   const [trackingInput, setTrackingInput] = useState<string>('');
   const [trackingOrderId, setTrackingOrderId] = useState<string | null>(null);
   const [syncOpen, setSyncOpen] = useState(false);
+  const [verifyingOrderId, setVerifyingOrderId] = useState<string | null>(null);
+  const [verificationResult, setVerificationResult] = useState<any>(null);
+  const [verificationPopoverOpen, setVerificationPopoverOpen] = useState<string | null>(null);
+  const { data: notifConfig } = useNotificationConfig();
 
   // Quick validation helpers
   const getValidationFlags = (order: Order): { identity: boolean; payment: boolean; shipping: boolean } => {
     const flags = (order as any).validationFlags || (order as any).validation_flags;
     return flags || { identity: false, payment: false, shipping: false };
+  };
+
+  // Send notification if configured
+  const sendNotificationIfNeeded = async (order: Order, type: 'identity_verified' | 'payment_verified' | 'all_validated') => {
+    if (!notifConfig) return;
+    const shouldNotify = 
+      (type === 'identity_verified' && notifConfig.notify_on_identity_verified) ||
+      (type === 'payment_verified' && notifConfig.notify_on_payment_verified) ||
+      (type === 'all_validated' && notifConfig.notify_on_all_validated);
+    if (!shouldNotify) return;
+    try {
+      await supabase.functions.invoke('send-order-notification', {
+        body: {
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          customerName: order.customer.name,
+          customerEmail: order.customer.email,
+          customerPhone: order.customer.phone,
+          notificationType: type,
+        },
+      });
+    } catch (e) {
+      console.error('Notification error:', e);
+    }
+  };
+
+  // AI identity verification
+  const handleAIVerify = async (order: Order) => {
+    setVerifyingOrderId(order.id);
+    setVerificationResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-customer-info', {
+        body: {
+          customerName: order.customer.name,
+          customerEmail: order.customer.email,
+          customerPhone: order.customer.phone,
+          customerAddress: order.customer.address,
+          customerCity: order.customer.city,
+          customerZip: order.customer.zip,
+          customerCountry: order.customer.country,
+        },
+      });
+      if (error) throw error;
+      setVerificationResult(data);
+      setVerificationPopoverOpen(order.id);
+
+      // Auto-validate if score >= 80
+      if (data?.status === 'valid' || (data?.score && data.score >= 80)) {
+        const currentFlags = getValidationFlags(order);
+        if (!currentFlags.identity) {
+          const newFlags = { ...currentFlags, identity: true };
+          await supabase.from('orders').update({ validation_flags: newFlags }).eq('id', order.id);
+          await sendNotificationIfNeeded(order, 'identity_verified');
+          
+          if (newFlags.payment && newFlags.shipping) {
+            await sendNotificationIfNeeded(order, 'all_validated');
+          }
+          toast({ title: '✅ Identité vérifiée par IA', description: `Score: ${data.score}/100` });
+        }
+      }
+    } catch (e: any) {
+      toast({ title: 'Erreur vérification IA', description: e.message, variant: 'destructive' });
+    } finally {
+      setVerifyingOrderId(null);
+    }
   };
 
   const handleQuickValidate = async (order: Order, flag: 'identity' | 'payment' | 'shipping', value?: string) => {
@@ -161,16 +234,20 @@ export default function AdminOrders() {
         updates.status = 'Shipped';
       }
       
-      // Update validation_flags via direct supabase call
       await supabase.from('orders').update({ validation_flags: newFlags }).eq('id', order.id);
       
       if (Object.keys(updates).length > 1) {
         await updateOrder.mutateAsync(updates);
       }
 
+      // Send step notification
+      if (flag === 'identity') await sendNotificationIfNeeded(order, 'identity_verified');
+      if (flag === 'payment') await sendNotificationIfNeeded(order, 'payment_verified');
+
       // Auto-complete if all 3 validated
       if (newFlags.identity && newFlags.payment && newFlags.shipping) {
         await updateOrder.mutateAsync({ id: order.id, status: 'Delivered' });
+        await sendNotificationIfNeeded(order, 'all_validated');
         toast({ title: '✅ Commande validée complètement' });
       } else {
         const labels = { identity: 'Identité', payment: 'Paiement', shipping: 'Expédition' };
@@ -487,9 +564,44 @@ export default function AdminOrders() {
                       </td>
                       <td className="p-3">
                         <div className="flex items-center gap-1 justify-center">
-                          <button onClick={() => !flags.identity && handleQuickValidate(order, 'identity')} disabled={flags.identity} className={`flex items-center gap-0.5 px-1.5 py-1 rounded text-[10px] font-bold transition-all ${flags.identity ? 'bg-blue-500 text-white' : 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 border border-blue-500/30'}`} title="Identité">
-                            <UserCheck className="h-3 w-3" />{flags.identity && <Check className="h-2.5 w-2.5" />}
-                          </button>
+                          <Popover open={verificationPopoverOpen === order.id} onOpenChange={(open) => { if (!open) setVerificationPopoverOpen(null); }}>
+                            <PopoverTrigger asChild>
+                              <button 
+                                onClick={() => !flags.identity && handleAIVerify(order)} 
+                                disabled={flags.identity || verifyingOrderId === order.id} 
+                                className={`flex items-center gap-0.5 px-1.5 py-1 rounded text-[10px] font-bold transition-all ${flags.identity ? 'bg-blue-500 text-white' : 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 border border-blue-500/30'}`} 
+                                title="Vérification IA"
+                              >
+                                {verifyingOrderId === order.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShieldCheck className="h-3 w-3" />}
+                                {flags.identity && <Check className="h-2.5 w-2.5" />}
+                              </button>
+                            </PopoverTrigger>
+                            {verificationResult && verificationPopoverOpen === order.id && (
+                              <PopoverContent className="w-72 p-3 space-y-2">
+                                <div className="flex items-center gap-2">
+                                  {verificationResult.status === 'valid' && <CheckCircle className="h-4 w-4 text-green-500" />}
+                                  {verificationResult.status === 'warning' && <AlertTriangle className="h-4 w-4 text-yellow-500" />}
+                                  {verificationResult.status === 'invalid' && <XOctagon className="h-4 w-4 text-destructive" />}
+                                  <span className="font-bold text-sm">Score: {verificationResult.score}/100</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground">{verificationResult.summary}</p>
+                                {verificationResult.issues?.length > 0 && (
+                                  <div className="space-y-1">
+                                    {verificationResult.issues.map((issue: any, i: number) => (
+                                      <div key={i} className={`text-[10px] p-1.5 rounded ${issue.severity === 'error' ? 'bg-destructive/10 text-destructive' : issue.severity === 'warning' ? 'bg-yellow-500/10 text-yellow-600' : 'bg-muted text-muted-foreground'}`}>
+                                        <strong>{issue.field}:</strong> {issue.message}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                {verificationResult.status !== 'valid' && !flags.identity && (
+                                  <Button size="sm" variant="outline" className="w-full text-xs" onClick={() => { handleQuickValidate(order, 'identity'); setVerificationPopoverOpen(null); }}>
+                                    Forcer la validation
+                                  </Button>
+                                )}
+                              </PopoverContent>
+                            )}
+                          </Popover>
                           <button onClick={() => !flags.payment && handleQuickValidate(order, 'payment')} disabled={flags.payment} className={`flex items-center gap-0.5 px-1.5 py-1 rounded text-[10px] font-bold transition-all ${flags.payment ? 'bg-green-500 text-white' : 'bg-green-500/10 text-green-500 hover:bg-green-500/20 border border-green-500/30'}`} title="Paiement">
                             <DollarSign className="h-3 w-3" />{flags.payment && <Check className="h-2.5 w-2.5" />}
                           </button>

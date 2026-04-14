@@ -952,6 +952,84 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_config: {
+        Row: {
+          config_key: string
+          created_at: string
+          email_templates: Json
+          id: string
+          notification_channels: Json
+          notify_on_all_validated: boolean
+          notify_on_identity_verified: boolean
+          notify_on_payment_verified: boolean
+          sms_from_number: string | null
+          sms_templates: Json
+          updated_at: string
+        }
+        Insert: {
+          config_key?: string
+          created_at?: string
+          email_templates?: Json
+          id?: string
+          notification_channels?: Json
+          notify_on_all_validated?: boolean
+          notify_on_identity_verified?: boolean
+          notify_on_payment_verified?: boolean
+          sms_from_number?: string | null
+          sms_templates?: Json
+          updated_at?: string
+        }
+        Update: {
+          config_key?: string
+          created_at?: string
+          email_templates?: Json
+          id?: string
+          notification_channels?: Json
+          notify_on_all_validated?: boolean
+          notify_on_identity_verified?: boolean
+          notify_on_payment_verified?: boolean
+          sms_from_number?: string | null
+          sms_templates?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      notification_log: {
+        Row: {
+          channel: string
+          created_at: string
+          error_message: string | null
+          id: string
+          notification_type: string
+          order_id: string
+          recipient: string
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          notification_type: string
+          order_id: string
+          recipient: string
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          notification_type?: string
+          order_id?: string
+          recipient?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           created_at: string
