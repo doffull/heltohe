@@ -87,7 +87,7 @@ function getColorHex(colorName: string): string {
   return COLOR_HEX_MAP[upper] || '#888888';
 }
 
-function ColorSwatch({ color, size = 14 }: { color: string; size?: number }) {
+const ColorSwatch = React.forwardRef<HTMLSpanElement, { color: string; size?: number }>(({ color, size = 14, ...props }, ref) => {
   const hex = getColorHex(color);
   const isLight = ['WHITE', 'BLANC', 'CREAM', 'CREME', 'BEIGE', 'YELLOW', 'JAUNE'].includes(color.toUpperCase().trim());
   return (
