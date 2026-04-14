@@ -357,6 +357,56 @@ function KpiCard({ title, value, icon, variant }: { title: string; value: number
   );
 }
 
+// ── Color stock popover for parent row swatch ──
+function ColorStockPopover({ color, inventoryId, stockLevels, webLocationId, onRefresh }: {
+  color: string; inventoryId: string; stockLevels: StockLevel[];
+  webLocationId: string | undefined; onRefresh: () => void;
+}) {
+  const { toast } = useToast();
+  const colorLevels = stockLevels.filter((sl: StockLevel) => sl.inventory_id === inventoryId && sl.color === color);
+  const totalQty = colorLevels.reduce((s, sl) => s + sl.quantity, 0);
+  const webLevels = webLocationId ? colorLevels.filter(sl => sl.location_id === webLocationId) : [];
+  const webQty = webLevels.reduce((s, sl) => s + sl.quantity, 0);
+
+  // Group by size for detail
+  const bySizeMap = new Map<string, number>();
+  for (const sl of colorLevels) {
+    const key = sl.size || '—';
+    bySizeMap.set(key, (bySizeMap.get(key) || 0) + sl.quantity);
+  }
+  const bySize = Array.from(bySizeMap.entries());
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button className="group/cs relative" title={`${color}: ${totalQty} en stock`} onClick={e => e.stopPropagation()}>
+          <ColorSwatch color={color} size={20} />
+          <span className="absolute -top-1.5 -right-1.5 bg-foreground text-background text-[8px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center leading-none">
+            {totalQty > 99 ? '99+' : totalQty}
+          </span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-48 p-2" align="start" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-2 mb-2">
+          <ColorSwatch color={color} size={14} />
+          <span className="font-semibold text-sm">{color}</span>
+          <span className="ml-auto font-mono text-xs text-muted-foreground">Total: {totalQty}</span>
+        </div>
+        {bySize.length > 0 && (
+          <div className="space-y-0.5">
+            {bySize.map(([size, qty]) => (
+              <div key={size} className="flex items-center justify-between text-xs px-1 py-0.5">
+                <span className="text-muted-foreground">{size}</span>
+                <span className={cn("font-mono font-semibold", qty === 0 ? "text-destructive/60" : "text-foreground")}>{qty}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 // ── Inline editable variant label (size/color) ──
 function VariantLabelEditor({ stockLevelIds, currentSize, currentColor, inventoryId, onRefresh }: {
   stockLevelIds: string[]; currentSize: string | null; currentColor: string | null;
@@ -407,10 +457,13 @@ function VariantLabelEditor({ stockLevelIds, currentSize, currentColor, inventor
     <div className="flex items-center gap-2 pl-3 group/vl">
       {currentColor && <ColorSwatch color={currentColor} size={12} />}
       <span className="text-xs font-medium text-foreground/80">
-        ↑ {currentSize || currentColor || 'Sans variante'}
+        {currentSize || ''}
       </span>
-      {currentSize && currentColor && (
+      {currentColor && (
         <span className="text-[10px] text-muted-foreground">{currentColor}</span>
+      )}
+      {!currentSize && !currentColor && (
+        <span className="text-xs text-muted-foreground">Sans variante</span>
       )}
       <button
         onClick={e => { e.stopPropagation(); setSize(currentSize || ''); setColor(currentColor || ''); setEditing(true); }}
