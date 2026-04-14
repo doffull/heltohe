@@ -23,7 +23,8 @@ import {
   Bot,
   Truck,
   ClipboardCheck,
-  CreditCard
+  CreditCard,
+  Bell
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -45,6 +46,7 @@ import AdminWooCommerce from './AdminWooCommerce';
 import AdminChatbot from './AdminChatbot';
 import AdminColissimo from './AdminColissimo';
 import AdminCheckout from './AdminCheckout';
+import AdminNotifications from './AdminNotifications';
 
 export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin': '#6B7280',
@@ -58,6 +60,7 @@ export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin/design': '#06B6D4',
   '/admin/stock': '#D97706',
   '/admin/colissimo': '#EAB308',
+  '/admin/notifications': '#F97316',
   '/admin/chatbot': '#14B8A6',
   '/admin/woocommerce': '#7C3AED',
   '/admin/audit': '#6B7280',
@@ -76,6 +79,7 @@ const SIDEBAR_ITEMS = [
   { icon: Palette, label: 'Design', href: '/admin/design' },
   { icon: Warehouse, label: 'Stock', href: '/admin/stock' },
   { icon: Truck, label: 'Colissimo', href: '/admin/colissimo' },
+  { icon: Bell, label: 'Notifications', href: '/admin/notifications' },
   { icon: Bot, label: 'Chatbot', href: '/admin/chatbot' },
   { icon: ShoppingBag, label: 'WooCommerce', href: '/admin/woocommerce' },
   { icon: ClipboardCheck, label: 'Audit', href: '/admin/audit' },
@@ -221,6 +225,7 @@ export default function Admin() {
             <Route path="design/*" element={<AdminDesign />} />
             <Route path="stock/*" element={<AdminStock />} />
             <Route path="colissimo/*" element={<AdminColissimo />} />
+            <Route path="notifications/*" element={<AdminNotifications />} />
             <Route path="chatbot/*" element={<AdminChatbot />} />
             <Route path="woocommerce/*" element={<AdminWooCommerce />} />
             <Route path="audit/*" element={<AdminAudit />} />
