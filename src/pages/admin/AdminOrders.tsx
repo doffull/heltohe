@@ -14,7 +14,7 @@ import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
 import { 
   Package, Clock, Truck, CheckCircle, XCircle, Eye, FileText, Save, Printer, Mail, ExternalLink, Trash2,
   CreditCard, Banknote, MapPin, FileDown, Tag, Search, Filter, Loader2, RefreshCw, CheckSquare, ArrowUpDown,
-  UserCheck, DollarSign, Send, Check
+  UserCheck, DollarSign, Send, Check, ShieldCheck, AlertTriangle, XOctagon
 } from 'lucide-react';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -22,6 +22,10 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
+import { useNotificationConfig } from '@/hooks/useNotificationConfig';
 
 const STATUS_OPTIONS: { value: OrderStatus; label: string; icon: typeof Clock; color: string }[] = [
   { value: 'Pending', label: 'En attente', icon: Clock, color: 'text-yellow-500' },
