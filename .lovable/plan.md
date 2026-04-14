@@ -1,47 +1,50 @@
 
 
-## Plan : Responsive mobile storefront + Amélioration zoom produit + Scroll vers photo
+## Plan : Variantes couleurs dans l'inventaire + Colonnes réordonnées + Menu compact
 
-### Problèmes identifiés
+### Contexte
+Le dialog d'édition d'inventaire (`InventoryProductDialog`) affiche déjà les tailles ET les couleurs en mode création, mais en mode édition les couleurs ne sont pas modifiables inline. De plus, le tableau d'inventaire global affiche une colonne SKU inutile et les colonnes ne sont pas dans l'ordre souhaité.
 
-1. **Panier (`Cart.tsx`)** — Le header avec titre + bouton "Vider" déborde sur mobile (flex horizontal)
-2. **Checkout (`Checkout.tsx`)** — Le titre "FINALISER LA COMMANDE" et certaines sections dépassent 360px
-3. **Boutique/Catégories (`Shop.tsx`)** — Les boutons catégories (Tout, Homme, Femme, Enfant, Accessoires) ne tiennent pas sur une ligne mobile, pas assez compacts
-4. **Produit (`ProductDetail.tsx` + `ProductImageGallery.tsx`)** — Le scroll au changement de couleur arrive en haut du `div` au lieu de centrer sur la photo ; le zoom est limité à ×2.5 et peu intuitif sur mobile (pas de pinch-to-zoom)
+### Changements prévus
 
-### Corrections prévues
+**A. InventoryProductDialog — Variantes couleurs en édition**
+- Le dialog affiche déjà les sections tailles et couleurs en mode création
+- En mode **édition**, la grille de stock par variante (couleur × taille) n'est pas affichée — seules les tailles/couleurs sont modifiables comme liste
+- Les tailles et couleurs sont déjà éditables en mode édition (ajout/suppression avec warning de stock)
+- Pas de changement majeur nécessaire ici, le dialog fonctionne correctement
 
-**A. Cart.tsx — Responsive mobile**
-- Header : empiler titre et bouton "Vider" en `flex-col` sur mobile
-- Réduire le titre à `text-xl` sur mobile
-- Le layout grid est déjà `lg:grid-cols-3` donc OK
+**B. Tableau Inventaire Global — Réordonner les colonnes et supprimer SKU**
 
-**B. Checkout.tsx — Responsive mobile**
-- Titre : `text-xl sm:text-3xl`
-- Progress steps : réduire le gap et masquer les labels sur très petit écran
-- Summary sidebar : s'assurer qu'elle passe en pleine largeur sur mobile (déjà `lg:grid-cols-3`)
+Ordre actuel : Chevron | Image | Produit | **SKU** | Canal | Web | Boutiques | Total | Seuil | Statut | Actions
 
-**C. Shop.tsx — Catégories compactes et colorées**
-- Réduire le padding des boutons catégories : `px-2.5 py-1.5 text-[10px]` sur mobile pour tout tenir sur ~2 lignes max
-- Ajouter une variante visuelle plus légère (fond teinté) pour les boutons non sélectionnés
-- Cacher la double barre de filtre (Select catégorie + boutons catégories) : sur mobile, ne garder que les boutons compacts
+Nouvel ordre demandé : Chevron | **Image** | **Produit** | **Canal** | **Web** | **Boutiques** | **Total** | **Seuil** | **Statut** | Actions
 
-**D. ProductImageGallery.tsx — Zoom amélioré + scroll précis**
-- Augmenter le zoom à ×3.5 au lieu de ×2.5
-- Sur mobile : activer le zoom au double-tap (pas au simple clic qui est maladroit sur tactile)
-- Ajouter un état "zoomed" qui affiche l'image en plein écran (overlay) avec possibilité de pinch-to-zoom via `touch-action: manipulation`
+- Supprimer la colonne SKU du header et des rows (parent + variant)
+- Réorganiser les colonnes dans l'ordre demandé
+- Supprimer aussi le SKU des lignes de variantes enfants
 
-**E. ProductDetail.tsx — Scroll vers la photo**
-- Modifier `scrollToImage` pour utiliser `block: 'center'` au lieu de `'start'` afin d'arriver pile sur la photo
-- Ajouter un léger offset négatif avec `scrollMarginTop` sur le ref pour compenser le header fixe
+**C. Variantes dans le tableau — Afficher tailles ET couleurs**
+
+Actuellement, quand on expand un produit, les variantes montrent taille et/ou couleur. C'est déjà fonctionnel. Le problème signalé est que la **sync produits** (`handleSyncProducts`) ne crée des `stock_levels` que pour les tailles, pas les couleurs :
+
+```typescript
+// Actuel (ligne ~490) — ne crée que des lignes par taille
+if (p.sizes && p.sizes.length > 0) {
+  for (const size of p.sizes) {
+    await supabase.from('stock_levels').insert({ ..., size, color: null });
+  }
+}
+```
+
+Correction : créer des `stock_levels` pour chaque combinaison taille × couleur (ou couleur seule si pas de tailles).
+
+**D. Modification rapide des variantes en un clic**
+
+Le `VariantStockCell` permet déjà l'édition inline du stock au clic. Ajouter la possibilité de **modifier la taille/couleur** d'une variante directement depuis la ligne du tableau (petit bouton d'édition inline à côté du label de variante).
 
 ### Fichiers modifiés
 
 | Fichier | Changement |
 |---|---|
-| `src/pages/Cart.tsx` | Header responsive, titre réduit mobile |
-| `src/pages/Checkout.tsx` | Titre + steps responsive |
-| `src/pages/Shop.tsx` | Boutons catégories compacts, couleurs plus claires |
-| `src/components/product/ProductImageGallery.tsx` | Zoom ×3.5, fullscreen overlay mobile, double-tap |
-| `src/pages/ProductDetail.tsx` | scrollIntoView `block: 'center'`, scrollMarginTop |
+| `src/pages/admin/AdminStock.tsx` | Supprimer colonne SKU, réordonner colonnes, corriger sync pour créer variantes couleur, ajouter édition inline taille/couleur sur les lignes variantes |
 
