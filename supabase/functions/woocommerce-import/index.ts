@@ -5,6 +5,27 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+class WcServiceError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
+function errorResponse(e: any) {
+  if (e instanceof WcServiceError) {
+    return new Response(
+      JSON.stringify({ error: e.message, fallback: true, serviceStatus: e.status }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+  return new Response(
+    JSON.stringify({ error: e.message || 'Erreur inconnue' }),
+    { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -42,7 +63,14 @@ Deno.serve(async (req) => {
 
   const wcFetch = async (path: string, page = 1) => {
     const res = await fetch(`${cleanUrl}/wp-json/wc/v3/${path}?per_page=100&page=${page}&${authParam}`);
-    if (!res.ok) throw new Error(`WC API error ${res.status} for ${path}`);
+    if (!res.ok) {
+      const statusCode = res.status;
+      const errorText = await res.text().catch(() => '');
+      if (statusCode >= 500) {
+        throw new WcServiceError(`Le serveur WooCommerce est temporairement indisponible (erreur ${statusCode}). Réessayez dans quelques instants.`, statusCode);
+      }
+      throw new Error(`Erreur API WooCommerce ${statusCode} pour ${path}: ${errorText.substring(0, 200)}`);
+    }
     const totalPages = parseInt(res.headers.get('x-wp-totalpages') || '1');
     const data = await res.json();
     return { data, totalPages };
@@ -161,7 +189,7 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } catch (e: any) {
-      return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return errorResponse(e);
     }
   }
 
@@ -182,7 +210,7 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } catch (e: any) {
-      return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return errorResponse(e);
     }
   }
 
@@ -203,7 +231,7 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } catch (e: any) {
-      return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return errorResponse(e);
     }
   }
 
@@ -232,7 +260,7 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } catch (e: any) {
-      return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return errorResponse(e);
     }
   }
 

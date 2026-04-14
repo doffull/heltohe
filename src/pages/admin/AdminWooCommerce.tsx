@@ -94,8 +94,12 @@ export default function AdminWooCommerce() {
         },
       });
       if (error) throw error;
-      setResult(data);
-      toast({ title: 'Import terminé ✓', description: 'Les données ont été importées avec succès.' });
+      if (data?.fallback || data?.error) {
+        toast({ title: 'Serveur WooCommerce indisponible', description: data.error || 'Le serveur est temporairement inaccessible. Réessayez plus tard.', variant: 'destructive' });
+      } else {
+        setResult(data);
+        toast({ title: 'Import terminé ✓', description: 'Les données ont été importées avec succès.' });
+      }
     } catch (err: any) {
       toast({ title: 'Erreur d\'import', description: err?.message || 'Une erreur s\'est produite.', variant: 'destructive' });
     } finally {
