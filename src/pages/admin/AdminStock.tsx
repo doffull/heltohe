@@ -977,7 +977,7 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
               <TableHead className="w-8 pl-3" />
               <TableHead className="w-12">Image</TableHead>
               <TableHead>Produit / Variante</TableHead>
-              <TableHead>Canal</TableHead>
+              <TableHead>Couleurs</TableHead>
               {webLocation && (
                 <TableHead className="text-right whitespace-nowrap">
                   <span className="inline-flex items-center justify-end gap-1 text-primary">
