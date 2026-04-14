@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { InventoryProductDialog } from '@/components/admin/InventoryProductDialog';
@@ -87,11 +87,12 @@ function getColorHex(colorName: string): string {
   return COLOR_HEX_MAP[upper] || '#888888';
 }
 
-function ColorSwatch({ color, size = 14 }: { color: string; size?: number }) {
+const ColorSwatch = React.forwardRef<HTMLSpanElement, { color: string; size?: number }>(({ color, size = 14, ...props }, ref) => {
   const hex = getColorHex(color);
   const isLight = ['WHITE', 'BLANC', 'CREAM', 'CREME', 'BEIGE', 'YELLOW', 'JAUNE'].includes(color.toUpperCase().trim());
   return (
     <span
+      ref={ref}
       className="inline-block rounded-full shrink-0"
       style={{
         width: size,
@@ -100,9 +101,11 @@ function ColorSwatch({ color, size = 14 }: { color: string; size?: number }) {
         border: isLight ? '1px solid hsl(var(--border))' : 'none',
       }}
       title={color}
+      {...props}
     />
   );
-}
+});
+ColorSwatch.displayName = 'ColorSwatch';
 
 const VIEWS = [
   { key: 'dashboard', label: 'Dashboard', icon: BarChart3 },
