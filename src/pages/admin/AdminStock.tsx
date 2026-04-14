@@ -625,6 +625,41 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
     }
   };
 
+  // ── Resync: create missing size×color stock_levels for existing inventory items ──
+  const [resyncing, setResyncing] = useState(false);
+  const handleResyncVariants = async () => {
+    setResyncing(true);
+    try {
+      let created = 0;
+      for (const inv of (inventory as InventoryItem[])) {
+        const prod = (products as ProductRow[]).find(p => p.id === inv.product_id);
+        if (!prod) continue;
+        const sizes = prod.sizes && prod.sizes.length > 0 ? prod.sizes : [null];
+        const colors = prod.colors && prod.colors.length > 0 ? prod.colors : [null];
+        const existingLevels = (stockLevels as StockLevel[]).filter(sl => sl.inventory_id === inv.id);
+
+        for (const sz of sizes) {
+          for (const col of colors) {
+            const exists = existingLevels.some(sl => sl.size === sz && sl.color === col);
+            if (!exists && webLocation) {
+              await supabase.from('stock_levels').insert({
+                inventory_id: inv.id, location_id: webLocation.id,
+                quantity: 0, reserved: 0, size: sz, color: col,
+              });
+              created++;
+            }
+          }
+        }
+      }
+      toast({ title: created > 0 ? `${created} variante${created > 1 ? 's' : ''} créée${created > 1 ? 's' : ''}` : 'Toutes les variantes sont déjà synchronisées ✓' });
+      onRefresh();
+    } catch (err: any) {
+      toast({ title: 'Erreur', description: err.message, variant: 'destructive' });
+    } finally {
+      setResyncing(false);
+    }
+  };
+
   const handleOpenTransfer = (item: InventoryItem) => {
     setTransferTarget(item);
     setTransferQty(1);
