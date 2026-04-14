@@ -920,6 +920,10 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
             <RefreshCw className={cn("h-3.5 w-3.5", syncing && "animate-spin")} />
             {syncing ? 'Sync…' : 'Sync Produits'}
           </Button>
+          <Button variant="outline" className="gap-2" onClick={handleResyncVariants} disabled={resyncing}>
+            <RefreshCw className={cn("h-3.5 w-3.5", resyncing && "animate-spin")} />
+            {resyncing ? 'Resync…' : 'Resync Variantes'}
+          </Button>
           <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
             <Upload className="h-4 w-4" /> Importer fichier
           </Button>
