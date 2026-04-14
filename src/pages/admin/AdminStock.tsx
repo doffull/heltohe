@@ -1239,6 +1239,10 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                           <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4 ml-3">Rupture</Badge>
                         )}
                       </TableCell>
+                      {/* Couleurs - show swatch for this variant */}
+                      <TableCell>
+                        {variant.color && <ColorSwatch color={variant.color} size={14} />}
+                      </TableCell>
                       <TableCell />
                       {/* Web variant qty */}
                       {webLocation && (
