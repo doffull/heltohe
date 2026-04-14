@@ -291,6 +291,88 @@ export default function AdminOrders() {
     }
   };
 
+  const handleBulkAIVerify = async () => {
+    const selected = filteredOrders.filter(o => selectedIds.has(o.id));
+    setBulkProcessing('identity');
+    let ok = 0, fail = 0;
+    for (const order of selected) {
+      try {
+        const { data, error } = await supabase.functions.invoke('verify-customer-info', {
+          body: {
+            customerName: order.customer.name, customerEmail: order.customer.email,
+            customerPhone: order.customer.phone, customerAddress: order.customer.address,
+            customerCity: order.customer.city, customerZip: order.customer.zip,
+            customerCountry: order.customer.country,
+          },
+        });
+        if (error) { fail++; continue; }
+        if (data?.status === 'valid' || (data?.score && data.score >= 80)) {
+          const flags = getValidationFlags(order);
+          if (!flags.identity) {
+            const newFlags = { ...flags, identity: true };
+            await supabase.from('orders').update({ validation_flags: newFlags }).eq('id', order.id);
+            await sendNotificationIfNeeded(order, 'identity_verified');
+            if (newFlags.payment && newFlags.shipping) {
+              await updateOrder.mutateAsync({ id: order.id, status: 'Delivered' });
+              await sendNotificationIfNeeded(order, 'all_validated');
+            }
+          }
+          ok++;
+        } else { fail++; }
+      } catch { fail++; }
+    }
+    setBulkProcessing(null);
+    toast({ title: `Vérification IA : ${ok} validée(s), ${fail} échouée(s)` });
+    clear();
+  };
+
+  const handleBulkValidatePayment = async () => {
+    const selected = filteredOrders.filter(o => selectedIds.has(o.id));
+    setBulkProcessing('payment');
+    let ok = 0;
+    for (const order of selected) {
+      try {
+        const flags = getValidationFlags(order);
+        if (!flags.payment) {
+          const newFlags = { ...flags, payment: true };
+          await supabase.from('orders').update({ validation_flags: newFlags, payment_status: 'Paid' }).eq('id', order.id);
+          await sendNotificationIfNeeded(order, 'payment_verified');
+          if (newFlags.identity && newFlags.shipping) {
+            await updateOrder.mutateAsync({ id: order.id, status: 'Delivered' });
+            await sendNotificationIfNeeded(order, 'all_validated');
+          }
+        }
+        ok++;
+      } catch {}
+    }
+    setBulkProcessing(null);
+    toast({ title: `${ok} paiement(s) validé(s)` });
+    clear();
+  };
+
+  const handleBulkValidateShipping = async () => {
+    const selected = filteredOrders.filter(o => selectedIds.has(o.id));
+    setBulkProcessing('shipping');
+    let ok = 0;
+    for (const order of selected) {
+      try {
+        const flags = getValidationFlags(order);
+        if (!flags.shipping) {
+          const newFlags = { ...flags, shipping: true };
+          await supabase.from('orders').update({ validation_flags: newFlags, status: 'Shipped' }).eq('id', order.id);
+          if (newFlags.identity && newFlags.payment) {
+            await updateOrder.mutateAsync({ id: order.id, status: 'Delivered' });
+            await sendNotificationIfNeeded(order, 'all_validated');
+          }
+        }
+        ok++;
+      } catch {}
+    }
+    setBulkProcessing(null);
+    toast({ title: `${ok} expédition(s) validée(s)` });
+    clear();
+  };
+
   const openDetail = (order: Order) => {
     setSelectedOrder(order);
     setEditForm({
