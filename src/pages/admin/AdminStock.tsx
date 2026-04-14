@@ -365,10 +365,7 @@ function ColorStockPopover({ color, inventoryId, stockLevels, webLocationId, onR
   const { toast } = useToast();
   const colorLevels = stockLevels.filter((sl: StockLevel) => sl.inventory_id === inventoryId && sl.color === color);
   const totalQty = colorLevels.reduce((s, sl) => s + sl.quantity, 0);
-  const webLevels = webLocationId ? colorLevels.filter(sl => sl.location_id === webLocationId) : [];
-  const webQty = webLevels.reduce((s, sl) => s + sl.quantity, 0);
 
-  // Group by size for detail
   const bySizeMap = new Map<string, number>();
   for (const sl of colorLevels) {
     const key = sl.size || '—';
@@ -407,15 +404,92 @@ function ColorStockPopover({ color, inventoryId, stockLevels, webLocationId, onR
   );
 }
 
-// ── Inline editable variant label (size/color) ──
-function VariantLabelEditor({ stockLevelIds, currentSize, currentColor, inventoryId, onRefresh }: {
-  stockLevelIds: string[]; currentSize: string | null; currentColor: string | null;
+// ── Inline color stock popover for a single size×color in variant rows ──
+function SizeColorSwatchPopover({ color, inventoryId, size, stockLevels, webLocationId, onRefresh }: {
+  color: string; inventoryId: string; size: string | null; stockLevels: StockLevel[];
+  webLocationId: string | undefined; onRefresh: () => void;
+}) {
+  const { toast } = useToast();
+  const level = stockLevels.find((sl: StockLevel) =>
+    sl.inventory_id === inventoryId && sl.size === size && sl.color === color &&
+    (webLocationId ? sl.location_id === webLocationId : true)
+  );
+  const qty = level?.quantity ?? 0;
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(qty);
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      if (level) {
+        await supabase.from('stock_levels').update({ quantity: val, updated_at: new Date().toISOString() }).eq('id', level.id);
+      } else if (webLocationId) {
+        await supabase.from('stock_levels').insert({
+          inventory_id: inventoryId, location_id: webLocationId,
+          size, color, quantity: val, reserved: 0,
+        });
+      }
+      toast({ title: `${color} / ${size || '—'} → ${val}` });
+      setEditing(false);
+      onRefresh();
+    } catch (err: any) {
+      toast({ title: 'Erreur', description: err.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Popover open={editing} onOpenChange={o => { if (!o) setEditing(false); }}>
+      <PopoverTrigger asChild>
+        <button
+          className="group/scp relative"
+          title={`${color}: ${qty}`}
+          onClick={e => { e.stopPropagation(); setVal(qty); setEditing(true); }}
+        >
+          <ColorSwatch color={color} size={16} />
+          <span className={cn(
+            "absolute -top-1.5 -right-2 text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none",
+            qty === 0 ? "bg-destructive text-destructive-foreground" : "bg-foreground text-background"
+          )}>
+            {qty > 99 ? '∞' : qty}
+          </span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-44 p-2" align="start" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-2 mb-2">
+          <ColorSwatch color={color} size={12} />
+          <span className="text-xs font-semibold">{color}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Input
+            type="number" min={0} value={val}
+            onChange={e => setVal(Number(e.target.value))}
+            className="w-16 h-7 text-xs text-right px-1.5"
+            autoFocus
+            onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }}
+          />
+          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleSave} disabled={saving}>
+            <Check className="h-3 w-3 text-primary" />
+          </Button>
+          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditing(false)}>
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// ── Inline editable variant label (size only now) ──
+function VariantLabelEditor({ stockLevelIds, currentSize, inventoryId, onRefresh }: {
+  stockLevelIds: string[]; currentSize: string | null;
   inventoryId: string; onRefresh: () => void;
 }) {
   const { toast } = useToast();
   const [editing, setEditing] = useState(false);
   const [size, setSize] = useState(currentSize || '');
-  const [color, setColor] = useState(currentColor || '');
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -424,11 +498,10 @@ function VariantLabelEditor({ stockLevelIds, currentSize, currentColor, inventor
       for (const id of stockLevelIds) {
         await supabase.from('stock_levels').update({
           size: size.trim() || null,
-          color: color.trim() || null,
           updated_at: new Date().toISOString(),
         }).eq('id', id);
       }
-      toast({ title: 'Variante mise à jour' });
+      toast({ title: 'Taille mise à jour' });
       setEditing(false);
       onRefresh();
     } catch (err: any) {
@@ -440,13 +513,8 @@ function VariantLabelEditor({ stockLevelIds, currentSize, currentColor, inventor
 
   if (editing) {
     return (
-      <div className="flex items-center gap-1 pl-3 flex-wrap">
-        {currentSize !== null && (
-          <Input value={size} onChange={e => setSize(e.target.value)} placeholder="Taille" className="w-16 h-6 text-xs px-1.5" autoFocus onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }} />
-        )}
-        {currentColor !== null && (
-          <Input value={color} onChange={e => setColor(e.target.value)} placeholder="Couleur" className="w-20 h-6 text-xs px-1.5" onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }} />
-        )}
+      <div className="flex items-center gap-1 pl-3">
+        <Input value={size} onChange={e => setSize(e.target.value)} placeholder="Taille" className="w-16 h-6 text-xs px-1.5" autoFocus onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }} />
         <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleSave} disabled={saving}><Check className="h-3 w-3 text-primary" /></Button>
         <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditing(false)}><X className="h-3 w-3" /></Button>
       </div>
@@ -455,20 +523,13 @@ function VariantLabelEditor({ stockLevelIds, currentSize, currentColor, inventor
 
   return (
     <div className="flex items-center gap-2 pl-3 group/vl">
-      {currentColor && <ColorSwatch color={currentColor} size={12} />}
-      <span className="text-xs font-medium text-foreground/80">
-        {currentSize || ''}
+      <span className="text-xs font-semibold text-foreground/80">
+        {currentSize || 'Sans taille'}
       </span>
-      {currentColor && (
-        <span className="text-[10px] text-muted-foreground">{currentColor}</span>
-      )}
-      {!currentSize && !currentColor && (
-        <span className="text-xs text-muted-foreground">Sans variante</span>
-      )}
       <button
-        onClick={e => { e.stopPropagation(); setSize(currentSize || ''); setColor(currentColor || ''); setEditing(true); }}
+        onClick={e => { e.stopPropagation(); setSize(currentSize || ''); setEditing(true); }}
         className="opacity-0 group-hover/vl:opacity-60 hover:!opacity-100 transition-opacity"
-        title="Modifier la variante"
+        title="Renommer la taille"
       >
         <Pencil className="h-3 w-3 text-muted-foreground" />
       </button>
