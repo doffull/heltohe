@@ -1248,143 +1248,123 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                   </TableCell>
                 </TableRow>,
 
-                // ── Child Variant Rows ──
-                ...(isExpanded && hasVariants ? uniqueVariants.map((variant: { color: string | null; size: string | null }, vi: number) => {
-                  const varKey = [variant.color, variant.size].filter(Boolean).join(' / ') || 'Sans variante';
-                  const varLabel = [variant.color, variant.size].filter(Boolean).join(' ');
-                  const webVariantLevel = webLocation
-                    ? stockLevels.find((sl: StockLevel) =>
-                        sl.inventory_id === item.id &&
-                        sl.location_id === webLocation.id &&
-                        sl.size === variant.size &&
-                        sl.color === variant.color
-                      )
-                    : null;
-                  const webVariantQty = webVariantLevel?.quantity ?? 0;
-                  const isVariantLow = webVariantQty === 0;
+                // ── Child Variant Rows — grouped by SIZE ──
+                ...(isExpanded && hasVariants ? (() => {
+                  const sizesToRender = uniqueSizes.length > 0 ? uniqueSizes : [null];
+                  return sizesToRender.map((sizeVal: string | null, si: number) => {
+                    // Total web qty for this size (all colors)
+                    const sizeWebLevels = webLocation
+                      ? stockLevels.filter((sl: StockLevel) =>
+                          sl.inventory_id === item.id && sl.location_id === webLocation.id && sl.size === sizeVal
+                        )
+                      : [];
+                    const sizeWebQty = sizeWebLevels.reduce((s: number, sl: StockLevel) => s + sl.quantity, 0);
 
-                  return (
-                    <TableRow
-                      key={`${item.id}-variant-${vi}`}
-                      className={cn(
-                        "bg-primary/[0.03] border-b border-primary/10",
-                        vi === uniqueVariants.length - 1 && "border-b-2 border-border"
-                      )}
-                    >
-                      {/* Indent indicator */}
-                      <TableCell className="pl-3 pr-0 w-8">
-                        <div className="w-4 h-full flex items-center justify-center">
-                          <div className="w-px h-4 bg-primary/30 mx-auto" />
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {matchedProduct?.image && matchedProduct.image !== '/placeholder.svg' ? (
-                          <img src={matchedProduct.image} alt={varLabel} className="w-7 h-7 rounded object-cover border border-primary/20 opacity-80" />
-                        ) : (
-                          <div className="w-7 h-7 rounded bg-muted/50 flex items-center justify-center">
-                            <Package className="h-3 w-3 text-muted-foreground/50" />
+                    // Total all locations for this size
+                    const sizeTotalQty = stockLevels
+                      .filter((sl: StockLevel) => sl.inventory_id === item.id && sl.size === sizeVal)
+                      .reduce((s: number, sl: StockLevel) => s + sl.quantity, 0);
+
+                    const isSizeLow = sizeWebQty === 0;
+
+                    // Stock level IDs for this size (for renaming)
+                    const sizeLevelIds = stockLevels
+                      .filter((sl: StockLevel) => sl.inventory_id === item.id && sl.size === sizeVal)
+                      .map((sl: StockLevel) => sl.id);
+
+                    return (
+                      <TableRow
+                        key={`${item.id}-size-${si}`}
+                        className={cn(
+                          "bg-primary/[0.03] border-b border-primary/10",
+                          si === sizesToRender.length - 1 && "border-b-2 border-border"
+                        )}
+                      >
+                        {/* Indent indicator */}
+                        <TableCell className="pl-3 pr-0 w-8">
+                          <div className="w-4 h-full flex items-center justify-center">
+                            <div className="w-px h-4 bg-primary/30 mx-auto" />
                           </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <VariantLabelEditor
-                          stockLevelIds={stockLevels
-                            .filter((sl: StockLevel) => sl.inventory_id === item.id && sl.size === variant.size && sl.color === variant.color)
-                            .map((sl: StockLevel) => sl.id)}
-                          currentSize={variant.size}
-                          currentColor={variant.color}
-                          inventoryId={item.id}
-                          onRefresh={onRefresh}
-                        />
-                        {isVariantLow && (
-                          <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4 ml-3">Rupture</Badge>
-                        )}
-                      </TableCell>
-                      {/* Couleurs - show swatch for this variant */}
-                      <TableCell>
-                        {variant.color && <ColorSwatch color={variant.color} size={14} />}
-                      </TableCell>
-                      <TableCell />
-                      {/* Web variant qty */}
-                      {webLocation && (
-                        <TableCell className="text-right">
-                          <VariantStockCell
-                            level={webVariantLevel}
-                            inventoryId={item.id}
-                            locationId={webLocation.id}
-                            size={variant.size}
-                            color={variant.color}
-                            onRefresh={onRefresh}
-                          />
                         </TableCell>
-                      )}
-                      {/* Aggregated hidden boutiques for variant */}
-                      {hiddenBoutiques.length > 0 && (
-                        <TableCell className="text-right">
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <button className="text-xs font-mono font-semibold cursor-pointer hover:text-primary transition-colors px-1 py-0.5 rounded hover:bg-primary/10">
-                                {hiddenBoutiques.reduce((s: number, loc: Location) => {
-                                  const lvl = stockLevels.find((sl: StockLevel) =>
-                                    sl.inventory_id === item.id && sl.location_id === loc.id &&
-                                    sl.size === variant.size && sl.color === variant.color
-                                  );
-                                  return s + (lvl?.quantity ?? 0);
-                                }, 0)}
-                              </button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-52 p-2" align="end">
-                              <p className="text-xs font-medium text-muted-foreground px-1 mb-1.5">Détail par boutique</p>
-                              {hiddenBoutiques.map((loc: Location) => {
-                                const lvl = stockLevels.find((sl: StockLevel) =>
-                                  sl.inventory_id === item.id && sl.location_id === loc.id &&
-                                  sl.size === variant.size && sl.color === variant.color
-                                );
-                                const q = lvl?.quantity ?? 0;
-                                return (
-                                  <div key={loc.id} className="flex items-center justify-between px-1 py-1 text-sm">
-                                    <span className="text-muted-foreground truncate mr-2">{loc.name}</span>
-                                    <span className={cn("font-mono font-semibold", q === 0 ? "text-muted-foreground/40" : "text-foreground")}>{q}</span>
-                                  </div>
-                                );
-                              })}
-                            </PopoverContent>
-                          </Popover>
+                        {/* Mini image */}
+                        <TableCell>
+                          {matchedProduct?.image && matchedProduct.image !== '/placeholder.svg' ? (
+                            <img src={matchedProduct.image} alt={sizeVal || ''} className="w-7 h-7 rounded object-cover border border-primary/20 opacity-80" />
+                          ) : (
+                            <div className="w-7 h-7 rounded bg-muted/50 flex items-center justify-center">
+                              <Package className="h-3 w-3 text-muted-foreground/50" />
+                            </div>
+                          )}
                         </TableCell>
-                      )}
-                      {/* Visible boutique columns for variant */}
-                      {visibleBoutiques.map((loc: Location) => {
-                        const boutVariantLevel = stockLevels.find((sl: StockLevel) =>
-                          sl.inventory_id === item.id &&
-                          sl.location_id === loc.id &&
-                          sl.size === variant.size &&
-                          sl.color === variant.color
-                        );
-                        return (
-                          <TableCell key={loc.id} className="text-right">
-                            <VariantStockCell
-                              level={boutVariantLevel}
+                        {/* Size label + edit */}
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <VariantLabelEditor
+                              stockLevelIds={sizeLevelIds}
+                              currentSize={sizeVal}
                               inventoryId={item.id}
-                              locationId={loc.id}
-                              size={variant.size}
-                              color={variant.color}
                               onRefresh={onRefresh}
                             />
+                            {isSizeLow && (
+                              <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4">Rupture</Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        {/* Color swatches with inline stock editing */}
+                        <TableCell onClick={e => e.stopPropagation()}>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {productColors.length > 0 ? (
+                              productColors.map((c: string) => (
+                                <SizeColorSwatchPopover
+                                  key={c}
+                                  color={c}
+                                  inventoryId={item.id}
+                                  size={sizeVal}
+                                  stockLevels={stockLevels}
+                                  webLocationId={webLocation?.id}
+                                  onRefresh={onRefresh}
+                                />
+                              ))
+                            ) : null}
+                          </div>
+                        </TableCell>
+                        <TableCell />
+                        {/* Web qty for this size */}
+                        {webLocation && (
+                          <TableCell className="text-right font-mono text-xs font-semibold">
+                            <span className={cn(sizeWebQty === 0 ? "text-destructive/60" : "text-foreground/80")}>{sizeWebQty}</span>
                           </TableCell>
-                        );
-                      })}
-                      {/* Total for this variant */}
-                      <TableCell className="text-right font-mono text-xs font-semibold text-foreground/70">
-                        {stockLevels
-                          .filter((sl: StockLevel) => sl.inventory_id === item.id && sl.size === variant.size && sl.color === variant.color)
-                          .reduce((s: number, sl: StockLevel) => s + sl.quantity, 0)}
-                      </TableCell>
-                      <TableCell />
-                      <TableCell />
-                      <TableCell />
-                    </TableRow>
-                  );
-                }) : [])
+                        )}
+                        {/* Aggregated hidden boutiques for this size */}
+                        {hiddenBoutiques.length > 0 && (
+                          <TableCell className="text-right font-mono text-xs font-semibold">
+                            {hiddenBoutiques.reduce((s: number, loc: Location) => {
+                              return s + stockLevels
+                                .filter((sl: StockLevel) => sl.inventory_id === item.id && sl.location_id === loc.id && sl.size === sizeVal)
+                                .reduce((ss: number, sl: StockLevel) => ss + sl.quantity, 0);
+                            }, 0)}
+                          </TableCell>
+                        )}
+                        {/* Visible boutique columns for this size */}
+                        {visibleBoutiques.map((loc: Location) => {
+                          const locSizeQty = stockLevels
+                            .filter((sl: StockLevel) => sl.inventory_id === item.id && sl.location_id === loc.id && sl.size === sizeVal)
+                            .reduce((s: number, sl: StockLevel) => s + sl.quantity, 0);
+                          return (
+                            <TableCell key={loc.id} className="text-right font-mono text-xs font-semibold">
+                              <span className={cn(locSizeQty === 0 ? "text-muted-foreground/40" : "text-foreground")}>{locSizeQty}</span>
+                            </TableCell>
+                          );
+                        })}
+                        {/* Total for this size */}
+                        <TableCell className="text-right font-mono text-xs font-semibold text-foreground/70">{sizeTotalQty}</TableCell>
+                        <TableCell />
+                        <TableCell />
+                        <TableCell />
+                      </TableRow>
+                    );
+                  });
+                })() : [])
               ];
             })}
           </TableBody>
