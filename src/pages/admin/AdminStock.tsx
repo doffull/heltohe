@@ -365,10 +365,7 @@ function ColorStockPopover({ color, inventoryId, stockLevels, webLocationId, onR
   const { toast } = useToast();
   const colorLevels = stockLevels.filter((sl: StockLevel) => sl.inventory_id === inventoryId && sl.color === color);
   const totalQty = colorLevels.reduce((s, sl) => s + sl.quantity, 0);
-  const webLevels = webLocationId ? colorLevels.filter(sl => sl.location_id === webLocationId) : [];
-  const webQty = webLevels.reduce((s, sl) => s + sl.quantity, 0);
 
-  // Group by size for detail
   const bySizeMap = new Map<string, number>();
   for (const sl of colorLevels) {
     const key = sl.size || '—';
@@ -407,15 +404,92 @@ function ColorStockPopover({ color, inventoryId, stockLevels, webLocationId, onR
   );
 }
 
-// ── Inline editable variant label (size/color) ──
-function VariantLabelEditor({ stockLevelIds, currentSize, currentColor, inventoryId, onRefresh }: {
-  stockLevelIds: string[]; currentSize: string | null; currentColor: string | null;
+// ── Inline color stock popover for a single size×color in variant rows ──
+function SizeColorSwatchPopover({ color, inventoryId, size, stockLevels, webLocationId, onRefresh }: {
+  color: string; inventoryId: string; size: string | null; stockLevels: StockLevel[];
+  webLocationId: string | undefined; onRefresh: () => void;
+}) {
+  const { toast } = useToast();
+  const level = stockLevels.find((sl: StockLevel) =>
+    sl.inventory_id === inventoryId && sl.size === size && sl.color === color &&
+    (webLocationId ? sl.location_id === webLocationId : true)
+  );
+  const qty = level?.quantity ?? 0;
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(qty);
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      if (level) {
+        await supabase.from('stock_levels').update({ quantity: val, updated_at: new Date().toISOString() }).eq('id', level.id);
+      } else if (webLocationId) {
+        await supabase.from('stock_levels').insert({
+          inventory_id: inventoryId, location_id: webLocationId,
+          size, color, quantity: val, reserved: 0,
+        });
+      }
+      toast({ title: `${color} / ${size || '—'} → ${val}` });
+      setEditing(false);
+      onRefresh();
+    } catch (err: any) {
+      toast({ title: 'Erreur', description: err.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Popover open={editing} onOpenChange={o => { if (!o) setEditing(false); }}>
+      <PopoverTrigger asChild>
+        <button
+          className="group/scp relative"
+          title={`${color}: ${qty}`}
+          onClick={e => { e.stopPropagation(); setVal(qty); setEditing(true); }}
+        >
+          <ColorSwatch color={color} size={16} />
+          <span className={cn(
+            "absolute -top-1.5 -right-2 text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none",
+            qty === 0 ? "bg-destructive text-destructive-foreground" : "bg-foreground text-background"
+          )}>
+            {qty > 99 ? '∞' : qty}
+          </span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-44 p-2" align="start" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-2 mb-2">
+          <ColorSwatch color={color} size={12} />
+          <span className="text-xs font-semibold">{color}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Input
+            type="number" min={0} value={val}
+            onChange={e => setVal(Number(e.target.value))}
+            className="w-16 h-7 text-xs text-right px-1.5"
+            autoFocus
+            onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }}
+          />
+          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleSave} disabled={saving}>
+            <Check className="h-3 w-3 text-primary" />
+          </Button>
+          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditing(false)}>
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// ── Inline editable variant label (size only now) ──
+function VariantLabelEditor({ stockLevelIds, currentSize, inventoryId, onRefresh }: {
+  stockLevelIds: string[]; currentSize: string | null;
   inventoryId: string; onRefresh: () => void;
 }) {
   const { toast } = useToast();
   const [editing, setEditing] = useState(false);
   const [size, setSize] = useState(currentSize || '');
-  const [color, setColor] = useState(currentColor || '');
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -424,11 +498,10 @@ function VariantLabelEditor({ stockLevelIds, currentSize, currentColor, inventor
       for (const id of stockLevelIds) {
         await supabase.from('stock_levels').update({
           size: size.trim() || null,
-          color: color.trim() || null,
           updated_at: new Date().toISOString(),
         }).eq('id', id);
       }
-      toast({ title: 'Variante mise à jour' });
+      toast({ title: 'Taille mise à jour' });
       setEditing(false);
       onRefresh();
     } catch (err: any) {
@@ -440,13 +513,8 @@ function VariantLabelEditor({ stockLevelIds, currentSize, currentColor, inventor
 
   if (editing) {
     return (
-      <div className="flex items-center gap-1 pl-3 flex-wrap">
-        {currentSize !== null && (
-          <Input value={size} onChange={e => setSize(e.target.value)} placeholder="Taille" className="w-16 h-6 text-xs px-1.5" autoFocus onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }} />
-        )}
-        {currentColor !== null && (
-          <Input value={color} onChange={e => setColor(e.target.value)} placeholder="Couleur" className="w-20 h-6 text-xs px-1.5" onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }} />
-        )}
+      <div className="flex items-center gap-1 pl-3">
+        <Input value={size} onChange={e => setSize(e.target.value)} placeholder="Taille" className="w-16 h-6 text-xs px-1.5" autoFocus onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }} />
         <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleSave} disabled={saving}><Check className="h-3 w-3 text-primary" /></Button>
         <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditing(false)}><X className="h-3 w-3" /></Button>
       </div>
@@ -455,20 +523,13 @@ function VariantLabelEditor({ stockLevelIds, currentSize, currentColor, inventor
 
   return (
     <div className="flex items-center gap-2 pl-3 group/vl">
-      {currentColor && <ColorSwatch color={currentColor} size={12} />}
-      <span className="text-xs font-medium text-foreground/80">
-        {currentSize || ''}
+      <span className="text-xs font-semibold text-foreground/80">
+        {currentSize || 'Sans taille'}
       </span>
-      {currentColor && (
-        <span className="text-[10px] text-muted-foreground">{currentColor}</span>
-      )}
-      {!currentSize && !currentColor && (
-        <span className="text-xs text-muted-foreground">Sans variante</span>
-      )}
       <button
-        onClick={e => { e.stopPropagation(); setSize(currentSize || ''); setColor(currentColor || ''); setEditing(true); }}
+        onClick={e => { e.stopPropagation(); setSize(currentSize || ''); setEditing(true); }}
         className="opacity-0 group-hover/vl:opacity-60 hover:!opacity-100 transition-opacity"
-        title="Modifier la variante"
+        title="Renommer la taille"
       >
         <Pencil className="h-3 w-3 text-muted-foreground" />
       </button>
@@ -1019,15 +1080,14 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
               const webQty = webLocation ? getStockForItem(item.id, webLocation.id) : null;
               const isExpanded = expandedItems.has(item.id);
 
-              // Build variant rows from stock_levels for this item
+              // Build unique sizes for grouped display
               const variantLevels = stockLevels.filter((sl: StockLevel) => sl.inventory_id === item.id && (sl.size || sl.color));
-              // Unique variant keys
-              const uniqueVariants = Array.from(
-                new Map(variantLevels.map((sl: StockLevel) => {
-                  const key = [sl.color, sl.size].filter(Boolean).join('|');
-                  return [key, { color: sl.color, size: sl.size }];
-                })).values()
-              );
+              const productColors = matchedProduct?.colors && matchedProduct.colors.length > 0 ? matchedProduct.colors : [];
+              const uniqueSizes = Array.from(new Set(
+                variantLevels.map((sl: StockLevel) => sl.size).filter((s): s is string => !!s)
+              ));
+              const hasColorsOnly = uniqueSizes.length === 0 && productColors.length > 0;
+              const hasVariants = uniqueSizes.length > 0 || hasColorsOnly || variantLevels.length > 0;
 
               const toggleExpand = () => {
                 setExpandedItems(prev => {
@@ -1036,8 +1096,6 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                   return next;
                 });
               };
-
-              const hasVariants = uniqueVariants.length > 0;
 
               return [
                 // ── Parent Row ──
@@ -1080,7 +1138,10 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                       <p className="font-semibold text-sm leading-tight">{item.name}</p>
                       {hasVariants && (
                         <p className="text-[10px] text-muted-foreground mt-0.5">
-                          {uniqueVariants.length} variante{uniqueVariants.length > 1 ? 's' : ''} — cliquer pour détailler
+                          {uniqueSizes.length > 0 ? `${uniqueSizes.length} taille${uniqueSizes.length > 1 ? 's' : ''}` : ''}
+                          {uniqueSizes.length > 0 && productColors.length > 0 ? ' × ' : ''}
+                          {productColors.length > 0 ? `${productColors.length} couleur${productColors.length > 1 ? 's' : ''}` : ''}
+                          {' — cliquer pour détailler'}
                         </p>
                       )}
                     </div>
@@ -1187,143 +1248,123 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                   </TableCell>
                 </TableRow>,
 
-                // ── Child Variant Rows ──
-                ...(isExpanded && hasVariants ? uniqueVariants.map((variant: { color: string | null; size: string | null }, vi: number) => {
-                  const varKey = [variant.color, variant.size].filter(Boolean).join(' / ') || 'Sans variante';
-                  const varLabel = [variant.color, variant.size].filter(Boolean).join(' ');
-                  const webVariantLevel = webLocation
-                    ? stockLevels.find((sl: StockLevel) =>
-                        sl.inventory_id === item.id &&
-                        sl.location_id === webLocation.id &&
-                        sl.size === variant.size &&
-                        sl.color === variant.color
-                      )
-                    : null;
-                  const webVariantQty = webVariantLevel?.quantity ?? 0;
-                  const isVariantLow = webVariantQty === 0;
+                // ── Child Variant Rows — grouped by SIZE ──
+                ...(isExpanded && hasVariants ? (() => {
+                  const sizesToRender = uniqueSizes.length > 0 ? uniqueSizes : [null];
+                  return sizesToRender.map((sizeVal: string | null, si: number) => {
+                    // Total web qty for this size (all colors)
+                    const sizeWebLevels = webLocation
+                      ? stockLevels.filter((sl: StockLevel) =>
+                          sl.inventory_id === item.id && sl.location_id === webLocation.id && sl.size === sizeVal
+                        )
+                      : [];
+                    const sizeWebQty = sizeWebLevels.reduce((s: number, sl: StockLevel) => s + sl.quantity, 0);
 
-                  return (
-                    <TableRow
-                      key={`${item.id}-variant-${vi}`}
-                      className={cn(
-                        "bg-primary/[0.03] border-b border-primary/10",
-                        vi === uniqueVariants.length - 1 && "border-b-2 border-border"
-                      )}
-                    >
-                      {/* Indent indicator */}
-                      <TableCell className="pl-3 pr-0 w-8">
-                        <div className="w-4 h-full flex items-center justify-center">
-                          <div className="w-px h-4 bg-primary/30 mx-auto" />
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {matchedProduct?.image && matchedProduct.image !== '/placeholder.svg' ? (
-                          <img src={matchedProduct.image} alt={varLabel} className="w-7 h-7 rounded object-cover border border-primary/20 opacity-80" />
-                        ) : (
-                          <div className="w-7 h-7 rounded bg-muted/50 flex items-center justify-center">
-                            <Package className="h-3 w-3 text-muted-foreground/50" />
+                    // Total all locations for this size
+                    const sizeTotalQty = stockLevels
+                      .filter((sl: StockLevel) => sl.inventory_id === item.id && sl.size === sizeVal)
+                      .reduce((s: number, sl: StockLevel) => s + sl.quantity, 0);
+
+                    const isSizeLow = sizeWebQty === 0;
+
+                    // Stock level IDs for this size (for renaming)
+                    const sizeLevelIds = stockLevels
+                      .filter((sl: StockLevel) => sl.inventory_id === item.id && sl.size === sizeVal)
+                      .map((sl: StockLevel) => sl.id);
+
+                    return (
+                      <TableRow
+                        key={`${item.id}-size-${si}`}
+                        className={cn(
+                          "bg-primary/[0.03] border-b border-primary/10",
+                          si === sizesToRender.length - 1 && "border-b-2 border-border"
+                        )}
+                      >
+                        {/* Indent indicator */}
+                        <TableCell className="pl-3 pr-0 w-8">
+                          <div className="w-4 h-full flex items-center justify-center">
+                            <div className="w-px h-4 bg-primary/30 mx-auto" />
                           </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <VariantLabelEditor
-                          stockLevelIds={stockLevels
-                            .filter((sl: StockLevel) => sl.inventory_id === item.id && sl.size === variant.size && sl.color === variant.color)
-                            .map((sl: StockLevel) => sl.id)}
-                          currentSize={variant.size}
-                          currentColor={variant.color}
-                          inventoryId={item.id}
-                          onRefresh={onRefresh}
-                        />
-                        {isVariantLow && (
-                          <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4 ml-3">Rupture</Badge>
-                        )}
-                      </TableCell>
-                      {/* Couleurs - show swatch for this variant */}
-                      <TableCell>
-                        {variant.color && <ColorSwatch color={variant.color} size={14} />}
-                      </TableCell>
-                      <TableCell />
-                      {/* Web variant qty */}
-                      {webLocation && (
-                        <TableCell className="text-right">
-                          <VariantStockCell
-                            level={webVariantLevel}
-                            inventoryId={item.id}
-                            locationId={webLocation.id}
-                            size={variant.size}
-                            color={variant.color}
-                            onRefresh={onRefresh}
-                          />
                         </TableCell>
-                      )}
-                      {/* Aggregated hidden boutiques for variant */}
-                      {hiddenBoutiques.length > 0 && (
-                        <TableCell className="text-right">
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <button className="text-xs font-mono font-semibold cursor-pointer hover:text-primary transition-colors px-1 py-0.5 rounded hover:bg-primary/10">
-                                {hiddenBoutiques.reduce((s: number, loc: Location) => {
-                                  const lvl = stockLevels.find((sl: StockLevel) =>
-                                    sl.inventory_id === item.id && sl.location_id === loc.id &&
-                                    sl.size === variant.size && sl.color === variant.color
-                                  );
-                                  return s + (lvl?.quantity ?? 0);
-                                }, 0)}
-                              </button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-52 p-2" align="end">
-                              <p className="text-xs font-medium text-muted-foreground px-1 mb-1.5">Détail par boutique</p>
-                              {hiddenBoutiques.map((loc: Location) => {
-                                const lvl = stockLevels.find((sl: StockLevel) =>
-                                  sl.inventory_id === item.id && sl.location_id === loc.id &&
-                                  sl.size === variant.size && sl.color === variant.color
-                                );
-                                const q = lvl?.quantity ?? 0;
-                                return (
-                                  <div key={loc.id} className="flex items-center justify-between px-1 py-1 text-sm">
-                                    <span className="text-muted-foreground truncate mr-2">{loc.name}</span>
-                                    <span className={cn("font-mono font-semibold", q === 0 ? "text-muted-foreground/40" : "text-foreground")}>{q}</span>
-                                  </div>
-                                );
-                              })}
-                            </PopoverContent>
-                          </Popover>
+                        {/* Mini image */}
+                        <TableCell>
+                          {matchedProduct?.image && matchedProduct.image !== '/placeholder.svg' ? (
+                            <img src={matchedProduct.image} alt={sizeVal || ''} className="w-7 h-7 rounded object-cover border border-primary/20 opacity-80" />
+                          ) : (
+                            <div className="w-7 h-7 rounded bg-muted/50 flex items-center justify-center">
+                              <Package className="h-3 w-3 text-muted-foreground/50" />
+                            </div>
+                          )}
                         </TableCell>
-                      )}
-                      {/* Visible boutique columns for variant */}
-                      {visibleBoutiques.map((loc: Location) => {
-                        const boutVariantLevel = stockLevels.find((sl: StockLevel) =>
-                          sl.inventory_id === item.id &&
-                          sl.location_id === loc.id &&
-                          sl.size === variant.size &&
-                          sl.color === variant.color
-                        );
-                        return (
-                          <TableCell key={loc.id} className="text-right">
-                            <VariantStockCell
-                              level={boutVariantLevel}
+                        {/* Size label + edit */}
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <VariantLabelEditor
+                              stockLevelIds={sizeLevelIds}
+                              currentSize={sizeVal}
                               inventoryId={item.id}
-                              locationId={loc.id}
-                              size={variant.size}
-                              color={variant.color}
                               onRefresh={onRefresh}
                             />
+                            {isSizeLow && (
+                              <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4">Rupture</Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        {/* Color swatches with inline stock editing */}
+                        <TableCell onClick={e => e.stopPropagation()}>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {productColors.length > 0 ? (
+                              productColors.map((c: string) => (
+                                <SizeColorSwatchPopover
+                                  key={c}
+                                  color={c}
+                                  inventoryId={item.id}
+                                  size={sizeVal}
+                                  stockLevels={stockLevels}
+                                  webLocationId={webLocation?.id}
+                                  onRefresh={onRefresh}
+                                />
+                              ))
+                            ) : null}
+                          </div>
+                        </TableCell>
+                        <TableCell />
+                        {/* Web qty for this size */}
+                        {webLocation && (
+                          <TableCell className="text-right font-mono text-xs font-semibold">
+                            <span className={cn(sizeWebQty === 0 ? "text-destructive/60" : "text-foreground/80")}>{sizeWebQty}</span>
                           </TableCell>
-                        );
-                      })}
-                      {/* Total for this variant */}
-                      <TableCell className="text-right font-mono text-xs font-semibold text-foreground/70">
-                        {stockLevels
-                          .filter((sl: StockLevel) => sl.inventory_id === item.id && sl.size === variant.size && sl.color === variant.color)
-                          .reduce((s: number, sl: StockLevel) => s + sl.quantity, 0)}
-                      </TableCell>
-                      <TableCell />
-                      <TableCell />
-                      <TableCell />
-                    </TableRow>
-                  );
-                }) : [])
+                        )}
+                        {/* Aggregated hidden boutiques for this size */}
+                        {hiddenBoutiques.length > 0 && (
+                          <TableCell className="text-right font-mono text-xs font-semibold">
+                            {hiddenBoutiques.reduce((s: number, loc: Location) => {
+                              return s + stockLevels
+                                .filter((sl: StockLevel) => sl.inventory_id === item.id && sl.location_id === loc.id && sl.size === sizeVal)
+                                .reduce((ss: number, sl: StockLevel) => ss + sl.quantity, 0);
+                            }, 0)}
+                          </TableCell>
+                        )}
+                        {/* Visible boutique columns for this size */}
+                        {visibleBoutiques.map((loc: Location) => {
+                          const locSizeQty = stockLevels
+                            .filter((sl: StockLevel) => sl.inventory_id === item.id && sl.location_id === loc.id && sl.size === sizeVal)
+                            .reduce((s: number, sl: StockLevel) => s + sl.quantity, 0);
+                          return (
+                            <TableCell key={loc.id} className="text-right font-mono text-xs font-semibold">
+                              <span className={cn(locSizeQty === 0 ? "text-muted-foreground/40" : "text-foreground")}>{locSizeQty}</span>
+                            </TableCell>
+                          );
+                        })}
+                        {/* Total for this size */}
+                        <TableCell className="text-right font-mono text-xs font-semibold text-foreground/70">{sizeTotalQty}</TableCell>
+                        <TableCell />
+                        <TableCell />
+                        <TableCell />
+                      </TableRow>
+                    );
+                  });
+                })() : [])
               ];
             })}
           </TableBody>
