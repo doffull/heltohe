@@ -154,6 +154,71 @@ export default function AdminOrders() {
     return flags || { identity: false, payment: false, shipping: false };
   };
 
+  // Send notification if configured
+  const sendNotificationIfNeeded = async (order: Order, type: 'identity_verified' | 'payment_verified' | 'all_validated') => {
+    if (!notifConfig) return;
+    const shouldNotify = 
+      (type === 'identity_verified' && notifConfig.notify_on_identity_verified) ||
+      (type === 'payment_verified' && notifConfig.notify_on_payment_verified) ||
+      (type === 'all_validated' && notifConfig.notify_on_all_validated);
+    if (!shouldNotify) return;
+    try {
+      await supabase.functions.invoke('send-order-notification', {
+        body: {
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          customerName: order.customer.name,
+          customerEmail: order.customer.email,
+          customerPhone: order.customer.phone,
+          notificationType: type,
+        },
+      });
+    } catch (e) {
+      console.error('Notification error:', e);
+    }
+  };
+
+  // AI identity verification
+  const handleAIVerify = async (order: Order) => {
+    setVerifyingOrderId(order.id);
+    setVerificationResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-customer-info', {
+        body: {
+          customerName: order.customer.name,
+          customerEmail: order.customer.email,
+          customerPhone: order.customer.phone,
+          customerAddress: order.customer.address,
+          customerCity: order.customer.city,
+          customerZip: order.customer.zip,
+          customerCountry: order.customer.country,
+        },
+      });
+      if (error) throw error;
+      setVerificationResult(data);
+      setVerificationPopoverOpen(order.id);
+
+      // Auto-validate if score >= 80
+      if (data?.status === 'valid' || (data?.score && data.score >= 80)) {
+        const currentFlags = getValidationFlags(order);
+        if (!currentFlags.identity) {
+          const newFlags = { ...currentFlags, identity: true };
+          await supabase.from('orders').update({ validation_flags: newFlags }).eq('id', order.id);
+          await sendNotificationIfNeeded(order, 'identity_verified');
+          
+          if (newFlags.payment && newFlags.shipping) {
+            await sendNotificationIfNeeded(order, 'all_validated');
+          }
+          toast({ title: '✅ Identité vérifiée par IA', description: `Score: ${data.score}/100` });
+        }
+      }
+    } catch (e: any) {
+      toast({ title: 'Erreur vérification IA', description: e.message, variant: 'destructive' });
+    } finally {
+      setVerifyingOrderId(null);
+    }
+  };
+
   const handleQuickValidate = async (order: Order, flag: 'identity' | 'payment' | 'shipping', value?: string) => {
     const currentFlags = getValidationFlags(order);
     const newFlags = { ...currentFlags, [flag]: true };
@@ -169,16 +234,20 @@ export default function AdminOrders() {
         updates.status = 'Shipped';
       }
       
-      // Update validation_flags via direct supabase call
       await supabase.from('orders').update({ validation_flags: newFlags }).eq('id', order.id);
       
       if (Object.keys(updates).length > 1) {
         await updateOrder.mutateAsync(updates);
       }
 
+      // Send step notification
+      if (flag === 'identity') await sendNotificationIfNeeded(order, 'identity_verified');
+      if (flag === 'payment') await sendNotificationIfNeeded(order, 'payment_verified');
+
       // Auto-complete if all 3 validated
       if (newFlags.identity && newFlags.payment && newFlags.shipping) {
         await updateOrder.mutateAsync({ id: order.id, status: 'Delivered' });
+        await sendNotificationIfNeeded(order, 'all_validated');
         toast({ title: '✅ Commande validée complètement' });
       } else {
         const labels = { identity: 'Identité', payment: 'Paiement', shipping: 'Expédition' };
