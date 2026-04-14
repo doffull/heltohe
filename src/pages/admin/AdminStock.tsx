@@ -1114,18 +1114,18 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2 pl-3">
-                          {variant.color && <ColorSwatch color={variant.color} size={12} />}
-                          <span className="text-xs font-medium text-foreground/80">
-                            ↑ {variant.size || variant.color || 'Sans variante'}
-                          </span>
-                          {variant.size && variant.color && (
-                            <span className="text-[10px] text-muted-foreground">{variant.color}</span>
-                          )}
-                          {isVariantLow && (
-                            <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4">Rupture</Badge>
-                          )}
-                        </div>
+                        <VariantLabelEditor
+                          stockLevelIds={stockLevels
+                            .filter((sl: StockLevel) => sl.inventory_id === item.id && sl.size === variant.size && sl.color === variant.color)
+                            .map((sl: StockLevel) => sl.id)}
+                          currentSize={variant.size}
+                          currentColor={variant.color}
+                          inventoryId={item.id}
+                          onRefresh={onRefresh}
+                        />
+                        {isVariantLow && (
+                          <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4 ml-3">Rupture</Badge>
+                        )}
                       </TableCell>
                       <TableCell />
                       {/* Web variant qty */}
