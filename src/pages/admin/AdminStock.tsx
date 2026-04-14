@@ -1085,6 +1085,25 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                       )}
                     </div>
                   </TableCell>
+                  {/* Color swatches */}
+                  <TableCell onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {matchedProduct?.colors && matchedProduct.colors.length > 0 ? (
+                        matchedProduct.colors.map((c: string) => (
+                          <ColorStockPopover
+                            key={c}
+                            color={c}
+                            inventoryId={item.id}
+                            stockLevels={stockLevels}
+                            webLocationId={webLocation?.id}
+                            onRefresh={onRefresh}
+                          />
+                        ))
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground">—</span>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell onClick={e => e.stopPropagation()}>
                     <Badge variant="outline">{item.channel.toUpperCase()}</Badge>
                   </TableCell>
