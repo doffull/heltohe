@@ -1,50 +1,91 @@
 
 
-## Plan : Regrouper les variantes par taille avec pastilles couleur inline
+## Plan : Système de validation des commandes amélioré avec vérification IA et notifications SMS/Email
 
-### Problème actuel
-Quand on expand un produit, chaque combinaison taille×couleur est affichée sur sa propre ligne (ex: Noir/XS, Gris/XS, Blanc/XS, Noir/S, Gris/S, Blanc/S...). Pour un produit avec 6 tailles et 6 couleurs, cela fait 36 lignes — beaucoup trop long.
+### Objectif
+Créer un processus de validation en 3 étapes avec vérification IA des informations client, validation manuelle du paiement, puis notification automatique au client (email et/ou SMS). Ajouter une page admin dédiée pour configurer ce processus.
 
-### Solution
-Regrouper par **taille** : chaque ligne enfant = une taille (XS, S, M, L...). À côté du nom de la taille, afficher les **pastilles couleur** avec le stock de chaque couleur pour cette taille. Cliquer sur une pastille ouvre un petit popover inline pour modifier la quantité de stock de cette combinaison taille×couleur.
-
-### Structure visuelle après changement
+### Architecture
 
 ```text
-▼ Marco                    [pastilles parent]  B2C   12   0   12   10   OK
-  ├─ XS  ●2 ●0 ●1 ●3                               6    0    6
-  ├─ S   ●1 ●0 ●2 ●0                               3    0    3
-  ├─ M   ●0 ●1 ●1 ●1                               3    0    3
-  └─ XL  ...                                        ...
+Flux de validation :
+1. Identité → IA vérifie email/téléphone/adresse/nom → badge vert/orange/rouge
+2. Paiement → Admin valide manuellement → badge vert
+3. Notification → Email + SMS automatique au client → badge vert
 ```
 
-Chaque ● est une pastille couleur cliquable. Au clic → popover avec le nom de la couleur, la quantité actuelle, et un champ pour la modifier.
+### Changements prévus
 
-### Changements dans `src/pages/admin/AdminStock.tsx`
+**A. Nouvelle table `notification_config` (migration)**
 
-**A. Nouveau composant `SizeColorStockCell`**
-- Reçoit : inventoryId, size, couleurs du produit, stockLevels, webLocationId, onRefresh
-- Affiche des pastilles couleur avec badge de quantité
-- Au clic sur une pastille → popover avec input pour modifier le stock de cette combinaison taille×couleur
-- Bouton crayon + save inline
+Stocke les préférences de notification de l'admin :
+- `config_key` (text, unique, default 'main')
+- `notify_on_identity_verified` (boolean) — notifier quand identité vérifiée
+- `notify_on_payment_verified` (boolean) — notifier quand paiement validé
+- `notify_on_all_validated` (boolean) — notifier quand tout est OK
+- `notification_channels` (jsonb) — `{email: true, sms: false}`
+- `sms_provider` (text) — 'twilio' ou null
+- `sms_from_number` (text) — numéro expéditeur
+- `email_templates` (jsonb) — templates personnalisables pour chaque étape
+- `sms_templates` (jsonb) — templates SMS pour chaque étape
+- RLS : admin only pour ALL, pas de SELECT public
 
-**B. Refactorer les lignes enfant (variant rows)**
-- Au lieu de boucler sur `uniqueVariants` (toutes les combinaisons), boucler sur les **tailles uniques** du produit
-- Chaque ligne de taille affiche :
-  - La taille (XS, S, M...)
-  - Les pastilles couleur avec stock inline (`SizeColorStockCell`)
-  - Le total Web pour cette taille (toutes couleurs)
-  - Les totaux boutiques pour cette taille
-- Si le produit n'a pas de couleurs, garder le comportement actuel (simple ligne par taille)
-- Si le produit n'a pas de tailles mais a des couleurs, afficher une seule ligne avec les pastilles couleur
+**B. Nouvelle Edge Function `verify-customer-info`**
 
-**C. Conserver le `VariantLabelEditor` pour l'édition du nom de taille**
-- Le crayon à côté du nom de taille permet de renommer la taille
-- La modification des couleurs se fait via les pastilles
+Appelle l'IA (Lovable AI Gateway) pour vérifier les informations client :
+- Valide le format email (regex + pattern IA)
+- Vérifie la cohérence nom/adresse/code postal/ville (via IA)
+- Vérifie le format du numéro de téléphone
+- Retourne un score de confiance + détails des problèmes détectés
+- Utilise `google/gemini-2.5-flash` pour l'analyse
 
-### Fichiers modifiés
+**C. Nouvelle Edge Function `send-order-notification`**
 
-| Fichier | Changement |
+Gère l'envoi de notifications :
+- Email via Resend (déjà configuré)
+- SMS via Twilio (si connecté) — demandera la connexion du connecteur Twilio
+- Lit la config depuis `notification_config`
+- Templates dynamiques avec variables (nom, n° commande, statut)
+
+**D. Nouvelle page admin `AdminNotifications.tsx` (`/admin/notifications`)**
+
+Section dédiée avec tabs :
+- **Canal** : Activer/désactiver email et SMS, configurer le numéro SMS
+- **Templates** : Personnaliser les messages pour chaque étape (identité validée, paiement OK, commande complète)
+- **Déclencheurs** : Choisir quand notifier (à chaque étape ou seulement à la fin)
+- **Historique** : Log des notifications envoyées (lecture depuis `notification_log`)
+
+**E. Modification de `AdminOrders.tsx`**
+
+- Bouton "Identité" : au clic, appelle `verify-customer-info` → affiche résultat IA (vert = OK, orange = doute, rouge = erreur) dans un popover
+- Si l'IA valide, le flag passe automatiquement à `true`
+- Si doute, l'admin peut forcer la validation ou corriger les infos
+- Quand un flag passe à `true`, vérifie la config notification et envoie si activé
+- Quand les 3 flags sont validés, envoie la notification finale automatiquement
+
+**F. Nouvelle table `notification_log` (migration)**
+
+Historique des notifications :
+- `order_id`, `channel` (email/sms), `type` (identity/payment/complete), `status` (sent/failed), `sent_at`, `recipient`
+- RLS : admin only
+
+**G. Mise à jour du routing admin**
+
+- Ajouter `AdminNotifications` dans `Admin.tsx` (sidebar + routes)
+- Icône `Bell` dans la sidebar
+
+### Fichiers créés/modifiés
+
+| Fichier | Action |
 |---|---|
-| `src/pages/admin/AdminStock.tsx` | Nouveau composant `SizeColorStockCell`, refactorer les variant rows pour regrouper par taille avec pastilles couleur cliquables |
+| Migration SQL | Créer `notification_config` + `notification_log` |
+| `supabase/functions/verify-customer-info/index.ts` | Créer — vérification IA |
+| `supabase/functions/send-order-notification/index.ts` | Créer — envoi email/SMS |
+| `src/pages/admin/AdminNotifications.tsx` | Créer — page config notifications |
+| `src/hooks/useNotificationConfig.ts` | Créer — hook CRUD config |
+| `src/pages/admin/AdminOrders.tsx` | Modifier — intégrer vérification IA + notifications auto |
+| `src/pages/admin/Admin.tsx` | Modifier — ajouter route + sidebar |
+
+### Note sur le SMS
+L'envoi de SMS nécessite Twilio. Le connecteur Twilio sera proposé lors de l'activation du SMS dans la page de configuration. Si l'utilisateur n'active pas le SMS, seul l'email sera disponible (déjà fonctionnel via Resend).
 
