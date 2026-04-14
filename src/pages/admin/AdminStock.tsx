@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { InventoryProductDialog } from '@/components/admin/InventoryProductDialog';
@@ -92,6 +92,7 @@ const ColorSwatch = React.forwardRef<HTMLSpanElement, { color: string; size?: nu
   const isLight = ['WHITE', 'BLANC', 'CREAM', 'CREME', 'BEIGE', 'YELLOW', 'JAUNE'].includes(color.toUpperCase().trim());
   return (
     <span
+      ref={ref}
       className="inline-block rounded-full shrink-0"
       style={{
         width: size,
@@ -100,9 +101,11 @@ const ColorSwatch = React.forwardRef<HTMLSpanElement, { color: string; size?: nu
         border: isLight ? '1px solid hsl(var(--border))' : 'none',
       }}
       title={color}
+      {...props}
     />
   );
-}
+});
+ColorSwatch.displayName = 'ColorSwatch';
 
 const VIEWS = [
   { key: 'dashboard', label: 'Dashboard', icon: BarChart3 },
