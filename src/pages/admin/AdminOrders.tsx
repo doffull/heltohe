@@ -590,9 +590,18 @@ export default function AdminOrders() {
 
       {/* Bulk Actions */}
       {someSelected && (
-        <div className="chamfer-hud bg-primary/10 border border-primary/30 p-3 flex items-center gap-4">
+        <div className="chamfer-hud bg-primary/10 border border-primary/30 p-3 flex items-center gap-3 flex-wrap">
           <span className="text-sm font-bold">{count} sélectionnée(s)</span>
-          <Button variant="destructive" size="sm" onClick={handleBulkDelete} disabled={bulkDelete.isPending}>
+          <Button variant="outline" size="sm" onClick={handleBulkAIVerify} disabled={!!bulkProcessing}>
+            {bulkProcessing === 'identity' ? <Loader2 className="h-3 w-3 mr-2 animate-spin" /> : <ShieldCheck className="h-3 w-3 mr-2" />}Vérifier IA
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleBulkValidatePayment} disabled={!!bulkProcessing}>
+            {bulkProcessing === 'payment' ? <Loader2 className="h-3 w-3 mr-2 animate-spin" /> : <DollarSign className="h-3 w-3 mr-2" />}Valider paiement
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleBulkValidateShipping} disabled={!!bulkProcessing}>
+            {bulkProcessing === 'shipping' ? <Loader2 className="h-3 w-3 mr-2 animate-spin" /> : <Send className="h-3 w-3 mr-2" />}Valider expédition
+          </Button>
+          <Button variant="destructive" size="sm" onClick={handleBulkDelete} disabled={bulkDelete.isPending || !!bulkProcessing}>
             <Trash2 className="h-3 w-3 mr-2" />Supprimer
           </Button>
           <Button variant="ghost" size="sm" onClick={clear}>Désélectionner</Button>
