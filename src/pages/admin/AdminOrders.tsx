@@ -132,6 +132,7 @@ export default function AdminOrders() {
   const updateOrder = useUpdateOrder();
   const bulkDelete = useBulkDeleteOrders();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [bulkProcessing, setBulkProcessing] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditForm | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isGeneratingLabel, setIsGeneratingLabel] = useState(false);
