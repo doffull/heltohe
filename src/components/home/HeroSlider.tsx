@@ -35,9 +35,17 @@ export function HeroSlider() {
   const goToPrev = () => setCurrentIndex((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
   const goToNext = () => setCurrentIndex((prev) => (prev + 1) % heroSlides.length);
 
+  // Reset index if it goes out of bounds (e.g. after slides update)
+  useEffect(() => {
+    if (currentIndex >= heroSlides.length && heroSlides.length > 0) {
+      setCurrentIndex(0);
+    }
+  }, [heroSlides.length, currentIndex]);
+
   if (heroSlides.length === 0) return null;
 
-  const currentSlide = heroSlides[currentIndex];
+  const currentSlide = heroSlides[currentIndex] ?? heroSlides[0];
+  if (!currentSlide) return null;
 
   // Helper to update a specific field of the current slide
   function updateCurrentSlide(changes: Partial<HeroSlide>) {
