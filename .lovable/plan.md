@@ -1,77 +1,101 @@
+## Refonte Page d'Accueil — Style Techwear
 
-# Plan — UX cleanup + Hero Slider AI tools
+### Points importants à valider d'abord
 
-## 1. Floating buttons cleanup (visiteurs)
+**1. Marque** — La maquette montre le logo Adidas. Votre projet est **HELVETICA / LVTK6** (Industrial Luxury). Je vais reproduire **la mise en page exacte** (layout, formes, panneaux stats, sélecteurs, hexagones, animations) mais avec **votre logo Helvetica**, pas celui d'Adidas (risque légal + cohérence marque).
 
-**Chatbot dans le header**
-- Supprimer le bouton flottant `ChatBotWidget` (bas-droite).
-- Ajouter dans `MainLayout` Header un bouton « Assistant » (icône `Bot` + petit label « Aide ») qui ouvre la fenêtre de chat existante.
-- La fenêtre de chat (panel) reste affichée en bas-droite, mais le déclencheur vit dans le header.
-- Visible pour tous (visiteurs + admin).
+**2. Stack** — Vous demandez `index.html` + `home.css` + `home.js` vanilla. Le projet est en **React + Vite + Tailwind**. Ouvrir un `index.html` standalone casserait votre routing, votre auth, votre panier. Je vais donc livrer la **même architecture modulaire** mais sous forme React :
+- `src/views/HomeView.tsx` (remplace l'actuel)
+- `src/components/home/techwear/*` (composants découpés, équivalents des "sections" HTML)
+- `src/styles/home-techwear.css` (variables CSS en tête, classes préfixées `hw-`)
+- `src/config/homeConfig.ts` (équivalent du `CONFIG` JS : textes, liens, tailles, couleurs, stats)
 
-**Bouton « S'abonner » bas-gauche (au-dessus de tout)**
-- Nouveau composant `SubscribeFab` rendu dans `MainLayout`, position `fixed bottom-6 left-6 z-[70]`.
-- Icône enveloppe + label « S'abonner » ; ouvre une petite popup avec champ email → insert dans `newsletters`.
-- Caché si l'utilisateur est admin (admin garde la cloche notifications + outils).
-- Caché aussi sur la home quand le sidebar mobile est ouvert (pour ne pas se chevaucher avec le bouton « ouvrir panneau »), réapparait sinon.
+Toutes les variables CSS, le `CONFIG`, le préfixe `hw-`, les animations, le responsive, l'accessibilité, le respect de `prefers-reduced-motion` — **tout est conservé à l'identique**.
 
-**Côté admin**
-- La cloche notifications (bas-droite) et le toggle Visual Editor restent en place, intacts.
+### Ce qui sera construit
 
-## 2. Hero Slider — fix + IA + génération d'images
+**Nouvelle HomeView (remplace `HeroSlider` + sections actuelles sur `/`) :**
 
-**Bug object-fit**
-- Cause : `Home.tsx` (utilisé par `/`) construit ses slides en hardcodant `object-cover` et `bg-cover` ; il ignore `slide.objectFit / objectPosition / mobileObjectFit / mobileObjectPosition`.
-- Fix : passer ces 4 champs dans la projection `heroSlides` et les appliquer via `style={{ objectFit, objectPosition }}` sur la balise `<img>` / `<video>` (et remplacer le `bg-cover` du conteneur background par une `<img>` avec style).
-- Vérifier également le panneau d'édition admin : le mini-aperçu (16:9) doit aussi refléter le `objectFit` choisi.
+```text
+┌──────────────────────────────────────────────────────┐
+│ Header existant (intact, non touché)                  │
+├──────────────────────────────────────────────────────┤
+│  hexagones   ┌────────────┐    ┌── Stats panel ──┐   │
+│  contour     │  Card 420  │    │ Price    ▓▓▓▓░  │   │
+│  (SVG bg)    │  ×680 px   │    │ Durab.   ▓▓▓▓▓  │   │
+│              │  Logo HV   │    │ Fashion  ▓▓▓░░  │   │
+│              │            │    └─────────────────┘   │
+│              │  Mannequin │    ┌── Color swatches ┐  │
+│              │  PNG       │    │ ■ □ ▨            │  │
+│              │            │    └──────────────────┘  │
+│              │            │    ┌── Size selector ─┐  │
+│              │            │    │ Size [XS]        │  │
+│              │ ┌MODEL─┐   │    │ Size [XL]        │  │
+│              │ │0.1.2 │   │    └──────────────────┘  │
+│              └────────────┘                          │
+│              [   SHOP NOW   ]                        │
+│              [ EXPLORE COLLECTION ]                  │
+├──────────────────────────────────────────────────────┤
+│ Footer existant (intact)                              │
+└──────────────────────────────────────────────────────┘
+```
 
-**Boutons IA (gain de temps)**
-- Nouvelle edge function `generate-slide-text` (Lovable AI, modèle `google/gemini-3-flash-preview`).
-  - Input : `{ field: 'title' | 'subtitle' | 'description' | 'cta', context, tone? }`.
-  - Output JSON via tool-calling : `{ value: string }`.
-- Dans `AdminDesign > HeroSliderTab`, ajouter un petit bouton ✨ « IA » à côté de chaque champ (Titre, Sous-titre, Texte CTA) : clic → génère et remplit le champ. Toast d'erreur si rate-limit (429) / quota (402).
-- Mêmes boutons IA réutilisables sur les futurs champs description.
+**Composants React créés :**
+1. `TechwearHero.tsx` — wrapper hero (`#hw-hero`), gère animations & parallaxe hexagones
+2. `HexBackground.tsx` — SVG hexagones contour + ligne horizontale (parallaxe Intersection Observer)
+3. `HeroCard.tsx` — card centrale clip-path biseauté, logo + image produit
+4. `StatsPanel.tsx` — Price/Durability/Fashion + barres animées 1.2s
+5. `ColorSwatches.tsx` — 3 couleurs, swatch actif étendu, switch image produit
+6. `SizeSelector.tsx` — tailles depuis config, toggle actif
+7. `ModelBadge.tsx` — hexagone "MODEL 0.1.2"
+8. `HeroCTAs.tsx` — boutons SHOP NOW / EXPLORE (liens vers `/shop` et `/boutique` existants)
 
-**Génération d'images IA pour slides**
-- Nouvelle edge function `generate-slide-image` (Lovable AI image, `google/gemini-2.5-flash-image`).
-  - Input : `{ prompt, aspectRatio? }`. Output : `{ url }` (upload du base64 dans le bucket `media`, retour de l'URL publique).
-- Dans `HeroSliderTab`, à côté de chaque `FileDropZone` (Fond / Intermédiaire / Premier plan / Mobile), ajouter un bouton ✨ « Générer avec IA » qui ouvre une mini-popup :
-  - Champ « Description de l'image » + bouton « Générer ».
-  - Aperçu, puis « Utiliser » → enregistre l'URL dans le slide.
+**Fichier de config (`src/config/homeConfig.ts`) :**
+```ts
+export const HOME_CONFIG = {
+  modelBadge: "MODEL 0.1.2",
+  ctaPrimary: { label: "SHOP NOW", href: "/shop" },
+  ctaSecondary: { label: "EXPLORE COLLECTION", href: "/boutique" },
+  sizes: ["XS","S","M","L","XL","XXL"],
+  defaultSize: "XS",
+  colorOptions: [
+    { name: "Black", hex: "#1A1A1A", image: "/assets/home/model-black.png" },
+    { name: "White", hex: "#F5F5F5", image: "/assets/home/model-white.png" },
+    { name: "Gray",  hex: "#888888", image: "/assets/home/model-gray.png" },
+  ],
+  defaultColor: 0,
+  stats: [
+    { label: "Price", value: 85 },
+    { label: "Durability", value: 90 },
+    { label: "Fashion", value: 70 },
+  ],
+};
+```
 
-## 3. Sidebar mobile — fullscreen
+**CSS (`src/styles/home-techwear.css`) :**
+- Bloc `:root { --color-bg, --color-white, --color-black, --color-gray-light, --color-gray-medium, --color-text, --color-border, --color-panel-bg, --font-main, --font-size-nav, --font-size-cta, --font-size-label, --header-height, --hero-padding, --panel-padding, --blur-panel, --transition-speed, --border-radius, --card-width, --card-height, --card-bevel }`
+- Toutes les classes préfixées `hw-` (isolation totale)
+- Keyframes `hw-fade-up`, `hw-slide-right`, `hw-fill-bar` avec délais échelonnés (0.1/0.3/0.4/0.5/0.6/0.7s)
+- `@media (prefers-reduced-motion: reduce) { *animations: none }`
+- Breakpoints 1200px (panels sous card, card 360px) et 768px (CTA full width, footer grid 2×2)
+- Importé **uniquement** dans `TechwearHero.tsx` → zéro impact sur le reste du site
 
-Dans `MainLayout` :
-- Sur mobile, le panneau gauche (`sidebar-left-panel`) passe de `w-[85%] sm:w-[320px]` à `w-screen h-screen` (vrai plein écran) tant que `< lg`.
-- Garder le bouton de fermeture en haut à droite, plus visible (taille augmentée, contraste sur fond image).
-- Sur desktop : comportement inchangé (`lg:w-[35%]`).
+### Images mannequin
 
-## 4. Header compact quand sidebar ouverte (desktop)
+3 PNG transparents (Black/White/Gray) requis dans `/public/assets/home/`. Je peux les **générer via Lovable AI (Nano Banana)** — silhouette techwear style éditorial, fond transparent. Sinon vous fournissez vos visuels.
 
-Symptôme : les liens de catégories se chevauchent quand le sidebar pousse le header (le header passe à `lg:ml-[35%]` mais les items de nav gardent leur `gap-8`).
+### Ce qui reste intact (RÈGLE ABSOLUE respectée)
 
-Fix dans `MainLayout` :
-- Quand `sidebarActive`, appliquer une classe « compact » sur la nav et les actions :
-  - `gap-8` → `gap-3 xl:gap-5`
-  - texte de nav `text-sm` → `text-xs`, `tracking-wider` conservé
-  - cacher les éléments non essentiels en deçà de `xl` : champ recherche replié, sélecteur de langue masqué `xl:block`, label « FRANÇAIS » caché.
-- Vérifier qu'à 1280–1440 px le header ne déborde plus.
+- Header (`MainLayout`), Footer, Sidebar, Cart, Auth, ChatBot, SubscribeFab, Visual Editor — **non touchés**
+- Routes, Supabase, RLS, edge functions — **non touchées**
+- Admin (`AdminDesign > HeroSlider`) reste fonctionnel ; option : ajouter un toggle "Mode Techwear" pour switcher entre l'ancien HeroSlider configurable et la nouvelle vue (à confirmer)
+- Anciens composants (`HeroSlider.tsx`, `CategoryGrid`, `ProductSections`) **conservés** (juste plus rendus sur `/`)
 
-## Détails techniques
+### Questions de validation
 
-- Edge functions : créer `supabase/functions/generate-slide-text/index.ts` et `supabase/functions/generate-slide-image/index.ts`. Pas de `verify_jwt` custom requis (par défaut Lovable). CORS standard. Validation Zod du body.
-- Image upload dans bucket `media` (existant, public) sous `slides/ai/{uuid}.png`.
-- Composant client réutilisable `AiTextButton` (champ → IA) et `AiImageButton` (popup → IA → URL) dans `src/components/admin/`.
-- Pas de migration DB requise.
-- Aucun changement au comportement admin (cloche, visual editor inchangés).
+1. **Logo** : on utilise votre logo Helvetica (depuis `design_settings`) au lieu du Trefoil Adidas ? ✅ recommandé
+2. **Sections sous le hero** : on garde `CategoryGrid` + `ProductSections` sous le nouveau hero, ou page d'accueil **uniquement le hero plein écran** (comme la maquette) ?
+3. **Images mannequin** : génération IA, ou vous fournissez les 3 PNG ?
+4. **Toggle admin** : ajouter un switch "Hero Techwear vs Hero Slider classique" dans Admin > Design ?
 
-## Fichiers touchés (estimés)
-
-- `src/components/layout/MainLayout.tsx` — header chatbot trigger, FAB subscribe, sidebar mobile fullscreen, header compact.
-- `src/components/layout/ChatBotWidget.tsx` — exposer ouverture via prop / contexte (retirer le bouton flottant interne, garder la fenêtre).
-- `src/components/layout/SubscribeFab.tsx` — nouveau.
-- `src/pages/Home.tsx` — appliquer `objectFit`/`objectPosition` au hero.
-- `src/pages/admin/AdminDesign.tsx` — boutons IA texte + IA image dans `HeroSliderTab`.
-- `src/components/admin/AiTextButton.tsx`, `AiImageButton.tsx` — nouveaux.
-- `supabase/functions/generate-slide-text/index.ts` — nouveau.
-- `supabase/functions/generate-slide-image/index.ts` — nouveau.
+Validez ces 4 points et j'implémente.

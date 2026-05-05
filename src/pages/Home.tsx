@@ -15,6 +15,7 @@ import PopupBanner from '@/components/home/PopupBanner';
 import { PromoCountdown } from '@/components/home/PromoCountdown';
 import { LoyaltyBanner } from '@/components/home/LoyaltyBanner';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { TechwearHero } from '@/components/home/TechwearHero';
 
 const PLACEHOLDER = '/placeholder.svg';
 
@@ -173,127 +174,9 @@ export default function Home() {
     <div className="min-h-screen bg-background overflow-hidden">
       {/* ═══════════════ PROMO BANNER ═══════════════ */}
       <PromoBanner />
-      {/* ═══════════════ HERO PARALLAX ═══════════════ */}
-      <section ref={heroRef} className={cn("relative overflow-hidden", hasAdminSlides && designSettings.sliderGrayscale && "grayscale")} style={{ height: sliderHeight }}>
-        {heroSlides.map((s, i) =>
-        <div
-          key={i}
-          className={cn(
-            "absolute inset-0 transition-opacity duration-1000",
-            i === currentSlide ? "opacity-100" : "opacity-0"
-          )}>
-          
-            {/* Background Layer (slowest parallax) */}
-            {'mediaType' in s && s.mediaType === 'video' ?
-          <motion.div className="absolute inset-0 will-change-transform" style={{ y: heroY, scale: heroScale }}>
-                <video src={s.image} autoPlay muted loop playsInline className="w-full h-full" style={{ objectFit: (s as any).objectFit || 'cover', objectPosition: (s as any).objectPosition || 'center' }} />
-              </motion.div> :
 
-          <motion.div
-            className="absolute inset-0 will-change-transform"
-            style={{ y: heroY, scale: heroScale }}>
-              <img
-                src={s.image}
-                alt={s.title}
-                className="w-full h-full"
-                style={{ objectFit: ((s as any).objectFit || 'cover') as any, objectPosition: (s as any).objectPosition || 'center' }}
-              />
-            </motion.div>
-          }
-            
-            {/* Midground Layer */}
-            {'midgroundMedia' in s && (s as any).midgroundMedia &&
-          <motion.div className="absolute inset-0 z-[1] will-change-transform" style={{ y: heroMgY }}>
-                <img src={(s as any).midgroundMedia} alt="" className="w-full h-full object-cover" />
-              </motion.div>
-          }
-            
-            {/* Foreground Layer */}
-            {'foregroundMedia' in s && (s as any).foregroundMedia &&
-          <motion.div className="absolute inset-0 z-[2] will-change-transform" style={{ y: heroFgY }}>
-                <img src={(s as any).foregroundMedia} alt="" className="w-full h-full object-contain" />
-              </motion.div>
-          }
-          </div>
-        )}
-
-        {/* Overlays removed per design choice */}
-
-        <motion.div
-          style={{ opacity: heroOpacity }}
-          className="relative z-20 h-full flex flex-col justify-end pb-16 lg:pb-24 px-4 lg:px-16">
-          
-          <div className="max-w-3xl space-y-6">
-            <motion.p
-              key={`sub-${currentSlide}`}
-              initial={{ opacity: 0, x: -30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="font-mono text-xs tracking-[0.4em] uppercase text-slate-50">
-              
-              {slide.subtitle}
-            </motion.p>
-            <h1 className="text-2xl sm:text-5xl md:text-7xl xl:text-8xl font-bold uppercase leading-[0.9] tracking-tighter">
-              {slide.title.split('\n').map((line, i) =>
-              <motion.span
-                key={`${currentSlide}-${i}`}
-                className="block text-white"
-                initial={{ opacity: 0, y: 40, clipPath: "inset(0 0 100% 0)" }}
-                animate={{ opacity: 1, y: 0, clipPath: "inset(0 0 0% 0)" }}
-                transition={{ duration: 0.8, delay: 0.3 + i * 0.15, ease: [0.22, 1, 0.36, 1] }}>
-                
-                  {i === 1 ?
-                <span className="text-muted-foreground">{line}</span> :
-                line}
-                </motion.span>
-              )}
-            </h1>
-            <motion.div
-              key={`cta-${currentSlide}`}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.7 }}>
-              
-              <Button
-                size="lg"
-                className="h-14 px-10 uppercase tracking-[0.2em] text-sm trapezoid-btn glow-hover"
-                onClick={() => navigate('/boutique')}>
-                
-                {slide.cta}
-                <ArrowRight className="ml-3 h-5 w-5" />
-              </Button>
-            </motion.div>
-          </div>
-
-          <div className="absolute bottom-8 right-8 flex items-center gap-3 z-30">
-            <button onClick={() => setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length)} className="w-10 h-10 border border-foreground/30 flex items-center justify-center hover:bg-foreground/10 transition-colors">
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="font-mono text-sm tabular-nums">
-              <span className="text-foreground">{String(currentSlide + 1).padStart(2, '0')}</span>
-              <span className="text-muted-foreground mx-1">/</span>
-              <span className="text-muted-foreground">{String(heroSlides.length).padStart(2, '0')}</span>
-            </span>
-            <button onClick={() => setCurrentSlide((prev) => (prev + 1) % heroSlides.length)} className="w-10 h-10 border border-foreground/30 flex items-center justify-center hover:bg-foreground/10 transition-colors">
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        </motion.div>
-
-        <motion.div
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30"
-          animate={{ opacity: [0.3, 1, 0.3] }}
-          transition={{ duration: 2, repeat: Infinity }}>
-          
-          <div className="w-px h-16 bg-foreground/20 relative overflow-hidden">
-            <motion.div
-              className="absolute top-0 left-0 w-full bg-foreground"
-              animate={{ height: ["0%", "100%", "0%"], top: ["0%", "0%", "100%"] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }} />
-            
-          </div>
-        </motion.div>
-      </section>
+      {/* ═══════════════ TECHWEAR HERO (mockup-driven) ═══════════════ */}
+      <TechwearHero />
 
       {/* ═══════════════ CATEGORIES GRID ═══════════════ */}
       <section className={sectionPy}>
