@@ -84,8 +84,8 @@ export function ChatBotWidget() {
   const { data: botConfig } = useQuery({
     queryKey: ['bot-config-widget'],
     queryFn: async () => {
-      const { data } = await supabase.from('bot_config_public' as any).select('*').eq('is_active', true).single();
-      return data;
+      const { data } = await (supabase.from('bot_config_public' as any).select('*').eq('is_active', true).single() as any);
+      return data as { bot_name?: string; bot_avatar?: string; welcome_message?: string; suggestions?: string[] } | null;
     },
   });
 
