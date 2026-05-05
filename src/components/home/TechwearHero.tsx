@@ -43,7 +43,17 @@ function useResolvedConfig(): { config: TechwearHeroConfig; productMissing: bool
   const { data: products, isLoading } = useProducts();
 
   return useMemo(() => {
-    const base: TechwearHeroConfig = { ...DEFAULT_TECHWEAR_HERO, ...(cfg || {}) };
+    const merged: TechwearHeroConfig = { ...DEFAULT_TECHWEAR_HERO, ...(cfg || {}) };
+    // Defensive: DB may store null for these — re-apply defaults to avoid `.length`/`.map` crashes.
+    const base: TechwearHeroConfig = {
+      ...merged,
+      colorOptions: Array.isArray(merged.colorOptions) && merged.colorOptions.length ? merged.colorOptions : DEFAULT_TECHWEAR_HERO.colorOptions,
+      visibleSizes: Array.isArray(merged.visibleSizes) ? merged.visibleSizes : DEFAULT_TECHWEAR_HERO.visibleSizes,
+      stats: Array.isArray(merged.stats) ? merged.stats : DEFAULT_TECHWEAR_HERO.stats,
+      modelBadge: merged.modelBadge || DEFAULT_TECHWEAR_HERO.modelBadge,
+      ctaPrimary: merged.ctaPrimary || DEFAULT_TECHWEAR_HERO.ctaPrimary,
+      ctaSecondary: merged.ctaSecondary || DEFAULT_TECHWEAR_HERO.ctaSecondary,
+    };
     if (!base.productId) return { config: base, productMissing: false };
     const product = products?.find((p) => p.id === base.productId);
     if (!product) {
