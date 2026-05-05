@@ -424,7 +424,10 @@ function HeroSliderTab() {
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Titre</Label>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs">Titre</Label>
+                      <AiTextButton field="title" context={slide.subtitle || slide.title} onGenerated={(v) => updateSlide(index, { title: v })} />
+                    </div>
                     <Input
                       value={slide.title}
                       onChange={(e) => updateSlide(index, { title: e.target.value })}
@@ -432,7 +435,10 @@ function HeroSliderTab() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Sous-titre</Label>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs">Sous-titre</Label>
+                      <AiTextButton field="subtitle" context={slide.title || slide.subtitle} onGenerated={(v) => updateSlide(index, { subtitle: v })} />
+                    </div>
                     <Input
                       value={slide.subtitle}
                       onChange={(e) => updateSlide(index, { subtitle: e.target.value })}
@@ -440,7 +446,10 @@ function HeroSliderTab() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Texte du bouton CTA</Label>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs">Texte du bouton CTA</Label>
+                      <AiTextButton field="cta" context={slide.title || slide.subtitle} onGenerated={(v) => updateSlide(index, { ctaText: v })} />
+                    </div>
                     <Input
                       value={slide.ctaText}
                       onChange={(e) => updateSlide(index, { ctaText: e.target.value })}
