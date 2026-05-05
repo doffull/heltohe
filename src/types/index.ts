@@ -114,8 +114,24 @@ export interface TechwearColorOption {
   name: string;
   hex: string;
   image: string;          // desktop (default fallback)
-  imageTablet?: string;   // optional tablet override
-  imageMobile?: string;   // optional mobile override
+  imageTablet?: string;
+  imageMobile?: string;
+  mediaType?: 'image' | 'video';
+  mediaTypeTablet?: 'image' | 'video';
+  mediaTypeMobile?: 'image' | 'video';
+  videoLoop?: boolean;
+  videoMuted?: boolean;
+  videoAutoplay?: boolean;
+}
+
+export interface TechwearBackground {
+  type: 'gradient' | 'color' | 'image' | 'video';
+  color?: string;
+  gradientFrom?: string;
+  gradientTo?: string;
+  mediaUrl?: string;
+  mediaType?: 'image' | 'video';
+  overlayOpacity?: number; // 0-1
 }
 
 export interface TechwearStat {
@@ -140,6 +156,9 @@ export interface TechwearHeroConfig {
   showColors: boolean;
   showSizes: boolean;
   showModelBadge: boolean;
+  background?: TechwearBackground;
+  cardSize?: 'sm' | 'md' | 'lg' | 'xl';
+  imageOverflow?: boolean;
 }
 
 export interface HeroSlide {
