@@ -45,15 +45,15 @@ export default function AccountDashboard() {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold hud-text">MON COMPTE</h1>
-            <p className="text-muted-foreground mt-1">{user?.email}</p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold hud-text">MON COMPTE</h1>
+            <p className="text-muted-foreground mt-1 text-sm truncate">{user?.email}</p>
           </div>
           <Button
             variant="outline"
             onClick={signOut}
-            className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+            className="text-destructive hover:bg-destructive hover:text-destructive-foreground w-full sm:w-auto"
           >
             <LogOut className="h-4 w-4 mr-2" />
             Déconnexion
