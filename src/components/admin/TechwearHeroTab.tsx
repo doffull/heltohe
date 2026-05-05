@@ -294,8 +294,9 @@ export function TechwearHeroTab() {
                   {linkedProduct.sizes?.length || 0} taille(s) · {linkedProduct.colors?.length || linkedProduct.colorOptions?.length || 0} couleur(s)
                 </p>
               </div>
-              <Button size="sm" variant="outline" onClick={syncFromProduct} className="gap-1.5">
-                <RefreshCw className="h-3.5 w-3.5" /> Synchroniser
+              <Button size="sm" variant="outline" onClick={syncFromProduct} className="gap-1.5"
+                title="Met à jour couleurs, tailles et CTA de cette slide depuis le produit lié">
+                <RefreshCw className="h-3.5 w-3.5" /> Synchroniser depuis le produit
               </Button>
             </div>
           )}
