@@ -340,42 +340,49 @@ export function TechwearHeroTab() {
               </div>
               <div className="md:col-span-5 space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs">Images mannequin (par device)</Label>
+                  <Label className="text-xs">Médias mannequin (image OU vidéo, par device)</Label>
                   <AiImageButton
                     label="Image"
                     defaultPrompt={`Mannequin techwear ${c.name}, fond transparent, plein corps`}
-                    onGenerated={(url) => updateColor(i, { image: url })}
+                    onGenerated={(url) => updateColor(i, { image: url, mediaType: 'image' })}
                   />
                 </div>
                 <div className="grid grid-cols-1 gap-2">
                   <div>
                     <p className="text-[10px] text-muted-foreground mb-1">🖥️ Desktop (par défaut)</p>
                     <FileDropZone
-                      accept={['image']}
+                      accept={['image', 'video']}
                       folder="techwear-hero"
                       currentFile={c.image}
-                      onUpload={(url) => updateColor(i, { image: url })}
-                      label="PNG desktop"
+                      onUpload={(url) => updateColor(i, { image: url, mediaType: /\.(mp4|webm)(\?|$)/i.test(url) ? 'video' : 'image' })}
+                      label="Image PNG ou vidéo MP4 (max 30 Mo)"
                     />
                   </div>
                   <div>
                     <p className="text-[10px] text-muted-foreground mb-1">📱 Tablette (optionnel)</p>
                     <FileDropZone
-                      accept={['image']}
+                      accept={['image', 'video']}
                       folder="techwear-hero"
                       currentFile={c.imageTablet || ''}
-                      onUpload={(url) => updateColor(i, { imageTablet: url })}
-                      label="PNG tablette"
+                      onUpload={(url) => updateColor(i, { imageTablet: url, mediaTypeTablet: /\.(mp4|webm)(\?|$)/i.test(url) ? 'video' : 'image' })}
+                      label="Tablette"
                     />
                   </div>
                   <div>
                     <p className="text-[10px] text-muted-foreground mb-1">📱 Mobile (optionnel)</p>
                     <FileDropZone
-                      accept={['image']}
+                      accept={['image', 'video']}
                       folder="techwear-hero"
                       currentFile={c.imageMobile || ''}
-                      onUpload={(url) => updateColor(i, { imageMobile: url })}
-                      label="PNG mobile"
+                      onUpload={(url) => updateColor(i, { imageMobile: url, mediaTypeMobile: /\.(mp4|webm)(\?|$)/i.test(url) ? 'video' : 'image' })}
+                      label="Mobile"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between rounded border px-2 py-1.5">
+                    <Label className="text-xs">Vidéo en boucle</Label>
+                    <Switch
+                      checked={c.videoLoop !== false}
+                      onCheckedChange={(v) => updateColor(i, { videoLoop: v })}
                     />
                   </div>
                 </div>
