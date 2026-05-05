@@ -1658,6 +1658,33 @@ export type Database = {
       }
     }
     Views: {
+      bot_config_public: {
+        Row: {
+          bot_avatar: string | null
+          bot_name: string | null
+          id: string | null
+          is_active: boolean | null
+          suggestions: Json | null
+          welcome_message: string | null
+        }
+        Insert: {
+          bot_avatar?: string | null
+          bot_name?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          suggestions?: Json | null
+          welcome_message?: string | null
+        }
+        Update: {
+          bot_avatar?: string | null
+          bot_name?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          suggestions?: Json | null
+          welcome_message?: string | null
+        }
+        Relationships: []
+      }
       design_settings_public: {
         Row: {
           accent_color: string | null
@@ -1971,6 +1998,10 @@ export type Database = {
           email: string
           user_id: string
         }[]
+      }
+      preview_promo_code: {
+        Args: { p_code: string; p_subtotal: number }
+        Returns: Json
       }
       release_order_stock: { Args: { p_order_id: string }; Returns: Json }
       reserve_order_stock: { Args: { p_order_id: string }; Returns: Json }
