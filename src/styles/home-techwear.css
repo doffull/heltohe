@@ -41,10 +41,39 @@
   position: relative;
   width: 100%;
   min-height: calc(100vh - 70px);
-  background: linear-gradient(135deg, var(--hw-color-bg-1) 0%, #EBEBEB 50%, var(--hw-color-bg-2) 100%);
+  background: transparent;
   overflow: hidden;
   font-family: var(--hw-font-main);
   color: var(--hw-color-text);
+}
+
+/* Background layer — sits under everything */
+#hw-hero .hw-bg-layer {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  z-index: 0; pointer-events: none;
+  object-fit: cover;
+}
+#hw-hero .hw-bg-overlay {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+}
+#hw-hero .hw-product-missing {
+  position: absolute; top: 8px; right: 8px; z-index: 50;
+  background: #fff3cd; color: #664d03; border: 1px solid #ffecb5;
+  padding: 6px 10px; font-size: 11px; border-radius: 4px;
+}
+
+/* Card size variants */
+#hw-hero[data-size="sm"]  { --hw-card-width: 340px; --hw-card-height: 540px; }
+#hw-hero[data-size="md"]  { --hw-card-width: 420px; --hw-card-height: 680px; }
+#hw-hero[data-size="lg"]  { --hw-card-width: 500px; --hw-card-height: 760px; }
+#hw-hero[data-size="xl"]  { --hw-card-width: 580px; --hw-card-height: 840px; }
+
+/* Image overflow — model can extend beyond the card */
+#hw-hero[data-overflow="true"] .hw-card { overflow: visible; }
+#hw-hero[data-overflow="true"] .hw-card-image {
+  height: 118%;
+  top: -12%;
+  max-width: 110%;
 }
 
 /* ── Hexagonal background shapes ───────────────────────────── */

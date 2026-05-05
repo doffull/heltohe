@@ -26,6 +26,9 @@ export const DEFAULT_TECHWEAR_HERO: TechwearHeroConfig = {
   showColors: true,
   showSizes: true,
   showModelBadge: true,
+  background: { type: 'gradient', gradientFrom: '#E0E0E0', gradientTo: '#E5E5E5', overlayOpacity: 0 },
+  cardSize: 'md',
+  imageOverflow: false,
 };
 
 // Back-compat export (old name still imported elsewhere)

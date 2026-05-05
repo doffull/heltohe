@@ -14,8 +14,11 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
   const [progress, setProgress] = useState(0);
 
   const upload = async (file: File): Promise<string | null> => {
-    if (file.size > maxSizeMB * 1024 * 1024) {
-      toast.error(`Le fichier dépasse la limite de ${maxSizeMB}MB`);
+    // Per-type size guard: videos are limited stricter
+    const isVideo = file.type.startsWith('video/');
+    const effectiveMax = isVideo ? Math.min(maxSizeMB, 30) : maxSizeMB;
+    if (file.size > effectiveMax * 1024 * 1024) {
+      toast.error(`Le fichier dépasse la limite de ${effectiveMax}MB`);
       return null;
     }
 
