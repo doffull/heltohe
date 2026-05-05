@@ -336,9 +336,16 @@ function HeroSliderTab() {
 
               {/* ── Mobile ── */}
               <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/40 pb-1 mb-3">
-                  Média mobile (optionnel)
-                </p>
+                <div className="flex items-center justify-between mb-3 border-b border-border/40 pb-1">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Média mobile (optionnel)
+                  </p>
+                  <AiImageButton
+                    label="Image mobile"
+                    defaultPrompt={slide.title ? `${slide.title} — format portrait mobile` : ''}
+                    onGenerated={(url) => updateSlide(index, { mobileImage: url, mobileMediaType: 'image' } as any)}
+                  />
+                </div>
                 <FileDropZone
                   accept={['image', 'video']}
                   folder="hero/mobile"
