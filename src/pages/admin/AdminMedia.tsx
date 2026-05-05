@@ -40,10 +40,20 @@ export default function AdminMedia() {
 
   const handleFiles = useCallback(async (fileList: FileList | null) => {
     if (!fileList) return;
-    for (const file of Array.from(fileList)) {
-      await uploadMedia.mutateAsync(file);
+    const files = Array.from(fileList);
+    let ok = 0, ko = 0;
+    for (const file of files) {
+      try {
+        await uploadMedia.mutateAsync(file);
+        ok++;
+      } catch {
+        ko++;
+      }
     }
-  }, [uploadMedia]);
+    if (files.length > 1) {
+      toast({ title: `Upload terminé : ${ok} réussi(s)${ko ? `, ${ko} échec(s)` : ''}` });
+    }
+  }, [uploadMedia, toast]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -79,14 +89,17 @@ export default function AdminMedia() {
         onDrop={handleDrop}
         onClick={() => {
           const input = document.createElement('input');
-          input.type = 'file'; input.multiple = true; input.accept = 'image/*,video/*';
+          input.type = 'file';
+          input.multiple = true;
+          input.accept = 'image/*,video/*,.webp,.gif,.png,.jpg,.jpeg,.svg,.avif,.mp4,.webm,.mov,.ogg';
           input.onchange = () => handleFiles(input.files);
           input.click();
         }}
       >
         <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
-        <p className="text-sm text-muted-foreground">Glissez-déposez vos fichiers ici ou <span className="text-primary underline">cliquez pour sélectionner</span></p>
-        {uploadMedia.isPending && <p className="text-xs text-primary mt-2">Upload en cours...</p>}
+        <p className="text-sm text-muted-foreground">Glissez-déposez vos fichiers (images & vidéos jusqu'à 100 Mo) ou <span className="text-primary underline">cliquez pour sélectionner</span></p>
+        <p className="text-[10px] text-muted-foreground mt-1">Formats : WebP, GIF, PNG, JPG, SVG, AVIF, MP4, WebM, MOV…</p>
+        {uploadMedia.isPending && <p className="text-xs text-primary mt-2">Upload en cours…</p>}
       </div>
 
       {/* Filters */}
@@ -134,7 +147,7 @@ export default function AdminMedia() {
                 {isImage(file.type) ? (
                   <img src={file.url} alt={file.name} className="w-full h-full object-cover" loading="lazy" />
                 ) : isVideo(file.type) ? (
-                  <div className="w-full h-full bg-muted flex items-center justify-center"><Film className="h-8 w-8 text-muted-foreground" /></div>
+                  <video src={file.url} className="w-full h-full object-cover" muted playsInline preload="metadata" />
                 ) : (
                   <div className="w-full h-full bg-muted flex items-center justify-center"><FileText className="h-8 w-8 text-muted-foreground" /></div>
                 )}
