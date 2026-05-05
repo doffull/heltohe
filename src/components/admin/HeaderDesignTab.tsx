@@ -551,6 +551,121 @@ export function HeaderDesignTab() {
           </div>
         </CardContent>
       </Card>
+
+      {/* ── LOGO GLOBAL ── */}
+      <Card>
+        <CardHeader className="pb-3 bg-gradient-to-r from-pink-500/10 to-transparent rounded-t-lg">
+          <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-pink-500 inline-block" />
+            Logo global (header / footer / favicon)
+          </CardTitle>
+          <CardDescription className="text-xs">Taille, forme de fond, favicon, logo footer</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-3 space-y-5">
+          {/* Size slider */}
+          <div className="space-y-1.5">
+            <Label className="text-xs flex justify-between">
+              <span>Taille du logo</span>
+              <span className="font-mono">{(designSettings as any).logoSize ?? 40}px</span>
+            </Label>
+            <input
+              type="range"
+              min={24}
+              max={120}
+              step={2}
+              value={(designSettings as any).logoSize ?? 40}
+              onChange={(e) => updateDesignSettings({ logoSize: parseInt(e.target.value, 10) } as any)}
+              className="w-full"
+            />
+          </div>
+
+          {/* Background shape */}
+          <div className="space-y-1.5">
+            <Label className="text-xs">Forme de fond derrière le logo</Label>
+            <div className="grid grid-cols-3 md:grid-cols-7 gap-2">
+              {(['none', 'circle', 'square', 'triangle', 'hexagon', 'diamond', 'blob'] as const).map((shape) => {
+                const active = ((designSettings as any).logoBackgroundShape || 'none') === shape;
+                const labels: Record<string, string> = {
+                  none: 'Aucune', circle: 'Cercle', square: 'Carré',
+                  triangle: 'Triangle', hexagon: 'Hexagone', diamond: 'Losange', blob: 'Blob',
+                };
+                return (
+                  <button
+                    key={shape}
+                    type="button"
+                    onClick={() => updateDesignSettings({ logoBackgroundShape: shape } as any)}
+                    className={cn(
+                      'rounded-lg border-2 p-2 text-[10px] font-medium transition',
+                      active ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'
+                    )}
+                  >
+                    {labels[shape]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Background color & padding */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Couleur du fond</Label>
+              <div className="flex gap-2">
+                <input
+                  type="color"
+                  value={(designSettings as any).logoBackgroundColor || '#ffffff'}
+                  onChange={(e) => updateDesignSettings({ logoBackgroundColor: e.target.value } as any)}
+                  className="h-9 w-12 cursor-pointer rounded border border-border flex-shrink-0"
+                />
+                <Input
+                  value={(designSettings as any).logoBackgroundColor || ''}
+                  onChange={(e) => updateDesignSettings({ logoBackgroundColor: e.target.value } as any)}
+                  placeholder="(transparent)"
+                  className="flex-1 h-9 font-mono text-xs"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs flex justify-between">
+                <span>Padding interne</span>
+                <span className="font-mono">{(designSettings as any).logoBackgroundPadding ?? 8}px</span>
+              </Label>
+              <input
+                type="range"
+                min={0}
+                max={32}
+                step={1}
+                value={(designSettings as any).logoBackgroundPadding ?? 8}
+                onChange={(e) => updateDesignSettings({ logoBackgroundPadding: parseInt(e.target.value, 10) } as any)}
+                className="w-full"
+              />
+            </div>
+          </div>
+
+          {/* Footer logo & favicon URL inputs */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 border-t border-border/30 pt-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs">URL Logo footer</Label>
+              <Input
+                value={(designSettings as any).footerLogo || ''}
+                onChange={(e) => updateDesignSettings({ footerLogo: e.target.value } as any)}
+                placeholder="https://… (laisser vide → utilise le logo principal)"
+                className="h-9 font-mono text-xs"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">URL Favicon (.ico/.png)</Label>
+              <Input
+                value={(designSettings as any).faviconUrl || ''}
+                onChange={(e) => updateDesignSettings({ faviconUrl: e.target.value } as any)}
+                placeholder="https://… ou /favicon.ico"
+                className="h-9 font-mono text-xs"
+              />
+              <p className="text-[10px] text-muted-foreground">L'onglet du navigateur sera mis à jour après sauvegarde.</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
