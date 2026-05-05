@@ -6,6 +6,30 @@ import { DEFAULT_TECHWEAR_HERO } from '@/config/homeConfig';
 import type { TechwearHeroConfig, TechwearColorOption } from '@/types';
 import '@/styles/home-techwear.css';
 
+type Viewport = 'mobile' | 'tablet' | 'desktop';
+function useViewport(): Viewport {
+  const [v, setV] = useState<Viewport>(() => {
+    if (typeof window === 'undefined') return 'desktop';
+    const w = window.innerWidth;
+    return w < 768 ? 'mobile' : w < 1200 ? 'tablet' : 'desktop';
+  });
+  useEffect(() => {
+    const onResize = () => {
+      const w = window.innerWidth;
+      setV(w < 768 ? 'mobile' : w < 1200 ? 'tablet' : 'desktop');
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return v;
+}
+
+function pickImage(c: TechwearColorOption, v: Viewport): string {
+  if (v === 'mobile') return c.imageMobile || c.imageTablet || c.image;
+  if (v === 'tablet') return c.imageTablet || c.image;
+  return c.image;
+}
+
 const Hex = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="0.5" className={className} aria-hidden="true">
     <polygon points="50,2 95,27 95,73 50,98 5,73 5,27" />
