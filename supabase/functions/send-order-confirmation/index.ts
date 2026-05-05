@@ -421,14 +421,16 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Auth check — reject requests with no Supabase credentials at all.
-  // We accept:
-  //   1. Authenticated users (Bearer JWT from supabase.functions.invoke with a logged-in session)
-  //   2. Anon/guest users (apikey header sent automatically by the Supabase JS SDK)
-  // We reject: raw unauthenticated HTTP requests (no Authorization header AND no apikey).
+  // Auth check — require an Authorization header. We accept:
+  //   1. A user JWT (validated via getClaims) OR
+  //   2. The anon key, BUT in that case we verify server-side that the
+  //      requested orderNumber + customerEmail match an order in the database.
+  // Raw unauthenticated HTTP requests are rejected.
   const authHeader = req.headers.get('Authorization');
   const apiKeyHeader = req.headers.get('apikey');
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
   if (!authHeader && !apiKeyHeader) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -437,16 +439,13 @@ serve(async (req) => {
     });
   }
 
-  // If Bearer token present, validate it belongs to a real user session
+  let isAuthenticatedUser = false;
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.replace('Bearer ', '');
-    // Only validate as user JWT if it's not just the anon key being passed as Bearer
     if (token !== supabaseAnonKey) {
-      const supabaseClient = createClient(
-        Deno.env.get('SUPABASE_URL')!,
-        supabaseAnonKey,
-        { global: { headers: { Authorization: authHeader } } }
-      );
+      const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
       const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
       if (claimsError || !claimsData?.claims) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -454,6 +453,7 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+      isAuthenticatedUser = true;
     }
   }
 
@@ -471,6 +471,23 @@ serve(async (req) => {
         JSON.stringify({ error: 'Missing required fields: customerEmail, orderNumber' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // For unauthenticated callers (guest checkout), verify the order actually exists
+    // with the claimed email — prevents arbitrary forged confirmation emails.
+    if (!isAuthenticatedUser) {
+      const adminDb = createClient(supabaseUrl, serviceRoleKey);
+      const { data: order, error: orderErr } = await adminDb
+        .from('orders')
+        .select('id, customer_email')
+        .eq('order_number', orderNumber)
+        .maybeSingle();
+      if (orderErr || !order || (order.customer_email || '').toLowerCase() !== customerEmail.toLowerCase()) {
+        return new Response(JSON.stringify({ error: 'Order not found or email mismatch' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
 
     let html: string;
