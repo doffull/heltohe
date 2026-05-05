@@ -64,6 +64,7 @@ export function TechwearHeroTab() {
       visibleSizes,
       defaultSize: visibleSizes[0] || cfg.defaultSize,
       ctaPrimary: { ...cfg.ctaPrimary, href: `/boutique/${linkedProduct.id}` },
+      ctaSecondary: { ...cfg.ctaSecondary, href: cfg.ctaSecondary.href && cfg.ctaSecondary.href !== '/boutique' ? cfg.ctaSecondary.href : `/boutique/${linkedProduct.id}` },
     });
     toast.success('Couleurs et tailles synchronisées depuis le produit');
   };
