@@ -11,11 +11,19 @@ import { Badge } from '@/components/ui/badge';
 import { FileDropZone } from '@/components/admin/FileDropZone';
 import { AiImageButton } from '@/components/admin/AiImageButton';
 import { Plus, Trash2, RefreshCw, Sparkles, Eye, EyeOff } from 'lucide-react';
-import type { TechwearHeroConfig, TechwearColorOption } from '@/types';
+import type { TechwearHeroConfig, TechwearColorOption, TechwearBackground } from '@/types';
 import { toast } from 'sonner';
 import { TechwearHero } from '@/components/home/TechwearHero';
 
 const ALL_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+
+const DEFAULT_BG: TechwearBackground = {
+  type: 'gradient',
+  gradientFrom: '#E0E0E0',
+  gradientTo: '#E5E5E5',
+  color: '#EBEBEB',
+  overlayOpacity: 0,
+};
 
 export function TechwearHeroTab() {
   const { designSettings, updateDesignSettings } = useApp();
@@ -191,6 +199,123 @@ export function TechwearHeroTab() {
         </CardContent>
       </Card>
 
+      {/* Background */}
+      <Card>
+        <CardHeader className="pb-3"><CardTitle className="text-sm">Arrière-plan</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          {(() => {
+            const bg = cfg.background || DEFAULT_BG;
+            const setBg = (patch: Partial<TechwearBackground>) =>
+              update({ background: { ...bg, ...patch } });
+            return (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {(['gradient', 'color', 'image', 'video'] as const).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setBg({ type: t })}
+                      className={`px-3 py-2 rounded border text-xs font-medium transition ${
+                        bg.type === t ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-muted'
+                      }`}
+                    >
+                      {t === 'gradient' ? 'Dégradé' : t === 'color' ? 'Couleur' : t === 'image' ? 'Image' : 'Vidéo'}
+                    </button>
+                  ))}
+                </div>
+
+                {bg.type === 'gradient' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Début</Label>
+                      <div className="flex gap-1">
+                        <input type="color" value={bg.gradientFrom || '#E0E0E0'} onChange={(e) => setBg({ gradientFrom: e.target.value })} className="h-9 w-12 rounded border" />
+                        <Input value={bg.gradientFrom || ''} onChange={(e) => setBg({ gradientFrom: e.target.value })} className="h-9 flex-1 font-mono text-xs" />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Fin</Label>
+                      <div className="flex gap-1">
+                        <input type="color" value={bg.gradientTo || '#E5E5E5'} onChange={(e) => setBg({ gradientTo: e.target.value })} className="h-9 w-12 rounded border" />
+                        <Input value={bg.gradientTo || ''} onChange={(e) => setBg({ gradientTo: e.target.value })} className="h-9 flex-1 font-mono text-xs" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {bg.type === 'color' && (
+                  <div className="space-y-1">
+                    <Label className="text-xs">Couleur de fond</Label>
+                    <div className="flex gap-1">
+                      <input type="color" value={bg.color || '#EBEBEB'} onChange={(e) => setBg({ color: e.target.value })} className="h-9 w-12 rounded border" />
+                      <Input value={bg.color || ''} onChange={(e) => setBg({ color: e.target.value })} className="h-9 flex-1 font-mono text-xs" />
+                    </div>
+                  </div>
+                )}
+
+                {(bg.type === 'image' || bg.type === 'video') && (
+                  <div className="space-y-1">
+                    <Label className="text-xs">
+                      {bg.type === 'video' ? 'Vidéo de fond (max 30 Mo, lecture en boucle)' : 'Image de fond'}
+                    </Label>
+                    <FileDropZone
+                      accept={bg.type === 'video' ? ['video'] : ['image']}
+                      folder="techwear-hero-bg"
+                      currentFile={bg.mediaUrl || ''}
+                      onUpload={(url) => setBg({ mediaUrl: url, mediaType: bg.type as 'image' | 'video' })}
+                      label={bg.type === 'video' ? 'Glissez une vidéo (mp4/webm)' : 'Glissez une image'}
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <Label className="text-xs flex justify-between">
+                    <span>Opacité du voile sombre</span>
+                    <span className="font-mono">{Math.round((bg.overlayOpacity ?? 0) * 100)}%</span>
+                  </Label>
+                  <Slider
+                    value={[Math.round((bg.overlayOpacity ?? 0) * 100)]}
+                    min={0} max={80} step={5}
+                    onValueChange={([v]) => setBg({ overlayOpacity: v / 100 })}
+                  />
+                </div>
+              </>
+            );
+          })()}
+        </CardContent>
+      </Card>
+
+      {/* Card sizing & overflow */}
+      <Card>
+        <CardHeader className="pb-3"><CardTitle className="text-sm">Carte produit (taille & débord)</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-1">
+            <Label className="text-xs">Taille de la carte</Label>
+            <div className="grid grid-cols-4 gap-2">
+              {(['sm', 'md', 'lg', 'xl'] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => update({ cardSize: s })}
+                  className={`px-3 py-2 rounded border text-xs font-bold uppercase transition ${
+                    (cfg.cardSize || 'md') === s ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-muted'
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center justify-between rounded border px-3 py-2">
+            <div>
+              <Label className="text-xs">Mannequin déborde de la carte</Label>
+              <p className="text-[10px] text-muted-foreground">Permet d'afficher le modèle entier qui dépasse vers le haut</p>
+            </div>
+            <Switch checked={!!cfg.imageOverflow} onCheckedChange={(v) => update({ imageOverflow: v })} />
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Colors */}
       <Card>
         <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
@@ -215,42 +340,49 @@ export function TechwearHeroTab() {
               </div>
               <div className="md:col-span-5 space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs">Images mannequin (par device)</Label>
+                  <Label className="text-xs">Médias mannequin (image OU vidéo, par device)</Label>
                   <AiImageButton
                     label="Image"
                     defaultPrompt={`Mannequin techwear ${c.name}, fond transparent, plein corps`}
-                    onGenerated={(url) => updateColor(i, { image: url })}
+                    onGenerated={(url) => updateColor(i, { image: url, mediaType: 'image' })}
                   />
                 </div>
                 <div className="grid grid-cols-1 gap-2">
                   <div>
                     <p className="text-[10px] text-muted-foreground mb-1">🖥️ Desktop (par défaut)</p>
                     <FileDropZone
-                      accept={['image']}
+                      accept={['image', 'video']}
                       folder="techwear-hero"
                       currentFile={c.image}
-                      onUpload={(url) => updateColor(i, { image: url })}
-                      label="PNG desktop"
+                      onUpload={(url) => updateColor(i, { image: url, mediaType: /\.(mp4|webm)(\?|$)/i.test(url) ? 'video' : 'image' })}
+                      label="Image PNG ou vidéo MP4 (max 30 Mo)"
                     />
                   </div>
                   <div>
                     <p className="text-[10px] text-muted-foreground mb-1">📱 Tablette (optionnel)</p>
                     <FileDropZone
-                      accept={['image']}
+                      accept={['image', 'video']}
                       folder="techwear-hero"
                       currentFile={c.imageTablet || ''}
-                      onUpload={(url) => updateColor(i, { imageTablet: url })}
-                      label="PNG tablette"
+                      onUpload={(url) => updateColor(i, { imageTablet: url, mediaTypeTablet: /\.(mp4|webm)(\?|$)/i.test(url) ? 'video' : 'image' })}
+                      label="Tablette"
                     />
                   </div>
                   <div>
                     <p className="text-[10px] text-muted-foreground mb-1">📱 Mobile (optionnel)</p>
                     <FileDropZone
-                      accept={['image']}
+                      accept={['image', 'video']}
                       folder="techwear-hero"
                       currentFile={c.imageMobile || ''}
-                      onUpload={(url) => updateColor(i, { imageMobile: url })}
-                      label="PNG mobile"
+                      onUpload={(url) => updateColor(i, { imageMobile: url, mediaTypeMobile: /\.(mp4|webm)(\?|$)/i.test(url) ? 'video' : 'image' })}
+                      label="Mobile"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between rounded border px-2 py-1.5">
+                    <Label className="text-xs">Vidéo en boucle</Label>
+                    <Switch
+                      checked={c.videoLoop !== false}
+                      onCheckedChange={(v) => updateColor(i, { videoLoop: v })}
                     />
                   </div>
                 </div>

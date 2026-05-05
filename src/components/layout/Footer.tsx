@@ -1,6 +1,7 @@
 import { Instagram, Twitter, Youtube, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
+import { BrandLogo } from '@/components/layout/BrandLogo';
 
 const socialIcons: Record<string, React.ElementType> = {
   INSTAGRAM: Instagram,
@@ -23,6 +24,7 @@ export function Footer() {
           {/* Brand */}
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-4">
+              <BrandLogo variant="footer" />
               <div className="hud-text text-sm text-muted-foreground">
                 <span className="text-primary">© {new Date().getFullYear()}</span> {siteName.toUpperCase()}
               </div>
