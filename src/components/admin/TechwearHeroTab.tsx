@@ -92,12 +92,19 @@ export function TechwearHeroTab() {
     const visibleSizes = linkedProduct.sizes?.length ? linkedProduct.sizes : active.visibleSizes;
     update({
       colorOptions,
+      defaultColor: 0,
       visibleSizes,
       defaultSize: visibleSizes[0] || active.defaultSize,
-      ctaPrimary: { ...active.ctaPrimary, href: `/boutique/${linkedProduct.id}` },
-      ctaSecondary: { ...active.ctaSecondary, href: active.ctaSecondary.href && active.ctaSecondary.href !== '/boutique' ? active.ctaSecondary.href : `/boutique/${linkedProduct.id}` },
+      ctaPrimary: {
+        label: active.ctaPrimary?.label || 'ACQUÉRIR',
+        href: `/boutique/${linkedProduct.id}`,
+      },
+      ctaSecondary: {
+        label: active.ctaSecondary?.label || 'DÉTAILS',
+        href: `/boutique/${linkedProduct.id}`,
+      },
     });
-    toast.success('Couleurs et tailles synchronisées depuis le produit');
+    toast.success(`Slide « ${active.name || 'sans nom'} » synchronisée depuis ${linkedProduct.name}`);
   };
 
   const addSlide = () => {
@@ -287,8 +294,9 @@ export function TechwearHeroTab() {
                   {linkedProduct.sizes?.length || 0} taille(s) · {linkedProduct.colors?.length || linkedProduct.colorOptions?.length || 0} couleur(s)
                 </p>
               </div>
-              <Button size="sm" variant="outline" onClick={syncFromProduct} className="gap-1.5">
-                <RefreshCw className="h-3.5 w-3.5" /> Synchroniser
+              <Button size="sm" variant="outline" onClick={syncFromProduct} className="gap-1.5"
+                title="Met à jour couleurs, tailles et CTA de cette slide depuis le produit lié">
+                <RefreshCw className="h-3.5 w-3.5" /> Synchroniser depuis le produit
               </Button>
             </div>
           )}
