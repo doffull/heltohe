@@ -228,7 +228,7 @@ export default function AdminCustomers() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[760px]">
               <thead className="bg-muted/50 border-b border-border">
                 <tr>
                   <th className="p-4 w-10"><Checkbox checked={allSelected} onCheckedChange={toggleAll} /></th>
