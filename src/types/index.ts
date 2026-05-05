@@ -342,6 +342,14 @@ export interface DesignSettings {
   headerTextColor?: string;
   headerFixed?: boolean;
 
+  // Logo customization
+  logoSize?: number;
+  logoBackgroundShape?: 'none' | 'circle' | 'square' | 'triangle' | 'hexagon' | 'diamond' | 'blob';
+  logoBackgroundColor?: string;
+  logoBackgroundPadding?: number;
+  footerLogo?: string;
+  faviconUrl?: string;
+
   // Sidebar delay (ms) - legacy
   sidebarDelay?: number;
 
