@@ -123,6 +123,7 @@ function SidebarContent({ user, signOut, location, sectionColors, allowedHrefs, 
             <Link
               key={item.href}
               to={item.href}
+              onClick={onNavigate}
               className={cn(
                 "flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-all group text-sm",
                 isActive 
