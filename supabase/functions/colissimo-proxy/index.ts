@@ -51,6 +51,20 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
+    // Admin role required for everything except the public relay-point lookup used by checkout.
+    if (action !== 'getRelayPoints') {
+      const { data: isAdmin } = await supabase.rpc('has_role', {
+        _user_id: claimsData.claims.sub,
+        _role: 'admin',
+      });
+      if (!isAdmin) {
+        return new Response(JSON.stringify({ error: 'Forbidden: admin role required' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // ─── ACTION: TEST CONNECTION ──────────────────────────────────────────────
     if (action === 'testConnection') {
       const now = new Date();
