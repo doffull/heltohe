@@ -127,10 +127,10 @@ export default function AdminChatbot() {
       </div>
 
       <Tabs defaultValue="personality">
-        <TabsList className="bg-muted/50">
-          <TabsTrigger value="personality" className="gap-2"><Bot className="h-4 w-4" />Personnalité</TabsTrigger>
-          <TabsTrigger value="suggestions" className="gap-2"><MessageSquare className="h-4 w-4" />Suggestions</TabsTrigger>
-          <TabsTrigger value="stats" className="gap-2"><BarChart2 className="h-4 w-4" />Statistiques</TabsTrigger>
+        <TabsList className="bg-muted/50 w-full overflow-x-auto justify-start">
+          <TabsTrigger value="personality" className="gap-2 text-xs sm:text-sm"><Bot className="h-4 w-4" />Personnalité</TabsTrigger>
+          <TabsTrigger value="suggestions" className="gap-2 text-xs sm:text-sm"><MessageSquare className="h-4 w-4" />Suggestions</TabsTrigger>
+          <TabsTrigger value="stats" className="gap-2 text-xs sm:text-sm"><BarChart2 className="h-4 w-4" />Statistiques</TabsTrigger>
         </TabsList>
 
         {/* PERSONALITY */}
