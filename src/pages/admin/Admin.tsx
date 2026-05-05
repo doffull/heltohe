@@ -89,6 +89,10 @@ const SIDEBAR_ITEMS = [
   { icon: Settings, label: 'Paramètres', href: '/admin/parametres' },
 ];
 
+// Routes accessibles selon les rôles non-admin
+const STOCK_MANAGER_ROUTES = new Set(['/admin', '/admin/commandes', '/admin/preparations', '/admin/stock']);
+const PREPARATOR_ROUTES = new Set(['/admin/preparations']);
+
 function getActiveHref(pathname: string): string {
   if (pathname === '/admin') return '/admin';
   const match = SIDEBAR_ITEMS.find(item => item.href !== '/admin' && pathname.startsWith(item.href));
