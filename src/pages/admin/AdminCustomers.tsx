@@ -292,7 +292,7 @@ export default function AdminCustomers() {
                 </Select>
               </div>
               <div><Label className="hud-text text-xs">Points de fidélité</Label><p className="text-2xl font-bold">{selectedCustomer.loyaltyPoints} pts</p></div>
-              <RoleManager userId={selectedCustomer.userId} />
+              <RoleManager userId={selectedCustomer.userId} customerEmail={selectedCustomer.email} customerName={`${selectedCustomer.firstName} ${selectedCustomer.lastName}`.trim()} />
 
               <div className="pt-2 border-t border-border">
                 <Button variant="outline" className="w-full" onClick={() => window.location.href = `mailto:${selectedCustomer.email}`}>
