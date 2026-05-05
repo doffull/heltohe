@@ -89,13 +89,17 @@ const SIDEBAR_ITEMS = [
   { icon: Settings, label: 'Paramètres', href: '/admin/parametres' },
 ];
 
+// Routes accessibles selon les rôles non-admin
+const STOCK_MANAGER_ROUTES = new Set(['/admin', '/admin/commandes', '/admin/preparations', '/admin/stock']);
+const PREPARATOR_ROUTES = new Set(['/admin/preparations']);
+
 function getActiveHref(pathname: string): string {
   if (pathname === '/admin') return '/admin';
   const match = SIDEBAR_ITEMS.find(item => item.href !== '/admin' && pathname.startsWith(item.href));
   return match?.href || '/admin';
 }
 
-function SidebarContent({ user, signOut, location, sectionColors }: { user: any; signOut: () => void; location: any; sectionColors: Record<string, string> }) {
+function SidebarContent({ user, signOut, location, sectionColors, allowedHrefs }: { user: any; signOut: () => void; location: any; sectionColors: Record<string, string>; allowedHrefs: Set<string> }) {
   const activeHref = getActiveHref(location.pathname);
 
   return (
@@ -111,7 +115,7 @@ function SidebarContent({ user, signOut, location, sectionColors }: { user: any;
       </div>
 
       <nav className="flex-1 p-3 lg:p-4 space-y-0.5 overflow-y-auto">
-        {SIDEBAR_ITEMS.map((item) => {
+        {SIDEBAR_ITEMS.filter(i => allowedHrefs.has(i.href)).map((item) => {
           const isActive = activeHref === item.href;
           const color = sectionColors[item.href] || DEFAULT_SECTION_COLORS[item.href] || '#6B7280';
           
@@ -161,7 +165,7 @@ function SidebarContent({ user, signOut, location, sectionColors }: { user: any;
 
 export default function Admin() {
   const location = useLocation();
-  const { user, isAdmin, isLoading, signOut } = useAuth();
+  const { user, isAdmin, isStockManager, isPreparator, hasAdminPanelAccess, isLoading, signOut } = useAuth();
   const { data: designSettings } = useDesignSettings();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -169,6 +173,14 @@ export default function Admin() {
     ...DEFAULT_SECTION_COLORS,
     ...((designSettings as any)?.admin_section_colors || {}),
   };
+
+  const allowedHrefs: Set<string> = isAdmin
+    ? new Set(SIDEBAR_ITEMS.map(i => i.href))
+    : isStockManager
+      ? STOCK_MANAGER_ROUTES
+      : isPreparator
+        ? PREPARATOR_ROUTES
+        : new Set();
 
   const activeHref = getActiveHref(location.pathname);
   const activeColor = sectionColors[activeHref] || '#6B7280';
@@ -185,13 +197,18 @@ export default function Admin() {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
-  if (!isAdmin) return <Navigate to="/" replace />;
+  if (!hasAdminPanelAccess) return <Navigate to="/" replace />;
+  // Si la route active n'est pas autorisée pour ce rôle, rediriger vers la première autorisée
+  if (!allowedHrefs.has(activeHref)) {
+    const fallback = Array.from(allowedHrefs)[0] || '/';
+    if (fallback !== location.pathname) return <Navigate to={fallback} replace />;
+  }
 
   return (
     <div className="min-h-screen bg-background flex">
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex fixed left-0 top-0 h-full w-60 bg-card border-r border-border flex-col z-50">
-        <SidebarContent user={user} signOut={signOut} location={location} sectionColors={sectionColors} />
+        <SidebarContent user={user} signOut={signOut} location={location} sectionColors={sectionColors} allowedHrefs={allowedHrefs} />
       </aside>
 
       {/* Mobile Header */}
@@ -203,7 +220,7 @@ export default function Admin() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-64 p-0 flex flex-col">
-            <SidebarContent user={user} signOut={signOut} location={location} sectionColors={sectionColors} />
+            <SidebarContent user={user} signOut={signOut} location={location} sectionColors={sectionColors} allowedHrefs={allowedHrefs} />
           </SheetContent>
         </Sheet>
         <Shield className="h-5 w-5 text-primary" />

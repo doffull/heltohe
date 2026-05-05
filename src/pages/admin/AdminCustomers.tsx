@@ -26,15 +26,29 @@ const TIER_COLORS: Record<string, string> = {
   platinum: 'bg-purple-500/20 text-purple-500',
 };
 
-type AppRole = 'admin' | 'stock_manager' | 'preparator';
+import { ROLE_LABELS, ROLE_COLORS, useAllUserRoles, type AppRole } from '@/hooks/useUserRoles';
+import { useQueryClient } from '@tanstack/react-query';
+
 const MANAGEABLE_ROLES: { value: AppRole; label: string }[] = [
   { value: 'stock_manager', label: 'Responsable stock' },
   { value: 'preparator', label: 'Préparateur' },
   { value: 'admin', label: 'Admin' },
 ];
 
-function RoleManager({ userId }: { userId: string }) {
+function RoleBadges({ roles }: { roles: AppRole[] }) {
+  if (!roles || roles.length === 0) return <span className="text-xs text-muted-foreground">—</span>;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {roles.map(r => (
+        <span key={r} className={`text-[10px] px-1.5 py-0.5 rounded border uppercase font-bold ${ROLE_COLORS[r]}`}>{ROLE_LABELS[r]}</span>
+      ))}
+    </div>
+  );
+}
+
+function RoleManager({ userId, customerEmail, customerName }: { userId: string; customerEmail: string; customerName: string }) {
   const { toast } = useToast();
+  const qc = useQueryClient();
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -51,12 +65,19 @@ function RoleManager({ userId }: { userId: string }) {
     if (checked) {
       const { error } = await supabase.from('user_roles').insert({ user_id: userId, role });
       if (error) { toast({ title: 'Erreur', description: error.message, variant: 'destructive' }); return; }
+      // Notification email (best-effort)
+      supabase.functions.invoke('send-order-notification', {
+        body: { notificationType: 'role_assigned', userId, role, customerEmail, customerName },
+      }).catch(() => {});
+      toast({ title: 'Rôle attribué', description: 'Notification envoyée par email.' });
     } else {
       const { error } = await supabase.from('user_roles').delete().eq('user_id', userId).eq('role', role);
       if (error) { toast({ title: 'Erreur', description: error.message, variant: 'destructive' }); return; }
+      toast({ title: 'Rôle retiré' });
     }
-    toast({ title: 'Rôle mis à jour' });
     load();
+    qc.invalidateQueries({ queryKey: ['all-user-roles'] });
+    qc.invalidateQueries({ queryKey: ['role-audit-log'] });
   };
 
   return (
@@ -79,6 +100,7 @@ function RoleManager({ userId }: { userId: string }) {
 export default function AdminCustomers() {
   const { toast } = useToast();
   const { data: customers = [], isLoading } = useCustomers();
+  const { data: rolesByUser } = useAllUserRoles();
   const updateCustomer = useUpdateCustomer();
   const bulkDelete = useBulkDeleteCustomers();
   const [searchQuery, setSearchQuery] = useState('');
@@ -212,6 +234,7 @@ export default function AdminCustomers() {
                   <th className="p-4 w-10"><Checkbox checked={allSelected} onCheckedChange={toggleAll} /></th>
                   <th className="text-left p-4 text-xs font-bold hud-text">CLIENT</th>
                   <th className="text-left p-4 text-xs font-bold hud-text">EMAIL</th>
+                  <th className="text-left p-4 text-xs font-bold hud-text">RÔLES</th>
                   <th className="text-left p-4 text-xs font-bold hud-text">NIVEAU</th>
                   <th className="text-right p-4 text-xs font-bold hud-text">POINTS</th>
                   <th className="text-right p-4 text-xs font-bold hud-text">TOTAL DÉPENSÉ</th>
@@ -227,6 +250,7 @@ export default function AdminCustomers() {
                       <p className="text-xs text-muted-foreground">Depuis {new Date(customer.createdAt).toLocaleDateString('fr-FR')}</p>
                     </td>
                     <td className="p-4 text-sm">{customer.email}</td>
+                    <td className="p-4"><RoleBadges roles={rolesByUser?.get(customer.userId) || []} /></td>
                     <td className="p-4">
                       <span className={`text-xs px-2 py-1 rounded uppercase ${TIER_COLORS[customer.loyaltyTier] || ''}`}>{customer.loyaltyTier}</span>
                     </td>
@@ -249,7 +273,10 @@ export default function AdminCustomers() {
       {/* Detail Dialog */}
       <Dialog open={!!selectedCustomer} onOpenChange={() => setSelectedCustomer(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle className="hud-text">DÉTAILS CLIENT</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle className="hud-text">DÉTAILS CLIENT</DialogTitle>
+            {selectedCustomer && <RoleBadges roles={rolesByUser?.get(selectedCustomer.userId) || []} />}
+          </DialogHeader>
           {selectedCustomer && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -271,7 +298,7 @@ export default function AdminCustomers() {
                 </Select>
               </div>
               <div><Label className="hud-text text-xs">Points de fidélité</Label><p className="text-2xl font-bold">{selectedCustomer.loyaltyPoints} pts</p></div>
-              <RoleManager userId={selectedCustomer.userId} />
+              <RoleManager userId={selectedCustomer.userId} customerEmail={selectedCustomer.email} customerName={`${selectedCustomer.firstName} ${selectedCustomer.lastName}`.trim()} />
 
               <div className="pt-2 border-t border-border">
                 <Button variant="outline" className="w-full" onClick={() => window.location.href = `mailto:${selectedCustomer.email}`}>

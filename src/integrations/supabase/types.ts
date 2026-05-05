@@ -1943,6 +1943,18 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles_with_email: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          first_name: string | null
+          id: string | null
+          last_name: string | null
+          role: Database["public"]["Enums"]["app_role"] | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       consume_order_stock: { Args: { p_order_id: string }; Returns: Json }
