@@ -280,9 +280,13 @@ export function MainLayout({ children }: MainLayoutProps) {
             </nav>
 
             {/* Actions */}
-            <div className="flex items-center gap-4 ml-auto">
-              {/* Search - Expandable */}
-              <div className={`hidden md:flex items-center transition-all duration-300 ${searchOpen ? 'w-64' : 'w-10'}`}>
+            <div className={cn("flex items-center ml-auto", sidebarActive ? "gap-1 xl:gap-2" : "gap-2 lg:gap-3")}>
+              {/* Search - Expandable (hidden when sidebar pushes header) */}
+              <div className={cn(
+                "items-center transition-all duration-300",
+                searchOpen ? 'w-48 xl:w-64' : 'w-10',
+                sidebarActive ? "hidden xl:flex" : "hidden md:flex"
+              )}>
                 {searchOpen ? (
                   <div className="relative w-full">
                     <Input 
@@ -292,25 +296,28 @@ export function MainLayout({ children }: MainLayoutProps) {
                       autoFocus
                       onBlur={() => setSearchOpen(false)}
                     />
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="absolute right-0 top-0"
-                      onClick={() => setSearchOpen(false)}
-                    >
+                    <Button variant="ghost" size="icon" className="absolute right-0 top-0" onClick={() => setSearchOpen(false)}>
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                 ) : (
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={() => setSearchOpen(true)}
-                  >
+                  <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)}>
                     <Search className="h-5 w-5" />
                   </Button>
                 )}
               </div>
+
+              {/* Chatbot trigger */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setChatOpen(true)}
+                className="gap-1.5 px-2 lg:px-3"
+                title="Assistant"
+              >
+                <Bot className="h-5 w-5" />
+                <span className="hidden xl:inline text-xs font-medium uppercase tracking-wider">Aide</span>
+              </Button>
 
               {/* Cart */}
               <Link to="/panier">
@@ -343,7 +350,10 @@ export function MainLayout({ children }: MainLayoutProps) {
               {/* Language selector */}
               <button
                 onClick={() => setLanguage(language === 'FR' ? 'EN' : 'FR')}
-                className="text-xs font-bold tracking-wider text-muted-foreground hover:text-foreground transition-colors hidden md:block"
+                className={cn(
+                  "text-xs font-bold tracking-wider text-muted-foreground hover:text-foreground transition-colors",
+                  sidebarActive ? "hidden xl:block" : "hidden md:block"
+                )}
               >
                 {language}
               </button>
