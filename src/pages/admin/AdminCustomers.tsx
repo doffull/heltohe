@@ -250,6 +250,7 @@ export default function AdminCustomers() {
                       <p className="text-xs text-muted-foreground">Depuis {new Date(customer.createdAt).toLocaleDateString('fr-FR')}</p>
                     </td>
                     <td className="p-4 text-sm">{customer.email}</td>
+                    <td className="p-4"><RoleBadges roles={rolesByUser?.get(customer.userId) || []} /></td>
                     <td className="p-4">
                       <span className={`text-xs px-2 py-1 rounded uppercase ${TIER_COLORS[customer.loyaltyTier] || ''}`}>{customer.loyaltyTier}</span>
                     </td>
