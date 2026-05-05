@@ -1675,8 +1675,8 @@ export default function AdminColissimo() {
           <Truck className="h-6 w-6 text-primary" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold">Colissimo</h1>
-          <p className="text-muted-foreground text-sm">Gestion des expéditions, bordereaux, points relais et étiquettes</p>
+          <h1 className="text-xl lg:text-3xl font-bold hud-text">COLISSIMO</h1>
+          <p className="text-muted-foreground text-xs lg:text-sm">Expéditions, bordereaux, points relais et étiquettes</p>
         </div>
       </div>
 
