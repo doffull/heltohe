@@ -16,6 +16,7 @@ import { PromoCountdown } from '@/components/home/PromoCountdown';
 import { LoyaltyBanner } from '@/components/home/LoyaltyBanner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { TechwearHero } from '@/components/home/TechwearHero';
+import { HeroSlider } from '@/components/home/HeroSlider';
 
 const PLACEHOLDER = '/placeholder.svg';
 
