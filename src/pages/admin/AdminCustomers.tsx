@@ -234,6 +234,7 @@ export default function AdminCustomers() {
                   <th className="p-4 w-10"><Checkbox checked={allSelected} onCheckedChange={toggleAll} /></th>
                   <th className="text-left p-4 text-xs font-bold hud-text">CLIENT</th>
                   <th className="text-left p-4 text-xs font-bold hud-text">EMAIL</th>
+                  <th className="text-left p-4 text-xs font-bold hud-text">RÔLES</th>
                   <th className="text-left p-4 text-xs font-bold hud-text">NIVEAU</th>
                   <th className="text-right p-4 text-xs font-bold hud-text">POINTS</th>
                   <th className="text-right p-4 text-xs font-bold hud-text">TOTAL DÉPENSÉ</th>
