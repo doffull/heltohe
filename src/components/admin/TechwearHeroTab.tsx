@@ -92,12 +92,19 @@ export function TechwearHeroTab() {
     const visibleSizes = linkedProduct.sizes?.length ? linkedProduct.sizes : active.visibleSizes;
     update({
       colorOptions,
+      defaultColor: 0,
       visibleSizes,
       defaultSize: visibleSizes[0] || active.defaultSize,
-      ctaPrimary: { ...active.ctaPrimary, href: `/boutique/${linkedProduct.id}` },
-      ctaSecondary: { ...active.ctaSecondary, href: active.ctaSecondary.href && active.ctaSecondary.href !== '/boutique' ? active.ctaSecondary.href : `/boutique/${linkedProduct.id}` },
+      ctaPrimary: {
+        label: active.ctaPrimary?.label || 'ACQUÉRIR',
+        href: `/boutique/${linkedProduct.id}`,
+      },
+      ctaSecondary: {
+        label: active.ctaSecondary?.label || 'DÉTAILS',
+        href: `/boutique/${linkedProduct.id}`,
+      },
     });
-    toast.success('Couleurs et tailles synchronisées depuis le produit');
+    toast.success(`Slide « ${active.name || 'sans nom'} » synchronisée depuis ${linkedProduct.name}`);
   };
 
   const addSlide = () => {
