@@ -276,14 +276,20 @@ function HeroSliderTab() {
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
-                    <Label className="text-xs font-medium mb-1.5 block text-blue-400/80">🏔 Fond (lent)</Label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <Label className="text-xs font-medium block text-blue-400/80">🏔 Fond (lent)</Label>
+                      <AiImageButton
+                        label="Image de fond"
+                        defaultPrompt={slide.title ? `${slide.title} — ambiance hero` : ''}
+                        onGenerated={(url) => updateSlide(index, { backgroundMedia: url, media: url, mediaType: 'image' })}
+                      />
+                    </div>
                     <FileDropZone
                       accept={['image', 'video']}
                       folder="hero/background"
                       currentFile={slide.backgroundMedia || slide.media || ''}
                       onUpload={(url) => {
                         if (!url) {
-                          // Clear both fields when removing
                           updateSlide(index, { backgroundMedia: '', media: '', mediaType: 'image' });
                         } else {
                           const isVid = /\.(mp4|webm|mov|ogg)$/i.test(url);
@@ -294,7 +300,13 @@ function HeroSliderTab() {
                     />
                   </div>
                   <div>
-                    <Label className="text-xs font-medium mb-1.5 block text-emerald-400/80">🌿 Intermédiaire</Label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <Label className="text-xs font-medium block text-emerald-400/80">🌿 Intermédiaire</Label>
+                      <AiImageButton
+                        label="Décor intermédiaire"
+                        onGenerated={(url) => updateSlide(index, { midgroundMedia: url })}
+                      />
+                    </div>
                     <FileDropZone
                       accept={['image']}
                       folder="hero/midground"
@@ -304,7 +316,13 @@ function HeroSliderTab() {
                     />
                   </div>
                   <div>
-                    <Label className="text-xs font-medium mb-1.5 block text-amber-400/80">✨ Premier plan</Label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <Label className="text-xs font-medium block text-amber-400/80">✨ Premier plan</Label>
+                      <AiImageButton
+                        label="Sujet premier plan"
+                        onGenerated={(url) => updateSlide(index, { foregroundMedia: url })}
+                      />
+                    </div>
                     <FileDropZone
                       accept={['image']}
                       folder="hero/foreground"
