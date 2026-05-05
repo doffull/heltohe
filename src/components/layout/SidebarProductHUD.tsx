@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { forwardRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
 import { useSidebarOptional } from '@/context/SidebarContext';
@@ -12,7 +12,7 @@ const DEFAULT_STATS = [
   { label: 'Tendance', value: 92 },
 ];
 
-function ProductSlide({ product, designSettings }: { product: Product; designSettings: any }) {
+const ProductSlide = forwardRef<HTMLDivElement, { product: Product; designSettings: any }>(function ProductSlide({ product, designSettings }, _ref) {
   const navigate = useNavigate();
   const [galleryIndex, setGalleryIndex] = useState(0);
 
@@ -119,7 +119,7 @@ function ProductSlide({ product, designSettings }: { product: Product; designSet
       )}
     </div>
   );
-}
+});
 
 function BrandBlock({ designSettings }: { designSettings: any }) {
   const brandName = designSettings.sidebarBrandName;
