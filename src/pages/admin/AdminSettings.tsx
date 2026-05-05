@@ -201,7 +201,7 @@ export default function AdminSettings() {
         <TabsContent value="customization" className="space-y-4">
           <div className="chamfer-hud bg-card/50 p-6 space-y-6">
             <h3 className="text-lg font-bold hud-text">TYPOGRAPHIE</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="hud-text text-xs">Police des titres</Label>
                 <select
@@ -332,7 +332,7 @@ export default function AdminSettings() {
         <TabsContent value="general" className="space-y-4">
           <div className="chamfer-hud bg-card/50 p-6 space-y-6">
             <h3 className="text-lg font-bold hud-text">INFORMATIONS DU SITE</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="hud-text text-xs">Nom du site</Label>
                 <Input
