@@ -219,54 +219,28 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const applyPromoCode = useCallback(async (code: string): Promise<{ success: boolean; discount: number; message: string }> => {
     try {
-      const { data, error } = await supabase
-        .from('promo_codes')
-        .select('*')
-        .eq('code', code.toUpperCase())
-        .eq('is_active', true)
-        .single();
+      const { data, error } = await supabase.rpc('preview_promo_code' as any, {
+        p_code: code,
+        p_subtotal: subtotal,
+      });
 
       if (error || !data) {
         return { success: false, discount: 0, message: 'Code promo invalide' };
       }
 
-      // Check if code has expired
-      if (data.expires_at && new Date(data.expires_at) < new Date()) {
-        return { success: false, discount: 0, message: 'Ce code promo a expiré' };
+      const result = data as { success: boolean; discount?: number; message?: string };
+      if (!result.success) {
+        return { success: false, discount: 0, message: result.message || 'Code promo invalide' };
       }
 
-      // Check minimum purchase
-      if (data.min_purchase && subtotal < data.min_purchase) {
-        return { 
-          success: false, 
-          discount: 0, 
-          message: `Montant minimum requis: ${data.min_purchase}€` 
-        };
-      }
-
-      // Check usage limit
-      if (data.usage_limit && data.usage_count >= data.usage_limit) {
-        return { success: false, discount: 0, message: 'Ce code promo a atteint sa limite d\'utilisation' };
-      }
-
-      // Calculate discount
-      let discount = 0;
-      if (data.type === 'percentage') {
-        discount = subtotal * (data.value / 100);
-        if (data.max_discount) {
-          discount = Math.min(discount, data.max_discount);
-        }
-      } else if (data.type === 'fixed_amount') {
-        discount = data.value;
-      }
-
+      const discount = Number(result.discount || 0);
       setPromoDiscount(discount);
       setPromoCode(code.toUpperCase());
 
-      return { 
-        success: true, 
-        discount, 
-        message: `Code appliqué! -${discount.toFixed(2)}€` 
+      return {
+        success: true,
+        discount,
+        message: result.message || `Code appliqué! -${discount.toFixed(2)}€`,
       };
     } catch (err) {
       return { success: false, discount: 0, message: 'Erreur lors de l\'application du code' };
