@@ -478,7 +478,7 @@ function LogoTab() {
                 <img src={designSettings.hudLogo} alt="Logo" className="h-12 w-auto object-contain max-w-[160px]" />
               </div>
               {/* Light background preview */}
-              <div className="rounded-lg p-6 flex items-center justify-center bg-white border border-border">
+              <div className="rounded-lg p-6 flex items-center justify-center bg-muted border border-border">
                 <img src={designSettings.hudLogo} alt="Logo" className="h-12 w-auto object-contain max-w-[160px]" />
               </div>
             </div>
