@@ -208,7 +208,7 @@ export default function Admin() {
     <div className="min-h-screen bg-background flex">
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex fixed left-0 top-0 h-full w-60 bg-card border-r border-border flex-col z-50">
-        <SidebarContent user={user} signOut={signOut} location={location} sectionColors={sectionColors} />
+        <SidebarContent user={user} signOut={signOut} location={location} sectionColors={sectionColors} allowedHrefs={allowedHrefs} />
       </aside>
 
       {/* Mobile Header */}
@@ -220,7 +220,7 @@ export default function Admin() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-64 p-0 flex flex-col">
-            <SidebarContent user={user} signOut={signOut} location={location} sectionColors={sectionColors} />
+            <SidebarContent user={user} signOut={signOut} location={location} sectionColors={sectionColors} allowedHrefs={allowedHrefs} />
           </SheetContent>
         </Sheet>
         <Shield className="h-5 w-5 text-primary" />
