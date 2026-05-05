@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCustomers, useUpdateCustomer, useBulkDeleteCustomers, CustomerRecord } from '@/hooks/useCustomers';
+import { supabase } from '@/integrations/supabase/client';
+import { Shield } from 'lucide-react';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
