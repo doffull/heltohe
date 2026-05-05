@@ -1,148 +1,111 @@
-# Plan global — Hero Techwear v2 + Logo global
+## Objectif
 
-## 1. Robustesse Hero Techwear (anti écran blanc)
+Aujourd'hui `techwearHero` est **une seule configuration**. Vous voulez pouvoir créer **plusieurs slides Hero Techwear**, et pour **chaque slide** retrouver l'intégralité des fonctionnalités (produit lié, image, arrière-plan, carte produit, couleurs, tailles affichées, statistiques, badge modèle, CTA, etc.) — comme un vrai slider défilant en boucle sur la home.
 
-### 1.1 Logging explicite
-**`src/components/home/TechwearHero.tsx`** : wrapper `try/catch` autour du merge cfg + `console.error('[TechwearHero] cfg invalide', { champ, valeurReçue, cfg })` pour identifier le champ fautif.
+## Architecture proposée
 
-### 1.2 Error Boundary + Fallback UI
-**Nouveau** `src/components/home/HeroErrorBoundary.tsx` (class component) — capture toute erreur du sous-arbre, affiche un fallback minimal (titre + CTA "SHOP NOW" → /boutique) et logge l'erreur. Wrap `<TechwearHero>` et `<HeroSlider>` dans `Home.tsx`.
+### 1. Modèle de données (compatible existant)
 
-### 1.3 Tests unitaires defensive
-**`src/components/home/__tests__/TechwearHero.test.tsx`** : ajouter cas
-- cfg avec `colorOptions: null`, `stats: null`, `visibleSizes: null`, `modelBadge: null`, `ctaPrimary: null` → ne plante pas, rend les valeurs par défaut
-- cfg `{ enabled: true }` vide → rend OK
-- Error Boundary : composant qui throw → fallback affiché
+Étendre `TechwearHeroConfig` pour qu'il devienne un **conteneur de slides** :
 
-### 1.4 Validation DB (trigger)
-**Migration SQL** : trigger `BEFORE UPDATE` sur `design_settings` qui, pour `techwear_hero`, remplace les sous-champs `null` par les defaults JSONB (via `COALESCE` sur chaque clé : `colorOptions`, `stats`, `visibleSizes`, `modelBadge`, `ctaPrimary`, `ctaSecondary`).
-
----
-
-## 2. Hero Techwear : Vidéos, Background, Modèle entier
-
-### 2.1 Types (`src/types/index.ts`)
 ```ts
-TechwearColorOption: + mediaType?: 'image'|'video', mediaTablet?, mediaMobile?,
-                     videoLoop?, videoMuted?, videoAutoplay?
-TechwearHeroConfig: + background: { type: 'gradient'|'color'|'image'|'video',
-                                    color?, gradientFrom?, gradientTo?,
-                                    mediaUrl?, mediaType?, overlayOpacity? },
-                    + cardSize: 'sm'|'md'|'lg'|'xl',
-                    + imageOverflow: boolean (modèle dépasse la card)
+interface TechwearHeroConfig {
+  enabled: boolean;
+  // Réglages slider globaux
+  autoplay?: boolean;
+  intervalMs?: number;        // défaut 6000
+  transition?: 'fade'|'slide';
+  showArrows?: boolean;
+  showDots?: boolean;
+  // Liste des slides — chacune = ancienne config complète
+  slides: TechwearHeroSlide[];
+}
+
+interface TechwearHeroSlide {
+  id: string;                 // uuid
+  name?: string;              // libellé admin "Slide 1"
+  productId: string | null;
+  modelBadge: { line1; line2 };
+  ctaPrimary: { label; href };
+  ctaSecondary: { label; href };
+  stats: { label; value }[];
+  visibleSizes: string[];
+  defaultSize: string;
+  colorOptions: TechwearColorOption[]; // (avec mediaType image|video, loop)
+  defaultColor: number;
+  imageFit: 'cover'|'contain';
+  imagePosition: string;
+  showStats; showColors; showSizes; showModelBadge: boolean;
+  background: TechwearBackground;       // gradient/color/image/video + overlay
+  cardSize: 'sm'|'md'|'lg'|'xl';
+  imageOverflow: boolean;
+}
 ```
 
-### 2.2 Rendu (`TechwearHero.tsx` + `home-techwear.css`)
-- Helper `pickMedia(color, viewport)` → URL + type selon device
-- Si `mediaType === 'video'` → balise `<video autoplay muted loop playsinline>`
-- Couche absolue `.hw-bg` rendue selon `background.type` (gradient CSS / couleur / `<img>` / `<video>`) + overlay sombre selon `overlayOpacity`
-- Card : `data-overflow="true"` → `overflow: visible` + image mannequin `max-height: 115%`, `transform: translateY(-7%)`
-- `data-size="sm|md|lg|xl"` → variantes hauteur
+**Migration douce** : si la BDD contient l'ancien format (sans `slides`), on l'enveloppe automatiquement en `{ enabled, slides: [<ancienConfig>] }` au chargement (dans `useDesignSettings`), zéro perte de données.
 
-### 2.3 Admin (`TechwearHeroTab.tsx`)
-- Nouvel onglet **Background** : sélecteur type, color pickers (gradient from/to), `FileDropZone` image OU vidéo (max 30 Mo), slider opacité overlay
-- Nouvel onglet **Carte** : sélecteur taille (sm/md/lg/xl), toggle "Mannequin déborde de la carte"
-- Par couleur : 3 zones upload (desktop / tablet / mobile) acceptant image OU vidéo + toggle "Boucle"
+### 2. Migration SQL
 
-### 2.4 Upload vidéo (`useFileUpload.ts`)
-- Paramètre `accept?: 'image'|'video'|'all'`
-- `maxSizeMB={30}` pour vidéos, validation MIME
+- Mettre à jour le `DEFAULT` de `design_settings.techwear_hero` pour inclure un tableau `slides`.
+- Adapter le trigger `sanitize_techwear_hero` pour :
+  - convertir l'ancien format en nouveau si `slides` absent ;
+  - garantir `slides` = array, et pour chaque slide, sanitiser `colorOptions`/`stats`/`visibleSizes`/`modelBadge`/`ctaPrimary`/`ctaSecondary` (mêmes règles qu'aujourd'hui mais par slide).
 
----
+### 3. Front — `TechwearHero.tsx`
 
-## 3. Hero Techwear par Catégorie
+Refonte en **slider** :
+- Si `slides.length === 0` → ne rien afficher.
+- Si `slides.length === 1` → rendre la slide unique (comportement actuel).
+- Si `slides.length > 1` → carrousel avec autoplay, fade/slide, flèches, dots, pause au hover.
+- Chaque slide est rendue par un sous-composant `TechwearHeroSlide` qui reprend tout le rendu actuel (background, carte, mannequin, stats, sélecteurs couleurs/tailles, badge, CTA).
+- Gardé sous `HeroErrorBoundary` (déjà en place).
 
-### 3.1 Migration SQL — nouvelle table
-```sql
-CREATE TABLE category_hero_settings (
-  id uuid PK, category_id uuid REFERENCES categories(id) ON DELETE CASCADE UNIQUE,
-  config jsonb NOT NULL DEFAULT '{}'::jsonb,
-  enabled boolean DEFAULT false,
-  created_at, updated_at
-);
-ALTER TABLE ... ENABLE RLS;
--- Policy: anon SELECT (enabled=true) ; admin ALL
-```
+### 4. Admin — `TechwearHeroTab.tsx`
 
-### 3.2 Hooks
-- `src/hooks/useCategoryHero.ts` : `useCategoryHero(categoryId)` (read public) + `useUpdateCategoryHero` (mutation admin)
+Refonte UI en deux niveaux :
 
-### 3.3 Affichage (`CategoryPageRouter.tsx`)
-- Si `category_hero_settings.enabled` pour la catégorie → render `<TechwearHero overrideConfig={config} />` AVANT `<CategoryHeader>` (ou en remplacement)
-- Prop `overrideConfig?: TechwearHeroConfig` ajoutée à `TechwearHero`
+**Niveau slider (en haut)** :
+- Switch "Hero activé"
+- Réglages globaux : autoplay, vitesse (slider), transition, flèches, dots
+- Liste des slides avec drag-to-reorder, bouton "+ Ajouter une slide", bouton dupliquer, supprimer, voir/masquer
 
-### 3.4 Admin
-- Nouvelle section dans `AdminCategories.tsx` (ou nouvel onglet AdminDesign) : sélecteur de catégorie + même UI que TechwearHeroTab (composant réutilisé)
+**Niveau slide (édition)** : on sélectionne une slide et on retrouve **exactement les onglets actuels** appliqués à CETTE slide :
+- Onglet Produit (productId + sync)
+- Onglet Image / Mannequin (médias par couleur, image/vidéo + loop)
+- Onglet Arrière-plan (gradient/color/image/video + overlay)
+- Onglet Carte (cardSize, imageOverflow)
+- Onglet Couleurs (liste éditable)
+- Onglet Tailles (visibleSizes, defaultSize)
+- Onglet Stats (3 barres)
+- Onglet Badge & CTA (modelBadge, ctaPrimary, ctaSecondary)
+- Onglet Affichage (toggles showStats/Colors/Sizes/ModelBadge, imageFit, imagePosition)
 
----
+Aperçu live de la slide en cours d'édition (mini `<TechwearHero overrideSlideIds={[id]} />`).
 
-## 4. Logo global : taille, forme background, favicon, footer
+### 5. Hooks / contexte
 
-### 4.1 Migration SQL — nouvelles colonnes `design_settings`
-```sql
-ALTER TABLE design_settings ADD COLUMN
-  logo_size integer DEFAULT 40,                  -- 24-120 px
-  logo_background_shape text DEFAULT 'none',     -- none|circle|square|triangle|hexagon|blob
-  logo_background_color text DEFAULT '',
-  logo_background_padding integer DEFAULT 8;
-```
+- `useDesignSettings.ts` : ajouter la normalisation ancien→nouveau format au mapping snake_case ↔ camelCase.
+- `homeConfig.ts` : `DEFAULT_TECHWEAR_HERO` retourne `{ enabled:false, slides:[<DEFAULT_SLIDE>] }`.
 
-### 4.2 Types & hook
-- `DesignSettings` : ajouter `logoSize?`, `logoBackgroundShape?`, `logoBackgroundColor?`, `logoBackgroundPadding?`
-- `useDesignSettings.ts` : mapper snake_case ↔ camelCase + corriger mapping `footer_logo` → `footerLogo` et `favicon_url` → `faviconUrl` (cause probable du bug "favicon ne marche pas")
+### 6. Tests
 
-### 4.3 Composant partagé
-**Nouveau** `src/components/layout/BrandLogo.tsx`
-```tsx
-<BrandLogo variant="header"|"footer"|"sidebar"|"favicon" size? />
-```
-- Applique `width: logoSize`, `padding: logoBackgroundPadding`, `background-color: logoBackgroundColor`
-- `clip-path` selon shape (triangle: `polygon(50% 0,100% 100%,0 100%)`, hexagon, blob via SVG mask)
-- Utilisé par `Header.tsx`, `Footer.tsx`, `Sidebar.tsx`, `HUDOverlays.tsx`
+Étendre `TechwearHero.test.tsx` :
+- cfg sans `slides` (ancien format) → ne crashe pas, slide unique rendue
+- `slides: []` → rien rendu
+- `slides: [a, b]` → autoplay change l'index
+- Champs null dans une slide → defaults appliqués
 
-### 4.4 Favicon dynamique
-**`src/App.tsx`** : `useEffect` qui lit `faviconUrl` et met à jour `<link rel="icon">` dans le `<head>` (création si absent)
+## Fichiers impactés
 
-### 4.5 Admin (`HeaderDesignTab.tsx`)
-Nouvelle Card "Logo global" :
-- Slider taille (24-120 px)
-- Sélecteur forme (none/circle/square/triangle/hexagon/blob) avec previews
-- Color picker background + slider padding
-- Upload favicon (`FileDropZone`) + upload footer logo
-
----
-
-## 5. QA — tests visuels obligatoires
-1. Activer Hero Techwear, sauver — pas d'erreur, plus d'écran blanc
-2. Uploader une vidéo 28 Mo en background — joue en boucle, muted
-3. `imageOverflow=true` + `cardSize=xl` — mannequin entier visible, dépasse en haut
-4. Activer Hero catégorie "Hommes" — visible sur `/boutique/hommes`
-5. Logo size 80px + shape triangle + color #FF0 — appliqué partout
-6. Upload favicon — onglet navigateur mis à jour
-7. Cfg DB volontairement corrompue (`colorOptions: null`) — Hero rend les defaults, console log explicite, pas de crash
-
----
-
-## Fichiers touchés
-
-**Créer**
-- `src/components/home/HeroErrorBoundary.tsx`
-- `src/components/layout/BrandLogo.tsx`
-- `src/hooks/useCategoryHero.ts`
-- `supabase/migrations/<ts>_category_hero_and_logo.sql`
-- `supabase/migrations/<ts>_techwear_hero_validation_trigger.sql`
-
-**Modifier**
-- `src/types/index.ts`
-- `src/components/home/TechwearHero.tsx`
+- `src/types/index.ts` (types)
+- `src/config/homeConfig.ts` (defaults)
+- `src/hooks/useDesignSettings.ts` (mapping + migration douce)
+- `src/components/home/TechwearHero.tsx` (slider + extraction `TechwearHeroSlide`)
+- `src/components/admin/TechwearHeroTab.tsx` (UI slides + édition par slide)
 - `src/components/home/__tests__/TechwearHero.test.tsx`
-- `src/styles/home-techwear.css`
-- `src/components/admin/TechwearHeroTab.tsx`
-- `src/components/admin/HeaderDesignTab.tsx`
-- `src/hooks/useFileUpload.ts`
-- `src/hooks/useDesignSettings.ts`
-- `src/pages/Home.tsx` (Error Boundary wrapper)
-- `src/pages/CategoryPageRouter.tsx`
-- `src/pages/admin/AdminCategories.tsx` (ou AdminDesign — onglet "Hero catégories")
-- `src/components/layout/Header.tsx`, `Footer.tsx`, `Sidebar.tsx`, `HUDOverlays.tsx` (utiliser BrandLogo)
-- `src/App.tsx` (favicon dynamique)
+- nouvelle migration SQL : default + trigger `sanitize_techwear_hero`
+
+## Hors scope (à confirmer)
+
+- Pas de table dédiée `techwear_hero_slides` : on garde tout dans la colonne JSONB `techwear_hero` (plus simple, atomique, suffisant pour <50 slides).
+- Pas de touche au Hero "classique" `HeroSlider` (slides image/vidéo) qui reste indépendant.

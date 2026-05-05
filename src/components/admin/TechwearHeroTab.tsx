@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { useProducts } from '@/hooks/useProducts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,10 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { FileDropZone } from '@/components/admin/FileDropZone';
 import { AiImageButton } from '@/components/admin/AiImageButton';
-import { Plus, Trash2, RefreshCw, Sparkles, Eye, EyeOff } from 'lucide-react';
-import type { TechwearHeroConfig, TechwearColorOption, TechwearBackground } from '@/types';
+import { Plus, Trash2, RefreshCw, Sparkles, Eye, EyeOff, Copy, ChevronUp, ChevronDown } from 'lucide-react';
+import type { TechwearHeroConfig, TechwearHeroSlideData, TechwearColorOption, TechwearBackground } from '@/types';
 import { toast } from 'sonner';
 import { TechwearHero } from '@/components/home/TechwearHero';
+import { getSlides, makeEmptySlide, duplicateSlide } from '@/lib/techwearHero';
 
 const ALL_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
@@ -29,53 +31,107 @@ export function TechwearHeroTab() {
   const { designSettings, updateDesignSettings } = useApp();
   const cfg = designSettings.techwearHero;
   const { data: products } = useProducts();
-  const linkedProduct = cfg.productId ? products?.find((p) => p.id === cfg.productId) : null;
 
-  const update = (patch: Partial<TechwearHeroConfig>) => {
-    updateDesignSettings({ techwearHero: { ...cfg, ...patch } });
+  // Always work on a slides[] array. Migrate legacy on first edit.
+  const slides: TechwearHeroSlideData[] = useMemo(() => getSlides(cfg), [cfg]);
+  const [activeId, setActiveId] = useState<string>(slides[0]?.id || '');
+
+  const active = slides.find((s) => s.id === activeId) || slides[0];
+  const activeIndex = slides.indexOf(active);
+  const linkedProduct = active?.productId ? products?.find((p) => p.id === active.productId) : null;
+
+  const persist = (newSlides: TechwearHeroSlideData[], extra: Partial<TechwearHeroConfig> = {}) => {
+    // Keep top-level fields in sync with the FIRST slide for backward-compat with the legacy renderer.
+    const first = newSlides[0];
+    const next: TechwearHeroConfig = {
+      ...cfg,
+      ...(first || {}),
+      enabled: cfg.enabled,
+      slides: newSlides,
+      ...extra,
+    } as any;
+    updateDesignSettings({ techwearHero: next });
+  };
+
+  const updateSlide = (id: string, patch: Partial<TechwearHeroSlideData>) => {
+    persist(slides.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+  };
+  const update = (patch: Partial<TechwearHeroSlideData>) => {
+    if (!active) return;
+    updateSlide(active.id, patch);
   };
 
   const updateColor = (i: number, patch: Partial<TechwearColorOption>) => {
-    const next = cfg.colorOptions.map((c, idx) => (idx === i ? { ...c, ...patch } : c));
+    if (!active) return;
+    const next = active.colorOptions.map((c, idx) => (idx === i ? { ...c, ...patch } : c));
     update({ colorOptions: next });
   };
-
-  const addColor = () => update({
-    colorOptions: [...cfg.colorOptions, { name: 'Nouveau', hex: '#888888', image: '' }],
+  const addColor = () => active && update({
+    colorOptions: [...active.colorOptions, { name: 'Nouveau', hex: '#888888', image: '' }],
   });
-
-  const removeColor = (i: number) => update({
-    colorOptions: cfg.colorOptions.filter((_, idx) => idx !== i),
-    defaultColor: Math.max(0, Math.min(cfg.defaultColor, cfg.colorOptions.length - 2)),
+  const removeColor = (i: number) => active && update({
+    colorOptions: active.colorOptions.filter((_, idx) => idx !== i),
+    defaultColor: Math.max(0, Math.min(active.defaultColor, active.colorOptions.length - 2)),
   });
-
   const updateStat = (i: number, patch: Partial<{ label: string; value: number }>) => {
-    const next = cfg.stats.map((s, idx) => (idx === i ? { ...s, ...patch } : s));
+    if (!active) return;
+    const next = active.stats.map((s, idx) => (idx === i ? { ...s, ...patch } : s));
     update({ stats: next });
   };
 
   const syncFromProduct = () => {
-    if (!linkedProduct) return;
-    let colorOptions: TechwearColorOption[] = cfg.colorOptions;
+    if (!linkedProduct || !active) return;
+    let colorOptions: TechwearColorOption[] = active.colorOptions;
     if (linkedProduct.colorOptions?.length) {
       colorOptions = linkedProduct.colorOptions.map((c, i) => ({
-        name: c.label || `Color ${i + 1}`,
-        hex: c.color,
-        image: c.image || linkedProduct.image,
+        name: c.label || `Color ${i + 1}`, hex: c.color, image: c.image || linkedProduct.image,
       }));
     } else if (linkedProduct.colors?.length) {
       colorOptions = linkedProduct.colors.map((c) => ({ name: c, hex: c, image: linkedProduct.image }));
     }
-    const visibleSizes = linkedProduct.sizes?.length ? linkedProduct.sizes : cfg.visibleSizes;
+    const visibleSizes = linkedProduct.sizes?.length ? linkedProduct.sizes : active.visibleSizes;
     update({
       colorOptions,
       visibleSizes,
-      defaultSize: visibleSizes[0] || cfg.defaultSize,
-      ctaPrimary: { ...cfg.ctaPrimary, href: `/boutique/${linkedProduct.id}` },
-      ctaSecondary: { ...cfg.ctaSecondary, href: cfg.ctaSecondary.href && cfg.ctaSecondary.href !== '/boutique' ? cfg.ctaSecondary.href : `/boutique/${linkedProduct.id}` },
+      defaultSize: visibleSizes[0] || active.defaultSize,
+      ctaPrimary: { ...active.ctaPrimary, href: `/boutique/${linkedProduct.id}` },
+      ctaSecondary: { ...active.ctaSecondary, href: active.ctaSecondary.href && active.ctaSecondary.href !== '/boutique' ? active.ctaSecondary.href : `/boutique/${linkedProduct.id}` },
     });
     toast.success('Couleurs et tailles synchronisées depuis le produit');
   };
+
+  const addSlide = () => {
+    const s = makeEmptySlide(`Slide ${slides.length + 1}`);
+    persist([...slides, s]);
+    setActiveId(s.id);
+    toast.success('Nouvelle slide ajoutée');
+  };
+  const duplicate = (id: string) => {
+    const src = slides.find((s) => s.id === id);
+    if (!src) return;
+    const copy = duplicateSlide(src);
+    persist([...slides, copy]);
+    setActiveId(copy.id);
+  };
+  const removeSlide = (id: string) => {
+    if (slides.length <= 1) {
+      toast.error('Au moins une slide est requise');
+      return;
+    }
+    const next = slides.filter((s) => s.id !== id);
+    persist(next);
+    if (activeId === id) setActiveId(next[0].id);
+  };
+  const moveSlide = (id: string, dir: -1 | 1) => {
+    const i = slides.findIndex((s) => s.id === id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= slides.length) return;
+    const next = [...slides];
+    [next[i], next[j]] = [next[j], next[i]];
+    persist(next);
+  };
+
+  if (!active) return null;
 
   return (
     <div className="space-y-6">
@@ -84,10 +140,10 @@ export function TechwearHeroTab() {
         <div>
           <h3 className="text-base font-bold flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
-            Hero Techwear
+            Hero Techwear · Slider
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Carte produit dynamique reliée à un produit du catalogue
+            Créez plusieurs slides — chaque slide a sa propre configuration complète
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -95,36 +151,126 @@ export function TechwearHeroTab() {
             {cfg.enabled ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
             {cfg.enabled ? 'Actif' : 'Désactivé'}
           </Badge>
-          <Switch checked={cfg.enabled} onCheckedChange={(v) => update({ enabled: v })} />
+          <Switch checked={cfg.enabled} onCheckedChange={(v) => updateDesignSettings({ techwearHero: { ...cfg, enabled: v, slides } })} />
         </div>
       </div>
 
-      {/* Live preview */}
+      {/* Slider settings */}
+      <Card>
+        <CardHeader className="pb-3"><CardTitle className="text-sm">Réglages du slider</CardTitle></CardHeader>
+        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="flex items-center justify-between rounded border px-3 py-2">
+            <Label className="text-xs">Lecture auto</Label>
+            <Switch checked={cfg.autoplay !== false} onCheckedChange={(v) => updateDesignSettings({ techwearHero: { ...cfg, autoplay: v, slides } })} />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Vitesse (ms)</Label>
+            <Input type="number" min={2000} step={500}
+              value={cfg.intervalMs ?? 6000}
+              onChange={(e) => updateDesignSettings({ techwearHero: { ...cfg, intervalMs: parseInt(e.target.value, 10) || 6000, slides } })}
+              className="h-9"
+            />
+          </div>
+          <div className="flex items-center justify-between rounded border px-3 py-2">
+            <Label className="text-xs">Flèches</Label>
+            <Switch checked={cfg.showArrows !== false} onCheckedChange={(v) => updateDesignSettings({ techwearHero: { ...cfg, showArrows: v, slides } })} />
+          </div>
+          <div className="flex items-center justify-between rounded border px-3 py-2">
+            <Label className="text-xs">Points</Label>
+            <Switch checked={cfg.showDots !== false} onCheckedChange={(v) => updateDesignSettings({ techwearHero: { ...cfg, showDots: v, slides } })} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Slides list */}
+      <Card>
+        <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-sm">Slides ({slides.length})</CardTitle>
+          <Button size="sm" onClick={addSlide} className="gap-1.5">
+            <Plus className="h-3.5 w-3.5" /> Ajouter une slide
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            {slides.map((s, i) => {
+              const isActive = s.id === active.id;
+              const cover = s.colorOptions?.[0]?.image;
+              return (
+                <div
+                  key={s.id}
+                  className={`relative rounded-lg border-2 transition cursor-pointer overflow-hidden ${
+                    isActive ? 'border-primary ring-2 ring-primary/30' : 'border-border hover:border-primary/40'
+                  }`}
+                  onClick={() => setActiveId(s.id)}
+                >
+                  <div className="aspect-[16/9] bg-muted overflow-hidden">
+                    {cover ? <img src={cover} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">Aucun média</div>}
+                  </div>
+                  <div className="p-2 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold truncate">{s.name || `Slide ${i + 1}`}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">
+                        {s.productId ? (products?.find((p) => p.id === s.productId)?.name || 'Produit lié') : 'Manuel'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-0.5">
+                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); moveSlide(s.id, -1); }} disabled={i === 0}>
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); moveSlide(s.id, 1); }} disabled={i === slides.length - 1}>
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); duplicate(s.id); }}>
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={(e) => { e.stopPropagation(); removeSlide(s.id); }}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Active slide editor */}
+      <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-2 text-center">
+        <p className="text-xs font-bold uppercase tracking-wider">
+          Édition · {active.name || `Slide ${activeIndex + 1}`}
+        </p>
+      </div>
+
+      {/* Live preview (current slide only) */}
       {cfg.enabled && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Aperçu en direct</CardTitle>
+            <CardTitle className="text-sm">Aperçu de cette slide</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="rounded-lg overflow-hidden border border-border bg-black" style={{ height: 480 }}>
               <div style={{ transform: 'scale(0.6)', transformOrigin: 'top left', width: '166%', height: '166%' }}>
-                <TechwearHero />
+                <TechwearHero onlySlideId={active.id} />
               </div>
             </div>
           </CardContent>
         </Card>
       )}
 
+      {/* Slide identity */}
+      <Card>
+        <CardHeader className="pb-3"><CardTitle className="text-sm">Nom de la slide</CardTitle></CardHeader>
+        <CardContent>
+          <Input value={active.name || ''} onChange={(e) => update({ name: e.target.value })} placeholder={`Slide ${activeIndex + 1}`} />
+        </CardContent>
+      </Card>
+
       {/* Linked product */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Produit lié</CardTitle>
-        </CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-sm">Produit lié</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          <Select
-            value={cfg.productId ?? '__none__'}
-            onValueChange={(v) => update({ productId: v === '__none__' ? null : v })}
-          >
+          <Select value={active.productId ?? '__none__'} onValueChange={(v) => update({ productId: v === '__none__' ? null : v })}>
             <SelectTrigger><SelectValue placeholder="Aucun (configuration manuelle)" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="__none__">Aucun (configuration manuelle)</SelectItem>
@@ -155,7 +301,7 @@ export function TechwearHeroTab() {
         <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="space-y-1">
             <Label className="text-xs">Mode d'affichage</Label>
-            <Select value={cfg.imageFit} onValueChange={(v) => update({ imageFit: v as any })}>
+            <Select value={active.imageFit} onValueChange={(v) => update({ imageFit: v as any })}>
               <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="cover">Cover (recadrer)</SelectItem>
@@ -167,7 +313,7 @@ export function TechwearHeroTab() {
           </div>
           <div className="space-y-1">
             <Label className="text-xs">Position</Label>
-            <Select value={cfg.imagePosition} onValueChange={(v) => update({ imagePosition: v })}>
+            <Select value={active.imagePosition} onValueChange={(v) => update({ imagePosition: v })}>
               <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="center">Centre</SelectItem>
@@ -181,19 +327,19 @@ export function TechwearHeroTab() {
           <div className="col-span-2 grid grid-cols-2 gap-2">
             <div className="flex items-center justify-between rounded border px-2 py-1.5">
               <Label className="text-xs">Stats</Label>
-              <Switch checked={cfg.showStats} onCheckedChange={(v) => update({ showStats: v })} />
+              <Switch checked={active.showStats} onCheckedChange={(v) => update({ showStats: v })} />
             </div>
             <div className="flex items-center justify-between rounded border px-2 py-1.5">
               <Label className="text-xs">Couleurs</Label>
-              <Switch checked={cfg.showColors} onCheckedChange={(v) => update({ showColors: v })} />
+              <Switch checked={active.showColors} onCheckedChange={(v) => update({ showColors: v })} />
             </div>
             <div className="flex items-center justify-between rounded border px-2 py-1.5">
               <Label className="text-xs">Tailles</Label>
-              <Switch checked={cfg.showSizes} onCheckedChange={(v) => update({ showSizes: v })} />
+              <Switch checked={active.showSizes} onCheckedChange={(v) => update({ showSizes: v })} />
             </div>
             <div className="flex items-center justify-between rounded border px-2 py-1.5">
               <Label className="text-xs">Badge MODEL</Label>
-              <Switch checked={cfg.showModelBadge} onCheckedChange={(v) => update({ showModelBadge: v })} />
+              <Switch checked={active.showModelBadge} onCheckedChange={(v) => update({ showModelBadge: v })} />
             </div>
           </div>
         </CardContent>
@@ -204,26 +350,19 @@ export function TechwearHeroTab() {
         <CardHeader className="pb-3"><CardTitle className="text-sm">Arrière-plan</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           {(() => {
-            const bg = cfg.background || DEFAULT_BG;
-            const setBg = (patch: Partial<TechwearBackground>) =>
-              update({ background: { ...bg, ...patch } });
+            const bg = active.background || DEFAULT_BG;
+            const setBg = (patch: Partial<TechwearBackground>) => update({ background: { ...bg, ...patch } });
             return (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   {(['gradient', 'color', 'image', 'video'] as const).map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setBg({ type: t })}
-                      className={`px-3 py-2 rounded border text-xs font-medium transition ${
-                        bg.type === t ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-muted'
-                      }`}
+                    <button key={t} type="button" onClick={() => setBg({ type: t })}
+                      className={`px-3 py-2 rounded border text-xs font-medium transition ${bg.type === t ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-muted'}`}
                     >
                       {t === 'gradient' ? 'Dégradé' : t === 'color' ? 'Couleur' : t === 'image' ? 'Image' : 'Vidéo'}
                     </button>
                   ))}
                 </div>
-
                 {bg.type === 'gradient' && (
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
@@ -242,7 +381,6 @@ export function TechwearHeroTab() {
                     </div>
                   </div>
                 )}
-
                 {bg.type === 'color' && (
                   <div className="space-y-1">
                     <Label className="text-xs">Couleur de fond</Label>
@@ -252,12 +390,9 @@ export function TechwearHeroTab() {
                     </div>
                   </div>
                 )}
-
                 {(bg.type === 'image' || bg.type === 'video') && (
                   <div className="space-y-1">
-                    <Label className="text-xs">
-                      {bg.type === 'video' ? 'Vidéo de fond (max 30 Mo, lecture en boucle)' : 'Image de fond'}
-                    </Label>
+                    <Label className="text-xs">{bg.type === 'video' ? 'Vidéo de fond (max 30 Mo, lecture en boucle)' : 'Image de fond'}</Label>
                     <FileDropZone
                       accept={bg.type === 'video' ? ['video'] : ['image']}
                       folder="techwear-hero-bg"
@@ -267,15 +402,12 @@ export function TechwearHeroTab() {
                     />
                   </div>
                 )}
-
                 <div className="space-y-1">
                   <Label className="text-xs flex justify-between">
                     <span>Opacité du voile sombre</span>
                     <span className="font-mono">{Math.round((bg.overlayOpacity ?? 0) * 100)}%</span>
                   </Label>
-                  <Slider
-                    value={[Math.round((bg.overlayOpacity ?? 0) * 100)]}
-                    min={0} max={80} step={5}
+                  <Slider value={[Math.round((bg.overlayOpacity ?? 0) * 100)]} min={0} max={80} step={5}
                     onValueChange={([v]) => setBg({ overlayOpacity: v / 100 })}
                   />
                 </div>
@@ -285,7 +417,7 @@ export function TechwearHeroTab() {
         </CardContent>
       </Card>
 
-      {/* Card sizing & overflow */}
+      {/* Card sizing */}
       <Card>
         <CardHeader className="pb-3"><CardTitle className="text-sm">Carte produit (taille & débord)</CardTitle></CardHeader>
         <CardContent className="space-y-4">
@@ -293,25 +425,18 @@ export function TechwearHeroTab() {
             <Label className="text-xs">Taille de la carte</Label>
             <div className="grid grid-cols-4 gap-2">
               {(['sm', 'md', 'lg', 'xl'] as const).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => update({ cardSize: s })}
-                  className={`px-3 py-2 rounded border text-xs font-bold uppercase transition ${
-                    (cfg.cardSize || 'md') === s ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-muted'
-                  }`}
-                >
-                  {s}
-                </button>
+                <button key={s} type="button" onClick={() => update({ cardSize: s })}
+                  className={`px-3 py-2 rounded border text-xs font-bold uppercase transition ${(active.cardSize || 'md') === s ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-muted'}`}
+                >{s}</button>
               ))}
             </div>
           </div>
           <div className="flex items-center justify-between rounded border px-3 py-2">
             <div>
               <Label className="text-xs">Mannequin déborde de la carte</Label>
-              <p className="text-[10px] text-muted-foreground">Permet d'afficher le modèle entier qui dépasse vers le haut</p>
+              <p className="text-[10px] text-muted-foreground">Affiche le modèle entier qui dépasse vers le haut</p>
             </div>
-            <Switch checked={!!cfg.imageOverflow} onCheckedChange={(v) => update({ imageOverflow: v })} />
+            <Switch checked={!!active.imageOverflow} onCheckedChange={(v) => update({ imageOverflow: v })} />
           </div>
         </CardContent>
       </Card>
@@ -319,13 +444,13 @@ export function TechwearHeroTab() {
       {/* Colors */}
       <Card>
         <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-sm">Couleurs ({cfg.colorOptions.length})</CardTitle>
+          <CardTitle className="text-sm">Couleurs ({active.colorOptions.length})</CardTitle>
           <Button size="sm" variant="outline" onClick={addColor} className="gap-1.5">
             <Plus className="h-3.5 w-3.5" /> Ajouter
           </Button>
         </CardHeader>
         <CardContent className="space-y-3">
-          {cfg.colorOptions.map((c, i) => (
+          {active.colorOptions.map((c, i) => (
             <div key={i} className="rounded-lg border p-3 grid grid-cols-1 md:grid-cols-12 gap-3 items-start">
               <div className="md:col-span-3 space-y-1">
                 <Label className="text-xs">Nom</Label>
@@ -350,40 +475,28 @@ export function TechwearHeroTab() {
                 <div className="grid grid-cols-1 gap-2">
                   <div>
                     <p className="text-[10px] text-muted-foreground mb-1">🖥️ Desktop (par défaut)</p>
-                    <FileDropZone
-                      accept={['image', 'video']}
-                      folder="techwear-hero"
-                      currentFile={c.image}
+                    <FileDropZone accept={['image', 'video']} folder="techwear-hero" currentFile={c.image}
                       onUpload={(url) => updateColor(i, { image: url, mediaType: /\.(mp4|webm)(\?|$)/i.test(url) ? 'video' : 'image' })}
                       label="Image PNG ou vidéo MP4 (max 30 Mo)"
                     />
                   </div>
                   <div>
                     <p className="text-[10px] text-muted-foreground mb-1">📱 Tablette (optionnel)</p>
-                    <FileDropZone
-                      accept={['image', 'video']}
-                      folder="techwear-hero"
-                      currentFile={c.imageTablet || ''}
+                    <FileDropZone accept={['image', 'video']} folder="techwear-hero" currentFile={c.imageTablet || ''}
                       onUpload={(url) => updateColor(i, { imageTablet: url, mediaTypeTablet: /\.(mp4|webm)(\?|$)/i.test(url) ? 'video' : 'image' })}
                       label="Tablette"
                     />
                   </div>
                   <div>
                     <p className="text-[10px] text-muted-foreground mb-1">📱 Mobile (optionnel)</p>
-                    <FileDropZone
-                      accept={['image', 'video']}
-                      folder="techwear-hero"
-                      currentFile={c.imageMobile || ''}
+                    <FileDropZone accept={['image', 'video']} folder="techwear-hero" currentFile={c.imageMobile || ''}
                       onUpload={(url) => updateColor(i, { imageMobile: url, mediaTypeMobile: /\.(mp4|webm)(\?|$)/i.test(url) ? 'video' : 'image' })}
                       label="Mobile"
                     />
                   </div>
                   <div className="flex items-center justify-between rounded border px-2 py-1.5">
                     <Label className="text-xs">Vidéo en boucle</Label>
-                    <Switch
-                      checked={c.videoLoop !== false}
-                      onCheckedChange={(v) => updateColor(i, { videoLoop: v })}
-                    />
+                    <Switch checked={c.videoLoop !== false} onCheckedChange={(v) => updateColor(i, { videoLoop: v })} />
                   </div>
                 </div>
               </div>
@@ -396,13 +509,10 @@ export function TechwearHeroTab() {
           ))}
           <div className="flex items-center gap-2 pt-2">
             <Label className="text-xs">Couleur par défaut :</Label>
-            <Select
-              value={String(cfg.defaultColor)}
-              onValueChange={(v) => update({ defaultColor: parseInt(v, 10) })}
-            >
+            <Select value={String(active.defaultColor)} onValueChange={(v) => update({ defaultColor: parseInt(v, 10) })}>
               <SelectTrigger className="h-8 w-48"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {cfg.colorOptions.map((c, i) => (
+                {active.colorOptions.map((c, i) => (
                   <SelectItem key={i} value={String(i)}>{c.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -417,31 +527,25 @@ export function TechwearHeroTab() {
         <CardContent className="space-y-3">
           <div className="flex flex-wrap gap-2">
             {ALL_SIZES.map((sz) => {
-              const isOn = cfg.visibleSizes.includes(sz);
+              const isOn = active.visibleSizes.includes(sz);
               return (
-                <button
-                  key={sz}
-                  type="button"
+                <button key={sz} type="button"
                   onClick={() => {
-                    const next = isOn ? cfg.visibleSizes.filter((s) => s !== sz) : [...cfg.visibleSizes, sz];
+                    const next = isOn ? active.visibleSizes.filter((s) => s !== sz) : [...active.visibleSizes, sz];
                     update({ visibleSizes: next });
                   }}
-                  className={`px-3 py-1.5 rounded border text-xs font-medium transition ${
-                    isOn ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-muted'
-                  }`}
+                  className={`px-3 py-1.5 rounded border text-xs font-medium transition ${isOn ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-muted'}`}
                   aria-pressed={isOn}
-                >
-                  {sz}
-                </button>
+                >{sz}</button>
               );
             })}
           </div>
           <div className="flex items-center gap-2">
             <Label className="text-xs">Taille par défaut :</Label>
-            <Select value={cfg.defaultSize} onValueChange={(v) => update({ defaultSize: v })}>
+            <Select value={active.defaultSize} onValueChange={(v) => update({ defaultSize: v })}>
               <SelectTrigger className="h-8 w-32"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {(cfg.visibleSizes.length ? cfg.visibleSizes : ALL_SIZES).map((sz) => (
+                {(active.visibleSizes.length ? active.visibleSizes : ALL_SIZES).map((sz) => (
                   <SelectItem key={sz} value={sz}>{sz}</SelectItem>
                 ))}
               </SelectContent>
@@ -454,21 +558,11 @@ export function TechwearHeroTab() {
       <Card>
         <CardHeader className="pb-3"><CardTitle className="text-sm">Statistiques</CardTitle></CardHeader>
         <CardContent className="space-y-4">
-          {cfg.stats.map((s, i) => (
+          {active.stats.map((s, i) => (
             <div key={i} className="grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
-              <Input
-                value={s.label}
-                onChange={(e) => updateStat(i, { label: e.target.value })}
-                className="h-9"
-                placeholder="Label"
-              />
+              <Input value={s.label} onChange={(e) => updateStat(i, { label: e.target.value })} className="h-9" placeholder="Label" />
               <div className="md:col-span-2 flex items-center gap-3">
-                <Slider
-                  value={[s.value]}
-                  min={0} max={100} step={1}
-                  onValueChange={([v]) => updateStat(i, { value: v })}
-                  className="flex-1"
-                />
+                <Slider value={[s.value]} min={0} max={100} step={1} onValueChange={([v]) => updateStat(i, { value: v })} className="flex-1" />
                 <span className="text-xs font-mono w-10 text-right">{s.value}%</span>
               </div>
             </div>
@@ -482,27 +576,27 @@ export function TechwearHeroTab() {
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-xs">Badge ligne 1</Label>
-            <Input value={cfg.modelBadge.line1} onChange={(e) => update({ modelBadge: { ...cfg.modelBadge, line1: e.target.value } })} />
+            <Input value={active.modelBadge.line1} onChange={(e) => update({ modelBadge: { ...active.modelBadge, line1: e.target.value } })} />
           </div>
           <div className="space-y-2">
             <Label className="text-xs">Badge ligne 2</Label>
-            <Input value={cfg.modelBadge.line2} onChange={(e) => update({ modelBadge: { ...cfg.modelBadge, line2: e.target.value } })} />
+            <Input value={active.modelBadge.line2} onChange={(e) => update({ modelBadge: { ...active.modelBadge, line2: e.target.value } })} />
           </div>
           <div className="space-y-2">
             <Label className="text-xs">CTA principal — texte</Label>
-            <Input value={cfg.ctaPrimary.label} onChange={(e) => update({ ctaPrimary: { ...cfg.ctaPrimary, label: e.target.value } })} />
+            <Input value={active.ctaPrimary.label} onChange={(e) => update({ ctaPrimary: { ...active.ctaPrimary, label: e.target.value } })} />
           </div>
           <div className="space-y-2">
             <Label className="text-xs">CTA principal — lien</Label>
-            <Input value={cfg.ctaPrimary.href} onChange={(e) => update({ ctaPrimary: { ...cfg.ctaPrimary, href: e.target.value } })} />
+            <Input value={active.ctaPrimary.href} onChange={(e) => update({ ctaPrimary: { ...active.ctaPrimary, href: e.target.value } })} />
           </div>
           <div className="space-y-2">
             <Label className="text-xs">CTA secondaire — texte</Label>
-            <Input value={cfg.ctaSecondary.label} onChange={(e) => update({ ctaSecondary: { ...cfg.ctaSecondary, label: e.target.value } })} />
+            <Input value={active.ctaSecondary.label} onChange={(e) => update({ ctaSecondary: { ...active.ctaSecondary, label: e.target.value } })} />
           </div>
           <div className="space-y-2">
             <Label className="text-xs">CTA secondaire — lien</Label>
-            <Input value={cfg.ctaSecondary.href} onChange={(e) => update({ ctaSecondary: { ...cfg.ctaSecondary, href: e.target.value } })} />
+            <Input value={active.ctaSecondary.href} onChange={(e) => update({ ctaSecondary: { ...active.ctaSecondary, href: e.target.value } })} />
           </div>
         </CardContent>
       </Card>

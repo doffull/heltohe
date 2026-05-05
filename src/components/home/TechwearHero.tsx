@@ -142,39 +142,18 @@ function BackgroundLayer({ bg }: { bg: TechwearBackground }) {
   return null;
 }
 
-export function TechwearHero({ overrideConfig }: TechwearHeroProps = {}) {
+type SlideConfig = TechwearHeroConfig;
+
+function TechwearHeroSlideView({ config, productMissing }: { config: SlideConfig; productMissing: boolean }) {
   const { designSettings } = useApp();
-  const { config, productMissing } = useResolvedConfig(overrideConfig);
   const viewport = useViewport();
   const safeColorIndex = Math.min(Math.max(config.defaultColor, 0), Math.max(config.colorOptions.length - 1, 0));
   const [activeColor, setActiveColor] = useState(safeColorIndex);
   const [activeSize, setActiveSize] = useState<string>(config.defaultSize);
-  const heroRef = useRef<HTMLElement>(null);
 
   useEffect(() => { setActiveColor(safeColorIndex); }, [safeColorIndex, config.colorOptions.length]);
   useEffect(() => { setActiveSize(config.defaultSize); }, [config.defaultSize]);
 
-  useEffect(() => {
-    if (!config.enabled) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const el = heroRef.current;
-    if (!el) return;
-    let raf = 0;
-    const onScroll = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        const y = window.scrollY * 0.15;
-        const layers = el.querySelectorAll<HTMLElement>('.hw-hex-bg svg');
-        layers.forEach((l, i) => {
-          l.style.transform = `translateY(${y * (i % 2 === 0 ? 1 : -1) * 0.4}px)`;
-        });
-      });
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => { window.removeEventListener('scroll', onScroll); cancelAnimationFrame(raf); };
-  }, [config.enabled]);
-
-  if (!config.enabled) return null;
   if (config.colorOptions.length === 0) return null;
 
   const color = config.colorOptions[activeColor] || config.colorOptions[0];
@@ -185,24 +164,15 @@ export function TechwearHero({ overrideConfig }: TechwearHeroProps = {}) {
   const overlayOpacity = bg.overlayOpacity ?? 0;
 
   return (
-    <section
-      id="hw-hero"
-      ref={heroRef}
-      role="region"
-      aria-label="Hero produit"
-      data-testid="techwear-hero"
+    <div
+      className="hw-slide-inner"
       data-size={config.cardSize || 'md'}
       data-overflow={config.imageOverflow ? 'true' : 'false'}
-      lang="fr"
+      style={{ position: 'relative', width: '100%', height: '100%' }}
     >
-      {/* Background layer (under everything) */}
       <BackgroundLayer bg={bg} />
       {overlayOpacity > 0 && (
-        <div
-          className="hw-bg-overlay"
-          style={{ background: `rgba(0,0,0,${overlayOpacity})` }}
-          aria-hidden="true"
-        />
+        <div className="hw-bg-overlay" style={{ background: `rgba(0,0,0,${overlayOpacity})` }} aria-hidden="true" />
       )}
 
       {productMissing && (
@@ -238,8 +208,7 @@ export function TechwearHero({ overrideConfig }: TechwearHeroProps = {}) {
                   key={color.name + media.url}
                   src={media.url}
                   className="hw-card-image"
-                  autoPlay
-                  muted
+                  autoPlay muted
                   loop={color.videoLoop !== false}
                   playsInline
                   style={{ objectFit: config.imageFit, objectPosition: config.imagePosition }}
@@ -251,10 +220,8 @@ export function TechwearHero({ overrideConfig }: TechwearHeroProps = {}) {
                   src={media.url}
                   alt={`Modèle ${color.name} (${viewport})`}
                   className="hw-card-image"
-                  width={1024}
-                  height={1024}
-                  loading="eager"
-                  decoding="async"
+                  width={1024} height={1024}
+                  loading="eager" decoding="async"
                   style={{ objectFit: config.imageFit, objectPosition: config.imagePosition }}
                   onError={(e) => { (e.currentTarget as HTMLImageElement).src = color.image; }}
                 />
@@ -332,6 +299,130 @@ export function TechwearHero({ overrideConfig }: TechwearHeroProps = {}) {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+interface TechwearHeroPropsExt extends TechwearHeroProps {
+  /** Render only this slide id (used by admin preview). */
+  onlySlideId?: string;
+}
+
+export function TechwearHero({ overrideConfig, onlySlideId }: TechwearHeroPropsExt = {}) {
+  const { config, productMissing } = useResolvedConfig(overrideConfig);
+  const heroRef = useRef<HTMLElement>(null);
+  const [index, setIndex] = useState(0);
+  const { data: products } = useProducts();
+
+  const slideConfigs = useMemo<SlideConfig[]>(() => {
+    const slides = Array.isArray(config.slides) && config.slides.length > 0 ? config.slides : null;
+    if (!slides) return [config];
+    return slides
+      .filter((s: any) => !onlySlideId || s.id === onlySlideId)
+      .map((slide: any) => {
+        const merged = sanitizeCfg({ ...config, ...slide, slides: undefined });
+        if (!merged.productId) return merged;
+        const product = products?.find((p) => p.id === merged.productId);
+        if (!product) return merged;
+        let colorOptions: TechwearColorOption[] = merged.colorOptions;
+        if (product.colorOptions && product.colorOptions.length > 0) {
+          colorOptions = product.colorOptions.map((c, i) => ({
+            name: c.label || `Color ${i + 1}`, hex: c.color, image: c.image || product.image,
+          }));
+        } else if (product.colors && product.colors.length > 0) {
+          colorOptions = product.colors.map((c) => ({ name: c, hex: c, image: product.image }));
+        }
+        const visibleSizes = (merged.visibleSizes?.length ? merged.visibleSizes : product.sizes) || [];
+        const productHref = `/boutique/${product.id}`;
+        return {
+          ...merged,
+          colorOptions,
+          visibleSizes,
+          defaultSize: visibleSizes.includes(merged.defaultSize) ? merged.defaultSize : (visibleSizes[0] || merged.defaultSize),
+          ctaPrimary: { ...merged.ctaPrimary, href: productHref },
+          ctaSecondary: { ...merged.ctaSecondary, href: merged.ctaSecondary.href || productHref },
+        };
+      });
+  }, [config, products, onlySlideId]);
+
+  const autoplay = config.autoplay !== false;
+  const intervalMs = Math.max(2000, config.intervalMs ?? 6000);
+  useEffect(() => {
+    if (!autoplay || slideConfigs.length <= 1) return;
+    const id = window.setInterval(() => setIndex((i) => (i + 1) % slideConfigs.length), intervalMs);
+    return () => window.clearInterval(id);
+  }, [autoplay, intervalMs, slideConfigs.length]);
+
+  useEffect(() => { if (index >= slideConfigs.length) setIndex(0); }, [slideConfigs.length, index]);
+
+  useEffect(() => {
+    if (!config.enabled) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const el = heroRef.current;
+    if (!el) return;
+    let raf = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const y = window.scrollY * 0.15;
+        const layers = el.querySelectorAll<HTMLElement>('.hw-hex-bg svg');
+        layers.forEach((l, i) => {
+          l.style.transform = `translateY(${y * (i % 2 === 0 ? 1 : -1) * 0.4}px)`;
+        });
+      });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => { window.removeEventListener('scroll', onScroll); cancelAnimationFrame(raf); };
+  }, [config.enabled]);
+
+  if (!config.enabled) return null;
+  if (slideConfigs.length === 0) return null;
+
+  const currentIdx = Math.min(index, slideConfigs.length - 1);
+  const current = slideConfigs[currentIdx];
+  const showArrows = (config.showArrows !== false) && slideConfigs.length > 1;
+  const showDots = (config.showDots !== false) && slideConfigs.length > 1;
+
+  return (
+    <section
+      id="hw-hero"
+      ref={heroRef}
+      role="region"
+      aria-label="Hero produit"
+      data-testid="techwear-hero"
+      data-slides={slideConfigs.length}
+      lang="fr"
+      style={{ position: 'relative' }}
+    >
+      <TechwearHeroSlideView
+        key={`slide-${currentIdx}`}
+        config={current}
+        productMissing={productMissing}
+      />
+
+      {showArrows && (
+        <>
+          <button type="button" aria-label="Précédent"
+            onClick={() => setIndex((i) => (i - 1 + slideConfigs.length) % slideConfigs.length)}
+            style={{ position: 'absolute', top: '50%', left: 16, transform: 'translateY(-50%)', zIndex: 30, width: 40, height: 40, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', color: '#fff', border: 'none', fontSize: 26, cursor: 'pointer' }}
+          >‹</button>
+          <button type="button" aria-label="Suivant"
+            onClick={() => setIndex((i) => (i + 1) % slideConfigs.length)}
+            style={{ position: 'absolute', top: '50%', right: 16, transform: 'translateY(-50%)', zIndex: 30, width: 40, height: 40, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', color: '#fff', border: 'none', fontSize: 26, cursor: 'pointer' }}
+          >›</button>
+        </>
+      )}
+
+      {showDots && (
+        <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 8, zIndex: 30 }}>
+          {slideConfigs.map((_, i) => (
+            <button key={i} type="button" aria-label={`Slide ${i + 1}`} aria-current={i === currentIdx}
+              onClick={() => setIndex(i)}
+              style={{ width: i === currentIdx ? 24 : 8, height: 8, borderRadius: 4, border: 'none', background: i === currentIdx ? '#111' : 'rgba(0,0,0,0.35)', cursor: 'pointer', transition: 'all 0.3s' }}
+            />
+          ))}
+        </div>
+      )}
     </section>
   );
 }
