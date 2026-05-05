@@ -37,16 +37,19 @@ const Hex = ({ className }: { className?: string }) => (
 );
 
 /** Merge stored config with linked product (colors / sizes / CTA href). */
-function useResolvedConfig(): TechwearHeroConfig {
+function useResolvedConfig(): { config: TechwearHeroConfig; productMissing: boolean } {
   const { designSettings } = useApp();
   const cfg = (designSettings as any).techwearHero as TechwearHeroConfig | undefined;
-  const { data: products } = useProducts();
+  const { data: products, isLoading } = useProducts();
 
   return useMemo(() => {
     const base: TechwearHeroConfig = { ...DEFAULT_TECHWEAR_HERO, ...(cfg || {}) };
-    if (!base.productId) return base;
+    if (!base.productId) return { config: base, productMissing: false };
     const product = products?.find((p) => p.id === base.productId);
-    if (!product) return base;
+    if (!product) {
+      // Product was deleted or not loaded yet — fall back to manual config
+      return { config: base, productMissing: !isLoading };
+    }
 
     // Derive colors from product
     let colorOptions: TechwearColorOption[] = base.colorOptions;
@@ -57,21 +60,25 @@ function useResolvedConfig(): TechwearHeroConfig {
         image: c.image || product.image,
       }));
     } else if (product.colors && product.colors.length > 0) {
-      colorOptions = product.colors.map((c, i) => ({
+      colorOptions = product.colors.map((c) => ({
         name: c, hex: c, image: product.image,
       }));
-      colorOptions[0] = { ...colorOptions[0], image: product.image };
     }
 
     const visibleSizes = (base.visibleSizes?.length ? base.visibleSizes : product.sizes) || [];
+    const productHref = `/boutique/${product.id}`;
     return {
-      ...base,
-      colorOptions,
-      visibleSizes,
-      defaultSize: visibleSizes.includes(base.defaultSize) ? base.defaultSize : (visibleSizes[0] || base.defaultSize),
-      ctaPrimary: { ...base.ctaPrimary, href: `/boutique/${product.id}` },
+      config: {
+        ...base,
+        colorOptions,
+        visibleSizes,
+        defaultSize: visibleSizes.includes(base.defaultSize) ? base.defaultSize : (visibleSizes[0] || base.defaultSize),
+        ctaPrimary: { ...base.ctaPrimary, href: productHref },
+        ctaSecondary: { ...base.ctaSecondary, href: base.ctaSecondary.href || productHref },
+      },
+      productMissing: false,
     };
-  }, [cfg, products]);
+  }, [cfg, products, isLoading]);
 }
 
 export function TechwearHero() {
