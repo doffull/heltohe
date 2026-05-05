@@ -61,7 +61,7 @@ export default function AccountDashboard() {
         </div>
 
         {/* Quick Stats */}
-        <div className="grid md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
           <div className="chamfer-hud bg-card/50 p-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-primary/10 rounded-full">
