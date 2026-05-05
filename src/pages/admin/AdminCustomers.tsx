@@ -26,6 +26,56 @@ const TIER_COLORS: Record<string, string> = {
   platinum: 'bg-purple-500/20 text-purple-500',
 };
 
+type AppRole = 'admin' | 'stock_manager' | 'preparator';
+const MANAGEABLE_ROLES: { value: AppRole; label: string }[] = [
+  { value: 'stock_manager', label: 'Responsable stock' },
+  { value: 'preparator', label: 'Préparateur' },
+  { value: 'admin', label: 'Admin' },
+];
+
+function RoleManager({ userId }: { userId: string }) {
+  const { toast } = useToast();
+  const [roles, setRoles] = useState<AppRole[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    setLoading(true);
+    const { data } = await supabase.from('user_roles').select('role').eq('user_id', userId);
+    setRoles(((data || []).map((r: any) => r.role)) as AppRole[]);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, [userId]);
+
+  const toggleRole = async (role: AppRole, checked: boolean) => {
+    if (checked) {
+      const { error } = await supabase.from('user_roles').insert({ user_id: userId, role });
+      if (error) { toast({ title: 'Erreur', description: error.message, variant: 'destructive' }); return; }
+    } else {
+      const { error } = await supabase.from('user_roles').delete().eq('user_id', userId).eq('role', role);
+      if (error) { toast({ title: 'Erreur', description: error.message, variant: 'destructive' }); return; }
+    }
+    toast({ title: 'Rôle mis à jour' });
+    load();
+  };
+
+  return (
+    <div className="space-y-2 pt-2 border-t border-border">
+      <Label className="hud-text text-xs flex items-center gap-1"><Shield className="h-3 w-3" /> Rôles équipe</Label>
+      {loading ? <p className="text-xs text-muted-foreground">Chargement...</p> : (
+        <div className="space-y-2">
+          {MANAGEABLE_ROLES.map(r => (
+            <label key={r.value} className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox checked={roles.includes(r.value)} onCheckedChange={(c) => toggleRole(r.value, !!c)} />
+              <span>{r.label}</span>
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminCustomers() {
   const { toast } = useToast();
   const { data: customers = [], isLoading } = useCustomers();
