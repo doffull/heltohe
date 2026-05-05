@@ -14,13 +14,84 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { orderId, orderNumber, customerName, customerEmail, customerPhone, notificationType } = await req.json();
+    const { orderId, orderNumber, customerName, customerEmail, customerPhone, notificationType, userId, role } = await req.json();
 
-    if (!orderId || !notificationType) {
-      return new Response(JSON.stringify({ error: "Missing required fields" }), {
+    if (!notificationType) {
+      return new Response(JSON.stringify({ error: "Missing notificationType" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const supabaseUrl0 = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey0 = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const sb0 = createClient(supabaseUrl0, serviceRoleKey0);
+
+    // Handle role attribution notification (no order context)
+    if (notificationType === "role_assigned") {
+      if (!userId || !role) {
+        return new Response(JSON.stringify({ error: "Missing userId or role" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      // Lookup recipient email
+      let recipient = customerEmail as string | undefined;
+      if (!recipient) {
+        const { data: cust } = await sb0.from("customers").select("email, first_name").eq("user_id", userId).maybeSingle();
+        recipient = cust?.email;
+      }
+      if (!recipient) {
+        const { data: u } = await sb0.auth.admin.getUserById(userId);
+        recipient = u?.user?.email || undefined;
+      }
+      if (!recipient) {
+        return new Response(JSON.stringify({ error: "No email found for user" }), {
+          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const roleLabels: Record<string, string> = {
+        admin: "Administrateur",
+        stock_manager: "Responsable stock",
+        preparator: "Préparateur",
+      };
+      const label = roleLabels[role] || role;
+      const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      let status = "skipped";
+      let errMsg: string | null = null;
+      if (RESEND_API_KEY && LOVABLE_API_KEY) {
+        try {
+          const res = await fetch("https://connector-gateway.lovable.dev/resend/emails", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${LOVABLE_API_KEY}`,
+              "X-Connection-Api-Key": RESEND_API_KEY,
+            },
+            body: JSON.stringify({
+              from: "LVTK6 <onboarding@resend.dev>",
+              to: [recipient],
+              subject: `LVTK6 — Nouveau rôle attribué : ${label}`,
+              html: `<div style="font-family:Arial,sans-serif;padding:20px;max-width:600px;margin:0 auto"><h2>Bienvenue dans l'équipe LVTK6</h2><p>Bonjour ${customerName || ""},</p><p>Le rôle <strong>${label}</strong> vient de vous être attribué sur la plateforme LVTK6.</p><p>Vous pouvez désormais accéder à votre espace de gestion en vous connectant à votre compte.</p><p style="color:#666;font-size:12px;margin-top:24px">Si vous n'avez pas demandé cet accès, contactez l'administrateur.</p></div>`,
+            }),
+          });
+          status = res.ok ? "sent" : "failed";
+          if (!res.ok) errMsg = await res.text();
+        } catch (e) {
+          status = "failed";
+          errMsg = String(e);
+        }
+      }
+      return new Response(JSON.stringify({ status, recipient }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!orderId) {
+      return new Response(JSON.stringify({ error: "Missing orderId" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
