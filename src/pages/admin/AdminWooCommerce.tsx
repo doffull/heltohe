@@ -108,12 +108,12 @@ export default function AdminWooCommerce() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 lg:space-y-8">
       {/* Header */}
       <div>
-        <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-1">// INTÉGRATIONS</p>
-        <h1 className="text-3xl font-bold uppercase tracking-tight">WooCommerce</h1>
-        <p className="text-muted-foreground mt-1">Synchronise tes produits, commandes et clients depuis ton site WooCommerce.</p>
+        <p className="font-mono text-[10px] lg:text-xs tracking-[0.3em] text-muted-foreground mb-1">// INTÉGRATIONS</p>
+        <h1 className="text-xl lg:text-3xl font-bold uppercase hud-text">WooCommerce</h1>
+        <p className="text-xs lg:text-sm text-muted-foreground mt-1">Synchronise tes produits, commandes et clients depuis ton site WooCommerce.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
