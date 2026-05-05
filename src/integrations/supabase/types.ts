@@ -1775,6 +1775,10 @@ export type Database = {
           legal_siret: string | null
           legal_vat: string | null
           legal_zip: string | null
+          logo_background_color: string | null
+          logo_background_padding: number | null
+          logo_background_shape: string | null
+          logo_size: number | null
           logo_style: Json | null
           mannequin_hotspots: Json | null
           mobile_sidebar_image: string | null
@@ -1870,6 +1874,10 @@ export type Database = {
           legal_siret?: string | null
           legal_vat?: string | null
           legal_zip?: string | null
+          logo_background_color?: string | null
+          logo_background_padding?: number | null
+          logo_background_shape?: string | null
+          logo_size?: number | null
           logo_style?: Json | null
           mannequin_hotspots?: Json | null
           mobile_sidebar_image?: string | null
@@ -1965,6 +1973,10 @@ export type Database = {
           legal_siret?: string | null
           legal_vat?: string | null
           legal_zip?: string | null
+          logo_background_color?: string | null
+          logo_background_padding?: number | null
+          logo_background_shape?: string | null
+          logo_size?: number | null
           logo_style?: Json | null
           mannequin_hotspots?: Json | null
           mobile_sidebar_image?: string | null
