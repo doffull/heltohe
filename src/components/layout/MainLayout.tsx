@@ -488,7 +488,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       {/* Left Sidebar Panel - Only on home page */}
       {showSidebar && (
         <div className={cn(
-          "sidebar-left-panel fixed top-0 left-0 h-screen z-50 transition-transform duration-500 ease-out w-[85%] sm:w-[320px] lg:w-[35%]",
+          "sidebar-left-panel fixed top-0 left-0 h-screen z-50 transition-transform duration-500 ease-out w-screen lg:w-[35%]",
           sidebarOpen ? 'translate-x-0' : '-translate-x-full',
           desktopSidebarOpen ? 'lg:translate-x-0' : 'lg:-translate-x-full'
         )}>
