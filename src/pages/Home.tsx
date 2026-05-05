@@ -186,17 +186,19 @@ export default function Home() {
             {/* Background Layer (slowest parallax) */}
             {'mediaType' in s && s.mediaType === 'video' ?
           <motion.div className="absolute inset-0 will-change-transform" style={{ y: heroY, scale: heroScale }}>
-                <video src={s.image} autoPlay muted loop playsInline className="w-full h-full object-cover" />
+                <video src={s.image} autoPlay muted loop playsInline className="w-full h-full" style={{ objectFit: (s as any).objectFit || 'cover', objectPosition: (s as any).objectPosition || 'center' }} />
               </motion.div> :
 
           <motion.div
-            className="absolute inset-0 bg-cover bg-center will-change-transform"
-            style={{
-              backgroundImage: `url(${s.image})`,
-              y: heroY,
-              scale: heroScale
-            }} />
-
+            className="absolute inset-0 will-change-transform"
+            style={{ y: heroY, scale: heroScale }}>
+              <img
+                src={s.image}
+                alt={s.title}
+                className="w-full h-full"
+                style={{ objectFit: ((s as any).objectFit || 'cover') as any, objectPosition: (s as any).objectPosition || 'center' }}
+              />
+            </motion.div>
           }
             
             {/* Midground Layer */}
