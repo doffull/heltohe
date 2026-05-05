@@ -1,73 +1,123 @@
-## Plan : Sécurisation maximale du site
+## Plan : Réservation stock & workflow de préparation après validation paiement
 
-### Audit réalisé
+### Objectif
+Quand le **paiement** d'une commande est validé (3e étape), automatiquement :
+1. **Réserver le stock** des produits commandés (mise de côté, plus disponible à la vente)
+2. **Notifier le responsable stock** par email + créer une tâche dans un nouveau dashboard
+3. Le responsable stock peut **assigner** la commande à un préparateur, qui reçoit une notif
+4. Le préparateur marque la commande comme "préparée" → débloque l'étape Expédition
 
-J'ai exécuté le scan de sécurité Supabase + le linter. **11 findings** au total. Voici la liste des problèmes réels et des corrections proposées.
+### Diagnostic actuel
 
-### Problèmes détectés
+- La table `stock_levels` a déjà une colonne `reserved` (jamais utilisée)
+- La validation paiement (`handleQuickValidate('payment')` + `handleBulkValidatePayment`) met juste `payment_status = 'Paid'` et `validation_flags.payment = true`
+- Aucune réservation de stock n'a lieu, aucune notification n'est envoyée à un responsable stock
+- Pas de rôle `stock_manager` ni `preparator` dans `app_role` (actuellement seulement `admin`)
 
-| # | Sévérité | Problème |
-|---|---|---|
-| 1 | 🔴 ERROR | Vue `design_settings_public` créée avec `security_invoker = off` (équivalent SECURITY DEFINER) — contourne la RLS du rôle appelant |
-| 2 | 🟠 WARN | Données sensibles exposées dans la vue `design_settings_public` : `contact_email`, `legal_siret`, `legal_vat`, `legal_director`, `legal_rgpd_email`, `legal_return_email` — accessibles à tout visiteur anonyme |
-| 3 | 🟠 WARN | Bucket storage `media` est public ET autorise le LISTING — n'importe qui peut lister tous les fichiers stockés |
-| 4 | 🟠 WARN | 8× fonctions `SECURITY DEFINER` avec `EXECUTE` accordé à `anon` / `authenticated` (`has_role`, `validate_and_create_order`, `auto_create_category_page`, `generate_category_slug`, `audit_role_change`, `auto_create_inventory_on_product_insert`, `update_updated_at_column`) — seules `has_role` et `validate_and_create_order` doivent rester appelables ; les autres sont des triggers et ne devraient pas être exposées via l'API REST |
-| 5 | 🟡 INFO | Auth : leaked-password protection (HIBP) déjà activée ✅ |
-| 6 | 🟡 INFO | Email auto-confirm désactivé (vérification email obligatoire) ✅ |
+### Architecture proposée
 
-### Corrections (1 migration SQL)
+#### 1. Base de données (migration SQL)
 
-**A. Vue `design_settings_public` — retirer les colonnes sensibles**
+**Nouveaux rôles** dans l'enum `app_role` :
+- `stock_manager` — voit les commandes à préparer, assigne les préparations
+- `preparator` — voit ses commandes assignées, les marque préparées
 
-Recréer la vue en EXCLUANT :
-- `contact_email`, `contact_phone`
-- `legal_siret`, `legal_vat`, `legal_director`, `legal_rgpd_email`, `legal_return_email`, `legal_rcs`, `legal_capital`
-- `admin_notification_email` (déjà absent ✅)
-
-Garder seulement les champs réellement utilisés par le frontend public (logo, hero, couleurs, sections home, sidebar, header, etc.). Les champs légaux et de contact resteront accessibles uniquement aux admins via la table `design_settings` directement.
-
-→ Met à jour les pages légales (CGV, Mentions légales, Confidentialité, Contact) pour qu'elles lisent ces données via une nouvelle RPC `get_legal_info()` SECURITY DEFINER qui retourne ces champs (nécessaire car le site public en a besoin pour les pages légales — mais on les expose de manière contrôlée).
-
-**B. Bucket `media` — bloquer le listing**
-
-Garder le bucket public (les URLs des images doivent rester accessibles), mais supprimer la policy SELECT large sur `storage.objects` qui permet `LIST`. Les images restent accessibles par URL directe (lecture par chemin connu) mais on ne peut plus énumérer le contenu du bucket.
-
-**C. Fonctions SECURITY DEFINER — révoquer EXECUTE inutiles**
-
-```sql
--- Triggers (jamais appelés via API)
-REVOKE EXECUTE ON FUNCTION public.auto_create_category_page() FROM anon, authenticated, public;
-REVOKE EXECUTE ON FUNCTION public.generate_category_slug() FROM anon, authenticated, public;
-REVOKE EXECUTE ON FUNCTION public.audit_role_change() FROM anon, authenticated, public;
-REVOKE EXECUTE ON FUNCTION public.auto_create_inventory_on_product_insert() FROM anon, authenticated, public;
-REVOKE EXECUTE ON FUNCTION public.update_updated_at_column() FROM anon, authenticated, public;
-
--- Garder accessibles : has_role (utilisé par RLS) et validate_and_create_order (RPC checkout)
+**Nouvelle table `order_preparations`** :
+```
+id, order_id, status (pending|assigned|in_progress|ready|cancelled),
+assigned_to (uuid → auth.users), assigned_by, assigned_at,
+prepared_at, notes, created_at, updated_at
 ```
 
-**D. Hardening complémentaire**
+**Nouvelle colonne `orders.stock_reserved_at`** (timestamp) pour tracer la réservation.
 
-- Ajouter une policy explicite `Deny anon` sur les tables sensibles (`admin_config`, `notification_config`, `notification_log`, `role_audit_log`, `colissimo_bordereaux`, `stock_transfers`, `stock_history`) — déjà couvertes par "admin only" mais ajout explicite pour défense en profondeur.
-- Vérifier que la table `messages` valide la taille du message (ajouter check ≤ 5000 chars) pour éviter spam.
+**Nouvelle RPC `reserve_order_stock(p_order_id uuid)`** (SECURITY DEFINER) :
+- Lit `orders.items` (jsonb)
+- Pour chaque item, trouve la ligne `stock_levels` matchant (via `inventory.product_id` + size si présente, location de type `web`)
+- Incrémente `reserved` du `quantity` commandé
+- Insère une ligne dans `stock_history` avec action `reservation`
+- Met `orders.stock_reserved_at = now()`
+- Idempotent : si `stock_reserved_at` est déjà défini, ne rien faire
 
-### Résumé des changements
+**Nouvelle RPC `release_order_stock(p_order_id uuid)`** : inverse (annulation/suppression commande).
+
+**Nouvelle RPC `consume_order_stock(p_order_id uuid)`** : appelée à l'expédition — décrémente `quantity` et `reserved` ensemble (le produit quitte vraiment le stock).
+
+**RLS** : `order_preparations` lisible par `admin`, `stock_manager`, et par le `preparator` à qui c'est assigné. Modifiable par `admin`/`stock_manager` ; `preparator` peut juste passer son préparation à `ready`.
+
+#### 2. Backend — Edge Function
+
+Étendre `send-order-notification` pour gérer 2 nouveaux types :
+- `stock_reservation_created` → envoyé à tous les utilisateurs ayant le rôle `stock_manager` (email récupéré via `customers.email` ou `auth.users`) — sujet « Nouvelle commande à préparer #ORDER »
+- `preparation_assigned` → envoyé au préparateur assigné
+
+Templates ajoutés dans `notification_config.email_templates` (avec valeurs par défaut FR).
+
+#### 3. Frontend
+
+**`src/pages/admin/AdminOrders.tsx`** :
+- Dans `handleQuickValidate` (cas `payment`) ET `handleBulkValidatePayment` : après succès → appeler `supabase.rpc('reserve_order_stock', { p_order_id })`, puis `supabase.functions.invoke('send-order-notification', { ..., notificationType: 'stock_reservation_created' })`
+- Toast : « Stock réservé, responsable stock notifié »
+
+**Nouvelle page `src/pages/admin/AdminPreparations.tsx`** (route `/admin/preparations`) :
+- Liste des préparations en attente (filtrable par statut)
+- Affiche : n° commande, client, articles à préparer (size/color/qty), bouton « Assigner à... » (select des users `preparator`)
+- Pour `preparator` connecté : ne voit que ses préparations, bouton « Marquer prêt » → met `status='ready'`, débloque automatiquement `validation_flags.shipping`-ready-state (ne valide pas l'expédition mais affiche un badge « Préparée » dans AdminOrders pour autoriser le clic d'expédition)
+
+**Nouvelle entrée sidebar admin** : « Préparations » (visible si `admin` ou `stock_manager`).
+
+**`src/pages/admin/AdminOrders.tsx`** : ajouter un badge « 📦 Stock réservé » et « ✅ Préparée » dans la colonne validation.
+
+**`AdminStock.tsx`** : afficher la colonne `reserved` (déjà en DB) à côté de `quantity` pour visualiser le stock mis de côté.
+
+#### 4. Gestion des rôles
+
+Dans `AdminCustomers` (ou nouvelle section dans `AdminSettings` → « Équipe ») :
+- Permettre à un `admin` d'attribuer les rôles `stock_manager` / `preparator` à des comptes existants
+
+### Diagramme de flux
+
+```text
+Validation Paiement (admin click)
+         │
+         ▼
+  RPC reserve_order_stock
+  ├─ stock_levels.reserved += qty
+  ├─ stock_history insert
+  └─ orders.stock_reserved_at = now()
+         │
+         ▼
+  Edge fn → email stock_manager(s)
+  + insert order_preparations(status='pending')
+         │
+         ▼
+  Stock manager ouvre /admin/preparations
+  Assigne à un préparateur ──► email préparateur
+         │
+         ▼
+  Préparateur marque "prêt"
+  order_preparations.status='ready'
+         │
+         ▼
+  Admin valide expédition (étape 3 existante)
+  └─ RPC consume_order_stock (quantity -= qty, reserved -= qty)
+```
+
+### Fichiers modifiés / créés
 
 | Fichier | Type | Changement |
 |---|---|---|
-| Nouvelle migration SQL | DB | Recréer vue, révoquer EXECUTE, créer RPC `get_legal_info()`, durcir storage, ajouter checks |
-| `src/hooks/useLegalInfo.ts` | Code | Utiliser la nouvelle RPC `get_legal_info()` au lieu de lire la vue |
+| Migration SQL | nouveau | enum roles + table `order_preparations` + 3 RPC + colonne `stock_reserved_at` + RLS |
+| `supabase/functions/send-order-notification/index.ts` | edit | gestion des types `stock_reservation_created` et `preparation_assigned` (lookup destinataires par rôle) |
+| `src/pages/admin/AdminOrders.tsx` | edit | appel RPC + notif après validation paiement, badges stock/préparation |
+| `src/pages/admin/AdminPreparations.tsx` | nouveau | dashboard préparations + assignation |
+| `src/pages/admin/AdminStock.tsx` | edit | colonne `reserved` affichée |
+| `src/pages/admin/Admin.tsx` (sidebar) | edit | nouvelle entrée « Préparations » |
+| `src/App.tsx` | edit | route `/admin/preparations` |
+| Composant gestion rôles équipe | nouveau ou edit AdminSettings | UI attribution `stock_manager` / `preparator` |
 
-### Ce qui reste sécurisé (déjà en place ✅)
+### Questions avant implémentation
 
-- RLS activée sur toutes les tables
-- Rôles dans table séparée `user_roles` + fonction `has_role`
-- Mot de passe : min 6 chars + HIBP activé
-- Email confirmation obligatoire
-- Honeypot + délai 10s sur formulaires anonymes
-- Validation Zod côté client
-- RPC `validate_and_create_order` revalide prix côté serveur
-- Audit log sur changements de rôles
-
-### Note
-
-Aucune donnée existante n'est perdue. Le site continue de fonctionner identiquement pour les visiteurs ; seules les données sensibles cessent d'être exposées publiquement.
+1. Veux-tu **2 nouveaux rôles distincts** (`stock_manager` qui assigne + `preparator` qui prépare), ou **un seul rôle** `stock_manager` qui fait tout (réception alerte + préparation) ?
+2. La **réservation doit-elle bloquer la vente** (afficher stock affichable = `quantity - reserved` côté boutique) ou juste informer en interne ?
+3. L'email destinataire du responsable stock : utiliser **tous les comptes ayant le rôle**, ou un seul **email fixe** configuré dans `admin_config.admin_notification_email` ?
