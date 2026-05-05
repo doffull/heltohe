@@ -119,7 +119,7 @@ const ProductSlide = forwardRef<HTMLDivElement, { product: Product; designSettin
       )}
     </div>
   );
-}
+});
 
 function BrandBlock({ designSettings }: { designSettings: any }) {
   const brandName = designSettings.sidebarBrandName;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { forwardRef, useState } from 'react';
 import { LucideIcon, Shield, Package, Layers, Move } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { MannequinHotspotConfig, MarkerType } from '@/types';
@@ -17,7 +17,7 @@ function getMediaType(url: string): 'video' | 'image' {
   return 'image';
 }
 
-function MarkerShape({ type = 'dot' }: { type?: MarkerType }) {
+const MarkerShape = forwardRef<HTMLDivElement, { type?: MarkerType }>(function MarkerShape({ type = 'dot' }, _ref) {
   switch (type) {
     case 'cross':
       return (
@@ -48,7 +48,7 @@ function MarkerShape({ type = 'dot' }: { type?: MarkerType }) {
     default:
       return <div className="hotspot-point" />;
   }
-}
+});
 
 interface HotspotProps {
   hotspot: MannequinHotspotConfig;
