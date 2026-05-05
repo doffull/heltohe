@@ -1,123 +1,74 @@
-## Plan : Réservation stock & workflow de préparation après validation paiement
+## Plan : Sécurisation et UX des rôles équipe
 
-### Objectif
-Quand le **paiement** d'une commande est validé (3e étape), automatiquement :
-1. **Réserver le stock** des produits commandés (mise de côté, plus disponible à la vente)
-2. **Notifier le responsable stock** par email + créer une tâche dans un nouveau dashboard
-3. Le responsable stock peut **assigner** la commande à un préparateur, qui reçoit une notif
-4. Le préparateur marque la commande comme "préparée" → débloque l'étape Expédition
+### Contexte
 
-### Diagnostic actuel
+Le système de rôles `admin` / `stock_manager` / `preparator` existe déjà (table `user_roles`, fonction `has_role`, table `role_audit_log` et fonction `audit_role_change`). Manquent :
+1. Le **trigger d'audit** sur `user_roles` (la fonction existe mais n'est attachée à aucune table).
+2. Une **notification** envoyée à l'utilisateur quand on lui attribue un rôle équipe.
+3. Des **badges visuels** sur la fiche et la liste clients.
+4. Un **accès aux écrans `/admin/preparations` et `/admin/stock`** ouvert au-delà de l'admin uniquement (`stock_manager`, `preparator`).
 
-- La table `stock_levels` a déjà une colonne `reserved` (jamais utilisée)
-- La validation paiement (`handleQuickValidate('payment')` + `handleBulkValidatePayment`) met juste `payment_status = 'Paid'` et `validation_flags.payment = true`
-- Aucune réservation de stock n'a lieu, aucune notification n'est envoyée à un responsable stock
-- Pas de rôle `stock_manager` ni `preparator` dans `app_role` (actuellement seulement `admin`)
+### 1. Migration SQL
 
-### Architecture proposée
+- Attacher le trigger `audit_role_change` (déjà existant) à `user_roles` AFTER INSERT/UPDATE/DELETE.
+- Créer une vue `user_roles_with_email` (security_invoker=on) admin-only pour afficher la liste des rôles côté listing client (évite N+1 requêtes).
+- Étendre la RPC `list_users_by_role` pour inclure first_name/last_name (utile pour l'email).
 
-#### 1. Base de données (migration SQL)
+### 2. Notification d'attribution de rôle
 
-**Nouveaux rôles** dans l'enum `app_role` :
-- `stock_manager` — voit les commandes à préparer, assigne les préparations
-- `preparator` — voit ses commandes assignées, les marque préparées
+Ajouter dans l'Edge Function `send-order-notification` (ou réutiliser le même pattern) un nouveau type `role_assigned` :
+- Sujet : « LVTK6 — Nouveau rôle attribué : {role_label} »
+- Corps : explique le rôle, lien vers `/admin/preparations` (stock_manager / preparator) ou `/admin` (admin)
+- Destinataire : email récupéré via `customers` puis `auth.users`
 
-**Nouvelle table `order_preparations`** :
-```
-id, order_id, status (pending|assigned|in_progress|ready|cancelled),
-assigned_to (uuid → auth.users), assigned_by, assigned_at,
-prepared_at, notes, created_at, updated_at
-```
+Côté frontend (`AdminCustomers.tsx > RoleManager`), après chaque `insert` réussi sur `user_roles`, appeler `supabase.functions.invoke('send-order-notification', { body: { notificationType: 'role_assigned', userId, role, customerEmail, customerName } })`.
 
-**Nouvelle colonne `orders.stock_reserved_at`** (timestamp) pour tracer la réservation.
+Toast : « Rôle attribué et utilisateur notifié par email ».
 
-**Nouvelle RPC `reserve_order_stock(p_order_id uuid)`** (SECURITY DEFINER) :
-- Lit `orders.items` (jsonb)
-- Pour chaque item, trouve la ligne `stock_levels` matchant (via `inventory.product_id` + size si présente, location de type `web`)
-- Incrémente `reserved` du `quantity` commandé
-- Insère une ligne dans `stock_history` avec action `reservation`
-- Met `orders.stock_reserved_at = now()`
-- Idempotent : si `stock_reserved_at` est déjà défini, ne rien faire
+### 3. Audit visible (read-only)
 
-**Nouvelle RPC `release_order_stock(p_order_id uuid)`** : inverse (annulation/suppression commande).
+- Pas de nouvelle UI dédiée — le journal sera consultable depuis `AdminAudit` existant via une nouvelle section « Historique des rôles » (tableau : date, qui, opération INSERT/DELETE, cible, rôle).
+- Lecture via `role_audit_log` (RLS admin-only déjà en place).
 
-**Nouvelle RPC `consume_order_stock(p_order_id uuid)`** : appelée à l'expédition — décrémente `quantity` et `reserved` ensemble (le produit quitte vraiment le stock).
+### 4. Contrôle d'accès écrans stock & préparation
 
-**RLS** : `order_preparations` lisible par `admin`, `stock_manager`, et par le `preparator` à qui c'est assigné. Modifiable par `admin`/`stock_manager` ; `preparator` peut juste passer son préparation à `ready`.
+Actuellement `Admin.tsx` exige `isAdmin`. Pour autoriser `stock_manager` et `preparator` à accéder uniquement à leurs écrans :
 
-#### 2. Backend — Edge Function
+- Étendre `AuthContext` : ajouter `roles: AppRole[]` + helpers `isStockManager`, `isPreparator`, `hasAnyAdminAccess`.
+- Modifier `Admin.tsx` :
+  - Acceptation de l'entrée si `hasAnyAdminAccess` (admin OU stock_manager OU preparator).
+  - Filtrer `SIDEBAR_ITEMS` selon le rôle :
+    - `admin` → tout
+    - `stock_manager` → Dashboard, Commandes, Préparations, Stock
+    - `preparator` → Préparations uniquement
+  - Bloquer les routes non autorisées par un `<Navigate>` dans chaque page sensible.
+- `AdminPreparations.tsx` : le filtre RLS existant fait déjà le travail côté DB ; ajouter un garde UI selon le rôle.
+- `AdminStock.tsx` : autoriser `stock_manager` (lecture seule possible — pour la phase 1, on laisse l'écriture admin only via RLS existante).
 
-Étendre `send-order-notification` pour gérer 2 nouveaux types :
-- `stock_reservation_created` → envoyé à tous les utilisateurs ayant le rôle `stock_manager` (email récupéré via `customers.email` ou `auth.users`) — sujet « Nouvelle commande à préparer #ORDER »
-- `preparation_assigned` → envoyé au préparateur assigné
+### 5. Badges de rôle
 
-Templates ajoutés dans `notification_config.email_templates` (avec valeurs par défaut FR).
+- **Fiche client (Dialog)** : `RoleManager` affiche déjà les checkboxes — ajouter en en-tête de la fiche les badges actuels colorés (rouge admin, ambre stock, vert préparateur).
+- **Liste clients (table)** : nouvelle colonne « RÔLES » entre EMAIL et NIVEAU, avec petits badges. Données chargées en une seule requête depuis `user_roles` (group by user_id) via un `useUserRoles()` hook React Query.
 
-#### 3. Frontend
+### 6. Dette technique / failles invisibles à corriger en passant
 
-**`src/pages/admin/AdminOrders.tsx`** :
-- Dans `handleQuickValidate` (cas `payment`) ET `handleBulkValidatePayment` : après succès → appeler `supabase.rpc('reserve_order_stock', { p_order_id })`, puis `supabase.functions.invoke('send-order-notification', { ..., notificationType: 'stock_reservation_created' })`
-- Toast : « Stock réservé, responsable stock notifié »
-
-**Nouvelle page `src/pages/admin/AdminPreparations.tsx`** (route `/admin/preparations`) :
-- Liste des préparations en attente (filtrable par statut)
-- Affiche : n° commande, client, articles à préparer (size/color/qty), bouton « Assigner à... » (select des users `preparator`)
-- Pour `preparator` connecté : ne voit que ses préparations, bouton « Marquer prêt » → met `status='ready'`, débloque automatiquement `validation_flags.shipping`-ready-state (ne valide pas l'expédition mais affiche un badge « Préparée » dans AdminOrders pour autoriser le clic d'expédition)
-
-**Nouvelle entrée sidebar admin** : « Préparations » (visible si `admin` ou `stock_manager`).
-
-**`src/pages/admin/AdminOrders.tsx`** : ajouter un badge « 📦 Stock réservé » et « ✅ Préparée » dans la colonne validation.
-
-**`AdminStock.tsx`** : afficher la colonne `reserved` (déjà en DB) à côté de `quantity` pour visualiser le stock mis de côté.
-
-#### 4. Gestion des rôles
-
-Dans `AdminCustomers` (ou nouvelle section dans `AdminSettings` → « Équipe ») :
-- Permettre à un `admin` d'attribuer les rôles `stock_manager` / `preparator` à des comptes existants
-
-### Diagramme de flux
-
-```text
-Validation Paiement (admin click)
-         │
-         ▼
-  RPC reserve_order_stock
-  ├─ stock_levels.reserved += qty
-  ├─ stock_history insert
-  └─ orders.stock_reserved_at = now()
-         │
-         ▼
-  Edge fn → email stock_manager(s)
-  + insert order_preparations(status='pending')
-         │
-         ▼
-  Stock manager ouvre /admin/preparations
-  Assigne à un préparateur ──► email préparateur
-         │
-         ▼
-  Préparateur marque "prêt"
-  order_preparations.status='ready'
-         │
-         ▼
-  Admin valide expédition (étape 3 existante)
-  └─ RPC consume_order_stock (quantity -= qty, reserved -= qty)
-```
+- `auto_create_inventory_on_product_insert` : aucun trigger attaché ? À vérifier (séparé du présent ticket si non).
+- `audit_role_change` : sera maintenant attaché ✅
+- Aucune autre faille bloquante détectée — RLS strict sur tables sensibles déjà en place (mémoire sécurité existante).
 
 ### Fichiers modifiés / créés
 
 | Fichier | Type | Changement |
 |---|---|---|
-| Migration SQL | nouveau | enum roles + table `order_preparations` + 3 RPC + colonne `stock_reserved_at` + RLS |
-| `supabase/functions/send-order-notification/index.ts` | edit | gestion des types `stock_reservation_created` et `preparation_assigned` (lookup destinataires par rôle) |
-| `src/pages/admin/AdminOrders.tsx` | edit | appel RPC + notif après validation paiement, badges stock/préparation |
-| `src/pages/admin/AdminPreparations.tsx` | nouveau | dashboard préparations + assignation |
-| `src/pages/admin/AdminStock.tsx` | edit | colonne `reserved` affichée |
-| `src/pages/admin/Admin.tsx` (sidebar) | edit | nouvelle entrée « Préparations » |
-| `src/App.tsx` | edit | route `/admin/preparations` |
-| Composant gestion rôles équipe | nouveau ou edit AdminSettings | UI attribution `stock_manager` / `preparator` |
+| Migration SQL | nouveau | trigger audit `user_roles`, vue rôles+email |
+| `supabase/functions/send-order-notification/index.ts` | edit | type `role_assigned` + lookup email destinataire |
+| `src/context/AuthContext.tsx` | edit | charger tous les rôles, exposer helpers |
+| `src/pages/admin/Admin.tsx` | edit | accès multi-rôle, sidebar filtré |
+| `src/pages/admin/AdminCustomers.tsx` | edit | colonne badges + badges en-tête fiche + invoke notif |
+| `src/pages/admin/AdminAudit.tsx` | edit | section « Historique des rôles » |
+| `src/hooks/useUserRoles.ts` | nouveau | hook batch chargement des rôles |
+| `src/pages/admin/AdminPreparations.tsx` | edit | garde UI léger selon rôle |
 
-### Questions avant implémentation
+### Question
 
-1. Veux-tu **2 nouveaux rôles distincts** (`stock_manager` qui assigne + `preparator` qui prépare), ou **un seul rôle** `stock_manager` qui fait tout (réception alerte + préparation) ?
-2. La **réservation doit-elle bloquer la vente** (afficher stock affichable = `quantity - reserved` côté boutique) ou juste informer en interne ?
-3. L'email destinataire du responsable stock : utiliser **tous les comptes ayant le rôle**, ou un seul **email fixe** configuré dans `admin_config.admin_notification_email` ?
+Le **template de l'email d'attribution** doit-il être configurable depuis `/admin/notifications` (comme les autres templates) ou hardcodé en français dans l'Edge Function pour simplifier ? Je propose **hardcodé** (1 seul template, peu de variables) sauf si tu préfères pouvoir le personnaliser.
