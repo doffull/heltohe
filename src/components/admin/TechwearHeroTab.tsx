@@ -143,17 +143,17 @@ export function TechwearHeroTab() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="rounded-xl bg-gradient-to-r from-primary/20 via-primary/10 to-transparent border border-primary/20 p-4 flex items-center justify-between">
-        <div>
+      <div className="rounded-xl bg-gradient-to-r from-primary/20 via-primary/10 to-transparent border border-primary/20 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="min-w-0">
           <h3 className="text-base font-bold flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            Hero Techwear · Slider
+            <Sparkles className="h-4 w-4 text-primary shrink-0" />
+            <span className="truncate">Hero Techwear · Slider</span>
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
             Créez plusieurs slides — chaque slide a sa propre configuration complète
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           <Badge variant={cfg.enabled ? 'default' : 'secondary'} className="gap-1">
             {cfg.enabled ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
             {cfg.enabled ? 'Actif' : 'Désactivé'}
