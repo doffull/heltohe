@@ -26,15 +26,29 @@ const TIER_COLORS: Record<string, string> = {
   platinum: 'bg-purple-500/20 text-purple-500',
 };
 
-type AppRole = 'admin' | 'stock_manager' | 'preparator';
+import { ROLE_LABELS, ROLE_COLORS, useAllUserRoles, type AppRole } from '@/hooks/useUserRoles';
+import { useQueryClient } from '@tanstack/react-query';
+
 const MANAGEABLE_ROLES: { value: AppRole; label: string }[] = [
   { value: 'stock_manager', label: 'Responsable stock' },
   { value: 'preparator', label: 'Préparateur' },
   { value: 'admin', label: 'Admin' },
 ];
 
-function RoleManager({ userId }: { userId: string }) {
+function RoleBadges({ roles }: { roles: AppRole[] }) {
+  if (!roles || roles.length === 0) return <span className="text-xs text-muted-foreground">—</span>;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {roles.map(r => (
+        <span key={r} className={`text-[10px] px-1.5 py-0.5 rounded border uppercase font-bold ${ROLE_COLORS[r]}`}>{ROLE_LABELS[r]}</span>
+      ))}
+    </div>
+  );
+}
+
+function RoleManager({ userId, customerEmail, customerName }: { userId: string; customerEmail: string; customerName: string }) {
   const { toast } = useToast();
+  const qc = useQueryClient();
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -51,12 +65,19 @@ function RoleManager({ userId }: { userId: string }) {
     if (checked) {
       const { error } = await supabase.from('user_roles').insert({ user_id: userId, role });
       if (error) { toast({ title: 'Erreur', description: error.message, variant: 'destructive' }); return; }
+      // Notification email (best-effort)
+      supabase.functions.invoke('send-order-notification', {
+        body: { notificationType: 'role_assigned', userId, role, customerEmail, customerName },
+      }).catch(() => {});
+      toast({ title: 'Rôle attribué', description: 'Notification envoyée par email.' });
     } else {
       const { error } = await supabase.from('user_roles').delete().eq('user_id', userId).eq('role', role);
       if (error) { toast({ title: 'Erreur', description: error.message, variant: 'destructive' }); return; }
+      toast({ title: 'Rôle retiré' });
     }
-    toast({ title: 'Rôle mis à jour' });
     load();
+    qc.invalidateQueries({ queryKey: ['all-user-roles'] });
+    qc.invalidateQueries({ queryKey: ['role-audit-log'] });
   };
 
   return (
