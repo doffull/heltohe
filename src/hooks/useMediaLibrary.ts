@@ -46,17 +46,23 @@ export function useUploadMedia() {
 
   return useMutation({
     mutationFn: async (file: File) => {
+      const isVideo = file.type.startsWith('video/');
+      const maxSize = isVideo ? 100 * 1024 * 1024 : 50 * 1024 * 1024;
+      if (file.size > maxSize) {
+        throw new Error(`Fichier trop volumineux (max ${isVideo ? '100' : '50'}MB)`);
+      }
       const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
       const { error } = await supabase.storage.from(BUCKET).upload(fileName, file, {
         cacheControl: '3600',
         upsert: false,
+        contentType: file.type || undefined,
       });
       if (error) throw error;
       return fileName;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['media-library'] });
-      toast({ title: 'Fichier uploadé avec succès' });
+      toast({ title: 'Fichier uploadé' });
     },
     onError: (e: Error) => {
       toast({ title: 'Erreur upload', description: e.message, variant: 'destructive' });
