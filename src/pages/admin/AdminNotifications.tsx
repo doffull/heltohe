@@ -79,28 +79,28 @@ export default function AdminNotifications() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+    <div className="space-y-4 lg:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-xl lg:text-3xl font-bold hud-text flex items-center gap-2">
-            <Bell className="h-6 w-6" /> NOTIFICATIONS
+            <Bell className="h-5 w-5 lg:h-6 lg:w-6 shrink-0" /> NOTIFICATIONS
           </h1>
           <p className="text-muted-foreground text-xs lg:text-sm mt-1">
             Configurez les notifications automatiques envoyées aux clients
           </p>
         </div>
-        <Button onClick={handleSave} disabled={upsert.isPending}>
+        <Button onClick={handleSave} disabled={upsert.isPending} className="w-full sm:w-auto">
           {upsert.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
           Sauvegarder
         </Button>
       </div>
 
       <Tabs defaultValue="channels" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="channels" className="gap-1"><Settings2 className="h-3.5 w-3.5" />Canaux</TabsTrigger>
-          <TabsTrigger value="triggers" className="gap-1"><Bell className="h-3.5 w-3.5" />Déclencheurs</TabsTrigger>
-          <TabsTrigger value="templates" className="gap-1"><FileText className="h-3.5 w-3.5" />Templates</TabsTrigger>
-          <TabsTrigger value="history" className="gap-1"><History className="h-3.5 w-3.5" />Historique</TabsTrigger>
+        <TabsList className="w-full overflow-x-auto justify-start">
+          <TabsTrigger value="channels" className="gap-1 text-xs sm:text-sm"><Settings2 className="h-3.5 w-3.5" />Canaux</TabsTrigger>
+          <TabsTrigger value="triggers" className="gap-1 text-xs sm:text-sm"><Bell className="h-3.5 w-3.5" />Déclencheurs</TabsTrigger>
+          <TabsTrigger value="templates" className="gap-1 text-xs sm:text-sm"><FileText className="h-3.5 w-3.5" />Templates</TabsTrigger>
+          <TabsTrigger value="history" className="gap-1 text-xs sm:text-sm"><History className="h-3.5 w-3.5" />Historique</TabsTrigger>
         </TabsList>
 
         {/* Channels */}
