@@ -47,6 +47,7 @@ import AdminChatbot from './AdminChatbot';
 import AdminColissimo from './AdminColissimo';
 import AdminCheckout from './AdminCheckout';
 import AdminNotifications from './AdminNotifications';
+import AdminPreparations from './AdminPreparations';
 
 export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin': '#6B7280',
