@@ -273,7 +273,10 @@ export default function AdminCustomers() {
       {/* Detail Dialog */}
       <Dialog open={!!selectedCustomer} onOpenChange={() => setSelectedCustomer(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle className="hud-text">DÉTAILS CLIENT</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle className="hud-text">DÉTAILS CLIENT</DialogTitle>
+            {selectedCustomer && <RoleBadges roles={rolesByUser?.get(selectedCustomer.userId) || []} />}
+          </DialogHeader>
           {selectedCustomer && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
