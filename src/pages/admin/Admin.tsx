@@ -115,7 +115,7 @@ function SidebarContent({ user, signOut, location, sectionColors, allowedHrefs }
       </div>
 
       <nav className="flex-1 p-3 lg:p-4 space-y-0.5 overflow-y-auto">
-        {SIDEBAR_ITEMS.map((item) => {
+        {SIDEBAR_ITEMS.filter(i => allowedHrefs.has(i.href)).map((item) => {
           const isActive = activeHref === item.href;
           const color = sectionColors[item.href] || DEFAULT_SECTION_COLORS[item.href] || '#6B7280';
           
