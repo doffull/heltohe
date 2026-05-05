@@ -99,7 +99,7 @@ function getActiveHref(pathname: string): string {
   return match?.href || '/admin';
 }
 
-function SidebarContent({ user, signOut, location, sectionColors }: { user: any; signOut: () => void; location: any; sectionColors: Record<string, string> }) {
+function SidebarContent({ user, signOut, location, sectionColors, allowedHrefs }: { user: any; signOut: () => void; location: any; sectionColors: Record<string, string>; allowedHrefs: Set<string> }) {
   const activeHref = getActiveHref(location.pathname);
 
   return (
