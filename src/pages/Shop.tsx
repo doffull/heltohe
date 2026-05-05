@@ -143,7 +143,7 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-12">
+      <div className="container mx-auto px-4 py-6 lg:py-12">
         {/* Header — hidden when a CategoryPageRouter provides its own hero */}
         {!hideHeader && (
           <div className="mb-6 lg:mb-10">
@@ -288,36 +288,36 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
             {filteredProducts.map((product, index) => (
               <div
                 key={product.id}
-                className="bevel-corners-sm bg-card p-6 flex gap-8 border border-border hover:border-foreground transition-all animate-fade-in"
+                className="bevel-corners-sm bg-card p-4 sm:p-6 flex flex-col sm:flex-row gap-4 sm:gap-8 border border-border hover:border-foreground transition-all animate-fade-in"
                 style={{ animationDelay: `${index * 50}ms` }}
                 onMouseEnter={() => handleProductHover(product)}
                 onMouseLeave={handleProductLeave}
               >
-                <div className="w-40 h-48 flex-shrink-0 bevel-corners-sm overflow-hidden cursor-pointer" onClick={() => navigate(`/boutique/${product.id}`)}>
+                <div className="w-full sm:w-40 h-48 flex-shrink-0 bevel-corners-sm overflow-hidden cursor-pointer" onClick={() => navigate(`/boutique/${product.id}`)}>
                   <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
                 </div>
-                <div className="flex-1 flex flex-col justify-between">
+                <div className="flex-1 flex flex-col justify-between min-w-0">
                   <div>
                     <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{product.category}</p>
-                    <h3 className="font-bold text-xl uppercase tracking-tight cursor-pointer hover:text-muted-foreground transition-colors" onClick={() => navigate(`/boutique/${product.id}`)}>
+                    <h3 className="font-bold text-lg sm:text-xl uppercase tracking-tight cursor-pointer hover:text-muted-foreground transition-colors" onClick={() => navigate(`/boutique/${product.id}`)}>
                       {product.name}
                     </h3>
                     <p className="text-sm text-muted-foreground line-clamp-2 mt-2">{product.description}</p>
                   </div>
-                  <div className="flex items-center justify-between mt-4">
+                  <div className="flex items-center justify-between gap-3 mt-4 flex-wrap">
                     <div>
                       {product.salePrice ? (
                         <div className="flex items-center gap-3">
-                          <span className="text-2xl font-bold">{product.salePrice}€</span>
-                          <span className="text-base line-through text-muted-foreground">{product.price}€</span>
+                          <span className="text-xl sm:text-2xl font-bold">{product.salePrice}€</span>
+                          <span className="text-sm sm:text-base line-through text-muted-foreground">{product.price}€</span>
                         </div>
                       ) : (
-                        <span className="text-2xl font-bold">{product.price}€</span>
+                        <span className="text-xl sm:text-2xl font-bold">{product.price}€</span>
                       )}
                     </div>
-                    <div className="flex gap-3">
-                      <Button variant="outline" size="icon" className="h-12 w-12"><Heart className="h-5 w-5" /></Button>
-                      <Button className="h-12 px-8 uppercase tracking-wider" onClick={() => handleAddToCart(product)} disabled={product.stock === 0}>
+                    <div className="flex gap-2 sm:gap-3">
+                      <Button variant="outline" size="icon" className="h-10 w-10 sm:h-12 sm:w-12"><Heart className="h-4 w-4 sm:h-5 sm:w-5" /></Button>
+                      <Button className="h-10 sm:h-12 px-4 sm:px-8 uppercase tracking-wider text-xs sm:text-sm" onClick={() => handleAddToCart(product)} disabled={product.stock === 0}>
                         {product.stock === 0 ? 'Épuisé' : 'Ajouter'}
                       </Button>
                     </div>
