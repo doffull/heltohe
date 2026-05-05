@@ -139,8 +139,9 @@ export interface TechwearStat {
   value: number;
 }
 
-export interface TechwearHeroConfig {
-  enabled: boolean;
+export interface TechwearHeroSlideData {
+  id: string;
+  name?: string;
   productId: string | null;
   modelBadge: { line1: string; line2: string };
   ctaPrimary: { label: string; href: string };
@@ -159,6 +160,17 @@ export interface TechwearHeroConfig {
   background?: TechwearBackground;
   cardSize?: 'sm' | 'md' | 'lg' | 'xl';
   imageOverflow?: boolean;
+}
+
+export interface TechwearHeroConfig extends Omit<TechwearHeroSlideData, 'id' | 'name'> {
+  enabled: boolean;
+  // New multi-slides system (optional, back-compatible)
+  slides?: TechwearHeroSlideData[];
+  autoplay?: boolean;
+  intervalMs?: number;
+  transition?: 'fade' | 'slide';
+  showArrows?: boolean;
+  showDots?: boolean;
 }
 
 export interface HeroSlide {
