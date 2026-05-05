@@ -177,8 +177,8 @@ export default function AdminPreparations() {
         })}
       </div>
 
-      <div className="border rounded-lg">
-        <Table>
+      <div className="border rounded-lg overflow-x-auto">
+        <Table className="min-w-[760px]">
           <TableHeader>
             <TableRow>
               <TableHead>Commande</TableHead>
