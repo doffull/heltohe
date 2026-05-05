@@ -45,18 +45,18 @@ export default function AdminSettings() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold hud-text">PARAMÈTRES</h1>
-        <p className="text-muted-foreground mt-1">Configuration de la boutique</p>
+        <h1 className="text-xl lg:text-3xl font-bold hud-text">PARAMÈTRES</h1>
+        <p className="text-muted-foreground text-xs lg:text-sm mt-1">Configuration de la boutique</p>
       </div>
 
       <Tabs defaultValue="categories">
-        <TabsList className="bg-muted/50 flex-wrap">
-          <TabsTrigger value="categories" className="gap-2"><LayoutGrid className="h-4 w-4" />Catégories</TabsTrigger>
-          <TabsTrigger value="customization" className="gap-2"><Paintbrush className="h-4 w-4" />Personnalisation</TabsTrigger>
-          <TabsTrigger value="general" className="gap-2"><Settings className="h-4 w-4" />Général</TabsTrigger>
-          <TabsTrigger value="legal" className="gap-2"><Scale className="h-4 w-4" />Légal</TabsTrigger>
+        <TabsList className="bg-muted/50 w-full overflow-x-auto justify-start flex-nowrap">
+          <TabsTrigger value="categories" className="gap-2 text-xs sm:text-sm"><LayoutGrid className="h-4 w-4" />Catégories</TabsTrigger>
+          <TabsTrigger value="customization" className="gap-2 text-xs sm:text-sm"><Paintbrush className="h-4 w-4" />Personnalisation</TabsTrigger>
+          <TabsTrigger value="general" className="gap-2 text-xs sm:text-sm"><Settings className="h-4 w-4" />Général</TabsTrigger>
+          <TabsTrigger value="legal" className="gap-2 text-xs sm:text-sm"><Scale className="h-4 w-4" />Légal</TabsTrigger>
         </TabsList>
 
         {/* ── CATEGORIES TAB ── */}
@@ -201,7 +201,7 @@ export default function AdminSettings() {
         <TabsContent value="customization" className="space-y-4">
           <div className="chamfer-hud bg-card/50 p-6 space-y-6">
             <h3 className="text-lg font-bold hud-text">TYPOGRAPHIE</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="hud-text text-xs">Police des titres</Label>
                 <select
@@ -332,7 +332,7 @@ export default function AdminSettings() {
         <TabsContent value="general" className="space-y-4">
           <div className="chamfer-hud bg-card/50 p-6 space-y-6">
             <h3 className="text-lg font-bold hud-text">INFORMATIONS DU SITE</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="hud-text text-xs">Nom du site</Label>
                 <Input

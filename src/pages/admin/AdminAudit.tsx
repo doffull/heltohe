@@ -386,8 +386,8 @@ export default function AdminAudit() {
     <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Audit Système</h1>
+        <div className="min-w-0">
+          <h1 className="text-xl lg:text-3xl font-bold hud-text">Audit Système</h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             {totalCount} vérifications — routes, DB, stockage, logique
           </p>
