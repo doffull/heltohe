@@ -710,8 +710,11 @@ export function MainLayout({ children }: MainLayoutProps) {
         </div>
       </footer>
 
-      {/* Chatbot Widget - visible on all pages */}
-      <ChatBotWidget />
+      {/* Chatbot Widget - triggered from header */}
+      <ChatBotWidget open={chatOpen} onOpenChange={setChatOpen} hideTrigger />
+
+      {/* Subscribe FAB - hidden for admins */}
+      {!isAdmin && <SubscribeFab />}
     </div>
   );
 }
