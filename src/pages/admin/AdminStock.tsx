@@ -1860,6 +1860,7 @@ function SizeColorGrid({
             })}
           </tbody>
         </table>
+        </div>
 
         {/* CSV Import Preview Dialog */}
         <Dialog open={csvImportOpen} onOpenChange={setCsvImportOpen}>
