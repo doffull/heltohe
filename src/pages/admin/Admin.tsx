@@ -99,7 +99,7 @@ function getActiveHref(pathname: string): string {
   return match?.href || '/admin';
 }
 
-function SidebarContent({ user, signOut, location, sectionColors, allowedHrefs }: { user: any; signOut: () => void; location: any; sectionColors: Record<string, string>; allowedHrefs: Set<string> }) {
+function SidebarContent({ user, signOut, location, sectionColors, allowedHrefs, onNavigate }: { user: any; signOut: () => void; location: any; sectionColors: Record<string, string>; allowedHrefs: Set<string>; onNavigate?: () => void }) {
   const activeHref = getActiveHref(location.pathname);
 
   return (
@@ -123,6 +123,7 @@ function SidebarContent({ user, signOut, location, sectionColors, allowedHrefs }
             <Link
               key={item.href}
               to={item.href}
+              onClick={onNavigate}
               className={cn(
                 "flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-all group text-sm",
                 isActive 
@@ -220,7 +221,7 @@ export default function Admin() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-64 p-0 flex flex-col">
-            <SidebarContent user={user} signOut={signOut} location={location} sectionColors={sectionColors} allowedHrefs={allowedHrefs} />
+            <SidebarContent user={user} signOut={signOut} location={location} sectionColors={sectionColors} allowedHrefs={allowedHrefs} onNavigate={() => setMobileOpen(false)} />
           </SheetContent>
         </Sheet>
         <Shield className="h-5 w-5 text-primary" />
@@ -242,7 +243,7 @@ export default function Admin() {
             <Route path="pages/*" element={<AdminPages />} />
             <Route path="media/*" element={<AdminMedia />} />
             <Route path="marketing/*" element={<AdminMarketing />} />
-            <Route path="bannieres/*" element={<AdminMarketing />} />
+            <Route path="bannieres/*" element={<Navigate to="/admin/marketing" replace />} />
             <Route path="design/*" element={<AdminDesign />} />
             <Route path="stock/*" element={<AdminStock />} />
             <Route path="colissimo/*" element={<AdminColissimo />} />

@@ -1,74 +1,59 @@
-## Plan : Sécurisation et UX des rôles équipe
+# Audit complet du tableau de bord admin
 
-### Contexte
+Audit qualité premium des **17 pages admin** + shell commun (`Admin.tsx`). Objectif : tout fonctionne, rien de cassé, mobile parfait à 360px, zéro doublon, zéro contraste blanc/blanc, tous les boutons opérationnels.
 
-Le système de rôles `admin` / `stock_manager` / `preparator` existe déjà (table `user_roles`, fonction `has_role`, table `role_audit_log` et fonction `audit_role_change`). Manquent :
-1. Le **trigger d'audit** sur `user_roles` (la fonction existe mais n'est attachée à aucune table).
-2. Une **notification** envoyée à l'utilisateur quand on lui attribue un rôle équipe.
-3. Des **badges visuels** sur la fiche et la liste clients.
-4. Un **accès aux écrans `/admin/preparations` et `/admin/stock`** ouvert au-delà de l'admin uniquement (`stock_manager`, `preparator`).
+## Périmètre
 
-### 1. Migration SQL
+**Shell commun** : `Admin.tsx` (sidebar desktop + drawer mobile, header, routing, gestion rôles)
 
-- Attacher le trigger `audit_role_change` (déjà existant) à `user_roles` AFTER INSERT/UPDATE/DELETE.
-- Créer une vue `user_roles_with_email` (security_invoker=on) admin-only pour afficher la liste des rôles côté listing client (évite N+1 requêtes).
-- Étendre la RPC `list_users_by_role` pour inclure first_name/last_name (utile pour l'email).
+**17 pages** :
+Dashboard · Produits · Commandes · Préparations · Checkout · Clients · Pages · Média · Marketing · Design · Stock · Colissimo · Notifications · Chatbot · WooCommerce · Audit · Paramètres
 
-### 2. Notification d'attribution de rôle
+## Méthode (par page)
 
-Ajouter dans l'Edge Function `send-order-notification` (ou réutiliser le même pattern) un nouveau type `role_assigned` :
-- Sujet : « LVTK6 — Nouveau rôle attribué : {role_label} »
-- Corps : explique le rôle, lien vers `/admin/preparations` (stock_manager / preparator) ou `/admin` (admin)
-- Destinataire : email récupéré via `customers` puis `auth.users`
+1. **Lecture du fichier** + composants enfants
+2. **Test fonctionnel mental** : chaque bouton, chaque mutation (create/update/delete/bulk), chaque dialog, chaque filtre/recherche
+3. **Test responsive** : tableau qui déborde ? colonnes qui se chevauchent à 360px ? boutons trop grands ?
+4. **Test visuel** : contraste texte/fond (blanc-sur-blanc, noir-sur-noir, hover invisibles), icônes manquantes, doublons d'images
+5. **Test états** : loading, empty, error, succès toast
+6. **Correction directe**
 
-Côté frontend (`AdminCustomers.tsx > RoleManager`), après chaque `insert` réussi sur `user_roles`, appeler `supabase.functions.invoke('send-order-notification', { body: { notificationType: 'role_assigned', userId, role, customerEmail, customerName } })`.
+## Corrections types attendues
 
-Toast : « Rôle attribué et utilisateur notifié par email ».
+- **Tableaux desktop** → wrapper `overflow-x-auto` + version mobile en `cards` empilées
+- **Boutons d'action** → vérifier que chaque `onClick` appelle bien la mutation et affiche un toast
+- **Dialogs** → fermeture après succès, reset du formulaire, validation des champs requis
+- **Bulk actions** → barre d'action sticky, compteur correct, confirmation avant delete
+- **Sidebar items dupliqués** → `Marketing` et `Bannières` pointent tous deux vers `AdminMarketing` (ligne 244-245 → bannieres redirigeable ou supprimé)
+- **Couleurs** → respect de `sectionColors[href]` partout, pas de couleurs hardcodées qui cassent le thème
+- **Empty states** → message + CTA d'action
+- **Loading skeletons** → uniformes (chamfer-hud)
+- **Headers de page** → tous au même format (`h1` + sous-titre + actions à droite)
+- **i18n FR** → tous les libellés en français, pas de "Loading..." anglais résiduel
 
-### 3. Audit visible (read-only)
+## Checks transversaux
 
-- Pas de nouvelle UI dédiée — le journal sera consultable depuis `AdminAudit` existant via une nouvelle section « Historique des rôles » (tableau : date, qui, opération INSERT/DELETE, cible, rôle).
-- Lecture via `role_audit_log` (RLS admin-only déjà en place).
+- **Routing** : doublon `bannieres/*` → décider (rediriger ou retirer du routing)
+- **Permissions** : préparateur ne voit que `/admin/preparations` (OK actuellement) — vérifier que les autres pages refusent bien l'accès direct par URL
+- **Console** : zéro warning React (refs, keys, controlled inputs)
+- **Network** : zéro requête en boucle, queries `react-query` correctement invalidées après mutation
+- **Mobile drawer** : se ferme bien après navigation
+- **Section color bar** : visible sur toutes les pages
 
-### 4. Contrôle d'accès écrans stock & préparation
+## Livraison
 
-Actuellement `Admin.tsx` exige `isAdmin`. Pour autoriser `stock_manager` et `preparator` à accéder uniquement à leurs écrans :
+Corrections directes en plusieurs vagues thématiques :
 
-- Étendre `AuthContext` : ajouter `roles: AppRole[]` + helpers `isStockManager`, `isPreparator`, `hasAnyAdminAccess`.
-- Modifier `Admin.tsx` :
-  - Acceptation de l'entrée si `hasAnyAdminAccess` (admin OU stock_manager OU preparator).
-  - Filtrer `SIDEBAR_ITEMS` selon le rôle :
-    - `admin` → tout
-    - `stock_manager` → Dashboard, Commandes, Préparations, Stock
-    - `preparator` → Préparations uniquement
-  - Bloquer les routes non autorisées par un `<Navigate>` dans chaque page sensible.
-- `AdminPreparations.tsx` : le filtre RLS existant fait déjà le travail côté DB ; ajouter un garde UI selon le rôle.
-- `AdminStock.tsx` : autoriser `stock_manager` (lecture seule possible — pour la phase 1, on laisse l'écriture admin only via RLS existante).
+1. **Vague 1 — Shell & navigation** : `Admin.tsx` (doublon Marketing/Bannières, fermeture drawer mobile au clic), uniformisation headers
+2. **Vague 2 — Pages "données" lourdes** : Produits, Commandes, Clients, Stock, Préparations, Colissimo (tableaux + bulk actions + responsive)
+3. **Vague 3 — Pages "config"** : Checkout, Notifications, Chatbot, WooCommerce, Paramètres, Audit (formulaires, save buttons, validation)
+4. **Vague 4 — Pages "contenu"** : Pages, Média, Marketing, Design, Dashboard (preview, drag&drop, color pickers)
+5. **Récap final** : liste des corrections par page + captures éventuelles si problème visuel résiduel
 
-### 5. Badges de rôle
+## Hors scope
 
-- **Fiche client (Dialog)** : `RoleManager` affiche déjà les checkboxes — ajouter en en-tête de la fiche les badges actuels colorés (rouge admin, ambre stock, vert préparateur).
-- **Liste clients (table)** : nouvelle colonne « RÔLES » entre EMAIL et NIVEAU, avec petits badges. Données chargées en une seule requête depuis `user_roles` (group by user_id) via un `useUserRoles()` hook React Query.
+- Refonte fonctionnelle (nouvelles fonctionnalités) → seulement corrections + polish premium
+- Migrations DB (sauf si bug bloquant découvert)
+- Edge functions (sauf si erreur runtime détectée)
 
-### 6. Dette technique / failles invisibles à corriger en passant
-
-- `auto_create_inventory_on_product_insert` : aucun trigger attaché ? À vérifier (séparé du présent ticket si non).
-- `audit_role_change` : sera maintenant attaché ✅
-- Aucune autre faille bloquante détectée — RLS strict sur tables sensibles déjà en place (mémoire sécurité existante).
-
-### Fichiers modifiés / créés
-
-| Fichier | Type | Changement |
-|---|---|---|
-| Migration SQL | nouveau | trigger audit `user_roles`, vue rôles+email |
-| `supabase/functions/send-order-notification/index.ts` | edit | type `role_assigned` + lookup email destinataire |
-| `src/context/AuthContext.tsx` | edit | charger tous les rôles, exposer helpers |
-| `src/pages/admin/Admin.tsx` | edit | accès multi-rôle, sidebar filtré |
-| `src/pages/admin/AdminCustomers.tsx` | edit | colonne badges + badges en-tête fiche + invoke notif |
-| `src/pages/admin/AdminAudit.tsx` | edit | section « Historique des rôles » |
-| `src/hooks/useUserRoles.ts` | nouveau | hook batch chargement des rôles |
-| `src/pages/admin/AdminPreparations.tsx` | edit | garde UI léger selon rôle |
-
-### Question
-
-Le **template de l'email d'attribution** doit-il être configurable depuis `/admin/notifications` (comme les autres templates) ou hardcodé en français dans l'Edge Function pour simplifier ? Je propose **hardcodé** (1 seul template, peu de variables) sauf si tu préfères pouvoir le personnaliser.
+Je commence par la **Vague 1** dès approbation.

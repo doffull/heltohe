@@ -1768,7 +1768,8 @@ function SizeColorGrid({
           </label>
         </div>
 
-        <table className="w-full text-xs border-collapse">
+        <div className="overflow-x-auto -mx-3 px-3">
+        <table className="w-full text-xs border-collapse min-w-[480px]">
           <thead>
             <tr className="bg-muted/50">
               <th className="text-left py-2 px-3 font-medium">Couleur</th>
@@ -1859,6 +1860,7 @@ function SizeColorGrid({
             })}
           </tbody>
         </table>
+        </div>
 
         {/* CSV Import Preview Dialog */}
         <Dialog open={csvImportOpen} onOpenChange={setCsvImportOpen}>
