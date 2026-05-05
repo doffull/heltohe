@@ -14,8 +14,9 @@ export function Header() {
   return (
     <header className="fixed top-0 left-16 lg:left-64 right-0 z-30 h-14 bg-background/80 backdrop-blur-sm border-b border-border/30">
       <div className="h-full px-4 lg:px-8 flex items-center justify-between">
-        {/* Left side - System info */}
+        {/* Left side - Logo + System info */}
         <div className="flex items-center gap-4">
+          {designSettings.showLogo !== false && <BrandLogo variant="header" />}
           <div className="hidden md:flex items-center gap-2 hud-text text-xs text-muted-foreground">
             <span className="text-primary">//</span>
             <span>{designSettings.backgroundWatermark}</span>
