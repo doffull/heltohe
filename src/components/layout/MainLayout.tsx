@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { MannequinHotspots } from './MannequinHotspot';
 import { SidebarProductHUD } from './SidebarProductHUD';
 import { ChatBotWidget } from './ChatBotWidget';
+import { SubscribeFab } from './SubscribeFab';
 import { InlineEditable } from '@/components/visual-editor/InlineEditable';
 import { 
   Search, 
@@ -25,6 +26,7 @@ import {
   Shield,
   Bell,
   Check,
+  Bot,
   Mail as MailIcon
 } from 'lucide-react';
 import {
