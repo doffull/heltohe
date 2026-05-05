@@ -110,6 +110,36 @@ export interface BackgroundMedia {
   isCover?: boolean;
 }
 
+export interface TechwearColorOption {
+  name: string;
+  hex: string;
+  image: string;
+}
+
+export interface TechwearStat {
+  label: string;
+  value: number;
+}
+
+export interface TechwearHeroConfig {
+  enabled: boolean;
+  productId: string | null;
+  modelBadge: { line1: string; line2: string };
+  ctaPrimary: { label: string; href: string };
+  ctaSecondary: { label: string; href: string };
+  stats: TechwearStat[];
+  visibleSizes: string[];
+  defaultSize: string;
+  colorOptions: TechwearColorOption[];
+  defaultColor: number;
+  imageFit: 'cover' | 'contain' | 'fill' | 'none';
+  imagePosition: string;
+  showStats: boolean;
+  showColors: boolean;
+  showSizes: boolean;
+  showModelBadge: boolean;
+}
+
 export interface HeroSlide {
   id: string;
   media: string;
@@ -214,6 +244,9 @@ export interface DesignSettings {
   isSlideshowActive: boolean;
   slideshowSpeed: number;
   
+  // Techwear hero (dynamic, product-linked)
+  techwearHero: TechwearHeroConfig;
+
   // Hero slider
   heroSlides: HeroSlide[];
   sliderAutoPlay: boolean;
