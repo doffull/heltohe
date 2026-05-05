@@ -530,6 +530,7 @@ export type Database = {
           stats_label: string | null
           stats_style: Json | null
           stats_sub_label: string | null
+          techwear_hero: Json
           top_banner: Json | null
           unit_id_label: string | null
           unit_id_style: Json | null
@@ -630,6 +631,7 @@ export type Database = {
           stats_label?: string | null
           stats_style?: Json | null
           stats_sub_label?: string | null
+          techwear_hero?: Json
           top_banner?: Json | null
           unit_id_label?: string | null
           unit_id_style?: Json | null
@@ -730,6 +732,7 @@ export type Database = {
           stats_label?: string | null
           stats_style?: Json | null
           stats_sub_label?: string | null
+          techwear_hero?: Json
           top_banner?: Json | null
           unit_id_label?: string | null
           unit_id_style?: Json | null

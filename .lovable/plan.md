@@ -1,101 +1,97 @@
-## Refonte Page d'Accueil — Style Techwear
+## Hero Techwear dynamique + admin lié aux produits
 
-### Points importants à valider d'abord
+### 1. Nouveau champ `techwear_hero` (DB)
 
-**1. Marque** — La maquette montre le logo Adidas. Votre projet est **HELVETICA / LVTK6** (Industrial Luxury). Je vais reproduire **la mise en page exacte** (layout, formes, panneaux stats, sélecteurs, hexagones, animations) mais avec **votre logo Helvetica**, pas celui d'Adidas (risque légal + cohérence marque).
+Migration : ajouter une colonne JSONB `techwear_hero` sur `design_settings` (RLS déjà en place — public lecture, admin écriture). Structure :
 
-**2. Stack** — Vous demandez `index.html` + `home.css` + `home.js` vanilla. Le projet est en **React + Vite + Tailwind**. Ouvrir un `index.html` standalone casserait votre routing, votre auth, votre panier. Je vais donc livrer la **même architecture modulaire** mais sous forme React :
-- `src/views/HomeView.tsx` (remplace l'actuel)
-- `src/components/home/techwear/*` (composants découpés, équivalents des "sections" HTML)
-- `src/styles/home-techwear.css` (variables CSS en tête, classes préfixées `hw-`)
-- `src/config/homeConfig.ts` (équivalent du `CONFIG` JS : textes, liens, tailles, couleurs, stats)
-
-Toutes les variables CSS, le `CONFIG`, le préfixe `hw-`, les animations, le responsive, l'accessibilité, le respect de `prefers-reduced-motion` — **tout est conservé à l'identique**.
-
-### Ce qui sera construit
-
-**Nouvelle HomeView (remplace `HeroSlider` + sections actuelles sur `/`) :**
-
-```text
-┌──────────────────────────────────────────────────────┐
-│ Header existant (intact, non touché)                  │
-├──────────────────────────────────────────────────────┤
-│  hexagones   ┌────────────┐    ┌── Stats panel ──┐   │
-│  contour     │  Card 420  │    │ Price    ▓▓▓▓░  │   │
-│  (SVG bg)    │  ×680 px   │    │ Durab.   ▓▓▓▓▓  │   │
-│              │  Logo HV   │    │ Fashion  ▓▓▓░░  │   │
-│              │            │    └─────────────────┘   │
-│              │  Mannequin │    ┌── Color swatches ┐  │
-│              │  PNG       │    │ ■ □ ▨            │  │
-│              │            │    └──────────────────┘  │
-│              │            │    ┌── Size selector ─┐  │
-│              │            │    │ Size [XS]        │  │
-│              │ ┌MODEL─┐   │    │ Size [XL]        │  │
-│              │ │0.1.2 │   │    └──────────────────┘  │
-│              └────────────┘                          │
-│              [   SHOP NOW   ]                        │
-│              [ EXPLORE COLLECTION ]                  │
-├──────────────────────────────────────────────────────┤
-│ Footer existant (intact)                              │
-└──────────────────────────────────────────────────────┘
-```
-
-**Composants React créés :**
-1. `TechwearHero.tsx` — wrapper hero (`#hw-hero`), gère animations & parallaxe hexagones
-2. `HexBackground.tsx` — SVG hexagones contour + ligne horizontale (parallaxe Intersection Observer)
-3. `HeroCard.tsx` — card centrale clip-path biseauté, logo + image produit
-4. `StatsPanel.tsx` — Price/Durability/Fashion + barres animées 1.2s
-5. `ColorSwatches.tsx` — 3 couleurs, swatch actif étendu, switch image produit
-6. `SizeSelector.tsx` — tailles depuis config, toggle actif
-7. `ModelBadge.tsx` — hexagone "MODEL 0.1.2"
-8. `HeroCTAs.tsx` — boutons SHOP NOW / EXPLORE (liens vers `/shop` et `/boutique` existants)
-
-**Fichier de config (`src/config/homeConfig.ts`) :**
 ```ts
-export const HOME_CONFIG = {
-  modelBadge: "MODEL 0.1.2",
-  ctaPrimary: { label: "SHOP NOW", href: "/shop" },
-  ctaSecondary: { label: "EXPLORE COLLECTION", href: "/boutique" },
-  sizes: ["XS","S","M","L","XL","XXL"],
-  defaultSize: "XS",
-  colorOptions: [
-    { name: "Black", hex: "#1A1A1A", image: "/assets/home/model-black.png" },
-    { name: "White", hex: "#F5F5F5", image: "/assets/home/model-white.png" },
-    { name: "Gray",  hex: "#888888", image: "/assets/home/model-gray.png" },
-  ],
-  defaultColor: 0,
-  stats: [
-    { label: "Price", value: 85 },
-    { label: "Durability", value: 90 },
-    { label: "Fashion", value: 70 },
-  ],
+type TechwearHeroConfig = {
+  enabled: boolean;
+  productId: string | null;   // si défini → tailles/couleurs/CTA "Shop now" pris du produit
+  modelBadge: { line1: string; line2: string };
+  ctaPrimary:   { label: string; href: string };
+  ctaSecondary: { label: string; href: string };
+  // Stats (3 lignes, sliders 0–100)
+  stats: { label: string; value: number }[];
+  // Visible sizes (sous-ensemble des tailles produit, ou libre)
+  visibleSizes: string[];
+  defaultSize: string;
+  // Couleurs (héritées du produit OU custom)
+  colorOptions: { name: string; hex: string; image: string }[];
+  defaultColor: number;
+  // Affichage de l'image mannequin dans la card
+  imageFit: 'cover' | 'contain' | 'fill' | 'none';
+  imagePosition: string;   // top|center|bottom|left|right
+  // Toggle des panneaux droits
+  showStats: boolean;
+  showColors: boolean;
+  showSizes: boolean;
+  showModelBadge: boolean;
 };
 ```
 
-**CSS (`src/styles/home-techwear.css`) :**
-- Bloc `:root { --color-bg, --color-white, --color-black, --color-gray-light, --color-gray-medium, --color-text, --color-border, --color-panel-bg, --font-main, --font-size-nav, --font-size-cta, --font-size-label, --header-height, --hero-padding, --panel-padding, --blur-panel, --transition-speed, --border-radius, --card-width, --card-height, --card-bevel }`
-- Toutes les classes préfixées `hw-` (isolation totale)
-- Keyframes `hw-fade-up`, `hw-slide-right`, `hw-fill-bar` avec délais échelonnés (0.1/0.3/0.4/0.5/0.6/0.7s)
-- `@media (prefers-reduced-motion: reduce) { *animations: none }`
-- Breakpoints 1200px (panels sous card, card 360px) et 768px (CTA full width, footer grid 2×2)
-- Importé **uniquement** dans `TechwearHero.tsx` → zéro impact sur le reste du site
+Ajout dans `useDesignSettings.ts` (mapping in/out) + `DesignSettings` type + `INITIAL_DESIGN_SETTINGS`.
 
-### Images mannequin
+### 2. `TechwearHero.tsx` dynamique
 
-3 PNG transparents (Black/White/Gray) requis dans `/public/assets/home/`. Je peux les **générer via Lovable AI (Nano Banana)** — silhouette techwear style éditorial, fond transparent. Sinon vous fournissez vos visuels.
+- Lit `designSettings.techwearHero`.
+- Si `enabled === false` → retourne `null` (le hero classique reste affiché par-dessus si activé séparément, sinon l'utilisateur voit le contenu en dessous).
+- Si `productId` défini : merge auto avec le produit (`useProducts` → trouve le produit, déduit `colorOptions` depuis `product.colorOptions || product.colors`, `visibleSizes ⊆ product.sizes`, `ctaPrimary.href = /boutique/{id}`).
+- Sinon utilise les valeurs custom de la config ou le fallback statique actuel.
+- Image courante : applique `imageFit` / `imagePosition` via `style.objectFit/objectPosition` (corrige le bug actuel sur la card).
+- Accessibilité renforcée :
+  - `<section role="region" aria-label="Hero produit">`
+  - Boutons couleur : `role="radiogroup"` + `aria-checked`.
+  - Boutons tailles : `aria-pressed`.
+  - Stats panel : `role="list"` + `aria-label`.
+  - Image mannequin : `alt` dynamique avec couleur sélectionnée.
+  - Focus visible (outline) sur swatches & sizes.
+  - Respect déjà en place de `prefers-reduced-motion`.
 
-### Ce qui reste intact (RÈGLE ABSOLUE respectée)
+### 3. Onglet admin "Hero Techwear"
 
-- Header (`MainLayout`), Footer, Sidebar, Cart, Auth, ChatBot, SubscribeFab, Visual Editor — **non touchés**
-- Routes, Supabase, RLS, edge functions — **non touchées**
-- Admin (`AdminDesign > HeroSlider`) reste fonctionnel ; option : ajouter un toggle "Mode Techwear" pour switcher entre l'ancien HeroSlider configurable et la nouvelle vue (à confirmer)
-- Anciens composants (`HeroSlider.tsx`, `CategoryGrid`, `ProductSections`) **conservés** (juste plus rendus sur `/`)
+Nouveau composant `TechwearHeroTab` ajouté dans `AdminDesign.tsx` :
+- Ajouté à `NAV_ITEMS` (icône `LayoutDashboard` ou `Sparkles`) entre `hero` et `header`.
+- Sections de l'éditeur :
+  1. **Activation** — switch `enabled` + bandeau d'aperçu.
+  2. **Produit lié** — `<Select>` listant `useProducts().data`. "Aucun (config manuelle)" possible. Si choisi : badge "Couleurs/tailles/CTA hérités du produit" + boutons "Resynchroniser depuis le produit".
+  3. **Image & affichage** — `Select` Fit (cover/contain/fill/none) + Position (5 options). Live mini-preview 3:4.
+  4. **Couleurs** — liste éditable (drag, ajout, supp). Chaque ligne : nom, picker hex, FileDropZone image PNG transparente + bouton AI (`AiImageButton`). Si produit lié : bouton "Importer depuis le produit".
+  5. **Tailles** — liste éditable + sélection des tailles à afficher (chips toggle), + taille par défaut.
+  6. **Stats** — 3 sliders avec label éditable et valeur 0–100.
+  7. **Badge MODEL** — 2 inputs (line1/line2) + switch visibilité.
+  8. **CTA** — 2 paires (label + URL/produit, avec auto-fill `/boutique/{id}` si produit lié).
+  9. **Sauvegarde** — utilise le bouton global "Sauvegarder" déjà présent.
 
-### Questions de validation
+### 4. Test visuel
 
-1. **Logo** : on utilise votre logo Helvetica (depuis `design_settings`) au lieu du Trefoil Adidas ? ✅ recommandé
-2. **Sections sous le hero** : on garde `CategoryGrid` + `ProductSections` sous le nouveau hero, ou page d'accueil **uniquement le hero plein écran** (comme la maquette) ?
-3. **Images mannequin** : génération IA, ou vous fournissez les 3 PNG ?
-4. **Toggle admin** : ajouter un switch "Hero Techwear vs Hero Slider classique" dans Admin > Design ?
+Ajouter `src/components/home/__tests__/TechwearHero.test.tsx` (Vitest + Testing Library) :
+- Vérifie que le hero s'affiche désactivé quand `enabled=false`.
+- Vérifie que les 3 stats, les 3 couleurs, les tailles visibles et le badge sont rendus quand activé.
+- Vérifie que cliquer sur un swatch met à jour `aria-checked` et le `src` de l'image.
+- Vérifie l'accessibilité de base (rôles, alt).
 
-Validez ces 4 points et j'implémente.
+(snapshot léger du markup interne `hw-card-image` + `hw-color-row.is-active`)
+
+### 5. Fichiers touchés
+
+**Migration :** `supabase/migrations/<ts>_techwear_hero.sql` — `ALTER TABLE design_settings ADD COLUMN techwear_hero JSONB DEFAULT ...`
+
+**Types & data :**
+- `src/types/index.ts` — ajout `TechwearHeroConfig` + champ dans `DesignSettings`.
+- `src/data/initialData.ts` — défaut.
+- `src/hooks/useDesignSettings.ts` — mapping `db.techwear_hero`.
+
+**UI :**
+- `src/components/home/TechwearHero.tsx` — version dynamique.
+- `src/config/homeConfig.ts` — devient `DEFAULT_TECHWEAR_HERO` (fallback).
+- `src/pages/admin/AdminDesign.tsx` — nouveau `TechwearHeroTab` + entrée nav.
+
+**Test :**
+- `src/components/home/__tests__/TechwearHero.test.tsx`.
+
+### 6. Hors scope (pour rester focus)
+- Pas de gestion stock temps réel sur la card (juste affichage des tailles disponibles).
+- Pas de panier-add depuis le hero (le CTA renvoie à la fiche produit).
+
+J'enchaîne sur l'implémentation.
