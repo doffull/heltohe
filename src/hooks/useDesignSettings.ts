@@ -27,6 +27,13 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     siteTagline: (db.site_tagline as string) ?? base.siteTagline,
     contactEmail: (db.contact_email as string) ?? base.contactEmail,
     contactPhone: (db.contact_phone as string) ?? base.contactPhone,
+    // Logo customization
+    logoSize: (db.logo_size as number) ?? 40,
+    logoBackgroundShape: ((db.logo_background_shape as string) || 'none') as any,
+    logoBackgroundColor: (db.logo_background_color as string) ?? '',
+    logoBackgroundPadding: (db.logo_background_padding as number) ?? 8,
+    footerLogo: (db.footer_logo as string) ?? '',
+    faviconUrl: (db.favicon_url as string) ?? '',
     // adminNotificationEmail and Colissimo sender fields moved to admin_config table
 
     // Sidebar HUD text fields
@@ -144,6 +151,13 @@ function settingsToDb(s: DesignSettings) {
     site_tagline: s.siteTagline ?? '',
     contact_email: s.contactEmail ?? '',
     contact_phone: s.contactPhone ?? '',
+    // Logo customization
+    logo_size: s.logoSize ?? 40,
+    logo_background_shape: s.logoBackgroundShape ?? 'none',
+    logo_background_color: s.logoBackgroundColor ?? '',
+    logo_background_padding: s.logoBackgroundPadding ?? 8,
+    footer_logo: s.footerLogo ?? '',
+    favicon_url: s.faviconUrl ?? '',
     // adminNotificationEmail and Colissimo sender fields moved to admin_config table
     // Core show/hide booleans
     show_logo: s.showLogo,
