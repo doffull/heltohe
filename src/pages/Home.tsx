@@ -110,15 +110,18 @@ export default function Home() {
   const heroSlides = hasAdminSlides ?
   adminSlides.map((s) => {
     const desktopImage = s.backgroundMedia || s.media;
+    const useMobile = isMobile && s.mobileImage;
     return {
-      image: isMobile && s.mobileImage ? s.mobileImage : desktopImage,
+      image: useMobile ? s.mobileImage : desktopImage,
       midgroundMedia: s.midgroundMedia,
       foregroundMedia: s.foregroundMedia,
       title: s.title || '',
       subtitle: s.subtitle || '',
       cta: s.ctaText || 'Découvrir',
       accentColor: s.accentColor,
-      mediaType: s.mediaType || 'image' as const
+      mediaType: (useMobile ? (s.mobileMediaType || 'image') : (s.mediaType || 'image')) as 'image' | 'video',
+      objectFit: (useMobile ? (s.mobileObjectFit || s.objectFit || 'cover') : (s.objectFit || 'cover')) as 'cover' | 'contain' | 'fill' | 'none',
+      objectPosition: useMobile ? (s.mobileObjectPosition || s.objectPosition || 'center') : (s.objectPosition || 'center'),
     };
   }) :
   DEFAULT_HERO_SLIDES;
