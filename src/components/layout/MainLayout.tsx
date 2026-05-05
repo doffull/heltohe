@@ -60,6 +60,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [sidebarClosedByUser, setSidebarClosedByUser] = useState(false);
   const [mobileSidebarClosedByUser, setMobileSidebarClosedByUser] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const queryClient = useQueryClient();
   const { data: dbCategories = [] } = useCategories();
 
