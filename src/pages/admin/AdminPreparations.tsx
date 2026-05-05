@@ -137,18 +137,18 @@ export default function AdminPreparations() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between flex-wrap gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Package className="h-6 w-6" />
-            Préparations de commandes
+          <h1 className="text-xl lg:text-3xl font-bold hud-text flex items-center gap-2">
+            <Package className="h-5 w-5 lg:h-6 lg:w-6" />
+            PRÉPARATIONS
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs lg:text-sm text-muted-foreground mt-1">
             Commandes payées dont le stock a été réservé et qui doivent être préparées.
           </p>
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
