@@ -248,9 +248,9 @@ function HeroSliderTab() {
               <div className="rounded-lg overflow-hidden border border-border/40 bg-muted" style={{ aspectRatio: '16/9', position: 'relative' }}>
                 {bgMedia ? (
                   isVideo ? (
-                    <video src={bgMedia} className="w-full h-full object-cover" muted />
+                    <video src={bgMedia} className="w-full h-full" style={{ objectFit: (slide.objectFit || 'cover') as any, objectPosition: slide.objectPosition || 'center' }} muted />
                   ) : (
-                    <img src={bgMedia} alt={slide.title} className="w-full h-full object-cover" style={{ objectPosition: slide.objectPosition || 'center' }} />
+                    <img src={bgMedia} alt={slide.title} className="w-full h-full" style={{ objectFit: (slide.objectFit || 'cover') as any, objectPosition: slide.objectPosition || 'center' }} />
                   )
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
