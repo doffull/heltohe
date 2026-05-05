@@ -169,9 +169,9 @@ export function ChatBotWidget({ open: openProp, onOpenChange, hideTrigger }: Cha
 
   return (
     <>
-      {/* Floating button */}
+      {/* Floating button (only when no external trigger) */}
       <AnimatePresence>
-        {!open && (
+        {!open && !hideTrigger && (
           <motion.button
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
