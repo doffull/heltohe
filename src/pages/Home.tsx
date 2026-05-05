@@ -17,6 +17,7 @@ import { LoyaltyBanner } from '@/components/home/LoyaltyBanner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { TechwearHero } from '@/components/home/TechwearHero';
 import { HeroSlider } from '@/components/home/HeroSlider';
+import { HeroErrorBoundary } from '@/components/home/HeroErrorBoundary';
 
 const PLACEHOLDER = '/placeholder.svg';
 
@@ -178,9 +179,9 @@ export default function Home() {
 
       {/* ═══════════════ HERO (Techwear OR Slider — exclusif) ═══════════════ */}
       {(designSettings as any).techwearHero?.enabled ? (
-        <TechwearHero />
+        <HeroErrorBoundary label="TechwearHero"><TechwearHero /></HeroErrorBoundary>
       ) : (
-        <HeroSlider />
+        <HeroErrorBoundary label="HeroSlider"><HeroSlider /></HeroErrorBoundary>
       )}
 
 
