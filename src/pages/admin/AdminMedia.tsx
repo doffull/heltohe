@@ -40,10 +40,20 @@ export default function AdminMedia() {
 
   const handleFiles = useCallback(async (fileList: FileList | null) => {
     if (!fileList) return;
-    for (const file of Array.from(fileList)) {
-      await uploadMedia.mutateAsync(file);
+    const files = Array.from(fileList);
+    let ok = 0, ko = 0;
+    for (const file of files) {
+      try {
+        await uploadMedia.mutateAsync(file);
+        ok++;
+      } catch {
+        ko++;
+      }
     }
-  }, [uploadMedia]);
+    if (files.length > 1) {
+      toast({ title: `Upload terminé : ${ok} réussi(s)${ko ? `, ${ko} échec(s)` : ''}` });
+    }
+  }, [uploadMedia, toast]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
