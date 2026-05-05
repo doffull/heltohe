@@ -296,6 +296,41 @@ export type Database = {
           },
         ]
       }
+      category_hero_settings: {
+        Row: {
+          category_id: string
+          config: Json
+          created_at: string
+          enabled: boolean
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          config?: Json
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          config?: Json
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_hero_settings_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: true
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_logs: {
         Row: {
           bot_response: string | null
@@ -480,6 +515,10 @@ export type Database = {
           legal_siret: string | null
           legal_vat: string | null
           legal_zip: string | null
+          logo_background_color: string | null
+          logo_background_padding: number | null
+          logo_background_shape: string | null
+          logo_size: number | null
           logo_style: Json | null
           mannequin_hotspots: Json
           mobile_sidebar_image: string | null
@@ -581,6 +620,10 @@ export type Database = {
           legal_siret?: string | null
           legal_vat?: string | null
           legal_zip?: string | null
+          logo_background_color?: string | null
+          logo_background_padding?: number | null
+          logo_background_shape?: string | null
+          logo_size?: number | null
           logo_style?: Json | null
           mannequin_hotspots?: Json
           mobile_sidebar_image?: string | null
@@ -682,6 +725,10 @@ export type Database = {
           legal_siret?: string | null
           legal_vat?: string | null
           legal_zip?: string | null
+          logo_background_color?: string | null
+          logo_background_padding?: number | null
+          logo_background_shape?: string | null
+          logo_size?: number | null
           logo_style?: Json | null
           mannequin_hotspots?: Json
           mobile_sidebar_image?: string | null
