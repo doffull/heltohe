@@ -500,13 +500,13 @@ export function MainLayout({ children }: MainLayoutProps) {
           >
             <X className="h-4 w-4" />
           </button>
-          {/* Mobile close button */}
+          {/* Mobile close button - larger and more visible */}
           <button
             onClick={() => { setSidebarOpen(false); setMobileSidebarClosedByUser(true); }}
-            className="absolute top-4 right-4 z-30 flex lg:hidden w-8 h-8 bg-background/80 text-foreground items-center justify-center rounded-full hover:bg-background transition-colors"
+            className="absolute top-4 right-4 z-30 flex lg:hidden w-12 h-12 bg-background/90 text-foreground items-center justify-center rounded-full shadow-lg hover:bg-background transition-colors backdrop-blur"
             aria-label="Fermer le panneau"
           >
-            <X className="h-4 w-4" />
+            <X className="h-6 w-6" />
           </button>
           {/* Mannequin Background Image - Fixed */}
           <div 
