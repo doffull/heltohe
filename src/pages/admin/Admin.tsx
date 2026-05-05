@@ -243,7 +243,7 @@ export default function Admin() {
             <Route path="pages/*" element={<AdminPages />} />
             <Route path="media/*" element={<AdminMedia />} />
             <Route path="marketing/*" element={<AdminMarketing />} />
-            <Route path="bannieres/*" element={<AdminMarketing />} />
+            <Route path="bannieres/*" element={<Navigate to="/admin/marketing" replace />} />
             <Route path="design/*" element={<AdminDesign />} />
             <Route path="stock/*" element={<AdminStock />} />
             <Route path="colissimo/*" element={<AdminColissimo />} />
