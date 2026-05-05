@@ -1,59 +1,73 @@
+## Plan : Sécurisation maximale du site
 
+### Audit réalisé
 
-## Plan : Corriger l'accès public aux paramètres de design (logo, hero, etc.)
+J'ai exécuté le scan de sécurité Supabase + le linter. **11 findings** au total. Voici la liste des problèmes réels et des corrections proposées.
 
-### Diagnostic confirmé
+### Problèmes détectés
 
-J'ai testé l'API publique de votre site avec la clé anonyme (la même que celle utilisée par le site publié) :
+| # | Sévérité | Problème |
+|---|---|---|
+| 1 | 🔴 ERROR | Vue `design_settings_public` créée avec `security_invoker = off` (équivalent SECURITY DEFINER) — contourne la RLS du rôle appelant |
+| 2 | 🟠 WARN | Données sensibles exposées dans la vue `design_settings_public` : `contact_email`, `legal_siret`, `legal_vat`, `legal_director`, `legal_rgpd_email`, `legal_return_email` — accessibles à tout visiteur anonyme |
+| 3 | 🟠 WARN | Bucket storage `media` est public ET autorise le LISTING — n'importe qui peut lister tous les fichiers stockés |
+| 4 | 🟠 WARN | 8× fonctions `SECURITY DEFINER` avec `EXECUTE` accordé à `anon` / `authenticated` (`has_role`, `validate_and_create_order`, `auto_create_category_page`, `generate_category_slug`, `audit_role_change`, `auto_create_inventory_on_product_insert`, `update_updated_at_column`) — seules `has_role` et `validate_and_create_order` doivent rester appelables ; les autres sont des triggers et ne devraient pas être exposées via l'API REST |
+| 5 | 🟡 INFO | Auth : leaked-password protection (HIBP) déjà activée ✅ |
+| 6 | 🟡 INFO | Email auto-confirm désactivé (vérification email obligatoire) ✅ |
 
-| Endpoint | Résultat anonyme |
-|---|---|
-| `categories` | ✅ Données reçues |
-| `products` | ✅ Données reçues |
-| **`design_settings_public`** | ❌ **`[]` (vide)** |
-| `design_settings` | ❌ `[]` (RLS admin-only) |
+### Corrections (1 migration SQL)
 
-**Cause racine :** la vue `design_settings_public` (utilisée par `useDesignSettings` pour charger le logo, le nom du site, les slides du hero, le HUD, les couleurs, les sections home, etc.) **n'accorde pas le SELECT aux rôles `anon` et `authenticated`**. Seul le rôle interne `sandbox_exec` y a accès. La table sous-jacente `design_settings` a une RLS "admin only".
+**A. Vue `design_settings_public` — retirer les colonnes sensibles**
 
-Conséquence : sur le site publié (où l'utilisateur n'est pas connecté en admin), `useDesignSettings` reçoit `null`, donc l'app retombe sur `INITIAL_DESIGN_SETTINGS` (placeholders) → pas de logo, pas de hero, mauvais nom de site.
+Recréer la vue en EXCLUANT :
+- `contact_email`, `contact_phone`
+- `legal_siret`, `legal_vat`, `legal_director`, `legal_rgpd_email`, `legal_return_email`, `legal_rcs`, `legal_capital`
+- `admin_notification_email` (déjà absent ✅)
 
-Sur la preview, vous êtes connecté en admin → vous voyez les vraies données. D'où l'écart.
+Garder seulement les champs réellement utilisés par le frontend public (logo, hero, couleurs, sections home, sidebar, header, etc.). Les champs légaux et de contact resteront accessibles uniquement aux admins via la table `design_settings` directement.
 
-### Correction
+→ Met à jour les pages légales (CGV, Mentions légales, Confidentialité, Contact) pour qu'elles lisent ces données via une nouvelle RPC `get_legal_info()` SECURITY DEFINER qui retourne ces champs (nécessaire car le site public en a besoin pour les pages légales — mais on les expose de manière contrôlée).
 
-**Migration SQL :**
+**B. Bucket `media` — bloquer le listing**
 
-1. Recréer la vue `design_settings_public` avec `WITH (security_invoker = off)` pour qu'elle s'exécute avec les droits de son owner (postgres) et contourne la RLS admin-only de la table de base.
-2. `GRANT SELECT ON public.design_settings_public TO anon, authenticated;`
-3. La vue continue d'exposer **uniquement** les colonnes non sensibles (déjà le cas — pas d'emails admin, pas de secrets). Les colonnes sensibles restent uniquement accessibles via la table `design_settings` (admin-only).
+Garder le bucket public (les URLs des images doivent rester accessibles), mais supprimer la policy SELECT large sur `storage.objects` qui permet `LIST`. Les images restent accessibles par URL directe (lecture par chemin connu) mais on ne peut plus énumérer le contenu du bucket.
 
-### Audit complémentaire
+**C. Fonctions SECURITY DEFINER — révoquer EXECUTE inutiles**
 
-Pendant que j'y suis, je vérifie également l'accès anonyme aux autres données utilisées par la home publiée :
-- `banners` ✅ (RLS "Anyone can view active banners")
-- `pages` ✅ (RLS "Anyone can view published pages")
-- `bot_config` ✅ (RLS "Anyone can view bot config")
-- `categories` ✅ déjà testé OK
-- `products` ✅ déjà testé OK
-- `locations`, `loyalty_rewards`, `product_looks`, `product_styles` ✅ tous "Anyone can view active"
-- Fichiers du bucket `media` ✅ (bucket public, URLs testées et accessibles)
+```sql
+-- Triggers (jamais appelés via API)
+REVOKE EXECUTE ON FUNCTION public.auto_create_category_page() FROM anon, authenticated, public;
+REVOKE EXECUTE ON FUNCTION public.generate_category_slug() FROM anon, authenticated, public;
+REVOKE EXECUTE ON FUNCTION public.audit_role_change() FROM anon, authenticated, public;
+REVOKE EXECUTE ON FUNCTION public.auto_create_inventory_on_product_insert() FROM anon, authenticated, public;
+REVOKE EXECUTE ON FUNCTION public.update_updated_at_column() FROM anon, authenticated, public;
 
-Donc la **seule correction nécessaire** est l'accès à la vue `design_settings_public`.
+-- Garder accessibles : has_role (utilisé par RLS) et validate_and_create_order (RPC checkout)
+```
 
-### Résultat attendu après correction
+**D. Hardening complémentaire**
 
-Une fois la migration appliquée et le site re-publié (clic sur "Update" dans la dialog Publish — les changements **frontend** ne sont pas nécessaires puisqu'on ne touche qu'à la base, mais le site servira directement la nouvelle vue dès la prochaine requête car il n'y a aucun cache CDN sur les appels Supabase) :
+- Ajouter une policy explicite `Deny anon` sur les tables sensibles (`admin_config`, `notification_config`, `notification_log`, `role_audit_log`, `colissimo_bordereaux`, `stock_transfers`, `stock_history`) — déjà couvertes par "admin only" mais ajout explicite pour défense en profondeur.
+- Vérifier que la table `messages` valide la taille du message (ajouter check ≤ 5000 chars) pour éviter spam.
 
-- Le logo s'affichera
-- Le nom du site (HELVETICA 2026) s'affichera dans l'onglet et le HUD
-- Les 2 slides du hero apparaîtront
-- Le HUD, les couleurs, les sections home, le sidebar, etc. seront identiques à la preview
+### Résumé des changements
 
-### Fichier modifié
+| Fichier | Type | Changement |
+|---|---|---|
+| Nouvelle migration SQL | DB | Recréer vue, révoquer EXECUTE, créer RPC `get_legal_info()`, durcir storage, ajouter checks |
+| `src/hooks/useLegalInfo.ts` | Code | Utiliser la nouvelle RPC `get_legal_info()` au lieu de lire la vue |
 
-| Fichier | Changement |
-|---|---|
-| Nouvelle migration SQL | Recréer `design_settings_public` avec `security_invoker=off` + GRANT SELECT à `anon` et `authenticated` |
+### Ce qui reste sécurisé (déjà en place ✅)
 
-Aucun changement de code frontend — c'est une correction purement base de données.
+- RLS activée sur toutes les tables
+- Rôles dans table séparée `user_roles` + fonction `has_role`
+- Mot de passe : min 6 chars + HIBP activé
+- Email confirmation obligatoire
+- Honeypot + délai 10s sur formulaires anonymes
+- Validation Zod côté client
+- RPC `validate_and_create_order` revalide prix côté serveur
+- Audit log sur changements de rôles
 
+### Note
+
+Aucune donnée existante n'est perdue. Le site continue de fonctionner identiquement pour les visiteurs ; seules les données sensibles cessent d'être exposées publiquement.
