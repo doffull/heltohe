@@ -255,7 +255,8 @@ export function MainLayout({ children }: MainLayoutProps) {
 
             {/* Desktop Navigation */}
             <nav className={cn(
-              "items-center gap-8",
+              "items-center",
+              sidebarActive ? "gap-3 xl:gap-5" : "gap-6 xl:gap-8",
               headerPreset === 'minimal' ? "hidden" : "hidden lg:flex",
               headerPreset === 'fullwidth' ? "flex-1 justify-center" : "",
               headerPreset === 'centered' ? "justify-center" : "",
@@ -264,11 +265,11 @@ export function MainLayout({ children }: MainLayoutProps) {
                 <Link
                   key={item.href}
                   to={item.href}
-                  className={`relative text-sm font-medium uppercase tracking-wider transition-colors hover:text-foreground group ${
-                    location.pathname === item.href 
-                      ? 'text-foreground' 
-                      : 'text-muted-foreground'
-                  }`}
+                  className={cn(
+                    "relative font-medium uppercase tracking-wider transition-colors hover:text-foreground group whitespace-nowrap",
+                    sidebarActive ? "text-[11px] xl:text-xs" : "text-xs xl:text-sm",
+                    location.pathname === item.href ? 'text-foreground' : 'text-muted-foreground'
+                  )}
                 >
                   {item.label}
                   <span className={`absolute -bottom-1 left-0 w-full h-px bg-foreground transform origin-left transition-transform duration-300 ${
