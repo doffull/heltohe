@@ -243,7 +243,27 @@ export default function AdminOrders() {
 
       // Send step notification
       if (flag === 'identity') await sendNotificationIfNeeded(order, 'identity_verified');
-      if (flag === 'payment') await sendNotificationIfNeeded(order, 'payment_verified');
+      if (flag === 'payment') {
+        await sendNotificationIfNeeded(order, 'payment_verified');
+        // Reserve stock + notify stock manager
+        try {
+          const { data: rData } = await supabase.rpc('reserve_order_stock', { p_order_id: order.id });
+          if (rData && !(rData as any).error) {
+            await supabase.functions.invoke('send-order-notification', {
+              body: {
+                orderId: order.id, orderNumber: order.orderNumber,
+                customerName: order.customer.name, customerEmail: order.customer.email,
+                customerPhone: order.customer.phone,
+                notificationType: 'stock_reservation_created',
+              },
+            });
+            toast({ title: '📦 Stock réservé', description: 'Responsable stock notifié' });
+          }
+        } catch (e) { console.error('Stock reservation failed:', e); }
+      }
+      if (flag === 'shipping') {
+        try { await supabase.rpc('consume_order_stock', { p_order_id: order.id }); } catch (e) { console.error(e); }
+      }
 
       // Auto-complete if all 3 validated
       if (newFlags.identity && newFlags.payment && newFlags.shipping) {
@@ -337,6 +357,19 @@ export default function AdminOrders() {
           const newFlags = { ...flags, payment: true };
           await supabase.from('orders').update({ validation_flags: newFlags, payment_status: 'Paid' }).eq('id', order.id);
           await sendNotificationIfNeeded(order, 'payment_verified');
+          try {
+            const { data: rData } = await supabase.rpc('reserve_order_stock', { p_order_id: order.id });
+            if (rData && !(rData as any).error) {
+              await supabase.functions.invoke('send-order-notification', {
+                body: {
+                  orderId: order.id, orderNumber: order.orderNumber,
+                  customerName: order.customer.name, customerEmail: order.customer.email,
+                  customerPhone: order.customer.phone,
+                  notificationType: 'stock_reservation_created',
+                },
+              });
+            }
+          } catch (e) { console.error(e); }
           if (newFlags.identity && newFlags.shipping) {
             await updateOrder.mutateAsync({ id: order.id, status: 'Delivered' });
             await sendNotificationIfNeeded(order, 'all_validated');

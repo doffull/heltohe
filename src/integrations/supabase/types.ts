@@ -1030,6 +1030,45 @@ export type Database = {
         }
         Relationships: []
       }
+      order_preparations: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          assigned_to: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          order_id: string
+          prepared_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          assigned_to?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_id: string
+          prepared_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          assigned_to?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_id?: string
+          prepared_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           created_at: string
@@ -1049,6 +1088,8 @@ export type Database = {
           shipping_carrier: string | null
           shipping_cost: number
           status: string
+          stock_consumed_at: string | null
+          stock_reserved_at: string | null
           subtotal: number
           tax: number
           total: number
@@ -1075,6 +1116,8 @@ export type Database = {
           shipping_carrier?: string | null
           shipping_cost?: number
           status?: string
+          stock_consumed_at?: string | null
+          stock_reserved_at?: string | null
           subtotal: number
           tax?: number
           total: number
@@ -1101,6 +1144,8 @@ export type Database = {
           shipping_carrier?: string | null
           shipping_cost?: number
           status?: string
+          stock_consumed_at?: string | null
+          stock_reserved_at?: string | null
           subtotal?: number
           tax?: number
           total?: number
@@ -1900,6 +1945,7 @@ export type Database = {
       }
     }
     Functions: {
+      consume_order_stock: { Args: { p_order_id: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1907,6 +1953,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      list_users_by_role: {
+        Args: { p_role: Database["public"]["Enums"]["app_role"] }
+        Returns: {
+          email: string
+          user_id: string
+        }[]
+      }
+      release_order_stock: { Args: { p_order_id: string }; Returns: Json }
+      reserve_order_stock: { Args: { p_order_id: string }; Returns: Json }
       validate_and_create_order: {
         Args: {
           p_delivery_mode: string
@@ -1918,7 +1973,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user"
+      app_role: "admin" | "moderator" | "user" | "stock_manager" | "preparator"
       banner_type: "hero" | "promo" | "popup" | "sidebar"
       loyalty_tier: "bronze" | "silver" | "gold" | "platinum"
       promo_type: "percentage" | "fixed_amount" | "free_shipping"
@@ -2049,7 +2104,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator", "user"],
+      app_role: ["admin", "moderator", "user", "stock_manager", "preparator"],
       banner_type: ["hero", "promo", "popup", "sidebar"],
       loyalty_tier: ["bronze", "silver", "gold", "platinum"],
       promo_type: ["percentage", "fixed_amount", "free_shipping"],

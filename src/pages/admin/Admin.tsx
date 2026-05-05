@@ -47,6 +47,7 @@ import AdminChatbot from './AdminChatbot';
 import AdminColissimo from './AdminColissimo';
 import AdminCheckout from './AdminCheckout';
 import AdminNotifications from './AdminNotifications';
+import AdminPreparations from './AdminPreparations';
 
 export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin': '#6B7280',
@@ -61,6 +62,7 @@ export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin/stock': '#D97706',
   '/admin/colissimo': '#EAB308',
   '/admin/notifications': '#F97316',
+  '/admin/preparations': '#22C55E',
   '/admin/chatbot': '#14B8A6',
   '/admin/woocommerce': '#7C3AED',
   '/admin/audit': '#6B7280',
@@ -71,6 +73,7 @@ const SIDEBAR_ITEMS = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/admin' },
   { icon: Package, label: 'Produits', href: '/admin/produits' },
   { icon: ShoppingCart, label: 'Commandes', href: '/admin/commandes' },
+  { icon: ClipboardCheck, label: 'Préparations', href: '/admin/preparations' },
   { icon: CreditCard, label: 'Checkout', href: '/admin/checkout' },
   { icon: Users, label: 'Clients', href: '/admin/clients' },
   { icon: FileText, label: 'Pages', href: '/admin/pages' },
@@ -216,6 +219,7 @@ export default function Admin() {
             <Route index element={<AdminDashboard />} />
             <Route path="produits/*" element={<AdminProducts />} />
             <Route path="commandes/*" element={<AdminOrders />} />
+            <Route path="preparations/*" element={<AdminPreparations />} />
             <Route path="checkout/*" element={<AdminCheckout />} />
             <Route path="clients/*" element={<AdminCustomers />} />
             <Route path="pages/*" element={<AdminPages />} />
