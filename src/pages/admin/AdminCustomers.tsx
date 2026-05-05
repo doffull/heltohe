@@ -100,6 +100,7 @@ function RoleManager({ userId, customerEmail, customerName }: { userId: string; 
 export default function AdminCustomers() {
   const { toast } = useToast();
   const { data: customers = [], isLoading } = useCustomers();
+  const { data: rolesByUser } = useAllUserRoles();
   const updateCustomer = useUpdateCustomer();
   const bulkDelete = useBulkDeleteCustomers();
   const [searchQuery, setSearchQuery] = useState('');
