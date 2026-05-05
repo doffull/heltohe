@@ -221,7 +221,7 @@ export default function Admin() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-64 p-0 flex flex-col">
-            <SidebarContent user={user} signOut={signOut} location={location} sectionColors={sectionColors} allowedHrefs={allowedHrefs} />
+            <SidebarContent user={user} signOut={signOut} location={location} sectionColors={sectionColors} allowedHrefs={allowedHrefs} onNavigate={() => setMobileOpen(false)} />
           </SheetContent>
         </Sheet>
         <Shield className="h-5 w-5 text-primary" />
