@@ -138,7 +138,7 @@ function AnimatedRoutes() {
           <Route path="/retours" element={<MainLayout><Retours /></MainLayout>} />
           <Route path="/mentions-legales" element={<MainLayout><MentionsLegales /></MainLayout>} />
           <Route path="/:categorySlug" element={<MainLayout><CategoryPageRouter /></MainLayout>} />
-          <Route path="*" element={<NotFound />} />
+          <Route path="*" element={<MainLayout><NotFound /></MainLayout>} />
         </Routes>
       </motion.div>
     </AnimatePresence>
