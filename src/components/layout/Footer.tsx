@@ -1,6 +1,7 @@
 import { Instagram, Twitter, Youtube, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
+import { BrandLogo } from '@/components/layout/BrandLogo';
 
 const socialIcons: Record<string, React.ElementType> = {
   INSTAGRAM: Instagram,
