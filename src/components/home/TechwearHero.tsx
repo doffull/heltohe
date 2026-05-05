@@ -83,7 +83,8 @@ function useResolvedConfig(): { config: TechwearHeroConfig; productMissing: bool
 
 export function TechwearHero() {
   const { designSettings } = useApp();
-  const config = useResolvedConfig();
+  const { config, productMissing } = useResolvedConfig();
+  const viewport = useViewport();
   const safeColorIndex = Math.min(Math.max(config.defaultColor, 0), Math.max(config.colorOptions.length - 1, 0));
   const [activeColor, setActiveColor] = useState(safeColorIndex);
   const [activeSize, setActiveSize] = useState<string>(config.defaultSize);
@@ -119,6 +120,7 @@ export function TechwearHero() {
   if (config.colorOptions.length === 0) return null;
 
   const color = config.colorOptions[activeColor] || config.colorOptions[0];
+  const imageSrc = pickImage(color, viewport);
   const logoUrl = (designSettings as any)?.hudLogo as string | undefined;
   const brandName = ((designSettings as any)?.siteName as string) || 'HELVETICA';
 
@@ -129,13 +131,31 @@ export function TechwearHero() {
       role="region"
       aria-label="Hero produit"
       data-testid="techwear-hero"
+      lang="fr"
     >
+      {productMissing && (
+        <div
+          role="alert"
+          style={{
+            position: 'absolute', top: 8, right: 8, zIndex: 50,
+            background: '#fff3cd', color: '#664d03', border: '1px solid #ffecb5',
+            padding: '6px 10px', fontSize: 11, borderRadius: 4,
+          }}
+        >
+          Produit lié introuvable — configuration manuelle utilisée.
+        </div>
+      )}
       <div className="hw-hex-bg" aria-hidden="true">
         <Hex className="hw-hex-1 hw-spin" />
         <Hex className="hw-hex-2" />
         <Hex className="hw-hex-3 hw-spin" />
         <div className="hw-hex-line" />
         <Hex className="hw-hex-r1" />
+      </div>
+
+      {/* Live region for screen readers when color/size change */}
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
+        Couleur sélectionnée : {color.name}. Taille sélectionnée : {activeSize}.
       </div>
 
       <div className="hw-stage">
@@ -154,13 +174,16 @@ export function TechwearHero() {
               </div>
 
               <img
-                key={color.name + color.image}
-                src={color.image}
-                alt={`Modèle ${color.name}`}
+                key={color.name + imageSrc}
+                src={imageSrc}
+                alt={`Modèle ${color.name} (${viewport})`}
                 className="hw-card-image"
                 width={1024}
                 height={1024}
+                loading="eager"
+                decoding="async"
                 style={{ objectFit: config.imageFit, objectPosition: config.imagePosition }}
+                onError={(e) => { (e.currentTarget as HTMLImageElement).src = color.image; }}
               />
 
               {config.showModelBadge && (
