@@ -62,6 +62,7 @@ export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin/stock': '#D97706',
   '/admin/colissimo': '#EAB308',
   '/admin/notifications': '#F97316',
+  '/admin/preparations': '#22C55E',
   '/admin/chatbot': '#14B8A6',
   '/admin/woocommerce': '#7C3AED',
   '/admin/audit': '#6B7280',
