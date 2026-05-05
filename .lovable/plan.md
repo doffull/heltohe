@@ -1,59 +1,77 @@
-# Audit complet du tableau de bord admin
 
-Audit qualité premium des **17 pages admin** + shell commun (`Admin.tsx`). Objectif : tout fonctionne, rien de cassé, mobile parfait à 360px, zéro doublon, zéro contraste blanc/blanc, tous les boutons opérationnels.
+# Plan — UX cleanup + Hero Slider AI tools
 
-## Périmètre
+## 1. Floating buttons cleanup (visiteurs)
 
-**Shell commun** : `Admin.tsx` (sidebar desktop + drawer mobile, header, routing, gestion rôles)
+**Chatbot dans le header**
+- Supprimer le bouton flottant `ChatBotWidget` (bas-droite).
+- Ajouter dans `MainLayout` Header un bouton « Assistant » (icône `Bot` + petit label « Aide ») qui ouvre la fenêtre de chat existante.
+- La fenêtre de chat (panel) reste affichée en bas-droite, mais le déclencheur vit dans le header.
+- Visible pour tous (visiteurs + admin).
 
-**17 pages** :
-Dashboard · Produits · Commandes · Préparations · Checkout · Clients · Pages · Média · Marketing · Design · Stock · Colissimo · Notifications · Chatbot · WooCommerce · Audit · Paramètres
+**Bouton « S'abonner » bas-gauche (au-dessus de tout)**
+- Nouveau composant `SubscribeFab` rendu dans `MainLayout`, position `fixed bottom-6 left-6 z-[70]`.
+- Icône enveloppe + label « S'abonner » ; ouvre une petite popup avec champ email → insert dans `newsletters`.
+- Caché si l'utilisateur est admin (admin garde la cloche notifications + outils).
+- Caché aussi sur la home quand le sidebar mobile est ouvert (pour ne pas se chevaucher avec le bouton « ouvrir panneau »), réapparait sinon.
 
-## Méthode (par page)
+**Côté admin**
+- La cloche notifications (bas-droite) et le toggle Visual Editor restent en place, intacts.
 
-1. **Lecture du fichier** + composants enfants
-2. **Test fonctionnel mental** : chaque bouton, chaque mutation (create/update/delete/bulk), chaque dialog, chaque filtre/recherche
-3. **Test responsive** : tableau qui déborde ? colonnes qui se chevauchent à 360px ? boutons trop grands ?
-4. **Test visuel** : contraste texte/fond (blanc-sur-blanc, noir-sur-noir, hover invisibles), icônes manquantes, doublons d'images
-5. **Test états** : loading, empty, error, succès toast
-6. **Correction directe**
+## 2. Hero Slider — fix + IA + génération d'images
 
-## Corrections types attendues
+**Bug object-fit**
+- Cause : `Home.tsx` (utilisé par `/`) construit ses slides en hardcodant `object-cover` et `bg-cover` ; il ignore `slide.objectFit / objectPosition / mobileObjectFit / mobileObjectPosition`.
+- Fix : passer ces 4 champs dans la projection `heroSlides` et les appliquer via `style={{ objectFit, objectPosition }}` sur la balise `<img>` / `<video>` (et remplacer le `bg-cover` du conteneur background par une `<img>` avec style).
+- Vérifier également le panneau d'édition admin : le mini-aperçu (16:9) doit aussi refléter le `objectFit` choisi.
 
-- **Tableaux desktop** → wrapper `overflow-x-auto` + version mobile en `cards` empilées
-- **Boutons d'action** → vérifier que chaque `onClick` appelle bien la mutation et affiche un toast
-- **Dialogs** → fermeture après succès, reset du formulaire, validation des champs requis
-- **Bulk actions** → barre d'action sticky, compteur correct, confirmation avant delete
-- **Sidebar items dupliqués** → `Marketing` et `Bannières` pointent tous deux vers `AdminMarketing` (ligne 244-245 → bannieres redirigeable ou supprimé)
-- **Couleurs** → respect de `sectionColors[href]` partout, pas de couleurs hardcodées qui cassent le thème
-- **Empty states** → message + CTA d'action
-- **Loading skeletons** → uniformes (chamfer-hud)
-- **Headers de page** → tous au même format (`h1` + sous-titre + actions à droite)
-- **i18n FR** → tous les libellés en français, pas de "Loading..." anglais résiduel
+**Boutons IA (gain de temps)**
+- Nouvelle edge function `generate-slide-text` (Lovable AI, modèle `google/gemini-3-flash-preview`).
+  - Input : `{ field: 'title' | 'subtitle' | 'description' | 'cta', context, tone? }`.
+  - Output JSON via tool-calling : `{ value: string }`.
+- Dans `AdminDesign > HeroSliderTab`, ajouter un petit bouton ✨ « IA » à côté de chaque champ (Titre, Sous-titre, Texte CTA) : clic → génère et remplit le champ. Toast d'erreur si rate-limit (429) / quota (402).
+- Mêmes boutons IA réutilisables sur les futurs champs description.
 
-## Checks transversaux
+**Génération d'images IA pour slides**
+- Nouvelle edge function `generate-slide-image` (Lovable AI image, `google/gemini-2.5-flash-image`).
+  - Input : `{ prompt, aspectRatio? }`. Output : `{ url }` (upload du base64 dans le bucket `media`, retour de l'URL publique).
+- Dans `HeroSliderTab`, à côté de chaque `FileDropZone` (Fond / Intermédiaire / Premier plan / Mobile), ajouter un bouton ✨ « Générer avec IA » qui ouvre une mini-popup :
+  - Champ « Description de l'image » + bouton « Générer ».
+  - Aperçu, puis « Utiliser » → enregistre l'URL dans le slide.
 
-- **Routing** : doublon `bannieres/*` → décider (rediriger ou retirer du routing)
-- **Permissions** : préparateur ne voit que `/admin/preparations` (OK actuellement) — vérifier que les autres pages refusent bien l'accès direct par URL
-- **Console** : zéro warning React (refs, keys, controlled inputs)
-- **Network** : zéro requête en boucle, queries `react-query` correctement invalidées après mutation
-- **Mobile drawer** : se ferme bien après navigation
-- **Section color bar** : visible sur toutes les pages
+## 3. Sidebar mobile — fullscreen
 
-## Livraison
+Dans `MainLayout` :
+- Sur mobile, le panneau gauche (`sidebar-left-panel`) passe de `w-[85%] sm:w-[320px]` à `w-screen h-screen` (vrai plein écran) tant que `< lg`.
+- Garder le bouton de fermeture en haut à droite, plus visible (taille augmentée, contraste sur fond image).
+- Sur desktop : comportement inchangé (`lg:w-[35%]`).
 
-Corrections directes en plusieurs vagues thématiques :
+## 4. Header compact quand sidebar ouverte (desktop)
 
-1. **Vague 1 — Shell & navigation** : `Admin.tsx` (doublon Marketing/Bannières, fermeture drawer mobile au clic), uniformisation headers
-2. **Vague 2 — Pages "données" lourdes** : Produits, Commandes, Clients, Stock, Préparations, Colissimo (tableaux + bulk actions + responsive)
-3. **Vague 3 — Pages "config"** : Checkout, Notifications, Chatbot, WooCommerce, Paramètres, Audit (formulaires, save buttons, validation)
-4. **Vague 4 — Pages "contenu"** : Pages, Média, Marketing, Design, Dashboard (preview, drag&drop, color pickers)
-5. **Récap final** : liste des corrections par page + captures éventuelles si problème visuel résiduel
+Symptôme : les liens de catégories se chevauchent quand le sidebar pousse le header (le header passe à `lg:ml-[35%]` mais les items de nav gardent leur `gap-8`).
 
-## Hors scope
+Fix dans `MainLayout` :
+- Quand `sidebarActive`, appliquer une classe « compact » sur la nav et les actions :
+  - `gap-8` → `gap-3 xl:gap-5`
+  - texte de nav `text-sm` → `text-xs`, `tracking-wider` conservé
+  - cacher les éléments non essentiels en deçà de `xl` : champ recherche replié, sélecteur de langue masqué `xl:block`, label « FRANÇAIS » caché.
+- Vérifier qu'à 1280–1440 px le header ne déborde plus.
 
-- Refonte fonctionnelle (nouvelles fonctionnalités) → seulement corrections + polish premium
-- Migrations DB (sauf si bug bloquant découvert)
-- Edge functions (sauf si erreur runtime détectée)
+## Détails techniques
 
-Je commence par la **Vague 1** dès approbation.
+- Edge functions : créer `supabase/functions/generate-slide-text/index.ts` et `supabase/functions/generate-slide-image/index.ts`. Pas de `verify_jwt` custom requis (par défaut Lovable). CORS standard. Validation Zod du body.
+- Image upload dans bucket `media` (existant, public) sous `slides/ai/{uuid}.png`.
+- Composant client réutilisable `AiTextButton` (champ → IA) et `AiImageButton` (popup → IA → URL) dans `src/components/admin/`.
+- Pas de migration DB requise.
+- Aucun changement au comportement admin (cloche, visual editor inchangés).
+
+## Fichiers touchés (estimés)
+
+- `src/components/layout/MainLayout.tsx` — header chatbot trigger, FAB subscribe, sidebar mobile fullscreen, header compact.
+- `src/components/layout/ChatBotWidget.tsx` — exposer ouverture via prop / contexte (retirer le bouton flottant interne, garder la fenêtre).
+- `src/components/layout/SubscribeFab.tsx` — nouveau.
+- `src/pages/Home.tsx` — appliquer `objectFit`/`objectPosition` au hero.
+- `src/pages/admin/AdminDesign.tsx` — boutons IA texte + IA image dans `HeroSliderTab`.
+- `src/components/admin/AiTextButton.tsx`, `AiImageButton.tsx` — nouveaux.
+- `supabase/functions/generate-slide-text/index.ts` — nouveau.
+- `supabase/functions/generate-slide-image/index.ts` — nouveau.

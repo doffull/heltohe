@@ -110,15 +110,18 @@ export default function Home() {
   const heroSlides = hasAdminSlides ?
   adminSlides.map((s) => {
     const desktopImage = s.backgroundMedia || s.media;
+    const useMobile = isMobile && s.mobileImage;
     return {
-      image: isMobile && s.mobileImage ? s.mobileImage : desktopImage,
+      image: useMobile ? s.mobileImage : desktopImage,
       midgroundMedia: s.midgroundMedia,
       foregroundMedia: s.foregroundMedia,
       title: s.title || '',
       subtitle: s.subtitle || '',
       cta: s.ctaText || 'Découvrir',
       accentColor: s.accentColor,
-      mediaType: s.mediaType || 'image' as const
+      mediaType: (useMobile ? (s.mobileMediaType || 'image') : (s.mediaType || 'image')) as 'image' | 'video',
+      objectFit: (useMobile ? (s.mobileObjectFit || s.objectFit || 'cover') : (s.objectFit || 'cover')) as 'cover' | 'contain' | 'fill' | 'none',
+      objectPosition: useMobile ? (s.mobileObjectPosition || s.objectPosition || 'center') : (s.objectPosition || 'center'),
     };
   }) :
   DEFAULT_HERO_SLIDES;
@@ -183,17 +186,19 @@ export default function Home() {
             {/* Background Layer (slowest parallax) */}
             {'mediaType' in s && s.mediaType === 'video' ?
           <motion.div className="absolute inset-0 will-change-transform" style={{ y: heroY, scale: heroScale }}>
-                <video src={s.image} autoPlay muted loop playsInline className="w-full h-full object-cover" />
+                <video src={s.image} autoPlay muted loop playsInline className="w-full h-full" style={{ objectFit: (s as any).objectFit || 'cover', objectPosition: (s as any).objectPosition || 'center' }} />
               </motion.div> :
 
           <motion.div
-            className="absolute inset-0 bg-cover bg-center will-change-transform"
-            style={{
-              backgroundImage: `url(${s.image})`,
-              y: heroY,
-              scale: heroScale
-            }} />
-
+            className="absolute inset-0 will-change-transform"
+            style={{ y: heroY, scale: heroScale }}>
+              <img
+                src={s.image}
+                alt={s.title}
+                className="w-full h-full"
+                style={{ objectFit: ((s as any).objectFit || 'cover') as any, objectPosition: (s as any).objectPosition || 'center' }}
+              />
+            </motion.div>
           }
             
             {/* Midground Layer */}

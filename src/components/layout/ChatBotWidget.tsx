@@ -72,8 +72,19 @@ async function streamChat({
   onDone();
 }
 
-export function ChatBotWidget() {
-  const [open, setOpen] = useState(false);
+interface ChatBotWidgetProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
+}
+
+export function ChatBotWidget({ open: openProp, onOpenChange, hideTrigger }: ChatBotWidgetProps = {}) {
+  const [openInternal, setOpenInternal] = useState(false);
+  const open = openProp !== undefined ? openProp : openInternal;
+  const setOpen = (v: boolean) => {
+    if (onOpenChange) onOpenChange(v);
+    if (openProp === undefined) setOpenInternal(v);
+  };
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -158,9 +169,9 @@ export function ChatBotWidget() {
 
   return (
     <>
-      {/* Floating button */}
+      {/* Floating button (only when no external trigger) */}
       <AnimatePresence>
-        {!open && (
+        {!open && !hideTrigger && (
           <motion.button
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}

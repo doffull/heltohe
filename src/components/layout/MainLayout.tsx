@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { MannequinHotspots } from './MannequinHotspot';
 import { SidebarProductHUD } from './SidebarProductHUD';
 import { ChatBotWidget } from './ChatBotWidget';
+import { SubscribeFab } from './SubscribeFab';
 import { InlineEditable } from '@/components/visual-editor/InlineEditable';
 import { 
   Search, 
@@ -25,6 +26,7 @@ import {
   Shield,
   Bell,
   Check,
+  Bot,
   Mail as MailIcon
 } from 'lucide-react';
 import {
@@ -58,6 +60,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [sidebarClosedByUser, setSidebarClosedByUser] = useState(false);
   const [mobileSidebarClosedByUser, setMobileSidebarClosedByUser] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const queryClient = useQueryClient();
   const { data: dbCategories = [] } = useCategories();
 
@@ -252,7 +255,8 @@ export function MainLayout({ children }: MainLayoutProps) {
 
             {/* Desktop Navigation */}
             <nav className={cn(
-              "items-center gap-8",
+              "items-center",
+              sidebarActive ? "gap-3 xl:gap-5" : "gap-6 xl:gap-8",
               headerPreset === 'minimal' ? "hidden" : "hidden lg:flex",
               headerPreset === 'fullwidth' ? "flex-1 justify-center" : "",
               headerPreset === 'centered' ? "justify-center" : "",
@@ -261,11 +265,11 @@ export function MainLayout({ children }: MainLayoutProps) {
                 <Link
                   key={item.href}
                   to={item.href}
-                  className={`relative text-sm font-medium uppercase tracking-wider transition-colors hover:text-foreground group ${
-                    location.pathname === item.href 
-                      ? 'text-foreground' 
-                      : 'text-muted-foreground'
-                  }`}
+                  className={cn(
+                    "relative font-medium uppercase tracking-wider transition-colors hover:text-foreground group whitespace-nowrap",
+                    sidebarActive ? "text-[11px] xl:text-xs" : "text-xs xl:text-sm",
+                    location.pathname === item.href ? 'text-foreground' : 'text-muted-foreground'
+                  )}
                 >
                   {item.label}
                   <span className={`absolute -bottom-1 left-0 w-full h-px bg-foreground transform origin-left transition-transform duration-300 ${
@@ -276,9 +280,13 @@ export function MainLayout({ children }: MainLayoutProps) {
             </nav>
 
             {/* Actions */}
-            <div className="flex items-center gap-4 ml-auto">
-              {/* Search - Expandable */}
-              <div className={`hidden md:flex items-center transition-all duration-300 ${searchOpen ? 'w-64' : 'w-10'}`}>
+            <div className={cn("flex items-center ml-auto", sidebarActive ? "gap-1 xl:gap-2" : "gap-2 lg:gap-3")}>
+              {/* Search - Expandable (hidden when sidebar pushes header) */}
+              <div className={cn(
+                "items-center transition-all duration-300",
+                searchOpen ? 'w-48 xl:w-64' : 'w-10',
+                sidebarActive ? "hidden xl:flex" : "hidden md:flex"
+              )}>
                 {searchOpen ? (
                   <div className="relative w-full">
                     <Input 
@@ -288,25 +296,28 @@ export function MainLayout({ children }: MainLayoutProps) {
                       autoFocus
                       onBlur={() => setSearchOpen(false)}
                     />
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="absolute right-0 top-0"
-                      onClick={() => setSearchOpen(false)}
-                    >
+                    <Button variant="ghost" size="icon" className="absolute right-0 top-0" onClick={() => setSearchOpen(false)}>
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                 ) : (
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={() => setSearchOpen(true)}
-                  >
+                  <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)}>
                     <Search className="h-5 w-5" />
                   </Button>
                 )}
               </div>
+
+              {/* Chatbot trigger */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setChatOpen(true)}
+                className="gap-1.5 px-2 lg:px-3"
+                title="Assistant"
+              >
+                <Bot className="h-5 w-5" />
+                <span className="hidden xl:inline text-xs font-medium uppercase tracking-wider">Aide</span>
+              </Button>
 
               {/* Cart */}
               <Link to="/panier">
@@ -339,7 +350,10 @@ export function MainLayout({ children }: MainLayoutProps) {
               {/* Language selector */}
               <button
                 onClick={() => setLanguage(language === 'FR' ? 'EN' : 'FR')}
-                className="text-xs font-bold tracking-wider text-muted-foreground hover:text-foreground transition-colors hidden md:block"
+                className={cn(
+                  "text-xs font-bold tracking-wider text-muted-foreground hover:text-foreground transition-colors",
+                  sidebarActive ? "hidden xl:block" : "hidden md:block"
+                )}
               >
                 {language}
               </button>
@@ -474,7 +488,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       {/* Left Sidebar Panel - Only on home page */}
       {showSidebar && (
         <div className={cn(
-          "sidebar-left-panel fixed top-0 left-0 h-screen z-50 transition-transform duration-500 ease-out w-[85%] sm:w-[320px] lg:w-[35%]",
+          "sidebar-left-panel fixed top-0 left-0 h-screen z-50 transition-transform duration-500 ease-out w-screen lg:w-[35%]",
           sidebarOpen ? 'translate-x-0' : '-translate-x-full',
           desktopSidebarOpen ? 'lg:translate-x-0' : 'lg:-translate-x-full'
         )}>
@@ -486,13 +500,13 @@ export function MainLayout({ children }: MainLayoutProps) {
           >
             <X className="h-4 w-4" />
           </button>
-          {/* Mobile close button */}
+          {/* Mobile close button - larger and more visible */}
           <button
             onClick={() => { setSidebarOpen(false); setMobileSidebarClosedByUser(true); }}
-            className="absolute top-4 right-4 z-30 flex lg:hidden w-8 h-8 bg-background/80 text-foreground items-center justify-center rounded-full hover:bg-background transition-colors"
+            className="absolute top-4 right-4 z-30 flex lg:hidden w-12 h-12 bg-background/90 text-foreground items-center justify-center rounded-full shadow-lg hover:bg-background transition-colors backdrop-blur"
             aria-label="Fermer le panneau"
           >
-            <X className="h-4 w-4" />
+            <X className="h-6 w-6" />
           </button>
           {/* Mannequin Background Image - Fixed */}
           <div 
@@ -696,8 +710,11 @@ export function MainLayout({ children }: MainLayoutProps) {
         </div>
       </footer>
 
-      {/* Chatbot Widget - visible on all pages */}
-      <ChatBotWidget />
+      {/* Chatbot Widget - triggered from header */}
+      <ChatBotWidget open={chatOpen} onOpenChange={setChatOpen} hideTrigger />
+
+      {/* Subscribe FAB - hidden for admins */}
+      {!isAdmin && <SubscribeFab />}
     </div>
   );
 }
