@@ -147,7 +147,7 @@ export default function AdminMedia() {
                 {isImage(file.type) ? (
                   <img src={file.url} alt={file.name} className="w-full h-full object-cover" loading="lazy" />
                 ) : isVideo(file.type) ? (
-                  <div className="w-full h-full bg-muted flex items-center justify-center"><Film className="h-8 w-8 text-muted-foreground" /></div>
+                  <video src={file.url} className="w-full h-full object-cover" muted playsInline preload="metadata" />
                 ) : (
                   <div className="w-full h-full bg-muted flex items-center justify-center"><FileText className="h-8 w-8 text-muted-foreground" /></div>
                 )}
