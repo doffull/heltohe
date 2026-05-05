@@ -165,7 +165,7 @@ function SidebarContent({ user, signOut, location, sectionColors, allowedHrefs }
 
 export default function Admin() {
   const location = useLocation();
-  const { user, isAdmin, isLoading, signOut } = useAuth();
+  const { user, isAdmin, isStockManager, isPreparator, hasAdminPanelAccess, isLoading, signOut } = useAuth();
   const { data: designSettings } = useDesignSettings();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -173,6 +173,14 @@ export default function Admin() {
     ...DEFAULT_SECTION_COLORS,
     ...((designSettings as any)?.admin_section_colors || {}),
   };
+
+  const allowedHrefs: Set<string> = isAdmin
+    ? new Set(SIDEBAR_ITEMS.map(i => i.href))
+    : isStockManager
+      ? STOCK_MANAGER_ROUTES
+      : isPreparator
+        ? PREPARATOR_ROUTES
+        : new Set();
 
   const activeHref = getActiveHref(location.pathname);
   const activeColor = sectionColors[activeHref] || '#6B7280';
@@ -189,7 +197,12 @@ export default function Admin() {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
-  if (!isAdmin) return <Navigate to="/" replace />;
+  if (!hasAdminPanelAccess) return <Navigate to="/" replace />;
+  // Si la route active n'est pas autorisée pour ce rôle, rediriger vers la première autorisée
+  if (!allowedHrefs.has(activeHref)) {
+    const fallback = Array.from(allowedHrefs)[0] || '/';
+    if (fallback !== location.pathname) return <Navigate to={fallback} replace />;
+  }
 
   return (
     <div className="min-h-screen bg-background flex">
