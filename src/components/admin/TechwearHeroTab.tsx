@@ -11,11 +11,19 @@ import { Badge } from '@/components/ui/badge';
 import { FileDropZone } from '@/components/admin/FileDropZone';
 import { AiImageButton } from '@/components/admin/AiImageButton';
 import { Plus, Trash2, RefreshCw, Sparkles, Eye, EyeOff } from 'lucide-react';
-import type { TechwearHeroConfig, TechwearColorOption } from '@/types';
+import type { TechwearHeroConfig, TechwearColorOption, TechwearBackground } from '@/types';
 import { toast } from 'sonner';
 import { TechwearHero } from '@/components/home/TechwearHero';
 
 const ALL_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+
+const DEFAULT_BG: TechwearBackground = {
+  type: 'gradient',
+  gradientFrom: '#E0E0E0',
+  gradientTo: '#E5E5E5',
+  color: '#EBEBEB',
+  overlayOpacity: 0,
+};
 
 export function TechwearHeroTab() {
   const { designSettings, updateDesignSettings } = useApp();
