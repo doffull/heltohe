@@ -9,6 +9,7 @@ import {
   Globe, Database, HardDrive, Navigation, Zap, Clock,
   ChevronDown, ChevronUp, RefreshCw
 } from 'lucide-react';
+import { useRoleAuditLog } from '@/hooks/useUserRoles';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type Status = 'pending' | 'running' | 'pass' | 'fail' | 'warn' | 'skip';
