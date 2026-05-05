@@ -249,9 +249,9 @@ export function TechwearHeroTab() {
         </p>
       </div>
 
-      {/* Live preview (current slide only) */}
+      {/* Live preview (current slide only) — desktop only */}
       {cfg.enabled && (
-        <Card>
+        <Card className="hidden lg:block">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">Aperçu de cette slide</CardTitle>
           </CardHeader>
@@ -263,6 +263,11 @@ export function TechwearHeroTab() {
             </div>
           </CardContent>
         </Card>
+      )}
+      {cfg.enabled && (
+        <p className="lg:hidden text-[11px] text-muted-foreground text-center -mt-2">
+          Aperçu live disponible sur écran large. Visualisez le rendu sur la page d'accueil.
+        </p>
       )}
 
       {/* Slide identity */}
