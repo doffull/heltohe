@@ -64,6 +64,7 @@ export function TechwearHeroTab() {
       visibleSizes,
       defaultSize: visibleSizes[0] || cfg.defaultSize,
       ctaPrimary: { ...cfg.ctaPrimary, href: `/boutique/${linkedProduct.id}` },
+      ctaSecondary: { ...cfg.ctaSecondary, href: cfg.ctaSecondary.href && cfg.ctaSecondary.href !== '/boutique' ? cfg.ctaSecondary.href : `/boutique/${linkedProduct.id}` },
     });
     toast.success('Couleurs et tailles synchronisées depuis le produit');
   };
@@ -212,22 +213,47 @@ export function TechwearHeroTab() {
                   <Input value={c.hex} onChange={(e) => updateColor(i, { hex: e.target.value })} className="h-8 flex-1" />
                 </div>
               </div>
-              <div className="md:col-span-5 space-y-1">
+              <div className="md:col-span-5 space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs">Image mannequin</Label>
+                  <Label className="text-xs">Images mannequin (par device)</Label>
                   <AiImageButton
                     label="Image"
                     defaultPrompt={`Mannequin techwear ${c.name}, fond transparent, plein corps`}
                     onGenerated={(url) => updateColor(i, { image: url })}
                   />
                 </div>
-                <FileDropZone
-                  accept={['image']}
-                  folder="techwear-hero"
-                  currentFile={c.image}
-                  onUpload={(url) => updateColor(i, { image: url })}
-                  label="PNG mannequin"
-                />
+                <div className="grid grid-cols-1 gap-2">
+                  <div>
+                    <p className="text-[10px] text-muted-foreground mb-1">🖥️ Desktop (par défaut)</p>
+                    <FileDropZone
+                      accept={['image']}
+                      folder="techwear-hero"
+                      currentFile={c.image}
+                      onUpload={(url) => updateColor(i, { image: url })}
+                      label="PNG desktop"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground mb-1">📱 Tablette (optionnel)</p>
+                    <FileDropZone
+                      accept={['image']}
+                      folder="techwear-hero"
+                      currentFile={c.imageTablet || ''}
+                      onUpload={(url) => updateColor(i, { imageTablet: url })}
+                      label="PNG tablette"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground mb-1">📱 Mobile (optionnel)</p>
+                    <FileDropZone
+                      accept={['image']}
+                      folder="techwear-hero"
+                      currentFile={c.imageMobile || ''}
+                      onUpload={(url) => updateColor(i, { imageMobile: url })}
+                      label="PNG mobile"
+                    />
+                  </div>
+                </div>
               </div>
               <div className="md:col-span-1 flex items-center justify-end">
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeColor(i)}>

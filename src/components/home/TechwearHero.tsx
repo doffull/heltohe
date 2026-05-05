@@ -6,6 +6,30 @@ import { DEFAULT_TECHWEAR_HERO } from '@/config/homeConfig';
 import type { TechwearHeroConfig, TechwearColorOption } from '@/types';
 import '@/styles/home-techwear.css';
 
+type Viewport = 'mobile' | 'tablet' | 'desktop';
+function useViewport(): Viewport {
+  const [v, setV] = useState<Viewport>(() => {
+    if (typeof window === 'undefined') return 'desktop';
+    const w = window.innerWidth;
+    return w < 768 ? 'mobile' : w < 1200 ? 'tablet' : 'desktop';
+  });
+  useEffect(() => {
+    const onResize = () => {
+      const w = window.innerWidth;
+      setV(w < 768 ? 'mobile' : w < 1200 ? 'tablet' : 'desktop');
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return v;
+}
+
+function pickImage(c: TechwearColorOption, v: Viewport): string {
+  if (v === 'mobile') return c.imageMobile || c.imageTablet || c.image;
+  if (v === 'tablet') return c.imageTablet || c.image;
+  return c.image;
+}
+
 const Hex = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="0.5" className={className} aria-hidden="true">
     <polygon points="50,2 95,27 95,73 50,98 5,73 5,27" />
@@ -13,16 +37,19 @@ const Hex = ({ className }: { className?: string }) => (
 );
 
 /** Merge stored config with linked product (colors / sizes / CTA href). */
-function useResolvedConfig(): TechwearHeroConfig {
+function useResolvedConfig(): { config: TechwearHeroConfig; productMissing: boolean } {
   const { designSettings } = useApp();
   const cfg = (designSettings as any).techwearHero as TechwearHeroConfig | undefined;
-  const { data: products } = useProducts();
+  const { data: products, isLoading } = useProducts();
 
   return useMemo(() => {
     const base: TechwearHeroConfig = { ...DEFAULT_TECHWEAR_HERO, ...(cfg || {}) };
-    if (!base.productId) return base;
+    if (!base.productId) return { config: base, productMissing: false };
     const product = products?.find((p) => p.id === base.productId);
-    if (!product) return base;
+    if (!product) {
+      // Product was deleted or not loaded yet — fall back to manual config
+      return { config: base, productMissing: !isLoading };
+    }
 
     // Derive colors from product
     let colorOptions: TechwearColorOption[] = base.colorOptions;
@@ -33,26 +60,31 @@ function useResolvedConfig(): TechwearHeroConfig {
         image: c.image || product.image,
       }));
     } else if (product.colors && product.colors.length > 0) {
-      colorOptions = product.colors.map((c, i) => ({
+      colorOptions = product.colors.map((c) => ({
         name: c, hex: c, image: product.image,
       }));
-      colorOptions[0] = { ...colorOptions[0], image: product.image };
     }
 
     const visibleSizes = (base.visibleSizes?.length ? base.visibleSizes : product.sizes) || [];
+    const productHref = `/boutique/${product.id}`;
     return {
-      ...base,
-      colorOptions,
-      visibleSizes,
-      defaultSize: visibleSizes.includes(base.defaultSize) ? base.defaultSize : (visibleSizes[0] || base.defaultSize),
-      ctaPrimary: { ...base.ctaPrimary, href: `/boutique/${product.id}` },
+      config: {
+        ...base,
+        colorOptions,
+        visibleSizes,
+        defaultSize: visibleSizes.includes(base.defaultSize) ? base.defaultSize : (visibleSizes[0] || base.defaultSize),
+        ctaPrimary: { ...base.ctaPrimary, href: productHref },
+        ctaSecondary: { ...base.ctaSecondary, href: base.ctaSecondary.href || productHref },
+      },
+      productMissing: false,
     };
-  }, [cfg, products]);
+  }, [cfg, products, isLoading]);
 }
 
 export function TechwearHero() {
   const { designSettings } = useApp();
-  const config = useResolvedConfig();
+  const { config, productMissing } = useResolvedConfig();
+  const viewport = useViewport();
   const safeColorIndex = Math.min(Math.max(config.defaultColor, 0), Math.max(config.colorOptions.length - 1, 0));
   const [activeColor, setActiveColor] = useState(safeColorIndex);
   const [activeSize, setActiveSize] = useState<string>(config.defaultSize);
@@ -88,6 +120,7 @@ export function TechwearHero() {
   if (config.colorOptions.length === 0) return null;
 
   const color = config.colorOptions[activeColor] || config.colorOptions[0];
+  const imageSrc = pickImage(color, viewport);
   const logoUrl = (designSettings as any)?.hudLogo as string | undefined;
   const brandName = ((designSettings as any)?.siteName as string) || 'HELVETICA';
 
@@ -98,13 +131,31 @@ export function TechwearHero() {
       role="region"
       aria-label="Hero produit"
       data-testid="techwear-hero"
+      lang="fr"
     >
+      {productMissing && (
+        <div
+          role="alert"
+          style={{
+            position: 'absolute', top: 8, right: 8, zIndex: 50,
+            background: '#fff3cd', color: '#664d03', border: '1px solid #ffecb5',
+            padding: '6px 10px', fontSize: 11, borderRadius: 4,
+          }}
+        >
+          Produit lié introuvable — configuration manuelle utilisée.
+        </div>
+      )}
       <div className="hw-hex-bg" aria-hidden="true">
         <Hex className="hw-hex-1 hw-spin" />
         <Hex className="hw-hex-2" />
         <Hex className="hw-hex-3 hw-spin" />
         <div className="hw-hex-line" />
         <Hex className="hw-hex-r1" />
+      </div>
+
+      {/* Live region for screen readers when color/size change */}
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
+        Couleur sélectionnée : {color.name}. Taille sélectionnée : {activeSize}.
       </div>
 
       <div className="hw-stage">
@@ -123,13 +174,16 @@ export function TechwearHero() {
               </div>
 
               <img
-                key={color.name + color.image}
-                src={color.image}
-                alt={`Modèle ${color.name}`}
+                key={color.name + imageSrc}
+                src={imageSrc}
+                alt={`Modèle ${color.name} (${viewport})`}
                 className="hw-card-image"
                 width={1024}
                 height={1024}
+                loading="eager"
+                decoding="async"
                 style={{ objectFit: config.imageFit, objectPosition: config.imagePosition }}
+                onError={(e) => { (e.currentTarget as HTMLImageElement).src = color.image; }}
               />
 
               {config.showModelBadge && (

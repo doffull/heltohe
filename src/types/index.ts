@@ -113,7 +113,9 @@ export interface BackgroundMedia {
 export interface TechwearColorOption {
   name: string;
   hex: string;
-  image: string;
+  image: string;          // desktop (default fallback)
+  imageTablet?: string;   // optional tablet override
+  imageMobile?: string;   // optional mobile override
 }
 
 export interface TechwearStat {

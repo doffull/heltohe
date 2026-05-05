@@ -72,10 +72,38 @@ describe('TechwearHero', () => {
     expect(img.src).toContain(INITIAL_DESIGN_SETTINGS.techwearHero.colorOptions[2].image);
   });
 
-  it('exposes accessible region label', () => {
+  it('exposes accessible region label and live region', () => {
     setConfig({ enabled: true });
     renderHero();
     const region = screen.getByRole('region', { name: /hero produit/i });
     expect(region).toBeInTheDocument();
+    // Live region for color/size announcements
+    expect(region.querySelector('[aria-live="polite"]')).not.toBeNull();
+  });
+
+  it('falls back to desktop image when no mobile/tablet override', () => {
+    setConfig({
+      enabled: true,
+      colorOptions: [{ name: 'Solo', hex: '#000', image: '/desktop.png' }],
+      defaultColor: 0,
+    });
+    renderHero();
+    const img = screen.getByAltText(/Modèle Solo/i) as HTMLImageElement;
+    expect(img.src).toContain('/desktop.png');
+  });
+
+  it('uses mobile image override when provided and viewport is mobile', () => {
+    // Force mobile viewport
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 360 });
+    setConfig({
+      enabled: true,
+      colorOptions: [{ name: 'Solo', hex: '#000', image: '/desktop.png', imageMobile: '/mobile.png' }],
+      defaultColor: 0,
+    });
+    renderHero();
+    const img = screen.getByAltText(/Modèle Solo/i) as HTMLImageElement;
+    expect(img.src).toContain('/mobile.png');
+    // Reset viewport for other tests
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1280 });
   });
 });
