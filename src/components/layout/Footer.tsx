@@ -24,6 +24,7 @@ export function Footer() {
           {/* Brand */}
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-4">
+              <BrandLogo variant="footer" />
               <div className="hud-text text-sm text-muted-foreground">
                 <span className="text-primary">© {new Date().getFullYear()}</span> {siteName.toUpperCase()}
               </div>
