@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
 import { useProducts } from '@/hooks/useProducts';
 import { DEFAULT_TECHWEAR_HERO } from '@/config/homeConfig';
-import type { TechwearHeroConfig, TechwearColorOption } from '@/types';
+import type { TechwearHeroConfig, TechwearColorOption, TechwearBackground } from '@/types';
 import '@/styles/home-techwear.css';
 
 type Viewport = 'mobile' | 'tablet' | 'desktop';
@@ -24,10 +24,19 @@ function useViewport(): Viewport {
   return v;
 }
 
-function pickImage(c: TechwearColorOption, v: Viewport): string {
-  if (v === 'mobile') return c.imageMobile || c.imageTablet || c.image;
-  if (v === 'tablet') return c.imageTablet || c.image;
-  return c.image;
+function pickMedia(c: TechwearColorOption, v: Viewport): { url: string; type: 'image' | 'video' } {
+  let url = c.image;
+  let type: 'image' | 'video' = c.mediaType || 'image';
+  if (v === 'mobile' && c.imageMobile) {
+    url = c.imageMobile;
+    type = c.mediaTypeMobile || c.mediaType || 'image';
+  } else if (v === 'tablet' && c.imageTablet) {
+    url = c.imageTablet;
+    type = c.mediaTypeTablet || c.mediaType || 'image';
+  }
+  // Auto-detect video by extension if not set
+  if (type !== 'video' && /\.(mp4|webm|mov|ogg)(\?|$)/i.test(url)) type = 'video';
+  return { url, type };
 }
 
 const Hex = ({ className }: { className?: string }) => (
@@ -36,45 +45,53 @@ const Hex = ({ className }: { className?: string }) => (
   </svg>
 );
 
-/** Merge stored config with linked product (colors / sizes / CTA href). */
-function useResolvedConfig(): { config: TechwearHeroConfig; productMissing: boolean } {
+/** Sanitize a possibly-corrupted cfg by re-applying defaults to any null/invalid sub-field. */
+function sanitizeCfg(raw: any): TechwearHeroConfig {
+  const cfg = { ...DEFAULT_TECHWEAR_HERO, ...(raw || {}) } as TechwearHeroConfig;
+  const flag = (field: string, expected: string) => {
+    // eslint-disable-next-line no-console
+    console.warn(`[TechwearHero] champ "${field}" invalide (attendu ${expected}), valeur reçue:`, (raw || {})[field]);
+  };
+  if (!Array.isArray(cfg.colorOptions) || cfg.colorOptions.length === 0) {
+    if (raw && raw.colorOptions !== undefined) flag('colorOptions', 'array non-vide');
+    cfg.colorOptions = DEFAULT_TECHWEAR_HERO.colorOptions;
+  }
+  if (!Array.isArray(cfg.visibleSizes)) { flag('visibleSizes', 'array'); cfg.visibleSizes = DEFAULT_TECHWEAR_HERO.visibleSizes; }
+  if (!Array.isArray(cfg.stats)) { flag('stats', 'array'); cfg.stats = DEFAULT_TECHWEAR_HERO.stats; }
+  if (!cfg.modelBadge) { cfg.modelBadge = DEFAULT_TECHWEAR_HERO.modelBadge; }
+  if (!cfg.ctaPrimary) { cfg.ctaPrimary = DEFAULT_TECHWEAR_HERO.ctaPrimary; }
+  if (!cfg.ctaSecondary) { cfg.ctaSecondary = DEFAULT_TECHWEAR_HERO.ctaSecondary; }
+  if (!cfg.background) { cfg.background = DEFAULT_TECHWEAR_HERO.background; }
+  if (!cfg.cardSize) { cfg.cardSize = 'md'; }
+  return cfg;
+}
+
+function useResolvedConfig(overrideConfig?: TechwearHeroConfig): { config: TechwearHeroConfig; productMissing: boolean } {
   const { designSettings } = useApp();
-  const cfg = (designSettings as any).techwearHero as TechwearHeroConfig | undefined;
+  const cfgRaw = overrideConfig ?? ((designSettings as any).techwearHero as TechwearHeroConfig | undefined);
   const { data: products, isLoading } = useProducts();
 
   return useMemo(() => {
-    const merged: TechwearHeroConfig = { ...DEFAULT_TECHWEAR_HERO, ...(cfg || {}) };
-    // Defensive: DB may store null for these — re-apply defaults to avoid `.length`/`.map` crashes.
-    const base: TechwearHeroConfig = {
-      ...merged,
-      colorOptions: Array.isArray(merged.colorOptions) && merged.colorOptions.length ? merged.colorOptions : DEFAULT_TECHWEAR_HERO.colorOptions,
-      visibleSizes: Array.isArray(merged.visibleSizes) ? merged.visibleSizes : DEFAULT_TECHWEAR_HERO.visibleSizes,
-      stats: Array.isArray(merged.stats) ? merged.stats : DEFAULT_TECHWEAR_HERO.stats,
-      modelBadge: merged.modelBadge || DEFAULT_TECHWEAR_HERO.modelBadge,
-      ctaPrimary: merged.ctaPrimary || DEFAULT_TECHWEAR_HERO.ctaPrimary,
-      ctaSecondary: merged.ctaSecondary || DEFAULT_TECHWEAR_HERO.ctaSecondary,
-    };
+    let base: TechwearHeroConfig;
+    try {
+      base = sanitizeCfg(cfgRaw);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('[TechwearHero] sanitizeCfg threw, falling back to defaults', e, 'cfg=', cfgRaw);
+      base = { ...DEFAULT_TECHWEAR_HERO };
+    }
     if (!base.productId) return { config: base, productMissing: false };
     const product = products?.find((p) => p.id === base.productId);
-    if (!product) {
-      // Product was deleted or not loaded yet — fall back to manual config
-      return { config: base, productMissing: !isLoading };
-    }
+    if (!product) return { config: base, productMissing: !isLoading };
 
-    // Derive colors from product
     let colorOptions: TechwearColorOption[] = base.colorOptions;
     if (product.colorOptions && product.colorOptions.length > 0) {
       colorOptions = product.colorOptions.map((c, i) => ({
-        name: c.label || `Color ${i + 1}`,
-        hex: c.color,
-        image: c.image || product.image,
+        name: c.label || `Color ${i + 1}`, hex: c.color, image: c.image || product.image,
       }));
     } else if (product.colors && product.colors.length > 0) {
-      colorOptions = product.colors.map((c) => ({
-        name: c, hex: c, image: product.image,
-      }));
+      colorOptions = product.colors.map((c) => ({ name: c, hex: c, image: product.image }));
     }
-
     const visibleSizes = (base.visibleSizes?.length ? base.visibleSizes : product.sizes) || [];
     const productHref = `/boutique/${product.id}`;
     return {
@@ -88,23 +105,55 @@ function useResolvedConfig(): { config: TechwearHeroConfig; productMissing: bool
       },
       productMissing: false,
     };
-  }, [cfg, products, isLoading]);
+  }, [cfgRaw, products, isLoading]);
 }
 
-export function TechwearHero() {
+interface TechwearHeroProps {
+  overrideConfig?: TechwearHeroConfig;
+}
+
+function BackgroundLayer({ bg }: { bg: TechwearBackground }) {
+  if (bg.type === 'gradient') {
+    return (
+      <div
+        className="hw-bg-layer"
+        style={{
+          background: `linear-gradient(135deg, ${bg.gradientFrom || '#E0E0E0'}, ${bg.gradientTo || '#E5E5E5'})`,
+        }}
+      />
+    );
+  }
+  if (bg.type === 'color') {
+    return <div className="hw-bg-layer" style={{ background: bg.color || '#EBEBEB' }} />;
+  }
+  if (bg.type === 'image' && bg.mediaUrl) {
+    return <img src={bg.mediaUrl} alt="" className="hw-bg-layer hw-bg-media" aria-hidden="true" />;
+  }
+  if (bg.type === 'video' && bg.mediaUrl) {
+    return (
+      <video
+        className="hw-bg-layer hw-bg-media"
+        src={bg.mediaUrl}
+        autoPlay loop muted playsInline
+        aria-hidden="true"
+      />
+    );
+  }
+  return null;
+}
+
+export function TechwearHero({ overrideConfig }: TechwearHeroProps = {}) {
   const { designSettings } = useApp();
-  const { config, productMissing } = useResolvedConfig();
+  const { config, productMissing } = useResolvedConfig(overrideConfig);
   const viewport = useViewport();
   const safeColorIndex = Math.min(Math.max(config.defaultColor, 0), Math.max(config.colorOptions.length - 1, 0));
   const [activeColor, setActiveColor] = useState(safeColorIndex);
   const [activeSize, setActiveSize] = useState<string>(config.defaultSize);
   const heroRef = useRef<HTMLElement>(null);
 
-  // Keep state aligned if config changes (e.g. admin edit)
   useEffect(() => { setActiveColor(safeColorIndex); }, [safeColorIndex, config.colorOptions.length]);
   useEffect(() => { setActiveSize(config.defaultSize); }, [config.defaultSize]);
 
-  // Light parallax
   useEffect(() => {
     if (!config.enabled) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -115,7 +164,6 @@ export function TechwearHero() {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
         const y = window.scrollY * 0.15;
-        el.style.setProperty('--hw-hex-shift', `${y}px`);
         const layers = el.querySelectorAll<HTMLElement>('.hw-hex-bg svg');
         layers.forEach((l, i) => {
           l.style.transform = `translateY(${y * (i % 2 === 0 ? 1 : -1) * 0.4}px)`;
@@ -130,9 +178,11 @@ export function TechwearHero() {
   if (config.colorOptions.length === 0) return null;
 
   const color = config.colorOptions[activeColor] || config.colorOptions[0];
-  const imageSrc = pickImage(color, viewport);
+  const media = pickMedia(color, viewport);
   const logoUrl = (designSettings as any)?.hudLogo as string | undefined;
   const brandName = ((designSettings as any)?.siteName as string) || 'HELVETICA';
+  const bg = config.background || DEFAULT_TECHWEAR_HERO.background!;
+  const overlayOpacity = bg.overlayOpacity ?? 0;
 
   return (
     <section
@@ -141,20 +191,26 @@ export function TechwearHero() {
       role="region"
       aria-label="Hero produit"
       data-testid="techwear-hero"
+      data-size={config.cardSize || 'md'}
+      data-overflow={config.imageOverflow ? 'true' : 'false'}
       lang="fr"
     >
-      {productMissing && (
+      {/* Background layer (under everything) */}
+      <BackgroundLayer bg={bg} />
+      {overlayOpacity > 0 && (
         <div
-          role="alert"
-          style={{
-            position: 'absolute', top: 8, right: 8, zIndex: 50,
-            background: '#fff3cd', color: '#664d03', border: '1px solid #ffecb5',
-            padding: '6px 10px', fontSize: 11, borderRadius: 4,
-          }}
-        >
+          className="hw-bg-overlay"
+          style={{ background: `rgba(0,0,0,${overlayOpacity})` }}
+          aria-hidden="true"
+        />
+      )}
+
+      {productMissing && (
+        <div role="alert" className="hw-product-missing">
           Produit lié introuvable — configuration manuelle utilisée.
         </div>
       )}
+
       <div className="hw-hex-bg" aria-hidden="true">
         <Hex className="hw-hex-1 hw-spin" />
         <Hex className="hw-hex-2" />
@@ -163,7 +219,6 @@ export function TechwearHero() {
         <Hex className="hw-hex-r1" />
       </div>
 
-      {/* Live region for screen readers when color/size change */}
       <div className="sr-only" aria-live="polite" aria-atomic="true">
         Couleur sélectionnée : {color.name}. Taille sélectionnée : {activeSize}.
       </div>
@@ -172,29 +227,38 @@ export function TechwearHero() {
         <div className="hw-stage-inner">
           <div aria-hidden="true" />
 
-          {/* Center card */}
           <div className="hw-card-col">
             <div className="hw-card">
               <div className="hw-card-logo">
-                {logoUrl ? (
-                  <img src={logoUrl} alt={brandName} />
-                ) : (
-                  <div className="hw-text-logo">{brandName}</div>
-                )}
+                {logoUrl ? <img src={logoUrl} alt={brandName} /> : <div className="hw-text-logo">{brandName}</div>}
               </div>
 
-              <img
-                key={color.name + imageSrc}
-                src={imageSrc}
-                alt={`Modèle ${color.name} (${viewport})`}
-                className="hw-card-image"
-                width={1024}
-                height={1024}
-                loading="eager"
-                decoding="async"
-                style={{ objectFit: config.imageFit, objectPosition: config.imagePosition }}
-                onError={(e) => { (e.currentTarget as HTMLImageElement).src = color.image; }}
-              />
+              {media.type === 'video' ? (
+                <video
+                  key={color.name + media.url}
+                  src={media.url}
+                  className="hw-card-image"
+                  autoPlay
+                  muted
+                  loop={color.videoLoop !== false}
+                  playsInline
+                  style={{ objectFit: config.imageFit, objectPosition: config.imagePosition }}
+                  aria-label={`Vidéo modèle ${color.name}`}
+                />
+              ) : (
+                <img
+                  key={color.name + media.url}
+                  src={media.url}
+                  alt={`Modèle ${color.name} (${viewport})`}
+                  className="hw-card-image"
+                  width={1024}
+                  height={1024}
+                  loading="eager"
+                  decoding="async"
+                  style={{ objectFit: config.imageFit, objectPosition: config.imagePosition }}
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).src = color.image; }}
+                />
+              )}
 
               {config.showModelBadge && (
                 <div className="hw-model-badge" aria-label="Référence modèle">
@@ -205,16 +269,11 @@ export function TechwearHero() {
             </div>
 
             <div className="hw-ctas">
-              <Link to={config.ctaPrimary.href} className="hw-cta-primary">
-                {config.ctaPrimary.label}
-              </Link>
-              <Link to={config.ctaSecondary.href} className="hw-cta-secondary">
-                {config.ctaSecondary.label}
-              </Link>
+              <Link to={config.ctaPrimary.href} className="hw-cta-primary">{config.ctaPrimary.label}</Link>
+              <Link to={config.ctaSecondary.href} className="hw-cta-secondary">{config.ctaSecondary.label}</Link>
             </div>
           </div>
 
-          {/* Right column */}
           <div className="hw-right">
             {config.showStats && (
               <div className="hw-panel hw-panel--stats" role="list" aria-label="Statistiques produit">
