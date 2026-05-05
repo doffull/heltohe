@@ -176,8 +176,13 @@ export default function Home() {
       {/* ═══════════════ PROMO BANNER ═══════════════ */}
       <PromoBanner />
 
-      {/* ═══════════════ TECHWEAR HERO (mockup-driven) ═══════════════ */}
-      <TechwearHero />
+      {/* ═══════════════ HERO (Techwear OR Slider — exclusif) ═══════════════ */}
+      {(designSettings as any).techwearHero?.enabled ? (
+        <TechwearHero />
+      ) : (
+        <HeroSlider />
+      )}
+
 
       {/* ═══════════════ CATEGORIES GRID ═══════════════ */}
       <section className={sectionPy}>
