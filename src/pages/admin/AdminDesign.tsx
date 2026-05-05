@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { HeaderDesignTab } from '@/components/admin/HeaderDesignTab';
+import { TechwearHeroTab } from '@/components/admin/TechwearHeroTab';
 import { AiTextButton } from '@/components/admin/AiTextButton';
 import { AiImageButton } from '@/components/admin/AiImageButton';
 import { useProducts } from '@/hooks/useProducts';
@@ -48,6 +49,7 @@ function generateId() {
 const NAV_ITEMS = [
   { key: 'disposition', label: 'Disposition', icon: LayoutDashboard, desc: 'Presets globaux' },
   { key: 'hero',        label: 'Hero Slider',  icon: ImagePlay,       desc: 'Slides & parallaxe' },
+  { key: 'techwear',    label: 'Hero Techwear', icon: ImagePlay,       desc: 'Carte produit dynamique' },
   { key: 'header',      label: 'Header',       icon: PanelTop,        desc: 'Barre de navigation' },
   { key: 'logo',        label: 'Logo & Marque',icon: Image,           desc: 'Identité visuelle' },
   { key: 'couleurs',    label: 'Couleurs',     icon: Palette,         desc: 'Palette & thème' },
@@ -2483,6 +2485,7 @@ function AdminColorsTab() {
 const TAB_COMPONENTS: Record<string, React.ComponentType> = {
   disposition: DispositionTab,
   hero:        HeroSliderTab,
+  techwear:    TechwearHeroTab,
   header:      HeaderDesignTab,
   logo:        LogoTab,
   couleurs:    CouleursTab,
