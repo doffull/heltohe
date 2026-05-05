@@ -520,6 +520,49 @@ export default function AdminAudit() {
         <div className="flex items-center gap-1"><AlertTriangle className="h-3 w-3 text-yellow-500" /> Avertissement</div>
         <div className="flex items-center gap-1"><div className="h-3 w-3 rounded-full border-2 border-border" /> En attente</div>
       </div>
+
+      <RoleAuditLogSection />
+    </div>
+  );
+}
+
+function RoleAuditLogSection() {
+  const { data: log = [], isLoading } = useRoleAuditLog();
+  return (
+    <div className="space-y-3 pt-4 border-t border-border">
+      <h2 className="text-base sm:text-lg font-bold hud-text">HISTORIQUE DES RÔLES</h2>
+      {isLoading ? (
+        <p className="text-xs text-muted-foreground">Chargement...</p>
+      ) : log.length === 0 ? (
+        <p className="text-xs text-muted-foreground">Aucun changement de rôle enregistré.</p>
+      ) : (
+        <div className="overflow-x-auto chamfer-hud bg-card/50">
+          <table className="w-full text-xs">
+            <thead className="bg-muted/50 border-b border-border">
+              <tr>
+                <th className="text-left p-2">Date</th>
+                <th className="text-left p-2">Opération</th>
+                <th className="text-left p-2">Cible (user_id)</th>
+                <th className="text-left p-2">Rôle</th>
+                <th className="text-left p-2">Modifié par</th>
+              </tr>
+            </thead>
+            <tbody>
+              {log.map((row: any) => (
+                <tr key={row.id} className="border-b border-border last:border-0">
+                  <td className="p-2 font-mono">{new Date(row.created_at).toLocaleString('fr-FR')}</td>
+                  <td className="p-2">
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${row.operation === 'INSERT' ? 'bg-green-500/20 text-green-500' : row.operation === 'DELETE' ? 'bg-red-500/20 text-red-500' : 'bg-blue-500/20 text-blue-500'}`}>{row.operation}</span>
+                  </td>
+                  <td className="p-2 font-mono text-[10px]">{row.target_user_id?.slice(0, 8)}…</td>
+                  <td className="p-2">{row.role}</td>
+                  <td className="p-2 font-mono text-[10px]">{row.changed_by?.slice(0, 8) || 'system'}…</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
