@@ -20,6 +20,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { HeaderDesignTab } from '@/components/admin/HeaderDesignTab';
+import { AiTextButton } from '@/components/admin/AiTextButton';
+import { AiImageButton } from '@/components/admin/AiImageButton';
 import { useProducts } from '@/hooks/useProducts';
 import { useSaveDesignSettings } from '@/hooks/useDesignSettings';
 import { CategoryFormDialog } from '@/components/admin/CategoryFormDialog';
