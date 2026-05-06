@@ -1,92 +1,59 @@
-# Système de Roulette Quotidienne 🎰
+## Hero Techwear mobile + protection des images
 
-Mise en place d'un jeu de roue à tourner une fois par jour, avec gains (livraison gratuite, % de réduction, etc.), gestion complète depuis l'admin.
+### 1. Hero Techwear — mobile
 
-## Vue d'ensemble
+**Décalage sous le header** (`src/styles/home-techwear.css`)
+- Lire la hauteur réelle du header (56px mobile / 80px desktop) et l'appliquer à `padding-top` du `#hw-hero` au lieu de `min-height: 100vh - 70px`.
+- Sur mobile (≤768px) : `padding-top: 64px` ; ≤480px : `padding-top: 60px`.
+- Réduire `min-height` à `calc(100svh - 64px)` pour ne plus chevaucher Categories.
 
-```text
-┌──────────────────────────┐         ┌──────────────────────────┐
-│  HOMEPAGE (Accueil)      │         │  ADMIN DASHBOARD         │
-│  ──────────────────────  │         │  ──────────────────────  │
-│  • Bouton flottant 🎁    │         │  • /admin/roulette       │
-│  • Modal roue animée     │         │  • CRUD segments (lots)  │
-│  • 1 spin / jour / user  │         │  • Activer/désactiver    │
-│  • Génère code promo     │         │  • Probabilités & limites│
-│  • Email du code         │         │  • Historique des gains  │
-└──────────────────────────┘         └──────────────────────────┘
+**Retrait du logo dans le Hero**
+- Dans `TechwearHero.tsx` (`hw-card-logo`), supprimer le rendu du logo (img + fallback texte). Le header s'en charge déjà.
+
+**Inversion de l'ordre des panneaux droits**
+- Dans `TechwearHero.tsx`, réordonner les panneaux : 1) couleurs, 2) tailles, 3) stats (au lieu de stats → couleurs → tailles).
+- Sur mobile, ajuster les `animation-delay` correspondants dans le CSS pour refléter le nouvel ordre.
+
+**Compactage couleurs/tailles + stock visible**
+- Couleurs : passer en grille horizontale compacte sur mobile (`flex-wrap`, swatches ronds 22px, libellé en tooltip + nom court sous le swatch sélectionné). Sous chaque swatch : pastille colorée (vert ≥10, orange 1-9, rouge 0) + nombre de stock total pour cette couleur.
+- Tailles : passer en grille de pills compactes (chip 36×36) sans la colonne "Size" répétée. Sous chaque taille : pastille + nombre selon la couleur active. Tailles à 0 : barrées et désactivées.
+
+**Source du stock**
+- Nouveau hook `src/hooks/useProductStock.ts` qui interroge `inventory` + `stock_levels` pour `productId` et retourne `{ bySize: Record<size, qty>, byColor: Record<color, qty>, bySizeColor: Record<"size|color", qty> }`. Quantité disponible = `quantity - reserved`.
+- Schema actuel `stock_levels` n'a pas de colonne `color` — on agrège par `size` uniquement, et on calcule `byColor` à partir des `colorOptions` du produit (somme par couleur si une convention existe ; sinon afficher le total inventory comme stock couleur). Pour rester correct sans migration : afficher la pastille **uniquement par taille**. Pour les couleurs : pastille verte si `total > 0`, grise si `0`.
+- Le hook n'est appelé que si `config.productId` est défini ; sinon pastilles masquées.
+
+### 2. Protection des images (niveau maximum)
+
+Nouveau composant global `src/components/security/ImageProtection.tsx` monté dans `src/App.tsx` :
+- Bloque `contextmenu`, `dragstart`, `selectstart`, `copy` au niveau document.
+- Bloque les raccourcis : `F12`, `Ctrl+Shift+I/J/C`, `Ctrl+U`, `Ctrl+S`, `Cmd+Opt+I/J/C`, `Cmd+S`.
+- Détection DevTools (différence `outerHeight - innerHeight > 200`) → overlay d'avertissement (non bloquant, juste dissuasif).
+
+Styles globaux dans `src/index.css` :
+```css
+img { -webkit-user-drag: none; user-select: none; pointer-events: none; }
+img[data-allow-interact] { pointer-events: auto; }
+.protected-image-wrap { position: relative; }
+.protected-image-wrap::after {
+  content: ''; position: absolute; inset: 0; z-index: 2;
+  background: transparent; pointer-events: auto;
+}
 ```
+- L'overlay transparent empêche "Enregistrer l'image sous". Les boutons (swatches couleurs ProductCard) restent au-dessus via `z-index` et l'overlay sera appliqué via une classe `.protected-image-wrap` posée sur les conteneurs d'images du Hero, ProductCard et ProductImageGallery.
+- Le swatch couleur du Hero qui change l'image n'utilise pas l'image elle-même comme cible : pas d'impact.
 
-## Backend (Lovable Cloud)
+### 3. Validation
 
-**Nouvelles tables :**
+- Tests visuels mobile 360×621 et 414×896 : Hero ne déborde plus, ordre couleurs/tailles → stats, pastilles stock visibles.
+- Test ProductDetail : vérifier que clic-droit/sélection bloqués mais ajout au panier fonctionne.
 
-1. **`roulette_config`** (singleton, config_key='main')
-   - `enabled` bool, `title`, `subtitle`, `button_label`
-   - `cooldown_hours` int (défaut 24)
-   - `require_auth` bool (sinon utilise email + cookie)
-   - `wheel_colors` jsonb (palette couleurs roue)
+### Fichiers touchés
 
-2. **`roulette_segments`** (les lots)
-   - `id`, `label` (ex "−10%"), `description`
-   - `reward_type`: `'percentage' | 'fixed_amount' | 'free_shipping' | 'nothing'`
-   - `reward_value` numeric, `min_purchase` numeric
-   - `probability_weight` int (poids pour tirage pondéré)
-   - `color` hex, `icon`, `sort_order`, `is_active`
-   - `max_wins_per_day` int nullable (limite globale)
-   - `code_prefix` text (ex "SPIN10")
-
-3. **`roulette_spins`** (historique + anti-triche)
-   - `id`, `user_id` nullable, `email` nullable, `ip_hash` text
-   - `segment_id`, `promo_code_id` nullable
-   - `created_at`
-
-**Fonction RPC `spin_roulette(p_email)`** (SECURITY DEFINER) :
-- Vérifie cooldown (24h) par user_id ou email/ip_hash
-- Vérifie `max_wins_per_day` du segment
-- Tirage pondéré côté serveur (anti-triche : le client ne décide pas)
-- Crée un `promo_codes` à usage unique (`usage_limit=1`) lié au gain
-- Insère dans `roulette_spins`
-- Retourne `{ segmentId, label, code, expiresAt }`
-
-**RLS :** segments/config lisibles par tous (actifs uniquement) ; admin gère tout ; spins en SELECT uniquement par admin ou l'utilisateur lui-même.
-
-**Edge function `send-roulette-reward`** : envoie le code promo gagné par email via Resend.
-
-## Frontend
-
-**Composants nouveaux :**
-- `src/components/home/RouletteWheel.tsx` — roue SVG animée (rotation CSS, easing, son optionnel)
-- `src/components/home/RouletteFab.tsx` — bouton flottant homepage (bottom-right, pulse + badge "1 spin"), ouvre modal Dialog
-- `src/hooks/useRoulette.ts` — `useRouletteConfig`, `useRouletteSegments`, `useSpinRoulette`, `useCanSpin` (cooldown localStorage + check serveur)
-
-**Intégration :**
-- Monté dans `src/views/HomeView.tsx` (uniquement homepage)
-- Cache si `roulette_config.enabled=false` ou si user a déjà spinné aujourd'hui (ou affiche un compte à rebours "Reviens dans 18h")
-- Animation : rotation 4-5s ease-out, s'arrête sur le segment gagné (calculé serveur), confettis sur gain
-- Style cohérent Industrial Luxury (Helvetica-MP, noir/blanc/gris, angles 45°)
-- Mobile-first (modal full-screen <768px)
-
-**Admin :**
-- Nouvelle page `src/pages/admin/AdminRoulette.tsx` ajoutée à `Admin.tsx` + sidebar admin
-- 3 onglets :
-  1. **Configuration** : activer/désactiver, textes, cooldown
-  2. **Lots (segments)** : table CRUD avec drag-and-drop ordre, édition inline (label, type récompense, valeur, probabilité, couleur, actif)
-  3. **Historique** : liste des spins (date, user/email, lot gagné, code utilisé ou non)
-- Aperçu live de la roue à droite
-
-## Sécurité
-- Tirage **toujours côté serveur** (RPC) — le frontend ne fait qu'animer le résultat reçu
-- Cooldown vérifié serveur (pas de bypass via localStorage)
-- Codes promo générés à usage unique avec `expires_at` (ex 7 jours)
-- Anonymes : limite par `ip_hash` + email
-- Honeypot sur le formulaire email anonyme (cf mémoire spam protection)
-
-## Fichiers créés/modifiés
-- **DB** : migration (3 tables + RPC + RLS + seed 6 segments par défaut)
-- **Edge function** : `send-roulette-reward/index.ts`
-- **Hooks** : `useRoulette.ts`
-- **Composants** : `RouletteWheel.tsx`, `RouletteFab.tsx`, `RouletteModal.tsx`
-- **Pages** : `AdminRoulette.tsx`
-- **Modifs** : `HomeView.tsx`, `Admin.tsx` (route + nav admin)
-
-Une fois approuvé, je passe en mode build et j'implémente.
+- `src/styles/home-techwear.css` (mobile padding, animation-delays, panel order, sizes/colors compacts)
+- `src/components/home/TechwearHero.tsx` (suppr logo, réordonne panels, intègre stock pastilles)
+- `src/hooks/useProductStock.ts` (nouveau)
+- `src/components/security/ImageProtection.tsx` (nouveau)
+- `src/App.tsx` (mount ImageProtection)
+- `src/index.css` (règles globales images)
+- `src/components/products/ProductCard.tsx` + `src/components/product/ProductImageGallery.tsx` (classe `protected-image-wrap`)
