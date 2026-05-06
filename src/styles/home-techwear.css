@@ -231,58 +231,78 @@
 
 /* ── Compact color chips ─── */
 .hw-colors-compact {
-  display: flex; flex-wrap: wrap; gap: 6px;
+  display: flex; flex-wrap: wrap; gap: 8px;
 }
 .hw-color-chip {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 4px 8px 4px 4px;
-  background: rgba(255,255,255,0.7);
-  border: 1px solid var(--hw-color-border);
+  padding: 6px 10px 6px 6px;
+  min-height: 36px;
+  background: #fff;
+  color: #111;
+  border: 1px solid #111;
   border-radius: 999px;
   cursor: pointer;
   transition: all var(--hw-transition-speed) ease;
+  outline: none;
+}
+.hw-color-chip:hover { background: #f3f3f3; }
+.hw-color-chip:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.25);
 }
 .hw-color-chip.is-active {
-  background: var(--hw-color-black);
-  color: var(--hw-color-white);
-  border-color: var(--hw-color-black);
+  background: #000;
+  color: #fff;
+  border-color: #000;
 }
 .hw-color-dot {
-  width: 18px; height: 18px; border-radius: 50%;
-  border: 1px solid rgba(0,0,0,0.2); flex-shrink: 0;
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 1px solid rgba(0,0,0,0.35); flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.6);
 }
 .hw-color-chip-name {
-  font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700;
 }
 
 /* ── Compact size chips with stock badge ─── */
 .hw-sizes-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+  gap: 8px;
 }
 .hw-size-chip {
   position: relative;
   display: inline-flex; align-items: center; justify-content: center;
-  min-width: 44px; height: 38px;
-  padding: 0 8px;
-  background: rgba(255,255,255,0.7);
-  border: 1px solid var(--hw-color-border);
-  font: 700 12px var(--hw-font-main);
+  min-width: 44px; min-height: 44px; height: 44px;
+  padding: 0 10px;
+  background: #fff;
+  color: #111;
+  border: 1px solid #111;
+  font: 700 13px var(--hw-font-main);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   cursor: pointer;
   transition: all var(--hw-transition-speed) ease;
+  outline: none;
+}
+.hw-size-chip:hover:not(:disabled) { background: #f3f3f3; }
+.hw-size-chip:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.25);
+  z-index: 2;
 }
 .hw-size-chip.is-active {
-  background: var(--hw-color-black);
-  color: var(--hw-color-white);
-  border-color: var(--hw-color-black);
+  background: #000;
+  color: #fff;
+  border-color: #000;
 }
 .hw-size-chip.is-out {
-  opacity: 0.4;
+  opacity: 0.55;
   cursor: not-allowed;
   text-decoration: line-through;
+  background: repeating-linear-gradient(45deg, #f5f5f5, #f5f5f5 4px, #ececec 4px, #ececec 8px);
 }
 .hw-stock-badge {
   position: absolute;
@@ -294,6 +314,7 @@
   text-align: center;
   border: 1.5px solid #fff;
   letter-spacing: 0;
+  pointer-events: none;
 }
 
 @keyframes hw-slide-right {

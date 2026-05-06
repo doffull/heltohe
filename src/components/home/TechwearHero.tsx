@@ -239,48 +239,103 @@ function TechwearHeroSlideView({ config, productMissing }: { config: SlideConfig
 
           <div className="hw-right">
             {config.showColors && (
-              <div className="hw-panel hw-panel--colors" role="radiogroup" aria-label="Couleur du produit">
+              <div className="hw-panel hw-panel--colors" role="radiogroup" aria-label="Choisir une couleur">
                 <div className="hw-colors-compact">
-                  {config.colorOptions.map((c, i) => (
-                    <button
-                      key={c.name + i}
-                      type="button"
-                      onClick={() => setActiveColor(i)}
-                      aria-label={`Couleur ${c.name}`}
-                      role="radio"
-                      aria-checked={i === activeColor}
-                      className={`hw-color-chip ${i === activeColor ? 'is-active' : ''}`}
-                      title={c.name}
-                    >
-                      <span className="hw-color-dot" style={{ background: c.hex }} />
-                      <span className="hw-color-chip-name">{c.name}</span>
-                    </button>
-                  ))}
+                  {config.colorOptions.map((c, i) => {
+                    const isActive = i === activeColor;
+                    return (
+                      <button
+                        key={c.name + i}
+                        type="button"
+                        onClick={() => setActiveColor(i)}
+                        onKeyDown={(e) => {
+                          const len = config.colorOptions.length;
+                          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                            e.preventDefault();
+                            const next = (i + 1) % len;
+                            setActiveColor(next);
+                            (e.currentTarget.parentElement?.children[next] as HTMLButtonElement)?.focus();
+                          } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            const prev = (i - 1 + len) % len;
+                            setActiveColor(prev);
+                            (e.currentTarget.parentElement?.children[prev] as HTMLButtonElement)?.focus();
+                          } else if (e.key === 'Home') {
+                            e.preventDefault(); setActiveColor(0);
+                            (e.currentTarget.parentElement?.children[0] as HTMLButtonElement)?.focus();
+                          } else if (e.key === 'End') {
+                            e.preventDefault(); setActiveColor(len - 1);
+                            (e.currentTarget.parentElement?.children[len - 1] as HTMLButtonElement)?.focus();
+                          }
+                        }}
+                        aria-label={`Couleur ${c.name}${isActive ? ' (sélectionnée)' : ''}`}
+                        role="radio"
+                        aria-checked={isActive}
+                        tabIndex={isActive ? 0 : -1}
+                        className={`hw-color-chip ${isActive ? 'is-active' : ''}`}
+                        title={c.name}
+                      >
+                        <span className="hw-color-dot" style={{ background: c.hex }} aria-hidden="true" />
+                        <span className="hw-color-chip-name">{c.name}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
 
             {config.showSizes && (
-              <div className="hw-panel hw-panel--sizes" role="group" aria-label="Tailles disponibles">
+              <div className="hw-panel hw-panel--sizes" role="radiogroup" aria-label="Choisir une taille">
                 <div className="hw-sizes-grid">
-                  {config.visibleSizes.map((sz) => {
+                  {config.visibleSizes.map((sz, i) => {
                     const qty = stock?.bySize?.[sz];
                     const out = showStockBadges && qty === 0;
+                    const isActive = activeSize === sz;
+                    const stockLabel =
+                      typeof qty === 'number'
+                        ? out
+                          ? 'épuisé'
+                          : qty < 10
+                            ? `stock faible, ${qty} restants`
+                            : `${qty} en stock`
+                        : '';
                     return (
                       <button
                         type="button"
                         key={sz}
-                        className={`hw-size-chip ${activeSize === sz ? 'is-active' : ''} ${out ? 'is-out' : ''}`}
+                        className={`hw-size-chip ${isActive ? 'is-active' : ''} ${out ? 'is-out' : ''}`}
                         onClick={() => !out && setActiveSize(sz)}
-                        aria-pressed={activeSize === sz}
+                        onKeyDown={(e) => {
+                          const sizes = config.visibleSizes;
+                          const move = (dir: 1 | -1) => {
+                            const len = sizes.length;
+                            for (let k = 1; k <= len; k++) {
+                              const idx = (i + dir * k + len) % len;
+                              const candidate = sizes[idx];
+                              const cQty = stock?.bySize?.[candidate];
+                              if (!(showStockBadges && cQty === 0)) {
+                                setActiveSize(candidate);
+                                (e.currentTarget.parentElement?.children[idx] as HTMLButtonElement)?.focus();
+                                return;
+                              }
+                            }
+                          };
+                          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); move(1); }
+                          else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); move(-1); }
+                        }}
+                        role="radio"
+                        aria-checked={isActive}
+                        aria-label={`Taille ${sz}${stockLabel ? `, ${stockLabel}` : ''}`}
+                        aria-disabled={out || undefined}
+                        tabIndex={isActive ? 0 : -1}
                         disabled={out}
                       >
-                        <span className="hw-size-chip-label">{sz}</span>
+                        <span className="hw-size-chip-label" aria-hidden="true">{sz}</span>
                         {showStockBadges && typeof qty === 'number' && (
                           <span
                             className="hw-stock-badge"
                             style={{ background: stockBadgeColor(qty) }}
-                            aria-label={`${qty} en stock`}
+                            aria-hidden="true"
                           >
                             {qty}
                           </span>
