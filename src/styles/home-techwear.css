@@ -40,12 +40,13 @@
 
   position: relative;
   width: 100%;
-  min-height: calc(100vh - 70px);
+  min-height: calc(100vh - 80px);
   background: transparent;
   overflow: hidden;
   font-family: var(--hw-font-main);
   color: var(--hw-color-text);
-  /* Espace de sécurité pour ne pas chevaucher la section suivante */
+  /* push under fixed header (80px desktop) */
+  padding-top: 80px;
   padding-bottom: 40px;
   margin-bottom: 40px;
 }
@@ -224,9 +225,76 @@
   animation: hw-slide-right 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   width: 240px;
 }
-.hw-panel--stats  { animation-delay: 0.30s; }
-.hw-panel--colors { animation-delay: 0.40s; padding: 12px 14px; }
-.hw-panel--sizes  { animation-delay: 0.50s; padding: 10px 12px; }
+.hw-panel--colors { animation-delay: 0.30s; padding: 12px 14px; }
+.hw-panel--sizes  { animation-delay: 0.40s; padding: 10px 12px; }
+.hw-panel--stats  { animation-delay: 0.50s; }
+
+/* ── Compact color chips ─── */
+.hw-colors-compact {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.hw-color-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 8px 4px 4px;
+  background: rgba(255,255,255,0.7);
+  border: 1px solid var(--hw-color-border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all var(--hw-transition-speed) ease;
+}
+.hw-color-chip.is-active {
+  background: var(--hw-color-black);
+  color: var(--hw-color-white);
+  border-color: var(--hw-color-black);
+}
+.hw-color-dot {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 1px solid rgba(0,0,0,0.2); flex-shrink: 0;
+}
+.hw-color-chip-name {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;
+}
+
+/* ── Compact size chips with stock badge ─── */
+.hw-sizes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+  gap: 6px;
+}
+.hw-size-chip {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 44px; height: 38px;
+  padding: 0 8px;
+  background: rgba(255,255,255,0.7);
+  border: 1px solid var(--hw-color-border);
+  font: 700 12px var(--hw-font-main);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--hw-transition-speed) ease;
+}
+.hw-size-chip.is-active {
+  background: var(--hw-color-black);
+  color: var(--hw-color-white);
+  border-color: var(--hw-color-black);
+}
+.hw-size-chip.is-out {
+  opacity: 0.4;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+.hw-stock-badge {
+  position: absolute;
+  top: -6px; right: -6px;
+  min-width: 18px; height: 18px; padding: 0 4px;
+  border-radius: 999px;
+  font-size: 9px; font-weight: 800; line-height: 18px;
+  color: #fff;
+  text-align: center;
+  border: 1.5px solid #fff;
+  letter-spacing: 0;
+}
 
 @keyframes hw-slide-right {
   to { opacity: 1; transform: translateX(0); }
@@ -378,10 +446,11 @@
 @media (max-width: 768px) {
   #hw-hero {
     --hw-card-width: min(86vw, 360px);
-    --hw-card-height: min(58svh, 520px);
+    --hw-card-height: min(54svh, 480px);
     --hw-card-bevel: 16px;
     --hw-hero-padding: 8px;
-    min-height: calc(100svh - 70px);
+    padding-top: 64px;
+    min-height: calc(100svh - 64px);
     padding-bottom: 24px;
     margin-bottom: 16px;
     display: flex;
@@ -417,13 +486,10 @@
     gap: 8px;
     width: 100%;
     padding: 0 4px;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
+    flex-direction: column;
   }
-  .hw-panel { padding: 8px 10px; min-width: 0; flex: 1 1 calc(50% - 6px); width: auto; }
-  .hw-panel--stats { flex-basis: 100%; }
-  .hw-color-row.is-active .hw-color-swatch { width: 60px; }
+  .hw-panel { padding: 8px 10px; min-width: 0; width: 100%; }
+  .hw-sizes-grid { grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); }
   .hw-hex-bg .hw-hex-r1, .hw-hex-bg .hw-hex-1 { display: none; }
   .hw-hex-bg .hw-hex-2 { width: 280px; height: 280px; opacity: 0.4; }
   .hw-hex-bg .hw-hex-3 { width: 220px; height: 220px; opacity: 0.4; }
@@ -431,11 +497,11 @@
 
 @media (max-width: 480px) {
   #hw-hero {
-    --hw-card-height: min(54svh, 460px);
+    --hw-card-height: min(50svh, 420px);
+    padding-top: 60px;
     min-height: calc(100svh - 60px);
   }
-  .hw-card-logo { width: 44px; top: 12px; left: 14px; }
-  .hw-size-btn { padding: 5px 10px; min-width: 40px; font-size: 10px; }
+  .hw-size-chip { height: 36px; min-width: 40px; font-size: 11px; }
   .hw-stage-inner { gap: 8px; }
   .hw-panel { padding: 6px 8px; }
 }

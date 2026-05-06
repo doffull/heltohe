@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import { VisualEditorProvider } from "@/components/visual-editor/VisualEditorProvider";
 import { VisualEditorToggle } from "@/components/visual-editor/VisualEditorToggle";
 import { VisualEditorPanel } from "@/components/visual-editor/VisualEditorPanel";
+import { ImageProtection } from "@/components/security/ImageProtection";
 
 // Pages
 import Home from "./pages/Home";
@@ -167,6 +168,7 @@ function AppShell() {
       <VisualEditorProvider>
         <TooltipProvider>
           <FaviconManager />
+          <ImageProtection />
           <Toaster />
           <Sonner />
           <ScrollToTop />

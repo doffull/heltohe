@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
 import { useProducts } from '@/hooks/useProducts';
+import { useProductStock, stockBadgeColor } from '@/hooks/useProductStock';
 import { DEFAULT_TECHWEAR_HERO } from '@/config/homeConfig';
 import type { TechwearHeroConfig, TechwearColorOption, TechwearBackground } from '@/types';
 import '@/styles/home-techwear.css';
@@ -145,11 +146,11 @@ function BackgroundLayer({ bg }: { bg: TechwearBackground }) {
 type SlideConfig = TechwearHeroConfig;
 
 function TechwearHeroSlideView({ config, productMissing }: { config: SlideConfig; productMissing: boolean }) {
-  const { designSettings } = useApp();
   const viewport = useViewport();
   const safeColorIndex = Math.min(Math.max(config.defaultColor, 0), Math.max(config.colorOptions.length - 1, 0));
   const [activeColor, setActiveColor] = useState(safeColorIndex);
   const [activeSize, setActiveSize] = useState<string>(config.defaultSize);
+  const { data: stock } = useProductStock(config.productId);
 
   useEffect(() => { setActiveColor(safeColorIndex); }, [safeColorIndex, config.colorOptions.length]);
   useEffect(() => { setActiveSize(config.defaultSize); }, [config.defaultSize]);
@@ -158,10 +159,9 @@ function TechwearHeroSlideView({ config, productMissing }: { config: SlideConfig
 
   const color = config.colorOptions[activeColor] || config.colorOptions[0];
   const media = pickMedia(color, viewport);
-  const logoUrl = (designSettings as any)?.hudLogo as string | undefined;
-  const brandName = ((designSettings as any)?.siteName as string) || 'HELVETICA';
   const bg = config.background || DEFAULT_TECHWEAR_HERO.background!;
   const overlayOpacity = bg.overlayOpacity ?? 0;
+  const showStockBadges = !!stock && stock.total > 0;
 
   return (
     <div
@@ -198,11 +198,7 @@ function TechwearHeroSlideView({ config, productMissing }: { config: SlideConfig
           <div aria-hidden="true" />
 
           <div className="hw-card-col">
-            <div className="hw-card">
-              <div className="hw-card-logo">
-                {logoUrl ? <img src={logoUrl} alt={brandName} /> : <div className="hw-text-logo">{brandName}</div>}
-              </div>
-
+            <div className="hw-card protected-image-wrap">
               {media.type === 'video' ? (
                 <video
                   key={color.name + media.url}
@@ -242,6 +238,60 @@ function TechwearHeroSlideView({ config, productMissing }: { config: SlideConfig
           </div>
 
           <div className="hw-right">
+            {config.showColors && (
+              <div className="hw-panel hw-panel--colors" role="radiogroup" aria-label="Couleur du produit">
+                <div className="hw-colors-compact">
+                  {config.colorOptions.map((c, i) => (
+                    <button
+                      key={c.name + i}
+                      type="button"
+                      onClick={() => setActiveColor(i)}
+                      aria-label={`Couleur ${c.name}`}
+                      role="radio"
+                      aria-checked={i === activeColor}
+                      className={`hw-color-chip ${i === activeColor ? 'is-active' : ''}`}
+                      title={c.name}
+                    >
+                      <span className="hw-color-dot" style={{ background: c.hex }} />
+                      <span className="hw-color-chip-name">{c.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {config.showSizes && (
+              <div className="hw-panel hw-panel--sizes" role="group" aria-label="Tailles disponibles">
+                <div className="hw-sizes-grid">
+                  {config.visibleSizes.map((sz) => {
+                    const qty = stock?.bySize?.[sz];
+                    const out = showStockBadges && qty === 0;
+                    return (
+                      <button
+                        type="button"
+                        key={sz}
+                        className={`hw-size-chip ${activeSize === sz ? 'is-active' : ''} ${out ? 'is-out' : ''}`}
+                        onClick={() => !out && setActiveSize(sz)}
+                        aria-pressed={activeSize === sz}
+                        disabled={out}
+                      >
+                        <span className="hw-size-chip-label">{sz}</span>
+                        {showStockBadges && typeof qty === 'number' && (
+                          <span
+                            className="hw-stock-badge"
+                            style={{ background: stockBadgeColor(qty) }}
+                            aria-label={`${qty} en stock`}
+                          >
+                            {qty}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {config.showStats && (
               <div className="hw-panel hw-panel--stats" role="list" aria-label="Statistiques produit">
                 {config.stats.map((s) => (
@@ -252,48 +302,6 @@ function TechwearHeroSlideView({ config, productMissing }: { config: SlideConfig
                     </div>
                   </div>
                 ))}
-              </div>
-            )}
-
-            {config.showColors && (
-              <div className="hw-panel hw-panel--colors" role="radiogroup" aria-label="Couleur du produit">
-                <div className="hw-colors">
-                  {config.colorOptions.map((c, i) => (
-                    <button
-                      key={c.name + i}
-                      type="button"
-                      onClick={() => setActiveColor(i)}
-                      aria-label={`Couleur ${c.name}`}
-                      role="radio"
-                      aria-checked={i === activeColor}
-                      className={`hw-color-row ${i === activeColor ? 'is-active' : ''}`}
-                      style={{ background: 'transparent', border: 0, padding: 0, textAlign: 'left' }}
-                    >
-                      <span className="hw-color-swatch" style={{ background: c.hex }} />
-                      <span className="hw-color-name">{c.name}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {config.showSizes && (
-              <div className="hw-panel hw-panel--sizes" role="group" aria-label="Tailles disponibles">
-                <div className="hw-sizes">
-                  {config.visibleSizes.map((sz) => (
-                    <div className="hw-size-row" key={sz}>
-                      <span className="hw-size-label">Size</span>
-                      <button
-                        type="button"
-                        className={`hw-size-btn ${activeSize === sz ? 'is-active' : ''}`}
-                        onClick={() => setActiveSize(sz)}
-                        aria-pressed={activeSize === sz}
-                      >
-                        {sz}
-                      </button>
-                    </div>
-                  ))}
-                </div>
               </div>
             )}
           </div>
