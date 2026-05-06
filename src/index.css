@@ -650,3 +650,30 @@
   border-bottom: 2px dashed hsl(var(--primary) / 0.7);
 }
 
+
+/* ── Image protection (site-wide) ────────────────────────────── */
+img {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
+  -webkit-touch-callout: none;
+}
+.protected-image-wrap {
+  position: relative;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.protected-image-wrap > img,
+.protected-image-wrap > video {
+  pointer-events: none;
+}
+.protected-image-wrap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: transparent;
+  pointer-events: auto;
+}
