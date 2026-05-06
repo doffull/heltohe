@@ -177,6 +177,7 @@ export default function Home() {
     <div className="min-h-screen bg-background overflow-hidden">
       {/* ═══════════════ PROMO BANNER ═══════════════ */}
       <PromoBanner />
+      <RouletteFab />
 
       {/* ═══════════════ HERO (Techwear OR Slider — exclusif) ═══════════════ */}
       {(designSettings as any).techwearHero?.enabled ? (
