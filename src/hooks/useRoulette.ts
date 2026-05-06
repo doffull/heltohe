@@ -77,11 +77,22 @@ export function useSpinRoulette() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (email?: string) => {
-      const { data, error } = await supabase.rpc('spin_roulette' as any, {
-        p_email: email || null,
+      // Call edge function so the server can hash the client IP for anti-abuse
+      const { data, error } = await supabase.functions.invoke('spin-roulette', {
+        body: { email: email || null },
       });
       if (error) throw error;
-      return data as unknown as SpinResult;
+      const result = data as SpinResult;
+      // Persist won code so checkout can auto-apply it
+      if (result?.code) {
+        try {
+          localStorage.setItem(
+            'roulette_reward_code',
+            JSON.stringify({ code: result.code, expiresAt: result.expiresAt })
+          );
+        } catch { /* ignore */ }
+      }
+      return result;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['roulette-spins'] });
