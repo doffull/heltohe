@@ -215,6 +215,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems([]);
     setPromoDiscount(0);
     setPromoCode(null);
+    try { localStorage.removeItem('roulette_reward_code'); } catch { /* ignore */ }
   }, [user]);
 
   const applyPromoCode = useCallback(async (code: string): Promise<{ success: boolean; discount: number; message: string }> => {
