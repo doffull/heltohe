@@ -18,6 +18,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { TechwearHero } from '@/components/home/TechwearHero';
 import { HeroSlider } from '@/components/home/HeroSlider';
 import { HeroErrorBoundary } from '@/components/home/HeroErrorBoundary';
+import { RouletteFab } from '@/components/home/RouletteFab';
 
 const PLACEHOLDER = '/placeholder.svg';
 
