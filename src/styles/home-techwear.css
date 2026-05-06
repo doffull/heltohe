@@ -446,10 +446,11 @@
 @media (max-width: 768px) {
   #hw-hero {
     --hw-card-width: min(86vw, 360px);
-    --hw-card-height: min(58svh, 520px);
+    --hw-card-height: min(54svh, 480px);
     --hw-card-bevel: 16px;
     --hw-hero-padding: 8px;
-    min-height: calc(100svh - 70px);
+    padding-top: 64px;
+    min-height: calc(100svh - 64px);
     padding-bottom: 24px;
     margin-bottom: 16px;
     display: flex;
@@ -485,13 +486,10 @@
     gap: 8px;
     width: 100%;
     padding: 0 4px;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
+    flex-direction: column;
   }
-  .hw-panel { padding: 8px 10px; min-width: 0; flex: 1 1 calc(50% - 6px); width: auto; }
-  .hw-panel--stats { flex-basis: 100%; }
-  .hw-color-row.is-active .hw-color-swatch { width: 60px; }
+  .hw-panel { padding: 8px 10px; min-width: 0; width: 100%; }
+  .hw-sizes-grid { grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); }
   .hw-hex-bg .hw-hex-r1, .hw-hex-bg .hw-hex-1 { display: none; }
   .hw-hex-bg .hw-hex-2 { width: 280px; height: 280px; opacity: 0.4; }
   .hw-hex-bg .hw-hex-3 { width: 220px; height: 220px; opacity: 0.4; }
@@ -499,11 +497,11 @@
 
 @media (max-width: 480px) {
   #hw-hero {
-    --hw-card-height: min(54svh, 460px);
+    --hw-card-height: min(50svh, 420px);
+    padding-top: 60px;
     min-height: calc(100svh - 60px);
   }
-  .hw-card-logo { width: 44px; top: 12px; left: 14px; }
-  .hw-size-btn { padding: 5px 10px; min-width: 40px; font-size: 10px; }
+  .hw-size-chip { height: 36px; min-width: 40px; font-size: 11px; }
   .hw-stage-inner { gap: 8px; }
   .hw-panel { padding: 6px 8px; }
 }
