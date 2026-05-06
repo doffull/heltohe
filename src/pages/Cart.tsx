@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
@@ -36,6 +36,28 @@ export default function Cart() {
 
   const [promoInput, setPromoInput] = useState('');
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+  const autoTriedRef = useRef(false);
+
+  // Auto-apply roulette reward code if available and not yet applied
+  useEffect(() => {
+    if (autoTriedRef.current || promoCode || items.length === 0 || subtotal <= 0) return;
+    try {
+      const raw = localStorage.getItem('roulette_reward_code');
+      if (!raw) return;
+      const saved = JSON.parse(raw) as { code?: string; expiresAt?: string };
+      if (!saved?.code) return;
+      if (saved.expiresAt && new Date(saved.expiresAt).getTime() < Date.now()) {
+        localStorage.removeItem('roulette_reward_code');
+        return;
+      }
+      autoTriedRef.current = true;
+      applyPromoCode(saved.code).then((res) => {
+        if (res.success) {
+          toast({ title: '🎁 Code roulette appliqué', description: res.message });
+        }
+      });
+    } catch { /* ignore */ }
+  }, [items.length, subtotal, promoCode, applyPromoCode, toast]);
 
   const handleApplyPromo = async () => {
     if (!promoInput.trim()) return;

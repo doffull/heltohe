@@ -2223,7 +2223,9 @@ export type Database = {
       }
       release_order_stock: { Args: { p_order_id: string }; Returns: Json }
       reserve_order_stock: { Args: { p_order_id: string }; Returns: Json }
-      spin_roulette: { Args: { p_email?: string }; Returns: Json }
+      spin_roulette:
+        | { Args: { p_email?: string }; Returns: Json }
+        | { Args: { p_email?: string; p_ip_hash?: string }; Returns: Json }
       validate_and_create_order: {
         Args: {
           p_delivery_mode: string
