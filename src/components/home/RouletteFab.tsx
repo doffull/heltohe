@@ -1,0 +1,290 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Gift, X, Copy, Check } from 'lucide-react';
+import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
+import {
+  useRouletteConfig,
+  useRouletteSegments,
+  useSpinRoulette,
+  type RouletteSegment,
+  type SpinResult,
+} from '@/hooks/useRoulette';
+
+const LS_LAST = 'roulette_last_spin';
+const LS_RESULT = 'roulette_last_result';
+
+function useCooldown(cooldownHours: number) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const last = Number(localStorage.getItem(LS_LAST) || 0);
+  const next = last + cooldownHours * 3600_000;
+  const remaining = Math.max(0, next - now);
+  return { canSpin: remaining === 0, remaining };
+}
+
+function fmt(ms: number) {
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return `${h}h ${m}m ${sec}s`;
+}
+
+function Wheel({
+  segments,
+  rotation,
+  size = 320,
+}: {
+  segments: RouletteSegment[];
+  rotation: number;
+  size?: number;
+}) {
+  const n = segments.length || 1;
+  const slice = 360 / n;
+  const r = size / 2;
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      {/* Pointer */}
+      <div
+        className="absolute left-1/2 -translate-x-1/2 -top-2 z-10"
+        style={{
+          width: 0,
+          height: 0,
+          borderLeft: '14px solid transparent',
+          borderRight: '14px solid transparent',
+          borderTop: '24px solid hsl(var(--primary))',
+        }}
+      />
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        style={{
+          transform: `rotate(${rotation}deg)`,
+          transition: 'transform 5s cubic-bezier(0.18, 0.89, 0.32, 1.18)',
+          filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.5))',
+        }}
+      >
+        {segments.map((seg, i) => {
+          const a0 = (i * slice - 90) * (Math.PI / 180);
+          const a1 = ((i + 1) * slice - 90) * (Math.PI / 180);
+          const x0 = r + r * Math.cos(a0);
+          const y0 = r + r * Math.sin(a0);
+          const x1 = r + r * Math.cos(a1);
+          const y1 = r + r * Math.sin(a1);
+          const large = slice > 180 ? 1 : 0;
+          const path = `M ${r} ${r} L ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1} Z`;
+          // Label position
+          const am = ((i + 0.5) * slice - 90) * (Math.PI / 180);
+          const lr = r * 0.65;
+          const lx = r + lr * Math.cos(am);
+          const ly = r + lr * Math.sin(am);
+          const rot = i * slice + slice / 2;
+          return (
+            <g key={seg.id}>
+              <path d={path} fill={seg.color} stroke="#fff" strokeWidth="2" />
+              <g transform={`translate(${lx}, ${ly}) rotate(${rot})`}>
+                <text
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fill={seg.text_color}
+                  fontSize={size * 0.05}
+                  fontWeight="bold"
+                  fontFamily="monospace"
+                >
+                  {seg.icon} {seg.label}
+                </text>
+              </g>
+            </g>
+          );
+        })}
+        <circle cx={r} cy={r} r={r * 0.12} fill="hsl(var(--primary))" stroke="#fff" strokeWidth="3" />
+      </svg>
+    </div>
+  );
+}
+
+export function RouletteFab() {
+  const { user } = useAuth();
+  const { data: config } = useRouletteConfig();
+  const { data: segments = [] } = useRouletteSegments();
+  const spin = useSpinRoulette();
+
+  const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState('');
+  const [rotation, setRotation] = useState(0);
+  const [spinning, setSpinning] = useState(false);
+  const [result, setResult] = useState<SpinResult | null>(null);
+  const [copied, setCopied] = useState(false);
+  const cooldownH = config?.cooldown_hours ?? 24;
+  const { canSpin, remaining } = useCooldown(cooldownH);
+  const wheelSize = useMemo(() => (typeof window !== 'undefined' && window.innerWidth < 480 ? 280 : 360), [open]);
+
+  // Restore last result if still within cooldown
+  useEffect(() => {
+    const saved = localStorage.getItem(LS_RESULT);
+    if (saved && !canSpin) {
+      try { setResult(JSON.parse(saved)); } catch { /* ignore */ }
+    }
+  }, [canSpin]);
+
+  if (!config?.enabled || segments.length === 0) return null;
+
+  const handleSpin = async () => {
+    if (!user && !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+      toast.error('Email valide requis');
+      return;
+    }
+    setSpinning(true);
+    setResult(null);
+    try {
+      const data = await spin.mutateAsync(user ? undefined : email);
+      if (data.error === 'COOLDOWN') {
+        toast.error('Vous avez déjà tourné aujourd\'hui');
+        if (data.nextAvailableAt) {
+          const last = new Date(data.nextAvailableAt).getTime() - cooldownH * 3600_000;
+          localStorage.setItem(LS_LAST, String(last));
+        }
+        setSpinning(false);
+        return;
+      }
+      if (data.error) {
+        toast.error('Erreur : ' + data.error);
+        setSpinning(false);
+        return;
+      }
+      const idx = segments.findIndex((s) => s.id === data.segmentId);
+      if (idx >= 0) {
+        const slice = 360 / segments.length;
+        // Rotate so chosen slice ends at top (pointer)
+        const target = 360 * 8 + (360 - (idx * slice + slice / 2));
+        setRotation(target);
+      }
+      setTimeout(() => {
+        setSpinning(false);
+        setResult(data);
+        localStorage.setItem(LS_LAST, String(Date.now()));
+        localStorage.setItem(LS_RESULT, JSON.stringify(data));
+      }, 5200);
+    } catch (e: any) {
+      toast.error(e.message || 'Erreur');
+      setSpinning(false);
+    }
+  };
+
+  const copyCode = () => {
+    if (result?.code) {
+      navigator.clipboard.writeText(result.code);
+      setCopied(true);
+      toast.success('Code copié !');
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <>
+      {/* FAB */}
+      <button
+        onClick={() => setOpen(true)}
+        className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-40 group"
+        aria-label="Ouvrir la roulette"
+      >
+        <div className="relative">
+          {canSpin && (
+            <span className="absolute inset-0 rounded-full bg-primary/40 animate-ping" />
+          )}
+          <div
+            className="relative bg-primary text-primary-foreground rounded-full px-4 py-3 md:px-5 md:py-4 shadow-2xl flex items-center gap-2 hover:scale-105 transition-transform border-2 border-primary-foreground/20"
+            style={{ clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' }}
+          >
+            <Gift className="h-5 w-5" />
+            <span className="font-bold tracking-wider text-xs md:text-sm uppercase">
+              {config.fab_label}
+            </span>
+          </div>
+        </div>
+      </button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-lg p-0 overflow-hidden bg-background border-2 border-primary/20">
+          <DialogTitle className="sr-only">{config.title}</DialogTitle>
+          <button
+            onClick={() => setOpen(false)}
+            className="absolute right-3 top-3 z-20 p-1.5 rounded-full bg-background/80 hover:bg-muted"
+          >
+            <X className="h-4 w-4" />
+          </button>
+
+          <div className="p-6 text-center">
+            <h2 className="text-2xl font-bold tracking-wider uppercase mb-1">{config.title}</h2>
+            <p className="text-sm text-muted-foreground mb-6">{config.subtitle}</p>
+
+            <div className="flex justify-center mb-6">
+              <Wheel segments={segments} rotation={rotation} size={wheelSize} />
+            </div>
+
+            {result ? (
+              <div className="space-y-4 animate-fade-in">
+                <div className="text-3xl">{segments.find(s => s.id === result.segmentId)?.icon}</div>
+                <h3 className="text-xl font-bold uppercase">{result.label}</h3>
+                <p className="text-sm text-muted-foreground">{result.description}</p>
+                {result.code && (
+                  <div className="flex items-center justify-center gap-2 p-3 bg-muted rounded-lg border-2 border-dashed border-primary/40">
+                    <code className="text-lg font-mono font-bold tracking-wider">{result.code}</code>
+                    <Button size="icon" variant="ghost" onClick={copyCode} className="h-8 w-8">
+                      {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                )}
+                {result.expiresAt && (
+                  <p className="text-xs text-muted-foreground">
+                    Valide jusqu'au {new Date(result.expiresAt).toLocaleDateString('fr-FR')}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Reviens dans {fmt(remaining)} pour rejouer
+                </p>
+              </div>
+            ) : !canSpin ? (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">Tu as déjà joué aujourd'hui</p>
+                <p className="font-mono text-lg font-bold">{fmt(remaining)}</p>
+                <p className="text-xs text-muted-foreground">avant ton prochain tour</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {!user && (
+                  <Input
+                    type="email"
+                    placeholder="ton@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="text-center"
+                    disabled={spinning}
+                  />
+                )}
+                <Button
+                  onClick={handleSpin}
+                  disabled={spinning}
+                  size="lg"
+                  className="w-full font-bold uppercase tracking-wider"
+                >
+                  {spinning ? 'La roue tourne...' : config.button_label}
+                </Button>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                  1 tour par {cooldownH}h
+                </p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}

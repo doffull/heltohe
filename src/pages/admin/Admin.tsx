@@ -24,7 +24,8 @@ import {
   Truck,
   ClipboardCheck,
   CreditCard,
-  Bell
+  Bell,
+  Gift
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -48,6 +49,7 @@ import AdminColissimo from './AdminColissimo';
 import AdminCheckout from './AdminCheckout';
 import AdminNotifications from './AdminNotifications';
 import AdminPreparations from './AdminPreparations';
+import AdminRoulette from './AdminRoulette';
 
 export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin': '#6B7280',
@@ -66,6 +68,7 @@ export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin/chatbot': '#14B8A6',
   '/admin/woocommerce': '#7C3AED',
   '/admin/audit': '#6B7280',
+  '/admin/roulette': '#F59E0B',
   '/admin/parametres': '#64748B',
 };
 
@@ -79,6 +82,7 @@ const SIDEBAR_ITEMS = [
   { icon: FileText, label: 'Pages', href: '/admin/pages' },
   { icon: FolderOpen, label: 'Média', href: '/admin/media' },
   { icon: Megaphone, label: 'Marketing', href: '/admin/marketing' },
+  { icon: Gift, label: 'Roulette', href: '/admin/roulette' },
   { icon: Palette, label: 'Design', href: '/admin/design' },
   { icon: Warehouse, label: 'Stock', href: '/admin/stock' },
   { icon: Truck, label: 'Colissimo', href: '/admin/colissimo' },
@@ -243,6 +247,7 @@ export default function Admin() {
             <Route path="pages/*" element={<AdminPages />} />
             <Route path="media/*" element={<AdminMedia />} />
             <Route path="marketing/*" element={<AdminMarketing />} />
+            <Route path="roulette/*" element={<AdminRoulette />} />
             <Route path="bannieres/*" element={<Navigate to="/admin/marketing" replace />} />
             <Route path="design/*" element={<AdminDesign />} />
             <Route path="stock/*" element={<AdminStock />} />

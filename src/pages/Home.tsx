@@ -18,6 +18,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { TechwearHero } from '@/components/home/TechwearHero';
 import { HeroSlider } from '@/components/home/HeroSlider';
 import { HeroErrorBoundary } from '@/components/home/HeroErrorBoundary';
+import { RouletteFab } from '@/components/home/RouletteFab';
 
 const PLACEHOLDER = '/placeholder.svg';
 
@@ -176,6 +177,7 @@ export default function Home() {
     <div className="min-h-screen bg-background overflow-hidden">
       {/* ═══════════════ PROMO BANNER ═══════════════ */}
       <PromoBanner />
+      <RouletteFab />
 
       {/* ═══════════════ HERO (Techwear OR Slider — exclusif) ═══════════════ */}
       {(designSettings as any).techwearHero?.enabled ? (

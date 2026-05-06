@@ -1,111 +1,92 @@
-## Objectif
+# Système de Roulette Quotidienne 🎰
 
-Aujourd'hui `techwearHero` est **une seule configuration**. Vous voulez pouvoir créer **plusieurs slides Hero Techwear**, et pour **chaque slide** retrouver l'intégralité des fonctionnalités (produit lié, image, arrière-plan, carte produit, couleurs, tailles affichées, statistiques, badge modèle, CTA, etc.) — comme un vrai slider défilant en boucle sur la home.
+Mise en place d'un jeu de roue à tourner une fois par jour, avec gains (livraison gratuite, % de réduction, etc.), gestion complète depuis l'admin.
 
-## Architecture proposée
+## Vue d'ensemble
 
-### 1. Modèle de données (compatible existant)
-
-Étendre `TechwearHeroConfig` pour qu'il devienne un **conteneur de slides** :
-
-```ts
-interface TechwearHeroConfig {
-  enabled: boolean;
-  // Réglages slider globaux
-  autoplay?: boolean;
-  intervalMs?: number;        // défaut 6000
-  transition?: 'fade'|'slide';
-  showArrows?: boolean;
-  showDots?: boolean;
-  // Liste des slides — chacune = ancienne config complète
-  slides: TechwearHeroSlide[];
-}
-
-interface TechwearHeroSlide {
-  id: string;                 // uuid
-  name?: string;              // libellé admin "Slide 1"
-  productId: string | null;
-  modelBadge: { line1; line2 };
-  ctaPrimary: { label; href };
-  ctaSecondary: { label; href };
-  stats: { label; value }[];
-  visibleSizes: string[];
-  defaultSize: string;
-  colorOptions: TechwearColorOption[]; // (avec mediaType image|video, loop)
-  defaultColor: number;
-  imageFit: 'cover'|'contain';
-  imagePosition: string;
-  showStats; showColors; showSizes; showModelBadge: boolean;
-  background: TechwearBackground;       // gradient/color/image/video + overlay
-  cardSize: 'sm'|'md'|'lg'|'xl';
-  imageOverflow: boolean;
-}
+```text
+┌──────────────────────────┐         ┌──────────────────────────┐
+│  HOMEPAGE (Accueil)      │         │  ADMIN DASHBOARD         │
+│  ──────────────────────  │         │  ──────────────────────  │
+│  • Bouton flottant 🎁    │         │  • /admin/roulette       │
+│  • Modal roue animée     │         │  • CRUD segments (lots)  │
+│  • 1 spin / jour / user  │         │  • Activer/désactiver    │
+│  • Génère code promo     │         │  • Probabilités & limites│
+│  • Email du code         │         │  • Historique des gains  │
+└──────────────────────────┘         └──────────────────────────┘
 ```
 
-**Migration douce** : si la BDD contient l'ancien format (sans `slides`), on l'enveloppe automatiquement en `{ enabled, slides: [<ancienConfig>] }` au chargement (dans `useDesignSettings`), zéro perte de données.
+## Backend (Lovable Cloud)
 
-### 2. Migration SQL
+**Nouvelles tables :**
 
-- Mettre à jour le `DEFAULT` de `design_settings.techwear_hero` pour inclure un tableau `slides`.
-- Adapter le trigger `sanitize_techwear_hero` pour :
-  - convertir l'ancien format en nouveau si `slides` absent ;
-  - garantir `slides` = array, et pour chaque slide, sanitiser `colorOptions`/`stats`/`visibleSizes`/`modelBadge`/`ctaPrimary`/`ctaSecondary` (mêmes règles qu'aujourd'hui mais par slide).
+1. **`roulette_config`** (singleton, config_key='main')
+   - `enabled` bool, `title`, `subtitle`, `button_label`
+   - `cooldown_hours` int (défaut 24)
+   - `require_auth` bool (sinon utilise email + cookie)
+   - `wheel_colors` jsonb (palette couleurs roue)
 
-### 3. Front — `TechwearHero.tsx`
+2. **`roulette_segments`** (les lots)
+   - `id`, `label` (ex "−10%"), `description`
+   - `reward_type`: `'percentage' | 'fixed_amount' | 'free_shipping' | 'nothing'`
+   - `reward_value` numeric, `min_purchase` numeric
+   - `probability_weight` int (poids pour tirage pondéré)
+   - `color` hex, `icon`, `sort_order`, `is_active`
+   - `max_wins_per_day` int nullable (limite globale)
+   - `code_prefix` text (ex "SPIN10")
 
-Refonte en **slider** :
-- Si `slides.length === 0` → ne rien afficher.
-- Si `slides.length === 1` → rendre la slide unique (comportement actuel).
-- Si `slides.length > 1` → carrousel avec autoplay, fade/slide, flèches, dots, pause au hover.
-- Chaque slide est rendue par un sous-composant `TechwearHeroSlide` qui reprend tout le rendu actuel (background, carte, mannequin, stats, sélecteurs couleurs/tailles, badge, CTA).
-- Gardé sous `HeroErrorBoundary` (déjà en place).
+3. **`roulette_spins`** (historique + anti-triche)
+   - `id`, `user_id` nullable, `email` nullable, `ip_hash` text
+   - `segment_id`, `promo_code_id` nullable
+   - `created_at`
 
-### 4. Admin — `TechwearHeroTab.tsx`
+**Fonction RPC `spin_roulette(p_email)`** (SECURITY DEFINER) :
+- Vérifie cooldown (24h) par user_id ou email/ip_hash
+- Vérifie `max_wins_per_day` du segment
+- Tirage pondéré côté serveur (anti-triche : le client ne décide pas)
+- Crée un `promo_codes` à usage unique (`usage_limit=1`) lié au gain
+- Insère dans `roulette_spins`
+- Retourne `{ segmentId, label, code, expiresAt }`
 
-Refonte UI en deux niveaux :
+**RLS :** segments/config lisibles par tous (actifs uniquement) ; admin gère tout ; spins en SELECT uniquement par admin ou l'utilisateur lui-même.
 
-**Niveau slider (en haut)** :
-- Switch "Hero activé"
-- Réglages globaux : autoplay, vitesse (slider), transition, flèches, dots
-- Liste des slides avec drag-to-reorder, bouton "+ Ajouter une slide", bouton dupliquer, supprimer, voir/masquer
+**Edge function `send-roulette-reward`** : envoie le code promo gagné par email via Resend.
 
-**Niveau slide (édition)** : on sélectionne une slide et on retrouve **exactement les onglets actuels** appliqués à CETTE slide :
-- Onglet Produit (productId + sync)
-- Onglet Image / Mannequin (médias par couleur, image/vidéo + loop)
-- Onglet Arrière-plan (gradient/color/image/video + overlay)
-- Onglet Carte (cardSize, imageOverflow)
-- Onglet Couleurs (liste éditable)
-- Onglet Tailles (visibleSizes, defaultSize)
-- Onglet Stats (3 barres)
-- Onglet Badge & CTA (modelBadge, ctaPrimary, ctaSecondary)
-- Onglet Affichage (toggles showStats/Colors/Sizes/ModelBadge, imageFit, imagePosition)
+## Frontend
 
-Aperçu live de la slide en cours d'édition (mini `<TechwearHero overrideSlideIds={[id]} />`).
+**Composants nouveaux :**
+- `src/components/home/RouletteWheel.tsx` — roue SVG animée (rotation CSS, easing, son optionnel)
+- `src/components/home/RouletteFab.tsx` — bouton flottant homepage (bottom-right, pulse + badge "1 spin"), ouvre modal Dialog
+- `src/hooks/useRoulette.ts` — `useRouletteConfig`, `useRouletteSegments`, `useSpinRoulette`, `useCanSpin` (cooldown localStorage + check serveur)
 
-### 5. Hooks / contexte
+**Intégration :**
+- Monté dans `src/views/HomeView.tsx` (uniquement homepage)
+- Cache si `roulette_config.enabled=false` ou si user a déjà spinné aujourd'hui (ou affiche un compte à rebours "Reviens dans 18h")
+- Animation : rotation 4-5s ease-out, s'arrête sur le segment gagné (calculé serveur), confettis sur gain
+- Style cohérent Industrial Luxury (Helvetica-MP, noir/blanc/gris, angles 45°)
+- Mobile-first (modal full-screen <768px)
 
-- `useDesignSettings.ts` : ajouter la normalisation ancien→nouveau format au mapping snake_case ↔ camelCase.
-- `homeConfig.ts` : `DEFAULT_TECHWEAR_HERO` retourne `{ enabled:false, slides:[<DEFAULT_SLIDE>] }`.
+**Admin :**
+- Nouvelle page `src/pages/admin/AdminRoulette.tsx` ajoutée à `Admin.tsx` + sidebar admin
+- 3 onglets :
+  1. **Configuration** : activer/désactiver, textes, cooldown
+  2. **Lots (segments)** : table CRUD avec drag-and-drop ordre, édition inline (label, type récompense, valeur, probabilité, couleur, actif)
+  3. **Historique** : liste des spins (date, user/email, lot gagné, code utilisé ou non)
+- Aperçu live de la roue à droite
 
-### 6. Tests
+## Sécurité
+- Tirage **toujours côté serveur** (RPC) — le frontend ne fait qu'animer le résultat reçu
+- Cooldown vérifié serveur (pas de bypass via localStorage)
+- Codes promo générés à usage unique avec `expires_at` (ex 7 jours)
+- Anonymes : limite par `ip_hash` + email
+- Honeypot sur le formulaire email anonyme (cf mémoire spam protection)
 
-Étendre `TechwearHero.test.tsx` :
-- cfg sans `slides` (ancien format) → ne crashe pas, slide unique rendue
-- `slides: []` → rien rendu
-- `slides: [a, b]` → autoplay change l'index
-- Champs null dans une slide → defaults appliqués
+## Fichiers créés/modifiés
+- **DB** : migration (3 tables + RPC + RLS + seed 6 segments par défaut)
+- **Edge function** : `send-roulette-reward/index.ts`
+- **Hooks** : `useRoulette.ts`
+- **Composants** : `RouletteWheel.tsx`, `RouletteFab.tsx`, `RouletteModal.tsx`
+- **Pages** : `AdminRoulette.tsx`
+- **Modifs** : `HomeView.tsx`, `Admin.tsx` (route + nav admin)
 
-## Fichiers impactés
-
-- `src/types/index.ts` (types)
-- `src/config/homeConfig.ts` (defaults)
-- `src/hooks/useDesignSettings.ts` (mapping + migration douce)
-- `src/components/home/TechwearHero.tsx` (slider + extraction `TechwearHeroSlide`)
-- `src/components/admin/TechwearHeroTab.tsx` (UI slides + édition par slide)
-- `src/components/home/__tests__/TechwearHero.test.tsx`
-- nouvelle migration SQL : default + trigger `sanitize_techwear_hero`
-
-## Hors scope (à confirmer)
-
-- Pas de table dédiée `techwear_hero_slides` : on garde tout dans la colonne JSONB `techwear_hero` (plus simple, atomique, suffisant pour <50 slides).
-- Pas de touche au Hero "classique" `HeroSlider` (slides image/vidéo) qui reste indépendant.
+Une fois approuvé, je passe en mode build et j'implémente.

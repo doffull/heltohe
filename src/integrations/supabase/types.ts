@@ -1481,6 +1481,159 @@ export type Database = {
         }
         Relationships: []
       }
+      roulette_config: {
+        Row: {
+          button_label: string
+          config_key: string
+          cooldown_hours: number
+          created_at: string
+          enabled: boolean
+          fab_label: string
+          id: string
+          require_email: boolean
+          reward_validity_days: number
+          subtitle: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          button_label?: string
+          config_key?: string
+          cooldown_hours?: number
+          created_at?: string
+          enabled?: boolean
+          fab_label?: string
+          id?: string
+          require_email?: boolean
+          reward_validity_days?: number
+          subtitle?: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          button_label?: string
+          config_key?: string
+          cooldown_hours?: number
+          created_at?: string
+          enabled?: boolean
+          fab_label?: string
+          id?: string
+          require_email?: boolean
+          reward_validity_days?: number
+          subtitle?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      roulette_segments: {
+        Row: {
+          code_prefix: string
+          color: string
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          label: string
+          max_discount: number | null
+          max_wins_per_day: number | null
+          min_purchase: number
+          probability_weight: number
+          reward_type: string
+          reward_value: number
+          sort_order: number
+          text_color: string
+          updated_at: string
+        }
+        Insert: {
+          code_prefix?: string
+          color?: string
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          max_discount?: number | null
+          max_wins_per_day?: number | null
+          min_purchase?: number
+          probability_weight?: number
+          reward_type: string
+          reward_value?: number
+          sort_order?: number
+          text_color?: string
+          updated_at?: string
+        }
+        Update: {
+          code_prefix?: string
+          color?: string
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          max_discount?: number | null
+          max_wins_per_day?: number | null
+          min_purchase?: number
+          probability_weight?: number
+          reward_type?: string
+          reward_value?: number
+          sort_order?: number
+          text_color?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      roulette_spins: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          ip_hash: string | null
+          promo_code: string | null
+          promo_code_id: string | null
+          segment_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          ip_hash?: string | null
+          promo_code?: string | null
+          promo_code_id?: string | null
+          segment_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          ip_hash?: string | null
+          promo_code?: string | null
+          promo_code_id?: string | null
+          segment_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roulette_spins_promo_code_id_fkey"
+            columns: ["promo_code_id"]
+            isOneToOne: false
+            referencedRelation: "promo_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roulette_spins_segment_id_fkey"
+            columns: ["segment_id"]
+            isOneToOne: false
+            referencedRelation: "roulette_segments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_history: {
         Row: {
           action: string
@@ -2070,6 +2223,7 @@ export type Database = {
       }
       release_order_stock: { Args: { p_order_id: string }; Returns: Json }
       reserve_order_stock: { Args: { p_order_id: string }; Returns: Json }
+      spin_roulette: { Args: { p_email?: string }; Returns: Json }
       validate_and_create_order: {
         Args: {
           p_delivery_mode: string
