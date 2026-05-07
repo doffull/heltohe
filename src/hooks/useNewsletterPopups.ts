@@ -74,7 +74,33 @@ export function useDeleteNewsletterPopup() {
   });
 }
 
-export async function subscribeToNewsletter(email: string, firstName?: string) {
-  const { error } = await supabase.from('newsletters').insert({ email, first_name: firstName || null });
-  if (error) throw error;
+export interface SubscribeOpts {
+  source?: 'sidebar' | 'popup' | 'roulette' | 'footer' | 'manual';
+  popupId?: string;
+  referrerPath?: string;
+  sessionId?: string;
 }
+
+export async function subscribeToNewsletter(email: string, firstName?: string, opts: SubscribeOpts = {}) {
+  const { error } = await supabase.from('newsletters').insert({
+    email,
+    first_name: firstName || null,
+    source: opts.source || null,
+    popup_id: opts.popupId || null,
+    referrer_path: opts.referrerPath || (typeof window !== 'undefined' ? window.location.pathname : null),
+  } as any);
+  if (error) throw error;
+  // Mark popup view as converted if applicable
+  if (opts.popupId && opts.sessionId) {
+    await supabase
+      .from('newsletter_popup_views' as any)
+      .update({ converted: true, converted_at: new Date().toISOString() } as any)
+      .eq('popup_id', opts.popupId)
+      .eq('session_id', opts.sessionId);
+  }
+}
+
+export async function recordPopupView(popupId: string, sessionId: string) {
+  await supabase.from('newsletter_popup_views' as any).insert({ popup_id: popupId, session_id: sessionId } as any);
+}
+
