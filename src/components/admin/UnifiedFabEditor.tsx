@@ -43,7 +43,7 @@ export function UnifiedFabEditor() {
   const save = async () => {
     await updateDesignSettings({
       ...(designSettings as any),
-      unifiedFab: { enabled, accentColor: accent, position_desktop: posD, position_mobile: posM, items },
+      unifiedFab: { enabled, accentColor: accent, mode, groupSide, groupOffsetY, position_desktop: posD, position_mobile: posM, items },
     } as any);
     toast.success('Bouton flottant enregistré');
   };
