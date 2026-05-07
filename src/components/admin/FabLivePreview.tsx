@@ -110,7 +110,7 @@ export function FabLivePreview() {
   const save = async () => {
     await updateDesignSettings({
       ...(designSettings as any),
-      unifiedFab: { ...cfg, mode, items },
+      unifiedFab: { ...cfg, mode, groupSide, items },
     } as any);
     toast.success('Positions enregistrées');
   };
