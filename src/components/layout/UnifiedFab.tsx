@@ -55,7 +55,8 @@ export function UnifiedFab() {
 
   const cfg = (designSettings as any).unifiedFab || {};
   const accent = cfg.accentColor || '#ffffff';
-  const items = (cfg.items && cfg.items.length ? cfg.items : DEFAULT_ITEMS) as typeof DEFAULT_ITEMS;
+  const mode: 'socle' | 'free' = cfg.mode === 'free' ? 'free' : 'socle';
+  const items = (cfg.items && cfg.items.length ? cfg.items : DEFAULT_ITEMS) as any[];
   const posCfg = isMobile
     ? (cfg.position_mobile || { corner: 'br', x: 16, y: 16 })
     : (cfg.position_desktop || { corner: 'br', x: 24, y: 24 });
