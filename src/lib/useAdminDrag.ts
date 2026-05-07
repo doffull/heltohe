@@ -40,11 +40,32 @@ export function useAdminDrag(opts: {
   const blockClickRef = useRef(false);
   const [pending, setPending] = useState<PendingDrag>(null);
 
+  const activePointerRef = useRef<number | null>(null);
+
   const onPointerDown = (e: React.PointerEvent<HTMLElement>) => {
     if (!enabled || readLocked()) return;
     if ((e.target as HTMLElement).closest('[data-no-drag]')) return;
+    // iOS: ignore secondary touches (multi-touch / pinch) — only first pointer drives drag
+    if (activePointerRef.current !== null) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    activePointerRef.current = e.pointerId;
     const target = e.currentTarget as HTMLElement;
+    // iOS Safari: prevent text selection callout, tap highlight, and native gestures
+    const prevWebkitCallout = (target.style as any).webkitTouchCallout;
+    const prevWebkitUserSelect = (target.style as any).webkitUserSelect;
+    const prevTapHighlight = (target.style as any).webkitTapHighlightColor;
+    (target.style as any).webkitTouchCallout = 'none';
+    (target.style as any).webkitUserSelect = 'none';
+    (target.style as any).webkitTapHighlightColor = 'transparent';
+    // Set touch-action immediately so iOS doesn't start a scroll before threshold
+    const prevTouchActionEarly = target.style.touchAction;
+    target.style.touchAction = 'none';
     try { target.setPointerCapture(e.pointerId); } catch { /* noop */ }
+    // iOS Safari: block pinch/double-tap zoom gestures during drag
+    const blockGesture = (ev: Event) => ev.preventDefault();
+    document.addEventListener('gesturestart', blockGesture as any, { passive: false });
+    document.addEventListener('gesturechange', blockGesture as any, { passive: false });
+    document.addEventListener('gestureend', blockGesture as any, { passive: false });
 
     // Cache everything once — no layout reads during the drag loop.
     const rect = target.getBoundingClientRect();
@@ -71,8 +92,13 @@ export function useAdminDrag(opts: {
     let dx = 0, dy = 0;
     let raf = 0;
     let hud: HTMLDivElement | null = null;
-    const prevTouchAction = target.style.touchAction;
+    const prevTouchAction = prevTouchActionEarly;
     const prevUserSelect = document.body.style.userSelect;
+    const prevBodyOverscroll = (document.body.style as any).overscrollBehavior;
+    const prevHtmlOverscroll = (document.documentElement.style as any).overscrollBehavior;
+    // iOS: stop rubber-band scroll while dragging
+    (document.body.style as any).overscrollBehavior = 'none';
+    (document.documentElement.style as any).overscrollBehavior = 'none';
 
     const ensureHud = () => {
       if (hud) return;
@@ -94,6 +120,7 @@ export function useAdminDrag(opts: {
     };
 
     const move = (ev: PointerEvent) => {
+      if (ev.pointerId !== activePointerRef.current) return;
       const rdx = ev.clientX - startX;
       const rdy = ev.clientY - startY;
       if (!dragging) {
@@ -102,6 +129,7 @@ export function useAdminDrag(opts: {
         target.style.willChange = 'transform';
         target.style.transition = 'none';
         target.style.touchAction = 'none';
+        (target.style as any).webkitTransform = 'translateZ(0)';
         document.body.style.userSelect = 'none';
         ensureHud();
       }
@@ -127,17 +155,28 @@ export function useAdminDrag(opts: {
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', up);
       window.removeEventListener('keydown', onKey);
+      document.removeEventListener('gesturestart', blockGesture as any);
+      document.removeEventListener('gesturechange', blockGesture as any);
+      document.removeEventListener('gestureend', blockGesture as any);
       try { target.releasePointerCapture(e.pointerId); } catch { /* noop */ }
       if (raf) { cancelAnimationFrame(raf); raf = 0; }
       target.style.willChange = '';
       target.style.transition = '';
       target.style.transform = '';
+      (target.style as any).webkitTransform = '';
       target.style.touchAction = prevTouchAction;
+      (target.style as any).webkitTouchCallout = prevWebkitCallout;
+      (target.style as any).webkitUserSelect = prevWebkitUserSelect;
+      (target.style as any).webkitTapHighlightColor = prevTapHighlight;
       document.body.style.userSelect = prevUserSelect;
+      (document.body.style as any).overscrollBehavior = prevBodyOverscroll;
+      (document.documentElement.style as any).overscrollBehavior = prevHtmlOverscroll;
+      activePointerRef.current = null;
       if (hud) { hud.remove(); hud = null; }
     };
 
-    const up = () => {
+    const up = (ev?: PointerEvent) => {
+      if (ev && ev.pointerId !== activePointerRef.current) return;
       if (!dragging) { cleanup(); return; }
       blockClickRef.current = true;
       setTimeout(() => { blockClickRef.current = false; }, 80);
@@ -158,8 +197,8 @@ export function useAdminDrag(opts: {
     };
 
     window.addEventListener('pointermove', move, { passive: false });
-    window.addEventListener('pointerup', up);
-    window.addEventListener('pointercancel', up);
+    window.addEventListener('pointerup', up as any);
+    window.addEventListener('pointercancel', up as any);
     window.addEventListener('keydown', onKey);
   };
 
