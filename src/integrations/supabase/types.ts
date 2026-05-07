@@ -578,6 +578,7 @@ export type Database = {
           unit_id_style: Json | null
           updated_at: string
           voice_command_enabled: boolean | null
+          voice_onboarding_hint: boolean
         }
         Insert: {
           accent_color?: string | null
@@ -687,6 +688,7 @@ export type Database = {
           unit_id_style?: Json | null
           updated_at?: string
           voice_command_enabled?: boolean | null
+          voice_onboarding_hint?: boolean
         }
         Update: {
           accent_color?: string | null
@@ -796,6 +798,7 @@ export type Database = {
           unit_id_style?: Json | null
           updated_at?: string
           voice_command_enabled?: boolean | null
+          voice_onboarding_hint?: boolean
         }
         Relationships: []
       }
@@ -981,6 +984,33 @@ export type Database = {
         }
         Relationships: []
       }
+      newsletter_popup_views: {
+        Row: {
+          converted: boolean
+          converted_at: string | null
+          id: string
+          popup_id: string
+          session_id: string | null
+          viewed_at: string
+        }
+        Insert: {
+          converted?: boolean
+          converted_at?: string | null
+          id?: string
+          popup_id: string
+          session_id?: string | null
+          viewed_at?: string
+        }
+        Update: {
+          converted?: boolean
+          converted_at?: string | null
+          id?: string
+          popup_id?: string
+          session_id?: string | null
+          viewed_at?: string
+        }
+        Relationships: []
+      }
       newsletter_popups: {
         Row: {
           bg_color: string | null
@@ -1042,7 +1072,10 @@ export type Database = {
           first_name: string | null
           id: string
           is_subscribed: boolean | null
+          popup_id: string | null
           preferences: Json | null
+          referrer_path: string | null
+          source: string | null
           subscribed_at: string
           unsubscribed_at: string | null
         }
@@ -1052,7 +1085,10 @@ export type Database = {
           first_name?: string | null
           id?: string
           is_subscribed?: boolean | null
+          popup_id?: string | null
           preferences?: Json | null
+          referrer_path?: string | null
+          source?: string | null
           subscribed_at?: string
           unsubscribed_at?: string | null
         }
@@ -1062,7 +1098,10 @@ export type Database = {
           first_name?: string | null
           id?: string
           is_subscribed?: boolean | null
+          popup_id?: string | null
           preferences?: Json | null
+          referrer_path?: string | null
+          source?: string | null
           subscribed_at?: string
           unsubscribed_at?: string | null
         }
@@ -1558,6 +1597,8 @@ export type Database = {
       }
       roulette_config: {
         Row: {
+          auto_open_delay_ms: number
+          auto_open_on_landing: boolean
           button_label: string
           config_key: string
           cooldown_hours: number
@@ -1565,13 +1606,18 @@ export type Database = {
           enabled: boolean
           fab_label: string
           id: string
+          notify_admin_email: string | null
+          notify_admin_on_win: boolean
           require_email: boolean
           reward_validity_days: number
+          show_after_dismiss_hours: number
           subtitle: string
           title: string
           updated_at: string
         }
         Insert: {
+          auto_open_delay_ms?: number
+          auto_open_on_landing?: boolean
           button_label?: string
           config_key?: string
           cooldown_hours?: number
@@ -1579,13 +1625,18 @@ export type Database = {
           enabled?: boolean
           fab_label?: string
           id?: string
+          notify_admin_email?: string | null
+          notify_admin_on_win?: boolean
           require_email?: boolean
           reward_validity_days?: number
+          show_after_dismiss_hours?: number
           subtitle?: string
           title?: string
           updated_at?: string
         }
         Update: {
+          auto_open_delay_ms?: number
+          auto_open_on_landing?: boolean
           button_label?: string
           config_key?: string
           cooldown_hours?: number
@@ -1593,8 +1644,11 @@ export type Database = {
           enabled?: boolean
           fab_label?: string
           id?: string
+          notify_admin_email?: string | null
+          notify_admin_on_win?: boolean
           require_email?: boolean
           reward_validity_days?: number
+          show_after_dismiss_hours?: number
           subtitle?: string
           title?: string
           updated_at?: string
@@ -2290,6 +2344,7 @@ export type Database = {
     }
     Functions: {
       consume_order_stock: { Args: { p_order_id: string }; Returns: Json }
+      get_newsletter_stats: { Args: never; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
