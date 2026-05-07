@@ -14,8 +14,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { FileDropZone } from '@/components/admin/FileDropZone';
 import { 
   Plus, Trash2, Pencil, Image, Tag, Mail, 
-  MoreHorizontal, Megaphone, Palette, Check
+  MoreHorizontal, Megaphone, Palette, Check, Bell
 } from 'lucide-react';
+import { NewsletterPopupsManager } from '@/components/admin/NewsletterPopupsManager';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
