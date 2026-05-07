@@ -224,8 +224,8 @@ function TechwearHeroSlideView({ config, productMissing }: { config: SlideConfig
         <Hex className="hw-hex-r1" />
       </div>
 
-      <div className="sr-only" aria-live="polite" aria-atomic="true">
-        Couleur sélectionnée : {color.name}. Taille sélectionnée : {activeSize}.
+      <div className="sr-only" aria-live="polite" aria-atomic="true" role="status">
+        {liveMsg}
       </div>
 
       <div className="hw-stage">
