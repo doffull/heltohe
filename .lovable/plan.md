@@ -1,103 +1,66 @@
-## Objectifs
+# Plan – Fixer les drags + Bouton Message dans le header
 
-1. **Réparer Aperçu Live** (`FabLivePreview`) : modes "Groupés" inerte et "Enregistrer" qui n'impacte pas la home.
-2. **Dock glassmorphism unifié** (inspiré de l'image jointe) regroupant Voix, Chat, Message, Éditeur Visuel (admin), Notifications…
-3. **Jeu-concours autonome** : centré par défaut, déplaçable libre + design personnalisable depuis l'admin.
+## 1. Bug "Jeu-concours qui se bloque en haut à gauche"
 
----
+Cause identifiée dans `src/components/home/RouletteFab.tsx` :
 
-## 1. Réparation Aperçu Live (`src/components/admin/FabLivePreview.tsx`)
+- Son `onPointerDown` est une **copie locale** du helper de drag, et il :
+  - Calcule la nouvelle position avec `btn = 56` codé en dur, alors que le bouton roulette est un **pill plus large** (~140 px). `pxToPos(...)` calcule donc un mauvais centre (`cx = left + 28`), ce qui mappe le drop en `tl` même quand l'utilisateur lâche au centre/droite → le bouton "saute" en haut-gauche.
+  - Fait `target.style.cssText = ''` après commit, ce qui efface aussi la classe de transform pendant le frame avant le re-render React.
+  - Ne clamp pas dans le viewport (peut sortir de l'écran).
 
-### Bugs identifiés
-- **Mode "Groupés"** : la prévisualisation ne dessine que des icônes draggables individuelles ; aucun rendu du mini-socle. Sélectionner "Groupés" ne change rien visuellement.
-- **Save sans effet** : `updateDesignSettings({ unifiedFab: { ...cfg, items } })` écrit `position_desktop`/`position_mobile` sur chaque item, mais `UnifiedFab` consomme ces clés uniquement en mode `free`/`grouped`. En mode `socle` (défaut), seules `cfg.position_desktop`/`cfg.position_mobile` sont lues → l'utilisateur ne voit aucun changement.
-- L'iframe `src="/"` est en `pointer-events: none` mais ne reflète pas non plus les changements (recharge non forcée après save).
+### Correctif
+- **Supprimer** le `onPointerDown` local de `RouletteFab.tsx`.
+- Exporter `useAdminDrag` depuis `UnifiedFab.tsx` (le déplacer dans `src/lib/useAdminDrag.ts`) et l'utiliser dans `RouletteFab` :
+  - Mesurer dynamiquement `offsetWidth` du bouton et le passer à `pxToPos`.
+  - Clamp `left/top` dans `[0, viewport - size]`.
+  - Nettoyer uniquement les propriétés inline posées (`left/top/right/bottom/transform/position`) au lieu d'un `cssText = ''`.
+- Conserver le persist via `updateDesignSettings({ unifiedFab: { ...cfg, rouletteFab: { ...rfab, [posKey]: pos } } })`.
 
-### Corrections
-- **Suppression du dragging dans la preview** : conversion en **panneau de contrôle non interactif** (résumé visuel des positions actives) puisque le drag se fait désormais en direct sur la home (déjà implémenté dans `UnifiedFab` via `useAdminDrag`).
-- Aperçu = un petit cadre 16/9 montrant les 4 coins avec les icônes positionnées correctement selon le mode actif (lecture seule).
-- Bouton **« Ouvrir la home en mode admin »** qui pointe vers `/` dans un nouvel onglet pour faire le drag réel.
-- **Si on garde le drag en preview** (option B) : injecter aussi le résultat dans `cfg.position_desktop`/`cfg.position_mobile` (mode socle) ET dans `cfg.clusterPos_*` (mode cluster) selon le mode courant, puis recharger l'iframe via `key={Date.now()}` après save.
+## 2. Audit & harmonisation des drags admin
 
-### Choix retenu
-**Option A** (lecture seule + lien vers home) — plus fiable, évite la duplication de logique de drag entre 2 fichiers et corrige les 2 bugs d'un coup.
+Bugs constatés sur la page d'accueil quand on déplace les outils :
+- `useAdminDrag` (Dock / Cluster / Group / Custom / SocleFree) calcule correctement `pxToPos`, mais utilise toujours `size = 56`. Pour le **Dock** (pill horizontal large) et le **Cluster** (bloc), ça fausse aussi le snap → impression de "blocage".
+- Les boutons libres (free / cluster-free) n'ont pas de **clamp viewport** → on peut les pousser sous le header / sidebar.
 
----
+### Correctif
+- Étendre `useAdminDrag` pour accepter `getSize()` qui lit `offsetWidth/Height` au pointerdown, et l'utiliser pour : clamp + `pxToPos`.
+- Pour les blocs (Dock, Cluster, Group), passer la **largeur réelle du conteneur** afin que le snap centre/coin soit correct.
+- Ajouter une **garde de safe area** : ne pas déposer sous la sidebar gauche (≥ 64 px / 256 px en lg) ni sous le header (≥ 56 px) — ces marges sont déjà connues de `Header.tsx`.
+- Ajouter un toast unique "Position enregistrée" plutôt qu'un toast par type pour cohérence.
 
-## 2. Dock Glassmorphism Unifié
+## 3. Bouton "Message client" dans le header (comme Notification)
 
-### Design (réf. image jointe)
-Pill arrondie (`rounded-full`) avec :
-- `backdrop-blur-2xl bg-white/5` + `border border-white/15`
-- ombre douce + halo radial derrière (gradient teal/cyan paramétrable via accent color)
-- icônes circulaires 44px, gap 8px, padding 12px
-- icône "active/sélectionnée" → pastille assombrie `bg-foreground/40` derrière
-- placement par défaut : **bottom-center** (`bottom: 24px; left: 50%; translate(-50%)`)
+Aujourd'hui :
+- La cloche Notif (admin) est un FAB flottant `fixed bottom-20 right-6` dans `MainLayout.tsx` (l. 546-589).
+- Le bouton Message est seulement dans le `ChatBotWidget` (côté client) et n'existe pas pour l'admin dans le header.
 
-### Contenu du dock (configurable)
-Tous les boutons disponibles, chacun **toggle on/off depuis l'admin** :
-- 🎤 Voix
-- 🤖 Chatbot
-- 💬 Message (custom FAB existant)
-- ✏️ Éditeur Visuel (visible **admin only**)
-- 🔔 Notifications (custom FABs)
-- + boutons custom DB (`home_fab_buttons`)
+### Refactor
+- **Créer** `src/components/layout/HeaderAdminTools.tsx` qui regroupe :
+  - 🔔 **Notifications** (déplacer le `Sheet` actuel de `MainLayout` vers ce composant).
+  - ✉️ **Messages clients** (nouveau bouton header, ouvre un `Sheet` listant les conversations chat). Source : table déjà utilisée par `ChatBotWidget` / `contact-chat` edge function — exposer via un hook `useCustomerChats` existant ou minimal (lecture des messages reçus).
+  - Style identique : icône dans un cercle `bg-foreground text-background`, badge rouge avec compteur non-lus.
+- **Monter** `HeaderAdminTools` dans `Header.tsx` (zone droite, avant le sélecteur de langue) — affiché uniquement si `isAdmin`.
+- **Supprimer** le FAB cloche flottant de `MainLayout.tsx`.
 
-### Implémentation
-- **Nouveau mode** `mode: 'dock'` dans `unifiedFab` (en plus de `socle`/`free`/`grouped`/`cluster`).
-- Rendu dans `src/components/layout/UnifiedFab.tsx` : nouveau bloc à la place du cluster, style pill glass.
-- Position du dock paramétrable : `dockPos_desktop` / `dockPos_mobile` (avec preset "center-bottom" par défaut → support `corner: 'bc'` dans `cornerStyle`, ou nouveau type `{ anchor: 'bottom-center', offset: 24 }`).
-- Drag admin du dock entier (réutiliser `useAdminDrag`).
-- Inclusion dans le dock : sur chaque item + chaque custom FAB, flag `inDock: true|false` dans la config (déjà présent : `freeCustomIds`, `clusterFree` → généralisation).
+## 4. Détails techniques
 
-### Édition (`UnifiedFabEditor.tsx`)
-- Ajouter un 5ᵉ mode "**Dock unifié**" dans la grille de modes.
-- Sous-section : checklist des éléments à inclure dans le dock (Voix / Chat / Message / Éditeur visuel / Notifications / customs).
-- Direction (row/col), taille des icônes, intensité du blur, couleur du halo.
+Fichiers touchés :
+- `src/lib/useAdminDrag.ts` *(nouveau, extrait de UnifiedFab)*
+- `src/components/layout/UnifiedFab.tsx` *(import du hook, fix size dynamique sur Dock/Cluster/Group)*
+- `src/components/home/RouletteFab.tsx` *(remplace drag local par hook commun, fix size dynamique)*
+- `src/components/layout/HeaderAdminTools.tsx` *(nouveau)*
+- `src/components/layout/Header.tsx` *(monter HeaderAdminTools si admin)*
+- `src/components/layout/MainLayout.tsx` *(retirer la cloche flottante + Sheet, déplacer logique vers HeaderAdminTools)*
+- `src/hooks/useCustomerChats.ts` *(nouveau, lecture des conversations chatbot)*
 
----
+Aucun changement de schéma DB ni de backend.
 
-## 3. Jeu-concours pleinement personnalisable
+## 5. Validation
 
-### Position
-- **Défaut au centre de la page** : nouveau preset `center` (`top: 50%; left: 50%; translate(-50%, -50%)`).
-- Toujours déplaçable librement par admin (drag déjà en place via `useAdminDrag` quand item est `clusterFree`/isolé).
-- Le Jeu-concours est **forcé hors du dock** (toujours autonome) pour rester très visible.
-
-### Design (nouvel éditeur dans `AdminRoulette` ou `UnifiedFabEditor`)
-Stocker dans `unifiedFab.rouletteFab` :
-- `variant`: `glossy | glass | neon | metal | outline | minimal | gift-pulse`
-- `accentColor`: hex
-- `size`: `sm | md | lg | xl`
-- `shape`: `round | pill | rect-bevel`
-- `label`: texte (déjà présent via `config.fab_label`)
-- `pulse`: bool (animation ping)
-- `icon`: choix via `IconPicker`
-
-### Refacto `RouletteFab` (trigger button)
-- Remplacer le markup hardcodé du trigger (lignes 226-244) par un bouton paramétrable lisant `unifiedFab.rouletteFab`.
-- Conserver `cornerStyle` si `corner` défini, sinon centre par défaut.
-- Drag admin (réutiliser `useAdminDrag`) — sauvegarde dans `cfg.rouletteFab.position_desktop/mobile`.
-- `RouletteFab` dans `UnifiedFab.tsx` reste rendu depuis `Home.tsx` (déjà le cas) — supprimer le doublon dans `UnifiedFab` (`<RouletteFab hideTrigger />`) ou le garder en `hideTrigger` modal.
-
-### Note importante
-Actuellement `<RouletteFab />` est rendu **2 fois** : une fois dans `Home.tsx` (avec trigger) + une fois dans `UnifiedFab.tsx` (`hideTrigger`). Cela duplique potentiellement le bouton. Garder uniquement la version `Home.tsx` comme trigger visuel, et `UnifiedFab` ne fait que contrôler l'ouverture via `setRouletteOpen`.
-
----
-
-## Fichiers à modifier
-
-| Fichier | Action |
-|---|---|
-| `src/components/admin/FabLivePreview.tsx` | Refactor en lecture seule + bouton "Ouvrir home admin" |
-| `src/lib/fabPosition.ts` | Ajouter support `corner: 'cc'` (centre) + `cornerStyle` étendu |
-| `src/components/layout/UnifiedFab.tsx` | Nouveau mode `dock`, retrait du double `<RouletteFab>` |
-| `src/components/admin/UnifiedFabEditor.tsx` | 5ᵉ mode "Dock", section design Jeu-concours |
-| `src/components/home/RouletteFab.tsx` | Trigger paramétrable (variant, taille, position centrée par défaut, drag admin) |
-| `src/types/index.ts` | Étendre `unifiedFab` (`dockPos_*`, `inDock`, `rouletteFab`) |
-
-Aucun changement DB requis.
-
-## Risques
-- Position "centre" doit éviter de couvrir le contenu : ajouter une note d'avertissement dans l'éditeur + offset ajustable.
-- Le trigger Roulette doit rester accessible clavier (`tabIndex`, `aria-label`).
+- Vérifier en dev (`/`) que :
+  - Le bouton Jeu-concours suit la souris exactement et reste à l'endroit où on le lâche (centre, coins, bords).
+  - Dock / Cluster / Group se déplacent sans saut.
+  - Les boutons ne se cachent jamais sous la sidebar/header.
+  - Header admin affiche les 2 icônes (Bell + Mail) avec compteurs.
+  - Plus aucun FAB cloche en bas-droite.
