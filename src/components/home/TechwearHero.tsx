@@ -188,6 +188,8 @@ function TechwearHeroSlideView({ config, productMissing, slideId }: { config: Sl
   // Local positions (override config; persisted on dragend)
   const [badgePos, setBadgePos] = useState<FreePos | undefined>(config.modelBadgePos);
   const [panelPos, setPanelPos] = useState<FreePos | undefined>(config.sidePanelPos);
+  // Pending validation: { which, prev, next } — set after a drag ends, awaiting confirm/cancel
+  const [pending, setPending] = useState<{ which: 'badge' | 'panel'; prev: FreePos | undefined; next: FreePos } | null>(null);
   useEffect(() => { setBadgePos(config.modelBadgePos); setPanelPos(config.sidePanelPos); }, [config.modelBadgePos, config.sidePanelPos]);
   const panelRef = useRef<HTMLDivElement | null>(null);
   // Clamp panel inside container if persisted position pushes it offscreen
@@ -224,24 +226,47 @@ function TechwearHeroSlideView({ config, productMissing, slideId }: { config: Sl
     const offX = e.clientX - tRect.left;
     const offY = e.clientY - tRect.top;
     const elW = tRect.width, elH = tRect.height;
-    const move = (ev: PointerEvent) => {
-      const left = Math.max(0, Math.min(cRect.width - elW, ev.clientX - cRect.left - offX));
-      const top = Math.max(0, Math.min(cRect.height - elH, ev.clientY - cRect.top - offY));
-      target.style.left = `${left}px`; target.style.top = `${top}px`;
-      target.style.right = 'auto'; target.style.bottom = 'auto';
+    const prev = which === 'badge' ? badgePos : panelPos;
+    target.style.willChange = 'left, top';
+    let nextLeft = tRect.left - cRect.left;
+    let nextTop = tRect.top - cRect.top;
+    let raf = 0;
+    const apply = () => {
+      raf = 0;
+      target.style.left = `${nextLeft}px`;
+      target.style.top = `${nextTop}px`;
+      target.style.right = 'auto';
+      target.style.bottom = 'auto';
       target.style.position = 'absolute';
     };
-    const up = (ev: PointerEvent) => {
+    const move = (ev: PointerEvent) => {
+      nextLeft = Math.max(0, Math.min(cRect.width - elW, ev.clientX - cRect.left - offX));
+      nextTop = Math.max(0, Math.min(cRect.height - elH, ev.clientY - cRect.top - offY));
+      if (!raf) raf = requestAnimationFrame(apply);
+    };
+    const up = () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
-      const left = parseInt(target.style.left || '0');
-      const top = parseInt(target.style.top || '0');
-      const pos = pxToCornerPos(left, top, cRect.width, cRect.height, elW, elH);
+      if (raf) cancelAnimationFrame(raf);
+      target.style.willChange = '';
+      const pos = pxToCornerPos(nextLeft, nextTop, cRect.width, cRect.height, elW, elH);
       if (which === 'badge') setBadgePos(pos); else setPanelPos(pos);
-      persistPos(which, pos);
+      setPending({ which, prev, next: pos });
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
+  };
+
+  const confirmPending = () => {
+    if (!pending) return;
+    persistPos(pending.which, pending.next);
+    toast.success(pending.which === 'badge' ? 'Badge modèle validé' : 'Panneau validé');
+    setPending(null);
+  };
+  const cancelPending = () => {
+    if (!pending) return;
+    if (pending.which === 'badge') setBadgePos(pending.prev); else setPanelPos(pending.prev);
+    setPending(null);
   };
 
   useEffect(() => { setActiveColor(safeColorIndex); }, [safeColorIndex, config.colorOptions.length]);
