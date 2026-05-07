@@ -1,25 +1,30 @@
 import { useRef, useState } from 'react';
 import { pxToPos, type FabPos } from './fabPosition';
 
-const DRAG_THRESHOLD = 5;
+const DRAG_THRESHOLD = 4;
 
 export type PendingDrag = { prev: FabPos | null; next: FabPos } | null;
 
+function readSnap(): boolean {
+  try { const v = localStorage.getItem('admin_drag_snap'); return v === null ? true : v === '1'; } catch { return true; }
+}
+function readLocked(): boolean {
+  try { return localStorage.getItem('admin_drag_locked') === '1'; } catch { return false; }
+}
+function snapVal(v: number, grid = 8) { return Math.round(v / grid) * grid; }
+function magnet(v: number, targets: number[], range = 10) {
+  for (const t of targets) if (Math.abs(v - t) < range) return t;
+  return v;
+}
+
 /**
- * Generic admin drag helper.
- * - Measures the actual element size at pointerdown so corner snapping is accurate
- *   for both small round buttons and wide pills/blocks (Dock, Cluster, Roulette pill).
- * - Clamps the drop position inside the viewport (and respects header/sidebar safe areas).
- * - Uses requestAnimationFrame batching to avoid laggy drags.
- * - Returns a `pending` state so the caller can render a Validate / Cancel toolbar
- *   before the new position is committed.
+ * Generic admin drag helper — fluid GPU drag using translate3d while moving,
+ * commits left/top/corner only on pointerup. Pointer-capture for stable input.
  */
 export function useAdminDrag(opts: {
   enabled: boolean;
   onCommit: (pos: FabPos) => void;
-  /** Optional: current saved position, so cancel can restore it. */
   currentPos?: FabPos | null;
-  /** Optional: skip the validation step and commit immediately. */
   autoCommit?: boolean;
 }) {
   const { enabled, onCommit, currentPos = null, autoCommit = false } = opts;
@@ -27,90 +32,110 @@ export function useAdminDrag(opts: {
   const [pending, setPending] = useState<PendingDrag>(null);
 
   const onPointerDown = (e: React.PointerEvent<HTMLElement>) => {
-    if (!enabled) return;
+    if (!enabled || readLocked()) return;
+    if ((e.target as HTMLElement).closest('[data-no-drag]')) return;
     const target = e.currentTarget as HTMLElement;
+    try { target.setPointerCapture(e.pointerId); } catch { /* noop */ }
     const rect = target.getBoundingClientRect();
     const w = rect.width || target.offsetWidth || 56;
     const h = rect.height || target.offsetHeight || 56;
     const startX = e.clientX;
     const startY = e.clientY;
+    const baseLeft = rect.left;
+    const baseTop = rect.top;
     let dragging = false;
+    const useSnap = readSnap();
 
-    // Safe areas — keep above sidebar/header
-    const safeTop = 56;
-    const safeRight = 0;
-    const safeBottom = 0;
-    const safeLeft = 0;
-
-    let nextLeft = rect.left;
-    let nextTop = rect.top;
+    // Safe areas
+    const safeTop = 56, safeRight = 0, safeBottom = 0, safeLeft = 0;
+    let dx = 0, dy = 0;
     let raf = 0;
-    const apply = () => {
+    let hud: HTMLDivElement | null = null;
+
+    const ensureHud = () => {
+      if (hud) return;
+      hud = document.createElement('div');
+      hud.style.cssText = 'position:fixed;z-index:9999;background:hsl(var(--foreground));color:hsl(var(--background));font:bold 10px/1 ui-monospace,monospace;padding:4px 6px;letter-spacing:.05em;pointer-events:none;border-radius:2px;';
+      document.body.appendChild(hud);
+    };
+    const updateHud = (l: number, t: number) => {
+      if (!hud) return;
+      hud.style.left = `${startX + dx + 14}px`;
+      hud.style.top = `${startY + dy + 14}px`;
+      hud.textContent = `${Math.round(l)} × ${Math.round(t)}`;
+    };
+
+    const applyTransform = () => {
       raf = 0;
-      target.style.left = `${nextLeft}px`;
-      target.style.top = `${nextTop}px`;
-      target.style.right = 'auto';
-      target.style.bottom = 'auto';
-      target.style.position = 'fixed';
-      target.style.transform = 'none';
+      target.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+      updateHud(baseLeft + dx, baseTop + dy);
     };
 
     const move = (ev: PointerEvent) => {
-      const dx = ev.clientX - startX;
-      const dy = ev.clientY - startY;
-      if (!dragging && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+      const rdx = ev.clientX - startX;
+      const rdy = ev.clientY - startY;
+      if (!dragging && Math.hypot(rdx, rdy) < DRAG_THRESHOLD) return;
       if (!dragging) {
         dragging = true;
-        target.style.willChange = 'left, top';
+        target.style.willChange = 'transform';
+        target.style.transition = 'none';
+        ensureHud();
       }
       ev.preventDefault();
-      nextLeft = Math.max(safeLeft, Math.min(window.innerWidth - w - safeRight, rect.left + dx));
-      nextTop = Math.max(safeTop, Math.min(window.innerHeight - h - safeBottom, rect.top + dy));
-      if (!raf) raf = requestAnimationFrame(apply);
+      let nl = baseLeft + rdx;
+      let nt = baseTop + rdy;
+      // Clamp to viewport
+      nl = Math.max(safeLeft, Math.min(window.innerWidth - w - safeRight, nl));
+      nt = Math.max(safeTop, Math.min(window.innerHeight - h - safeBottom, nt));
+      if (useSnap) {
+        nl = snapVal(nl);
+        nt = snapVal(nt);
+        // Magnet to viewport center / edges
+        const vw = window.innerWidth, vh = window.innerHeight;
+        nl = magnet(nl + w / 2, [vw / 2, w / 2, vw - w / 2]) - w / 2;
+        nt = magnet(nt + h / 2, [vh / 2, h / 2, vh - h / 2]) - h / 2;
+      }
+      dx = nl - baseLeft;
+      dy = nt - baseTop;
+      if (!raf) raf = requestAnimationFrame(applyTransform);
     };
 
-    const cleanupStyles = () => {
-      target.style.left = '';
-      target.style.top = '';
-      target.style.right = '';
-      target.style.bottom = '';
-      target.style.position = '';
-      target.style.transform = '';
+    const cleanup = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      window.removeEventListener('keydown', onKey);
+      try { target.releasePointerCapture(e.pointerId); } catch { /* noop */ }
+      if (raf) cancelAnimationFrame(raf);
       target.style.willChange = '';
+      target.style.transition = '';
+      target.style.transform = '';
+      if (hud) { hud.remove(); hud = null; }
     };
 
     const up = () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-      window.removeEventListener('keydown', onKey);
-      if (raf) cancelAnimationFrame(raf);
-      if (!dragging) { cleanupStyles(); return; }
+      if (!dragging) { cleanup(); return; }
       blockClickRef.current = true;
       setTimeout(() => { blockClickRef.current = false; }, 80);
-      const pos = pxToPos(nextLeft, nextTop, window.innerWidth, window.innerHeight, w, h);
-      cleanupStyles();
+      const finalLeft = baseLeft + dx;
+      const finalTop = baseTop + dy;
+      cleanup();
+      const pos = pxToPos(finalLeft, finalTop, window.innerWidth, window.innerHeight, w, h);
       if (autoCommit) {
         onCommit(pos);
       } else {
         setPending({ prev: currentPos, next: pos });
-        // Optimistic apply so user sees it; commit happens on validate
         onCommit(pos);
       }
     };
 
     const onKey = (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape') {
-        window.removeEventListener('pointermove', move);
-        window.removeEventListener('pointerup', up);
-        window.removeEventListener('keydown', onKey);
-        if (raf) cancelAnimationFrame(raf);
-        dragging = false;
-        cleanupStyles();
-      }
+      if (ev.key === 'Escape') { dragging = false; cleanup(); }
     };
 
-    window.addEventListener('pointermove', move);
+    window.addEventListener('pointermove', move, { passive: false });
     window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
     window.addEventListener('keydown', onKey);
   };
 
