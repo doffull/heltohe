@@ -17,6 +17,13 @@ const fadeUp = {
 };
 
 export default function ProductInfo({ product, isNew }: ProductInfoProps) {
+  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
+  const guessCategory = (): SizeCategory => {
+    const c = (product.category || '').toLowerCase();
+    if (c.includes('femme')) return 'femme';
+    if (c.includes('enfant') || c.includes('kid')) return 'enfant';
+    return 'homme';
+  };
   return (
     <>
       {/* Category & SKU */}
