@@ -128,10 +128,21 @@ export function FabLivePreview() {
             <Label>Mode</Label>
             <Tabs value={mode} onValueChange={(v) => setMode(v as any)}>
               <TabsList className="h-8">
-                <TabsTrigger value="socle" className="text-xs">Socle unifié</TabsTrigger>
-                <TabsTrigger value="free" className="text-xs">Icônes libres</TabsTrigger>
+                <TabsTrigger value="socle" className="text-xs">Socle</TabsTrigger>
+                <TabsTrigger value="grouped" className="text-xs">Groupés</TabsTrigger>
+                <TabsTrigger value="free" className="text-xs">Libres</TabsTrigger>
               </TabsList>
             </Tabs>
+            {mode === 'grouped' && (
+              <div className="flex gap-1">
+                {(['left', 'right'] as const).map((s) => (
+                  <button key={s} type="button" onClick={() => setGroupSide(s)}
+                    className={`text-[10px] uppercase px-2 py-1 border-2 ${groupSide === s ? 'border-primary bg-primary/10' : 'border-border'}`}>
+                    {s === 'left' ? 'Gauche' : 'Droite'}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </CardTitle>
       </CardHeader>
