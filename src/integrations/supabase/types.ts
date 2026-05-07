@@ -400,6 +400,39 @@ export type Database = {
         }
         Relationships: []
       }
+      click_events: {
+        Row: {
+          clicked_at: string
+          element_label: string | null
+          element_selector: string | null
+          id: string
+          path: string
+          session_id: string
+          x: number | null
+          y: number | null
+        }
+        Insert: {
+          clicked_at?: string
+          element_label?: string | null
+          element_selector?: string | null
+          id?: string
+          path: string
+          session_id: string
+          x?: number | null
+          y?: number | null
+        }
+        Update: {
+          clicked_at?: string
+          element_label?: string | null
+          element_selector?: string | null
+          id?: string
+          path?: string
+          session_id?: string
+          x?: number | null
+          y?: number | null
+        }
+        Relationships: []
+      }
       colissimo_bordereaux: {
         Row: {
           bordereau_date: string
@@ -1365,6 +1398,33 @@ export type Database = {
         }
         Relationships: []
       }
+      page_views: {
+        Row: {
+          duration_ms: number | null
+          id: string
+          path: string
+          session_id: string
+          title: string | null
+          viewed_at: string
+        }
+        Insert: {
+          duration_ms?: number | null
+          id?: string
+          path: string
+          session_id: string
+          title?: string | null
+          viewed_at?: string
+        }
+        Update: {
+          duration_ms?: number | null
+          id?: string
+          path?: string
+          session_id?: string
+          title?: string | null
+          viewed_at?: string
+        }
+        Relationships: []
+      }
       pages: {
         Row: {
           category_id: string | null
@@ -2010,6 +2070,48 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      visitor_sessions: {
+        Row: {
+          country: string | null
+          device: string | null
+          id: string
+          ip_hash: string | null
+          landing_path: string | null
+          last_seen_at: string
+          referrer: string | null
+          session_id: string
+          started_at: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          country?: string | null
+          device?: string | null
+          id?: string
+          ip_hash?: string | null
+          landing_path?: string | null
+          last_seen_at?: string
+          referrer?: string | null
+          session_id: string
+          started_at?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          country?: string | null
+          device?: string | null
+          id?: string
+          ip_hash?: string | null
+          landing_path?: string | null
+          last_seen_at?: string
+          referrer?: string | null
+          session_id?: string
+          started_at?: string
+          user_agent?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }

@@ -1,119 +1,90 @@
-## 1 · Génération IA étendue (Hero Techwear)
+# Plan : Live Edit, Tracking temps réel & Achat vocal complet
 
-Étendre `AiTextButton` pour accepter de nouveaux `field` :
-- `slide_name` — nom interne de la slide
-- `badge_line1` / `badge_line2` — badge MODEL
-- `cta_primary` / `cta_secondary` — libellés des deux CTA
+## 1. FAB vocal visible pour admin (quick win)
 
-Backend `supabase/functions/generate-slide-text/index.ts` :
-- Étendre `FIELD_GUIDES` avec les 5 nouvelles entrées (consignes courtes, MAJUSCULES pour badges/CTA, ton mode/luxe FR).
-- Conserver le contract tool-call `return_text`.
+`MainLayout.tsx` cache actuellement `<FabStack />` quand `isAdmin = true`. On retire cette restriction pour que tu voies/testes la commande vocale, la roulette et le chat comme un visiteur.
 
-Front `TechwearHeroTab.tsx` :
-- Ajouter un `<AiTextButton>` à côté des champs : nom de la slide, badge ligne 1, badge ligne 2, CTA principal texte, CTA secondaire texte.
-- Le `context` envoyé inclut le nom de la slide active + produit lié (si présent) pour des suggestions cohérentes.
+## 2. Tracking visiteurs temps réel
 
-## 2 · CTA Hero Techwear : design glossy + positionnement libre
+### Tables (migration)
+- `visitor_sessions` : `id`, `session_id` (cookie), `user_id`, `started_at`, `last_seen_at`, `user_agent`, `ip_hash`, `country`, `device`, `referrer`, `landing_path`.
+- `page_views` : `session_id`, `path`, `title`, `viewed_at`, `duration_ms`.
+- `click_events` : `session_id`, `path`, `element_label`, `element_selector`, `x`, `y`, `clicked_at`.
+- RLS : insert public (anon), select admin uniquement. Realtime activé sur les 3 tables.
 
-### Modèle de données (frontend uniquement, stocké dans `techwearHero.slides[].ctaStyle`)
-Étendre `TechwearHeroSlideData` avec un objet optionnel `ctaStyle` :
-```ts
-ctaStyle?: {
-  variant: 'glossy' | 'glass' | 'neon' | 'metal' | 'outline' | 'minimal';
-  size: 'sm' | 'md' | 'lg' | 'xl';
-  radius: 'none' | 'sm' | 'md' | 'pill';
-  // Position relative à la zone image (en %), mobile et desktop séparés
-  position: {
-    desktop: { x: number; y: number; layout: 'row' | 'column' };
-    mobile:  { x: number; y: number; layout: 'row' | 'column' };
-  };
-  gap: number; // px
-  // Couleurs personnalisables (override)
-  primaryBg?: string; primaryFg?: string;
-  secondaryBg?: string; secondaryFg?: string;
-}
-```
+### Frontend
+- Hook `useVisitorTracking()` monté dans `MainLayout` (sauf admin) :
+  - Crée/relance une session (sessionStorage), heartbeat toutes les 15s sur `last_seen_at`.
+  - Envoie un `page_view` à chaque changement de route.
+  - Listener global de clic → enregistre les clics significatifs (boutons, liens, ajout panier).
 
-### Rendu (`TechwearHero.tsx`)
-- Remplacer le bloc actuel `.hw-cta-primary / .hw-cta-secondary` par un conteneur positionné en `absolute` au-dessus de l'image lorsqu'un `ctaStyle.position` est défini (sinon fallback inline actuel).
-- Ajouter une classe `hw-cta-{variant}` avec styles dans `index.css` :
-  - `glossy` : dégradé blanc→argent + reflet `::before`, ombre douce.
-  - `glass` : `backdrop-blur-md` + bord translucide.
-  - `neon` : bord lumineux accent + glow.
-  - `metal` : dégradé acier + grain subtil.
-  - `outline` / `minimal` : variantes simples.
-- Tous respectent les tokens HSL (`--foreground`, `--background`, `--accent`).
+### Admin dashboard
+- Nouvelle page `/admin/live` (`AdminLive.tsx`) :
+  - **Visiteurs en ligne** (sessions `last_seen_at > now()-30s`) avec liste live (Realtime).
+  - **Carte parcours** : clic sur un visiteur → timeline ordonnée de ses page_views + clics.
+  - **Top pages temps réel**, **clics chauds** par page (compteur), **derniers événements**.
 
-### Admin (`TechwearHeroTab.tsx`)
-Nouvelle carte **« Design des CTA »** sous la section CTAs :
-- Sélecteur de variant (6 vignettes).
-- Sliders size / radius / gap.
-- Color pickers (primaire/secondaire).
-- Mini éditeur de position : 2 sliders X (0–100 %) et Y (0–100 %) pour Desktop + Mobile, plus toggle row/column.
-- Bouton **« Suggestions IA »** appelant un nouveau endpoint `generate-cta-style` qui renvoie 3 presets (variant + couleurs + size). L'edge function utilise `google/gemini-2.5-flash` avec tool-call `return_styles` (array de 3 styles).
-- Aperçu live des deux boutons en haut de la carte.
+## 3. Édition visuelle live (drag & drop + inline)
 
-## 3 · Éditeur d'icônes fixes (Home FAB)
+L'éditeur visuel existant (`src/components/visual-editor/`) gère déjà l'inline texte/couleurs sur quelques zones. On l'étend.
 
-### Schéma DB (migration)
-Nouvelle table `home_fab_buttons` :
-```sql
-id uuid pk, label text, icon text (lucide name),
-action_type text check in ('route','external','roulette','voice','chat','newsletter'),
-action_value text, -- href ou identifiant
-variant text default 'glossy',
-position_desktop jsonb default '{"corner":"br","x":24,"y":24}',
-position_mobile  jsonb default '{"corner":"br","x":16,"y":16}',
-visible_desktop bool default true, visible_mobile bool default true,
-sort_order int default 0, is_active bool default true,
-created_at, updated_at
-```
-RLS : lecture publique si `is_active`, écriture admin (`has_role(auth.uid(),'admin')`).
+### Inline partout
+- Étendre `InlineEditable` aux zones manquantes du site (titres de sections, sous-titres, descriptions catégories, CTA, footer, headings page produit).
+- Sauvegarde directe dans `design_settings` ou la table source (categories, products selon la cible) via `data-editable-source`.
+- Édition d'image : clic sur une image éditable → ouvre `MediaPicker` existant et update la source.
 
-### Front
-- `useHomeFabButtons.ts` (React Query) — fetch + cache.
-- Refonte de `FabStack.tsx` :
-  - Si la table renvoie des entrées, on les rend (positionnées par `corner`+offsets, layout vertical).
-  - Sinon fallback aux 3 FAB hard-codés actuels (rétrocompatible).
-  - Chaque bouton mappe `action_type` → onClick (ouverture roulette / voice / chat, navigation, ouverture popup newsletter).
-  - Variants visuels partagés avec le système des CTA (glossy/glass/neon/metal/outline/minimal) via classe utilitaire commune.
+### Drag & drop des sections homepage
+- `home_sections` (jsonb dans `design_settings`) déjà présent → ajouter un mode "réorganisation" dans `VisualEditorPanel` :
+  - Survol = handle drag visible sur chaque section homepage.
+  - Réordonner avec `@dnd-kit/sortable` (déjà disponible probablement, sinon ajouter).
+  - Toggle visibilité par section, save manuel (cohérent avec la règle Admin "no auto-save").
 
-### Admin
-Nouvelle page `src/pages/admin/AdminHomeIcons.tsx` (entrée sidebar « Icônes Accueil ») :
-- Liste drag-handle réordonnable (`sort_order`).
-- Form par bouton : label, icône (picker parmi ~40 icônes lucide), action (select + champ), variant, visibilités desktop/mobile, position (corner BL/BR/TL/TR + offsets X/Y en px) avec aperçu temps réel sur cadre 360 × 640 et 1280 × 720.
-- Actions : ajouter / dupliquer / supprimer / activer.
+### Activation
+- Un seul toggle global "Mode édition live" déjà existant (`VisualEditorToggle`) qui active inline + drag & drop simultanément.
 
-## 4 · Détails techniques
+## 4. Achat 100% vocal end-to-end
 
-- Pas de modif du Sidebar ni du checkout.
-- Toute couleur via tokens HSL et `cn()` ; aucune couleur brute en dehors des color pickers utilisateur.
-- Edge functions ajoutées : `generate-cta-style` (réutilise pattern `generate-slide-text`).
-- `IconPicker.tsx` : composant léger qui mappe nom → composant lucide via `import * as Icons from 'lucide-react'`.
-- Mobile-first 360 px : positions par défaut conservatrices (coin bas-droit) ; éditeur permet override.
+### Edge function `voice-command` enrichie
+Ajouter ces actions au tool calling :
+- `add_to_cart` (existe déjà, on garde mode test confirmation).
+- `set_address` : extrait nom, adresse, ville, code postal, téléphone depuis la dictée.
+- `set_delivery` : `home` ou `relay` + ville si relay.
+- `apply_promo` : code promo dicté.
+- `place_order` : déclenche `validate_and_create_order` après confirmation vocale explicite ("je confirme ma commande").
+- `read_cart` / `read_total` : lecture vocale du récap (synthèse vocale via `speechSynthesis`).
 
-## 5 · Hors périmètre
+### VoiceCommandFab
+- Conserver le **mode test** (transcription + action affichée + bouton "Confirmer / Annuler") avant chaque action sensible (ajout panier, adresse, paiement).
+- Ajouter une **machine à états vocale** : idle → écoute → action proposée → confirmation → exécution → feedback vocal (TTS).
+- Dialogue multi-tours : la session conserve le contexte (panier en cours, adresse partielle) jusqu'à `place_order` ou reset.
+- Indicateur visuel d'étape (panier → livraison → paiement → confirmé).
+- Lecture audio des prix/réponses via `window.speechSynthesis` (FR).
 
-- Pas d'A/B testing sur les CTA.
-- Pas de génération d'icônes SVG personnalisées (uniquement choix dans la lib lucide).
-- Pas de migration des FAB existants vers la DB (fallback automatique : l'admin ajoute manuellement ce qu'il veut).
+### Sécurité
+- `place_order` côté front appelle la RPC `validate_and_create_order` existante (re-validation prix serveur conservée).
+- Paiement reste manuel (virement/chèque) → la voix prépare la commande, l'utilisateur confirme le mode de paiement à l'oral, l'admin valide ensuite (flux 3-étapes inchangé).
 
-## Fichiers
+### Onboarding
+- L'indice "Nouveau · commandez à la voix" est déjà en place ; ajouter un mini tutoriel 3 étapes au 1er clic ("Dis le produit → la couleur/taille → confirme").
+
+## Fichiers impactés
 
 **Création**
-- `supabase/functions/generate-cta-style/index.ts`
-- `supabase/migrations/<ts>_home_fab_buttons.sql`
-- `src/hooks/useHomeFabButtons.ts`
-- `src/components/admin/IconPicker.tsx`
-- `src/components/admin/HomeFabEditor.tsx`
-- `src/pages/admin/AdminHomeIcons.tsx`
+- `supabase/migrations/<ts>_visitor_tracking.sql`
+- `src/hooks/useVisitorTracking.ts`
+- `src/pages/admin/AdminLive.tsx`
+- `src/components/admin/LiveVisitorsPanel.tsx`, `LiveJourneyTimeline.tsx`
 
 **Modification**
-- `supabase/functions/generate-slide-text/index.ts` (nouveaux champs)
-- `src/components/admin/AiTextButton.tsx` (élargir le type `field`)
-- `src/components/admin/TechwearHeroTab.tsx` (boutons IA + carte Design CTA)
-- `src/components/home/TechwearHero.tsx` (rendu CTA positionnés + variants)
-- `src/index.css` (classes `.hw-cta-glossy`, `.hw-cta-glass`, `.hw-cta-neon`, `.hw-cta-metal`, `.hw-cta-outline`, `.hw-cta-minimal`)
-- `src/components/layout/FabStack.tsx` (lit la nouvelle table, fallback intact)
-- `src/types/index.ts` (`ctaStyle` sur slide + types FAB)
-- `src/App.tsx` + sidebar admin (route `/admin/home-icons`)
+- `src/components/layout/MainLayout.tsx` (FAB pour admin + mount tracking)
+- `supabase/functions/voice-command/index.ts` (nouvelles actions + multi-tours)
+- `src/components/voice/VoiceCommandFab.tsx` (machine à états, TTS, checkout vocal)
+- `src/components/visual-editor/VisualEditorPanel.tsx` + nouveau `SectionsDndEditor.tsx`
+- `src/components/visual-editor/InlineEditable.tsx` (extension cibles + image)
+- `src/pages/admin/Admin.tsx` (entrée sidebar "Live")
+
+## Notes techniques
+- Realtime via `supabase.channel().on('postgres_changes')` sur `visitor_sessions`.
+- Pas de PII brute : `ip_hash` (sha256 + sel côté edge function light) plutôt que IP claire.
+- Heatmap reportée (option choisie : "Basique maison").
+- Drag & drop : si `@dnd-kit` absent, l'ajouter.
