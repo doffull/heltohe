@@ -92,8 +92,13 @@ export function useAdminDrag(opts: {
     let dx = 0, dy = 0;
     let raf = 0;
     let hud: HTMLDivElement | null = null;
-    const prevTouchAction = target.style.touchAction;
+    const prevTouchAction = prevTouchActionEarly;
     const prevUserSelect = document.body.style.userSelect;
+    const prevBodyOverscroll = (document.body.style as any).overscrollBehavior;
+    const prevHtmlOverscroll = (document.documentElement.style as any).overscrollBehavior;
+    // iOS: stop rubber-band scroll while dragging
+    (document.body.style as any).overscrollBehavior = 'none';
+    (document.documentElement.style as any).overscrollBehavior = 'none';
 
     const ensureHud = () => {
       if (hud) return;
