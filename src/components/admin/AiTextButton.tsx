@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 interface AiTextButtonProps {
-  field: 'title' | 'subtitle' | 'description' | 'cta';
+  field: 'title' | 'subtitle' | 'description' | 'cta' | 'slide_name' | 'badge_line1' | 'badge_line2' | 'cta_primary' | 'cta_secondary';
   context?: string;
   onGenerated: (value: string) => void;
   className?: string;
