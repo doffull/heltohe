@@ -25,6 +25,9 @@ function dbToAppProduct(db: Record<string, unknown>): Product {
     videoUrl: (db.video_url as string) || undefined,
     tags: (db.tags as string[]) || [],
     promoEndsAt: (db.promo_ends_at as string) || undefined,
+    modelHeight: (db.model_height as string) || undefined,
+    modelSizeWorn: (db.model_size_worn as string) || undefined,
+    modelName: (db.model_name as string) || undefined,
   };
 }
 
