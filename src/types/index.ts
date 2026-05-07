@@ -287,12 +287,38 @@ export interface DesignSettings {
   voiceOnboardingHint?: boolean;
   unifiedFab?: {
     enabled?: boolean;
-    mode?: 'socle' | 'free' | 'grouped';
+    mode?: 'socle' | 'free' | 'grouped' | 'cluster' | 'dock';
     groupSide?: 'left' | 'right';
     groupOffsetY?: number;
-    position_desktop?: { corner: 'br'|'bl'|'tr'|'tl'; x: number; y: number };
-    position_mobile?: { corner: 'br'|'bl'|'tr'|'tl'; x: number; y: number };
+    position_desktop?: { corner: 'br'|'bl'|'tr'|'tl'|'cc'|'bc'|'tc'; x: number; y: number };
+    position_mobile?: { corner: 'br'|'bl'|'tr'|'tl'|'cc'|'bc'|'tc'; x: number; y: number };
     accentColor?: string;
+    clusterDir?: 'row' | 'col';
+    clusterPos_desktop?: { corner: 'br'|'bl'|'tr'|'tl'|'cc'|'bc'|'tc'; x: number; y: number };
+    clusterPos_mobile?: { corner: 'br'|'bl'|'tr'|'tl'|'cc'|'bc'|'tc'; x: number; y: number };
+    freeCustomIds?: string[];
+    // Dock (glass pill) config
+    dockPos_desktop?: { corner: 'br'|'bl'|'tr'|'tl'|'cc'|'bc'|'tc'; x: number; y: number };
+    dockPos_mobile?: { corner: 'br'|'bl'|'tr'|'tl'|'cc'|'bc'|'tc'; x: number; y: number };
+    dockDir?: 'row' | 'col';
+    dockSize?: number;
+    dockBlur?: number;
+    dockShowVoice?: boolean;
+    dockShowChat?: boolean;
+    dockShowVisualEditor?: boolean;
+    dockExcludeRoulette?: boolean;
+    // Roulette trigger customization
+    rouletteFab?: {
+      variant?: 'glossy'|'glass'|'neon'|'metal'|'outline'|'minimal';
+      accentColor?: string;
+      size?: 'sm'|'md'|'lg'|'xl';
+      shape?: 'round'|'pill'|'rect-bevel';
+      icon?: string;
+      pulse?: boolean;
+      label?: string;
+      position_desktop?: { corner: 'br'|'bl'|'tr'|'tl'|'cc'|'bc'|'tc'; x: number; y: number };
+      position_mobile?: { corner: 'br'|'bl'|'tr'|'tl'|'cc'|'bc'|'tc'; x: number; y: number };
+    };
     items?: Array<{
       id: 'voice'|'chat'|'roulette';
       label: string;
@@ -300,8 +326,9 @@ export interface DesignSettings {
       visible: boolean;
       order: number;
       groupedIn?: 'group' | 'free';
-      position_desktop?: { corner: 'br'|'bl'|'tr'|'tl'; x: number; y: number };
-      position_mobile?: { corner: 'br'|'bl'|'tr'|'tl'; x: number; y: number };
+      clusterFree?: boolean;
+      position_desktop?: { corner: 'br'|'bl'|'tr'|'tl'|'cc'|'bc'|'tc'; x: number; y: number };
+      position_mobile?: { corner: 'br'|'bl'|'tr'|'tl'|'cc'|'bc'|'tc'; x: number; y: number };
     }>;
   };
   // Sidebar settings
