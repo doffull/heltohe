@@ -41,6 +41,7 @@ export function UnifiedFabEditor() {
   const [dockShowVoice, setDockShowVoice] = useState<boolean>(initial.dockShowVoice !== false);
   const [dockShowChat, setDockShowChat] = useState<boolean>(initial.dockShowChat !== false);
   const [dockShowVisualEditor, setDockShowVisualEditor] = useState<boolean>(initial.dockShowVisualEditor !== false);
+  const [dockShowRoulette, setDockShowRoulette] = useState<boolean>(initial.dockShowRoulette !== false);
   const rouletteFab = initial.rouletteFab || {};
   const [rfVariant, setRfVariant] = useState<string>(rouletteFab.variant || 'glossy');
   const [rfSize, setRfSize] = useState<string>(rouletteFab.size || 'md');
