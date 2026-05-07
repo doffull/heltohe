@@ -253,6 +253,7 @@ export default function Admin() {
             <Route path="roulette/*" element={<AdminRoulette />} />
             <Route path="bannieres/*" element={<Navigate to="/admin/marketing" replace />} />
             <Route path="design/*" element={<AdminDesign />} />
+            <Route path="home-icons/*" element={<AdminHomeIcons />} />
             <Route path="stock/*" element={<AdminStock />} />
             <Route path="colissimo/*" element={<AdminColissimo />} />
             <Route path="notifications/*" element={<AdminNotifications />} />
