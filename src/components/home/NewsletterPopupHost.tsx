@@ -4,9 +4,15 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { X, Mail } from 'lucide-react';
 import { toast } from 'sonner';
-import { useActiveNewsletterPopups, subscribeToNewsletter, type NewsletterPopup } from '@/hooks/useNewsletterPopups';
+import { useActiveNewsletterPopups, subscribeToNewsletter, recordPopupView, type NewsletterPopup } from '@/hooks/useNewsletterPopups';
 
 const SEEN_KEY = (id: string) => `nl_popup_seen_${id}`;
+const SESSION_KEY = 'nl_popup_session';
+function getSessionId() {
+  let s = sessionStorage.getItem(SESSION_KEY);
+  if (!s) { s = Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem(SESSION_KEY, s); }
+  return s;
+}
 
 export function NewsletterPopupHost() {
   const { data: popups = [] } = useActiveNewsletterPopups();
