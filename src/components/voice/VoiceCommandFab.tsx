@@ -389,6 +389,36 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
             </div>
           )}
 
+          {results.length > 0 && (
+            <div className="border-2 border-foreground/30 mt-2 divide-y divide-border">
+              <div className="px-3 py-2 text-[10px] uppercase tracking-wider bg-foreground/5 flex items-center justify-between">
+                <span>{results.length} résultat{results.length > 1 ? 's' : ''}</span>
+                <button onClick={() => setResults([])} className="text-muted-foreground hover:text-foreground">×</button>
+              </div>
+              {results.map((p, i) => (
+                <div key={p.id} className="flex items-center gap-3 p-2">
+                  <div className="text-[10px] font-bold w-5 text-center">{i + 1}</div>
+                  <img src={p.image || '/placeholder.svg'} alt={p.name} className="w-12 h-12 object-cover" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium truncate">{p.name}</div>
+                    <div className="text-[10px] text-muted-foreground">{(p.salePrice ?? p.price)?.toFixed?.(2)} €</div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-[10px] uppercase tracking-wider h-7"
+                    onClick={() => { addItem({ ...p, quantity: 1 }); toast.success(`${p.name} ajouté`); speak(`${p.name} ajouté au panier`); }}
+                  >
+                    + Panier
+                  </Button>
+                </div>
+              ))}
+              <div className="px-3 py-2 text-[10px] text-muted-foreground italic">
+                Dites par exemple : « Ajoute le numéro 2 en taille M »
+              </div>
+            </div>
+          )}
+
           {!pending && reply && (
             <div className="border border-border p-3 text-sm bg-muted/30 mt-2">
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Assistant</div>
