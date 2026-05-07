@@ -626,7 +626,7 @@ export default function Checkout() {
 
           {/* Order Summary Sidebar */}
           <div className="lg:col-span-1">
-            <div className="chamfer-hud bg-card/50 p-6 sticky top-4">
+            <div className="chamfer-hud bg-card/50 p-4 sm:p-6 lg:sticky lg:top-4">
               <h2 className="text-sm font-bold hud-text mb-4 pb-3 border-b border-border">VOTRE COMMANDE</h2>
               <div className="space-y-3 mb-4">
                 {items.map(item => (
