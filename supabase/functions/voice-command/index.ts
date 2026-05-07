@@ -156,6 +156,7 @@ Règles:
                 },
                 deliveryMode: { type: "string", enum: ["home", "relay"] },
                 promoCode: { type: "string" },
+                resultIndex: { type: "number", description: "1-based index dans la dernière liste de résultats" },
               },
               required: ["type"],
             },
