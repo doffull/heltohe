@@ -1,89 +1,60 @@
-## Objectif
+# Gestion libre des boutons flottants + CTAs Hero mobile
 
-1. **Hero TechwearHero** : pouvoir positionner librement le badge "MODEL 0.1.2" (par défaut en haut à droite) et déplacer le bloc latéral contenant **Couleurs / Tailles / Price·Durability·Fashion**.
-2. **Bouton flottant** : regrouper **Voix + Assistant** dans un mini-socle commun, placé sur un côté de l'écran (gauche par défaut, configurable). **Jeu-concours** et **Message/Chat secondaire** restent indépendants et déplaçables où l'on veut.
-3. **Admin `/admin/home-icons`** : ajouter un sélecteur **gauche / droite** pour le mini-socle Voix+Assistant et conserver le drag libre pour les autres icônes.
+## 1. Drag & drop admin sur TOUS les boutons flottants (live, in-place)
 
----
+Aujourd'hui, seul le bouton "Sparkles" du socle est draggable côté admin, et l'aperçu live est dans une iframe séparée. On unifie : en mode admin, **chaque** bouton flottant visible sur la home est directement déplaçable avec preview temps réel, et la position est sauvegardée.
 
-## 1. TechwearHero — éléments repositionnables
+Boutons concernés :
+- **Voix**, **Assistant (chatbot)**, **Jeu-concours** (items du socle / mode libre / mode groupé)
+- **Mini-socle groupé** Voix+Assistant (déplacement du bloc entier)
+- **Boutons FAB personnalisés** issus de `home_fab_buttons` (Notifications, Bots, Message, etc.)
 
-Étendre `TechwearHeroConfig` (`src/types/index.ts` + `src/config/homeConfig.ts`) :
+Comportement :
+- Hors admin : aucun changement, les boutons restent à leur position configurée.
+- En admin : chaque bouton reçoit une poignée invisible (pointer-down sur le bouton lui-même + Alt-drag pour différencier du clic, ou un overlay `⠿` au survol). Drag → mise à jour optimiste de la position locale → snapping coin le plus proche (tl/tr/bl/br) → toast "Position enregistrée" au relâchement.
+- Persistance :
+  - Items du socle (`voice`, `chat`, `roulette`) → `design_settings.unifiedFab.items[].position_desktop / position_mobile` (déjà supportés côté admin, on ajoute juste l'écriture depuis la home).
+  - Mini-socle groupé → `design_settings.unifiedFab.groupSide` + `groupOffsetY` mis à jour.
+  - FABs custom DB → `home_fab_buttons.position_desktop / position_mobile` via `useHomeFabMutations.upsert`.
+- Le viewport courant détermine quelle clé est éditée (`position_mobile` si <768px, sinon `position_desktop`).
+- Indicateur visuel admin : ring primary + petit label `corner x·y` au survol.
 
-```ts
-modelBadgePos?: { corner: 'tl'|'tr'|'bl'|'br'; x: number; y: number }; // défaut tr 24/24
-sidePanelPos?:  { corner: 'tl'|'tr'|'bl'|'br'; x: number; y: number }; // bloc couleurs/tailles/stats
-```
+Le bloc `FabLivePreview` (iframe + drag overlay) devient redondant pour Voix/Assistant/Jeu-concours puisque c'est éditable directement sur la vraie home — on le garde uniquement comme **résumé non-interactif** (lecture seule, sliders pour valeurs précises) sous `AdminHomeIcons`.
 
-Dans `TechwearHero.tsx` :
-- Le badge `MODEL` devient `position: absolute` dans le conteneur du hero, placé via `modelBadgePos` (par défaut top-right).
-- Le panneau latéral (couleurs + tailles + StatBar) devient un bloc unique `position: absolute` placé via `sidePanelPos`.
-- En mode admin (`useAuth().isAdmin`), les deux blocs sont **draggables** (pointer events, snap 8 px). À la fin du drag → `updateDesignSettings({ techwearHero: { ..., modelBadgePos, sidePanelPos } })` debounce 600 ms.
+## 2. CTAs Hero adaptés mobile
 
-Dans `TechwearHeroTab.tsx` (admin) : ajouter deux blocs « Position du badge » et « Position du panneau » avec corner + sliders X/Y, identiques au pattern de `UnifiedFabEditor`.
+Sur le viewport actuel (360px), les CTAs `Découvrir` / `Voir collection` du `TechwearHero` débordent et restent en taille `lg/xl`. On rend le rendu responsif **sans** changer la config admin.
 
----
+Changements ciblés dans `src/styles/home-techwear.css` :
+- Sous `@media (max-width: 640px)` :
+  - `.hw-cta-positioned { flex-direction: column; gap: 8px; width: calc(100% - 32px); left: 16px; right: 16px; }`
+  - `.hw-cta-btn { width: 100%; min-height: 44px; padding: 10px 16px; font-size: 12px; letter-spacing: 0.12em; }`
+  - Force toutes les tailles (`hw-cta-sz-sm/md/lg/xl`) à converger vers 44px de haut, font 12px, padding 10/16 sur mobile (override).
+  - `.hw-cta-positioned.is-row` repassé en `flex-direction: column` (priorité mobile).
+- Mêmes overrides pour la branche fallback `.hw-cta-primary / .hw-cta-secondary`.
 
-## 2. Refonte des FAB
+Aucun changement TS / config — uniquement CSS responsive.
 
-### Modèle de données (`design_settings.unifiedFab`)
-Ajouter un nouveau mode `grouped` (en plus de `socle` et `free`) :
+## Détails techniques
 
-```jsonc
-{
-  "mode": "grouped",
-  "groupSide": "left",          // "left" | "right"
-  "groupOffsetY": 200,          // distance au top
-  "items": [
-    { "id":"voice",    "groupedIn":"chat",  ... }, // forcés dans le mini-socle
-    { "id":"chat",     "groupedIn":"chat",  ... },
-    { "id":"roulette", "groupedIn":"free", "position_desktop":{...}, "position_mobile":{...} },
-    { "id":"message",  "groupedIn":"free", ... }   // bouton chat secondaire / message
-  ]
-}
-```
+### Fichiers à modifier
+- `src/components/layout/UnifiedFab.tsx`
+  - Ajouter `useAuth().isAdmin` drag handler générique `makeDraggable(itemId, kind: 'socleItem' | 'group' | 'customFab')` avec mise à jour optimiste + debounce 600ms d'écriture (`updateDesignSettings` ou `useHomeFabMutations.upsert`).
+  - Wrapper chaque bouton (custom, free, grouped, mini-socle) avec `onPointerDown` admin et style `cursor-grab` + ring.
+  - Snapping coin : `pxToPos` (logique déjà présente dans `FabLivePreview.tsx`) extraite vers `src/lib/fabPosition.ts`.
+- `src/lib/fabPosition.ts` (nouveau)
+  - Exports `pxToPos`, `posToPx`, `cornerStyle`.
+- `src/components/admin/FabLivePreview.tsx`
+  - Importer depuis `fabPosition.ts` (suppression duplication). Garder l'aperçu mais marquer-le "Aperçu — édition désormais directement sur la home".
+- `src/styles/home-techwear.css`
+  - Ajouter media queries mobile décrites ci-dessus.
 
-### `UnifiedFab.tsx`
-- Nouveau rendu `mode === 'grouped'` :
-  - Mini-socle vertical (Voix + Assistant) collé sur le bord choisi (`left`/`right`), centré verticalement avec offset configurable. Toujours visible (pas de toggle Sparkles).
-  - Les autres items (Roulette, Message) rendus indépendamment via leur `position_desktop`/`position_mobile` comme déjà fait en mode `free`.
-- En admin : drag du mini-socle (déplacement vertical + bascule gauche/droite si traversée du milieu) **et** drag individuel des autres icônes.
-- Hint vocal repositionné à côté du mini-socle.
+### Hors scope
+- Pas de modification de schéma DB (les colonnes `position_desktop/mobile` existent déjà sur `home_fab_buttons` et dans `design_settings.unifiedFab.items`).
+- Pas de changement du comportement public / non-admin.
+- Pas de modification du Hero TechwearHeroTab admin (déjà couvert par étape précédente).
 
-### `UnifiedFabEditor.tsx`
-- Sélecteur de mode passe à 3 options : **Socle unifié / Icônes libres / Voix+Assistant groupés**.
-- En mode `grouped` : afficher Radio **Côté = Gauche / Droite**, slider **Décalage vertical**, et un sous-éditeur de positions libres pour Roulette et Message.
-
-### `FabLivePreview.tsx`
-- Quand mode `grouped` : afficher le mini-socle ancré au bord choisi, draggable verticalement + drag horizontal pour basculer côté ; les icônes Roulette/Message restent draggables librement comme aujourd'hui.
-
----
-
-## 3. Z-index & non-gêne
-
-- Mini-socle Voix+Assistant : `z-40`, marge automatique vis-à-vis du Sidebar (offset latéral = 76 px si sidebar visible côté gauche).
-- Roulette/Message : conservent `z-50` mais s'évitent mutuellement (snap minimal 8 px, pas de collision automatique — laissé à l'admin).
-
----
-
-## Fichiers touchés
-
-- **Modif** : `src/types/index.ts` (ajout `modelBadgePos`, `sidePanelPos`, `unifiedFab.mode='grouped'`, `groupSide`, `groupOffsetY`, `items[].groupedIn`)
-- **Modif** : `src/config/homeConfig.ts` (defaults)
-- **Modif** : `src/components/home/TechwearHero.tsx` (badge + panneau absolus + drag admin)
-- **Modif** : `src/components/admin/TechwearHeroTab.tsx` (éditeurs de position)
-- **Modif** : `src/components/layout/UnifiedFab.tsx` (mode `grouped`)
-- **Modif** : `src/components/admin/UnifiedFabEditor.tsx` (mode + côté)
-- **Modif** : `src/components/admin/FabLivePreview.tsx` (rendu mode `grouped`)
-
-Aucun changement DB, aucune nouvelle dépendance.
-
----
-
-## Critères d'acceptation
-
-1. Sur la home, le badge "MODEL 0.1.2" est par défaut en **haut à droite** du hero.
-2. En admin, je peux glisser le badge et le panneau couleurs/tailles/stats où je veux dans le hero, et c'est persisté.
-3. Le bouton flottant propose un mode **Voix+Assistant groupés** placé à gauche (par défaut) ou à droite, sans gêner les CTA d'achat.
-4. Jeu-concours et Message peuvent être déplacés indépendamment partout sur l'écran (desktop + mobile).
-5. L'admin `/admin/home-icons` permet de choisir le côté du mini-socle et d'éditer toutes les positions via l'aperçu live.
+### Points d'attention
+- Différencier clic vs drag : seuil de 5px de mouvement avant de considérer drag → sinon trigger l'action habituelle du bouton.
+- Sur mobile admin (touch), `touchAction: 'none'` sur les boutons en drag pour éviter scroll parasite.
+- Persistance debounced pour éviter de spammer l'API pendant un drag long.

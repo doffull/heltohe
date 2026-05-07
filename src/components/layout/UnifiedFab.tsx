@@ -1,18 +1,19 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Mic, Gift, Bot, Sparkles, X } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { useRouletteConfig } from '@/hooks/useRoulette';
-import { useHomeFabButtons } from '@/hooks/useHomeFabButtons';
+import { useHomeFabButtons, useHomeFabMutations } from '@/hooks/useHomeFabButtons';
 import { useAuth } from '@/context/AuthContext';
 import { VoiceCommandFab } from '@/components/voice/VoiceCommandFab';
 import { RouletteFab } from '@/components/home/RouletteFab';
 import { ChatBotWidget } from './ChatBotWidget';
 import { getIcon } from '@/components/admin/IconPicker';
 import { cn } from '@/lib/utils';
+import { pxToPos, cornerStyle, type FabPos } from '@/lib/fabPosition';
+import { toast } from 'sonner';
 import type { HomeFabButton } from '@/types';
 
 const HINT_KEY = 'voice_hint_seen';
-const POS_KEY = 'unified_fab_pos_v1';
 
 const ICON_MAP: Record<string, any> = { voice: Mic, chat: Bot, roulette: Gift };
 
@@ -22,29 +23,80 @@ const DEFAULT_ITEMS = [
   { id: 'roulette' as const, label: 'Jeu-concours', icon: 'Gift', visible: true, order: 2 },
 ];
 
-function cornerStyle(corner: string, x: number, y: number): React.CSSProperties {
-  const s: React.CSSProperties = { position: 'fixed', zIndex: 50 };
-  if (corner === 'br') { s.right = x; s.bottom = y; }
-  else if (corner === 'bl') { s.left = x; s.bottom = y; }
-  else if (corner === 'tr') { s.right = x; s.top = y; }
-  else if (corner === 'tl') { s.left = x; s.top = y; }
-  return s;
+const DRAG_THRESHOLD = 5;
+
+/**
+ * Generic admin drag helper.
+ * - onCommit receives the new {corner,x,y} once the user releases.
+ * - Returns a click suppression flag via shouldBlockClickRef.
+ */
+function useAdminDrag(opts: {
+  enabled: boolean;
+  isMobile: boolean;
+  onCommit: (pos: FabPos) => void;
+  size?: number;
+}) {
+  const { enabled, onCommit, size = 56 } = opts;
+  const blockClickRef = useRef(false);
+
+  const onPointerDown = (e: React.PointerEvent<HTMLElement>) => {
+    if (!enabled) return;
+    const target = e.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    let dragging = false;
+
+    const move = (ev: PointerEvent) => {
+      const dx = ev.clientX - startX;
+      const dy = ev.clientY - startY;
+      if (!dragging && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+      dragging = true;
+      ev.preventDefault();
+      const left = Math.max(0, Math.min(window.innerWidth - size, rect.left + dx));
+      const top = Math.max(0, Math.min(window.innerHeight - size, rect.top + dy));
+      target.style.position = 'fixed';
+      target.style.left = `${left}px`;
+      target.style.top = `${top}px`;
+      target.style.right = 'auto';
+      target.style.bottom = 'auto';
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      if (!dragging) return;
+      blockClickRef.current = true;
+      setTimeout(() => { blockClickRef.current = false; }, 50);
+      const left = parseFloat(target.style.left || '0');
+      const top = parseFloat(target.style.top || '0');
+      const pos = pxToPos(left, top, window.innerWidth, window.innerHeight, size);
+      onCommit(pos);
+      // clear inline; rerender will place via cornerStyle
+      target.style.left = '';
+      target.style.top = '';
+      target.style.right = '';
+      target.style.bottom = '';
+      target.style.position = '';
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
+  return { onPointerDown, blockClickRef };
 }
 
 export function UnifiedFab() {
-  const { designSettings } = useApp();
+  const { designSettings, updateDesignSettings } = useApp();
   const { isAdmin } = useAuth();
   const { data: rouletteConfig } = useRouletteConfig();
   const { data: customFabs = [] } = useHomeFabButtons();
+  const { upsert: upsertFab } = useHomeFabMutations();
   const [open, setOpen] = useState(false);
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [rouletteOpen, setRouletteOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false);
-  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(() => {
-    try { const v = localStorage.getItem(POS_KEY); return v ? JSON.parse(v) : null; } catch { return null; }
-  });
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 767px)');
@@ -109,54 +161,49 @@ export function UnifiedFab() {
     .filter((it) => it.id !== 'roulette' || rouletteConfig?.enabled)
     .sort((a, b) => a.order - b.order);
 
-  // Drag (admin only)
-  const onDragStart = (e: React.PointerEvent) => {
-    if (!isAdmin) return;
-    e.preventDefault();
-    const startX = e.clientX, startY = e.clientY;
-    const init = dragPos || { x: window.innerWidth - 80, y: window.innerHeight - 80 };
-    const move = (ev: PointerEvent) => {
-      setDragPos({
-        x: Math.max(8, Math.min(window.innerWidth - 64, init.x + (ev.clientX - startX))),
-        y: Math.max(8, Math.min(window.innerHeight - 64, init.y + (ev.clientY - startY))),
-      });
-    };
-    const up = () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-      try { localStorage.setItem(POS_KEY, JSON.stringify(dragPos)); } catch {}
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up);
+  // ── Persistence helpers ──────────────────────────────────────────
+  const posKey = isMobile ? 'position_mobile' : 'position_desktop';
+
+  const saveSocleItemPos = (id: string, pos: FabPos) => {
+    const next = items.map((it) => it.id === id ? { ...it, [posKey]: pos } : it);
+    updateDesignSettings({ ...(designSettings as any), unifiedFab: { ...cfg, items: next } } as any);
+    toast.success(`Position « ${id} » enregistrée`);
   };
 
-  const baseStyle: React.CSSProperties = isAdmin && dragPos
-    ? { position: 'fixed', left: dragPos.x, top: dragPos.y, zIndex: 50 }
-    : cornerStyle(posCfg.corner, posCfg.x, posCfg.y);
+  const saveCustomFabPos = (b: HomeFabButton, pos: FabPos) => {
+    upsertFab.mutateAsync({ ...b, [posKey]: pos } as any).then(() => toast.success(`Position « ${b.label} » enregistrée`));
+  };
+
+  const saveGroupPos = (pos: FabPos) => {
+    // Convert to side + offsetY (always anchored left/right)
+    const side: 'left' | 'right' = pos.corner.endsWith('r') ? 'right' : 'left';
+    const top = pos.corner.startsWith('t') ? pos.y : window.innerHeight - pos.y - 56;
+    updateDesignSettings({ ...(designSettings as any), unifiedFab: { ...cfg, groupSide: side, groupOffsetY: Math.max(80, Math.round(top)) } } as any);
+    toast.success('Mini-socle repositionné');
+  };
+
+  // ── Per-button drag hooks ────────────────────────────────────────
+  // Group socle drag
+  const groupDrag = useAdminDrag({ enabled: isAdmin, isMobile, onCommit: saveGroupPos });
 
   return (
     <>
-      {/* Custom DB FABs (preserved, independent placement) */}
+      {/* Custom DB FABs */}
       {visibleCustom.map((b) => {
         const pos = isMobile ? b.position_mobile : b.position_desktop;
         const I = getIcon(b.icon);
         return (
-          <button
+          <CustomFabButton
             key={b.id}
-            type="button"
+            button={b}
+            pos={pos as FabPos}
+            isAdmin={isAdmin}
+            isMobile={isMobile}
+            accent={accent}
             onClick={() => handleAction(b)}
-            aria-label={b.label}
-            title={b.label}
-            className={`hw-cta-btn hw-cta-v-${b.variant} hw-cta-rd-md w-12 h-12 p-0 shadow-xl`}
-            style={cornerStyle(pos.corner, pos.x, pos.y)}
-          >
-            <I className="h-5 w-5" />
-            {b.badge && (
-              <span className="absolute -top-1.5 -right-1.5 bg-foreground text-background text-[8px] font-bold px-1.5 py-0.5 uppercase tracking-wider">
-                {b.badge}
-              </span>
-            )}
-          </button>
+            onDragCommit={(p) => saveCustomFabPos(b, p)}
+            Icon={I}
+          />
         );
       })}
 
@@ -164,11 +211,7 @@ export function UnifiedFab() {
       {showHint && voiceEnabled && (
         <div
           className="fixed z-[51] bg-foreground text-background px-3 py-2 text-[10px] uppercase tracking-[0.18em] font-bold animate-fade-in shadow-2xl"
-          style={{
-            ...(baseStyle.left !== undefined
-              ? { left: (baseStyle.left as number) - 200, top: baseStyle.top as number }
-              : { right: (posCfg.x as number) + 70, bottom: (posCfg.y as number) + 8 }),
-          }}
+          style={cornerStyle(posCfg.corner, (posCfg.x || 0) + 70, (posCfg.y || 0) + 8)}
         >
           Nouveau · commande vocale
         </div>
@@ -188,11 +231,16 @@ export function UnifiedFab() {
                 {/* Mini-socle Voix + Assistant */}
                 {mode === 'grouped' && groupedIds.size > 0 && (
                   <div
-                    className="fixed z-40 flex flex-col gap-2 p-2 rounded-2xl backdrop-blur-xl bg-background/80 border border-foreground/20 shadow-2xl"
+                    onPointerDown={groupDrag.onPointerDown}
+                    className={cn(
+                      'fixed z-40 flex flex-col gap-2 p-2 rounded-2xl backdrop-blur-xl bg-background/80 border border-foreground/20 shadow-2xl',
+                      isAdmin && 'ring-2 ring-primary/60 cursor-grab active:cursor-grabbing'
+                    )}
                     style={{
                       [groupSide]: 16,
                       top: groupOffsetY,
                       boxShadow: `0 8px 32px ${accent}33`,
+                      touchAction: isAdmin ? 'none' : undefined,
                     } as any}
                   >
                     {visibleItems
@@ -202,18 +250,12 @@ export function UnifiedFab() {
                         return (
                           <button
                             key={it.id}
-                            onClick={() => triggerItem(it.id)}
+                            onClick={() => { if (groupDrag.blockClickRef.current) return; triggerItem(it.id); }}
                             aria-label={it.label}
                             title={it.label}
                             className="group relative w-11 h-11 rounded-full bg-background/90 border-2 border-foreground/40 text-foreground hover:scale-110 hover:bg-foreground hover:text-background transition-all flex items-center justify-center"
                           >
                             <Icon className="h-4 w-4" />
-                            <span className={cn(
-                              'absolute top-1/2 -translate-y-1/2 px-2 py-1 bg-foreground text-background text-[10px] uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none',
-                              groupSide === 'left' ? 'left-full ml-3' : 'right-full mr-3'
-                            )}>
-                              {it.label}
-                            </span>
                           </button>
                         );
                       })}
@@ -224,16 +266,18 @@ export function UnifiedFab() {
                   const Icon = ICON_MAP[it.id] || Sparkles;
                   const p = (isMobile ? it.position_mobile : it.position_desktop) || (isMobile ? { corner: 'br', x: 16, y: 16 + (it.order || 0) * 70 } : { corner: 'br', x: 24, y: 24 + (it.order || 0) * 70 });
                   return (
-                    <button
+                    <SocleFreeButton
                       key={it.id}
+                      id={it.id}
+                      label={it.label}
+                      Icon={Icon}
+                      pos={p as FabPos}
+                      isAdmin={isAdmin}
+                      isMobile={isMobile}
+                      accent={accent}
                       onClick={() => triggerItem(it.id)}
-                      aria-label={it.label}
-                      title={it.label}
-                      className="group w-12 h-12 rounded-full backdrop-blur-xl bg-background/80 border-2 border-foreground/40 text-foreground hover:scale-110 hover:bg-foreground hover:text-background transition-all shadow-xl flex items-center justify-center"
-                      style={{ ...cornerStyle(p.corner, p.x, p.y), boxShadow: `0 8px 24px ${accent}44, 0 0 0 3px ${accent}11` }}
-                    >
-                      <Icon className="h-5 w-5" />
-                    </button>
+                      onDragCommit={(np) => saveSocleItemPos(it.id, np)}
+                    />
                   );
                 })}
               </>
@@ -241,49 +285,113 @@ export function UnifiedFab() {
           })()}
         </>
       ) : (
-        <div style={baseStyle} className="flex flex-col items-center gap-3">
-          {open && (
-            <div className="flex flex-col items-center gap-2 animate-fade-in">
-              {visibleItems.map((it: any) => {
-                const Icon = ICON_MAP[it.id] || Sparkles;
-                return (
-                  <button
-                    key={it.id}
-                    onClick={() => triggerItem(it.id)}
-                    aria-label={it.label}
-                    title={it.label}
-                    className="group relative w-12 h-12 rounded-full backdrop-blur-xl bg-background/70 border border-foreground/30 text-foreground hover:scale-110 hover:bg-foreground hover:text-background transition-all shadow-xl"
-                    style={{ boxShadow: `0 0 24px ${accent}33` }}
-                  >
-                    <Icon className="h-5 w-5 mx-auto" />
-                    <span className="absolute right-full mr-3 top-1/2 -translate-y-1/2 px-2 py-1 bg-foreground text-background text-[10px] uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                      {it.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          <button
-            onPointerDown={onDragStart}
-            onClick={() => setOpen((v) => !v)}
-            aria-label={open ? 'Fermer' : 'Ouvrir le menu flottant'}
-            className={cn(
-              'relative w-14 h-14 rounded-full backdrop-blur-xl border-2 transition-all flex items-center justify-center',
-              open
-                ? 'bg-foreground text-background border-foreground rotate-45'
-                : 'bg-background/80 text-foreground border-foreground/40 hover:scale-110'
-            )}
-            style={{ boxShadow: `0 8px 32px ${accent}55, 0 0 0 4px ${accent}11, inset 0 0 20px ${accent}22` }}
-          >
-            <span className="absolute inset-0 rounded-full animate-pulse pointer-events-none" style={{ boxShadow: `0 0 20px ${accent}66`, opacity: 0.6 }} />
-            {open ? <X className="h-5 w-5 relative -rotate-45" /> : <Sparkles className="h-5 w-5 relative" />}
-          </button>
-        </div>
+        <SocleStack
+          posCfg={posCfg}
+          isAdmin={isAdmin}
+          isMobile={isMobile}
+          accent={accent}
+          open={open}
+          setOpen={setOpen}
+          visibleItems={visibleItems}
+          triggerItem={triggerItem}
+          onDragCommit={(pos) => {
+            updateDesignSettings({ ...(designSettings as any), unifiedFab: { ...cfg, [posKey]: pos } } as any);
+            toast.success('Socle repositionné');
+          }}
+        />
       )}
 
       <VoiceCommandFab open={voiceOpen} onOpenChange={setVoiceOpen} hideTrigger />
       <RouletteFab open={rouletteOpen} onOpenChange={setRouletteOpen} hideTrigger />
     </>
+  );
+}
+
+// ── Sub-components for per-button drag ────────────────────────────────
+
+function CustomFabButton({ button, pos, isAdmin, isMobile, accent, onClick, onDragCommit, Icon }: any) {
+  const drag = useAdminDrag({ enabled: isAdmin, isMobile, onCommit: onDragCommit });
+  return (
+    <button
+      type="button"
+      onClick={() => { if (drag.blockClickRef.current) return; onClick(); }}
+      onPointerDown={drag.onPointerDown}
+      aria-label={button.label}
+      title={button.label}
+      className={cn(
+        `hw-cta-btn hw-cta-v-${button.variant} hw-cta-rd-md w-12 h-12 p-0 shadow-xl`,
+        isAdmin && 'ring-2 ring-primary/60 cursor-grab active:cursor-grabbing'
+      )}
+      style={{ ...cornerStyle(pos.corner, pos.x, pos.y), touchAction: isAdmin ? 'none' : undefined }}
+    >
+      <Icon className="h-5 w-5" />
+      {button.badge && (
+        <span className="absolute -top-1.5 -right-1.5 bg-foreground text-background text-[8px] font-bold px-1.5 py-0.5 uppercase tracking-wider">
+          {button.badge}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function SocleFreeButton({ id, label, Icon, pos, isAdmin, isMobile, accent, onClick, onDragCommit }: any) {
+  const drag = useAdminDrag({ enabled: isAdmin, isMobile, onCommit: onDragCommit });
+  return (
+    <button
+      onClick={() => { if (drag.blockClickRef.current) return; onClick(); }}
+      onPointerDown={drag.onPointerDown}
+      aria-label={label}
+      title={label}
+      className={cn(
+        'group w-12 h-12 rounded-full backdrop-blur-xl bg-background/80 border-2 border-foreground/40 text-foreground hover:scale-110 hover:bg-foreground hover:text-background transition-all shadow-xl flex items-center justify-center',
+        isAdmin && 'ring-2 ring-primary/60 cursor-grab active:cursor-grabbing'
+      )}
+      style={{ ...cornerStyle(pos.corner, pos.x, pos.y), boxShadow: `0 8px 24px ${accent}44, 0 0 0 3px ${accent}11`, touchAction: isAdmin ? 'none' : undefined }}
+    >
+      <Icon className="h-5 w-5" />
+    </button>
+  );
+}
+
+function SocleStack({ posCfg, isAdmin, isMobile, accent, open, setOpen, visibleItems, triggerItem, onDragCommit }: any) {
+  const drag = useAdminDrag({ enabled: isAdmin, isMobile, onCommit: onDragCommit });
+  return (
+    <div style={cornerStyle(posCfg.corner, posCfg.x, posCfg.y)} className="flex flex-col items-center gap-3">
+      {open && (
+        <div className="flex flex-col items-center gap-2 animate-fade-in">
+          {visibleItems.map((it: any) => {
+            const Icon = ICON_MAP[it.id] || Sparkles;
+            return (
+              <button
+                key={it.id}
+                onClick={() => triggerItem(it.id)}
+                aria-label={it.label}
+                title={it.label}
+                className="group relative w-12 h-12 rounded-full backdrop-blur-xl bg-background/70 border border-foreground/30 text-foreground hover:scale-110 hover:bg-foreground hover:text-background transition-all shadow-xl"
+                style={{ boxShadow: `0 0 24px ${accent}33` }}
+              >
+                <Icon className="h-5 w-5 mx-auto" />
+              </button>
+            );
+          })}
+        </div>
+      )}
+      <button
+        onPointerDown={drag.onPointerDown}
+        onClick={() => { if (drag.blockClickRef.current) return; setOpen((v: boolean) => !v); }}
+        aria-label={open ? 'Fermer' : 'Ouvrir le menu flottant'}
+        className={cn(
+          'relative w-14 h-14 rounded-full backdrop-blur-xl border-2 transition-all flex items-center justify-center',
+          open
+            ? 'bg-foreground text-background border-foreground rotate-45'
+            : 'bg-background/80 text-foreground border-foreground/40 hover:scale-110',
+          isAdmin && 'ring-2 ring-primary/60 cursor-grab active:cursor-grabbing'
+        )}
+        style={{ boxShadow: `0 8px 32px ${accent}55, 0 0 0 4px ${accent}11, inset 0 0 20px ${accent}22`, touchAction: isAdmin ? 'none' : undefined }}
+      >
+        <span className="absolute inset-0 rounded-full animate-pulse pointer-events-none" style={{ boxShadow: `0 0 20px ${accent}66`, opacity: 0.6 }} />
+        {open ? <X className="h-5 w-5 relative -rotate-45" /> : <Sparkles className="h-5 w-5 relative" />}
+      </button>
+    </div>
   );
 }
