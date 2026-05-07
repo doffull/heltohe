@@ -1,59 +1,60 @@
-## Hero Techwear mobile + protection des images
+# Plan : Mobile checkout + couleurs par étape
 
-### 1. Hero Techwear — mobile
+## Objectif
+Adapter le tunnel d'achat (Panier → Adresse → Livraison → Confirmation) au format mobile (360px) en évitant les débordements sur l'étape Colissimo, et donner une couleur distincte à chacune des 3 étapes.
 
-**Décalage sous le header** (`src/styles/home-techwear.css`)
-- Lire la hauteur réelle du header (56px mobile / 80px desktop) et l'appliquer à `padding-top` du `#hw-hero` au lieu de `min-height: 100vh - 70px`.
-- Sur mobile (≤768px) : `padding-top: 64px` ; ≤480px : `padding-top: 60px`.
-- Réduire `min-height` à `calc(100svh - 64px)` pour ne plus chevaucher Categories.
+## 1. Code couleur par étape
 
-**Retrait du logo dans le Hero**
-- Dans `TechwearHero.tsx` (`hw-card-logo`), supprimer le rendu du logo (img + fallback texte). Le header s'en charge déjà.
+| Étape | Couleur | Token CSS |
+|---|---|---|
+| 1 — Adresse | Bleu | `hsl(210 90% 50%)` → `--step-address` |
+| 2 — Livraison (Colissimo) | Orange | `hsl(28 95% 55%)` → `--step-delivery` |
+| 3 — Confirmation | Vert | `hsl(142 70% 42%)` → `--step-confirm` |
 
-**Inversion de l'ordre des panneaux droits**
-- Dans `TechwearHero.tsx`, réordonner les panneaux : 1) couleurs, 2) tailles, 3) stats (au lieu de stats → couleurs → tailles).
-- Sur mobile, ajuster les `animation-delay` correspondants dans le CSS pour refléter le nouvel ordre.
+- Ajout des 3 tokens HSL dans `src/index.css` (light + dark).
+- Le numéro d'étape actif et l'icône du titre de section utilisent la couleur correspondante.
+- La barre de progression colore les pastilles (active = couleur étape ; passée = même couleur en opacité 60%).
+- Le bouton CTA principal de chaque étape reprend la couleur de son étape.
 
-**Compactage couleurs/tailles + stock visible**
-- Couleurs : passer en grille horizontale compacte sur mobile (`flex-wrap`, swatches ronds 22px, libellé en tooltip + nom court sous le swatch sélectionné). Sous chaque swatch : pastille colorée (vert ≥10, orange 1-9, rouge 0) + nombre de stock total pour cette couleur.
-- Tailles : passer en grille de pills compactes (chip 36×36) sans la colonne "Size" répétée. Sous chaque taille : pastille + nombre selon la couleur active. Tailles à 0 : barrées et désactivées.
+## 2. Mobile fixes — `src/pages/Checkout.tsx`
 
-**Source du stock**
-- Nouveau hook `src/hooks/useProductStock.ts` qui interroge `inventory` + `stock_levels` pour `productId` et retourne `{ bySize: Record<size, qty>, byColor: Record<color, qty>, bySizeColor: Record<"size|color", qty> }`. Quantité disponible = `quantity - reserved`.
-- Schema actuel `stock_levels` n'a pas de colonne `color` — on agrège par `size` uniquement, et on calcule `byColor` à partir des `colorOptions` du produit (somme par couleur si une convention existe ; sinon afficher le total inventory comme stock couleur). Pour rester correct sans migration : afficher la pastille **uniquement par taille**. Pour les couleurs : pastille verte si `total > 0`, grise si `0`.
-- Le hook n'est appelé que si `config.productId` est défini ; sinon pastilles masquées.
+### Barre de progression (lignes 303-326)
+- Afficher le label sous la pastille en `text-[10px]` à partir de 360px (suppression du `hidden sm:block`).
+- Réduire largeur du séparateur (`w-4 sm:w-8`).
+- Layout `flex-1` pour centrage propre.
 
-### 2. Protection des images (niveau maximum)
+### Étape 2 — Mode de livraison (zones qui débordent)
+- Boutons Colissimo : passer le contenu en `flex-col gap-2 sm:flex-row sm:items-center sm:justify-between` pour que le prix passe sous le titre en mobile.
+- Prix : `text-sm whitespace-nowrap`, titre `break-words`.
+- Liste des points relais (lignes 466-499) :
+  - `p-3` → `p-2.5` mobile.
+  - Nom point relais : retirer `truncate`, autoriser `break-words` + `text-xs leading-tight`.
+  - Adresse / horaires : `text-[11px]` mobile, `ml-5` → `ml-4`.
+  - Distance : passer en haut à droite via `flex-col items-end`, ne plus chevaucher le texte.
+- Bandeau récap "Point relais sélectionné" : adresse en `break-words`.
+- Bandeau "Plus que X€" : `text-[11px]` mobile.
+- Récap commande sticky (sidebar) : sur mobile (`<lg`), passer en accordéon repliable via `<details>` pour libérer l'écran. Sticky désactivé `<lg`.
+- Boutons Retour / Confirmer : `flex-col sm:flex-row gap-2`, bouton confirmer prend toute la largeur mobile, montant en `text-sm` mobile.
 
-Nouveau composant global `src/components/security/ImageProtection.tsx` monté dans `src/App.tsx` :
-- Bloque `contextmenu`, `dragstart`, `selectstart`, `copy` au niveau document.
-- Bloque les raccourcis : `F12`, `Ctrl+Shift+I/J/C`, `Ctrl+U`, `Ctrl+S`, `Cmd+Opt+I/J/C`, `Cmd+S`.
-- Détection DevTools (différence `outerHeight - innerHeight > 200`) → overlay d'avertissement (non bloquant, juste dissuasif).
+### Étape 1 — Adresse
+- Padding container `p-4 sm:p-6`.
+- Inputs : `text-base` (évite le zoom iOS).
 
-Styles globaux dans `src/index.css` :
-```css
-img { -webkit-user-drag: none; user-select: none; pointer-events: none; }
-img[data-allow-interact] { pointer-events: auto; }
-.protected-image-wrap { position: relative; }
-.protected-image-wrap::after {
-  content: ''; position: absolute; inset: 0; z-index: 2;
-  background: transparent; pointer-events: auto;
-}
-```
-- L'overlay transparent empêche "Enregistrer l'image sous". Les boutons (swatches couleurs ProductCard) restent au-dessus via `z-index` et l'overlay sera appliqué via une classe `.protected-image-wrap` posée sur les conteneurs d'images du Hero, ProductCard et ProductImageGallery.
-- Le swatch couleur du Hero qui change l'image n'utilise pas l'image elle-même comme cible : pas d'impact.
+### Étape 3 — Confirmation
+- Container `p-5 sm:p-8`, encadré IBAN passe en `text-[11px]` mobile, `break-all` sur la référence.
 
-### 3. Validation
+## 3. Mobile fixes — `src/pages/Cart.tsx`
+- Carte produit : image `w-20 h-20 sm:w-24 sm:h-24`, prix `text-sm` mobile pour ne pas déborder.
+- Récap : passer en accordéon `<details open>` sur `<lg` ou afficher sous les articles en pleine largeur (sticky désactivé mobile).
+- Bouton "PASSER COMMANDE" : couleur étape 1 (bleu) pour annoncer la suite.
 
-- Tests visuels mobile 360×621 et 414×896 : Hero ne déborde plus, ordre couleurs/tailles → stats, pastilles stock visibles.
-- Test ProductDetail : vérifier que clic-droit/sélection bloqués mais ajout au panier fonctionne.
+## 4. Tests visuels
+- Screenshot 360x800 sur `/panier`, `/checkout` étapes 1, 2 (avec recherche relais 75001), 3.
+- Vérifier qu'aucun texte/prix ne dépasse, que les 3 couleurs sont bien distinctes.
 
-### Fichiers touchés
+## Fichiers modifiés
+- `src/index.css` (3 tokens couleur)
+- `src/pages/Checkout.tsx` (layout mobile + couleurs)
+- `src/pages/Cart.tsx` (layout mobile + couleur CTA)
 
-- `src/styles/home-techwear.css` (mobile padding, animation-delays, panel order, sizes/colors compacts)
-- `src/components/home/TechwearHero.tsx` (suppr logo, réordonne panels, intègre stock pastilles)
-- `src/hooks/useProductStock.ts` (nouveau)
-- `src/components/security/ImageProtection.tsx` (nouveau)
-- `src/App.tsx` (mount ImageProtection)
-- `src/index.css` (règles globales images)
-- `src/components/products/ProductCard.tsx` + `src/components/product/ProductImageGallery.tsx` (classe `protected-image-wrap`)
+Aucune modification de la logique métier (calcul prix, appel Colissimo, RPC commande).

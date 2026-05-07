@@ -65,6 +65,11 @@
     --logo-bevel-size: 30px;
     --panel-bevel-size: 20px;
     --glass-blur-strength: 10px;
+
+    /* Checkout step colors */
+    --step-address: 210 90% 50%;
+    --step-delivery: 28 95% 55%;
+    --step-confirm: 142 70% 42%;
   }
 
   .dark {
