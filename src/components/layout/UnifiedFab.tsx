@@ -66,6 +66,7 @@ export function UnifiedFab() {
   const dockShowVoice = cfg.dockShowVoice !== false;
   const dockShowChat = cfg.dockShowChat !== false;
   const dockShowVisualEditor = cfg.dockShowVisualEditor !== false;
+  const dockShowRoulette = cfg.dockShowRoulette !== false;
 
   const voiceEnabled = designSettings.voiceCommandEnabled;
   const hintEnabled = (designSettings as any).voiceOnboardingHint !== false;
@@ -202,9 +203,12 @@ export function UnifiedFab() {
           dockShowVoice={dockShowVoice}
           dockShowChat={dockShowChat}
           dockShowVisualEditor={dockShowVisualEditor && isAdmin}
+          dockShowRoulette={dockShowRoulette}
+          rouletteEnabled={!!rouletteConfig?.enabled}
           customs={visibleCustom.filter((b) => !freeCustomIds.includes(b.id))}
           onVoice={() => triggerItem('voice')}
           onChat={() => triggerItem('chat')}
+          onRoulette={() => triggerItem('roulette')}
           onVisualEditor={() => ve?.setIsOpen(!ve.isOpen)}
           onCustom={(b) => handleAction(b)}
         />
@@ -462,10 +466,11 @@ function SocleStack({ posCfg, isAdmin, isMobile, accent, open, setOpen, visibleI
   );
 }
 
-function Dock({ dockPos, dockDir, dockSize, dockBlur, dockDrag, isAdmin, accent, voiceEnabled, dockShowVoice, dockShowChat, dockShowVisualEditor, customs, onVoice, onChat, onVisualEditor, onCustom }: any) {
+function Dock({ dockPos, dockDir, dockSize, dockBlur, dockDrag, isAdmin, accent, voiceEnabled, dockShowVoice, dockShowChat, dockShowVisualEditor, dockShowRoulette, rouletteEnabled, customs, onVoice, onChat, onRoulette, onVisualEditor, onCustom }: any) {
   const items: Array<{ key: string; Icon: any; label: string; onClick: () => void }> = [];
   if (dockShowVoice && voiceEnabled) items.push({ key: 'voice', Icon: Mic, label: 'Voix', onClick: onVoice });
   if (dockShowChat) items.push({ key: 'chat', Icon: Bot, label: 'Assistant', onClick: onChat });
+  if (dockShowRoulette && rouletteEnabled) items.push({ key: 'roulette', Icon: Gift, label: 'Jeu-concours', onClick: onRoulette });
   customs.forEach((b: any) => items.push({ key: b.id, Icon: getIcon(b.icon), label: b.label, onClick: () => onCustom(b) }));
   if (dockShowVisualEditor) items.push({ key: 've', Icon: Pencil, label: 'Éditeur visuel', onClick: onVisualEditor });
   if (items.length === 0) return null;

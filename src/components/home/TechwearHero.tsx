@@ -188,15 +188,28 @@ function TechwearHeroSlideView({ config, productMissing, slideId }: { config: Sl
   const [badgePos, setBadgePos] = useState<FreePos | undefined>(config.modelBadgePos);
   const [panelPos, setPanelPos] = useState<FreePos | undefined>(config.sidePanelPos);
   useEffect(() => { setBadgePos(config.modelBadgePos); setPanelPos(config.sidePanelPos); }, [config.modelBadgePos, config.sidePanelPos]);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  // Clamp panel inside container if persisted position pushes it offscreen
+  useEffect(() => {
+    if (!panelPos || !containerRef.current || !panelRef.current) return;
+    const c = containerRef.current.getBoundingClientRect();
+    const p = panelRef.current.getBoundingClientRect();
+    const outside = p.right < c.left + 8 || p.left > c.right - 8 || p.bottom < c.top + 8 || p.top > c.bottom - 8;
+    if (outside) {
+      setPanelPos(undefined);
+      persistPos('panel', undefined as any);
+    }
+  }, [panelPos]);
 
-  const persistPos = (which: 'badge' | 'panel', pos: FreePos) => {
+  const persistPos = (which: 'badge' | 'panel', pos: FreePos | undefined) => {
     const cur = (designSettings as any).techwearHero || {};
     const slides = Array.isArray(cur.slides) ? cur.slides : null;
+    const key = which === 'badge' ? 'modelBadgePos' : 'sidePanelPos';
     if (slides && slideId) {
-      const next = slides.map((s: any) => s.id === slideId ? { ...s, [which === 'badge' ? 'modelBadgePos' : 'sidePanelPos']: pos } : s);
-      updateDesignSettings({ techwearHero: { ...cur, slides: next, ...(slides[0]?.id === slideId ? { [which === 'badge' ? 'modelBadgePos' : 'sidePanelPos']: pos } : {}) } } as any);
+      const next = slides.map((s: any) => s.id === slideId ? { ...s, [key]: pos } : s);
+      updateDesignSettings({ techwearHero: { ...cur, slides: next, ...(slides[0]?.id === slideId ? { [key]: pos } : {}) } } as any);
     } else {
-      updateDesignSettings({ techwearHero: { ...cur, [which === 'badge' ? 'modelBadgePos' : 'sidePanelPos']: pos } } as any);
+      updateDesignSettings({ techwearHero: { ...cur, [key]: pos } } as any);
     }
   };
 
@@ -409,16 +422,25 @@ function TechwearHeroSlideView({ config, productMissing, slideId }: { config: Sl
           </div>
 
           <div
+            ref={panelRef}
             className="hw-right"
             style={panelStyleFree}
           >
             {isAdmin && (
-              <div
-                onPointerDown={startDrag('panel')}
-                className="text-[9px] uppercase tracking-widest font-bold bg-foreground text-background px-2 py-1 cursor-grab active:cursor-grabbing select-none"
-                style={{ touchAction: 'none' }}
-                title="Glisser pour repositionner le panneau"
-              >⠿ Panneau (déplacer)</div>
+              <div className="flex items-center gap-1">
+                <div
+                  onPointerDown={startDrag('panel')}
+                  className="text-[9px] uppercase tracking-widest font-bold bg-foreground text-background px-2 py-1 cursor-grab active:cursor-grabbing select-none"
+                  style={{ touchAction: 'none' }}
+                  title="Glisser pour repositionner le panneau"
+                >⠿ Panneau (déplacer)</div>
+                <button
+                  type="button"
+                  onClick={() => { setPanelPos(undefined); persistPos('panel', undefined as any); }}
+                  className="text-[9px] uppercase tracking-widest font-bold bg-background text-foreground border border-foreground px-2 py-1"
+                  title="Réinitialiser la position du panneau"
+                >⟳ Reset</button>
+              </div>
             )}
             {config.showColors && (
               <div className="hw-panel hw-panel--colors" role="radiogroup" aria-label="Choisir une couleur">

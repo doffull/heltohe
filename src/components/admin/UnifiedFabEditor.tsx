@@ -41,6 +41,7 @@ export function UnifiedFabEditor() {
   const [dockShowVoice, setDockShowVoice] = useState<boolean>(initial.dockShowVoice !== false);
   const [dockShowChat, setDockShowChat] = useState<boolean>(initial.dockShowChat !== false);
   const [dockShowVisualEditor, setDockShowVisualEditor] = useState<boolean>(initial.dockShowVisualEditor !== false);
+  const [dockShowRoulette, setDockShowRoulette] = useState<boolean>(initial.dockShowRoulette !== false);
   const rouletteFab = initial.rouletteFab || {};
   const [rfVariant, setRfVariant] = useState<string>(rouletteFab.variant || 'glossy');
   const [rfSize, setRfSize] = useState<string>(rouletteFab.size || 'md');
@@ -63,7 +64,7 @@ export function UnifiedFabEditor() {
         enabled, accentColor: accent, mode, groupSide, groupOffsetY,
         clusterDir,
         dockDir, dockSize, dockBlur,
-        dockShowVoice, dockShowChat, dockShowVisualEditor,
+        dockShowVoice, dockShowChat, dockShowVisualEditor, dockShowRoulette,
         rouletteFab: {
           ...rouletteFab,
           variant: rfVariant, size: rfSize, shape: rfShape,
@@ -143,9 +144,10 @@ export function UnifiedFabEditor() {
                   <Slider value={[dockBlur]} min={0} max={48} step={2} onValueChange={([v]) => setDockBlur(v)} />
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                 <label className="flex items-center justify-between border rounded p-2 text-xs">Voix <Switch checked={dockShowVoice} onCheckedChange={setDockShowVoice} /></label>
                 <label className="flex items-center justify-between border rounded p-2 text-xs">Chatbot <Switch checked={dockShowChat} onCheckedChange={setDockShowChat} /></label>
+                <label className="flex items-center justify-between border rounded p-2 text-xs">Jeu-concours <Switch checked={dockShowRoulette} onCheckedChange={setDockShowRoulette} /></label>
                 <label className="flex items-center justify-between border rounded p-2 text-xs">Éditeur visuel (admin) <Switch checked={dockShowVisualEditor} onCheckedChange={setDockShowVisualEditor} /></label>
               </div>
               <p className="text-[10px] text-muted-foreground">Les boutons custom (Notifications, Message…) sont automatiquement inclus sauf s'ils sont marqués « Isolé » ci-dessous.</p>
@@ -320,7 +322,46 @@ export function UnifiedFabEditor() {
               Animation pulsation <Switch checked={rfPulse} onCheckedChange={setRfPulse} />
             </label>
           </div>
-          <p className="text-[10px] text-muted-foreground">Astuce : en mode admin, glissez le bouton Jeu-concours directement sur la home pour ajuster sa position. Le centre est idéal pour maximiser la visibilité.</p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                const reset = { corner: rfCorner, x: 0, y: 0 };
+                await updateDesignSettings({
+                  ...(designSettings as any),
+                  unifiedFab: {
+                    ...initial,
+                    rouletteFab: { ...rouletteFab, position_desktop: reset, position_mobile: reset },
+                  },
+                } as any);
+                toast.success('Position du Jeu-concours réinitialisée');
+              }}
+            >⟳ Réinitialiser la position du Jeu-concours</Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                const cur = (designSettings as any).unifiedFab || {};
+                await updateDesignSettings({
+                  ...(designSettings as any),
+                  unifiedFab: {
+                    ...cur,
+                    dockPos_desktop: { corner: 'bc', x: 0, y: 24 },
+                    dockPos_mobile: { corner: 'bc', x: 0, y: 16 },
+                    clusterPos_desktop: { corner: 'br', x: 24, y: 90 },
+                    clusterPos_mobile: { corner: 'br', x: 16, y: 90 },
+                    position_desktop: { corner: 'br', x: 24, y: 24 },
+                    position_mobile: { corner: 'br', x: 16, y: 16 },
+                  },
+                } as any);
+                toast.success('Toutes les positions ont été réinitialisées');
+              }}
+            >⟳ Réinitialiser toutes les positions (Dock, Cluster, Socle)</Button>
+          </div>
+          <p className="text-[10px] text-muted-foreground">Astuce : en mode admin, glissez le bouton Jeu-concours directement sur la home pour ajuster sa position. Le centre est idéal pour maximiser la visibilité. Touche Échap pendant le drag pour annuler.</p>
         </div>
 
         <div className="flex justify-end">

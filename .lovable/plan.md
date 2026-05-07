@@ -1,66 +1,55 @@
-# Plan – Fixer les drags + Bouton Message dans le header
+# Audit & corrections drag admin
 
-## 1. Bug "Jeu-concours qui se bloque en haut à gauche"
+## Diagnostic du bug "il saute en haut à gauche"
 
-Cause identifiée dans `src/components/home/RouletteFab.tsx` :
+Dans `src/lib/fabPosition.ts`, la fonction `pxToPos(left, top, w, h, btn = 56)` utilise le 5ᵉ argument `btn` à la fois comme **largeur** ET comme **hauteur** de l'élément :
 
-- Son `onPointerDown` est une **copie locale** du helper de drag, et il :
-  - Calcule la nouvelle position avec `btn = 56` codé en dur, alors que le bouton roulette est un **pill plus large** (~140 px). `pxToPos(...)` calcule donc un mauvais centre (`cx = left + 28`), ce qui mappe le drop en `tl` même quand l'utilisateur lâche au centre/droite → le bouton "saute" en haut-gauche.
-  - Fait `target.style.cssText = ''` après commit, ce qui efface aussi la classe de transform pendant le frame avant le re-render React.
-  - Ne clamp pas dans le viewport (peut sortir de l'écran).
+```
+y: bottom ? h - top - btn : top   // ← devrait être hauteur réelle, pas largeur
+```
 
-### Correctif
-- **Supprimer** le `onPointerDown` local de `RouletteFab.tsx`.
-- Exporter `useAdminDrag` depuis `UnifiedFab.tsx` (le déplacer dans `src/lib/useAdminDrag.ts`) et l'utiliser dans `RouletteFab` :
-  - Mesurer dynamiquement `offsetWidth` du bouton et le passer à `pxToPos`.
-  - Clamp `left/top` dans `[0, viewport - size]`.
-  - Nettoyer uniquement les propriétés inline posées (`left/top/right/bottom/transform/position`) au lieu d'un `cssText = ''`.
-- Conserver le persist via `updateDesignSettings({ unifiedFab: { ...cfg, rouletteFab: { ...rfab, [posKey]: pos } } })`.
+`useAdminDrag` ne lui passe que la largeur (`w`) du bouton. Pour la pill « Jeu-concours » (~220×48), la hauteur calculée est fausse → la position commit est hors-champ → au re-render, `cornerStyle` la place collée à un coin (souvent `tl`/`tr`) avec un offset négatif clampé à 0.
 
-## 2. Audit & harmonisation des drags admin
+Même cause pour le centre vertical (`vertCenter`) qui utilise `cy = top + btn/2` au lieu de `top + h/2`.
 
-Bugs constatés sur la page d'accueil quand on déplace les outils :
-- `useAdminDrag` (Dock / Cluster / Group / Custom / SocleFree) calcule correctement `pxToPos`, mais utilise toujours `size = 56`. Pour le **Dock** (pill horizontal large) et le **Cluster** (bloc), ça fausse aussi le snap → impression de "blocage".
-- Les boutons libres (free / cluster-free) n'ont pas de **clamp viewport** → on peut les pousser sous le header / sidebar.
+## Corrections
 
-### Correctif
-- Étendre `useAdminDrag` pour accepter `getSize()` qui lit `offsetWidth/Height` au pointerdown, et l'utiliser pour : clamp + `pxToPos`.
-- Pour les blocs (Dock, Cluster, Group), passer la **largeur réelle du conteneur** afin que le snap centre/coin soit correct.
-- Ajouter une **garde de safe area** : ne pas déposer sous la sidebar gauche (≥ 64 px / 256 px en lg) ni sous le header (≥ 56 px) — ces marges sont déjà connues de `Header.tsx`.
-- Ajouter un toast unique "Position enregistrée" plutôt qu'un toast par type pour cohérence.
+### 1. `src/lib/fabPosition.ts` — accepter largeur ET hauteur
+- Nouvelle signature : `pxToPos(left, top, vw, vh, elW = 56, elH = elW)`
+- Utiliser `elW` partout pour X et `elH` partout pour Y.
+- `posToPx` mis à jour de la même façon (utilisé par les previews).
+- `cornerStyle` inchangé (déjà correct).
 
-## 3. Bouton "Message client" dans le header (comme Notification)
+### 2. `src/lib/useAdminDrag.ts` — passer la hauteur réelle
+- Mesurer `h` au pointerdown (déjà fait) et le passer : `pxToPos(left, top, vw, vh, w, h)`.
+- Bonus : exposer `reset()` qui efface la position en commit (`onCommit(null as any)` ne convient pas) → ajouter une 2ᵉ option `onReset` optionnelle au hook (utilisée plus tard).
 
-Aujourd'hui :
-- La cloche Notif (admin) est un FAB flottant `fixed bottom-20 right-6` dans `MainLayout.tsx` (l. 546-589).
-- Le bouton Message est seulement dans le `ChatBotWidget` (côté client) et n'existe pas pour l'admin dans le header.
+### 3. `src/components/home/RouletteFab.tsx` — bouton Reset + ne plus jamais sortir
+- Ajouter, en mode admin, un mini bouton « ⟳ » accolé à la pill qui remet `position_desktop` / `position_mobile` à `{ corner: 'cc', x: 0, y: 0 }` (centre absolu).
+- Un raccourci clavier `Echap` pendant un drag annule l'opération (relâche les listeners sans commit).
 
-### Refactor
-- **Créer** `src/components/layout/HeaderAdminTools.tsx` qui regroupe :
-  - 🔔 **Notifications** (déplacer le `Sheet` actuel de `MainLayout` vers ce composant).
-  - ✉️ **Messages clients** (nouveau bouton header, ouvre un `Sheet` listant les conversations chat). Source : table déjà utilisée par `ChatBotWidget` / `contact-chat` edge function — exposer via un hook `useCustomerChats` existant ou minimal (lecture des messages reçus).
-  - Style identique : icône dans un cercle `bg-foreground text-background`, badge rouge avec compteur non-lus.
-- **Monter** `HeaderAdminTools` dans `Header.tsx` (zone droite, avant le sélecteur de langue) — affiché uniquement si `isAdmin`.
-- **Supprimer** le FAB cloche flottant de `MainLayout.tsx`.
+### 4. `src/components/admin/UnifiedFabEditor.tsx` — bouton Reset global
+- Dans le bloc « 🎁 Bouton Jeu-concours » : ajouter un bouton « Réinitialiser la position » qui set `position_desktop = { corner: rfCorner, x: 0, y: 0 }` et `position_mobile = idem`.
+- Dans le bloc Mode Dock : déjà couvert par `dockPos` mais ajouter aussi un Reset position dock + reset position cluster + reset socle, regroupés dans une rangée « Réinitialiser les positions ».
 
-## 4. Détails techniques
+### 5. Toujours présent dans le Dock — fallback Jeu-concours
+Suite au choix utilisateur (« les deux : icône dans le dock ET bouton flottant »), inclure toujours une icône Jeu-concours dans le Dock unifié, en plus du FAB libre :
+- Dans `UnifiedFab.tsx` `<Dock />` : ajouter une icône « Gift » qui appelle `setRouletteOpen(true)` quand `rouletteConfig?.enabled` (réglable par un nouveau switch `dockShowRoulette` dans l'éditeur, défaut **true**).
+- L'icône reste dans le dock même si le FAB libre est masqué.
 
-Fichiers touchés :
-- `src/lib/useAdminDrag.ts` *(nouveau, extrait de UnifiedFab)*
-- `src/components/layout/UnifiedFab.tsx` *(import du hook, fix size dynamique sur Dock/Cluster/Group)*
-- `src/components/home/RouletteFab.tsx` *(remplace drag local par hook commun, fix size dynamique)*
-- `src/components/layout/HeaderAdminTools.tsx` *(nouveau)*
-- `src/components/layout/Header.tsx` *(monter HeaderAdminTools si admin)*
-- `src/components/layout/MainLayout.tsx` *(retirer la cloche flottante + Sheet, déplacer logique vers HeaderAdminTools)*
-- `src/hooks/useCustomerChats.ts` *(nouveau, lecture des conversations chatbot)*
+### 6. `src/components/home/TechwearHero.tsx` — panneau couleur/taille hors champ
+La fonction `pxToCornerPos` est correcte (passe `elW`/`elH`), mais le commit ne **clamp** pas si la valeur initiale du config place le panneau hors du conteneur (cas où on change de slide ou le conteneur rétrécit).
+- Dans `freeStyle`, clamp `p.x` et `p.y` à `[0, container - element]` au moment du calcul. Comme `freeStyle` ne connaît pas la taille du conteneur, exposer plutôt un clamp via `useEffect` au mount du composant : si `panelPos.x` ou `.y` rendent l'élément invisible (offsetParent rect en dehors du conteneur), forcer un reset à `{ corner: 'br', x: 24, y: 24 }`.
+- Ajouter, en mode admin, deux petits boutons « ⟳ » au-dessus du panneau et du badge model pour forcer un reset (`setPanelPos(undefined)` + `persistPos` avec valeur défaut). Sans admin, les boutons sont cachés.
 
-Aucun changement de schéma DB ni de backend.
+## Fichiers modifiés
+- `src/lib/fabPosition.ts`
+- `src/lib/useAdminDrag.ts`
+- `src/components/home/RouletteFab.tsx`
+- `src/components/admin/UnifiedFabEditor.tsx`
+- `src/components/layout/UnifiedFab.tsx` (icône Gift dans le Dock + switch `dockShowRoulette`)
+- `src/components/home/TechwearHero.tsx` (clamp + bouton reset admin)
 
-## 5. Validation
-
-- Vérifier en dev (`/`) que :
-  - Le bouton Jeu-concours suit la souris exactement et reste à l'endroit où on le lâche (centre, coins, bords).
-  - Dock / Cluster / Group se déplacent sans saut.
-  - Les boutons ne se cachent jamais sous la sidebar/header.
-  - Header admin affiche les 2 icônes (Bell + Mail) avec compteurs.
-  - Plus aucun FAB cloche en bas-droite.
+## Hors scope
+- Pas de changement DB / RLS / edge functions.
+- Pas de refonte du système de drag : on corrige le bug racine et on ajoute des sécurités (reset, clamp).

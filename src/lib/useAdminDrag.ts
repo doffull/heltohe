@@ -50,17 +50,7 @@ export function useAdminDrag(opts: {
       target.style.transform = 'none';
     };
 
-    const up = () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-      if (!dragging) return;
-      blockClickRef.current = true;
-      setTimeout(() => { blockClickRef.current = false; }, 80);
-      const left = parseFloat(target.style.left || '0');
-      const top = parseFloat(target.style.top || '0');
-      const pos = pxToPos(left, top, window.innerWidth, window.innerHeight, w);
-      onCommit(pos);
-      // Clear only the props we set; re-render places via cornerStyle
+    const cleanupStyles = () => {
       target.style.left = '';
       target.style.top = '';
       target.style.right = '';
@@ -69,8 +59,33 @@ export function useAdminDrag(opts: {
       target.style.transform = '';
     };
 
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('keydown', onKey);
+      if (!dragging) return;
+      blockClickRef.current = true;
+      setTimeout(() => { blockClickRef.current = false; }, 80);
+      const left = parseFloat(target.style.left || '0');
+      const top = parseFloat(target.style.top || '0');
+      const pos = pxToPos(left, top, window.innerWidth, window.innerHeight, w, h);
+      onCommit(pos);
+      cleanupStyles();
+    };
+
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') {
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+        window.removeEventListener('keydown', onKey);
+        dragging = false;
+        cleanupStyles();
+      }
+    };
+
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
+    window.addEventListener('keydown', onKey);
   };
 
   return { onPointerDown, blockClickRef };
