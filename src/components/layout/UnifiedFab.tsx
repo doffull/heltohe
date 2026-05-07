@@ -108,8 +108,8 @@ export function UnifiedFab() {
 
   const cfg = (designSettings as any).unifiedFab || {};
   const accent = cfg.accentColor || '#ffffff';
-  const mode: 'socle' | 'free' | 'grouped' | 'cluster' =
-    cfg.mode === 'free' ? 'free' : cfg.mode === 'grouped' ? 'grouped' : cfg.mode === 'cluster' ? 'cluster' : 'socle';
+  const mode: 'socle' | 'free' | 'grouped' | 'cluster' | 'dock' =
+    cfg.mode === 'free' ? 'free' : cfg.mode === 'grouped' ? 'grouped' : cfg.mode === 'cluster' ? 'cluster' : cfg.mode === 'dock' ? 'dock' : 'socle';
   const groupSide: 'left' | 'right' = cfg.groupSide === 'right' ? 'right' : 'left';
   const groupOffsetY: number = typeof cfg.groupOffsetY === 'number' ? cfg.groupOffsetY : 220;
   const items = (cfg.items && cfg.items.length ? cfg.items : DEFAULT_ITEMS) as any[];
@@ -119,6 +119,13 @@ export function UnifiedFab() {
   const clusterPos: FabPos = (isMobile ? cfg.clusterPos_mobile : cfg.clusterPos_desktop) || { corner: 'br', x: 16, y: 90 };
   const clusterDir: 'row' | 'col' = cfg.clusterDir === 'row' ? 'row' : 'col';
   const freeCustomIds: string[] = Array.isArray(cfg.freeCustomIds) ? cfg.freeCustomIds : [];
+  const dockPos: FabPos = (isMobile ? cfg.dockPos_mobile : cfg.dockPos_desktop) || { corner: 'bc', x: 0, y: 24 };
+  const dockDir: 'row' | 'col' = cfg.dockDir === 'col' ? 'col' : 'row';
+  const dockSize: number = cfg.dockSize || 44;
+  const dockBlur: number = cfg.dockBlur ?? 24;
+  const dockShowVoice = cfg.dockShowVoice !== false;
+  const dockShowChat = cfg.dockShowChat !== false;
+  const dockShowVisualEditor = cfg.dockShowVisualEditor !== false;
 
   const voiceEnabled = designSettings.voiceCommandEnabled;
   const hintEnabled = (designSettings as any).voiceOnboardingHint !== false;
