@@ -81,6 +81,8 @@ export default function AdminHomeIcons() {
         <Button onClick={handleAdd} className="gap-1.5"><Plus className="h-4 w-4" /> Ajouter un bouton</Button>
       </div>
 
+      <UnifiedFabEditor />
+
       {isLoading && <p className="text-sm text-muted-foreground">Chargement…</p>}
 
       {!isLoading && buttons.length === 0 && (
