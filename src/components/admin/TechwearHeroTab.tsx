@@ -17,6 +17,8 @@ import type { TechwearHeroConfig, TechwearHeroSlideData, TechwearColorOption, Te
 import { toast } from 'sonner';
 import { TechwearHero } from '@/components/home/TechwearHero';
 import { getSlides, makeEmptySlide, duplicateSlide } from '@/lib/techwearHero';
+import { HERO_PRESETS } from '@/config/techwearHeroPresets';
+import { IconPicker } from '@/components/admin/IconPicker';
 
 const ALL_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
@@ -176,7 +178,63 @@ export function TechwearHeroTab() {
           <Button size="sm" onClick={handleSave} disabled={saving}>
             {saving ? 'Enregistrement…' : 'Enregistrer'}
           </Button>
+      </div>
+
+      {/* PRESETS */}
+      <Card className="p-4 border-2 border-primary/40">
+        <div className="mb-3">
+          <h3 className="text-sm font-bold uppercase tracking-wider">Presets layout + skin + animation</h3>
+          <p className="text-xs text-muted-foreground">Applique un look complet (panneau, badge, anim titre, stats) à la slide active</p>
         </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {HERO_PRESETS.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => {
+                update({
+                  sidePanelPos: p.patch.sidePanelPos as any,
+                  modelBadgePos: p.patch.modelBadgePos as any,
+                  cardSize: p.patch.cardSize,
+                  titleAnimation: p.patch.titleAnimation,
+                  titleIcon: p.patch.titleIcon,
+                  statsStyle: p.patch.statsStyle,
+                  skinTokens: p.patch.skinTokens,
+                } as any);
+                toast.success(`Preset « ${p.name} » appliqué`);
+              }}
+              className="text-left border-2 border-border hover:border-primary p-3 transition"
+              style={{ background: (p.patch.skinTokens.accent || '#000') + '14' }}
+            >
+              <div className="text-2xl mb-1">{p.emoji}</div>
+              <div className="text-sm font-bold uppercase tracking-wider">{p.name}</div>
+              <div className="text-[10px] text-muted-foreground mt-1">{p.description}</div>
+              <div className="mt-2 flex flex-wrap gap-1">
+                <span className="text-[9px] px-1.5 py-0.5 bg-foreground text-background uppercase tracking-wider">{p.patch.titleAnimation}</span>
+                <span className="text-[9px] px-1.5 py-0.5 border border-foreground/40 uppercase tracking-wider">{p.patch.statsStyle}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-3 border-t pt-3">
+          <Label className="text-xs uppercase tracking-wider">Animation titre</Label>
+          <Select
+            value={(active as any).titleAnimation || 'fade-up'}
+            onValueChange={(v) => update({ titleAnimation: v } as any)}
+          >
+            <SelectTrigger className="w-40 h-8"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {(['none','fade-up','typewriter','glitch','neon','slide-in'] as const).map((a) => (
+                <SelectItem key={a} value={a}>{a}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Label className="text-xs uppercase tracking-wider">Icône titre</Label>
+          <div className="w-48">
+            <IconPicker value={(active as any).titleIcon || 'Sparkles'} onChange={(v) => update({ titleIcon: v } as any)} />
+          </div>
+        </div>
+      </Card>
       </div>
 
       {/* Slider settings */}

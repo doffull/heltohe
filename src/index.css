@@ -682,3 +682,50 @@ img {
   background: transparent;
   pointer-events: auto;
 }
+
+/* ===== Animated title effects ===== */
+.animated-title-glitch {
+  position: relative;
+  display: inline-block;
+}
+.animated-title-glitch::before,
+.animated-title-glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.85;
+}
+.animated-title-glitch::before {
+  color: #ff00aa;
+  transform: translate(2px, 0);
+  animation: glitch-1 2.4s infinite steps(1);
+}
+.animated-title-glitch::after {
+  color: #00f0ff;
+  transform: translate(-2px, 0);
+  animation: glitch-2 2.4s infinite steps(1);
+}
+@keyframes glitch-1 {
+  0%, 92%, 100% { clip-path: inset(0 0 90% 0); }
+  93% { clip-path: inset(20% 0 60% 0); }
+  95% { clip-path: inset(60% 0 20% 0); }
+  97% { clip-path: inset(40% 0 40% 0); }
+}
+@keyframes glitch-2 {
+  0%, 91%, 100% { clip-path: inset(85% 0 5% 0); }
+  92% { clip-path: inset(10% 0 70% 0); }
+  94% { clip-path: inset(50% 0 30% 0); }
+  96% { clip-path: inset(30% 0 50% 0); }
+}
+.animated-title-neon {
+  text-shadow:
+    0 0 4px currentColor,
+    0 0 12px currentColor,
+    0 0 24px hsl(var(--primary) / 0.7);
+  animation: neon-flicker 3.2s infinite;
+}
+@keyframes neon-flicker {
+  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; }
+  20%, 22%, 24%, 55% { opacity: 0.55; }
+}

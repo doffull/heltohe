@@ -15,6 +15,8 @@ import { VisualEditorProvider } from "@/components/visual-editor/VisualEditorPro
 import { VisualEditorToggle } from "@/components/visual-editor/VisualEditorToggle";
 import { VisualEditorPanel } from "@/components/visual-editor/VisualEditorPanel";
 import { ImageProtection } from "@/components/security/ImageProtection";
+import { AdminViewportProvider } from "@/context/AdminViewportContext";
+import { AdminDragBar } from "@/components/admin/AdminDragBar";
 
 // Pages
 import Home from "./pages/Home";
@@ -159,6 +161,7 @@ function AdminVisualEditor() {
     <>
       <VisualEditorToggle />
       <VisualEditorPanel />
+      <AdminDragBar />
     </>
   );
 }
@@ -167,6 +170,7 @@ function AppShell() {
   const [showSplash, setShowSplash] = useState(true);
   return (
     <AppProvider>
+      <AdminViewportProvider>
       <VisualEditorProvider>
         <TooltipProvider>
           <FaviconManager />
@@ -181,6 +185,7 @@ function AppShell() {
           <AdminVisualEditor />
         </TooltipProvider>
       </VisualEditorProvider>
+      </AdminViewportProvider>
     </AppProvider>
   );
 }
