@@ -256,8 +256,8 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
     <>
       {!hideTrigger && (
         <button
-          onClick={() => { if (dragRef.current.blocked) return; setOpen(true); }}
-          onPointerDown={onPointerDown}
+          onClick={() => { if (rouletteDrag.blockClickRef.current) return; setOpen(true); }}
+          onPointerDown={rouletteDrag.onPointerDown}
           className={cn('group z-40', isAdmin && 'ring-2 ring-primary/60 cursor-grab active:cursor-grabbing')}
           style={{ ...cornerStyle(fabPos.corner, fabPos.x, fabPos.y), touchAction: isAdmin ? 'none' : undefined }}
           aria-label="Ouvrir la roulette"
