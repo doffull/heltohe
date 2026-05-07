@@ -291,7 +291,10 @@ export function TechwearHeroTab() {
       <Card>
         <CardHeader className="pb-3"><CardTitle className="text-sm">Nom de la slide</CardTitle></CardHeader>
         <CardContent>
-          <Input value={active.name || ''} onChange={(e) => update({ name: e.target.value })} placeholder={`Slide ${activeIndex + 1}`} />
+          <div className="flex gap-1">
+            <Input value={active.name || ''} onChange={(e) => update({ name: e.target.value })} placeholder={`Slide ${activeIndex + 1}`} />
+            <AiTextButton field="slide_name" context={linkedProduct?.name} onGenerated={(v) => update({ name: v })} />
+          </div>
         </CardContent>
       </Card>
 
