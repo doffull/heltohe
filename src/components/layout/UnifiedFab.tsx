@@ -25,67 +25,6 @@ const DEFAULT_ITEMS = [
   { id: 'roulette' as const, label: 'Jeu-concours', icon: 'Gift', visible: true, order: 2 },
 ];
 
-const DRAG_THRESHOLD = 5;
-
-/**
- * Generic admin drag helper.
- * - onCommit receives the new {corner,x,y} once the user releases.
- * - Returns a click suppression flag via shouldBlockClickRef.
- */
-function useAdminDrag(opts: {
-  enabled: boolean;
-  isMobile: boolean;
-  onCommit: (pos: FabPos) => void;
-  size?: number;
-}) {
-  const { enabled, onCommit, size = 56 } = opts;
-  const blockClickRef = useRef(false);
-
-  const onPointerDown = (e: React.PointerEvent<HTMLElement>) => {
-    if (!enabled) return;
-    const target = e.currentTarget as HTMLElement;
-    const rect = target.getBoundingClientRect();
-    const startX = e.clientX;
-    const startY = e.clientY;
-    let dragging = false;
-
-    const move = (ev: PointerEvent) => {
-      const dx = ev.clientX - startX;
-      const dy = ev.clientY - startY;
-      if (!dragging && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
-      dragging = true;
-      ev.preventDefault();
-      const left = Math.max(0, Math.min(window.innerWidth - size, rect.left + dx));
-      const top = Math.max(0, Math.min(window.innerHeight - size, rect.top + dy));
-      target.style.position = 'fixed';
-      target.style.left = `${left}px`;
-      target.style.top = `${top}px`;
-      target.style.right = 'auto';
-      target.style.bottom = 'auto';
-    };
-    const up = () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-      if (!dragging) return;
-      blockClickRef.current = true;
-      setTimeout(() => { blockClickRef.current = false; }, 50);
-      const left = parseFloat(target.style.left || '0');
-      const top = parseFloat(target.style.top || '0');
-      const pos = pxToPos(left, top, window.innerWidth, window.innerHeight, size);
-      onCommit(pos);
-      // clear inline; rerender will place via cornerStyle
-      target.style.left = '';
-      target.style.top = '';
-      target.style.right = '';
-      target.style.bottom = '';
-      target.style.position = '';
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up);
-  };
-
-  return { onPointerDown, blockClickRef };
-}
 
 export function UnifiedFab() {
   const { designSettings, updateDesignSettings } = useApp();
