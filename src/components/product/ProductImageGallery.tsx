@@ -213,6 +213,29 @@ export default function ProductImageGallery({
           </motion.div>
         )}
 
+        {/* Mannequin badge — bottom-left, dismissable */}
+        {showModelBadge && (modelHeight || modelSizeWorn) && activeMedia === 'image' && (
+          <motion.div
+            className="absolute bottom-4 left-4 flex items-center gap-2 bg-background/85 backdrop-blur-sm rounded-full pl-3 pr-1.5 py-1.5 shadow-md"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="text-[10px] font-bold hud-text uppercase tracking-wider">
+              📏 {[modelHeight, modelSizeWorn && `taille ${modelSizeWorn}`].filter(Boolean).join(' · ')}
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowModelBadge(false)}
+              className="w-5 h-5 rounded-full hover:bg-foreground/10 flex items-center justify-center"
+              aria-label="Masquer"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </motion.div>
+        )}
+
         {/* HUD corner accents */}
         <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-primary/40" />
         <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-primary/40" />
