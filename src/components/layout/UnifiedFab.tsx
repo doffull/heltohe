@@ -211,8 +211,8 @@ export function UnifiedFab() {
   const clusterDrag = useAdminDrag({ enabled: isAdmin, isMobile, onCommit: saveClusterPos });
   const dockDrag = useAdminDrag({ enabled: isAdmin, isMobile, onCommit: saveDockPos });
 
-  // Visual editor toggle for admins (used in dock)
-  const ve = (() => { try { return useVisualEditor(); } catch { return null; } })();
+  // Visual editor toggle for admins (used in dock). Provider always present at App root.
+  const ve = useVisualEditor();
 
   return (
     <>
