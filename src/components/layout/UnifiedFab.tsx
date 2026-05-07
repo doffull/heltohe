@@ -203,9 +203,12 @@ export function UnifiedFab() {
           dockShowVoice={dockShowVoice}
           dockShowChat={dockShowChat}
           dockShowVisualEditor={dockShowVisualEditor && isAdmin}
+          dockShowRoulette={dockShowRoulette}
+          rouletteEnabled={!!rouletteConfig?.enabled}
           customs={visibleCustom.filter((b) => !freeCustomIds.includes(b.id))}
           onVoice={() => triggerItem('voice')}
           onChat={() => triggerItem('chat')}
+          onRoulette={() => triggerItem('roulette')}
           onVisualEditor={() => ve?.setIsOpen(!ve.isOpen)}
           onCustom={(b) => handleAction(b)}
         />
