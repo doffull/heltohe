@@ -249,7 +249,26 @@ export function UnifiedFab() {
 
       <ChatBotWidget open={chatOpen} onOpenChange={setChatOpen} hideTrigger />
 
-      {mode === 'cluster' ? (
+      {mode === 'dock' ? (
+        <Dock
+          dockPos={dockPos}
+          dockDir={dockDir}
+          dockSize={dockSize}
+          dockBlur={dockBlur}
+          dockDrag={dockDrag}
+          isAdmin={isAdmin}
+          accent={accent}
+          voiceEnabled={!!voiceEnabled}
+          dockShowVoice={dockShowVoice}
+          dockShowChat={dockShowChat}
+          dockShowVisualEditor={dockShowVisualEditor && isAdmin}
+          customs={visibleCustom.filter((b) => !freeCustomIds.includes(b.id))}
+          onVoice={() => triggerItem('voice')}
+          onChat={() => triggerItem('chat')}
+          onVisualEditor={() => ve?.setIsOpen(!ve.isOpen)}
+          onCustom={(b) => handleAction(b)}
+        />
+      ) : mode === 'cluster' ? (
         <>
           {/* Free socle items (e.g. Jeu-concours isolé) */}
           {visibleItems
