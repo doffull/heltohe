@@ -51,6 +51,7 @@ import AdminCheckout from './AdminCheckout';
 import AdminNotifications from './AdminNotifications';
 import AdminPreparations from './AdminPreparations';
 import AdminRoulette from './AdminRoulette';
+import AdminHomeIcons from './AdminHomeIcons';
 
 export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin': '#6B7280',
