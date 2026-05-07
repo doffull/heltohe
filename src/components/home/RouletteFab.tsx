@@ -123,6 +123,8 @@ interface RouletteFabProps {
 
 export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: RouletteFabProps = {}) {
   const { user } = useAuth();
+  const { isAdmin } = useAuth() as any;
+  const { designSettings, updateDesignSettings } = useApp();
   const { data: config } = useRouletteConfig();
   const { data: segments = [] } = useRouletteSegments();
   const spin = useSpinRoulette();
