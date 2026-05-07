@@ -26,7 +26,8 @@ import {
   CreditCard,
   Bell,
   Gift,
-  MousePointer
+  MousePointer,
+  Activity
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
