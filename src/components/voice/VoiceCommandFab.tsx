@@ -180,6 +180,40 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
       case 'search':
         navigate(`/boutique?q=${encodeURIComponent(action.query || transcript)}`);
         break;
+      case 'search_products':
+      case 'recommend': {
+        try {
+          const lite = products.slice(0, 120).map((p) => ({
+            id: p.id, name: p.name, category: p.category, price: p.price,
+            sizes: p.sizes, colors: p.colors, description: p.description,
+          }));
+          const { data, error } = await supabase.functions.invoke('voice-command', {
+            body: { mode: action.type === 'recommend' ? 'recommend' : 'search', transcript: action.query || transcript, products: lite },
+          });
+          if (error) throw error;
+          const ids: string[] = data?.productIds || [];
+          const found = ids.map((id) => products.find((p) => p.id === id)).filter(Boolean);
+          setResults(found);
+          const spoken = data?.spoken || (found.length ? `J'ai trouvé ${found.length} produit${found.length > 1 ? 's' : ''}` : 'Aucun résultat');
+          speak(spoken);
+          setReply(spoken);
+        } catch (e) {
+          toast.error('Recherche impossible');
+        }
+        break;
+      }
+      case 'select_result': {
+        const idx = (action.resultIndex || 1) - 1;
+        const p = results[idx];
+        if (!p) {
+          speak('Je n\'ai pas trouvé ce résultat. Reformulez votre choix.');
+          break;
+        }
+        addItem({ ...p, quantity: action.quantity || 1, size: action.size, color: action.color });
+        speak(`${p.name} ajouté au panier`);
+        toast.success(`${p.name} ajouté au panier`);
+        break;
+      }
       case 'set_address': {
         const next = { ...address, ...(action.address || {}) };
         setAddress(next);
