@@ -254,41 +254,66 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
   return (
     <>
       {!hideTrigger && (
-        <button
-          onClick={() => { if (rouletteDrag.blockClickRef.current) return; setOpen(true); }}
-          onPointerDown={rouletteDrag.onPointerDown}
-          className={cn('group z-40', isAdmin && 'ring-2 ring-primary/60 cursor-grab active:cursor-grabbing')}
+        <div
+          className="z-40"
           style={{ ...cornerStyle(fabPos.corner, fabPos.x, fabPos.y), touchAction: isAdmin ? 'none' : undefined }}
-          aria-label="Ouvrir la roulette"
         >
-          <div className="relative">
-            {canSpin && rfab.pulse !== false && (
-              <span className="absolute inset-0 animate-ping" style={{ ...shapeStyle, background: `${accentColor}33` }} />
-            )}
-            <div
-              className={cn(
-                'relative flex items-center gap-2 shadow-xl transition-all',
-                sizeClass,
-                variant === 'glass' && 'bg-white/10 backdrop-blur-xl border border-white/20 text-foreground',
-                variant === 'neon' && 'bg-foreground text-background border-2',
-                variant === 'metal' && 'bg-gradient-to-b from-zinc-200 to-zinc-400 text-zinc-900 border border-zinc-500',
-                variant === 'outline' && 'bg-transparent text-foreground border-2 border-foreground',
-                variant === 'minimal' && 'bg-background text-foreground border border-foreground/20',
-                variant === 'glossy' && 'bg-background text-foreground border border-foreground/30 backdrop-blur-md hover:bg-foreground hover:text-background'
-              )}
-              style={{
-                ...shapeStyle,
-                boxShadow: `0 8px 28px ${accentColor}55`,
-                borderColor: variant === 'neon' ? accentColor : undefined,
-              }}
+          <div className="relative flex items-center gap-1">
+            <button
+              onClick={() => { if (rouletteDrag.blockClickRef.current) return; setOpen(true); }}
+              onPointerDown={rouletteDrag.onPointerDown}
+              className={cn('group', isAdmin && 'ring-2 ring-primary/60 cursor-grab active:cursor-grabbing')}
+              aria-label="Ouvrir la roulette"
             >
-              <Icon className={iconSize} />
-              <span className="font-bold tracking-wider uppercase">
-                {label}
-              </span>
-            </div>
+              <div className="relative">
+                {canSpin && rfab.pulse !== false && (
+                  <span className="absolute inset-0 animate-ping" style={{ ...shapeStyle, background: `${accentColor}33` }} />
+                )}
+                <div
+                  className={cn(
+                    'relative flex items-center gap-2 shadow-xl transition-all',
+                    sizeClass,
+                    variant === 'glass' && 'bg-white/10 backdrop-blur-xl border border-white/20 text-foreground',
+                    variant === 'neon' && 'bg-foreground text-background border-2',
+                    variant === 'metal' && 'bg-gradient-to-b from-zinc-200 to-zinc-400 text-zinc-900 border border-zinc-500',
+                    variant === 'outline' && 'bg-transparent text-foreground border-2 border-foreground',
+                    variant === 'minimal' && 'bg-background text-foreground border border-foreground/20',
+                    variant === 'glossy' && 'bg-background text-foreground border border-foreground/30 backdrop-blur-md hover:bg-foreground hover:text-background'
+                  )}
+                  style={{
+                    ...shapeStyle,
+                    boxShadow: `0 8px 28px ${accentColor}55`,
+                    borderColor: variant === 'neon' ? accentColor : undefined,
+                  }}
+                >
+                  <Icon className={iconSize} />
+                  <span className="font-bold tracking-wider uppercase">
+                    {label}
+                  </span>
+                </div>
+              </div>
+            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const reset = { corner: 'cc', x: 0, y: 0 } as FabPos;
+                  updateDesignSettings({
+                    ...(designSettings as any),
+                    unifiedFab: {
+                      ...cfg,
+                      rouletteFab: { ...rfab, position_desktop: reset, position_mobile: reset },
+                    },
+                  } as any);
+                  toast.success('Position du Jeu-concours réinitialisée');
+                }}
+                className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-background border border-primary/60 text-foreground rounded shadow"
+                title="Réinitialiser la position"
+              >⟳</button>
+            )}
           </div>
-        </button>
+        </div>
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
