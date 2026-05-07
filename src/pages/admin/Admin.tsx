@@ -25,7 +25,8 @@ import {
   ClipboardCheck,
   CreditCard,
   Bell,
-  Gift
+  Gift,
+  MousePointer
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -50,6 +51,7 @@ import AdminCheckout from './AdminCheckout';
 import AdminNotifications from './AdminNotifications';
 import AdminPreparations from './AdminPreparations';
 import AdminRoulette from './AdminRoulette';
+import AdminHomeIcons from './AdminHomeIcons';
 
 export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin': '#6B7280',
@@ -84,6 +86,7 @@ const SIDEBAR_ITEMS = [
   { icon: Megaphone, label: 'Marketing', href: '/admin/marketing' },
   { icon: Gift, label: 'Roulette', href: '/admin/roulette' },
   { icon: Palette, label: 'Design', href: '/admin/design' },
+  { icon: MousePointer, label: 'Icônes Accueil', href: '/admin/home-icons' },
   { icon: Warehouse, label: 'Stock', href: '/admin/stock' },
   { icon: Truck, label: 'Colissimo', href: '/admin/colissimo' },
   { icon: Bell, label: 'Notifications', href: '/admin/notifications' },
@@ -250,6 +253,7 @@ export default function Admin() {
             <Route path="roulette/*" element={<AdminRoulette />} />
             <Route path="bannieres/*" element={<Navigate to="/admin/marketing" replace />} />
             <Route path="design/*" element={<AdminDesign />} />
+            <Route path="home-icons/*" element={<AdminHomeIcons />} />
             <Route path="stock/*" element={<AdminStock />} />
             <Route path="colissimo/*" element={<AdminColissimo />} />
             <Route path="notifications/*" element={<AdminNotifications />} />

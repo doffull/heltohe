@@ -802,6 +802,60 @@ export type Database = {
         }
         Relationships: []
       }
+      home_fab_buttons: {
+        Row: {
+          action_type: string
+          action_value: string
+          badge: string | null
+          created_at: string
+          icon: string
+          id: string
+          is_active: boolean
+          label: string
+          position_desktop: Json
+          position_mobile: Json
+          sort_order: number
+          updated_at: string
+          variant: string
+          visible_desktop: boolean
+          visible_mobile: boolean
+        }
+        Insert: {
+          action_type?: string
+          action_value?: string
+          badge?: string | null
+          created_at?: string
+          icon?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          position_desktop?: Json
+          position_mobile?: Json
+          sort_order?: number
+          updated_at?: string
+          variant?: string
+          visible_desktop?: boolean
+          visible_mobile?: boolean
+        }
+        Update: {
+          action_type?: string
+          action_value?: string
+          badge?: string | null
+          created_at?: string
+          icon?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          position_desktop?: Json
+          position_mobile?: Json
+          sort_order?: number
+          updated_at?: string
+          variant?: string
+          visible_desktop?: boolean
+          visible_mobile?: boolean
+        }
+        Relationships: []
+      }
       inventory: {
         Row: {
           channel: string

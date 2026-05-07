@@ -537,3 +537,133 @@
   }
   .hw-stat-bar-fill { width: var(--hw-fill); }
 }
+
+/* ── CTA design variants (admin configurable) ─────────────────────── */
+.hw-cta-positioned {
+  position: absolute;
+  z-index: 8;
+  display: flex;
+  pointer-events: auto;
+  transform: translate(-50%, -50%);
+}
+.hw-cta-positioned.is-row { flex-direction: row; }
+.hw-cta-positioned.is-col { flex-direction: column; }
+
+.hw-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-weight: 700;
+  font-family: var(--hw-font-main);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform .25s ease, box-shadow .25s ease, background .25s ease, border-color .25s ease, filter .25s ease;
+  border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
+}
+.hw-cta-btn:hover { transform: translateY(-1px); }
+
+/* Sizes */
+.hw-cta-sz-sm { padding: 8px 16px;  font-size: 11px; min-height: 34px; }
+.hw-cta-sz-md { padding: 11px 22px; font-size: 12px; min-height: 42px; }
+.hw-cta-sz-lg { padding: 14px 28px; font-size: 13px; min-height: 50px; }
+.hw-cta-sz-xl { padding: 18px 36px; font-size: 14px; min-height: 58px; }
+
+/* Radius */
+.hw-cta-rd-none { border-radius: 0; }
+.hw-cta-rd-sm   { border-radius: 4px; }
+.hw-cta-rd-md   { border-radius: 10px; }
+.hw-cta-rd-pill { border-radius: 999px; }
+
+/* Variant: glossy */
+.hw-cta-v-glossy {
+  background: linear-gradient(180deg, #ffffff 0%, #e6e6e6 48%, #c9c9c9 49%, #f5f5f5 100%);
+  color: #111;
+  box-shadow: 0 1px 0 rgba(255,255,255,.9) inset, 0 -8px 18px rgba(0,0,0,.05) inset, 0 10px 24px rgba(0,0,0,.18);
+  border-color: rgba(0,0,0,.12);
+}
+.hw-cta-v-glossy::before {
+  content: ""; position: absolute; inset: 0 0 50% 0;
+  background: linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,0));
+  pointer-events: none;
+}
+.hw-cta-v-glossy.is-secondary {
+  background: linear-gradient(180deg, #2a2a2a, #050505);
+  color: #fff;
+  border-color: rgba(255,255,255,.1);
+  box-shadow: 0 10px 24px rgba(0,0,0,.4), 0 1px 0 rgba(255,255,255,.08) inset;
+}
+.hw-cta-v-glossy.is-secondary::before {
+  background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,0));
+}
+
+/* Variant: glass */
+.hw-cta-v-glass {
+  background: rgba(255,255,255,.18);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: #fff;
+  border-color: rgba(255,255,255,.35);
+  text-shadow: 0 1px 2px rgba(0,0,0,.4);
+}
+.hw-cta-v-glass.is-secondary {
+  background: rgba(0,0,0,.25);
+  color: #fff;
+  border-color: rgba(255,255,255,.2);
+}
+
+/* Variant: neon */
+.hw-cta-v-neon {
+  background: #0a0a0a;
+  color: hsl(var(--accent, 142 76% 45%));
+  border-color: hsl(var(--accent, 142 76% 45%));
+  box-shadow: 0 0 0 1px hsl(var(--accent, 142 76% 45%) / .4), 0 0 24px hsl(var(--accent, 142 76% 45%) / .45);
+}
+.hw-cta-v-neon.is-secondary {
+  background: transparent;
+  color: hsl(var(--accent, 142 76% 45%));
+  box-shadow: 0 0 0 1px hsl(var(--accent, 142 76% 45%) / .25), 0 0 12px hsl(var(--accent, 142 76% 45%) / .2);
+}
+
+/* Variant: metal */
+.hw-cta-v-metal {
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,.04) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, #5e5e5e, #1a1a1a 60%, #2a2a2a);
+  color: #fff;
+  border-color: #000;
+  box-shadow: 0 1px 0 rgba(255,255,255,.18) inset, 0 12px 22px rgba(0,0,0,.45);
+}
+.hw-cta-v-metal.is-secondary {
+  background:
+    repeating-linear-gradient(90deg, rgba(0,0,0,.08) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, #f1f1f1, #b9b9b9);
+  color: #111;
+  border-color: rgba(0,0,0,.4);
+}
+
+/* Variant: outline */
+.hw-cta-v-outline {
+  background: transparent;
+  color: #fff;
+  border-color: #fff;
+}
+.hw-cta-v-outline.is-secondary {
+  color: #fff;
+  border-color: rgba(255,255,255,.4);
+}
+
+/* Variant: minimal */
+.hw-cta-v-minimal {
+  background: #fff;
+  color: #000;
+}
+.hw-cta-v-minimal.is-secondary {
+  background: transparent;
+  color: #fff;
+  border-color: rgba(255,255,255,.45);
+}

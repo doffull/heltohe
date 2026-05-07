@@ -163,6 +163,49 @@ export interface TechwearHeroSlideData {
   background?: TechwearBackground;
   cardSize?: 'sm' | 'md' | 'lg' | 'xl';
   imageOverflow?: boolean;
+  ctaStyle?: TechwearCtaStyle;
+}
+
+export type TechwearCtaVariant = 'glossy' | 'glass' | 'neon' | 'metal' | 'outline' | 'minimal';
+export type TechwearCtaSize = 'sm' | 'md' | 'lg' | 'xl';
+export type TechwearCtaRadius = 'none' | 'sm' | 'md' | 'pill';
+
+export interface TechwearCtaPositionPart {
+  x: number; // 0-100 % of image area
+  y: number; // 0-100
+  layout: 'row' | 'column';
+}
+
+export interface TechwearCtaStyle {
+  enabled: boolean;        // when false → fallback inline classic rendering
+  variant: TechwearCtaVariant;
+  size: TechwearCtaSize;
+  radius: TechwearCtaRadius;
+  gap: number; // px
+  position: {
+    desktop: TechwearCtaPositionPart;
+    mobile: TechwearCtaPositionPart;
+  };
+  primaryBg?: string;
+  primaryFg?: string;
+  secondaryBg?: string;
+  secondaryFg?: string;
+}
+
+export interface HomeFabButton {
+  id: string;
+  label: string;
+  icon: string;
+  action_type: 'route' | 'external' | 'roulette' | 'voice' | 'chat' | 'newsletter';
+  action_value: string;
+  variant: TechwearCtaVariant;
+  position_desktop: { corner: 'tl' | 'tr' | 'bl' | 'br'; x: number; y: number };
+  position_mobile: { corner: 'tl' | 'tr' | 'bl' | 'br'; x: number; y: number };
+  visible_desktop: boolean;
+  visible_mobile: boolean;
+  sort_order: number;
+  is_active: boolean;
+  badge?: string | null;
 }
 
 export interface TechwearHeroConfig extends Omit<TechwearHeroSlideData, 'id' | 'name'> {

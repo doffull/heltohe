@@ -9,6 +9,11 @@ const FIELD_GUIDES: Record<string, string> = {
   subtitle: "Un sous-titre court (5–10 mots), en MAJUSCULES, qui complète le titre.",
   description: "Une description marketing de 1–2 phrases (max 180 caractères).",
   cta: "Un libellé de bouton très court (1–3 mots) en MAJUSCULES, ex: DÉCOUVRIR, EXPLORER, ACHETER.",
+  slide_name: "Un nom interne court (2–4 mots) pour identifier la slide en back-office. Style descriptif, ex: 'Capsule Hiver Noir'.",
+  badge_line1: "Un mot très court en MAJUSCULES pour un badge produit (ex: MODEL, EDITION, SERIE).",
+  badge_line2: "Un code/numéro court (3–6 caractères) en MAJUSCULES, ex: 0.1.2, FW25, A-07.",
+  cta_primary: "Un libellé de bouton d'action principal très court (1–3 mots) en MAJUSCULES, ex: ACQUÉRIR, SHOP NOW, COMMANDER.",
+  cta_secondary: "Un libellé de bouton secondaire très court (1–3 mots) en MAJUSCULES, ex: EXPLORER, DÉTAILS, COLLECTION.",
 };
 
 Deno.serve(async (req) => {

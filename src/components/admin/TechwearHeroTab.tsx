@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { FileDropZone } from '@/components/admin/FileDropZone';
 import { AiImageButton } from '@/components/admin/AiImageButton';
+import { AiTextButton } from '@/components/admin/AiTextButton';
 import { Plus, Trash2, RefreshCw, Sparkles, Eye, EyeOff, Copy, ChevronUp, ChevronDown } from 'lucide-react';
 import type { TechwearHeroConfig, TechwearHeroSlideData, TechwearColorOption, TechwearBackground } from '@/types';
 import { toast } from 'sonner';
@@ -290,7 +291,10 @@ export function TechwearHeroTab() {
       <Card>
         <CardHeader className="pb-3"><CardTitle className="text-sm">Nom de la slide</CardTitle></CardHeader>
         <CardContent>
-          <Input value={active.name || ''} onChange={(e) => update({ name: e.target.value })} placeholder={`Slide ${activeIndex + 1}`} />
+          <div className="flex gap-1">
+            <Input value={active.name || ''} onChange={(e) => update({ name: e.target.value })} placeholder={`Slide ${activeIndex + 1}`} />
+            <AiTextButton field="slide_name" context={linkedProduct?.name} onGenerated={(v) => update({ name: v })} />
+          </div>
         </CardContent>
       </Card>
 
@@ -605,15 +609,24 @@ export function TechwearHeroTab() {
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-xs">Badge ligne 1</Label>
-            <Input value={active.modelBadge.line1} onChange={(e) => update({ modelBadge: { ...active.modelBadge, line1: e.target.value } })} />
+            <div className="flex gap-1">
+              <Input value={active.modelBadge.line1} onChange={(e) => update({ modelBadge: { ...active.modelBadge, line1: e.target.value } })} />
+              <AiTextButton field="badge_line1" context={active.name || linkedProduct?.name} onGenerated={(v) => update({ modelBadge: { ...active.modelBadge, line1: v } })} />
+            </div>
           </div>
           <div className="space-y-2">
             <Label className="text-xs">Badge ligne 2</Label>
-            <Input value={active.modelBadge.line2} onChange={(e) => update({ modelBadge: { ...active.modelBadge, line2: e.target.value } })} />
+            <div className="flex gap-1">
+              <Input value={active.modelBadge.line2} onChange={(e) => update({ modelBadge: { ...active.modelBadge, line2: e.target.value } })} />
+              <AiTextButton field="badge_line2" context={active.name || linkedProduct?.name} onGenerated={(v) => update({ modelBadge: { ...active.modelBadge, line2: v } })} />
+            </div>
           </div>
           <div className="space-y-2">
             <Label className="text-xs">CTA principal — texte</Label>
-            <Input value={active.ctaPrimary.label} onChange={(e) => update({ ctaPrimary: { ...active.ctaPrimary, label: e.target.value } })} />
+            <div className="flex gap-1">
+              <Input value={active.ctaPrimary.label} onChange={(e) => update({ ctaPrimary: { ...active.ctaPrimary, label: e.target.value } })} />
+              <AiTextButton field="cta_primary" context={active.name || linkedProduct?.name} onGenerated={(v) => update({ ctaPrimary: { ...active.ctaPrimary, label: v } })} />
+            </div>
           </div>
           <div className="space-y-2">
             <Label className="text-xs">CTA principal — lien</Label>
@@ -621,7 +634,10 @@ export function TechwearHeroTab() {
           </div>
           <div className="space-y-2">
             <Label className="text-xs">CTA secondaire — texte</Label>
-            <Input value={active.ctaSecondary.label} onChange={(e) => update({ ctaSecondary: { ...active.ctaSecondary, label: e.target.value } })} />
+            <div className="flex gap-1">
+              <Input value={active.ctaSecondary.label} onChange={(e) => update({ ctaSecondary: { ...active.ctaSecondary, label: e.target.value } })} />
+              <AiTextButton field="cta_secondary" context={active.name || linkedProduct?.name} onGenerated={(v) => update({ ctaSecondary: { ...active.ctaSecondary, label: v } })} />
+            </div>
           </div>
           <div className="space-y-2">
             <Label className="text-xs">CTA secondaire — lien</Label>
@@ -629,7 +645,184 @@ export function TechwearHeroTab() {
           </div>
         </CardContent>
       </Card>
+
+      <CtaDesignCard active={active} update={update} />
     </div>
+  );
+}
+
+const DEFAULT_CTA_STYLE = {
+  enabled: true,
+  variant: 'glossy' as const,
+  size: 'lg' as const,
+  radius: 'md' as const,
+  gap: 12,
+  position: {
+    desktop: { x: 50, y: 92, layout: 'row' as const },
+    mobile:  { x: 50, y: 94, layout: 'column' as const },
+  },
+};
+
+function CtaDesignCard({ active, update }: { active: any; update: (p: any) => void }) {
+  const s = active.ctaStyle ?? DEFAULT_CTA_STYLE;
+  const setS = (patch: any) => update({ ctaStyle: { ...s, ...patch } });
+  const variants = [
+    { v: 'glossy', label: 'Glossy' },
+    { v: 'glass', label: 'Verre' },
+    { v: 'neon', label: 'Néon' },
+    { v: 'metal', label: 'Métal' },
+    { v: 'outline', label: 'Outline' },
+    { v: 'minimal', label: 'Minimal' },
+  ];
+  return (
+    <Card>
+      <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
+        <CardTitle className="text-sm">Design des CTA (positionnement & style)</CardTitle>
+        <div className="flex items-center gap-2">
+          <Label className="text-xs">Personnalisé</Label>
+          <Switch checked={!!s.enabled} onCheckedChange={(v) => setS({ enabled: v })} />
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <Label className="text-xs mb-2 block">Variant</Label>
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+            {variants.map((v) => (
+              <button
+                key={v.v}
+                type="button"
+                onClick={() => setS({ variant: v.v })}
+                className={`px-2 py-3 rounded border text-xs font-medium transition ${s.variant === v.v ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-muted'}`}
+              >
+                <div className={`hw-cta-btn hw-cta-v-${v.v} hw-cta-sz-sm hw-cta-rd-md mx-auto mb-1`} style={{ pointerEvents: 'none' }}>AA</div>
+                {v.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="space-y-1">
+            <Label className="text-xs">Taille</Label>
+            <Select value={s.size} onValueChange={(v) => setS({ size: v })}>
+              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="sm">SM</SelectItem>
+                <SelectItem value="md">MD</SelectItem>
+                <SelectItem value="lg">LG</SelectItem>
+                <SelectItem value="xl">XL</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Arrondi</Label>
+            <Select value={s.radius} onValueChange={(v) => setS({ radius: v })}>
+              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Aucun</SelectItem>
+                <SelectItem value="sm">Léger</SelectItem>
+                <SelectItem value="md">Moyen</SelectItem>
+                <SelectItem value="pill">Pilule</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Espacement (px)</Label>
+            <Input type="number" min={0} max={48} value={s.gap} onChange={(e) => setS({ gap: parseInt(e.target.value, 10) || 0 })} className="h-9" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {(['desktop', 'mobile'] as const).map((dev) => {
+            const p = s.position[dev];
+            const setP = (patch: any) => setS({ position: { ...s.position, [dev]: { ...p, ...patch } } });
+            return (
+              <div key={dev} className="rounded-lg border p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold uppercase">{dev === 'desktop' ? '🖥️ Desktop' : '📱 Mobile'}</p>
+                  <Select value={p.layout} onValueChange={(v) => setP({ layout: v })}>
+                    <SelectTrigger className="h-7 w-28 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="row">Côte à côte</SelectItem>
+                      <SelectItem value="column">Empilés</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] flex justify-between"><span>Position X</span><span className="font-mono">{p.x}%</span></Label>
+                  <Slider value={[p.x]} min={0} max={100} step={1} onValueChange={([v]) => setP({ x: v })} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] flex justify-between"><span>Position Y</span><span className="font-mono">{p.y}%</span></Label>
+                  <Slider value={[p.y]} min={0} max={100} step={1} onValueChange={([v]) => setP({ y: v })} />
+                </div>
+                <div className="relative h-32 rounded border bg-muted/30 overflow-hidden">
+                  <div className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: `${p.x}%`, top: `${p.y}%` }}>
+                    <div className={`hw-cta-btn hw-cta-v-${s.variant} hw-cta-sz-sm hw-cta-rd-${s.radius}`}>CTA</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t">
+          <div className="space-y-1">
+            <Label className="text-[10px]">Fond CTA principal</Label>
+            <div className="flex gap-1">
+              <input type="color" value={s.primaryBg || '#ffffff'} onChange={(e) => setS({ primaryBg: e.target.value })} className="h-8 w-10 rounded border" />
+              <Input value={s.primaryBg || ''} onChange={(e) => setS({ primaryBg: e.target.value })} className="h-8 text-xs" placeholder="auto" />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[10px]">Texte CTA principal</Label>
+            <div className="flex gap-1">
+              <input type="color" value={s.primaryFg || '#000000'} onChange={(e) => setS({ primaryFg: e.target.value })} className="h-8 w-10 rounded border" />
+              <Input value={s.primaryFg || ''} onChange={(e) => setS({ primaryFg: e.target.value })} className="h-8 text-xs" placeholder="auto" />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[10px]">Fond CTA secondaire</Label>
+            <div className="flex gap-1">
+              <input type="color" value={s.secondaryBg || '#000000'} onChange={(e) => setS({ secondaryBg: e.target.value })} className="h-8 w-10 rounded border" />
+              <Input value={s.secondaryBg || ''} onChange={(e) => setS({ secondaryBg: e.target.value })} className="h-8 text-xs" placeholder="auto" />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[10px]">Texte CTA secondaire</Label>
+            <div className="flex gap-1">
+              <input type="color" value={s.secondaryFg || '#ffffff'} onChange={(e) => setS({ secondaryFg: e.target.value })} className="h-8 w-10 rounded border" />
+              <Input value={s.secondaryFg || ''} onChange={(e) => setS({ secondaryFg: e.target.value })} className="h-8 text-xs" placeholder="auto" />
+            </div>
+          </div>
+        </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          onClick={async () => {
+            try {
+              const { supabase } = await import('@/integrations/supabase/client');
+              const { data, error } = await supabase.functions.invoke('generate-cta-style', {
+                body: { context: active.name || '' },
+              });
+              if (error || (data as any)?.error) throw new Error((data as any)?.error || error?.message);
+              const preset = (data as any)?.preset;
+              if (preset) {
+                setS(preset);
+                toast.success('Suggestion IA appliquée');
+              }
+            } catch (e: any) {
+              toast.error(e.message || 'Erreur IA');
+            }
+          }}
+        >
+          <Sparkles className="h-3.5 w-3.5" /> Suggestion IA
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 
