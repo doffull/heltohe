@@ -1,60 +1,103 @@
-# Gestion libre des boutons flottants + CTAs Hero mobile
+## Objectifs
 
-## 1. Drag & drop admin sur TOUS les boutons flottants (live, in-place)
+1. **Réparer Aperçu Live** (`FabLivePreview`) : modes "Groupés" inerte et "Enregistrer" qui n'impacte pas la home.
+2. **Dock glassmorphism unifié** (inspiré de l'image jointe) regroupant Voix, Chat, Message, Éditeur Visuel (admin), Notifications…
+3. **Jeu-concours autonome** : centré par défaut, déplaçable libre + design personnalisable depuis l'admin.
 
-Aujourd'hui, seul le bouton "Sparkles" du socle est draggable côté admin, et l'aperçu live est dans une iframe séparée. On unifie : en mode admin, **chaque** bouton flottant visible sur la home est directement déplaçable avec preview temps réel, et la position est sauvegardée.
+---
 
-Boutons concernés :
-- **Voix**, **Assistant (chatbot)**, **Jeu-concours** (items du socle / mode libre / mode groupé)
-- **Mini-socle groupé** Voix+Assistant (déplacement du bloc entier)
-- **Boutons FAB personnalisés** issus de `home_fab_buttons` (Notifications, Bots, Message, etc.)
+## 1. Réparation Aperçu Live (`src/components/admin/FabLivePreview.tsx`)
 
-Comportement :
-- Hors admin : aucun changement, les boutons restent à leur position configurée.
-- En admin : chaque bouton reçoit une poignée invisible (pointer-down sur le bouton lui-même + Alt-drag pour différencier du clic, ou un overlay `⠿` au survol). Drag → mise à jour optimiste de la position locale → snapping coin le plus proche (tl/tr/bl/br) → toast "Position enregistrée" au relâchement.
-- Persistance :
-  - Items du socle (`voice`, `chat`, `roulette`) → `design_settings.unifiedFab.items[].position_desktop / position_mobile` (déjà supportés côté admin, on ajoute juste l'écriture depuis la home).
-  - Mini-socle groupé → `design_settings.unifiedFab.groupSide` + `groupOffsetY` mis à jour.
-  - FABs custom DB → `home_fab_buttons.position_desktop / position_mobile` via `useHomeFabMutations.upsert`.
-- Le viewport courant détermine quelle clé est éditée (`position_mobile` si <768px, sinon `position_desktop`).
-- Indicateur visuel admin : ring primary + petit label `corner x·y` au survol.
+### Bugs identifiés
+- **Mode "Groupés"** : la prévisualisation ne dessine que des icônes draggables individuelles ; aucun rendu du mini-socle. Sélectionner "Groupés" ne change rien visuellement.
+- **Save sans effet** : `updateDesignSettings({ unifiedFab: { ...cfg, items } })` écrit `position_desktop`/`position_mobile` sur chaque item, mais `UnifiedFab` consomme ces clés uniquement en mode `free`/`grouped`. En mode `socle` (défaut), seules `cfg.position_desktop`/`cfg.position_mobile` sont lues → l'utilisateur ne voit aucun changement.
+- L'iframe `src="/"` est en `pointer-events: none` mais ne reflète pas non plus les changements (recharge non forcée après save).
 
-Le bloc `FabLivePreview` (iframe + drag overlay) devient redondant pour Voix/Assistant/Jeu-concours puisque c'est éditable directement sur la vraie home — on le garde uniquement comme **résumé non-interactif** (lecture seule, sliders pour valeurs précises) sous `AdminHomeIcons`.
+### Corrections
+- **Suppression du dragging dans la preview** : conversion en **panneau de contrôle non interactif** (résumé visuel des positions actives) puisque le drag se fait désormais en direct sur la home (déjà implémenté dans `UnifiedFab` via `useAdminDrag`).
+- Aperçu = un petit cadre 16/9 montrant les 4 coins avec les icônes positionnées correctement selon le mode actif (lecture seule).
+- Bouton **« Ouvrir la home en mode admin »** qui pointe vers `/` dans un nouvel onglet pour faire le drag réel.
+- **Si on garde le drag en preview** (option B) : injecter aussi le résultat dans `cfg.position_desktop`/`cfg.position_mobile` (mode socle) ET dans `cfg.clusterPos_*` (mode cluster) selon le mode courant, puis recharger l'iframe via `key={Date.now()}` après save.
 
-## 2. CTAs Hero adaptés mobile
+### Choix retenu
+**Option A** (lecture seule + lien vers home) — plus fiable, évite la duplication de logique de drag entre 2 fichiers et corrige les 2 bugs d'un coup.
 
-Sur le viewport actuel (360px), les CTAs `Découvrir` / `Voir collection` du `TechwearHero` débordent et restent en taille `lg/xl`. On rend le rendu responsif **sans** changer la config admin.
+---
 
-Changements ciblés dans `src/styles/home-techwear.css` :
-- Sous `@media (max-width: 640px)` :
-  - `.hw-cta-positioned { flex-direction: column; gap: 8px; width: calc(100% - 32px); left: 16px; right: 16px; }`
-  - `.hw-cta-btn { width: 100%; min-height: 44px; padding: 10px 16px; font-size: 12px; letter-spacing: 0.12em; }`
-  - Force toutes les tailles (`hw-cta-sz-sm/md/lg/xl`) à converger vers 44px de haut, font 12px, padding 10/16 sur mobile (override).
-  - `.hw-cta-positioned.is-row` repassé en `flex-direction: column` (priorité mobile).
-- Mêmes overrides pour la branche fallback `.hw-cta-primary / .hw-cta-secondary`.
+## 2. Dock Glassmorphism Unifié
 
-Aucun changement TS / config — uniquement CSS responsive.
+### Design (réf. image jointe)
+Pill arrondie (`rounded-full`) avec :
+- `backdrop-blur-2xl bg-white/5` + `border border-white/15`
+- ombre douce + halo radial derrière (gradient teal/cyan paramétrable via accent color)
+- icônes circulaires 44px, gap 8px, padding 12px
+- icône "active/sélectionnée" → pastille assombrie `bg-foreground/40` derrière
+- placement par défaut : **bottom-center** (`bottom: 24px; left: 50%; translate(-50%)`)
 
-## Détails techniques
+### Contenu du dock (configurable)
+Tous les boutons disponibles, chacun **toggle on/off depuis l'admin** :
+- 🎤 Voix
+- 🤖 Chatbot
+- 💬 Message (custom FAB existant)
+- ✏️ Éditeur Visuel (visible **admin only**)
+- 🔔 Notifications (custom FABs)
+- + boutons custom DB (`home_fab_buttons`)
 
-### Fichiers à modifier
-- `src/components/layout/UnifiedFab.tsx`
-  - Ajouter `useAuth().isAdmin` drag handler générique `makeDraggable(itemId, kind: 'socleItem' | 'group' | 'customFab')` avec mise à jour optimiste + debounce 600ms d'écriture (`updateDesignSettings` ou `useHomeFabMutations.upsert`).
-  - Wrapper chaque bouton (custom, free, grouped, mini-socle) avec `onPointerDown` admin et style `cursor-grab` + ring.
-  - Snapping coin : `pxToPos` (logique déjà présente dans `FabLivePreview.tsx`) extraite vers `src/lib/fabPosition.ts`.
-- `src/lib/fabPosition.ts` (nouveau)
-  - Exports `pxToPos`, `posToPx`, `cornerStyle`.
-- `src/components/admin/FabLivePreview.tsx`
-  - Importer depuis `fabPosition.ts` (suppression duplication). Garder l'aperçu mais marquer-le "Aperçu — édition désormais directement sur la home".
-- `src/styles/home-techwear.css`
-  - Ajouter media queries mobile décrites ci-dessus.
+### Implémentation
+- **Nouveau mode** `mode: 'dock'` dans `unifiedFab` (en plus de `socle`/`free`/`grouped`/`cluster`).
+- Rendu dans `src/components/layout/UnifiedFab.tsx` : nouveau bloc à la place du cluster, style pill glass.
+- Position du dock paramétrable : `dockPos_desktop` / `dockPos_mobile` (avec preset "center-bottom" par défaut → support `corner: 'bc'` dans `cornerStyle`, ou nouveau type `{ anchor: 'bottom-center', offset: 24 }`).
+- Drag admin du dock entier (réutiliser `useAdminDrag`).
+- Inclusion dans le dock : sur chaque item + chaque custom FAB, flag `inDock: true|false` dans la config (déjà présent : `freeCustomIds`, `clusterFree` → généralisation).
 
-### Hors scope
-- Pas de modification de schéma DB (les colonnes `position_desktop/mobile` existent déjà sur `home_fab_buttons` et dans `design_settings.unifiedFab.items`).
-- Pas de changement du comportement public / non-admin.
-- Pas de modification du Hero TechwearHeroTab admin (déjà couvert par étape précédente).
+### Édition (`UnifiedFabEditor.tsx`)
+- Ajouter un 5ᵉ mode "**Dock unifié**" dans la grille de modes.
+- Sous-section : checklist des éléments à inclure dans le dock (Voix / Chat / Message / Éditeur visuel / Notifications / customs).
+- Direction (row/col), taille des icônes, intensité du blur, couleur du halo.
 
-### Points d'attention
-- Différencier clic vs drag : seuil de 5px de mouvement avant de considérer drag → sinon trigger l'action habituelle du bouton.
-- Sur mobile admin (touch), `touchAction: 'none'` sur les boutons en drag pour éviter scroll parasite.
-- Persistance debounced pour éviter de spammer l'API pendant un drag long.
+---
+
+## 3. Jeu-concours pleinement personnalisable
+
+### Position
+- **Défaut au centre de la page** : nouveau preset `center` (`top: 50%; left: 50%; translate(-50%, -50%)`).
+- Toujours déplaçable librement par admin (drag déjà en place via `useAdminDrag` quand item est `clusterFree`/isolé).
+- Le Jeu-concours est **forcé hors du dock** (toujours autonome) pour rester très visible.
+
+### Design (nouvel éditeur dans `AdminRoulette` ou `UnifiedFabEditor`)
+Stocker dans `unifiedFab.rouletteFab` :
+- `variant`: `glossy | glass | neon | metal | outline | minimal | gift-pulse`
+- `accentColor`: hex
+- `size`: `sm | md | lg | xl`
+- `shape`: `round | pill | rect-bevel`
+- `label`: texte (déjà présent via `config.fab_label`)
+- `pulse`: bool (animation ping)
+- `icon`: choix via `IconPicker`
+
+### Refacto `RouletteFab` (trigger button)
+- Remplacer le markup hardcodé du trigger (lignes 226-244) par un bouton paramétrable lisant `unifiedFab.rouletteFab`.
+- Conserver `cornerStyle` si `corner` défini, sinon centre par défaut.
+- Drag admin (réutiliser `useAdminDrag`) — sauvegarde dans `cfg.rouletteFab.position_desktop/mobile`.
+- `RouletteFab` dans `UnifiedFab.tsx` reste rendu depuis `Home.tsx` (déjà le cas) — supprimer le doublon dans `UnifiedFab` (`<RouletteFab hideTrigger />`) ou le garder en `hideTrigger` modal.
+
+### Note importante
+Actuellement `<RouletteFab />` est rendu **2 fois** : une fois dans `Home.tsx` (avec trigger) + une fois dans `UnifiedFab.tsx` (`hideTrigger`). Cela duplique potentiellement le bouton. Garder uniquement la version `Home.tsx` comme trigger visuel, et `UnifiedFab` ne fait que contrôler l'ouverture via `setRouletteOpen`.
+
+---
+
+## Fichiers à modifier
+
+| Fichier | Action |
+|---|---|
+| `src/components/admin/FabLivePreview.tsx` | Refactor en lecture seule + bouton "Ouvrir home admin" |
+| `src/lib/fabPosition.ts` | Ajouter support `corner: 'cc'` (centre) + `cornerStyle` étendu |
+| `src/components/layout/UnifiedFab.tsx` | Nouveau mode `dock`, retrait du double `<RouletteFab>` |
+| `src/components/admin/UnifiedFabEditor.tsx` | 5ᵉ mode "Dock", section design Jeu-concours |
+| `src/components/home/RouletteFab.tsx` | Trigger paramétrable (variant, taille, position centrée par défaut, drag admin) |
+| `src/types/index.ts` | Étendre `unifiedFab` (`dockPos_*`, `inDock`, `rouletteFab`) |
+
+Aucun changement DB requis.
+
+## Risques
+- Position "centre" doit éviter de couvrir le contenu : ajouter une note d'avertissement dans l'éditeur + offset ajustable.
+- Le trigger Roulette doit rester accessible clavier (`tabIndex`, `aria-label`).
