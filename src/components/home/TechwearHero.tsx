@@ -544,6 +544,19 @@ function TechwearHeroSlideView({ config, productMissing, slideId }: { config: Sl
           </div>
         </div>
       </div>
+
+      {/* MODEL badge — free positioned over the slide (default top-right) */}
+      {config.showModelBadge && (
+        <div
+          aria-label="Référence modèle"
+          onPointerDown={startDrag('badge')}
+          style={badgeStyle}
+          className="bg-background/90 border border-foreground/10 px-3 py-2 text-center select-none"
+        >
+          <div className="text-[9px] font-bold uppercase tracking-[0.15em]">{config.modelBadge.line1}</div>
+          <div className="text-xs font-bold mt-0.5">{config.modelBadge.line2}</div>
+        </div>
+      )}
     </div>
   );
 }
