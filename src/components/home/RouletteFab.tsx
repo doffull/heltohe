@@ -174,7 +174,18 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
     return () => clearTimeout(t);
   }, [config?.enabled, segments.length, canSpin, location.pathname]);
 
-  const dragRef = useRef({ blocked: false });
+  const cfg = (designSettings as any).unifiedFab || {};
+  const rfab = cfg.rouletteFab || {};
+  const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false;
+
+  const rouletteDrag = useAdminDrag({
+    enabled: !!isAdmin,
+    onCommit: (pos) => {
+      const key = isMobile ? 'position_mobile' : 'position_desktop';
+      updateDesignSettings({ ...(designSettings as any), unifiedFab: { ...cfg, rouletteFab: { ...rfab, [key]: pos } } } as any);
+      toast.success('Jeu-concours repositionné');
+    },
+  });
 
   if (!config?.enabled || segments.length === 0) return null;
 
