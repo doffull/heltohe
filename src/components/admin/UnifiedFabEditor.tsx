@@ -144,9 +144,10 @@ export function UnifiedFabEditor() {
                   <Slider value={[dockBlur]} min={0} max={48} step={2} onValueChange={([v]) => setDockBlur(v)} />
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                 <label className="flex items-center justify-between border rounded p-2 text-xs">Voix <Switch checked={dockShowVoice} onCheckedChange={setDockShowVoice} /></label>
                 <label className="flex items-center justify-between border rounded p-2 text-xs">Chatbot <Switch checked={dockShowChat} onCheckedChange={setDockShowChat} /></label>
+                <label className="flex items-center justify-between border rounded p-2 text-xs">Jeu-concours <Switch checked={dockShowRoulette} onCheckedChange={setDockShowRoulette} /></label>
                 <label className="flex items-center justify-between border rounded p-2 text-xs">Éditeur visuel (admin) <Switch checked={dockShowVisualEditor} onCheckedChange={setDockShowVisualEditor} /></label>
               </div>
               <p className="text-[10px] text-muted-foreground">Les boutons custom (Notifications, Message…) sont automatiquement inclus sauf s'ils sont marqués « Isolé » ci-dessous.</p>
