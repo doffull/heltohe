@@ -174,7 +174,18 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
     return () => clearTimeout(t);
   }, [config?.enabled, segments.length, canSpin, location.pathname]);
 
-  const dragRef = useRef({ blocked: false });
+  const cfg = (designSettings as any).unifiedFab || {};
+  const rfab = cfg.rouletteFab || {};
+  const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false;
+
+  const rouletteDrag = useAdminDrag({
+    enabled: !!isAdmin,
+    onCommit: (pos) => {
+      const key = isMobile ? 'position_mobile' : 'position_desktop';
+      updateDesignSettings({ ...(designSettings as any), unifiedFab: { ...cfg, rouletteFab: { ...rfab, [key]: pos } } } as any);
+      toast.success('Jeu-concours repositionné');
+    },
+  });
 
   if (!config?.enabled || segments.length === 0) return null;
 
@@ -229,9 +240,6 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
     }
   };
 
-  const cfg = (designSettings as any).unifiedFab || {};
-  const rfab = cfg.rouletteFab || {};
-  const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false;
   const fabPos: FabPos = (isMobile ? rfab.position_mobile : rfab.position_desktop) || { corner: 'cc', x: 0, y: 0 };
   const variant = rfab.variant || 'glossy';
   const shape = rfab.shape || 'pill';
@@ -242,15 +250,6 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
   const sizeClass = size === 'sm' ? 'px-3 py-2 text-[10px]' : size === 'lg' ? 'px-6 py-4 text-sm' : size === 'xl' ? 'px-8 py-5 text-base' : 'px-4 py-3 text-xs';
   const iconSize = size === 'sm' ? 'h-3.5 w-3.5' : size === 'lg' ? 'h-5 w-5' : size === 'xl' ? 'h-6 w-6' : 'h-4 w-4';
   const shapeStyle = shape === 'round' ? { borderRadius: '9999px' } : shape === 'rect-bevel' ? { clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' } : { borderRadius: '9999px' };
-
-  const rouletteDrag = useAdminDrag({
-    enabled: !!isAdmin,
-    onCommit: (pos) => {
-      const key = isMobile ? 'position_mobile' : 'position_desktop';
-      updateDesignSettings({ ...(designSettings as any), unifiedFab: { ...cfg, rouletteFab: { ...rfab, [key]: pos } } } as any);
-      toast.success('Jeu-concours repositionné');
-    },
-  });
 
   return (
     <>
