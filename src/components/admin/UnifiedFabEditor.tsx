@@ -31,10 +31,24 @@ export function UnifiedFabEditor() {
   const [posD, setPosD] = useState(initial.position_desktop || { corner: 'br', x: 24, y: 24 });
   const [posM, setPosM] = useState(initial.position_mobile || { corner: 'br', x: 16, y: 16 });
   const [items, setItems] = useState(initial.items?.length ? initial.items : DEFAULT_ITEMS);
-  const [mode, setMode] = useState<'socle' | 'free' | 'grouped' | 'cluster'>(initial.mode || 'socle');
+  const [mode, setMode] = useState<'socle' | 'free' | 'grouped' | 'cluster' | 'dock'>(initial.mode || 'socle');
   const [groupSide, setGroupSide] = useState<'left' | 'right'>(initial.groupSide || 'left');
   const [groupOffsetY, setGroupOffsetY] = useState<number>(initial.groupOffsetY ?? 220);
   const [clusterDir, setClusterDir] = useState<'row' | 'col'>(initial.clusterDir || 'col');
+  const [dockDir, setDockDir] = useState<'row' | 'col'>(initial.dockDir || 'row');
+  const [dockSize, setDockSize] = useState<number>(initial.dockSize || 44);
+  const [dockBlur, setDockBlur] = useState<number>(initial.dockBlur ?? 24);
+  const [dockShowVoice, setDockShowVoice] = useState<boolean>(initial.dockShowVoice !== false);
+  const [dockShowChat, setDockShowChat] = useState<boolean>(initial.dockShowChat !== false);
+  const [dockShowVisualEditor, setDockShowVisualEditor] = useState<boolean>(initial.dockShowVisualEditor !== false);
+  const rouletteFab = initial.rouletteFab || {};
+  const [rfVariant, setRfVariant] = useState<string>(rouletteFab.variant || 'glossy');
+  const [rfSize, setRfSize] = useState<string>(rouletteFab.size || 'md');
+  const [rfShape, setRfShape] = useState<string>(rouletteFab.shape || 'pill');
+  const [rfAccent, setRfAccent] = useState<string>(rouletteFab.accentColor || '#ffffff');
+  const [rfLabel, setRfLabel] = useState<string>(rouletteFab.label || '');
+  const [rfPulse, setRfPulse] = useState<boolean>(rouletteFab.pulse !== false);
+  const [rfCorner, setRfCorner] = useState<string>((rouletteFab.position_desktop?.corner) || 'cc');
 
   useEffect(() => {
     const cur = (designSettings as any).unifiedFab || {};
@@ -48,6 +62,15 @@ export function UnifiedFabEditor() {
         ...initial,
         enabled, accentColor: accent, mode, groupSide, groupOffsetY,
         clusterDir,
+        dockDir, dockSize, dockBlur,
+        dockShowVoice, dockShowChat, dockShowVisualEditor,
+        rouletteFab: {
+          ...rouletteFab,
+          variant: rfVariant, size: rfSize, shape: rfShape,
+          accentColor: rfAccent, label: rfLabel, pulse: rfPulse,
+          position_desktop: { corner: rfCorner, x: rouletteFab.position_desktop?.x || 0, y: rouletteFab.position_desktop?.y || 0 },
+          position_mobile: rouletteFab.position_mobile || { corner: rfCorner, x: 0, y: 0 },
+        },
         position_desktop: posD, position_mobile: posM, items,
       },
     } as any);
