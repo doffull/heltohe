@@ -46,7 +46,7 @@ Réponds via la fonction search_results.`;
           model: 'google/gemini-3-flash-preview',
           messages: [
             { role: 'system', content: searchPrompt },
-            { role: 'user', content: transcript },
+            { role: 'user', content: q },
           ],
           tools: [{
             type: 'function',
