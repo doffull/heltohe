@@ -7,7 +7,8 @@ import { Gift, X, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
-import { cornerStyle, pxToPos, type FabPos } from '@/lib/fabPosition';
+import { cornerStyle, type FabPos } from '@/lib/fabPosition';
+import { useAdminDrag } from '@/lib/useAdminDrag';
 import { getIcon } from '@/components/admin/IconPicker';
 import { cn } from '@/lib/utils';
 import {
