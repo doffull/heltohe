@@ -169,17 +169,66 @@ function pxToCornerPos(left: number, top: number, w: number, h: number, elW: num
   };
 }
 
-function TechwearHeroSlideView({ config, productMissing }: { config: SlideConfig; productMissing: boolean }) {
+function TechwearHeroSlideView({ config, productMissing, slideId }: { config: SlideConfig; productMissing: boolean; slideId?: string }) {
   const viewport = useViewport();
   const safeColorIndex = Math.min(Math.max(config.defaultColor, 0), Math.max(config.colorOptions.length - 1, 0));
   const [activeColor, setActiveColor] = useState(safeColorIndex);
   const [activeSize, setActiveSize] = useState<string>(config.defaultSize);
   const { data: stock } = useProductStock(config.productId);
   const { data: products } = useProducts();
+  const { isAdmin } = useAuth();
+  const { designSettings, updateDesignSettings } = useApp();
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const linkedProduct = useMemo(
     () => (config.productId ? products?.find((p) => p.id === config.productId) : undefined),
     [products, config.productId]
   );
+
+  // Local positions (override config; persisted on dragend)
+  const [badgePos, setBadgePos] = useState<FreePos | undefined>(config.modelBadgePos);
+  const [panelPos, setPanelPos] = useState<FreePos | undefined>(config.sidePanelPos);
+  useEffect(() => { setBadgePos(config.modelBadgePos); setPanelPos(config.sidePanelPos); }, [config.modelBadgePos, config.sidePanelPos]);
+
+  const persistPos = (which: 'badge' | 'panel', pos: FreePos) => {
+    const cur = (designSettings as any).techwearHero || {};
+    const slides = Array.isArray(cur.slides) ? cur.slides : null;
+    if (slides && slideId) {
+      const next = slides.map((s: any) => s.id === slideId ? { ...s, [which === 'badge' ? 'modelBadgePos' : 'sidePanelPos']: pos } : s);
+      updateDesignSettings({ techwearHero: { ...cur, slides: next, ...(slides[0]?.id === slideId ? { [which === 'badge' ? 'modelBadgePos' : 'sidePanelPos']: pos } : {}) } } as any);
+    } else {
+      updateDesignSettings({ techwearHero: { ...cur, [which === 'badge' ? 'modelBadgePos' : 'sidePanelPos']: pos } } as any);
+    }
+  };
+
+  const startDrag = (which: 'badge' | 'panel') => (e: React.PointerEvent) => {
+    if (!isAdmin) return;
+    e.preventDefault(); e.stopPropagation();
+    const target = e.currentTarget as HTMLElement;
+    const container = containerRef.current; if (!container) return;
+    const cRect = container.getBoundingClientRect();
+    const tRect = target.getBoundingClientRect();
+    const offX = e.clientX - tRect.left;
+    const offY = e.clientY - tRect.top;
+    const elW = tRect.width, elH = tRect.height;
+    const move = (ev: PointerEvent) => {
+      const left = Math.max(0, Math.min(cRect.width - elW, ev.clientX - cRect.left - offX));
+      const top = Math.max(0, Math.min(cRect.height - elH, ev.clientY - cRect.top - offY));
+      target.style.left = `${left}px`; target.style.top = `${top}px`;
+      target.style.right = 'auto'; target.style.bottom = 'auto';
+      target.style.position = 'absolute';
+    };
+    const up = (ev: PointerEvent) => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      const left = parseInt(target.style.left || '0');
+      const top = parseInt(target.style.top || '0');
+      const pos = pxToCornerPos(left, top, cRect.width, cRect.height, elW, elH);
+      if (which === 'badge') setBadgePos(pos); else setPanelPos(pos);
+      persistPos(which, pos);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
 
   useEffect(() => { setActiveColor(safeColorIndex); }, [safeColorIndex, config.colorOptions.length]);
   useEffect(() => { setActiveSize(config.defaultSize); }, [config.defaultSize]);
