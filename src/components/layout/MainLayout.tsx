@@ -719,7 +719,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       </footer>
 
       {/* Unified floating action stack (Industrial Luxury) — visible for everyone, including admins for testing */}
-      <FabStack />
+      <UnifiedFab />
 
       {/* Newsletter Popup Host */}
       {!isAdmin && <NewsletterPopupHost />}
