@@ -70,6 +70,45 @@ export function UnifiedFabEditor() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Mode */}
+        <div className="space-y-2 p-3 border rounded">
+          <Label className="text-xs uppercase tracking-wider">Mode d'affichage</Label>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { v: 'socle', label: 'Socle unifié' },
+              { v: 'grouped', label: 'Voix+Assistant groupés' },
+              { v: 'free', label: 'Icônes libres' },
+            ].map((m) => (
+              <button
+                key={m.v}
+                type="button"
+                onClick={() => setMode(m.v as any)}
+                className={`text-xs font-bold uppercase tracking-wider p-2 border-2 transition ${mode === m.v ? 'border-primary bg-primary/10' : 'border-border'}`}
+              >{m.label}</button>
+            ))}
+          </div>
+
+          {mode === 'grouped' && (
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <div>
+                <Label className="text-[10px]">Côté</Label>
+                <div className="flex gap-2 mt-1">
+                  {(['left', 'right'] as const).map((s) => (
+                    <button key={s} type="button" onClick={() => setGroupSide(s)}
+                      className={`flex-1 text-xs p-2 border-2 ${groupSide === s ? 'border-primary bg-primary/10' : 'border-border'}`}>
+                      {s === 'left' ? 'Gauche' : 'Droite'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Label className="text-[10px]">Décalage vertical ({groupOffsetY}px)</Label>
+                <Slider value={[groupOffsetY]} min={60} max={600} step={8} onValueChange={([v]) => setGroupOffsetY(v)} />
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Position */}
         <div className="grid md:grid-cols-2 gap-4">
           {[
