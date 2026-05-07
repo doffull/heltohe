@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
 import { useProducts } from '@/hooks/useProducts';
