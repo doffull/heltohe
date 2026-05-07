@@ -723,6 +723,12 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Subscribe FAB - hidden for admins */}
       {!isAdmin && <SubscribeFab />}
+
+      {/* Voice Command FAB - hidden for admins */}
+      {!isAdmin && <VoiceCommandFab />}
+
+      {/* Newsletter Popup Host */}
+      {!isAdmin && <NewsletterPopupHost />}
     </div>
   );
 }
