@@ -193,6 +193,22 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   const unreadCount = messages.filter(m => !m.is_read).length;
 
+  // Admin customer chat logs
+  const { data: chatLogs = [] } = useQuery({
+    queryKey: ['admin-chat-logs'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('chat_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(30);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!isAdmin,
+  });
+  const chatCount = chatLogs.length;
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Top Banner */}
