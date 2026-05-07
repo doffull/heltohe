@@ -1,90 +1,122 @@
-# Plan : Live Edit, Tracking temps réel & Achat vocal complet
+# Plan — Éditeur live, Voice Shopping & FAB unifié
 
-## 1. FAB vocal visible pour admin (quick win)
+## 1. Éditeur visuel — Drag & Drop sections + Inline généralisé
 
-`MainLayout.tsx` cache actuellement `<FabStack />` quand `isAdmin = true`. On retire cette restriction pour que tu voies/testes la commande vocale, la roulette et le chat comme un visiteur.
+**a) Drag & Drop sections homepage**
+- Ajouter `home_sections` (jsonb ordonné) dans `design_settings` :
+  ```
+  [{ id, type: "hero" | "techwear" | "categories" | "products" | "looks" | "newsletter" | "flash" | "loyalty", visible, props }]
+  ```
+- Refactor `Index.tsx` pour boucler sur `home_sections` au lieu d'un ordre figé
+- Nouveau panneau `HomeSectionsEditor.tsx` (admin → Design) avec `@dnd-kit/sortable` :
+  - Réordonnancement par drag
+  - Toggle visibilité
+  - Bouton "Ajouter une section" (catalogue de blocs)
+  - Sauvegarde explicite (cohérent avec règle "no auto-save")
+- En mode édition live (super admin), poignées de drag visibles directement sur la home
 
-## 2. Tracking visiteurs temps réel
+**b) Inline editing généralisé**
+- Étendre `InlineEditable` à : titres de sections, sous-titres, CTA labels, footer, page produit (nom court, descriptions catégories), badges
+- Convention : `data-editable-source="design_settings.{path}"` ou `products.{id}.{field}`
+- Ajouter wrapper `<EditableImage>` (utilise `MediaPicker` existant) pour toutes les images de la home
+- Indicateur visuel discret (contour pointillé au hover) en mode édition
 
-### Tables (migration)
-- `visitor_sessions` : `id`, `session_id` (cookie), `user_id`, `started_at`, `last_seen_at`, `user_agent`, `ip_hash`, `country`, `device`, `referrer`, `landing_path`.
-- `page_views` : `session_id`, `path`, `title`, `viewed_at`, `duration_ms`.
-- `click_events` : `session_id`, `path`, `element_label`, `element_selector`, `x`, `y`, `clicked_at`.
-- RLS : insert public (anon), select admin uniquement. Realtime activé sur les 3 tables.
+## 2. Achat vocal connecté au catalogue réel
 
-### Frontend
-- Hook `useVisitorTracking()` monté dans `MainLayout` (sauf admin) :
-  - Crée/relance une session (sessionStorage), heartbeat toutes les 15s sur `last_seen_at`.
-  - Envoie un `page_view` à chaque changement de route.
-  - Listener global de clic → enregistre les clics significatifs (boutons, liens, ajout panier).
+**a) Recherche sémantique produit**
+- Nouvelle action vocale `search_products` dans `voice-command/index.ts` :
+  - Parse : couleur, type, taille, mot-clé via Gemini 2.5 Flash
+  - Query `products` (filtres : `is_active=true`, ILIKE name/description, color/size match)
+  - Si <3 résultats : élargir + recommandations (même catégorie / look associé)
+- Réponse structurée : `{ products: [...], spoken: "J'ai trouvé 4 doudous noirs..." }`
 
-### Admin dashboard
-- Nouvelle page `/admin/live` (`AdminLive.tsx`) :
-  - **Visiteurs en ligne** (sessions `last_seen_at > now()-30s`) avec liste live (Realtime).
-  - **Carte parcours** : clic sur un visiteur → timeline ordonnée de ses page_views + clics.
-  - **Top pages temps réel**, **clics chauds** par page (compteur), **derniers événements**.
+**b) Affichage des résultats vocaux**
+- Nouveau composant `VoiceResultsSheet.tsx` (Sheet bottom mobile / side desktop) :
+  - Liste produits avec image + prix + bouton "Ajouter" vocal-friendly
+  - "Dis : ajoute le numéro 2 en taille M"
+- Action `select_product_by_index` + `add_to_cart` enrichie (taille/couleur reconnues)
 
-## 3. Édition visuelle live (drag & drop + inline)
+**c) Recommandations**
+- Action `recommend` : si user dit "propose-moi", appelle Gemini avec catalogue résumé + historique session
+- Retourne 3 produits + raison parlée
 
-L'éditeur visuel existant (`src/components/visual-editor/`) gère déjà l'inline texte/couleurs sur quelques zones. On l'étend.
+**d) Mise à jour `VoiceCommandFab.tsx`**
+- Ajouter étape "Recherche" dans le stepper
+- Persistance résultats dans state pour follow-up ("le 2ème", "le rouge")
 
-### Inline partout
-- Étendre `InlineEditable` aux zones manquantes du site (titres de sections, sous-titres, descriptions catégories, CTA, footer, headings page produit).
-- Sauvegarde directe dans `design_settings` ou la table source (categories, products selon la cible) via `data-editable-source`.
-- Édition d'image : clic sur une image éditable → ouvre `MediaPicker` existant et update la source.
+## 3. FAB unifié — un seul socle flottant
 
-### Drag & drop des sections homepage
-- `home_sections` (jsonb dans `design_settings`) déjà présent → ajouter un mode "réorganisation" dans `VisualEditorPanel` :
-  - Survol = handle drag visible sur chaque section homepage.
-  - Réordonner avec `@dnd-kit/sortable` (déjà disponible probablement, sinon ajouter).
-  - Toggle visibilité par section, save manuel (cohérent avec la règle Admin "no auto-save").
+**Règle :** notifications restent séparées (en haut). Tout le reste regroupé en bas-droite.
 
-### Activation
-- Un seul toggle global "Mode édition live" déjà existant (`VisualEditorToggle`) qui active inline + drag & drop simultanément.
+**Nouveau composant `UnifiedFab.tsx` :**
+- Bouton principal flottant (cercle 56px, glassmorphism, halo animé, design futuriste cohérent Industrial Luxury)
+- Au clic : déploiement radial/vertical de 3 sous-FAB :
+  - 🎤 Commande vocale
+  - 💬 Chatbot IA
+  - 🎰 Jeux concours (roulette)
+- Animation ouverture (spring), labels au hover
+- Position par défaut : bottom-right, draggable en mode admin
 
-## 4. Achat 100% vocal end-to-end
+**Suppression de `FabStack` actuel** → remplacé par `UnifiedFab` dans `MainLayout`
 
-### Edge function `voice-command` enrichie
-Ajouter ces actions au tool calling :
-- `add_to_cart` (existe déjà, on garde mode test confirmation).
-- `set_address` : extrait nom, adresse, ville, code postal, téléphone depuis la dictée.
-- `set_delivery` : `home` ou `relay` + ville si relay.
-- `apply_promo` : code promo dicté.
-- `place_order` : déclenche `validate_and_create_order` après confirmation vocale explicite ("je confirme ma commande").
-- `read_cart` / `read_total` : lecture vocale du récap (synthèse vocale via `speechSynthesis`).
+**Admin — `AdminHomeIcons.tsx` étendu :**
+- Liste des 3 icônes du FAB unifié + bouton notifications
+- Pour chaque : icône (IconPicker), label, visible on/off, ordre
+- Position du socle : sliders `bottom`, `right` (séparés mobile/desktop) — preview live
+- Couleur d'accent du halo, taille
+- Sauvegarde dans `design_settings.unified_fab` (jsonb)
+- Drag & drop direct sur preview homepage (mode édition) pour repositionner
 
-### VoiceCommandFab
-- Conserver le **mode test** (transcription + action affichée + bouton "Confirmer / Annuler") avant chaque action sensible (ajout panier, adresse, paiement).
-- Ajouter une **machine à états vocale** : idle → écoute → action proposée → confirmation → exécution → feedback vocal (TTS).
-- Dialogue multi-tours : la session conserve le contexte (panier en cours, adresse partielle) jusqu'à `place_order` ou reset.
-- Indicateur visuel d'étape (panier → livraison → paiement → confirmé).
-- Lecture audio des prix/réponses via `window.speechSynthesis` (FR).
+## 4. Validation du tracking visiteurs
 
-### Sécurité
-- `place_order` côté front appelle la RPC `validate_and_create_order` existante (re-validation prix serveur conservée).
-- Paiement reste manuel (virement/chèque) → la voix prépare la commande, l'utilisateur confirme le mode de paiement à l'oral, l'admin valide ensuite (flux 3-étapes inchangé).
+- Vérifier `useVisitorTracking` : insert session OK, page_views au changement de route, click_events sur éléments significatifs (`[data-track]`, boutons, liens produits)
+- Tester `/admin/live` : visiteurs en ligne (heartbeat 15s), top pages temps réel (Realtime), timeline par session
+- Ajouter compteur "X visiteurs en ligne" dans header admin
+- Fix éventuel : exclure les sessions admin du tracking (déjà conditionné, à re-vérifier)
 
-### Onboarding
-- L'indice "Nouveau · commandez à la voix" est déjà en place ; ajouter un mini tutoriel 3 étapes au 1er clic ("Dis le produit → la couleur/taille → confirme").
+## Détails techniques
 
-## Fichiers impactés
+### Migrations
+- `design_settings` : ajout colonnes `home_sections jsonb`, `unified_fab jsonb` (avec defaults sains)
+- Trigger `sanitize_unified_fab` similaire à `sanitize_techwear_hero`
 
-**Création**
-- `supabase/migrations/<ts>_visitor_tracking.sql`
-- `src/hooks/useVisitorTracking.ts`
-- `src/pages/admin/AdminLive.tsx`
-- `src/components/admin/LiveVisitorsPanel.tsx`, `LiveJourneyTimeline.tsx`
+### Fichiers créés
+- `src/components/admin/HomeSectionsEditor.tsx`
+- `src/components/layout/UnifiedFab.tsx`
+- `src/components/voice/VoiceResultsSheet.tsx`
+- `src/hooks/useUnifiedFab.ts`
+- `src/hooks/useHomeSections.ts`
 
-**Modification**
-- `src/components/layout/MainLayout.tsx` (FAB pour admin + mount tracking)
-- `supabase/functions/voice-command/index.ts` (nouvelles actions + multi-tours)
-- `src/components/voice/VoiceCommandFab.tsx` (machine à états, TTS, checkout vocal)
-- `src/components/visual-editor/VisualEditorPanel.tsx` + nouveau `SectionsDndEditor.tsx`
-- `src/components/visual-editor/InlineEditable.tsx` (extension cibles + image)
-- `src/pages/admin/Admin.tsx` (entrée sidebar "Live")
+### Fichiers modifiés
+- `src/pages/Index.tsx` (rendu basé sur `home_sections`)
+- `src/components/layout/MainLayout.tsx` (FabStack → UnifiedFab)
+- `src/components/voice/VoiceCommandFab.tsx` (search + results)
+- `supabase/functions/voice-command/index.ts` (search/recommend)
+- `src/pages/admin/AdminHomeIcons.tsx` (config FAB unifié)
+- `src/components/admin/InlineEditable.tsx` (extension)
 
-## Notes techniques
-- Realtime via `supabase.channel().on('postgres_changes')` sur `visitor_sessions`.
-- Pas de PII brute : `ip_hash` (sha256 + sel côté edge function light) plutôt que IP claire.
-- Heatmap reportée (option choisie : "Basique maison").
-- Drag & drop : si `@dnd-kit` absent, l'ajouter.
+### Diagramme FAB
+```text
+                    [Notifications] (haut)
+
+                                      ┌─────┐
+                                      │  🎤 │
+                                      ├─────┤
+                                      │  💬 │
+                                      ├─────┤
+                                      │  🎰 │
+                                      └──┬──┘
+                                         │
+                                      ┌─────┐
+                                      │  ✦  │  ← socle unifié
+                                      └─────┘
+```
+
+## Ordre d'exécution
+1. Migration `home_sections` + `unified_fab`
+2. `UnifiedFab` + intégration MainLayout (quick win visuel)
+3. Voice search/recommend + `VoiceResultsSheet`
+4. `HomeSectionsEditor` + refactor `Index.tsx`
+5. Inline généralisé
+6. Admin config FAB + drag position
+7. QA tracking

@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { MannequinHotspots } from './MannequinHotspot';
 import { SidebarProductHUD } from './SidebarProductHUD';
-import { FabStack } from './FabStack';
+import { UnifiedFab } from './UnifiedFab';
 import { SidebarNewsletter } from './SidebarNewsletter';
 import { NewsletterPopupHost } from '@/components/home/NewsletterPopupHost';
 import { InlineEditable } from '@/components/visual-editor/InlineEditable';
@@ -719,7 +719,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       </footer>
 
       {/* Unified floating action stack (Industrial Luxury) — visible for everyone, including admins for testing */}
-      <FabStack />
+      <UnifiedFab />
 
       {/* Newsletter Popup Host */}
       {!isAdmin && <NewsletterPopupHost />}

@@ -87,6 +87,7 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
   const [reply, setReply] = useState('');
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<{ action: any; message: string } | null>(null);
+  const [results, setResults] = useState<any[]>([]);
   const [testMode, setTestMode] = useState<boolean>(() => {
     try { return localStorage.getItem(TEST_MODE_KEY) !== 'off'; } catch { return true; }
   });
@@ -179,6 +180,40 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
       case 'search':
         navigate(`/boutique?q=${encodeURIComponent(action.query || transcript)}`);
         break;
+      case 'search_products':
+      case 'recommend': {
+        try {
+          const lite = products.slice(0, 120).map((p) => ({
+            id: p.id, name: p.name, category: p.category, price: p.price,
+            sizes: p.sizes, colors: p.colors, description: p.description,
+          }));
+          const { data, error } = await supabase.functions.invoke('voice-command', {
+            body: { mode: action.type === 'recommend' ? 'recommend' : 'search', transcript: action.query || transcript, products: lite },
+          });
+          if (error) throw error;
+          const ids: string[] = data?.productIds || [];
+          const found = ids.map((id) => products.find((p) => p.id === id)).filter(Boolean);
+          setResults(found);
+          const spoken = data?.spoken || (found.length ? `J'ai trouvé ${found.length} produit${found.length > 1 ? 's' : ''}` : 'Aucun résultat');
+          speak(spoken);
+          setReply(spoken);
+        } catch (e) {
+          toast.error('Recherche impossible');
+        }
+        break;
+      }
+      case 'select_result': {
+        const idx = (action.resultIndex || 1) - 1;
+        const p = results[idx];
+        if (!p) {
+          speak('Je n\'ai pas trouvé ce résultat. Reformulez votre choix.');
+          break;
+        }
+        addItem({ ...p, quantity: action.quantity || 1, size: action.size, color: action.color });
+        speak(`${p.name} ajouté au panier`);
+        toast.success(`${p.name} ajouté au panier`);
+        break;
+      }
       case 'set_address': {
         const next = { ...address, ...(action.address || {}) };
         setAddress(next);
@@ -350,6 +385,36 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
                 <Button size="sm" className="flex-1 text-xs uppercase tracking-wider gap-1" onClick={confirmPending}>
                   <Check className="h-3 w-3" /> Confirmer
                 </Button>
+              </div>
+            </div>
+          )}
+
+          {results.length > 0 && (
+            <div className="border-2 border-foreground/30 mt-2 divide-y divide-border">
+              <div className="px-3 py-2 text-[10px] uppercase tracking-wider bg-foreground/5 flex items-center justify-between">
+                <span>{results.length} résultat{results.length > 1 ? 's' : ''}</span>
+                <button onClick={() => setResults([])} className="text-muted-foreground hover:text-foreground">×</button>
+              </div>
+              {results.map((p, i) => (
+                <div key={p.id} className="flex items-center gap-3 p-2">
+                  <div className="text-[10px] font-bold w-5 text-center">{i + 1}</div>
+                  <img src={p.image || '/placeholder.svg'} alt={p.name} className="w-12 h-12 object-cover" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium truncate">{p.name}</div>
+                    <div className="text-[10px] text-muted-foreground">{(p.salePrice ?? p.price)?.toFixed?.(2)} €</div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-[10px] uppercase tracking-wider h-7"
+                    onClick={() => { addItem({ ...p, quantity: 1 }); toast.success(`${p.name} ajouté`); speak(`${p.name} ajouté au panier`); }}
+                  >
+                    + Panier
+                  </Button>
+                </div>
+              ))}
+              <div className="px-3 py-2 text-[10px] text-muted-foreground italic">
+                Dites par exemple : « Ajoute le numéro 2 en taille M »
               </div>
             </div>
           )}
