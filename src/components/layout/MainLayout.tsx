@@ -193,6 +193,22 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   const unreadCount = messages.filter(m => !m.is_read).length;
 
+  // Admin customer chat logs
+  const { data: chatLogs = [] } = useQuery({
+    queryKey: ['admin-chat-logs'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('chat_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(30);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!isAdmin,
+  });
+  const chatCount = chatLogs.length;
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Top Banner */}
@@ -348,6 +364,86 @@ export function MainLayout({ children }: MainLayoutProps) {
                     <Shield className="h-5 w-5" />
                   </Button>
                 </Link>
+              )}
+
+              {/* Admin Notifications */}
+              {isAdmin && (
+                <Sheet open={notifOpen} onOpenChange={setNotifOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon" className="relative" title="Notifications">
+                      <Bell className="h-5 w-5" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-[360px] bg-background p-0">
+                    <div className="p-4 border-b border-border">
+                      <h3 className="font-bold text-lg">Notifications</h3>
+                      <p className="text-xs text-muted-foreground">{unreadCount} non lu{unreadCount > 1 ? 's' : ''}</p>
+                    </div>
+                    <div className="overflow-y-auto max-h-[calc(100vh-80px)]">
+                      {messages.length === 0 ? (
+                        <p className="text-muted-foreground text-center py-12">Aucun message</p>
+                      ) : messages.map((msg) => (
+                        <div key={msg.id} className={`p-4 border-b border-border ${!msg.is_read ? 'bg-primary/5' : ''}`}>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">{msg.name}</p>
+                              <p className="text-xs text-muted-foreground">{msg.email}</p>
+                              <p className="text-sm mt-1 line-clamp-2">{msg.message}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {format(new Date(msg.created_at), 'dd MMM yyyy HH:mm', { locale: fr })}
+                              </p>
+                            </div>
+                            {!msg.is_read && (
+                              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => markRead.mutate(msg.id)}>
+                                <Check className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              )}
+
+              {/* Admin Customer Chat Messages */}
+              {isAdmin && (
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon" className="relative" title="Messages clients">
+                      <MailIcon className="h-5 w-5" />
+                      {chatCount > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
+                          {chatCount > 9 ? '9+' : chatCount}
+                        </span>
+                      )}
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-[400px] bg-background p-0">
+                    <div className="p-4 border-b border-border">
+                      <h3 className="font-bold text-lg">Messages clients</h3>
+                      <p className="text-xs text-muted-foreground">{chatCount} conversation{chatCount > 1 ? 's' : ''} récente{chatCount > 1 ? 's' : ''}</p>
+                    </div>
+                    <div className="overflow-y-auto max-h-[calc(100vh-80px)]">
+                      {chatLogs.length === 0 ? (
+                        <p className="text-muted-foreground text-center py-12">Aucun message</p>
+                      ) : chatLogs.map((c: any) => (
+                        <div key={c.id} className="p-4 border-b border-border">
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+                            {format(new Date(c.created_at), 'dd MMM HH:mm', { locale: fr })} · #{(c.session_id || '').slice(0, 8)}
+                          </p>
+                          <p className="text-sm font-medium">👤 {c.user_message}</p>
+                          {c.bot_response && <p className="text-xs text-muted-foreground mt-1 line-clamp-3">🤖 {c.bot_response}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </SheetContent>
+                </Sheet>
               )}
 
               {/* Language selector */}
@@ -543,50 +639,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         </div>
       )}
 
-      {/* Admin Notification Bell */}
-      {isAdmin && (
-        <Sheet open={notifOpen} onOpenChange={setNotifOpen}>
-          <SheetTrigger asChild>
-            <button className="fixed bottom-20 right-6 z-[60] w-12 h-12 bg-foreground text-background flex items-center justify-center rounded-full shadow-lg hover:scale-105 transition-transform">
-              <Bell className="h-5 w-5" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs w-5 h-5 flex items-center justify-center rounded-full font-bold">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </button>
-          </SheetTrigger>
-          <SheetContent side="right" className="w-[360px] bg-background p-0">
-            <div className="p-4 border-b border-border">
-              <h3 className="font-bold text-lg">Messages clients</h3>
-              <p className="text-xs text-muted-foreground">{unreadCount} non lu{unreadCount > 1 ? 's' : ''}</p>
-            </div>
-            <div className="overflow-y-auto max-h-[calc(100vh-80px)]">
-              {messages.length === 0 ? (
-                <p className="text-muted-foreground text-center py-12">Aucun message</p>
-              ) : messages.map((msg) => (
-                <div key={msg.id} className={`p-4 border-b border-border ${!msg.is_read ? 'bg-primary/5' : ''}`}>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{msg.name}</p>
-                      <p className="text-xs text-muted-foreground">{msg.email}</p>
-                      <p className="text-sm mt-1 line-clamp-2">{msg.message}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {format(new Date(msg.created_at), 'dd MMM yyyy HH:mm', { locale: fr })}
-                      </p>
-                    </div>
-                    {!msg.is_read && (
-                      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => markRead.mutate(msg.id)}>
-                        <Check className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </SheetContent>
-        </Sheet>
-      )}
+      {/* Admin notifications and messages now live in the header (top-right). */}
 
       {/* Main Content */}
       <main className={cn(

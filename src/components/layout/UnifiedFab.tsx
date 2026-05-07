@@ -9,7 +9,8 @@ import { RouletteFab } from '@/components/home/RouletteFab';
 import { ChatBotWidget } from './ChatBotWidget';
 import { getIcon } from '@/components/admin/IconPicker';
 import { cn } from '@/lib/utils';
-import { pxToPos, cornerStyle, type FabPos } from '@/lib/fabPosition';
+import { cornerStyle, type FabPos } from '@/lib/fabPosition';
+import { useAdminDrag } from '@/lib/useAdminDrag';
 import { toast } from 'sonner';
 import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
 import type { HomeFabButton } from '@/types';
@@ -24,67 +25,6 @@ const DEFAULT_ITEMS = [
   { id: 'roulette' as const, label: 'Jeu-concours', icon: 'Gift', visible: true, order: 2 },
 ];
 
-const DRAG_THRESHOLD = 5;
-
-/**
- * Generic admin drag helper.
- * - onCommit receives the new {corner,x,y} once the user releases.
- * - Returns a click suppression flag via shouldBlockClickRef.
- */
-function useAdminDrag(opts: {
-  enabled: boolean;
-  isMobile: boolean;
-  onCommit: (pos: FabPos) => void;
-  size?: number;
-}) {
-  const { enabled, onCommit, size = 56 } = opts;
-  const blockClickRef = useRef(false);
-
-  const onPointerDown = (e: React.PointerEvent<HTMLElement>) => {
-    if (!enabled) return;
-    const target = e.currentTarget as HTMLElement;
-    const rect = target.getBoundingClientRect();
-    const startX = e.clientX;
-    const startY = e.clientY;
-    let dragging = false;
-
-    const move = (ev: PointerEvent) => {
-      const dx = ev.clientX - startX;
-      const dy = ev.clientY - startY;
-      if (!dragging && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
-      dragging = true;
-      ev.preventDefault();
-      const left = Math.max(0, Math.min(window.innerWidth - size, rect.left + dx));
-      const top = Math.max(0, Math.min(window.innerHeight - size, rect.top + dy));
-      target.style.position = 'fixed';
-      target.style.left = `${left}px`;
-      target.style.top = `${top}px`;
-      target.style.right = 'auto';
-      target.style.bottom = 'auto';
-    };
-    const up = () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-      if (!dragging) return;
-      blockClickRef.current = true;
-      setTimeout(() => { blockClickRef.current = false; }, 50);
-      const left = parseFloat(target.style.left || '0');
-      const top = parseFloat(target.style.top || '0');
-      const pos = pxToPos(left, top, window.innerWidth, window.innerHeight, size);
-      onCommit(pos);
-      // clear inline; rerender will place via cornerStyle
-      target.style.left = '';
-      target.style.top = '';
-      target.style.right = '';
-      target.style.bottom = '';
-      target.style.position = '';
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up);
-  };
-
-  return { onPointerDown, blockClickRef };
-}
 
 export function UnifiedFab() {
   const { designSettings, updateDesignSettings } = useApp();
@@ -207,9 +147,9 @@ export function UnifiedFab() {
   };
 
   // ── Per-button drag hooks ────────────────────────────────────────
-  const groupDrag = useAdminDrag({ enabled: isAdmin, isMobile, onCommit: saveGroupPos });
-  const clusterDrag = useAdminDrag({ enabled: isAdmin, isMobile, onCommit: saveClusterPos });
-  const dockDrag = useAdminDrag({ enabled: isAdmin, isMobile, onCommit: saveDockPos });
+  const groupDrag = useAdminDrag({ enabled: isAdmin, onCommit: saveGroupPos });
+  const clusterDrag = useAdminDrag({ enabled: isAdmin, onCommit: saveClusterPos });
+  const dockDrag = useAdminDrag({ enabled: isAdmin, onCommit: saveDockPos });
 
   // Visual editor toggle for admins (used in dock). Provider always present at App root.
   const ve = useVisualEditor();
@@ -436,7 +376,7 @@ export function UnifiedFab() {
 // ── Sub-components for per-button drag ────────────────────────────────
 
 function CustomFabButton({ button, pos, isAdmin, isMobile, accent, onClick, onDragCommit, Icon }: any) {
-  const drag = useAdminDrag({ enabled: isAdmin, isMobile, onCommit: onDragCommit });
+  const drag = useAdminDrag({ enabled: isAdmin, onCommit: onDragCommit });
   return (
     <button
       type="button"
@@ -461,7 +401,7 @@ function CustomFabButton({ button, pos, isAdmin, isMobile, accent, onClick, onDr
 }
 
 function SocleFreeButton({ id, label, Icon, pos, isAdmin, isMobile, accent, onClick, onDragCommit }: any) {
-  const drag = useAdminDrag({ enabled: isAdmin, isMobile, onCommit: onDragCommit });
+  const drag = useAdminDrag({ enabled: isAdmin, onCommit: onDragCommit });
   return (
     <button
       onClick={() => { if (drag.blockClickRef.current) return; onClick(); }}
@@ -480,7 +420,7 @@ function SocleFreeButton({ id, label, Icon, pos, isAdmin, isMobile, accent, onCl
 }
 
 function SocleStack({ posCfg, isAdmin, isMobile, accent, open, setOpen, visibleItems, triggerItem, onDragCommit }: any) {
-  const drag = useAdminDrag({ enabled: isAdmin, isMobile, onCommit: onDragCommit });
+  const drag = useAdminDrag({ enabled: isAdmin, onCommit: onDragCommit });
   return (
     <div style={cornerStyle(posCfg.corner, posCfg.x, posCfg.y)} className="flex flex-col items-center gap-3">
       {open && (
