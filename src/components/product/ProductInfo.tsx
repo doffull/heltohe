@@ -1,6 +1,10 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Truck, Shield, RotateCcw, Sparkles } from 'lucide-react';
+import { Check, Truck, Shield, RotateCcw, Sparkles, Ruler, User } from 'lucide-react';
 import { Product } from '@/types';
+import { Button } from '@/components/ui/button';
+import { SizeGuideAIModal } from './SizeGuideAIModal';
+import type { SizeCategory } from '@/lib/sizeCharts';
 
 interface ProductInfoProps {
   product: Product;
