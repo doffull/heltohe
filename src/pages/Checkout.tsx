@@ -53,7 +53,16 @@ export default function Checkout() {
   const { items, subtotal, promoDiscount, promoCode, total, clearCart } = useCart();
 
   const [step, setStep] = useState<Step>('address');
-  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>('relay');
+  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>(() => {
+    try {
+      const raw = sessionStorage.getItem('voice_checkout');
+      if (raw) {
+        const d = JSON.parse(raw)?.deliveryMode;
+        if (d === 'home' || d === 'relay') return d;
+      }
+    } catch {}
+    return 'relay';
+  });
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
 
