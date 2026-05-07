@@ -232,7 +232,84 @@ export function UnifiedFab() {
 
       <ChatBotWidget open={chatOpen} onOpenChange={setChatOpen} hideTrigger />
 
-      {mode === 'free' || mode === 'grouped' ? (
+      {mode === 'cluster' ? (
+        <>
+          {/* Free socle items (e.g. Jeu-concours isolé) */}
+          {visibleItems
+            .filter((it: any) => (it.clusterFree ?? (it.id === 'roulette')) === true)
+            .map((it: any) => {
+              const Icon = ICON_MAP[it.id] || Sparkles;
+              const p = (isMobile ? it.position_mobile : it.position_desktop) || (isMobile ? { corner: 'br', x: 16, y: 90 } : { corner: 'br', x: 24, y: 110 });
+              return (
+                <SocleFreeButton
+                  key={it.id}
+                  id={it.id}
+                  label={it.label}
+                  Icon={Icon}
+                  pos={p as FabPos}
+                  isAdmin={isAdmin}
+                  isMobile={isMobile}
+                  accent={accent}
+                  onClick={() => triggerItem(it.id)}
+                  onDragCommit={(np) => saveSocleItemPos(it.id, np)}
+                />
+              );
+            })}
+
+          {/* Cluster bloc — déplaçable d'un seul tenant */}
+          <div
+            onPointerDown={clusterDrag.onPointerDown}
+            className={cn(
+              'fixed z-40 flex gap-2 p-2 rounded-2xl backdrop-blur-xl bg-background/80 border border-foreground/20 shadow-2xl',
+              clusterDir === 'col' ? 'flex-col' : 'flex-row',
+              isAdmin && 'ring-2 ring-primary/60 cursor-grab active:cursor-grabbing'
+            )}
+            style={{
+              ...cornerStyle(clusterPos.corner, clusterPos.x, clusterPos.y),
+              boxShadow: `0 8px 32px ${accent}33`,
+              touchAction: isAdmin ? 'none' : undefined,
+            } as any}
+          >
+            {visibleItems
+              .filter((it: any) => !(it.clusterFree ?? (it.id === 'roulette')))
+              .map((it: any) => {
+                const Icon = ICON_MAP[it.id] || Sparkles;
+                return (
+                  <button
+                    key={it.id}
+                    onClick={(e) => { e.stopPropagation(); if (clusterDrag.blockClickRef.current) return; triggerItem(it.id); }}
+                    aria-label={it.label}
+                    title={it.label}
+                    className="w-11 h-11 rounded-full bg-background/90 border-2 border-foreground/40 text-foreground hover:scale-110 hover:bg-foreground hover:text-background transition-all flex items-center justify-center"
+                  >
+                    <Icon className="h-4 w-4" />
+                  </button>
+                );
+              })}
+            {visibleCustom
+              .filter((b) => !freeCustomIds.includes(b.id))
+              .map((b) => {
+                const I = getIcon(b.icon);
+                return (
+                  <button
+                    key={b.id}
+                    onClick={(e) => { e.stopPropagation(); if (clusterDrag.blockClickRef.current) return; handleAction(b); }}
+                    aria-label={b.label}
+                    title={b.label}
+                    className={cn(`hw-cta-btn hw-cta-v-${b.variant} hw-cta-rd-md w-11 h-11 p-0 relative`)}
+                  >
+                    <I className="h-4 w-4" />
+                    {b.badge && (
+                      <span className="absolute -top-1.5 -right-1.5 bg-foreground text-background text-[8px] font-bold px-1.5 py-0.5 uppercase tracking-wider">
+                        {b.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+          </div>
+        </>
+      ) : mode === 'free' || mode === 'grouped' ? (
         <>
           {(() => {
             const groupedIds = mode === 'grouped'
