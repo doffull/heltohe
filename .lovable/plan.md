@@ -1,103 +1,118 @@
-## Résumé
 
-Quatre chantiers indépendants :
-1. **Fixes badge mannequin** (flush save + invalidation par-id)
-2. **Commande vocale IA** (parler → ajouter au panier → checkout)
-3. **Newsletter** (widget sidebar discret + créateur de pop-ups admin)
-4. **Roulette d'accueil automatique** (au 1er visite/jour si non jouée)
+# Plan — Itération vocal, FABs & Newsletter
 
----
+## 1. Mode test commande vocale (dry-run)
 
-## 1. Fixes badge mannequin (rapide)
+**Objectif** : avant d'exécuter une action (ajout panier, navigation), afficher la transcription + l'action reconnue + bouton "Confirmer / Annuler".
 
-- `src/context/AppContext.tsx` : exposer `flushDesignSettings()` qui annule le timer debounce et appelle `saveDesignSettings.mutateAsync` immédiatement.
-- `src/components/admin/TechwearHeroTab.tsx` : ajouter un bouton **« Enregistrer »** explicite qui appelle `flushDesignSettings()` puis `toast.success`.
-- `src/hooks/useProducts.ts` : dans `useUpdateProduct.onSuccess`, invalider aussi `['products', id]` pour rafraîchir la fiche produit en cours.
+- `VoiceCommandFab.tsx` :
+  - Ajouter un état `pendingAction` qui stocke `{ transcript, action, message }` après l'appel à `voice-command`.
+  - **Ne plus exécuter automatiquement** l'action dans `handleCommand`. À la place, afficher dans la modale :
+    - Transcription brute (« Vous avez dit »)
+    - Action interprétée traduite en français lisible (ex : « Ajouter T-shirt Noir taille M au panier »)
+    - Boutons **Confirmer** (exécute) / **Réessayer** (relance le micro) / **Annuler**.
+  - Toggle « Mode test » (par défaut **activé**) dans la modale ; persisté en `localStorage` (`voice_test_mode`).
+  - Si mode test désactivé → comportement actuel (auto-exécution + TTS).
+- Helper `formatActionLabel(action, products)` pour rendre l'action humainement lisible.
 
----
+## 2. Onboarding vocal visible à l'arrivée
 
-## 2. Commande vocale IA
+**Objectif** : faire connaître la commande vocale dès l'entrée sur le site.
 
-**Approche** : bouton micro flottant (FAB) → enregistrement → transcription + intention via Lovable AI (Gemini) → action panier/navigation.
+- Nouveau composant `VoiceOnboardingHint.tsx` :
+  - Pulse + tooltip animé attaché au FAB micro pendant ~6s à la première visite (`localStorage: voice_hint_seen`).
+  - Texte : « Nouveau — Commandez à la voix », flèche vers le micro.
+  - Mobile-first (360px) ; positionné au-dessus du FAB.
+- Rendu uniquement si `designSettings.voiceCommandEnabled` et utilisateur sur la home.
+- Toggle admin `voiceOnboardingHint` (par défaut true) dans Marketing → Voix.
 
-- **Edge function** `supabase/functions/voice-command/index.ts` :
-  - Reçoit `{ transcript: string, cartContext, products[] }`.
-  - Appelle Gemini avec **tool calling** pour extraire intention structurée :
-    - `add_to_cart({ productQuery, size?, color?, quantity })`
-    - `remove_from_cart({ productQuery })`
-    - `navigate({ destination: 'cart'|'checkout'|'shop'|'product', productQuery? })`
-    - `search({ query })`
-    - `clarify({ message })`
-  - Retourne JSON avec action + message vocal de confirmation.
-- **Composant** `src/components/voice/VoiceCommandFab.tsx` :
-  - Bouton micro fixe en bas-droite (mobile-first 360 px).
-  - Web Speech API (`SpeechRecognition` `lang='fr-FR'`) pour STT navigateur (gratuit).
-  - Fallback : enregistrement audio + envoi à Gemini si non supporté.
-  - Affichage modal du transcript + réponse IA.
-  - `SpeechSynthesisUtterance` pour réponse vocale.
-- **Hook** `src/hooks/useVoiceCommand.ts` : exécute l'action retournée (navigateToProduct, addItem du CartContext, navigate `/panier`/`/checkout`).
-- **Admin toggle** : ajout `voiceCommandEnabled` dans `design_settings` pour activer/désactiver globalement.
+## 3. Refonte des FABs (intégration discrète mais visible)
 
----
+**Objectif** : que Roulette + Voix + Chatbot s'intègrent visuellement au site (Industrial Luxury, noir/blanc, 45°) au lieu de flotter en pastilles colorées.
 
-## 3. Newsletter (sidebar + pop-ups)
+- Créer `src/components/layout/FabStack.tsx` :
+  - Conteneur unique en bas-droite (`fixed bottom-4 right-4 z-40`) qui empile verticalement les FABs avec un design unifié :
+    - Forme carrée 44×44 avec **coin coupé 45°** (clip-path), bordure 1px `border-foreground/20`, fond `background/80 backdrop-blur`.
+    - Icône monochrome `text-foreground`, label uppercase tracking-wider en tooltip.
+    - Variante "primary" (Voix) → fond inversé pour appel à l'action.
+  - Slots: VoiceCommandFab, RouletteFab, ChatBotWidget toggle.
+- Refactor `VoiceCommandFab`, `RouletteFab`, `ChatBotWidget` pour exposer un bouton trigger via prop ou render-prop, et déléguer le rendu du bouton au `FabStack`.
+- Suppression des positions fixes individuelles (`bottom-36`, etc.) → orchestrées par `FabStack`.
+- Mounted dans `MainLayout.tsx` (non-admin uniquement).
 
-### a) Backend
-- Migration : table `newsletter_popups` (`name`, `title`, `subtitle`, `cta_label`, `image_url`, `display_trigger` enum `on_load|exit_intent|scroll_50|delay`, `delay_seconds`, `frequency_days`, `is_active`, `targeting` jsonb).
-- Réutiliser table `newsletters` existante (déjà présente via `useNewsletters`) pour stocker les emails.
-- RLS : lecture publique des `newsletter_popups` actifs ; insertion publique dans `newsletters` (déjà en place).
+## 4. Admin Newsletter — section dédiée et visible
 
-### b) Sidebar widget
-- `src/components/layout/SidebarNewsletter.tsx` : champ email + CTA discret, intégré au bas de `Sidebar.tsx`.
-- Contrôlé par `designSettings.showSidebarNewsletter` (boolean) + `sidebarNewsletterTitle/CtaLabel`.
-- Anti-spam : honeypot + délai 10s (cohérent avec règles projet).
+**Objectif** : la newsletter doit avoir sa propre place dans la sidebar admin et un dashboard avec stats de conversion.
 
-### c) Pop-up frontend
-- `src/components/home/NewsletterPopup.tsx` : Dialog shadcn déclenché selon `display_trigger`.
-- LocalStorage `nl_popup_seen_<id>` pour respecter `frequency_days`.
-- Honeypot + délai 10s.
+- Nouvelle page `src/pages/admin/AdminNewsletter.tsx` :
+  - **Onglet Vue d'ensemble** : KPIs (abonnés totaux, abonnés 7j, taux conversion popup, top popup, désinscriptions).
+  - **Onglet Abonnés** : liste filtrable (réutilise `useNewsletters`) + export CSV + suppression.
+  - **Onglet Pop-ups** : déplace `NewsletterPopupsManager` ici.
+  - **Onglet Sidebar widget** : toggles `showSidebarNewsletter`, `sidebarNewsletterTitle`, `sidebarNewsletterCta` (déplacés depuis Marketing).
+  - **Onglet Configuration** : email d'expédition, fréquence par défaut, RGPD checkbox text.
+- Ajout entrée « Newsletter » dans la sidebar admin (`Admin.tsx` ou route registry) avec icône `Mail`.
+- Retirer la duplication dans `AdminMarketing.tsx`.
 
-### d) Admin
-- Nouvel onglet dans `AdminMarketing.tsx` : **« Pop-ups Newsletter »** (CRUD).
-- Liste + formulaire : titre, sous-titre, image, déclencheur, délai, fréquence, actif.
-- Aperçu live du pop-up.
+## 5. Tracking conversions newsletter
 
----
+**Objectif** : mesurer combien d'abonnements proviennent de chaque source.
 
-## 4. Roulette d'accueil automatique
+- **Migration DB** :
+  - Ajouter colonnes à `newsletters` :
+    - `source text` (`sidebar`, `popup`, `roulette`, `footer`, `manual`)
+    - `popup_id uuid` (nullable, ref `newsletter_popups`)
+    - `referrer_path text` (URL de la page d'inscription)
+  - Ajouter table `newsletter_popup_views` :
+    - `popup_id uuid`, `viewed_at timestamptz`, `session_id text`, `converted boolean default false`
+  - RLS : insert public (avec validation), select admin only.
+- **`subscribeToNewsletter`** : étendre signature `(email, opts: { source, popupId?, referrerPath? })`.
+- **`NewsletterPopupHost`** :
+  - Insert `newsletter_popup_views` quand un popup s'affiche.
+  - À la conversion, mise à jour `converted = true`.
+- **`SidebarNewsletter`** : passe `source: 'sidebar'`.
+- **Stats RPC** `get_newsletter_stats()` (security definer) renvoyant les agrégats utilisés par le dashboard.
 
-- `src/components/home/RouletteFab.tsx` existe déjà → ajouter logique d'**ouverture auto au 1er chargement** :
-  - Vérifier `localStorage.getItem('roulette_last_spin')` (date ISO).
-  - Si absent OU plus vieux qu'aujourd'hui (cooldown défini dans `roulette_config`) → ouvrir le modal après 1.5s sur la home.
-  - Stocker `roulette_last_spin` lors du `spin_roulette` réussi.
-- Côté DB : déjà géré (cooldown server-side), mais on évite l'ouverture inutile de la modale.
-- Toggle admin : `designSettings.rouletteAutoOpen` (boolean) dans `AdminRoulette`.
+## 6. Configuration roue — notifications & préférences
 
----
+**Objectif** : compléter la config roulette demandée.
 
-## Détails techniques
+- Ajouter à `roulette_config` :
+  - `notify_admin_on_win boolean default true`
+  - `notify_admin_email text` (fallback `admin_config.admin_notification_email`)
+  - `auto_open_on_landing boolean default true`
+  - `auto_open_delay_ms integer default 1500`
+  - `show_after_dismiss_hours integer default 24`
+- Section **Notifications & Préférences** dans `AdminRoulette.tsx` (toggles + champs).
+- `RouletteFab` lit `auto_open_*` et `show_after_dismiss_hours` depuis la config.
+- Edge function `spin-roulette` envoie un email admin (Resend) si `notify_admin_on_win` et que le segment a une valeur ≥ seuil (réutilise `send-order-notification` pattern).
 
-| Fichier | Action |
-|---|---|
-| `src/context/AppContext.tsx` | + `flushDesignSettings`, expose dans context |
-| `src/components/admin/TechwearHeroTab.tsx` | + bouton « Enregistrer » avec toast |
-| `src/hooks/useProducts.ts` | invalidation `['products', id]` |
-| `supabase/functions/voice-command/index.ts` | nouveau (Gemini tool calling) |
-| `src/components/voice/VoiceCommandFab.tsx` | nouveau |
-| `src/hooks/useVoiceCommand.ts` | nouveau |
-| `src/App.tsx` | monter `<VoiceCommandFab />` dans MainLayout |
-| migration SQL | table `newsletter_popups` + RLS |
-| `src/hooks/useNewsletterPopups.ts` | nouveau (CRUD) |
-| `src/components/layout/SidebarNewsletter.tsx` | nouveau |
-| `src/components/layout/Sidebar.tsx` | intégrer widget |
-| `src/components/home/NewsletterPopup.tsx` | nouveau |
-| `src/pages/admin/AdminMarketing.tsx` | + onglet pop-ups |
-| `src/components/home/RouletteFab.tsx` | logique auto-open |
-| `src/pages/admin/AdminRoulette.tsx` | toggle auto-open |
-| `src/types/index.ts` | + champs design_settings |
-| `src/hooks/useDesignSettings.ts` | mapping nouveaux champs |
-| migration SQL | colonnes `voice_command_enabled`, `roulette_auto_open`, `show_sidebar_newsletter`, `sidebar_newsletter_*` sur `design_settings` |
+## 7. Détails techniques
 
-## Ce qui n'est pas inclus
-- Paiement vocal (sécurité) : la commande vocale s'arrête au checkout, l'utilisateur valide manuellement le paiement.
-- Pas de TTS premium (utilisation `SpeechSynthesis` natif navigateur).
+**Fichiers à créer**
+- `src/components/voice/VoiceOnboardingHint.tsx`
+- `src/components/layout/FabStack.tsx`
+- `src/pages/admin/AdminNewsletter.tsx`
+- `src/components/admin/NewsletterStatsTab.tsx`
+- `src/components/admin/NewsletterSubscribersTab.tsx`
+- Migration : `add_newsletter_tracking_and_roulette_prefs.sql`
+
+**Fichiers à modifier**
+- `VoiceCommandFab.tsx`, `RouletteFab.tsx`, `ChatBotWidget.tsx` (extraction trigger)
+- `MainLayout.tsx` (mount FabStack au lieu de FABs individuels)
+- `AdminMarketing.tsx` (retirer onglets newsletter/popups)
+- `AdminRoulette.tsx` (notifications & préférences)
+- `useNewsletterPopups.ts` (signature subscribe + tracking views)
+- `SidebarNewsletter.tsx`, `NewsletterPopupHost.tsx` (sources tracking)
+- `useDesignSettings.ts`, `types/index.ts` (`voiceOnboardingHint`)
+- `App.tsx` (route `/admin/newsletter`)
+- `supabase/functions/spin-roulette/index.ts` (notification admin)
+
+**Sécurité / Mémoire projet respectée**
+- RLS strict sur `newsletter_popup_views` (insert public via validation, select admin).
+- Honeypot + délai 10s conservés sur tous les forms.
+- Pas de logique sensible côté client.
+
+## Hors-scope volontaire
+- Pas de A/B testing popups (peut venir en v2).
+- Pas de templates email automatisés newsletter (envoi reste manuel via Resend).
+- Pas de modification du paiement vocal (sécurité).

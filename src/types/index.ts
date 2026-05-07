@@ -238,6 +238,7 @@ export interface DesignSettings {
   sidebarNewsletterTitle?: string;
   sidebarNewsletterCta?: string;
   voiceCommandEnabled?: boolean;
+  voiceOnboardingHint?: boolean;
   // Sidebar settings
   sidebarBg: string;
   accentColor: string;

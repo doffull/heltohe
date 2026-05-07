@@ -12,11 +12,9 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { MannequinHotspots } from './MannequinHotspot';
 import { SidebarProductHUD } from './SidebarProductHUD';
-import { ChatBotWidget } from './ChatBotWidget';
-import { SubscribeFab } from './SubscribeFab';
+import { FabStack } from './FabStack';
 import { SidebarNewsletter } from './SidebarNewsletter';
 import { NewsletterPopupHost } from '@/components/home/NewsletterPopupHost';
-import { VoiceCommandFab } from '@/components/voice/VoiceCommandFab';
 import { InlineEditable } from '@/components/visual-editor/InlineEditable';
 import { 
   Search, 
@@ -718,14 +716,8 @@ export function MainLayout({ children }: MainLayoutProps) {
         </div>
       </footer>
 
-      {/* Chatbot Widget - triggered from header */}
-      <ChatBotWidget open={chatOpen} onOpenChange={setChatOpen} hideTrigger />
-
-      {/* Subscribe FAB - hidden for admins */}
-      {!isAdmin && <SubscribeFab />}
-
-      {/* Voice Command FAB - hidden for admins */}
-      {!isAdmin && <VoiceCommandFab />}
+      {/* Unified floating action stack (Industrial Luxury) - hidden for admins */}
+      {!isAdmin && <FabStack />}
 
       {/* Newsletter Popup Host */}
       {!isAdmin && <NewsletterPopupHost />}

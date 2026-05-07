@@ -30,7 +30,7 @@ export function SidebarNewsletter() {
     }
     setSubmitting(true);
     try {
-      await subscribeToNewsletter(email);
+      await subscribeToNewsletter(email, undefined, { source: 'sidebar' });
       toast.success('Merci pour votre inscription !');
       setEmail('');
     } catch (err: any) {

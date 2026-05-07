@@ -111,13 +111,24 @@ function Wheel({
   );
 }
 
-export function RouletteFab() {
+interface RouletteFabProps {
+  open?: boolean;
+  onOpenChange?: (v: boolean) => void;
+  hideTrigger?: boolean;
+}
+
+export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: RouletteFabProps = {}) {
   const { user } = useAuth();
   const { data: config } = useRouletteConfig();
   const { data: segments = [] } = useRouletteSegments();
   const spin = useSpinRoulette();
 
-  const [open, setOpen] = useState(false);
+  const [openInternal, setOpenInternal] = useState(false);
+  const open = openProp !== undefined ? openProp : openInternal;
+  const setOpen = (v: boolean) => {
+    onOpenChange?.(v);
+    if (openProp === undefined) setOpenInternal(v);
+  };
   const [email, setEmail] = useState('');
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
@@ -141,16 +152,18 @@ export function RouletteFab() {
   useEffect(() => {
     if (autoOpenedRef.current) return;
     if (!config?.enabled || segments.length === 0) return;
+    if ((config as any).auto_open_on_landing === false) return;
     if (location.pathname !== '/' && location.pathname !== '/index') return;
     if (!canSpin) return;
-    const today = new Date().toISOString().slice(0, 10);
-    const lastPrompt = localStorage.getItem('roulette_auto_prompt_day');
-    if (lastPrompt === today) return;
+    const dismissH = (config as any).show_after_dismiss_hours ?? 24;
+    const lastPrompt = Number(localStorage.getItem('roulette_auto_prompt_at') || 0);
+    if (lastPrompt && Date.now() - lastPrompt < dismissH * 3600_000) return;
     autoOpenedRef.current = true;
+    const delay = (config as any).auto_open_delay_ms ?? 1500;
     const t = setTimeout(() => {
       setOpen(true);
-      localStorage.setItem('roulette_auto_prompt_day', today);
-    }, 1500);
+      localStorage.setItem('roulette_auto_prompt_at', String(Date.now()));
+    }, delay);
     return () => clearTimeout(t);
   }, [config?.enabled, segments.length, canSpin, location.pathname]);
 
@@ -209,27 +222,28 @@ export function RouletteFab() {
 
   return (
     <>
-      {/* FAB */}
-      <button
-        onClick={() => setOpen(true)}
-        className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-40 group"
-        aria-label="Ouvrir la roulette"
-      >
-        <div className="relative">
-          {canSpin && (
-            <span className="absolute inset-0 rounded-full bg-primary/40 animate-ping" />
-          )}
-          <div
-            className="relative bg-primary text-primary-foreground rounded-full px-4 py-3 md:px-5 md:py-4 shadow-2xl flex items-center gap-2 hover:scale-105 transition-transform border-2 border-primary-foreground/20"
-            style={{ clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' }}
-          >
-            <Gift className="h-5 w-5" />
-            <span className="font-bold tracking-wider text-xs md:text-sm uppercase">
-              {config.fab_label}
-            </span>
+      {!hideTrigger && (
+        <button
+          onClick={() => setOpen(true)}
+          className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-40 group"
+          aria-label="Ouvrir la roulette"
+        >
+          <div className="relative">
+            {canSpin && (
+              <span className="absolute inset-0 bg-foreground/20 animate-ping" style={{ clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' }} />
+            )}
+            <div
+              className="relative bg-background text-foreground border border-foreground/30 backdrop-blur-md px-4 py-3 shadow-xl flex items-center gap-2 hover:bg-foreground hover:text-background transition-colors"
+              style={{ clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' }}
+            >
+              <Gift className="h-4 w-4" />
+              <span className="font-bold tracking-wider text-[10px] md:text-xs uppercase">
+                {config.fab_label}
+              </span>
+            </div>
           </div>
-        </div>
-      </button>
+        </button>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg p-0 overflow-hidden bg-background border-2 border-primary/20">
