@@ -282,6 +282,13 @@ export interface DesignSettings {
   sidebarNewsletterCta?: string;
   voiceCommandEnabled?: boolean;
   voiceOnboardingHint?: boolean;
+  unifiedFab?: {
+    enabled?: boolean;
+    position_desktop?: { corner: 'br'|'bl'|'tr'|'tl'; x: number; y: number };
+    position_mobile?: { corner: 'br'|'bl'|'tr'|'tl'; x: number; y: number };
+    accentColor?: string;
+    items?: Array<{ id: 'voice'|'chat'|'roulette'; label: string; icon: string; visible: boolean; order: number }>;
+  };
   // Sidebar settings
   sidebarBg: string;
   accentColor: string;
