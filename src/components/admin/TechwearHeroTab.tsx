@@ -17,6 +17,8 @@ import type { TechwearHeroConfig, TechwearHeroSlideData, TechwearColorOption, Te
 import { toast } from 'sonner';
 import { TechwearHero } from '@/components/home/TechwearHero';
 import { getSlides, makeEmptySlide, duplicateSlide } from '@/lib/techwearHero';
+import { HERO_PRESETS } from '@/config/techwearHeroPresets';
+import { IconPicker } from '@/components/admin/IconPicker';
 
 const ALL_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
