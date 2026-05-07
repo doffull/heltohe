@@ -147,6 +147,8 @@ export default function ProductDetail() {
               colorOptions={product.colorOptions}
               selectedColor={selectedColor}
               onColorChange={handleColorChange}
+              modelHeight={(product as any).modelHeight}
+              modelSizeWorn={(product as any).modelSizeWorn}
             />
           </div>
 
