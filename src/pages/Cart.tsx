@@ -221,7 +221,7 @@ export default function Cart() {
 
           {/* Order Summary */}
           <div className="lg:col-span-1">
-            <div className="chamfer-hud bg-card/50 p-6 sticky top-4">
+            <div className="chamfer-hud bg-card/50 p-4 sm:p-6 lg:sticky lg:top-4">
               <h2 className="text-lg font-bold hud-text mb-6 pb-4 border-b border-border">
                 RÉCAPITULATIF
               </h2>
