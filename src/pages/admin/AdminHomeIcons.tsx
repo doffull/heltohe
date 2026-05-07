@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { IconPicker, getIcon } from '@/components/admin/IconPicker';
 import { Plus, Trash2, Copy, ChevronUp, ChevronDown, Sparkles } from 'lucide-react';
 import { UnifiedFabEditor } from '@/components/admin/UnifiedFabEditor';
+import { HomeBlocksEditor } from '@/components/admin/HomeBlocksEditor';
 import { toast } from 'sonner';
 import type { HomeFabButton } from '@/types';
 
@@ -81,6 +82,7 @@ export default function AdminHomeIcons() {
         <Button onClick={handleAdd} className="gap-1.5"><Plus className="h-4 w-4" /> Ajouter un bouton</Button>
       </div>
 
+      <HomeBlocksEditor />
       <UnifiedFabEditor />
 
       {isLoading && <p className="text-sm text-muted-foreground">Chargement…</p>}

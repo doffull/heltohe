@@ -173,21 +173,25 @@ export default function Home() {
 
   const slide = heroSlides[currentSlide];
 
-  return (
-    <div className="min-h-screen bg-background overflow-hidden">
-      {/* ═══════════════ PROMO BANNER ═══════════════ */}
-      <PromoBanner />
-      <RouletteFab />
+  const DEFAULT_BLOCKS = [
+    { id: 'hero' as const, visible: true },
+    { id: 'categories' as const, visible: true },
+    { id: 'featured' as const, visible: true },
+    { id: 'flash' as const, visible: true },
+    { id: 'newArrivals' as const, visible: true },
+    { id: 'loyalty' as const, visible: true },
+    { id: 'newsletter' as const, visible: true },
+  ];
+  const blocks = ((designSettings as any).homePageBlocks?.length ? (designSettings as any).homePageBlocks : DEFAULT_BLOCKS) as typeof DEFAULT_BLOCKS;
 
-      {/* ═══════════════ HERO (Techwear OR Slider — exclusif) ═══════════════ */}
-      {(designSettings as any).techwearHero?.enabled ? (
+  const blockRenderers: Record<string, () => JSX.Element | null> = {
+    hero: () =>
+      (designSettings as any).techwearHero?.enabled ? (
         <HeroErrorBoundary label="TechwearHero"><TechwearHero /></HeroErrorBoundary>
       ) : (
         <HeroErrorBoundary label="HeroSlider"><HeroSlider /></HeroErrorBoundary>
-      )}
-
-
-      {/* ═══════════════ CATEGORIES GRID ═══════════════ */}
+      ),
+    categories: () => (
       <section className={sectionPy}>
         <div className="container mx-auto px-4">
           <RevealSection>
@@ -198,14 +202,11 @@ export default function Home() {
               </div>
             </div>
           </RevealSection>
-
           <StaggerContainer className={cn(
             "grid",
-            // Gap
             (designSettings as any).categoryLayout?.gap === 'sm' ? "gap-2" :
             (designSettings as any).categoryLayout?.gap === 'lg' ? "gap-6 lg:gap-8" :
             "gap-3 lg:gap-6",
-            // Columns
             ((designSettings as any).categoryLayout?.columns || (designSettings as any).categoryColumns) === 2 ? "grid-cols-2" :
             ((designSettings as any).categoryLayout?.columns || (designSettings as any).categoryColumns) === 3 ? "grid-cols-2 lg:grid-cols-3" :
             "grid-cols-2 lg:grid-cols-4"
@@ -222,33 +223,26 @@ export default function Home() {
               const ar = (designSettings as any).categoryLayout?.aspectRatio || '3/4';
               return (
                 <motion.div key={cat.title} variants={cardVariants}>
-                <Link
+                  <Link
                     to={cat.href}
                     className={cn("group relative overflow-hidden bevel-corners block", `aspect-[${ar}]`)}
                     style={{ aspectRatio: ar }}>
-                    
-                  <img
-                      src={cat.image}
-                      alt={cat.title}
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                    
-                  <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/20 to-transparent" />
-                  <div className="absolute inset-0 border-2 border-transparent group-hover:border-foreground/40 transition-colors duration-300 bevel-corners" />
-                  <div className="absolute bottom-0 left-0 right-0 p-5 lg:p-6">
-                    <h3 className="text-lg lg:text-xl font-bold uppercase tracking-wider text-background group-hover:text-background/80 transition-colors">
-                      {cat.title}
-                    </h3>
-                    <div className="mt-2 h-0.5 w-0 bg-background group-hover:w-12 transition-all duration-500" />
-                  </div>
-                </Link>
-              </motion.div>);
-
+                    <img src={cat.image} alt={cat.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/20 to-transparent" />
+                    <div className="absolute inset-0 border-2 border-transparent group-hover:border-foreground/40 transition-colors duration-300 bevel-corners" />
+                    <div className="absolute bottom-0 left-0 right-0 p-5 lg:p-6">
+                      <h3 className="text-lg lg:text-xl font-bold uppercase tracking-wider text-background group-hover:text-background/80 transition-colors">{cat.title}</h3>
+                      <div className="mt-2 h-0.5 w-0 bg-background group-hover:w-12 transition-all duration-500" />
+                    </div>
+                  </Link>
+                </motion.div>
+              );
             })}
           </StaggerContainer>
         </div>
       </section>
-
-      {/* ═══════════════ FEATURED PRODUCTS ═══════════════ */}
+    ),
+    featured: () => (
       <section className={cn(sectionPy, "bg-secondary/30")}>
         <div className="container mx-auto px-4">
           <RevealSection>
@@ -257,82 +251,40 @@ export default function Home() {
                 <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-2">// SÉLECTION</p>
                 <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight">En vedette</h2>
               </div>
-              <Button
-                variant="outline"
-                className="hidden md:flex uppercase tracking-wider"
-                onClick={() => navigate('/boutique')}>
-                
-                Tout voir
-                <ChevronRight className="ml-2 h-4 w-4" />
+              <Button variant="outline" className="hidden md:flex uppercase tracking-wider" onClick={() => navigate('/boutique')}>
+                Tout voir<ChevronRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
           </RevealSection>
-
           <StaggerContainer className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-            {featuredProducts.map((product) =>
-            <motion.div
-              key={product.id}
-              variants={cardVariants}
-              whileHover={{ y: -8, transition: { duration: 0.3 } }}
-              className="group bg-background bevel-corners overflow-hidden border border-border hover:border-foreground hover:shadow-hmp-lg transition-colors">
-              
-                <div
-                className="relative aspect-[3/4] overflow-hidden cursor-pointer"
-                onClick={() => navigate(`/boutique/${product.id}`)}>
-                
-                  <img
-                  src={product.image}
-                  alt={product.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                
-                  {product.salePrice &&
-                <div className="absolute top-3 left-3 bg-foreground text-background px-2 py-1 text-[10px] font-bold uppercase">
-                      Promo
-                    </div>
-                }
-                  {product.stock <= 5 && product.stock > 0 &&
-                <div className="absolute top-3 right-3 bg-destructive text-destructive-foreground px-2 py-1 text-[10px] uppercase">
-                      Stock limité
-                    </div>
-                }
+            {featuredProducts.map((product) => (
+              <motion.div key={product.id} variants={cardVariants} whileHover={{ y: -8, transition: { duration: 0.3 } }} className="group bg-background bevel-corners overflow-hidden border border-border hover:border-foreground hover:shadow-hmp-lg transition-colors">
+                <div className="relative aspect-[3/4] overflow-hidden cursor-pointer" onClick={() => navigate(`/boutique/${product.id}`)}>
+                  <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                  {product.salePrice && <div className="absolute top-3 left-3 bg-foreground text-background px-2 py-1 text-[10px] font-bold uppercase">Promo</div>}
+                  {product.stock <= 5 && product.stock > 0 && <div className="absolute top-3 right-3 bg-destructive text-destructive-foreground px-2 py-1 text-[10px] uppercase">Stock limité</div>}
                 </div>
                 <div className="p-4">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{product.category}</p>
                   <h3 className="text-sm font-bold uppercase tracking-tight truncate">{product.name}</h3>
                   <div className="flex items-center gap-2 mt-2">
-                    {product.salePrice ?
-                  <>
-                        <span className="text-base font-bold">{product.salePrice}€</span>
-                        <span className="text-xs text-muted-foreground line-through">{product.price}€</span>
-                      </> :
-
-                  <span className="text-base font-bold">{product.price}€</span>
-                  }
+                    {product.salePrice ? (<><span className="text-base font-bold">{product.salePrice}€</span><span className="text-xs text-muted-foreground line-through">{product.price}€</span></>) : (<span className="text-base font-bold">{product.price}€</span>)}
                   </div>
                 </div>
-                <button
-                className="product-card-footer text-xs"
-                onClick={() => handleAddToCart(product)}>
-                
-                  Ajouter au panier
-                </button>
+                <button className="product-card-footer text-xs" onClick={() => handleAddToCart(product)}>Ajouter au panier</button>
               </motion.div>
-            )}
+            ))}
           </StaggerContainer>
-
           <div className="text-center mt-6 md:hidden">
             <Button variant="outline" className="uppercase tracking-wider" onClick={() => navigate('/boutique')}>
-              Voir tous les produits
-              <ChevronRight className="ml-2 h-4 w-4" />
+              Voir tous les produits<ChevronRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
         </div>
       </section>
-
-      {/* ═══════════════ FLASH PROMOS ═══════════════ */}
-      <PromoCountdown />
-
-      {/* ═══════════════ NEW ARRIVALS ═══════════════ */}
+    ),
+    flash: () => <PromoCountdown />,
+    newArrivals: () => (
       <section className={sectionPy}>
         <div className="container mx-auto px-4">
           <RevealSection>
@@ -341,65 +293,37 @@ export default function Home() {
               <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight">Dernières arrivées</h2>
             </div>
           </RevealSection>
-
           <StaggerContainer className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6">
-            {newArrivals.map((product) =>
-            <motion.div
-              key={product.id}
-              variants={cardVariants}
-              whileHover={{ y: -6, transition: { duration: 0.3 } }}
-              className="group bg-card bevel-corners-sm overflow-hidden border border-border hover:border-foreground transition-colors">
-              
-                <div
-                className="relative aspect-square overflow-hidden cursor-pointer"
-                onClick={() => navigate(`/boutique/${product.id}`)}>
-                
-                  <img
-                  src={product.image}
-                  alt={product.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                
+            {newArrivals.map((product) => (
+              <motion.div key={product.id} variants={cardVariants} whileHover={{ y: -6, transition: { duration: 0.3 } }} className="group bg-card bevel-corners-sm overflow-hidden border border-border hover:border-foreground transition-colors">
+                <div className="relative aspect-square overflow-hidden cursor-pointer" onClick={() => navigate(`/boutique/${product.id}`)}>
+                  <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 </div>
                 <div className="p-4">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{product.category}</p>
                   <h3 className="font-bold uppercase text-sm tracking-tight truncate">{product.name}</h3>
                   <p className="text-muted-foreground font-bold mt-1">{product.salePrice || product.price}€</p>
                 </div>
-                <button className="product-card-footer text-xs" onClick={() => handleAddToCart(product)}>
-                  Ajouter au panier
-                </button>
+                <button className="product-card-footer text-xs" onClick={() => handleAddToCart(product)}>Ajouter au panier</button>
               </motion.div>
-            )}
+            ))}
           </StaggerContainer>
-
           <RevealSection delay={0.3} className="text-center mt-4 lg:mt-6">
-            <Button
-              size="lg"
-              variant="outline"
-              className="uppercase tracking-wider"
-              onClick={() => navigate('/boutique')}>
-              
-              Voir toute la collection
-              <ChevronRight className="ml-2 h-5 w-5" />
+            <Button size="lg" variant="outline" className="uppercase tracking-wider" onClick={() => navigate('/boutique')}>
+              Voir toute la collection<ChevronRight className="ml-2 h-5 w-5" />
             </Button>
           </RevealSection>
         </div>
       </section>
-
-      {/* ═══════════════ LOYALTY BANNER ═══════════════ */}
-      <LoyaltyBanner />
-
-      {/* ═══════════════ NEWSLETTER CTA ═══════════════ */}
+    ),
+    loyalty: () => <LoyaltyBanner />,
+    newsletter: () => (
       <RevealSection>
         <section className={cn(sectionPy, "bg-foreground text-background")}>
           <div className="container mx-auto px-4 text-center">
             <p className="font-mono text-xs tracking-[0.3em] text-background/50 mb-4">// NEWSLETTER</p>
-            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight mb-4">
-              Restez informé
-            </h2>
-            <p className="text-background/60 mb-8 max-w-md mx-auto">
-              Inscrivez-vous pour recevoir les nouveautés et offres exclusives en avant-première.
-            </p>
+            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight mb-4">Restez informé</h2>
+            <p className="text-background/60 mb-8 max-w-md mx-auto">Inscrivez-vous pour recevoir les nouveautés et offres exclusives en avant-première.</p>
             <form
               className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto"
               onSubmit={async (e) => {
@@ -417,27 +341,24 @@ export default function Home() {
                   toast({ title: 'Erreur', description: 'Une erreur est survenue.', variant: 'destructive' });
                 }
               }}>
-              
-              <input
-                type="email"
-                placeholder="votre@email.com"
-                required
-                className="flex-1 h-12 px-4 bg-background text-foreground border-0" />
-              
-              <Button
-                type="submit"
-                size="lg"
-                className="h-12 bg-background text-foreground hover:bg-background/90">
-                
-                S'inscrire
-              </Button>
+              <input type="email" placeholder="votre@email.com" required className="flex-1 h-12 px-4 bg-background text-foreground border-0" />
+              <Button type="submit" size="lg" className="h-12 bg-background text-foreground hover:bg-background/90">S'inscrire</Button>
             </form>
           </div>
         </section>
       </RevealSection>
+    ),
+  };
 
-      {/* ═══════════════ POPUP BANNER ═══════════════ */}
+  return (
+    <div className="min-h-screen bg-background overflow-hidden">
+      <PromoBanner />
+      <RouletteFab />
+      {blocks.filter((b) => b.visible).map((b) => {
+        const r = blockRenderers[b.id];
+        return r ? <div key={b.id} data-home-block={b.id}>{r()}</div> : null;
+      })}
       <PopupBanner />
-    </div>);
-
+    </div>
+  );
 }
