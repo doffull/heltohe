@@ -233,6 +233,11 @@ export interface PageSettings {
 }
 
 export interface DesignSettings {
+  // Newsletter widget + voice command
+  showSidebarNewsletter?: boolean;
+  sidebarNewsletterTitle?: string;
+  sidebarNewsletterCta?: string;
+  voiceCommandEnabled?: boolean;
   // Sidebar settings
   sidebarBg: string;
   accentColor: string;
