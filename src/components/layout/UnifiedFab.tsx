@@ -199,24 +199,26 @@ export function UnifiedFab() {
 
   return (
     <>
-      {/* Custom DB FABs */}
-      {visibleCustom.map((b) => {
-        const pos = isMobile ? b.position_mobile : b.position_desktop;
-        const I = getIcon(b.icon);
-        return (
-          <CustomFabButton
-            key={b.id}
-            button={b}
-            pos={pos as FabPos}
-            isAdmin={isAdmin}
-            isMobile={isMobile}
-            accent={accent}
-            onClick={() => handleAction(b)}
-            onDragCommit={(p) => saveCustomFabPos(b, p)}
-            Icon={I}
-          />
-        );
-      })}
+      {/* Custom DB FABs (skipped in cluster mode unless marked free) */}
+      {visibleCustom
+        .filter((b) => mode !== 'cluster' || freeCustomIds.includes(b.id))
+        .map((b) => {
+          const pos = isMobile ? b.position_mobile : b.position_desktop;
+          const I = getIcon(b.icon);
+          return (
+            <CustomFabButton
+              key={b.id}
+              button={b}
+              pos={pos as FabPos}
+              isAdmin={isAdmin}
+              isMobile={isMobile}
+              accent={accent}
+              onClick={() => handleAction(b)}
+              onDragCommit={(p) => saveCustomFabPos(b, p)}
+              Icon={I}
+            />
+          );
+        })}
 
       {/* Hint bubble */}
       {showHint && voiceEnabled && (
