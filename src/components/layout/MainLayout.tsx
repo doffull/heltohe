@@ -716,8 +716,8 @@ export function MainLayout({ children }: MainLayoutProps) {
         </div>
       </footer>
 
-      {/* Unified floating action stack (Industrial Luxury) - hidden for admins */}
-      {!isAdmin && <FabStack />}
+      {/* Unified floating action stack (Industrial Luxury) — visible for everyone, including admins for testing */}
+      <FabStack />
 
       {/* Newsletter Popup Host */}
       {!isAdmin && <NewsletterPopupHost />}
