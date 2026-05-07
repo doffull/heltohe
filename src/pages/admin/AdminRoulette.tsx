@@ -18,6 +18,10 @@ import {
   useRouletteSpinsHistory,
   type RouletteSegment,
 } from '@/hooks/useRoulette';
+import { ROULETTE_PRESETS } from '@/config/roulettePresets';
+import { useApp } from '@/context/AppContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function AdminRoulette() {
   const { data: config } = useRouletteConfig();
@@ -27,8 +31,37 @@ export default function AdminRoulette() {
   const upsert = useUpsertSegment();
   const del = useDeleteSegment();
   const [draft, setDraft] = useState<any>(null);
+  const { designSettings, updateDesignSettings } = useApp();
+  const qc = useQueryClient();
 
   const cfg = draft || config;
+
+  const applyPreset = async (presetId: string) => {
+    const preset = ROULETTE_PRESETS.find((p) => p.id === presetId);
+    if (!preset) return;
+    try {
+      // 1) Update roulette_config
+      await updateConfig.mutateAsync(preset.config as any);
+      // 2) Replace segments
+      await supabase.from('roulette_segments' as any).delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      const rows = preset.segments.map((s, i) => ({ ...s, sort_order: i, is_active: true }));
+      await supabase.from('roulette_segments' as any).insert(rows as any);
+      qc.invalidateQueries({ queryKey: ['roulette-segments'] });
+      // 3) Update FAB style
+      const cur = (designSettings as any) || {};
+      const ufab = cur.unifiedFab || {};
+      await updateDesignSettings({
+        ...cur,
+        unifiedFab: {
+          ...ufab,
+          rouletteFab: { ...(ufab.rouletteFab || {}), ...preset.fab },
+        },
+      } as any);
+      toast.success(`Preset « ${preset.name} » appliqué`);
+    } catch (e: any) {
+      toast.error(e.message || 'Erreur lors de l\'application du preset');
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -36,6 +69,35 @@ export default function AdminRoulette() {
         <h1 className="text-2xl lg:text-3xl font-bold uppercase tracking-wider">🎰 Roulette</h1>
         <p className="text-sm text-muted-foreground">Système de jeu quotidien à lots</p>
       </div>
+
+      {/* PRESETS */}
+      <Card className="p-4 border-2 border-primary/40">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-sm font-bold uppercase tracking-wider">Presets rapides</h2>
+            <p className="text-xs text-muted-foreground">Style FAB + type de jeu + lots/promos en un clic</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {ROULETTE_PRESETS.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => applyPreset(p.id)}
+              className="text-left border-2 border-border hover:border-primary p-3 transition group"
+              style={{ background: p.fab.accentColor + '14' }}
+            >
+              <div className="text-2xl mb-1">{p.emoji}</div>
+              <div className="text-sm font-bold uppercase tracking-wider">{p.name}</div>
+              <div className="text-[10px] text-muted-foreground mt-1">{p.description}</div>
+              <div className="mt-2 flex flex-wrap gap-1">
+                <span className="text-[9px] px-1.5 py-0.5 bg-foreground text-background uppercase tracking-wider">{p.gameType}</span>
+                <span className="text-[9px] px-1.5 py-0.5 border border-foreground/40 uppercase tracking-wider">{p.fab.variant}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </Card>
 
       <Tabs defaultValue="config">
         <TabsList>
