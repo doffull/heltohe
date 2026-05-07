@@ -475,6 +475,11 @@ export default function AdminMarketing() {
           </div>
         </TabsContent>
 
+        {/* ── POPUPS TAB ── */}
+        <TabsContent value="popups" className="space-y-4">
+          <NewsletterPopupsManager />
+        </TabsContent>
+
         {/* ── STYLES TAB ── */}
         <TabsContent value="styles" className="space-y-4">
           <div className="flex justify-end">
