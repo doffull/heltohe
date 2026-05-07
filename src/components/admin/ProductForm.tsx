@@ -56,6 +56,9 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
     attributes: {} as Record<string, string>,
     videoUrl: '',
     tags: [] as string[],
+    modelHeight: '',
+    modelSizeWorn: '',
+    modelName: '',
   });
 
   // Variant stock state (local to form — passed up on submit)
