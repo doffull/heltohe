@@ -659,7 +659,40 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         </div>
       </div>
 
-      {/* Attributes */}
+      {/* Mannequin */}
+      <div className="space-y-4">
+        <h4 className="hud-text text-xs text-primary">// MANNEQUIN (optionnel)</h4>
+        <p className="text-[11px] text-muted-foreground">Affiché sur la fiche produit pour aider au choix de la taille.</p>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="space-y-2">
+            <Label className="hud-text text-xs">Taille (ex: 1m80)</Label>
+            <Input
+              value={formData.modelHeight}
+              onChange={(e) => setFormData(prev => ({ ...prev, modelHeight: e.target.value }))}
+              className="bg-secondary/50 border-border/30"
+              placeholder="1m80"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="hud-text text-xs">Taille portée</Label>
+            <Input
+              value={formData.modelSizeWorn}
+              onChange={(e) => setFormData(prev => ({ ...prev, modelSizeWorn: e.target.value }))}
+              className="bg-secondary/50 border-border/30"
+              placeholder="M"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="hud-text text-xs">Nom (optionnel)</Label>
+            <Input
+              value={formData.modelName}
+              onChange={(e) => setFormData(prev => ({ ...prev, modelName: e.target.value }))}
+              className="bg-secondary/50 border-border/30"
+              placeholder="Lucas"
+            />
+          </div>
+        </div>
+      </div>
       <div className="space-y-4">
         <h4 className="hud-text text-xs text-primary">// ATTRIBUTS TECHNIQUES</h4>
         
