@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { MannequinHotspots } from './MannequinHotspot';
 import { SidebarProductHUD } from './SidebarProductHUD';
-import { FabStack } from './FabStack';
+import { UnifiedFab } from './UnifiedFab';
 import { SidebarNewsletter } from './SidebarNewsletter';
 import { NewsletterPopupHost } from '@/components/home/NewsletterPopupHost';
 import { InlineEditable } from '@/components/visual-editor/InlineEditable';
