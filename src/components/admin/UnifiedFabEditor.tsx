@@ -79,10 +79,11 @@ export function UnifiedFabEditor() {
         {/* Mode */}
         <div className="space-y-2 p-3 border rounded">
           <Label className="text-xs uppercase tracking-wider">Mode d'affichage</Label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {[
               { v: 'socle', label: 'Socle unifié' },
               { v: 'grouped', label: 'Voix+Assistant groupés' },
+              { v: 'cluster', label: 'Cluster CTA (tout regroupé)' },
               { v: 'free', label: 'Icônes libres' },
             ].map((m) => (
               <button
@@ -93,6 +94,21 @@ export function UnifiedFabEditor() {
               >{m.label}</button>
             ))}
           </div>
+
+          {mode === 'cluster' && (
+            <div className="mt-3 space-y-2">
+              <Label className="text-[10px]">Direction du cluster</Label>
+              <div className="flex gap-2">
+                {(['col', 'row'] as const).map((d) => (
+                  <button key={d} type="button" onClick={() => setClusterDir(d)}
+                    className={`flex-1 text-xs p-2 border-2 ${clusterDir === d ? 'border-primary bg-primary/10' : 'border-border'}`}>
+                    {d === 'col' ? 'Vertical' : 'Horizontal'}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-muted-foreground">Glissez le cluster directement sur la home en mode admin pour le repositionner. Marquez ci-dessous les boutons à isoler du cluster (ex. Jeu-concours).</p>
+            </div>
+          )}
 
           {mode === 'grouped' && (
             <div className="grid grid-cols-2 gap-3 mt-3">
