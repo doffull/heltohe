@@ -142,10 +142,10 @@ export default function Cart() {
             {items.map((item) => (
               <div 
                 key={item.id}
-                className="chamfer-hud bg-card/50 p-4 flex gap-4"
+                className="chamfer-hud bg-card/50 p-3 sm:p-4 flex gap-3 sm:gap-4"
               >
                 {/* Product Image */}
-                <div className="w-24 h-24 flex-shrink-0 chamfer-hud-sm overflow-hidden bg-muted">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 chamfer-hud-sm overflow-hidden bg-muted">
                   <img 
                     src={item.image} 
                     alt={item.name}
@@ -157,16 +157,16 @@ export default function Cart() {
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold text-sm hud-text truncate">{item.name}</h3>
                   {(item.size || item.color) && (
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-[11px] sm:text-xs text-muted-foreground mt-1 truncate">
                       {item.size && `Taille: ${item.size}`}
                       {item.size && item.color && ' | '}
                       {item.color && `Couleur: ${item.color}`}
                     </p>
                   )}
                   
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-3">
+                  <div className="flex items-center justify-between gap-2 mt-2 sm:mt-3 flex-wrap">
                     {/* Quantity Controls */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <Button
                         variant="outline"
                         size="icon"
@@ -175,7 +175,7 @@ export default function Cart() {
                       >
                         <Minus className="h-3 w-3" />
                       </Button>
-                      <span className="w-8 text-center font-bold">{item.quantity}</span>
+                      <span className="w-7 text-center font-bold text-sm">{item.quantity}</span>
                       <Button
                         variant="outline"
                         size="icon"
@@ -185,11 +185,11 @@ export default function Cart() {
                         <Plus className="h-3 w-3" />
                       </Button>
                       
-                      {/* Remove - inline on mobile */}
+                      {/* Remove */}
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-destructive hover:bg-destructive/10 ml-auto sm:ml-0"
+                        className="h-8 w-8 text-destructive hover:bg-destructive/10"
                         onClick={() => removeItem(item.id)}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -197,18 +197,18 @@ export default function Cart() {
                     </div>
 
                     {/* Price */}
-                    <div className="text-right">
+                    <div className="text-right whitespace-nowrap">
                       {item.salePrice ? (
-                        <div>
-                          <span className="text-sm line-through text-muted-foreground mr-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+                          <span className="text-[11px] sm:text-sm line-through text-muted-foreground">
                             {(item.price * item.quantity).toFixed(2)}€
                           </span>
-                          <span className="font-bold text-primary">
+                          <span className="font-bold text-sm sm:text-base text-primary">
                             {(item.salePrice * item.quantity).toFixed(2)}€
                           </span>
                         </div>
                       ) : (
-                        <span className="font-bold">
+                        <span className="font-bold text-sm sm:text-base">
                           {(item.price * item.quantity).toFixed(2)}€
                         </span>
                       )}
