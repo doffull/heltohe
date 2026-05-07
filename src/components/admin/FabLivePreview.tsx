@@ -71,10 +71,11 @@ export function FabLivePreview() {
 
   const [items, setItems] = useState<Item[]>(initial);
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop');
-  const [mode, setMode] = useState<'free' | 'socle'>(cfg.mode || 'socle');
+  const [mode, setMode] = useState<'free' | 'socle' | 'grouped'>(cfg.mode || 'socle');
+  const [groupSide, setGroupSide] = useState<'left' | 'right'>(cfg.groupSide || 'left');
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => { setItems(initial); setMode(cfg.mode || 'socle'); }, [designSettings]);
+  useEffect(() => { setItems(initial); setMode(cfg.mode || 'socle'); setGroupSide(cfg.groupSide || 'left'); }, [designSettings]);
 
   const size = SIZES[device];
   const posKey = device === 'desktop' ? 'position_desktop' : 'position_mobile';
