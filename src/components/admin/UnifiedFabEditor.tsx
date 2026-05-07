@@ -102,11 +102,12 @@ export function UnifiedFabEditor() {
         {/* Mode */}
         <div className="space-y-2 p-3 border rounded">
           <Label className="text-xs uppercase tracking-wider">Mode d'affichage</Label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
             {[
+              { v: 'dock', label: 'Dock unifié (glass)' },
               { v: 'socle', label: 'Socle unifié' },
               { v: 'grouped', label: 'Voix+Assistant groupés' },
-              { v: 'cluster', label: 'Cluster CTA (tout regroupé)' },
+              { v: 'cluster', label: 'Cluster CTA' },
               { v: 'free', label: 'Icônes libres' },
             ].map((m) => (
               <button
@@ -117,6 +118,39 @@ export function UnifiedFabEditor() {
               >{m.label}</button>
             ))}
           </div>
+
+          {mode === 'dock' && (
+            <div className="mt-3 space-y-3 border-t pt-3">
+              <p className="text-[11px] text-muted-foreground">Pill glassmorphism regroupant tous les outils. Glissez-le sur la home en mode admin. Position par défaut : bas centre.</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-[10px]">Direction</Label>
+                  <div className="flex gap-2 mt-1">
+                    {(['row', 'col'] as const).map((d) => (
+                      <button key={d} type="button" onClick={() => setDockDir(d)}
+                        className={`flex-1 text-xs p-2 border-2 ${dockDir === d ? 'border-primary bg-primary/10' : 'border-border'}`}>
+                        {d === 'row' ? 'Horizontal' : 'Vertical'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-[10px]">Taille des icônes ({dockSize}px)</Label>
+                  <Slider value={[dockSize]} min={32} max={64} step={2} onValueChange={([v]) => setDockSize(v)} />
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-[10px]">Intensité du blur ({dockBlur}px)</Label>
+                  <Slider value={[dockBlur]} min={0} max={48} step={2} onValueChange={([v]) => setDockBlur(v)} />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <label className="flex items-center justify-between border rounded p-2 text-xs">Voix <Switch checked={dockShowVoice} onCheckedChange={setDockShowVoice} /></label>
+                <label className="flex items-center justify-between border rounded p-2 text-xs">Chatbot <Switch checked={dockShowChat} onCheckedChange={setDockShowChat} /></label>
+                <label className="flex items-center justify-between border rounded p-2 text-xs">Éditeur visuel (admin) <Switch checked={dockShowVisualEditor} onCheckedChange={setDockShowVisualEditor} /></label>
+              </div>
+              <p className="text-[10px] text-muted-foreground">Les boutons custom (Notifications, Message…) sont automatiquement inclus sauf s'ils sont marqués « Isolé » ci-dessous.</p>
+            </div>
+          )}
 
           {mode === 'cluster' && (
             <div className="mt-3 space-y-2">
