@@ -126,6 +126,11 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     legalDirector: (db.legal_director as string) ?? '',
     legalRgpdEmail: (db.legal_rgpd_email as string) ?? '',
     legalReturnEmail: (db.legal_return_email as string) ?? '',
+    // Sidebar newsletter widget + voice command
+    showSidebarNewsletter: db.show_sidebar_newsletter !== null && db.show_sidebar_newsletter !== undefined ? (db.show_sidebar_newsletter as boolean) : true,
+    sidebarNewsletterTitle: (db.sidebar_newsletter_title as string) ?? 'Newsletter',
+    sidebarNewsletterCta: (db.sidebar_newsletter_cta as string) ?? "Je m'inscris",
+    voiceCommandEnabled: db.voice_command_enabled !== null && db.voice_command_enabled !== undefined ? (db.voice_command_enabled as boolean) : true,
   };
 }
 
@@ -236,6 +241,10 @@ function settingsToDb(s: DesignSettings) {
     legal_director: s.legalDirector ?? '',
     legal_rgpd_email: s.legalRgpdEmail ?? '',
     legal_return_email: s.legalReturnEmail ?? '',
+    show_sidebar_newsletter: (s as any).showSidebarNewsletter ?? true,
+    sidebar_newsletter_title: (s as any).sidebarNewsletterTitle ?? 'Newsletter',
+    sidebar_newsletter_cta: (s as any).sidebarNewsletterCta ?? "Je m'inscris",
+    voice_command_enabled: (s as any).voiceCommandEnabled ?? true,
   };
 }
 
