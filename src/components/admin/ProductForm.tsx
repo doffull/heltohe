@@ -91,6 +91,9 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         attributes: product.attributes || {},
         videoUrl: product.videoUrl || '',
         tags: product.tags || [],
+        modelHeight: product.modelHeight || '',
+        modelSizeWorn: product.modelSizeWorn || '',
+        modelName: product.modelName || '',
       });
     }
   }, [product]);
