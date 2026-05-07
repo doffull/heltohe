@@ -64,6 +64,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const queryClient = useQueryClient();
+  useVisitorTracking({ enabled: !isAdmin, userId: user?.id ?? null });
   const { data: dbCategories = [] } = useCategories();
 
   const isHomePage = location.pathname === '/';
