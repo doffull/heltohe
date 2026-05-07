@@ -11,6 +11,8 @@ interface ProductImageGalleryProps {
   colorOptions?: ColorOption[];
   selectedColor?: string | null;
   onColorChange?: (color: string) => void;
+  modelHeight?: string;
+  modelSizeWorn?: string;
 }
 
 function isEmbedVideo(url: string) {
@@ -32,9 +34,12 @@ export default function ProductImageGallery({
   colorOptions = [],
   selectedColor,
   onColorChange,
+  modelHeight,
+  modelSizeWorn,
 }: ProductImageGalleryProps) {
   const isMobile = useIsMobile();
   const [activeMedia, setActiveMedia] = useState<'image' | 'video'>('image');
+  const [showModelBadge, setShowModelBadge] = useState(true);
   const [isZoomed, setIsZoomed] = useState(false);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
@@ -205,6 +210,29 @@ export default function ProductImageGallery({
             transition={{ delay: 0.5 }}
           >
             <span className="text-[10px] text-muted-foreground">Double-tap pour zoomer</span>
+          </motion.div>
+        )}
+
+        {/* Mannequin badge — bottom-left, dismissable */}
+        {showModelBadge && (modelHeight || modelSizeWorn) && activeMedia === 'image' && (
+          <motion.div
+            className="absolute bottom-4 left-4 flex items-center gap-2 bg-background/85 backdrop-blur-sm rounded-full pl-3 pr-1.5 py-1.5 shadow-md"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="text-[10px] font-bold hud-text uppercase tracking-wider">
+              📏 {[modelHeight, modelSizeWorn && `taille ${modelSizeWorn}`].filter(Boolean).join(' · ')}
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowModelBadge(false)}
+              className="w-5 h-5 rounded-full hover:bg-foreground/10 flex items-center justify-center"
+              aria-label="Masquer"
+            >
+              <X className="h-3 w-3" />
+            </button>
           </motion.div>
         )}
 
