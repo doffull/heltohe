@@ -422,6 +422,7 @@ function TechwearHeroSlideView({ config, productMissing, slideId }: { config: Sl
           </div>
 
           <div
+            ref={panelRef}
             className="hw-right"
             style={panelStyleFree}
           >
