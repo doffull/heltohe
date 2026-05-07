@@ -52,6 +52,9 @@ function appToDbProduct(product: Partial<Product>) {
     video_url: product.videoUrl || null,
     tags: product.tags || [],
     promo_ends_at: product.promoEndsAt || null,
+    model_height: product.modelHeight || null,
+    model_size_worn: product.modelSizeWorn || null,
+    model_name: product.modelName || null,
     is_active: true,
   };
 }
