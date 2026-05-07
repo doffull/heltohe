@@ -11,6 +11,8 @@ interface ProductImageGalleryProps {
   colorOptions?: ColorOption[];
   selectedColor?: string | null;
   onColorChange?: (color: string) => void;
+  modelHeight?: string;
+  modelSizeWorn?: string;
 }
 
 function isEmbedVideo(url: string) {
