@@ -573,6 +573,32 @@
 .hw-cta-sz-lg { padding: 14px 28px; font-size: 13px; min-height: 50px; }
 .hw-cta-sz-xl { padding: 18px 36px; font-size: 14px; min-height: 58px; }
 
+/* Mobile override: tighter, full-width stacked CTAs */
+@media (max-width: 640px) {
+  .hw-cta-positioned {
+    flex-direction: column !important;
+    gap: 8px;
+    width: calc(100% - 32px);
+    left: 16px !important;
+    right: 16px;
+    transform: none !important;
+    bottom: 16px;
+    top: auto !important;
+  }
+  .hw-cta-positioned.is-row { flex-direction: column !important; }
+  .hw-cta-btn,
+  .hw-cta-sz-sm,
+  .hw-cta-sz-md,
+  .hw-cta-sz-lg,
+  .hw-cta-sz-xl {
+    width: 100%;
+    min-height: 42px;
+    padding: 10px 16px;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+  }
+}
+
 /* Radius */
 .hw-cta-rd-none { border-radius: 0; }
 .hw-cta-rd-sm   { border-radius: 4px; }
