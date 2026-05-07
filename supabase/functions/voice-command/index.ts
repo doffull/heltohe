@@ -111,11 +111,14 @@ Catalogue:
 ${productList}
 
 Règles:
-- Pour ajouter au panier: utilise add_to_cart avec productId si tu identifies le produit, sinon productQuery + précision attendue.
+- Si l'utilisateur cherche un produit ("cherche…", "trouve…", "montre-moi…", "j'aimerais…") sans nommer un produit précis -> action search_products avec query=mots-clés.
+- Si l'utilisateur demande une recommandation ("propose-moi…", "qu'est-ce que tu me conseilles…", "suggère…") -> action recommend avec query=contexte.
+- Si l'utilisateur réfère à un résultat précédent ("le 2", "le deuxième", "le rouge") -> select_result avec resultIndex (1-based) et éventuellement size/color/quantity.
+- Pour ajouter au panier directement quand le produit est sans ambiguïté: add_to_cart avec productId.
 - Pour adresse: extrais nom complet, adresse, code postal, ville, téléphone (place_order ne marche que si adresse complète).
 - Pour livraison: 'home' (domicile) ou 'relay' (point relais).
 - Pour valider la commande: l'utilisateur doit dire explicitement "je confirme" / "valide ma commande" -> place_order.
-- Pour lire panier/total: utilise read_cart.
+- Pour lire panier/total: read_cart.
 - Si tu n'es pas sûr: clarify avec une question courte.`;
 
     const tools = [{
