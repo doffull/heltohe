@@ -87,6 +87,7 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
   const [reply, setReply] = useState('');
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<{ action: any; message: string } | null>(null);
+  const [results, setResults] = useState<any[]>([]);
   const [testMode, setTestMode] = useState<boolean>(() => {
     try { return localStorage.getItem(TEST_MODE_KEY) !== 'off'; } catch { return true; }
   });
