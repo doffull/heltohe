@@ -120,6 +120,7 @@ export function useAdminDrag(opts: {
     };
 
     const move = (ev: PointerEvent) => {
+      if (ev.pointerId !== activePointerRef.current) return;
       const rdx = ev.clientX - startX;
       const rdy = ev.clientY - startY;
       if (!dragging) {
@@ -128,6 +129,7 @@ export function useAdminDrag(opts: {
         target.style.willChange = 'transform';
         target.style.transition = 'none';
         target.style.touchAction = 'none';
+        (target.style as any).webkitTransform = 'translateZ(0)';
         document.body.style.userSelect = 'none';
         ensureHud();
       }
@@ -153,13 +155,23 @@ export function useAdminDrag(opts: {
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', up);
       window.removeEventListener('keydown', onKey);
+      document.removeEventListener('gesturestart', blockGesture as any);
+      document.removeEventListener('gesturechange', blockGesture as any);
+      document.removeEventListener('gestureend', blockGesture as any);
       try { target.releasePointerCapture(e.pointerId); } catch { /* noop */ }
       if (raf) { cancelAnimationFrame(raf); raf = 0; }
       target.style.willChange = '';
       target.style.transition = '';
       target.style.transform = '';
+      (target.style as any).webkitTransform = '';
       target.style.touchAction = prevTouchAction;
+      (target.style as any).webkitTouchCallout = prevWebkitCallout;
+      (target.style as any).webkitUserSelect = prevWebkitUserSelect;
+      (target.style as any).webkitTapHighlightColor = prevTapHighlight;
       document.body.style.userSelect = prevUserSelect;
+      (document.body.style as any).overscrollBehavior = prevBodyOverscroll;
+      (document.documentElement.style as any).overscrollBehavior = prevHtmlOverscroll;
+      activePointerRef.current = null;
       if (hud) { hud.remove(); hud = null; }
     };
 
