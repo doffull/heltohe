@@ -521,3 +521,44 @@ function SocleStack({ posCfg, isAdmin, isMobile, accent, open, setOpen, visibleI
     </div>
   );
 }
+
+function Dock({ dockPos, dockDir, dockSize, dockBlur, dockDrag, isAdmin, accent, voiceEnabled, dockShowVoice, dockShowChat, dockShowVisualEditor, customs, onVoice, onChat, onVisualEditor, onCustom }: any) {
+  const items: Array<{ key: string; Icon: any; label: string; onClick: () => void }> = [];
+  if (dockShowVoice && voiceEnabled) items.push({ key: 'voice', Icon: Mic, label: 'Voix', onClick: onVoice });
+  if (dockShowChat) items.push({ key: 'chat', Icon: Bot, label: 'Assistant', onClick: onChat });
+  customs.forEach((b: any) => items.push({ key: b.id, Icon: getIcon(b.icon), label: b.label, onClick: () => onCustom(b) }));
+  if (dockShowVisualEditor) items.push({ key: 've', Icon: Pencil, label: 'Éditeur visuel', onClick: onVisualEditor });
+  if (items.length === 0) return null;
+  return (
+    <div
+      onPointerDown={dockDrag.onPointerDown}
+      className={cn(
+        'flex items-center gap-2 p-2 rounded-full border shadow-2xl',
+        dockDir === 'col' ? 'flex-col' : 'flex-row',
+        isAdmin && 'ring-2 ring-primary/60 cursor-grab active:cursor-grabbing'
+      )}
+      style={{
+        ...cornerStyle(dockPos.corner, dockPos.x, dockPos.y),
+        backdropFilter: `blur(${dockBlur}px) saturate(180%)`,
+        WebkitBackdropFilter: `blur(${dockBlur}px) saturate(180%)`,
+        background: 'rgba(255,255,255,0.06)',
+        borderColor: 'rgba(255,255,255,0.18)',
+        boxShadow: `0 12px 40px ${accent}33, inset 0 1px 0 rgba(255,255,255,0.18)`,
+        touchAction: isAdmin ? 'none' : undefined,
+      } as any}
+    >
+      {items.map((it) => (
+        <button
+          key={it.key}
+          onClick={(e) => { e.stopPropagation(); if (dockDrag.blockClickRef.current) return; it.onClick(); }}
+          aria-label={it.label}
+          title={it.label}
+          className="rounded-full flex items-center justify-center text-foreground hover:bg-foreground/15 transition-colors"
+          style={{ width: dockSize, height: dockSize }}
+        >
+          <it.Icon className="h-5 w-5" />
+        </button>
+      ))}
+    </div>
+  );
+}
