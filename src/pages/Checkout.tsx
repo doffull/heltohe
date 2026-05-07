@@ -53,7 +53,16 @@ export default function Checkout() {
   const { items, subtotal, promoDiscount, promoCode, total, clearCart } = useCart();
 
   const [step, setStep] = useState<Step>('address');
-  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>('relay');
+  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>(() => {
+    try {
+      const raw = sessionStorage.getItem('voice_checkout');
+      if (raw) {
+        const d = JSON.parse(raw)?.deliveryMode;
+        if (d === 'home' || d === 'relay') return d;
+      }
+    } catch {}
+    return 'relay';
+  });
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
 
@@ -63,15 +72,26 @@ export default function Checkout() {
   const [relaySearchZip, setRelaySearchZip] = useState('');
   const [isSearchingRelays, setIsSearchingRelays] = useState(false);
 
+  const voicePrefill = (() => {
+    try {
+      const raw = sessionStorage.getItem('voice_checkout');
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      sessionStorage.removeItem('voice_checkout');
+      return data;
+    } catch { return null; }
+  })();
+  const va = voicePrefill?.address || {};
+  const vName = (va.name || '').trim().split(' ');
   const [form, setForm] = useState({
-    firstName: '',
-    lastName: '',
-    email: user?.email || '',
-    phone: '',
-    address: '',
+    firstName: vName[0] || '',
+    lastName: vName.slice(1).join(' ') || '',
+    email: va.email || user?.email || '',
+    phone: va.phone || '',
+    address: va.address || '',
     address2: '',
-    city: '',
-    zip: '',
+    city: va.city || '',
+    zip: va.zip || '',
     country: 'France',
     relayInfo: '',
   });

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Mic, Loader2, ArrowRight, Check } from 'lucide-react';
+import { Mic, Loader2, Check, ShoppingCart, MapPin, Truck, Tag } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -12,11 +12,22 @@ import { supabase } from '@/integrations/supabase/client';
 
 type SR = any;
 const TEST_MODE_KEY = 'voice_test_mode';
+const VOICE_ADDR_KEY = 'voice_address';
+const VOICE_DELIVERY_KEY = 'voice_delivery';
 
 interface VoiceCommandFabProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   hideTrigger?: boolean;
+}
+
+interface VoiceAddress {
+  name?: string;
+  address?: string;
+  zip?: string;
+  city?: string;
+  phone?: string;
+  email?: string;
 }
 
 function describeAction(action: any, products: any[]): string {
@@ -35,15 +46,24 @@ function describeAction(action: any, products: any[]): string {
       ].filter(Boolean);
       return `${parts.join(' · ')} au panier`;
     }
-    case 'navigate': {
-      if (action.destination === 'cart') return 'Ouvrir le panier';
-      if (action.destination === 'checkout') return 'Aller au paiement';
-      if (action.destination === 'shop') return 'Ouvrir la boutique';
-      if (action.destination === 'product') return `Ouvrir la fiche produit ${findP()?.name || action.productQuery || ''}`;
-      return 'Naviguer';
+    case 'remove_from_cart': {
+      const p = findP();
+      return `Retirer ${p?.name || action.productQuery || '?'} du panier`;
     }
+    case 'navigate':
+      return `Ouvrir ${action.destination || ''}`;
     case 'search':
       return `Rechercher : « ${action.query} »`;
+    case 'set_address':
+      return `Adresse : ${[action.address?.name, action.address?.address, action.address?.zip, action.address?.city].filter(Boolean).join(', ')}`;
+    case 'set_delivery':
+      return `Livraison : ${action.deliveryMode === 'home' ? 'à domicile' : 'point relais'}`;
+    case 'apply_promo':
+      return `Appliquer le code ${action.promoCode}`;
+    case 'place_order':
+      return 'Valider et passer la commande';
+    case 'read_cart':
+      return 'Lire le panier';
     case 'clarify':
       return 'Demander une précision';
     default:
@@ -53,7 +73,8 @@ function describeAction(action: any, products: any[]): string {
 
 export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: VoiceCommandFabProps = {}) {
   const { designSettings, products, navigateToProduct } = useApp();
-  const { addItem } = useCart() as any;
+  const cart = useCart() as any;
+  const { addItem, items, subtotal, total } = cart;
   const navigate = useNavigate();
   const [openInternal, setOpenInternal] = useState(false);
   const open = openProp !== undefined ? openProp : openInternal;
@@ -69,18 +90,33 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
   const [testMode, setTestMode] = useState<boolean>(() => {
     try { return localStorage.getItem(TEST_MODE_KEY) !== 'off'; } catch { return true; }
   });
+  const [address, setAddress] = useState<VoiceAddress>(() => {
+    try { return JSON.parse(localStorage.getItem(VOICE_ADDR_KEY) || '{}'); } catch { return {}; }
+  });
+  const [deliveryMode, setDeliveryMode] = useState<string>(() => {
+    try { return localStorage.getItem(VOICE_DELIVERY_KEY) || ''; } catch { return ''; }
+  });
   const recRef = useRef<SR | null>(null);
 
   useEffect(() => {
     try { localStorage.setItem(TEST_MODE_KEY, testMode ? 'on' : 'off'); } catch {}
   }, [testMode]);
+  useEffect(() => {
+    try { localStorage.setItem(VOICE_ADDR_KEY, JSON.stringify(address)); } catch {}
+  }, [address]);
+  useEffect(() => {
+    try { localStorage.setItem(VOICE_DELIVERY_KEY, deliveryMode); } catch {}
+  }, [deliveryMode]);
 
   if (!designSettings.voiceCommandEnabled) return null;
 
   const speak = (text: string) => {
     try {
+      if (!text) return;
       const u = new SpeechSynthesisUtterance(text);
       u.lang = 'fr-FR';
+      u.rate = 1.05;
+      window.speechSynthesis.cancel();
       window.speechSynthesis.speak(u);
     } catch { /* ignore */ }
   };
@@ -112,11 +148,14 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
     rec.start();
   };
 
-  const executeAction = (action: any) => {
+  const addressComplete = (a: VoiceAddress) =>
+    !!(a.name && a.address && a.zip && a.city && a.phone);
+
+  const executeAction = async (action: any) => {
     switch (action?.type) {
       case 'add_to_cart': {
-        const p = products.find(x => x.id === action.productId)
-          || products.find(x => x.name.toLowerCase().includes((action.productQuery || '').toLowerCase()));
+        const p = products.find((x) => x.id === action.productId)
+          || products.find((x) => x.name.toLowerCase().includes((action.productQuery || '').toLowerCase()));
         if (p) {
           addItem({ ...p, quantity: action.quantity || 1, size: action.size, color: action.color });
           toast.success(`${p.name} ajouté au panier`);
@@ -129,15 +168,56 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
         if (action.destination === 'cart') navigate('/panier');
         else if (action.destination === 'checkout') navigate('/checkout');
         else if (action.destination === 'shop') navigate('/boutique');
+        else if (action.destination === 'home') navigate('/');
         else if (action.destination === 'product') {
-          const p = products.find(x => x.id === action.productId)
-            || products.find(x => x.name.toLowerCase().includes((action.productQuery || '').toLowerCase()));
+          const p = products.find((x) => x.id === action.productId)
+            || products.find((x) => x.name.toLowerCase().includes((action.productQuery || '').toLowerCase()));
           if (p) navigateToProduct(p);
         }
         break;
       }
-      case 'search': {
+      case 'search':
         navigate(`/boutique?q=${encodeURIComponent(action.query || transcript)}`);
+        break;
+      case 'set_address': {
+        const next = { ...address, ...(action.address || {}) };
+        setAddress(next);
+        toast.success('Adresse enregistrée');
+        break;
+      }
+      case 'set_delivery':
+        setDeliveryMode(action.deliveryMode || '');
+        toast.success(`Livraison ${action.deliveryMode === 'home' ? 'à domicile' : 'en point relais'}`);
+        break;
+      case 'apply_promo':
+        if (cart.applyPromoCode && action.promoCode) {
+          await cart.applyPromoCode(action.promoCode);
+        } else if (action.promoCode) {
+          // Fallback: persist for checkout
+          try { sessionStorage.setItem('voice_promo', action.promoCode); } catch {}
+          toast.info(`Code ${action.promoCode} mémorisé pour le checkout`);
+        }
+        break;
+      case 'read_cart': {
+        const summary = items.length === 0
+          ? 'Votre panier est vide.'
+          : `${items.length} article${items.length > 1 ? 's' : ''} dans votre panier. Total : ${total.toFixed(2)} euros.`;
+        speak(summary);
+        toast.message(summary);
+        break;
+      }
+      case 'place_order': {
+        if (items.length === 0) {
+          speak('Votre panier est vide');
+          toast.error('Panier vide');
+          break;
+        }
+        // Persist voice context for checkout pre-fill
+        try {
+          sessionStorage.setItem('voice_checkout', JSON.stringify({ address, deliveryMode }));
+        } catch {}
+        navigate('/checkout');
+        speak('Direction le paiement');
         break;
       }
     }
@@ -146,22 +226,31 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
   const handleCommand = async (text: string) => {
     setBusy(true);
     try {
-      const lite = products.slice(0, 50).map(p => ({
+      const lite = products.slice(0, 80).map((p) => ({
         id: p.id, name: p.name, category: p.category, price: p.price, sizes: p.sizes,
       }));
+      const ctx = {
+        cart: items.map((i: any) => ({
+          name: i.name, quantity: i.quantity, size: i.size, color: i.color, price: i.price,
+        })),
+        address,
+        deliveryMode,
+      };
       const { data, error } = await supabase.functions.invoke('voice-command', {
-        body: { transcript: text, products: lite },
+        body: { transcript: text, products: lite, context: ctx },
       });
       if (error) throw error;
       const action = data?.action || {};
       const message: string = data?.message || 'OK';
       setReply(message);
 
-      if (testMode) {
+      const sensitive = ['add_to_cart', 'place_order', 'set_address', 'remove_from_cart', 'apply_promo'].includes(action.type);
+      if (testMode && sensitive) {
         setPending({ action, message });
+        speak(message);
       } else {
         speak(message);
-        executeAction(action);
+        await executeAction(action);
       }
     } catch (e: any) {
       const msg = e?.message?.includes('429')
@@ -174,13 +263,20 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
     }
   };
 
-  const confirmPending = () => {
+  const confirmPending = async () => {
     if (!pending) return;
-    speak(pending.message);
-    executeAction(pending.action);
+    await executeAction(pending.action);
     setPending(null);
-    setOpen(false);
   };
+
+  const Step = ({ done, icon: Icon, label }: any) => (
+    <div className={`flex flex-col items-center gap-1 flex-1 ${done ? 'text-foreground' : 'text-muted-foreground/50'}`}>
+      <div className={`h-7 w-7 flex items-center justify-center border ${done ? 'border-foreground bg-foreground text-background' : 'border-border'}`}>
+        <Icon className="h-3.5 w-3.5" />
+      </div>
+      <span className="text-[9px] uppercase tracking-wider">{label}</span>
+    </div>
+  );
 
   return (
     <>
@@ -194,14 +290,22 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
           <Mic className="h-5 w-5" />
         </button>
       )}
-      <Dialog open={open} onOpenChange={(v) => { if (!v) { recRef.current?.stop?.(); } setOpen(v); }}>
-        <DialogContent className="max-w-md p-6 border-2 border-foreground/20 bg-background">
-          <DialogTitle className="text-base font-bold uppercase tracking-wider">Commande vocale</DialogTitle>
+      <Dialog open={open} onOpenChange={(v) => { if (!v) { recRef.current?.stop?.(); window.speechSynthesis?.cancel(); } setOpen(v); }}>
+        <DialogContent className="max-w-md p-6 border-2 border-foreground/20 bg-background max-h-[90vh] overflow-y-auto">
+          <DialogTitle className="text-base font-bold uppercase tracking-wider">Achat vocal</DialogTitle>
           <p className="text-xs text-muted-foreground">
-            Exemples : « Ajoute le t-shirt noir taille M », « Ouvre mon panier », « Cherche les vestes »
+            Dites par exemple : « Ajoute le t-shirt noir taille M », « Mon adresse est… », « Livraison à domicile », « Je confirme ma commande ».
           </p>
 
-          <div className="flex items-center justify-between gap-2 py-2 border-y border-border">
+          {/* Stepper */}
+          <div className="flex items-center justify-between gap-1 py-3 border-y border-border">
+            <Step done={items.length > 0} icon={ShoppingCart} label="Panier" />
+            <Step done={addressComplete(address)} icon={MapPin} label="Adresse" />
+            <Step done={!!deliveryMode} icon={Truck} label="Livraison" />
+            <Step done={false} icon={Check} label="Confirmé" />
+          </div>
+
+          <div className="flex items-center justify-between gap-2 py-2 border-b border-border">
             <Label htmlFor="voice-test" className="text-xs uppercase tracking-wider cursor-pointer">
               Mode test (confirmation avant action)
             </Label>
@@ -231,7 +335,7 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
           )}
 
           {pending && (
-            <div className="border-2 border-foreground p-3 space-y-3 bg-foreground/5">
+            <div className="border-2 border-foreground p-3 space-y-3 bg-foreground/5 mt-2">
               <div>
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Action reconnue</div>
                 <div className="text-sm font-medium">{describeAction(pending.action, products)}</div>
@@ -251,9 +355,24 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
           )}
 
           {!pending && reply && (
-            <div className="border border-border p-3 text-sm bg-muted/30">
+            <div className="border border-border p-3 text-sm bg-muted/30 mt-2">
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Assistant</div>
               {reply}
+            </div>
+          )}
+
+          {/* Context snapshot */}
+          {(addressComplete(address) || deliveryMode || items.length > 0) && (
+            <div className="text-[10px] text-muted-foreground space-y-1 pt-2 border-t border-border mt-2">
+              {items.length > 0 && (
+                <div className="flex items-center gap-1"><ShoppingCart className="h-3 w-3" /> {items.length} article{items.length > 1 ? 's' : ''} · {subtotal.toFixed(2)}€</div>
+              )}
+              {address.address && (
+                <div className="flex items-start gap-1"><MapPin className="h-3 w-3 mt-0.5" /> <span className="truncate">{[address.name, address.address, address.zip, address.city].filter(Boolean).join(', ')}</span></div>
+              )}
+              {deliveryMode && (
+                <div className="flex items-center gap-1"><Truck className="h-3 w-3" /> {deliveryMode === 'home' ? 'Domicile' : 'Point relais'}</div>
+              )}
             </div>
           )}
         </DialogContent>

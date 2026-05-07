@@ -1,6 +1,7 @@
 import { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useVisitorTracking } from '@/hooks/useVisitorTracking';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { useApp } from '@/context/AppContext';
@@ -63,6 +64,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const queryClient = useQueryClient();
+  useVisitorTracking({ enabled: !isAdmin, userId: user?.id ?? null });
   const { data: dbCategories = [] } = useCategories();
 
   const isHomePage = location.pathname === '/';
@@ -716,8 +718,8 @@ export function MainLayout({ children }: MainLayoutProps) {
         </div>
       </footer>
 
-      {/* Unified floating action stack (Industrial Luxury) - hidden for admins */}
-      {!isAdmin && <FabStack />}
+      {/* Unified floating action stack (Industrial Luxury) — visible for everyone, including admins for testing */}
+      <FabStack />
 
       {/* Newsletter Popup Host */}
       {!isAdmin && <NewsletterPopupHost />}

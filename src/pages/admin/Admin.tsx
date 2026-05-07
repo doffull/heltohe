@@ -26,7 +26,8 @@ import {
   CreditCard,
   Bell,
   Gift,
-  MousePointer
+  MousePointer,
+  Activity
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -52,6 +53,7 @@ import AdminNotifications from './AdminNotifications';
 import AdminPreparations from './AdminPreparations';
 import AdminRoulette from './AdminRoulette';
 import AdminHomeIcons from './AdminHomeIcons';
+import AdminLive from './AdminLive';
 
 export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin': '#6B7280',
@@ -76,6 +78,7 @@ export const DEFAULT_SECTION_COLORS: Record<string, string> = {
 
 const SIDEBAR_ITEMS = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/admin' },
+  { icon: Activity, label: 'Live', href: '/admin/live' },
   { icon: Package, label: 'Produits', href: '/admin/produits' },
   { icon: ShoppingCart, label: 'Commandes', href: '/admin/commandes' },
   { icon: ClipboardCheck, label: 'Préparations', href: '/admin/preparations' },
@@ -242,6 +245,7 @@ export default function Admin() {
         <div className="p-3 lg:p-8">
           <Routes>
             <Route index element={<AdminDashboard />} />
+            <Route path="live/*" element={<AdminLive />} />
             <Route path="produits/*" element={<AdminProducts />} />
             <Route path="commandes/*" element={<AdminOrders />} />
             <Route path="preparations/*" element={<AdminPreparations />} />
