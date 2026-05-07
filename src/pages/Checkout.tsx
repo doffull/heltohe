@@ -423,9 +423,9 @@ export default function Checkout() {
 
             {/* STEP 2: DELIVERY */}
             {step === 'delivery' && (
-              <div className="chamfer-hud bg-card/50 p-6 space-y-4">
-                <h2 className="text-lg font-bold hud-text flex items-center gap-2">
-                  <Truck className="h-5 w-5 text-primary" />
+              <div className="chamfer-hud bg-card/50 p-4 sm:p-6 space-y-4 border-l-4" style={{ borderLeftColor: `hsl(var(--step-delivery))` }}>
+                <h2 className="text-base sm:text-lg font-bold hud-text flex items-center gap-2">
+                  <Truck className="h-5 w-5" style={{ color: `hsl(var(--step-delivery))` }} />
                   MODE DE LIVRAISON
                 </h2>
 
@@ -436,31 +436,35 @@ export default function Checkout() {
                   <div
                     className={cn(
                       'border transition-all chamfer-hud-sm',
-                      deliveryMode === 'relay' ? 'border-primary bg-primary/5' : 'border-border',
+                      deliveryMode === 'relay' ? 'bg-[hsl(var(--step-delivery)/0.06)]' : 'border-border',
                     )}
+                    style={deliveryMode === 'relay' ? { borderColor: `hsl(var(--step-delivery))` } : undefined}
                   >
                     <button
                       onClick={() => setDeliveryMode('relay')}
-                      className="w-full p-4 text-left"
+                      className="w-full p-3 sm:p-4 text-left"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={cn('w-4 h-4 rounded-full border-2 flex items-center justify-center', deliveryMode === 'relay' ? 'border-primary' : 'border-muted-foreground')}>
-                            {deliveryMode === 'relay' && <div className="w-2 h-2 rounded-full bg-primary" />}
+                      <div className="flex items-start sm:items-center justify-between gap-2">
+                        <div className="flex items-start gap-2 sm:gap-3 min-w-0 flex-1">
+                          <div
+                            className={cn('w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center mt-0.5 sm:mt-0')}
+                            style={{ borderColor: deliveryMode === 'relay' ? `hsl(var(--step-delivery))` : 'hsl(var(--muted-foreground))' }}
+                          >
+                            {deliveryMode === 'relay' && <div className="w-2 h-2 rounded-full" style={{ backgroundColor: `hsl(var(--step-delivery))` }} />}
                           </div>
-                          <div>
-                            <p className="font-bold text-sm">Colissimo Point Relais</p>
-                            <p className="text-xs text-muted-foreground">Livraison en 3-5 jours ouvrés</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-bold text-sm leading-tight">Colissimo Point Relais</p>
+                            <p className="text-[11px] sm:text-xs text-muted-foreground leading-tight mt-0.5">Livraison en 3-5 jours ouvrés</p>
                           </div>
                         </div>
-                        <span className="font-bold text-sm">
-                          {subtotal >= rates.free_threshold ? <span className="text-primary">GRATUIT</span> : `${rates.relay.toFixed(2)}€`}
+                        <span className="font-bold text-sm whitespace-nowrap shrink-0">
+                          {subtotal >= rates.free_threshold ? <span style={{ color: `hsl(var(--step-delivery))` }}>GRATUIT</span> : `${rates.relay.toFixed(2)}€`}
                         </span>
                       </div>
                     </button>
 
                     {deliveryMode === 'relay' && (
-                      <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
+                      <div className="px-3 sm:px-4 pb-3 sm:pb-4 space-y-3 border-t border-border pt-3">
                         {/* Relay search */}
                         <div>
                           <Label className="hud-text text-xs mb-2 block">RECHERCHER UN POINT RELAIS</Label>
@@ -469,7 +473,7 @@ export default function Checkout() {
                               value={relaySearchZip}
                               onChange={e => setRelaySearchZip(e.target.value)}
                               placeholder="Code postal (ex: 75001)"
-                              className="bg-secondary/50 flex-1"
+                              className="bg-secondary/50 flex-1 text-base"
                               onKeyDown={e => e.key === 'Enter' && searchRelayPoints(relaySearchZip)}
                             />
                             <Button
@@ -486,56 +490,64 @@ export default function Checkout() {
 
                         {/* Relay points list */}
                         {relayPoints.length > 0 && (
-                          <div className="space-y-2 max-h-72 overflow-y-auto">
-                            {relayPoints.map(point => (
-                              <button
-                                key={point.identifiant}
-                                onClick={() => selectRelay(point)}
-                                className={cn(
-                                  'w-full text-left p-3 chamfer-hud-sm border transition-all',
-                                  selectedRelay?.identifiant === point.identifiant
-                                    ? 'border-primary bg-primary/10'
-                                    : 'border-border hover:border-foreground/30 bg-secondary/20'
-                                )}
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                      <div className={cn('w-3 h-3 rounded-full border-2 flex-shrink-0 flex items-center justify-center', selectedRelay?.identifiant === point.identifiant ? 'border-primary' : 'border-muted-foreground')}>
-                                        {selectedRelay?.identifiant === point.identifiant && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                          <div className="space-y-2 max-h-72 overflow-y-auto -mx-1 px-1">
+                            {relayPoints.map(point => {
+                              const isSel = selectedRelay?.identifiant === point.identifiant;
+                              return (
+                                <button
+                                  key={point.identifiant}
+                                  onClick={() => selectRelay(point)}
+                                  className={cn(
+                                    'w-full text-left p-2.5 sm:p-3 chamfer-hud-sm border transition-all',
+                                    isSel ? '' : 'border-border hover:border-foreground/30 bg-secondary/20'
+                                  )}
+                                  style={isSel ? { borderColor: `hsl(var(--step-delivery))`, backgroundColor: `hsl(var(--step-delivery)/0.1)` } : undefined}
+                                >
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-start gap-2">
+                                        <div
+                                          className="w-3 h-3 rounded-full border-2 flex-shrink-0 flex items-center justify-center mt-0.5"
+                                          style={{ borderColor: isSel ? `hsl(var(--step-delivery))` : 'hsl(var(--muted-foreground))' }}
+                                        >
+                                          {isSel && <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: `hsl(var(--step-delivery))` }} />}
+                                        </div>
+                                        <p className="font-bold text-xs leading-tight break-words flex-1">{point.nom}</p>
                                       </div>
-                                      <p className="font-bold text-xs truncate">{point.nom}</p>
+                                      <p className="text-[11px] text-muted-foreground mt-0.5 ml-5 break-words">{point.adresse1}</p>
+                                      <p className="text-[11px] text-muted-foreground ml-5">{point.codePostal} {point.localite}</p>
+                                      {point.horairesOuvertureLundi && (
+                                        <div className="flex items-start gap-1 mt-1 ml-5">
+                                          <Clock className="h-3 w-3 text-muted-foreground shrink-0 mt-0.5" />
+                                          <span className="text-[11px] text-muted-foreground leading-tight">Lun: {formatHoraires(point.horairesOuvertureLundi)} · Sam: {formatHoraires(point.horairesOuvertureSamedi)}</span>
+                                        </div>
+                                      )}
                                     </div>
-                                    <p className="text-xs text-muted-foreground mt-0.5 ml-5">{point.adresse1}</p>
-                                    <p className="text-xs text-muted-foreground ml-5">{point.codePostal} {point.localite}</p>
-                                    {point.horairesOuvertureLundi && (
-                                      <div className="flex items-center gap-1 mt-1 ml-5">
-                                        <Clock className="h-3 w-3 text-muted-foreground" />
-                                        <span className="text-xs text-muted-foreground">Lun: {formatHoraires(point.horairesOuvertureLundi)} · Sam: {formatHoraires(point.horairesOuvertureSamedi)}</span>
-                                      </div>
+                                    {point.distanceEnMetre !== undefined && (
+                                      <span className="text-[11px] sm:text-xs font-bold shrink-0" style={{ color: `hsl(var(--step-delivery))` }}>{formatDistance(point.distanceEnMetre)}</span>
                                     )}
                                   </div>
-                                  {point.distanceEnMetre !== undefined && (
-                                    <span className="text-xs font-bold text-primary shrink-0">{formatDistance(point.distanceEnMetre)}</span>
-                                  )}
-                                </div>
-                              </button>
-                            ))}
+                                </button>
+                              );
+                            })}
                           </div>
                         )}
 
                         {selectedRelay && (
-                          <div className="flex items-start gap-2 bg-primary/10 border border-primary/20 chamfer-hud-sm p-3">
-                            <CheckCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                            <div className="text-xs">
-                              <p className="font-bold text-primary">Point relais sélectionné</p>
-                              <p className="text-foreground">{selectedRelay.nom} — {selectedRelay.adresse1}, {selectedRelay.codePostal} {selectedRelay.localite}</p>
+                          <div
+                            className="flex items-start gap-2 chamfer-hud-sm p-3 border"
+                            style={{ borderColor: `hsl(var(--step-delivery)/0.3)`, backgroundColor: `hsl(var(--step-delivery)/0.1)` }}
+                          >
+                            <CheckCircle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: `hsl(var(--step-delivery))` }} />
+                            <div className="text-xs min-w-0 flex-1">
+                              <p className="font-bold" style={{ color: `hsl(var(--step-delivery))` }}>Point relais sélectionné</p>
+                              <p className="text-foreground break-words">{selectedRelay.nom} — {selectedRelay.adresse1}, {selectedRelay.codePostal} {selectedRelay.localite}</p>
                             </div>
                           </div>
                         )}
 
                         {!selectedRelay && relayPoints.length === 0 && (
-                          <p className="text-xs text-muted-foreground">Recherchez un point relais par code postal pour sélectionner votre lieu de retrait.</p>
+                          <p className="text-[11px] sm:text-xs text-muted-foreground">Recherchez un point relais par code postal pour sélectionner votre lieu de retrait.</p>
                         )}
                       </div>
                     )}
@@ -545,58 +557,66 @@ export default function Checkout() {
                   <button
                     onClick={() => setDeliveryMode('home')}
                     className={cn(
-                      'w-full p-4 text-left border transition-all chamfer-hud-sm',
-                      deliveryMode === 'home' ? 'border-primary bg-primary/5' : 'border-border hover:border-foreground/30',
+                      'w-full p-3 sm:p-4 text-left border transition-all chamfer-hud-sm',
+                      deliveryMode === 'home' ? '' : 'border-border hover:border-foreground/30',
                     )}
+                    style={deliveryMode === 'home' ? { borderColor: `hsl(var(--step-delivery))`, backgroundColor: `hsl(var(--step-delivery)/0.06)` } : undefined}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={cn('w-4 h-4 rounded-full border-2 flex items-center justify-center', deliveryMode === 'home' ? 'border-primary' : 'border-muted-foreground')}>
-                          {deliveryMode === 'home' && <div className="w-2 h-2 rounded-full bg-primary" />}
+                    <div className="flex items-start sm:items-center justify-between gap-2">
+                      <div className="flex items-start gap-2 sm:gap-3 min-w-0 flex-1">
+                        <div
+                          className="w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center mt-0.5 sm:mt-0"
+                          style={{ borderColor: deliveryMode === 'home' ? `hsl(var(--step-delivery))` : 'hsl(var(--muted-foreground))' }}
+                        >
+                          {deliveryMode === 'home' && <div className="w-2 h-2 rounded-full" style={{ backgroundColor: `hsl(var(--step-delivery))` }} />}
                         </div>
-                        <div>
-                          <p className="font-bold text-sm">Colissimo à Domicile</p>
-                          <p className="text-xs text-muted-foreground">Livraison en 2-3 jours ouvrés — Suivi inclus</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-sm leading-tight">Colissimo à Domicile</p>
+                          <p className="text-[11px] sm:text-xs text-muted-foreground leading-tight mt-0.5">2-3 jours ouvrés — Suivi inclus</p>
                         </div>
                       </div>
-                      <span className="font-bold text-sm">
-                        {subtotal >= rates.free_threshold ? <span className="text-primary">GRATUIT</span> : `${rates.home.toFixed(2)}€`}
+                      <span className="font-bold text-sm whitespace-nowrap shrink-0">
+                        {subtotal >= rates.free_threshold ? <span style={{ color: `hsl(var(--step-delivery))` }}>GRATUIT</span> : `${rates.home.toFixed(2)}€`}
                       </span>
                     </div>
                   </button>
                 </div>
 
                 {subtotal < rates.free_threshold && (
-                  <div className="bg-primary/10 border border-primary/20 px-4 py-3 chamfer-hud-sm">
-                    <p className="text-xs text-primary">
+                  <div
+                    className="px-3 py-2.5 chamfer-hud-sm border"
+                    style={{ borderColor: `hsl(var(--step-delivery)/0.3)`, backgroundColor: `hsl(var(--step-delivery)/0.1)` }}
+                  >
+                    <p className="text-[11px] sm:text-xs" style={{ color: `hsl(var(--step-delivery))` }}>
                       <Truck className="h-3 w-3 inline mr-1" />
-                      Plus que {(rates.free_threshold - subtotal).toFixed(2)}€ d'achats pour la livraison gratuite !
+                      Plus que {(rates.free_threshold - subtotal).toFixed(2)}€ pour la livraison gratuite !
                     </p>
                   </div>
                 )}
 
                 {/* Summary before placing order */}
-                <div className="bg-secondary/30 p-4 chamfer-hud-sm space-y-2 text-sm">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <MapPin className="h-3 w-3" />
-                    <span>{form.firstName} {form.lastName} — {form.address}, {form.zip} {form.city}</span>
+                <div className="bg-secondary/30 p-3 chamfer-hud-sm">
+                  <div className="flex items-start gap-2 text-[11px] sm:text-xs text-muted-foreground">
+                    <MapPin className="h-3 w-3 shrink-0 mt-0.5" />
+                    <span className="break-words min-w-0">{form.firstName} {form.lastName} — {form.address}, {form.zip} {form.city}</span>
                   </div>
                 </div>
 
-                <div className="flex gap-3">
-                  <Button variant="outline" onClick={() => setStep('address')} className="flex-1">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                  <Button variant="outline" onClick={() => setStep('address')} className="sm:flex-1 h-11">
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Retour
                   </Button>
                   <Button
-                    className="flex-1 chamfer-hud-sm h-12 text-base font-bold"
+                    className="sm:flex-1 chamfer-hud-sm h-12 text-sm sm:text-base font-bold text-white hover:opacity-90"
+                    style={{ backgroundColor: `hsl(var(--step-delivery))` }}
                     onClick={handlePlaceOrder}
                     disabled={isProcessing || (deliveryMode === 'relay' && !selectedRelay)}
                   >
                     {isProcessing ? (
                       <><Loader2 className="h-5 w-5 mr-2 animate-spin" />Traitement...</>
                     ) : (
-                      <><CheckCircle className="h-5 w-5 mr-2" />CONFIRMER {orderTotal.toFixed(2)}€</>
+                      <><CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 mr-2 shrink-0" /><span className="truncate">CONFIRMER {orderTotal.toFixed(2)}€</span></>
                     )}
                   </Button>
                 </div>
