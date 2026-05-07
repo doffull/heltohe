@@ -144,7 +144,7 @@ export function NewsletterPopupsManager() {
             </div>
             <div>
               <Label>Image (optionnel)</Label>
-              <FileDropZone value={form.image_url || ''} onChange={(url) => setForm({ ...form, image_url: url })} accept="image/*" />
+              <FileDropZone value={form.image_url || ''} onChange={(url) => setForm({ ...form, image_url: url })} accept={['image']} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
