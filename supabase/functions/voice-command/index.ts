@@ -13,9 +13,10 @@ serve(async (req) => {
 
     // ─── Mode "search": recherche/recommandation produits ───
     if (mode === 'search' || mode === 'recommend') {
-      if (!transcript || typeof transcript !== 'string' || transcript.length > 500) {
-        return new Response(JSON.stringify({ error: 'Invalid query' }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      const q = (typeof transcript === 'string' ? transcript : '').trim().slice(0, 500);
+      if (!q) {
+        return new Response(JSON.stringify({ productIds: [], spoken: 'Que cherches-tu ?' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
       const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -45,7 +46,7 @@ Réponds via la fonction search_results.`;
           model: 'google/gemini-3-flash-preview',
           messages: [
             { role: 'system', content: searchPrompt },
-            { role: 'user', content: transcript },
+            { role: 'user', content: q },
           ],
           tools: [{
             type: 'function',
