@@ -716,14 +716,8 @@ export function MainLayout({ children }: MainLayoutProps) {
         </div>
       </footer>
 
-      {/* Chatbot Widget - triggered from header */}
-      <ChatBotWidget open={chatOpen} onOpenChange={setChatOpen} hideTrigger />
-
-      {/* Subscribe FAB - hidden for admins */}
-      {!isAdmin && <SubscribeFab />}
-
-      {/* Voice Command FAB - hidden for admins */}
-      {!isAdmin && <VoiceCommandFab />}
+      {/* Unified floating action stack (Industrial Luxury) - hidden for admins */}
+      {!isAdmin && <FabStack />}
 
       {/* Newsletter Popup Host */}
       {!isAdmin && <NewsletterPopupHost />}
