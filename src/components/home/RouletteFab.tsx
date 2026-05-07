@@ -243,7 +243,6 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
   const shapeStyle = shape === 'round' ? { borderRadius: '9999px' } : shape === 'rect-bevel' ? { clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' } : { borderRadius: '9999px' };
 
   // Admin drag for the trigger
-  const dragRef = useRef({ blocked: false });
   const onPointerDown = (e: React.PointerEvent<HTMLElement>) => {
     if (!isAdmin) return;
     const target = e.currentTarget as HTMLElement;
