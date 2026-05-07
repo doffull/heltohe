@@ -40,11 +40,32 @@ export function useAdminDrag(opts: {
   const blockClickRef = useRef(false);
   const [pending, setPending] = useState<PendingDrag>(null);
 
+  const activePointerRef = useRef<number | null>(null);
+
   const onPointerDown = (e: React.PointerEvent<HTMLElement>) => {
     if (!enabled || readLocked()) return;
     if ((e.target as HTMLElement).closest('[data-no-drag]')) return;
+    // iOS: ignore secondary touches (multi-touch / pinch) — only first pointer drives drag
+    if (activePointerRef.current !== null) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    activePointerRef.current = e.pointerId;
     const target = e.currentTarget as HTMLElement;
+    // iOS Safari: prevent text selection callout, tap highlight, and native gestures
+    const prevWebkitCallout = (target.style as any).webkitTouchCallout;
+    const prevWebkitUserSelect = (target.style as any).webkitUserSelect;
+    const prevTapHighlight = (target.style as any).webkitTapHighlightColor;
+    (target.style as any).webkitTouchCallout = 'none';
+    (target.style as any).webkitUserSelect = 'none';
+    (target.style as any).webkitTapHighlightColor = 'transparent';
+    // Set touch-action immediately so iOS doesn't start a scroll before threshold
+    const prevTouchActionEarly = target.style.touchAction;
+    target.style.touchAction = 'none';
     try { target.setPointerCapture(e.pointerId); } catch { /* noop */ }
+    // iOS Safari: block pinch/double-tap zoom gestures during drag
+    const blockGesture = (ev: Event) => ev.preventDefault();
+    document.addEventListener('gesturestart', blockGesture as any, { passive: false });
+    document.addEventListener('gesturechange', blockGesture as any, { passive: false });
+    document.addEventListener('gestureend', blockGesture as any, { passive: false });
 
     // Cache everything once — no layout reads during the drag loop.
     const rect = target.getBoundingClientRect();
