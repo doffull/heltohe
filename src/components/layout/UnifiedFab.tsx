@@ -462,10 +462,11 @@ function SocleStack({ posCfg, isAdmin, isMobile, accent, open, setOpen, visibleI
   );
 }
 
-function Dock({ dockPos, dockDir, dockSize, dockBlur, dockDrag, isAdmin, accent, voiceEnabled, dockShowVoice, dockShowChat, dockShowVisualEditor, customs, onVoice, onChat, onVisualEditor, onCustom }: any) {
+function Dock({ dockPos, dockDir, dockSize, dockBlur, dockDrag, isAdmin, accent, voiceEnabled, dockShowVoice, dockShowChat, dockShowVisualEditor, dockShowRoulette, rouletteEnabled, customs, onVoice, onChat, onRoulette, onVisualEditor, onCustom }: any) {
   const items: Array<{ key: string; Icon: any; label: string; onClick: () => void }> = [];
   if (dockShowVoice && voiceEnabled) items.push({ key: 'voice', Icon: Mic, label: 'Voix', onClick: onVoice });
   if (dockShowChat) items.push({ key: 'chat', Icon: Bot, label: 'Assistant', onClick: onChat });
+  if (dockShowRoulette && rouletteEnabled) items.push({ key: 'roulette', Icon: Gift, label: 'Jeu-concours', onClick: onRoulette });
   customs.forEach((b: any) => items.push({ key: b.id, Icon: getIcon(b.icon), label: b.label, onClick: () => onCustom(b) }));
   if (dockShowVisualEditor) items.push({ key: 've', Icon: Pencil, label: 'Éditeur visuel', onClick: onVisualEditor });
   if (items.length === 0) return null;
