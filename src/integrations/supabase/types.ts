@@ -2120,6 +2120,7 @@ export type Database = {
           unit_id_style: Json | null
           updated_at: string | null
           voice_command_enabled: boolean | null
+          voice_onboarding_hint: boolean | null
         }
         Insert: {
           accent_color?: string | null
@@ -2223,6 +2224,7 @@ export type Database = {
           unit_id_style?: Json | null
           updated_at?: string | null
           voice_command_enabled?: boolean | null
+          voice_onboarding_hint?: boolean | null
         }
         Update: {
           accent_color?: string | null
@@ -2326,6 +2328,7 @@ export type Database = {
           unit_id_style?: Json | null
           updated_at?: string | null
           voice_command_enabled?: boolean | null
+          voice_onboarding_hint?: boolean | null
         }
         Relationships: []
       }
