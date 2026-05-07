@@ -64,7 +64,7 @@ export function UnifiedFabEditor() {
         enabled, accentColor: accent, mode, groupSide, groupOffsetY,
         clusterDir,
         dockDir, dockSize, dockBlur,
-        dockShowVoice, dockShowChat, dockShowVisualEditor,
+        dockShowVoice, dockShowChat, dockShowVisualEditor, dockShowRoulette,
         rouletteFab: {
           ...rouletteFab,
           variant: rfVariant, size: rfSize, shape: rfShape,
