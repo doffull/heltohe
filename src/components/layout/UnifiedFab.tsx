@@ -148,9 +148,9 @@ export function UnifiedFab() {
   };
 
   // ── Per-button drag hooks ────────────────────────────────────────
-  const groupDrag = useAdminDrag({ enabled: isAdmin, onCommit: saveGroupPos });
-  const clusterDrag = useAdminDrag({ enabled: isAdmin, onCommit: saveClusterPos });
-  const dockDrag = useAdminDrag({ enabled: isAdmin, onCommit: saveDockPos });
+  const groupDrag = useAdminDrag({ enabled: isAdmin, autoCommit: true, onCommit: saveGroupPos });
+  const clusterDrag = useAdminDrag({ enabled: isAdmin, autoCommit: true, onCommit: saveClusterPos });
+  const dockDrag = useAdminDrag({ enabled: isAdmin, autoCommit: true, onCommit: saveDockPos });
 
   // Visual editor toggle for admins (used in dock). Provider always present at App root.
   const ve = useVisualEditor();
@@ -380,7 +380,7 @@ export function UnifiedFab() {
 // ── Sub-components for per-button drag ────────────────────────────────
 
 function CustomFabButton({ button, pos, isAdmin, isMobile, accent, onClick, onDragCommit, Icon }: any) {
-  const drag = useAdminDrag({ enabled: isAdmin, onCommit: onDragCommit });
+  const drag = useAdminDrag({ enabled: isAdmin, autoCommit: true, onCommit: onDragCommit });
   return (
     <button
       type="button"
@@ -405,7 +405,7 @@ function CustomFabButton({ button, pos, isAdmin, isMobile, accent, onClick, onDr
 }
 
 function SocleFreeButton({ id, label, Icon, pos, isAdmin, isMobile, accent, onClick, onDragCommit }: any) {
-  const drag = useAdminDrag({ enabled: isAdmin, onCommit: onDragCommit });
+  const drag = useAdminDrag({ enabled: isAdmin, autoCommit: true, onCommit: onDragCommit });
   return (
     <button
       onClick={() => { if (drag.blockClickRef.current) return; onClick(); }}
@@ -424,7 +424,7 @@ function SocleFreeButton({ id, label, Icon, pos, isAdmin, isMobile, accent, onCl
 }
 
 function SocleStack({ posCfg, isAdmin, isMobile, accent, open, setOpen, visibleItems, triggerItem, onDragCommit }: any) {
-  const drag = useAdminDrag({ enabled: isAdmin, onCommit: onDragCommit });
+  const drag = useAdminDrag({ enabled: isAdmin, autoCommit: true, onCommit: onDragCommit });
   return (
     <div style={cornerStyle(posCfg.corner, posCfg.x, posCfg.y)} className="flex flex-col items-center gap-3">
       {open && (

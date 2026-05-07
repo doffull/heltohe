@@ -178,14 +178,19 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
   const rfab = cfg.rouletteFab || {};
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false;
 
+  const fabPosCurrent: FabPos = (isMobile ? rfab.position_mobile : rfab.position_desktop) || { corner: 'cc', x: 0, y: 0 };
   const rouletteDrag = useAdminDrag({
     enabled: !!isAdmin,
+    currentPos: fabPosCurrent,
     onCommit: (pos) => {
       const key = isMobile ? 'position_mobile' : 'position_desktop';
       updateDesignSettings({ ...(designSettings as any), unifiedFab: { ...cfg, rouletteFab: { ...rfab, [key]: pos } } } as any);
-      toast.success('Jeu-concours repositionné');
     },
   });
+  const handleConfirmDrag = () => {
+    rouletteDrag.confirmPending();
+    toast.success('Position du Jeu-concours validée (mobile + desktop)');
+  };
 
   if (!config?.enabled || segments.length === 0) return null;
 
@@ -240,7 +245,7 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
     }
   };
 
-  const fabPos: FabPos = (isMobile ? rfab.position_mobile : rfab.position_desktop) || { corner: 'cc', x: 0, y: 0 };
+  const fabPos: FabPos = fabPosCurrent;
   const variant = rfab.variant || 'glossy';
   const shape = rfab.shape || 'pill';
   const size = rfab.size || 'md';
@@ -311,6 +316,21 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
                 className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-background border border-primary/60 text-foreground rounded shadow"
                 title="Réinitialiser la position"
               >⟳</button>
+            )}
+            {isAdmin && rouletteDrag.pending && (
+              <div className="flex items-center gap-1 ml-1 bg-background border-2 border-primary px-2 py-1 shadow">
+                <span className="text-[9px] uppercase tracking-widest font-bold">Position OK ?</span>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); handleConfirmDrag(); }}
+                  className="text-[9px] uppercase tracking-widest font-bold bg-foreground text-background px-2 py-0.5"
+                >✓</button>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); rouletteDrag.cancelPending(); }}
+                  className="text-[9px] uppercase tracking-widest font-bold bg-background text-foreground border border-foreground px-2 py-0.5"
+                >✕</button>
+              </div>
             )}
           </div>
         </div>
