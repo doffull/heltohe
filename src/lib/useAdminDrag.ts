@@ -175,7 +175,8 @@ export function useAdminDrag(opts: {
       if (hud) { hud.remove(); hud = null; }
     };
 
-    const up = () => {
+    const up = (ev?: PointerEvent) => {
+      if (ev && ev.pointerId !== activePointerRef.current) return;
       if (!dragging) { cleanup(); return; }
       blockClickRef.current = true;
       setTimeout(() => { blockClickRef.current = false; }, 80);
@@ -196,8 +197,8 @@ export function useAdminDrag(opts: {
     };
 
     window.addEventListener('pointermove', move, { passive: false });
-    window.addEventListener('pointerup', up);
-    window.addEventListener('pointercancel', up);
+    window.addEventListener('pointerup', up as any);
+    window.addEventListener('pointercancel', up as any);
     window.addEventListener('keydown', onKey);
   };
 
