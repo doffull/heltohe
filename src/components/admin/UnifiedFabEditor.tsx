@@ -322,7 +322,46 @@ export function UnifiedFabEditor() {
               Animation pulsation <Switch checked={rfPulse} onCheckedChange={setRfPulse} />
             </label>
           </div>
-          <p className="text-[10px] text-muted-foreground">Astuce : en mode admin, glissez le bouton Jeu-concours directement sur la home pour ajuster sa position. Le centre est idéal pour maximiser la visibilité.</p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                const reset = { corner: rfCorner, x: 0, y: 0 };
+                await updateDesignSettings({
+                  ...(designSettings as any),
+                  unifiedFab: {
+                    ...initial,
+                    rouletteFab: { ...rouletteFab, position_desktop: reset, position_mobile: reset },
+                  },
+                } as any);
+                toast.success('Position du Jeu-concours réinitialisée');
+              }}
+            >⟳ Réinitialiser la position du Jeu-concours</Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                const cur = (designSettings as any).unifiedFab || {};
+                await updateDesignSettings({
+                  ...(designSettings as any),
+                  unifiedFab: {
+                    ...cur,
+                    dockPos_desktop: { corner: 'bc', x: 0, y: 24 },
+                    dockPos_mobile: { corner: 'bc', x: 0, y: 16 },
+                    clusterPos_desktop: { corner: 'br', x: 24, y: 90 },
+                    clusterPos_mobile: { corner: 'br', x: 16, y: 90 },
+                    position_desktop: { corner: 'br', x: 24, y: 24 },
+                    position_mobile: { corner: 'br', x: 16, y: 16 },
+                  },
+                } as any);
+                toast.success('Toutes les positions ont été réinitialisées');
+              }}
+            >⟳ Réinitialiser toutes les positions (Dock, Cluster, Socle)</Button>
+          </div>
+          <p className="text-[10px] text-muted-foreground">Astuce : en mode admin, glissez le bouton Jeu-concours directement sur la home pour ajuster sa position. Le centre est idéal pour maximiser la visibilité. Touche Échap pendant le drag pour annuler.</p>
         </div>
 
         <div className="flex justify-end">
