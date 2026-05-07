@@ -128,8 +128,9 @@ export function useUpdateProduct() {
       if (error) throw error;
       return dbToAppProduct(data as Record<string, unknown>);
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['products', variables.id] });
     },
   });
 }

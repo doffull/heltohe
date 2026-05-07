@@ -39,6 +39,7 @@ interface AppContextType {
   designSettings: DesignSettings;
   setDesignSettings: (settings: DesignSettings) => void;
   updateDesignSettings: (updates: Partial<DesignSettings>) => void;
+  flushDesignSettings: () => Promise<void>;
   
   // Navigation helpers
   navigateToCategory: (category: string) => void;
@@ -134,6 +135,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, [debouncedSave]);
 
+  // Flush pending debounced save immediately (used on explicit "Save" button)
+  const flushDesignSettings = useCallback(async () => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    await saveDesignSettings.mutateAsync(designSettings);
+  }, [saveDesignSettings, designSettings]);
+
   const navigate = useNavigate();
   const { data: allCategories = [] } = useCategories();
 
@@ -188,6 +198,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         designSettings,
         setDesignSettings,
         updateDesignSettings,
+        flushDesignSettings,
         navigateToCategory,
         navigateToProduct,
       }}
