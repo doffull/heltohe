@@ -164,6 +164,9 @@ export interface TechwearHeroSlideData {
   cardSize?: 'sm' | 'md' | 'lg' | 'xl';
   imageOverflow?: boolean;
   ctaStyle?: TechwearCtaStyle;
+  // Free positioning (admin draggable). When omitted → defaults from CSS.
+  modelBadgePos?: { corner: 'tl' | 'tr' | 'bl' | 'br'; x: number; y: number };
+  sidePanelPos?: { corner: 'tl' | 'tr' | 'bl' | 'br'; x: number; y: number };
 }
 
 export type TechwearCtaVariant = 'glossy' | 'glass' | 'neon' | 'metal' | 'outline' | 'minimal';
@@ -284,10 +287,22 @@ export interface DesignSettings {
   voiceOnboardingHint?: boolean;
   unifiedFab?: {
     enabled?: boolean;
+    mode?: 'socle' | 'free' | 'grouped';
+    groupSide?: 'left' | 'right';
+    groupOffsetY?: number;
     position_desktop?: { corner: 'br'|'bl'|'tr'|'tl'; x: number; y: number };
     position_mobile?: { corner: 'br'|'bl'|'tr'|'tl'; x: number; y: number };
     accentColor?: string;
-    items?: Array<{ id: 'voice'|'chat'|'roulette'; label: string; icon: string; visible: boolean; order: number }>;
+    items?: Array<{
+      id: 'voice'|'chat'|'roulette';
+      label: string;
+      icon: string;
+      visible: boolean;
+      order: number;
+      groupedIn?: 'group' | 'free';
+      position_desktop?: { corner: 'br'|'bl'|'tr'|'tl'; x: number; y: number };
+      position_mobile?: { corner: 'br'|'bl'|'tr'|'tl'; x: number; y: number };
+    }>;
   };
   // Sidebar settings
   sidebarBg: string;
