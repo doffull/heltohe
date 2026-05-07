@@ -71,10 +71,11 @@ export function FabLivePreview() {
 
   const [items, setItems] = useState<Item[]>(initial);
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop');
-  const [mode, setMode] = useState<'free' | 'socle'>(cfg.mode || 'socle');
+  const [mode, setMode] = useState<'free' | 'socle' | 'grouped'>(cfg.mode || 'socle');
+  const [groupSide, setGroupSide] = useState<'left' | 'right'>(cfg.groupSide || 'left');
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => { setItems(initial); setMode(cfg.mode || 'socle'); }, [designSettings]);
+  useEffect(() => { setItems(initial); setMode(cfg.mode || 'socle'); setGroupSide(cfg.groupSide || 'left'); }, [designSettings]);
 
   const size = SIZES[device];
   const posKey = device === 'desktop' ? 'position_desktop' : 'position_mobile';
@@ -109,7 +110,7 @@ export function FabLivePreview() {
   const save = async () => {
     await updateDesignSettings({
       ...(designSettings as any),
-      unifiedFab: { ...cfg, mode, items },
+      unifiedFab: { ...cfg, mode, groupSide, items },
     } as any);
     toast.success('Positions enregistrées');
   };
@@ -127,10 +128,21 @@ export function FabLivePreview() {
             <Label>Mode</Label>
             <Tabs value={mode} onValueChange={(v) => setMode(v as any)}>
               <TabsList className="h-8">
-                <TabsTrigger value="socle" className="text-xs">Socle unifié</TabsTrigger>
-                <TabsTrigger value="free" className="text-xs">Icônes libres</TabsTrigger>
+                <TabsTrigger value="socle" className="text-xs">Socle</TabsTrigger>
+                <TabsTrigger value="grouped" className="text-xs">Groupés</TabsTrigger>
+                <TabsTrigger value="free" className="text-xs">Libres</TabsTrigger>
               </TabsList>
             </Tabs>
+            {mode === 'grouped' && (
+              <div className="flex gap-1">
+                {(['left', 'right'] as const).map((s) => (
+                  <button key={s} type="button" onClick={() => setGroupSide(s)}
+                    className={`text-[10px] uppercase px-2 py-1 border-2 ${groupSide === s ? 'border-primary bg-primary/10' : 'border-border'}`}>
+                    {s === 'left' ? 'Gauche' : 'Droite'}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </CardTitle>
       </CardHeader>

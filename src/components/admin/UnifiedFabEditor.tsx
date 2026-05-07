@@ -31,6 +31,9 @@ export function UnifiedFabEditor() {
   const [posD, setPosD] = useState(initial.position_desktop || { corner: 'br', x: 24, y: 24 });
   const [posM, setPosM] = useState(initial.position_mobile || { corner: 'br', x: 16, y: 16 });
   const [items, setItems] = useState(initial.items?.length ? initial.items : DEFAULT_ITEMS);
+  const [mode, setMode] = useState<'socle' | 'free' | 'grouped'>(initial.mode || 'socle');
+  const [groupSide, setGroupSide] = useState<'left' | 'right'>(initial.groupSide || 'left');
+  const [groupOffsetY, setGroupOffsetY] = useState<number>(initial.groupOffsetY ?? 220);
 
   useEffect(() => {
     const cur = (designSettings as any).unifiedFab || {};
@@ -40,7 +43,7 @@ export function UnifiedFabEditor() {
   const save = async () => {
     await updateDesignSettings({
       ...(designSettings as any),
-      unifiedFab: { enabled, accentColor: accent, position_desktop: posD, position_mobile: posM, items },
+      unifiedFab: { enabled, accentColor: accent, mode, groupSide, groupOffsetY, position_desktop: posD, position_mobile: posM, items },
     } as any);
     toast.success('Bouton flottant enregistré');
   };
@@ -67,6 +70,45 @@ export function UnifiedFabEditor() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Mode */}
+        <div className="space-y-2 p-3 border rounded">
+          <Label className="text-xs uppercase tracking-wider">Mode d'affichage</Label>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { v: 'socle', label: 'Socle unifié' },
+              { v: 'grouped', label: 'Voix+Assistant groupés' },
+              { v: 'free', label: 'Icônes libres' },
+            ].map((m) => (
+              <button
+                key={m.v}
+                type="button"
+                onClick={() => setMode(m.v as any)}
+                className={`text-xs font-bold uppercase tracking-wider p-2 border-2 transition ${mode === m.v ? 'border-primary bg-primary/10' : 'border-border'}`}
+              >{m.label}</button>
+            ))}
+          </div>
+
+          {mode === 'grouped' && (
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <div>
+                <Label className="text-[10px]">Côté</Label>
+                <div className="flex gap-2 mt-1">
+                  {(['left', 'right'] as const).map((s) => (
+                    <button key={s} type="button" onClick={() => setGroupSide(s)}
+                      className={`flex-1 text-xs p-2 border-2 ${groupSide === s ? 'border-primary bg-primary/10' : 'border-border'}`}>
+                      {s === 'left' ? 'Gauche' : 'Droite'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Label className="text-[10px]">Décalage vertical ({groupOffsetY}px)</Label>
+                <Slider value={[groupOffsetY]} min={60} max={600} step={8} onValueChange={([v]) => setGroupOffsetY(v)} />
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Position */}
         <div className="grid md:grid-cols-2 gap-4">
           {[
@@ -103,18 +145,28 @@ export function UnifiedFabEditor() {
         {/* Items */}
         <div className="space-y-2">
           <Label className="text-xs uppercase tracking-wider">Sous-boutons (ordre & visibilité)</Label>
-          {[...items].sort((a: any, b: any) => a.order - b.order).map((it: any) => (
-            <div key={it.id} className="flex items-center gap-3 p-2 border rounded">
-              <GripVertical className="h-4 w-4 text-muted-foreground" />
-              <div className="flex-1 text-sm">
-                <span className="font-medium">{it.label}</span>
-                <span className="text-xs text-muted-foreground ml-2">({it.id})</span>
+          {[...items].sort((a: any, b: any) => a.order - b.order).map((it: any) => {
+            const grouped = (it.groupedIn ?? (it.id === 'voice' || it.id === 'chat' ? 'group' : 'free')) === 'group';
+            return (
+              <div key={it.id} className="flex items-center gap-3 p-2 border rounded flex-wrap">
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+                <div className="flex-1 text-sm min-w-[120px]">
+                  <span className="font-medium">{it.label}</span>
+                  <span className="text-xs text-muted-foreground ml-2">({it.id})</span>
+                </div>
+                {mode === 'grouped' && (
+                  <button
+                    type="button"
+                    onClick={() => setItems(items.map((x: any) => x.id === it.id ? { ...x, groupedIn: grouped ? 'free' : 'group' } : x))}
+                    className={`text-[10px] uppercase tracking-wider px-2 py-1 border-2 ${grouped ? 'border-primary bg-primary/10' : 'border-border'}`}
+                  >{grouped ? 'Dans le socle' : 'Libre'}</button>
+                )}
+                <Button size="sm" variant="ghost" onClick={() => move(it.id, -1)}>↑</Button>
+                <Button size="sm" variant="ghost" onClick={() => move(it.id, 1)}>↓</Button>
+                <Switch checked={it.visible} onCheckedChange={() => toggle(it.id)} />
               </div>
-              <Button size="sm" variant="ghost" onClick={() => move(it.id, -1)}>↑</Button>
-              <Button size="sm" variant="ghost" onClick={() => move(it.id, 1)}>↓</Button>
-              <Switch checked={it.visible} onCheckedChange={() => toggle(it.id)} />
-            </div>
-          ))}
+            );
+          })}
           <p className="text-[10px] text-muted-foreground">Astuce : en mode admin, vous pouvez aussi glisser-déposer le socle directement sur la page d'accueil.</p>
         </div>
 

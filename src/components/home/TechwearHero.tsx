@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import { useProducts } from '@/hooks/useProducts';
 import { useProductStock, stockBadgeColor } from '@/hooks/useProductStock';
 import { DEFAULT_TECHWEAR_HERO } from '@/config/homeConfig';
@@ -144,18 +145,90 @@ function BackgroundLayer({ bg }: { bg: TechwearBackground }) {
 }
 
 type SlideConfig = TechwearHeroConfig;
+type Corner = 'tl' | 'tr' | 'bl' | 'br';
+type FreePos = { corner: Corner; x: number; y: number };
 
-function TechwearHeroSlideView({ config, productMissing }: { config: SlideConfig; productMissing: boolean }) {
+function freeStyle(p?: FreePos, fallback?: React.CSSProperties): React.CSSProperties {
+  if (!p) return fallback || {};
+  const s: React.CSSProperties = { position: 'absolute', zIndex: 5 };
+  if (p.corner.endsWith('r')) s.right = p.x; else s.left = p.x;
+  if (p.corner.startsWith('b')) s.bottom = p.y; else s.top = p.y;
+  return s;
+}
+
+function pxToCornerPos(left: number, top: number, w: number, h: number, elW: number, elH: number): FreePos {
+  const cx = left + elW / 2;
+  const cy = top + elH / 2;
+  const right = cx > w / 2;
+  const bottom = cy > h / 2;
+  const corner: Corner = `${bottom ? 'b' : 't'}${right ? 'r' : 'l'}` as Corner;
+  return {
+    corner,
+    x: Math.max(0, Math.round(right ? w - left - elW : left)),
+    y: Math.max(0, Math.round(bottom ? h - top - elH : top)),
+  };
+}
+
+function TechwearHeroSlideView({ config, productMissing, slideId }: { config: SlideConfig; productMissing: boolean; slideId?: string }) {
   const viewport = useViewport();
   const safeColorIndex = Math.min(Math.max(config.defaultColor, 0), Math.max(config.colorOptions.length - 1, 0));
   const [activeColor, setActiveColor] = useState(safeColorIndex);
   const [activeSize, setActiveSize] = useState<string>(config.defaultSize);
   const { data: stock } = useProductStock(config.productId);
   const { data: products } = useProducts();
+  const { isAdmin } = useAuth();
+  const { designSettings, updateDesignSettings } = useApp();
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const linkedProduct = useMemo(
     () => (config.productId ? products?.find((p) => p.id === config.productId) : undefined),
     [products, config.productId]
   );
+
+  // Local positions (override config; persisted on dragend)
+  const [badgePos, setBadgePos] = useState<FreePos | undefined>(config.modelBadgePos);
+  const [panelPos, setPanelPos] = useState<FreePos | undefined>(config.sidePanelPos);
+  useEffect(() => { setBadgePos(config.modelBadgePos); setPanelPos(config.sidePanelPos); }, [config.modelBadgePos, config.sidePanelPos]);
+
+  const persistPos = (which: 'badge' | 'panel', pos: FreePos) => {
+    const cur = (designSettings as any).techwearHero || {};
+    const slides = Array.isArray(cur.slides) ? cur.slides : null;
+    if (slides && slideId) {
+      const next = slides.map((s: any) => s.id === slideId ? { ...s, [which === 'badge' ? 'modelBadgePos' : 'sidePanelPos']: pos } : s);
+      updateDesignSettings({ techwearHero: { ...cur, slides: next, ...(slides[0]?.id === slideId ? { [which === 'badge' ? 'modelBadgePos' : 'sidePanelPos']: pos } : {}) } } as any);
+    } else {
+      updateDesignSettings({ techwearHero: { ...cur, [which === 'badge' ? 'modelBadgePos' : 'sidePanelPos']: pos } } as any);
+    }
+  };
+
+  const startDrag = (which: 'badge' | 'panel') => (e: React.PointerEvent) => {
+    if (!isAdmin) return;
+    e.preventDefault(); e.stopPropagation();
+    const target = e.currentTarget as HTMLElement;
+    const container = containerRef.current; if (!container) return;
+    const cRect = container.getBoundingClientRect();
+    const tRect = target.getBoundingClientRect();
+    const offX = e.clientX - tRect.left;
+    const offY = e.clientY - tRect.top;
+    const elW = tRect.width, elH = tRect.height;
+    const move = (ev: PointerEvent) => {
+      const left = Math.max(0, Math.min(cRect.width - elW, ev.clientX - cRect.left - offX));
+      const top = Math.max(0, Math.min(cRect.height - elH, ev.clientY - cRect.top - offY));
+      target.style.left = `${left}px`; target.style.top = `${top}px`;
+      target.style.right = 'auto'; target.style.bottom = 'auto';
+      target.style.position = 'absolute';
+    };
+    const up = (ev: PointerEvent) => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      const left = parseInt(target.style.left || '0');
+      const top = parseInt(target.style.top || '0');
+      const pos = pxToCornerPos(left, top, cRect.width, cRect.height, elW, elH);
+      if (which === 'badge') setBadgePos(pos); else setPanelPos(pos);
+      persistPos(which, pos);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
 
   useEffect(() => { setActiveColor(safeColorIndex); }, [safeColorIndex, config.colorOptions.length]);
   useEffect(() => { setActiveSize(config.defaultSize); }, [config.defaultSize]);
@@ -198,8 +271,34 @@ function TechwearHeroSlideView({ config, productMissing }: { config: SlideConfig
   const overlayOpacity = bg.overlayOpacity ?? 0;
   const showStockBadges = !!stock && stock.total > 0;
 
+  const effectiveBadgePos = badgePos ?? { corner: 'tr' as Corner, x: 24, y: 24 };
+  const badgeStyle: React.CSSProperties = {
+    ...freeStyle(effectiveBadgePos),
+    zIndex: 6,
+    cursor: isAdmin ? 'grab' : undefined,
+    outline: isAdmin ? '1px dashed hsl(var(--primary)/0.5)' : undefined,
+    outlineOffset: isAdmin ? '4px' : undefined,
+    touchAction: isAdmin ? 'none' : undefined,
+  };
+  const panelStyleFree: React.CSSProperties | undefined = panelPos
+    ? {
+        ...freeStyle(panelPos),
+        zIndex: 5,
+        cursor: isAdmin ? 'grab' : undefined,
+        outline: isAdmin ? '1px dashed hsl(var(--primary)/0.5)' : undefined,
+        outlineOffset: isAdmin ? '4px' : undefined,
+        touchAction: isAdmin ? 'none' : undefined,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 14,
+        alignItems: 'flex-start',
+        maxWidth: 280,
+      }
+    : undefined;
+
   return (
     <div
+      ref={containerRef}
       className="hw-slide-inner"
       data-size={config.cardSize || 'md'}
       data-overflow={config.imageOverflow ? 'true' : 'false'}
@@ -258,12 +357,7 @@ function TechwearHeroSlideView({ config, productMissing }: { config: SlideConfig
                 />
               )}
 
-              {config.showModelBadge && (
-                <div className="hw-model-badge" aria-label="Référence modèle">
-                  <div className="hw-mb-1">{config.modelBadge.line1}</div>
-                  <div className="hw-mb-2">{config.modelBadge.line2}</div>
-                </div>
-              )}
+              {/* MODEL badge rendered at slide-inner level for free positioning */}
 
               {config.ctaStyle?.enabled && (() => {
                 const s = config.ctaStyle!;
@@ -314,7 +408,18 @@ function TechwearHeroSlideView({ config, productMissing }: { config: SlideConfig
             )}
           </div>
 
-          <div className="hw-right">
+          <div
+            className="hw-right"
+            style={panelStyleFree}
+          >
+            {isAdmin && (
+              <div
+                onPointerDown={startDrag('panel')}
+                className="text-[9px] uppercase tracking-widest font-bold bg-foreground text-background px-2 py-1 cursor-grab active:cursor-grabbing select-none"
+                style={{ touchAction: 'none' }}
+                title="Glisser pour repositionner le panneau"
+              >⠿ Panneau (déplacer)</div>
+            )}
             {config.showColors && (
               <div className="hw-panel hw-panel--colors" role="radiogroup" aria-label="Choisir une couleur">
                 <div className="hw-colors-compact">
@@ -439,6 +544,19 @@ function TechwearHeroSlideView({ config, productMissing }: { config: SlideConfig
           </div>
         </div>
       </div>
+
+      {/* MODEL badge — free positioned over the slide (default top-right) */}
+      {config.showModelBadge && (
+        <div
+          aria-label="Référence modèle"
+          onPointerDown={startDrag('badge')}
+          style={badgeStyle}
+          className="bg-background/90 border border-foreground/10 px-3 py-2 text-center select-none"
+        >
+          <div className="text-[9px] font-bold uppercase tracking-[0.15em]">{config.modelBadge.line1}</div>
+          <div className="text-xs font-bold mt-0.5">{config.modelBadge.line2}</div>
+        </div>
+      )}
     </div>
   );
 }
@@ -538,6 +656,7 @@ export function TechwearHero({ overrideConfig, onlySlideId }: TechwearHeroPropsE
         key={`slide-${currentIdx}`}
         config={current}
         productMissing={productMissing}
+        slideId={(current as any).id}
       />
 
       {showArrows && (

@@ -55,7 +55,9 @@ export function UnifiedFab() {
 
   const cfg = (designSettings as any).unifiedFab || {};
   const accent = cfg.accentColor || '#ffffff';
-  const mode: 'socle' | 'free' = cfg.mode === 'free' ? 'free' : 'socle';
+  const mode: 'socle' | 'free' | 'grouped' = cfg.mode === 'free' ? 'free' : cfg.mode === 'grouped' ? 'grouped' : 'socle';
+  const groupSide: 'left' | 'right' = cfg.groupSide === 'right' ? 'right' : 'left';
+  const groupOffsetY: number = typeof cfg.groupOffsetY === 'number' ? cfg.groupOffsetY : 220;
   const items = (cfg.items && cfg.items.length ? cfg.items : DEFAULT_ITEMS) as any[];
   const posCfg = isMobile
     ? (cfg.position_mobile || { corner: 'br', x: 16, y: 16 })
@@ -174,24 +176,69 @@ export function UnifiedFab() {
 
       <ChatBotWidget open={chatOpen} onOpenChange={setChatOpen} hideTrigger />
 
-      {mode === 'free' ? (
+      {mode === 'free' || mode === 'grouped' ? (
         <>
-          {visibleItems.map((it: any) => {
-            const Icon = ICON_MAP[it.id] || Sparkles;
-            const p = (isMobile ? it.position_mobile : it.position_desktop) || (isMobile ? { corner: 'br', x: 16, y: 16 + (it.order || 0) * 70 } : { corner: 'br', x: 24, y: 24 + (it.order || 0) * 70 });
+          {(() => {
+            const groupedIds = mode === 'grouped'
+              ? new Set(visibleItems.filter((it: any) => (it.groupedIn ?? (it.id === 'voice' || it.id === 'chat' ? 'group' : 'free')) === 'group').map((it: any) => it.id))
+              : new Set();
+            const freeOnes = visibleItems.filter((it: any) => !groupedIds.has(it.id));
             return (
-              <button
-                key={it.id}
-                onClick={() => triggerItem(it.id)}
-                aria-label={it.label}
-                title={it.label}
-                className="group w-12 h-12 rounded-full backdrop-blur-xl bg-background/80 border-2 border-foreground/40 text-foreground hover:scale-110 hover:bg-foreground hover:text-background transition-all shadow-xl flex items-center justify-center"
-                style={{ ...cornerStyle(p.corner, p.x, p.y), boxShadow: `0 8px 24px ${accent}44, 0 0 0 3px ${accent}11` }}
-              >
-                <Icon className="h-5 w-5" />
-              </button>
+              <>
+                {/* Mini-socle Voix + Assistant */}
+                {mode === 'grouped' && groupedIds.size > 0 && (
+                  <div
+                    className="fixed z-40 flex flex-col gap-2 p-2 rounded-2xl backdrop-blur-xl bg-background/80 border border-foreground/20 shadow-2xl"
+                    style={{
+                      [groupSide]: 16,
+                      top: groupOffsetY,
+                      boxShadow: `0 8px 32px ${accent}33`,
+                    } as any}
+                  >
+                    {visibleItems
+                      .filter((it: any) => groupedIds.has(it.id))
+                      .map((it: any) => {
+                        const Icon = ICON_MAP[it.id] || Sparkles;
+                        return (
+                          <button
+                            key={it.id}
+                            onClick={() => triggerItem(it.id)}
+                            aria-label={it.label}
+                            title={it.label}
+                            className="group relative w-11 h-11 rounded-full bg-background/90 border-2 border-foreground/40 text-foreground hover:scale-110 hover:bg-foreground hover:text-background transition-all flex items-center justify-center"
+                          >
+                            <Icon className="h-4 w-4" />
+                            <span className={cn(
+                              'absolute top-1/2 -translate-y-1/2 px-2 py-1 bg-foreground text-background text-[10px] uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none',
+                              groupSide === 'left' ? 'left-full ml-3' : 'right-full mr-3'
+                            )}>
+                              {it.label}
+                            </span>
+                          </button>
+                        );
+                      })}
+                  </div>
+                )}
+                {/* Free items (Roulette, Message, etc.) */}
+                {freeOnes.map((it: any) => {
+                  const Icon = ICON_MAP[it.id] || Sparkles;
+                  const p = (isMobile ? it.position_mobile : it.position_desktop) || (isMobile ? { corner: 'br', x: 16, y: 16 + (it.order || 0) * 70 } : { corner: 'br', x: 24, y: 24 + (it.order || 0) * 70 });
+                  return (
+                    <button
+                      key={it.id}
+                      onClick={() => triggerItem(it.id)}
+                      aria-label={it.label}
+                      title={it.label}
+                      className="group w-12 h-12 rounded-full backdrop-blur-xl bg-background/80 border-2 border-foreground/40 text-foreground hover:scale-110 hover:bg-foreground hover:text-background transition-all shadow-xl flex items-center justify-center"
+                      style={{ ...cornerStyle(p.corner, p.x, p.y), boxShadow: `0 8px 24px ${accent}44, 0 0 0 3px ${accent}11` }}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </button>
+                  );
+                })}
+              </>
             );
-          })}
+          })()}
         </>
       ) : (
         <div style={baseStyle} className="flex flex-col items-center gap-3">
