@@ -149,7 +149,7 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
   };
 
   const addressComplete = (a: VoiceAddress) =>
-    !!(a.name && a.address && a.zip && a.city && a.phone && (a.email || cart.user?.email));
+    !!(a.name && a.address && a.zip && a.city && a.phone);
 
   const executeAction = async (action: any) => {
     switch (action?.type) {
