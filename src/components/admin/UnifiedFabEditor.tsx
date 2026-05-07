@@ -31,9 +31,10 @@ export function UnifiedFabEditor() {
   const [posD, setPosD] = useState(initial.position_desktop || { corner: 'br', x: 24, y: 24 });
   const [posM, setPosM] = useState(initial.position_mobile || { corner: 'br', x: 16, y: 16 });
   const [items, setItems] = useState(initial.items?.length ? initial.items : DEFAULT_ITEMS);
-  const [mode, setMode] = useState<'socle' | 'free' | 'grouped'>(initial.mode || 'socle');
+  const [mode, setMode] = useState<'socle' | 'free' | 'grouped' | 'cluster'>(initial.mode || 'socle');
   const [groupSide, setGroupSide] = useState<'left' | 'right'>(initial.groupSide || 'left');
   const [groupOffsetY, setGroupOffsetY] = useState<number>(initial.groupOffsetY ?? 220);
+  const [clusterDir, setClusterDir] = useState<'row' | 'col'>(initial.clusterDir || 'col');
 
   useEffect(() => {
     const cur = (designSettings as any).unifiedFab || {};
@@ -43,7 +44,12 @@ export function UnifiedFabEditor() {
   const save = async () => {
     await updateDesignSettings({
       ...(designSettings as any),
-      unifiedFab: { enabled, accentColor: accent, mode, groupSide, groupOffsetY, position_desktop: posD, position_mobile: posM, items },
+      unifiedFab: {
+        ...initial,
+        enabled, accentColor: accent, mode, groupSide, groupOffsetY,
+        clusterDir,
+        position_desktop: posD, position_mobile: posM, items,
+      },
     } as any);
     toast.success('Bouton flottant enregistré');
   };
@@ -73,10 +79,11 @@ export function UnifiedFabEditor() {
         {/* Mode */}
         <div className="space-y-2 p-3 border rounded">
           <Label className="text-xs uppercase tracking-wider">Mode d'affichage</Label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {[
               { v: 'socle', label: 'Socle unifié' },
               { v: 'grouped', label: 'Voix+Assistant groupés' },
+              { v: 'cluster', label: 'Cluster CTA (tout regroupé)' },
               { v: 'free', label: 'Icônes libres' },
             ].map((m) => (
               <button
@@ -87,6 +94,21 @@ export function UnifiedFabEditor() {
               >{m.label}</button>
             ))}
           </div>
+
+          {mode === 'cluster' && (
+            <div className="mt-3 space-y-2">
+              <Label className="text-[10px]">Direction du cluster</Label>
+              <div className="flex gap-2">
+                {(['col', 'row'] as const).map((d) => (
+                  <button key={d} type="button" onClick={() => setClusterDir(d)}
+                    className={`flex-1 text-xs p-2 border-2 ${clusterDir === d ? 'border-primary bg-primary/10' : 'border-border'}`}>
+                    {d === 'col' ? 'Vertical' : 'Horizontal'}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-muted-foreground">Glissez le cluster directement sur la home en mode admin pour le repositionner. Marquez ci-dessous les boutons à isoler du cluster (ex. Jeu-concours).</p>
+            </div>
+          )}
 
           {mode === 'grouped' && (
             <div className="grid grid-cols-2 gap-3 mt-3">
@@ -147,6 +169,7 @@ export function UnifiedFabEditor() {
           <Label className="text-xs uppercase tracking-wider">Sous-boutons (ordre & visibilité)</Label>
           {[...items].sort((a: any, b: any) => a.order - b.order).map((it: any) => {
             const grouped = (it.groupedIn ?? (it.id === 'voice' || it.id === 'chat' ? 'group' : 'free')) === 'group';
+            const clusterFree = it.clusterFree ?? (it.id === 'roulette');
             return (
               <div key={it.id} className="flex items-center gap-3 p-2 border rounded flex-wrap">
                 <GripVertical className="h-4 w-4 text-muted-foreground" />
@@ -161,13 +184,20 @@ export function UnifiedFabEditor() {
                     className={`text-[10px] uppercase tracking-wider px-2 py-1 border-2 ${grouped ? 'border-primary bg-primary/10' : 'border-border'}`}
                   >{grouped ? 'Dans le socle' : 'Libre'}</button>
                 )}
+                {mode === 'cluster' && (
+                  <button
+                    type="button"
+                    onClick={() => setItems(items.map((x: any) => x.id === it.id ? { ...x, clusterFree: !clusterFree } : x))}
+                    className={`text-[10px] uppercase tracking-wider px-2 py-1 border-2 ${clusterFree ? 'border-primary bg-primary/10' : 'border-border'}`}
+                  >{clusterFree ? 'Isolé (libre)' : 'Dans le cluster'}</button>
+                )}
                 <Button size="sm" variant="ghost" onClick={() => move(it.id, -1)}>↑</Button>
                 <Button size="sm" variant="ghost" onClick={() => move(it.id, 1)}>↓</Button>
                 <Switch checked={it.visible} onCheckedChange={() => toggle(it.id)} />
               </div>
             );
           })}
-          <p className="text-[10px] text-muted-foreground">Astuce : en mode admin, vous pouvez aussi glisser-déposer le socle directement sur la page d'accueil.</p>
+          <p className="text-[10px] text-muted-foreground">Astuce : en mode admin, glissez-déposez directement les boutons et le cluster sur la page d'accueil pour les repositionner.</p>
         </div>
 
         <div className="flex justify-end">

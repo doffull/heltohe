@@ -107,13 +107,17 @@ export function UnifiedFab() {
 
   const cfg = (designSettings as any).unifiedFab || {};
   const accent = cfg.accentColor || '#ffffff';
-  const mode: 'socle' | 'free' | 'grouped' = cfg.mode === 'free' ? 'free' : cfg.mode === 'grouped' ? 'grouped' : 'socle';
+  const mode: 'socle' | 'free' | 'grouped' | 'cluster' =
+    cfg.mode === 'free' ? 'free' : cfg.mode === 'grouped' ? 'grouped' : cfg.mode === 'cluster' ? 'cluster' : 'socle';
   const groupSide: 'left' | 'right' = cfg.groupSide === 'right' ? 'right' : 'left';
   const groupOffsetY: number = typeof cfg.groupOffsetY === 'number' ? cfg.groupOffsetY : 220;
   const items = (cfg.items && cfg.items.length ? cfg.items : DEFAULT_ITEMS) as any[];
   const posCfg = isMobile
     ? (cfg.position_mobile || { corner: 'br', x: 16, y: 16 })
     : (cfg.position_desktop || { corner: 'br', x: 24, y: 24 });
+  const clusterPos: FabPos = (isMobile ? cfg.clusterPos_mobile : cfg.clusterPos_desktop) || { corner: 'br', x: 16, y: 90 };
+  const clusterDir: 'row' | 'col' = cfg.clusterDir === 'row' ? 'row' : 'col';
+  const freeCustomIds: string[] = Array.isArray(cfg.freeCustomIds) ? cfg.freeCustomIds : [];
 
   const voiceEnabled = designSettings.voiceCommandEnabled;
   const hintEnabled = (designSettings as any).voiceOnboardingHint !== false;
@@ -182,30 +186,39 @@ export function UnifiedFab() {
     toast.success('Mini-socle repositionné');
   };
 
+  const saveClusterPos = (pos: FabPos) => {
+    const key = isMobile ? 'clusterPos_mobile' : 'clusterPos_desktop';
+    updateDesignSettings({ ...(designSettings as any), unifiedFab: { ...cfg, [key]: pos } } as any);
+    toast.success('Cluster repositionné');
+  };
+
   // ── Per-button drag hooks ────────────────────────────────────────
   // Group socle drag
   const groupDrag = useAdminDrag({ enabled: isAdmin, isMobile, onCommit: saveGroupPos });
+  const clusterDrag = useAdminDrag({ enabled: isAdmin, isMobile, onCommit: saveClusterPos });
 
   return (
     <>
-      {/* Custom DB FABs */}
-      {visibleCustom.map((b) => {
-        const pos = isMobile ? b.position_mobile : b.position_desktop;
-        const I = getIcon(b.icon);
-        return (
-          <CustomFabButton
-            key={b.id}
-            button={b}
-            pos={pos as FabPos}
-            isAdmin={isAdmin}
-            isMobile={isMobile}
-            accent={accent}
-            onClick={() => handleAction(b)}
-            onDragCommit={(p) => saveCustomFabPos(b, p)}
-            Icon={I}
-          />
-        );
-      })}
+      {/* Custom DB FABs (skipped in cluster mode unless marked free) */}
+      {visibleCustom
+        .filter((b) => mode !== 'cluster' || freeCustomIds.includes(b.id))
+        .map((b) => {
+          const pos = isMobile ? b.position_mobile : b.position_desktop;
+          const I = getIcon(b.icon);
+          return (
+            <CustomFabButton
+              key={b.id}
+              button={b}
+              pos={pos as FabPos}
+              isAdmin={isAdmin}
+              isMobile={isMobile}
+              accent={accent}
+              onClick={() => handleAction(b)}
+              onDragCommit={(p) => saveCustomFabPos(b, p)}
+              Icon={I}
+            />
+          );
+        })}
 
       {/* Hint bubble */}
       {showHint && voiceEnabled && (
@@ -219,7 +232,84 @@ export function UnifiedFab() {
 
       <ChatBotWidget open={chatOpen} onOpenChange={setChatOpen} hideTrigger />
 
-      {mode === 'free' || mode === 'grouped' ? (
+      {mode === 'cluster' ? (
+        <>
+          {/* Free socle items (e.g. Jeu-concours isolé) */}
+          {visibleItems
+            .filter((it: any) => (it.clusterFree ?? (it.id === 'roulette')) === true)
+            .map((it: any) => {
+              const Icon = ICON_MAP[it.id] || Sparkles;
+              const p = (isMobile ? it.position_mobile : it.position_desktop) || (isMobile ? { corner: 'br', x: 16, y: 90 } : { corner: 'br', x: 24, y: 110 });
+              return (
+                <SocleFreeButton
+                  key={it.id}
+                  id={it.id}
+                  label={it.label}
+                  Icon={Icon}
+                  pos={p as FabPos}
+                  isAdmin={isAdmin}
+                  isMobile={isMobile}
+                  accent={accent}
+                  onClick={() => triggerItem(it.id)}
+                  onDragCommit={(np) => saveSocleItemPos(it.id, np)}
+                />
+              );
+            })}
+
+          {/* Cluster bloc — déplaçable d'un seul tenant */}
+          <div
+            onPointerDown={clusterDrag.onPointerDown}
+            className={cn(
+              'fixed z-40 flex gap-2 p-2 rounded-2xl backdrop-blur-xl bg-background/80 border border-foreground/20 shadow-2xl',
+              clusterDir === 'col' ? 'flex-col' : 'flex-row',
+              isAdmin && 'ring-2 ring-primary/60 cursor-grab active:cursor-grabbing'
+            )}
+            style={{
+              ...cornerStyle(clusterPos.corner, clusterPos.x, clusterPos.y),
+              boxShadow: `0 8px 32px ${accent}33`,
+              touchAction: isAdmin ? 'none' : undefined,
+            } as any}
+          >
+            {visibleItems
+              .filter((it: any) => !(it.clusterFree ?? (it.id === 'roulette')))
+              .map((it: any) => {
+                const Icon = ICON_MAP[it.id] || Sparkles;
+                return (
+                  <button
+                    key={it.id}
+                    onClick={(e) => { e.stopPropagation(); if (clusterDrag.blockClickRef.current) return; triggerItem(it.id); }}
+                    aria-label={it.label}
+                    title={it.label}
+                    className="w-11 h-11 rounded-full bg-background/90 border-2 border-foreground/40 text-foreground hover:scale-110 hover:bg-foreground hover:text-background transition-all flex items-center justify-center"
+                  >
+                    <Icon className="h-4 w-4" />
+                  </button>
+                );
+              })}
+            {visibleCustom
+              .filter((b) => !freeCustomIds.includes(b.id))
+              .map((b) => {
+                const I = getIcon(b.icon);
+                return (
+                  <button
+                    key={b.id}
+                    onClick={(e) => { e.stopPropagation(); if (clusterDrag.blockClickRef.current) return; handleAction(b); }}
+                    aria-label={b.label}
+                    title={b.label}
+                    className={cn(`hw-cta-btn hw-cta-v-${b.variant} hw-cta-rd-md w-11 h-11 p-0 relative`)}
+                  >
+                    <I className="h-4 w-4" />
+                    {b.badge && (
+                      <span className="absolute -top-1.5 -right-1.5 bg-foreground text-background text-[8px] font-bold px-1.5 py-0.5 uppercase tracking-wider">
+                        {b.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+          </div>
+        </>
+      ) : mode === 'free' || mode === 'grouped' ? (
         <>
           {(() => {
             const groupedIds = mode === 'grouped'
