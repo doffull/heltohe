@@ -271,8 +271,34 @@ function TechwearHeroSlideView({ config, productMissing, slideId }: { config: Sl
   const overlayOpacity = bg.overlayOpacity ?? 0;
   const showStockBadges = !!stock && stock.total > 0;
 
+  const effectiveBadgePos = badgePos ?? { corner: 'tr' as Corner, x: 24, y: 24 };
+  const badgeStyle: React.CSSProperties = {
+    ...freeStyle(effectiveBadgePos),
+    zIndex: 6,
+    cursor: isAdmin ? 'grab' : undefined,
+    outline: isAdmin ? '1px dashed hsl(var(--primary)/0.5)' : undefined,
+    outlineOffset: isAdmin ? '4px' : undefined,
+    touchAction: isAdmin ? 'none' : undefined,
+  };
+  const panelStyleFree: React.CSSProperties | undefined = panelPos
+    ? {
+        ...freeStyle(panelPos),
+        zIndex: 5,
+        cursor: isAdmin ? 'grab' : undefined,
+        outline: isAdmin ? '1px dashed hsl(var(--primary)/0.5)' : undefined,
+        outlineOffset: isAdmin ? '4px' : undefined,
+        touchAction: isAdmin ? 'none' : undefined,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 14,
+        alignItems: 'flex-start',
+        maxWidth: 280,
+      }
+    : undefined;
+
   return (
     <div
+      ref={containerRef}
       className="hw-slide-inner"
       data-size={config.cardSize || 'md'}
       data-overflow={config.imageOverflow ? 'true' : 'false'}
