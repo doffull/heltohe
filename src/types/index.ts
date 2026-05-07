@@ -281,7 +281,6 @@ export interface DesignSettings {
   sidebarNewsletterTitle?: string;
   sidebarNewsletterCta?: string;
   voiceCommandEnabled?: boolean;
-  homeSections?: Array<{ id: string; visible: boolean; order: number }>;
   voiceOnboardingHint?: boolean;
   unifiedFab?: {
     enabled?: boolean;
