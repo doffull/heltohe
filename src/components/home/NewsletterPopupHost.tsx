@@ -34,7 +34,10 @@ export function NewsletterPopupHost() {
     if (!eligible) return;
     triggeredRef.current = true;
 
-    const open = () => setActive(eligible);
+    const open = () => {
+      setActive(eligible);
+      recordPopupView(eligible.id, getSessionId()).catch(() => {});
+    };
 
     if (eligible.display_trigger === 'on_load') {
       open();
@@ -86,7 +89,7 @@ export function NewsletterPopupHost() {
     }
     setSubmitting(true);
     try {
-      await subscribeToNewsletter(email);
+      await subscribeToNewsletter(email, undefined, { source: 'popup', popupId: active.id, sessionId: getSessionId() });
       toast.success('Merci pour votre inscription !');
       close();
     } catch (err: any) {
