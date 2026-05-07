@@ -55,7 +55,8 @@ export function UnifiedFab() {
 
   const cfg = (designSettings as any).unifiedFab || {};
   const accent = cfg.accentColor || '#ffffff';
-  const items = (cfg.items && cfg.items.length ? cfg.items : DEFAULT_ITEMS) as typeof DEFAULT_ITEMS;
+  const mode: 'socle' | 'free' = cfg.mode === 'free' ? 'free' : 'socle';
+  const items = (cfg.items && cfg.items.length ? cfg.items : DEFAULT_ITEMS) as any[];
   const posCfg = isMobile
     ? (cfg.position_mobile || { corner: 'br', x: 16, y: 16 })
     : (cfg.position_desktop || { corner: 'br', x: 24, y: 24 });
@@ -173,55 +174,66 @@ export function UnifiedFab() {
 
       <ChatBotWidget open={chatOpen} onOpenChange={setChatOpen} hideTrigger />
 
-      {/* Unified socle */}
-      <div style={baseStyle} className="flex flex-col items-center gap-3">
-        {/* Expanded items */}
-        {open && (
-          <div className="flex flex-col items-center gap-2 animate-fade-in">
-            {visibleItems.map((it) => {
-              const Icon = ICON_MAP[it.id] || Sparkles;
-              return (
-                <button
-                  key={it.id}
-                  onClick={() => triggerItem(it.id)}
-                  aria-label={it.label}
-                  title={it.label}
-                  className="group relative w-12 h-12 rounded-full backdrop-blur-xl bg-background/70 border border-foreground/30 text-foreground hover:scale-110 hover:bg-foreground hover:text-background transition-all shadow-xl"
-                  style={{ boxShadow: `0 0 24px ${accent}33` }}
-                >
-                  <Icon className="h-5 w-5 mx-auto" />
-                  <span className="absolute right-full mr-3 top-1/2 -translate-y-1/2 px-2 py-1 bg-foreground text-background text-[10px] uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                    {it.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Main socle button */}
-        <button
-          onPointerDown={onDragStart}
-          onClick={() => setOpen((v) => !v)}
-          aria-label={open ? 'Fermer' : 'Ouvrir le menu flottant'}
-          className={cn(
-            'relative w-14 h-14 rounded-full backdrop-blur-xl border-2 transition-all flex items-center justify-center',
-            open
-              ? 'bg-foreground text-background border-foreground rotate-45'
-              : 'bg-background/80 text-foreground border-foreground/40 hover:scale-110'
+      {mode === 'free' ? (
+        <>
+          {visibleItems.map((it: any) => {
+            const Icon = ICON_MAP[it.id] || Sparkles;
+            const p = (isMobile ? it.position_mobile : it.position_desktop) || (isMobile ? { corner: 'br', x: 16, y: 16 + (it.order || 0) * 70 } : { corner: 'br', x: 24, y: 24 + (it.order || 0) * 70 });
+            return (
+              <button
+                key={it.id}
+                onClick={() => triggerItem(it.id)}
+                aria-label={it.label}
+                title={it.label}
+                className="group w-12 h-12 rounded-full backdrop-blur-xl bg-background/80 border-2 border-foreground/40 text-foreground hover:scale-110 hover:bg-foreground hover:text-background transition-all shadow-xl flex items-center justify-center"
+                style={{ ...cornerStyle(p.corner, p.x, p.y), boxShadow: `0 8px 24px ${accent}44, 0 0 0 3px ${accent}11` }}
+              >
+                <Icon className="h-5 w-5" />
+              </button>
+            );
+          })}
+        </>
+      ) : (
+        <div style={baseStyle} className="flex flex-col items-center gap-3">
+          {open && (
+            <div className="flex flex-col items-center gap-2 animate-fade-in">
+              {visibleItems.map((it: any) => {
+                const Icon = ICON_MAP[it.id] || Sparkles;
+                return (
+                  <button
+                    key={it.id}
+                    onClick={() => triggerItem(it.id)}
+                    aria-label={it.label}
+                    title={it.label}
+                    className="group relative w-12 h-12 rounded-full backdrop-blur-xl bg-background/70 border border-foreground/30 text-foreground hover:scale-110 hover:bg-foreground hover:text-background transition-all shadow-xl"
+                    style={{ boxShadow: `0 0 24px ${accent}33` }}
+                  >
+                    <Icon className="h-5 w-5 mx-auto" />
+                    <span className="absolute right-full mr-3 top-1/2 -translate-y-1/2 px-2 py-1 bg-foreground text-background text-[10px] uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                      {it.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           )}
-          style={{
-            boxShadow: `0 8px 32px ${accent}55, 0 0 0 4px ${accent}11, inset 0 0 20px ${accent}22`,
-          }}
-        >
-          {/* halo */}
-          <span
-            className="absolute inset-0 rounded-full animate-pulse pointer-events-none"
-            style={{ boxShadow: `0 0 20px ${accent}66`, opacity: 0.6 }}
-          />
-          {open ? <X className="h-5 w-5 relative -rotate-45" /> : <Sparkles className="h-5 w-5 relative" />}
-        </button>
-      </div>
+          <button
+            onPointerDown={onDragStart}
+            onClick={() => setOpen((v) => !v)}
+            aria-label={open ? 'Fermer' : 'Ouvrir le menu flottant'}
+            className={cn(
+              'relative w-14 h-14 rounded-full backdrop-blur-xl border-2 transition-all flex items-center justify-center',
+              open
+                ? 'bg-foreground text-background border-foreground rotate-45'
+                : 'bg-background/80 text-foreground border-foreground/40 hover:scale-110'
+            )}
+            style={{ boxShadow: `0 8px 32px ${accent}55, 0 0 0 4px ${accent}11, inset 0 0 20px ${accent}22` }}
+          >
+            <span className="absolute inset-0 rounded-full animate-pulse pointer-events-none" style={{ boxShadow: `0 0 20px ${accent}66`, opacity: 0.6 }} />
+            {open ? <X className="h-5 w-5 relative -rotate-45" /> : <Sparkles className="h-5 w-5 relative" />}
+          </button>
+        </div>
+      )}
 
       <VoiceCommandFab open={voiceOpen} onOpenChange={setVoiceOpen} hideTrigger />
       <RouletteFab open={rouletteOpen} onOpenChange={setRouletteOpen} hideTrigger />
