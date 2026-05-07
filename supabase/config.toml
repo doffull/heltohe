@@ -22,3 +22,6 @@ verify_jwt = false
 [functions.colissimo-proxy]
 verify_jwt = false
 
+[functions.recommend-size]
+verify_jwt = false
+
