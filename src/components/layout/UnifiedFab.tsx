@@ -200,16 +200,25 @@ export function UnifiedFab() {
     toast.success('Cluster repositionné');
   };
 
+  const saveDockPos = (pos: FabPos) => {
+    const key = isMobile ? 'dockPos_mobile' : 'dockPos_desktop';
+    updateDesignSettings({ ...(designSettings as any), unifiedFab: { ...cfg, [key]: pos } } as any);
+    toast.success('Dock repositionné');
+  };
+
   // ── Per-button drag hooks ────────────────────────────────────────
-  // Group socle drag
   const groupDrag = useAdminDrag({ enabled: isAdmin, isMobile, onCommit: saveGroupPos });
   const clusterDrag = useAdminDrag({ enabled: isAdmin, isMobile, onCommit: saveClusterPos });
+  const dockDrag = useAdminDrag({ enabled: isAdmin, isMobile, onCommit: saveDockPos });
+
+  // Visual editor toggle for admins (used in dock)
+  const ve = (() => { try { return useVisualEditor(); } catch { return null; } })();
 
   return (
     <>
-      {/* Custom DB FABs (skipped in cluster mode unless marked free) */}
+      {/* Custom DB FABs (skipped in cluster/dock mode unless marked free) */}
       {visibleCustom
-        .filter((b) => mode !== 'cluster' || freeCustomIds.includes(b.id))
+        .filter((b) => (mode !== 'cluster' && mode !== 'dock') || freeCustomIds.includes(b.id))
         .map((b) => {
           const pos = isMobile ? b.position_mobile : b.position_desktop;
           const I = getIcon(b.icon);
