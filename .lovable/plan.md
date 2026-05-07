@@ -1,104 +1,103 @@
+## Résumé
 
-# Plan — Taille mannequin, Guide IA, Hero Techwear
+Quatre chantiers indépendants :
+1. **Fixes badge mannequin** (flush save + invalidation par-id)
+2. **Commande vocale IA** (parler → ajouter au panier → checkout)
+3. **Newsletter** (widget sidebar discret + créateur de pop-ups admin)
+4. **Roulette d'accueil automatique** (au 1er visite/jour si non jouée)
 
-## 1. Taille du mannequin sur les produits
+---
 
-**Schéma DB** (migration) — ajouter colonnes à `products`:
-- `model_height` (text, ex "1m80")
-- `model_size_worn` (text, ex "M")
-- `model_name` (text, optionnel)
+## 1. Fixes badge mannequin (rapide)
 
-**Admin (`ProductForm.tsx`)** — nouvelle section pliable « Mannequin » avec 3 champs (taille, taille portée, nom).
+- `src/context/AppContext.tsx` : exposer `flushDesignSettings()` qui annule le timer debounce et appelle `saveDesignSettings.mutateAsync` immédiatement.
+- `src/components/admin/TechwearHeroTab.tsx` : ajouter un bouton **« Enregistrer »** explicite qui appelle `flushDesignSettings()` puis `toast.success`.
+- `src/hooks/useProducts.ts` : dans `useUpdateProduct.onSuccess`, invalider aussi `['products', id]` pour rafraîchir la fiche produit en cours.
 
-**Front fiche produit**:
-- **Badge sur l'image** (`ProductImageGallery.tsx`) : pastille discrète bas-gauche `« 📏 1m80 · taille M »` masquable.
-- **Ligne sous la galerie** (`ProductInfo.tsx`) : ligne dédiée « Le mannequin mesure 1m80 et porte une taille M ».
+---
 
-## 2. Guide des tailles IA (Homme / Femme / Enfant)
+## 2. Commande vocale IA
 
-**Page dédiée** `/guide-des-tailles` (nouveau `src/pages/SizeGuide.tsx` + route).
-- Sélecteur catégorie (Homme/Femme/Enfant)
-- Formulaire: taille (cm), poids (kg), tour poitrine/taille/hanches, morphologie
-- Bouton « Trouver ma taille » → appel edge function `recommend-size`
-- Résultat: taille recommandée + grille de produits compatibles + explications IA
+**Approche** : bouton micro flottant (FAB) → enregistrement → transcription + intention via Lovable AI (Gemini) → action panier/navigation.
 
-**Modal réutilisable** `SizeGuideAIModal.tsx` (refonte de `SizeGuideModal.tsx`):
-- Bouton « 🤖 Trouver ma taille » sur chaque fiche produit
-- Pré-rempli avec catégorie/sizes du produit courant
-- Lien « Guide complet » → page dédiée
+- **Edge function** `supabase/functions/voice-command/index.ts` :
+  - Reçoit `{ transcript: string, cartContext, products[] }`.
+  - Appelle Gemini avec **tool calling** pour extraire intention structurée :
+    - `add_to_cart({ productQuery, size?, color?, quantity })`
+    - `remove_from_cart({ productQuery })`
+    - `navigate({ destination: 'cart'|'checkout'|'shop'|'product', productQuery? })`
+    - `search({ query })`
+    - `clarify({ message })`
+  - Retourne JSON avec action + message vocal de confirmation.
+- **Composant** `src/components/voice/VoiceCommandFab.tsx` :
+  - Bouton micro fixe en bas-droite (mobile-first 360 px).
+  - Web Speech API (`SpeechRecognition` `lang='fr-FR'`) pour STT navigateur (gratuit).
+  - Fallback : enregistrement audio + envoi à Gemini si non supporté.
+  - Affichage modal du transcript + réponse IA.
+  - `SpeechSynthesisUtterance` pour réponse vocale.
+- **Hook** `src/hooks/useVoiceCommand.ts` : exécute l'action retournée (navigateToProduct, addItem du CartContext, navigate `/panier`/`/checkout`).
+- **Admin toggle** : ajout `voiceCommandEnabled` dans `design_settings` pour activer/désactiver globalement.
 
-**Edge Function** `supabase/functions/recommend-size/index.ts`:
-- Reçoit: catégorie, mensurations, produit (optionnel)
-- Appelle Lovable AI (`google/gemini-3-flash-preview`) avec tool calling structuré
-- Retourne: `{ recommendedSize, confidence, alternativeSize, advice }`
-- Côté serveur: matche avec produits actifs ayant cette taille
+---
 
-**Tables de référence taille** (JSON statique dans `src/lib/sizeCharts.ts`) — barème Homme/Femme/Enfant standard EU.
+## 3. Newsletter (sidebar + pop-ups)
 
-## 3. Bug Hero Techwear : changements non visibles après refresh
+### a) Backend
+- Migration : table `newsletter_popups` (`name`, `title`, `subtitle`, `cta_label`, `image_url`, `display_trigger` enum `on_load|exit_intent|scroll_50|delay`, `delay_seconds`, `frequency_days`, `is_active`, `targeting` jsonb).
+- Réutiliser table `newsletters` existante (déjà présente via `useNewsletters`) pour stocker les emails.
+- RLS : lecture publique des `newsletter_popups` actifs ; insertion publique dans `newsletters` (déjà en place).
 
-**Cause identifiée**: dans `useDesignSettings.ts`, le `dbToSettings` lit `techwear_hero` directement, mais après save :
-- Le mutation `useSaveDesignSettings` `invalidateQueries` mais `useDesignSettings` a `staleTime: 0`
-- `AppContext` ne re-synchronise PAS depuis le DB après le premier load (`initializedRef` bloque)
-- → Sur la home, la version locale `INITIAL_DESIGN_SETTINGS` est utilisée si l'admin a save dans un autre onglet/refresh
+### b) Sidebar widget
+- `src/components/layout/SidebarNewsletter.tsx` : champ email + CTA discret, intégré au bas de `Sidebar.tsx`.
+- Contrôlé par `designSettings.showSidebarNewsletter` (boolean) + `sidebarNewsletterTitle/CtaLabel`.
+- Anti-spam : honeypot + délai 10s (cohérent avec règles projet).
 
-**Fix**:
-1. Dans `AppContext.tsx`: re-synchroniser `dbSettings → setDesignSettingsLocal` à chaque update DB **sauf** si une édition locale est en cours (flag `dirty` 5s ou `isPending` du mutation).
-2. Dans `useSaveDesignSettings.ts`: `await refetch` après save pour s'assurer que le cache est frais avant de naviguer.
-3. Dans `TechwearHero.tsx` (`useResolvedConfig`): retirer le `useMemo` figé sur `cfgRaw` — recalculer à chaque render quand `designSettings.techwearHero` change (vérifier la dépendance).
-4. **Persister immédiatement** au lieu de debounce 800ms quand on modifie `techwearHero` (le débounce cause perte si refresh rapide). Ajouter méthode `flushDesignSettings()` exposée dans le contexte, appelée par le bouton « Enregistrer » de l'éditeur Techwear.
+### c) Pop-up frontend
+- `src/components/home/NewsletterPopup.tsx` : Dialog shadcn déclenché selon `display_trigger`.
+- LocalStorage `nl_popup_seen_<id>` pour respecter `frequency_days`.
+- Honeypot + délai 10s.
 
-## 4. Hero Techwear mobile
+### d) Admin
+- Nouvel onglet dans `AdminMarketing.tsx` : **« Pop-ups Newsletter »** (CRUD).
+- Liste + formulaire : titre, sous-titre, image, déclencheur, délai, fréquence, actif.
+- Aperçu live du pop-up.
 
-`TechwearHero.tsx` + `home-techwear.css`:
-- Carte mobile passe en pleine largeur (`100vw - 16px`), retirer transformations qui débordent
-- Image: `object-fit: cover` + ratio fixe `4/5` mobile
-- Stats / couleurs / tailles : grille 2 colonnes mobile, scroll horizontal pour swatches
-- CTA: stack vertical, bouton pleine largeur
-- Badge MODEL: top-right, plus petit (`text-[10px]`)
-- Tester à 360px
+---
 
-## 5. Réorganisation admin Hero Techwear
+## 4. Roulette d'accueil automatique
 
-`TechwearHeroTab.tsx` — refonte avec accordéons pliables (composant `Accordion` shadcn déjà dispo). 6 groupes:
+- `src/components/home/RouletteFab.tsx` existe déjà → ajouter logique d'**ouverture auto au 1er chargement** :
+  - Vérifier `localStorage.getItem('roulette_last_spin')` (date ISO).
+  - Si absent OU plus vieux qu'aujourd'hui (cooldown défini dans `roulette_config`) → ouvrir le modal après 1.5s sur la home.
+  - Stocker `roulette_last_spin` lors du `spin_roulette` réussi.
+- Côté DB : déjà géré (cooldown server-side), mais on évite l'ouverture inutile de la modale.
+- Toggle admin : `designSettings.rouletteAutoOpen` (boolean) dans `AdminRoulette`.
 
-```text
-▼ 1. Slides            (liste, ajouter, dupliquer, ordre)
-▶ 2. Identité          (nom, badge MODEL, CTA primaire/secondaire)
-▶ 3. Produit lié       (sélecteur, bouton sync)
-▶ 4. Médias & Couleurs (galerie d'images regroupée, par couleur, mobile/tablet/desktop)
-▶ 5. Tailles & Stats   (visibleSizes, defaultSize, stats array)
-▶ 6. Style & Background (imageFit, position, background type, switches d'affichage)
-```
-
-- Chaque accordéon avec chevron à droite (ouvert/fermé)
-- Une seule ouverte à la fois par défaut (mode `single`)
-- Section « Médias & Couleurs » : nouveau composant `ColorMediaGallery` qui regroupe toutes les images d'une slide dans une grille avec onglets « Desktop / Tablette / Mobile »
-- Bouton « Enregistrer » sticky bas qui appelle `flushDesignSettings()` immédiatement (plus de débounce sur cet onglet)
-- Réglages slider (autoplay/intervalle/flèches/dots) restent en haut, hors accordéon
+---
 
 ## Détails techniques
 
-**Migration SQL**:
-```sql
-ALTER TABLE public.products
-  ADD COLUMN IF NOT EXISTS model_height text,
-  ADD COLUMN IF NOT EXISTS model_size_worn text,
-  ADD COLUMN IF NOT EXISTS model_name text;
-```
+| Fichier | Action |
+|---|---|
+| `src/context/AppContext.tsx` | + `flushDesignSettings`, expose dans context |
+| `src/components/admin/TechwearHeroTab.tsx` | + bouton « Enregistrer » avec toast |
+| `src/hooks/useProducts.ts` | invalidation `['products', id]` |
+| `supabase/functions/voice-command/index.ts` | nouveau (Gemini tool calling) |
+| `src/components/voice/VoiceCommandFab.tsx` | nouveau |
+| `src/hooks/useVoiceCommand.ts` | nouveau |
+| `src/App.tsx` | monter `<VoiceCommandFab />` dans MainLayout |
+| migration SQL | table `newsletter_popups` + RLS |
+| `src/hooks/useNewsletterPopups.ts` | nouveau (CRUD) |
+| `src/components/layout/SidebarNewsletter.tsx` | nouveau |
+| `src/components/layout/Sidebar.tsx` | intégrer widget |
+| `src/components/home/NewsletterPopup.tsx` | nouveau |
+| `src/pages/admin/AdminMarketing.tsx` | + onglet pop-ups |
+| `src/components/home/RouletteFab.tsx` | logique auto-open |
+| `src/pages/admin/AdminRoulette.tsx` | toggle auto-open |
+| `src/types/index.ts` | + champs design_settings |
+| `src/hooks/useDesignSettings.ts` | mapping nouveaux champs |
+| migration SQL | colonnes `voice_command_enabled`, `roulette_auto_open`, `show_sidebar_newsletter`, `sidebar_newsletter_*` sur `design_settings` |
 
-**Types** : étendre `Product` dans `src/types/index.ts` + `dbToAppProduct`/`appToDbProduct` dans `useProducts.ts`.
-
-**Edge function `recommend-size`**:
-- `verify_jwt = false` (utilisable anonyme)
-- Tool calling: `{ size: string, confidence: 0-100, alternative?: string, advice: string }`
-- Prompt système intègre la table de tailles EU + mensurations utilisateur
-
-**Routes**: ajouter `/guide-des-tailles` dans `App.tsx`. Lien dans header (menu) + footer.
-
-## Fichiers touchés
-
-- **Nouveau**: `src/pages/SizeGuide.tsx`, `src/components/product/SizeGuideAIModal.tsx`, `src/lib/sizeCharts.ts`, `src/components/admin/ColorMediaGallery.tsx`, `supabase/functions/recommend-size/index.ts`
-- **Migration**: ajout colonnes `products` + config edge function
-- **Édités**: `ProductForm.tsx`, `ProductImageGallery.tsx`, `ProductInfo.tsx`, `useProducts.ts`, `types/index.ts`, `TechwearHeroTab.tsx`, `TechwearHero.tsx`, `home-techwear.css`, `useDesignSettings.ts`, `AppContext.tsx`, `App.tsx`, `Header.tsx`, `Footer.tsx`
-- **Supprimé**: ancien `SizeGuideModal.tsx` (remplacé)
+## Ce qui n'est pas inclus
+- Paiement vocal (sécurité) : la commande vocale s'arrête au checkout, l'utilisateur valide manuellement le paiement.
+- Pas de TTS premium (utilisation `SpeechSynthesis` natif navigateur).
