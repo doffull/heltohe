@@ -408,7 +408,12 @@ function TechwearHeroSlideView({ config, productMissing, slideId }: { config: Sl
             )}
           </div>
 
-          <div className="hw-right">
+          <div
+            className="hw-right"
+            ref={panelPos ? undefined : undefined}
+            onPointerDown={panelPos ? startDrag('panel') : undefined}
+            style={panelStyleFree}
+          >
             {config.showColors && (
               <div className="hw-panel hw-panel--colors" role="radiogroup" aria-label="Choisir une couleur">
                 <div className="hw-colors-compact">
