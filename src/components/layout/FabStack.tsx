@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Mic, Gift, Bot } from 'lucide-react';
-import { Link } from 'react-router-dom';
+// Link import removed - using window.location.assign for FAB route navigation to keep them framework-agnostic
 import { useApp } from '@/context/AppContext';
 import { useRouletteConfig } from '@/hooks/useRoulette';
 import { useHomeFabButtons } from '@/hooks/useHomeFabButtons';
