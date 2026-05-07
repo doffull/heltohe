@@ -257,6 +257,72 @@ export function UnifiedFabEditor() {
           <p className="text-[10px] text-muted-foreground">Astuce : en mode admin, glissez-déposez directement les boutons et le cluster sur la page d'accueil pour les repositionner.</p>
         </div>
 
+        {/* Roulette / Jeu-concours design */}
+        <div className="space-y-3 p-3 border-2 border-primary/30 rounded">
+          <Label className="text-xs uppercase tracking-wider">🎁 Bouton Jeu-concours</Label>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <div>
+              <Label className="text-[10px]">Style</Label>
+              <Select value={rfVariant} onValueChange={setRfVariant}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {['glossy','glass','neon','metal','outline','minimal'].map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-[10px]">Forme</Label>
+              <Select value={rfShape} onValueChange={setRfShape}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pill">Pill</SelectItem>
+                  <SelectItem value="round">Rond</SelectItem>
+                  <SelectItem value="rect-bevel">Biseauté</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-[10px]">Taille</Label>
+              <Select value={rfSize} onValueChange={setRfSize}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {['sm','md','lg','xl'].map((v) => <SelectItem key={v} value={v}>{v.toUpperCase()}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-[10px]">Position par défaut</Label>
+              <Select value={rfCorner} onValueChange={setRfCorner}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cc">Centre de l'écran</SelectItem>
+                  <SelectItem value="bc">Bas centre</SelectItem>
+                  <SelectItem value="tc">Haut centre</SelectItem>
+                  <SelectItem value="br">Bas droite</SelectItem>
+                  <SelectItem value="bl">Bas gauche</SelectItem>
+                  <SelectItem value="tr">Haut droite</SelectItem>
+                  <SelectItem value="tl">Haut gauche</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-[10px]">Libellé</Label>
+              <Input value={rfLabel} onChange={(e) => setRfLabel(e.target.value)} placeholder="Jeu-concours" />
+            </div>
+            <div>
+              <Label className="text-[10px]">Couleur d'accent</Label>
+              <div className="flex gap-2">
+                <Input type="color" value={rfAccent} onChange={(e) => setRfAccent(e.target.value)} className="w-12 h-9 p-1" />
+                <Input value={rfAccent} onChange={(e) => setRfAccent(e.target.value)} />
+              </div>
+            </div>
+            <label className="flex items-center justify-between border rounded p-2 text-xs col-span-2 md:col-span-3">
+              Animation pulsation <Switch checked={rfPulse} onCheckedChange={setRfPulse} />
+            </label>
+          </div>
+          <p className="text-[10px] text-muted-foreground">Astuce : en mode admin, glissez le bouton Jeu-concours directement sur la home pour ajuster sa position. Le centre est idéal pour maximiser la visibilité.</p>
+        </div>
+
         <div className="flex justify-end">
           <Button onClick={save} className="gap-2"><Save className="h-4 w-4" /> Enregistrer</Button>
         </div>
