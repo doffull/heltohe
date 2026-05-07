@@ -178,14 +178,19 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
   const rfab = cfg.rouletteFab || {};
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false;
 
+  const fabPosCurrent: FabPos = (isMobile ? rfab.position_mobile : rfab.position_desktop) || { corner: 'cc', x: 0, y: 0 };
   const rouletteDrag = useAdminDrag({
     enabled: !!isAdmin,
+    currentPos: fabPosCurrent,
     onCommit: (pos) => {
       const key = isMobile ? 'position_mobile' : 'position_desktop';
       updateDesignSettings({ ...(designSettings as any), unifiedFab: { ...cfg, rouletteFab: { ...rfab, [key]: pos } } } as any);
-      toast.success('Jeu-concours repositionné');
     },
   });
+  const handleConfirmDrag = () => {
+    rouletteDrag.confirmPending();
+    toast.success('Position du Jeu-concours validée (mobile + desktop)');
+  };
 
   if (!config?.enabled || segments.length === 0) return null;
 
