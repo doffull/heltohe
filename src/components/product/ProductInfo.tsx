@@ -95,9 +95,47 @@ export default function ProductInfo({ product, isNew }: ProductInfoProps) {
         )}
       </motion.div>
 
+      {/* Model info */}
+      {(product.modelHeight || product.modelSizeWorn) && (
+        <motion.div className="flex items-center gap-2 rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-xs" {...fadeUp} transition={{ delay: 0.27 }}>
+          <User className="h-3.5 w-3.5 text-primary shrink-0" />
+          <span className="text-muted-foreground">
+            {product.modelName ? `${product.modelName} mesure ` : 'Le mannequin mesure '}
+            <span className="font-semibold text-foreground">{product.modelHeight || '—'}</span>
+            {product.modelSizeWorn && <> et porte la taille <span className="font-semibold text-foreground">{product.modelSizeWorn}</span></>}
+          </span>
+        </motion.div>
+      )}
+
+      {/* Size guide AI button */}
+      {product.sizes && product.sizes.length > 0 && (
+        <motion.div {...fadeUp} transition={{ delay: 0.28 }}>
+          <Button variant="outline" size="sm" onClick={() => setSizeGuideOpen(true)} className="gap-2 w-full sm:w-auto">
+            <Ruler className="h-3.5 w-3.5" />
+            <Sparkles className="h-3 w-3" />
+            Trouver ma taille
+          </Button>
+          <SizeGuideAIModal
+            open={sizeGuideOpen}
+            onOpenChange={setSizeGuideOpen}
+            productName={product.name}
+            availableSizes={product.sizes}
+            defaultCategory={guessCategory()}
+          />
+        </motion.div>
+      )}
+
       {/* Features bar */}
       <motion.div
         className="grid grid-cols-3 gap-2 py-4 border-y border-border"
+        {...fadeUp}
+        transition={{ delay: 0.5 }}
+      ></motion.div>
+      <motion.div
+        className="grid grid-cols-3 gap-2 py-4 border-y border-border"
+        {...fadeUp}
+        transition={{ delay: 0.5 }}
+      >
         {...fadeUp}
         transition={{ delay: 0.5 }}
       >
