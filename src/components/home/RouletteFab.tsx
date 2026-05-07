@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -133,6 +134,25 @@ export function RouletteFab() {
       try { setResult(JSON.parse(saved)); } catch { /* ignore */ }
     }
   }, [canSpin]);
+
+  // Auto-open on home if user can spin and hasn't been auto-prompted today
+  const location = useLocation();
+  const autoOpenedRef = useRef(false);
+  useEffect(() => {
+    if (autoOpenedRef.current) return;
+    if (!config?.enabled || segments.length === 0) return;
+    if (location.pathname !== '/' && location.pathname !== '/index') return;
+    if (!canSpin) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const lastPrompt = localStorage.getItem('roulette_auto_prompt_day');
+    if (lastPrompt === today) return;
+    autoOpenedRef.current = true;
+    const t = setTimeout(() => {
+      setOpen(true);
+      localStorage.setItem('roulette_auto_prompt_day', today);
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [config?.enabled, segments.length, canSpin, location.pathname]);
 
   if (!config?.enabled || segments.length === 0) return null;
 
