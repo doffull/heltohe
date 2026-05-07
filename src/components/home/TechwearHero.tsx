@@ -264,12 +264,54 @@ function TechwearHeroSlideView({ config, productMissing }: { config: SlideConfig
                   <div className="hw-mb-2">{config.modelBadge.line2}</div>
                 </div>
               )}
+
+              {config.ctaStyle?.enabled && (() => {
+                const s = config.ctaStyle!;
+                const isMobile = viewport === 'mobile';
+                const pos = isMobile ? s.position.mobile : s.position.desktop;
+                const sizeCls = `hw-cta-sz-${s.size}`;
+                const radCls = `hw-cta-rd-${s.radius}`;
+                const varCls = `hw-cta-v-${s.variant}`;
+                return (
+                  <div
+                    className={`hw-cta-positioned ${pos.layout === 'row' ? 'is-row' : 'is-col'}`}
+                    style={{
+                      left: `${pos.x}%`,
+                      top: `${pos.y}%`,
+                      gap: `${s.gap}px`,
+                    }}
+                  >
+                    <Link
+                      to={config.ctaPrimary.href}
+                      className={`hw-cta-btn ${varCls} ${sizeCls} ${radCls}`}
+                      style={{
+                        background: s.primaryBg || undefined,
+                        color: s.primaryFg || undefined,
+                      }}
+                    >
+                      {config.ctaPrimary.label}
+                    </Link>
+                    <Link
+                      to={config.ctaSecondary.href}
+                      className={`hw-cta-btn ${varCls} ${sizeCls} ${radCls} is-secondary`}
+                      style={{
+                        background: s.secondaryBg || undefined,
+                        color: s.secondaryFg || undefined,
+                      }}
+                    >
+                      {config.ctaSecondary.label}
+                    </Link>
+                  </div>
+                );
+              })()}
             </div>
 
-            <div className="hw-ctas">
-              <Link to={config.ctaPrimary.href} className="hw-cta-primary">{config.ctaPrimary.label}</Link>
-              <Link to={config.ctaSecondary.href} className="hw-cta-secondary">{config.ctaSecondary.label}</Link>
-            </div>
+            {!config.ctaStyle?.enabled && (
+              <div className="hw-ctas">
+                <Link to={config.ctaPrimary.href} className="hw-cta-primary">{config.ctaPrimary.label}</Link>
+                <Link to={config.ctaSecondary.href} className="hw-cta-secondary">{config.ctaSecondary.label}</Link>
+              </div>
+            )}
           </div>
 
           <div className="hw-right">
