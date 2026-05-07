@@ -1,90 +1,89 @@
 ## Objectif
 
-Permettre, dans `/admin/home-icons`, de **déplacer chaque icône flottante** (Voix, Assistant, Jeu-concours) **individuellement** sur un aperçu visuel en temps réel de la page d'accueil, et de sauvegarder leur position exacte (desktop + mobile).
+1. **Hero TechwearHero** : pouvoir positionner librement le badge "MODEL 0.1.2" (par défaut en haut à droite) et déplacer le bloc latéral contenant **Couleurs / Tailles / Price·Durability·Fashion**.
+2. **Bouton flottant** : regrouper **Voix + Assistant** dans un mini-socle commun, placé sur un côté de l'écran (gauche par défaut, configurable). **Jeu-concours** et **Message/Chat secondaire** restent indépendants et déplaçables où l'on veut.
+3. **Admin `/admin/home-icons`** : ajouter un sélecteur **gauche / droite** pour le mini-socle Voix+Assistant et conserver le drag libre pour les autres icônes.
 
-Aujourd'hui, seul le socle unifié peut être déplacé en bloc. L'utilisateur veut éclater le socle pour positionner chaque sous-bouton à l'endroit de son choix sur la home.
+---
 
-## Ce qui change
+## 1. TechwearHero — éléments repositionnables
 
-### 1. Modèle de données (`design_settings.unifiedFab`)
+Étendre `TechwearHeroConfig` (`src/types/index.ts` + `src/config/homeConfig.ts`) :
 
-Étendre chaque item avec une position propre + un mode :
+```ts
+modelBadgePos?: { corner: 'tl'|'tr'|'bl'|'br'; x: number; y: number }; // défaut tr 24/24
+sidePanelPos?:  { corner: 'tl'|'tr'|'bl'|'br'; x: number; y: number }; // bloc couleurs/tailles/stats
+```
 
-```json
+Dans `TechwearHero.tsx` :
+- Le badge `MODEL` devient `position: absolute` dans le conteneur du hero, placé via `modelBadgePos` (par défaut top-right).
+- Le panneau latéral (couleurs + tailles + StatBar) devient un bloc unique `position: absolute` placé via `sidePanelPos`.
+- En mode admin (`useAuth().isAdmin`), les deux blocs sont **draggables** (pointer events, snap 8 px). À la fin du drag → `updateDesignSettings({ techwearHero: { ..., modelBadgePos, sidePanelPos } })` debounce 600 ms.
+
+Dans `TechwearHeroTab.tsx` (admin) : ajouter deux blocs « Position du badge » et « Position du panneau » avec corner + sliders X/Y, identiques au pattern de `UnifiedFabEditor`.
+
+---
+
+## 2. Refonte des FAB
+
+### Modèle de données (`design_settings.unifiedFab`)
+Ajouter un nouveau mode `grouped` (en plus de `socle` et `free`) :
+
+```jsonc
 {
-  "mode": "free",                  // "socle" (actuel) | "free" (nouveau)
+  "mode": "grouped",
+  "groupSide": "left",          // "left" | "right"
+  "groupOffsetY": 200,          // distance au top
   "items": [
-    {
-      "id": "voice", "label": "Voix", "icon": "Mic", "visible": true, "order": 0,
-      "position_desktop": { "corner": "br", "x": 24, "y": 96 },
-      "position_mobile":  { "corner": "br", "x": 16, "y": 80 }
-    },
-    { "id": "chat",     ... },
-    { "id": "roulette", ... }
+    { "id":"voice",    "groupedIn":"chat",  ... }, // forcés dans le mini-socle
+    { "id":"chat",     "groupedIn":"chat",  ... },
+    { "id":"roulette", "groupedIn":"free", "position_desktop":{...}, "position_mobile":{...} },
+    { "id":"message",  "groupedIn":"free", ... }   // bouton chat secondaire / message
   ]
 }
 ```
 
-Pas de migration SQL : `unifiedFab` est déjà un champ JSON libre.
+### `UnifiedFab.tsx`
+- Nouveau rendu `mode === 'grouped'` :
+  - Mini-socle vertical (Voix + Assistant) collé sur le bord choisi (`left`/`right`), centré verticalement avec offset configurable. Toujours visible (pas de toggle Sparkles).
+  - Les autres items (Roulette, Message) rendus indépendamment via leur `position_desktop`/`position_mobile` comme déjà fait en mode `free`.
+- En admin : drag du mini-socle (déplacement vertical + bascule gauche/droite si traversée du milieu) **et** drag individuel des autres icônes.
+- Hint vocal repositionné à côté du mini-socle.
 
-### 2. Rendu (`UnifiedFab.tsx`)
+### `UnifiedFabEditor.tsx`
+- Sélecteur de mode passe à 3 options : **Socle unifié / Icônes libres / Voix+Assistant groupés**.
+- En mode `grouped` : afficher Radio **Côté = Gauche / Droite**, slider **Décalage vertical**, et un sous-éditeur de positions libres pour Roulette et Message.
 
-- Si `mode === "free"` → rendre chaque item comme un FAB indépendant, à sa propre position (plus de socle Sparkles + menu déployant).
-- Si `mode === "socle"` → comportement actuel conservé.
-- Le hint vocal et les actions (ouverture VoiceCommandFab, ChatBotWidget, RouletteFab) restent identiques.
+### `FabLivePreview.tsx`
+- Quand mode `grouped` : afficher le mini-socle ancré au bord choisi, draggable verticalement + drag horizontal pour basculer côté ; les icônes Roulette/Message restent draggables librement comme aujourd'hui.
 
-### 3. Nouvel éditeur visuel (`AdminHomeIcons.tsx` → onglet « Aperçu live »)
+---
 
-Composant `FabLivePreview.tsx` :
+## 3. Z-index & non-gêne
 
-```text
-┌─────────────────────────────────────────┐
-│  [Toggle Desktop / Mobile]              │
-│  ┌───────────────────────────────────┐  │
-│  │                                   │  │
-│  │   Aperçu home (iframe ou         │  │
-│  │   capture statique en fond)      │  │
-│  │                                   │  │
-│  │             🎤  ← draggable       │  │
-│  │                                   │  │
-│  │                       🤖          │  │
-│  │                       🎁          │  │
-│  └───────────────────────────────────┘  │
-│  Position Voix : right 24px, bottom 96  │
-│  [Réinitialiser] [Enregistrer]          │
-└─────────────────────────────────────────┘
-```
+- Mini-socle Voix+Assistant : `z-40`, marge automatique vis-à-vis du Sidebar (offset latéral = 76 px si sidebar visible côté gauche).
+- Roulette/Message : conservent `z-50` mais s'évitent mutuellement (snap minimal 8 px, pas de collision automatique — laissé à l'admin).
 
-- Fond = `<iframe src="/" />` sans interactions (pointer-events: none) pour voir la home réelle.
-- Overlay absolu avec les 3 icônes draggables (`pointer-events:auto`).
-- Drag basé sur `pointerdown/move/up` (pas de lib), conversion px → `{corner, x, y}` selon le quadrant le plus proche du clic final.
-- Switch Desktop (1280×800) / Mobile (390×844) qui redimensionne l'iframe et édite le bon champ (`position_desktop` / `position_mobile`).
-- Snap optionnel (grille de 8px) + affichage en direct des coordonnées sous chaque icône.
-- Bouton « Enregistrer » → `updateDesignSettings({ unifiedFab: { mode:'free', items:[...] } })`.
-
-### 4. Mise à jour du `UnifiedFabEditor.tsx`
-
-- Ajouter un radio « Mode d'affichage » : **Socle unifié** / **Icônes libres**.
-- Quand « Icônes libres » est choisi, masquer la position globale et afficher un lien « Ouvrir l'éditeur visuel ».
-
-### 5. Drag direct sur la vraie home (bonus admin)
-
-Dans `UnifiedFab.tsx`, en mode `free` + admin, chaque icône devient draggable directement sur le site (comme l'actuel socle). La nouvelle position est persistée dans `design_settings` via debounce 800 ms.
+---
 
 ## Fichiers touchés
 
-- **Création** : `src/components/admin/FabLivePreview.tsx`
-- **Modif** : `src/components/layout/UnifiedFab.tsx` (mode free + drag par item)
-- **Modif** : `src/components/admin/UnifiedFabEditor.tsx` (sélecteur de mode)
-- **Modif** : `src/pages/admin/AdminHomeIcons.tsx` (nouvel onglet « Aperçu live »)
-- **Modif** : `src/types/index.ts` (typage `unifiedFab.items[].position_*` + `mode`)
+- **Modif** : `src/types/index.ts` (ajout `modelBadgePos`, `sidePanelPos`, `unifiedFab.mode='grouped'`, `groupSide`, `groupOffsetY`, `items[].groupedIn`)
+- **Modif** : `src/config/homeConfig.ts` (defaults)
+- **Modif** : `src/components/home/TechwearHero.tsx` (badge + panneau absolus + drag admin)
+- **Modif** : `src/components/admin/TechwearHeroTab.tsx` (éditeurs de position)
+- **Modif** : `src/components/layout/UnifiedFab.tsx` (mode `grouped`)
+- **Modif** : `src/components/admin/UnifiedFabEditor.tsx` (mode + côté)
+- **Modif** : `src/components/admin/FabLivePreview.tsx` (rendu mode `grouped`)
 
-Aucun changement de schéma DB, aucune nouvelle dépendance.
+Aucun changement DB, aucune nouvelle dépendance.
+
+---
 
 ## Critères d'acceptation
 
-1. Dans `/admin/home-icons`, onglet **Aperçu live**, je vois la home en fond avec les 3 icônes superposées.
-2. Je peux glisser chaque icône où je veux (desktop **et** mobile via toggle).
-3. Au clic « Enregistrer », les positions sont stockées et la home publique reflète immédiatement le nouvel emplacement.
-4. En mode admin sur la home réelle, je peux aussi attraper chaque icône pour l'ajuster, sans passer par l'admin.
-5. Le mode « socle unifié » reste disponible et fonctionnel pour ceux qui le préfèrent.
+1. Sur la home, le badge "MODEL 0.1.2" est par défaut en **haut à droite** du hero.
+2. En admin, je peux glisser le badge et le panneau couleurs/tailles/stats où je veux dans le hero, et c'est persisté.
+3. Le bouton flottant propose un mode **Voix+Assistant groupés** placé à gauche (par défaut) ou à droite, sans gêner les CTA d'achat.
+4. Jeu-concours et Message peuvent être déplacés indépendamment partout sur l'écran (desktop + mobile).
+5. L'admin `/admin/home-icons` permet de choisir le côté du mini-socle et d'éditer toutes les positions via l'aperçu live.
