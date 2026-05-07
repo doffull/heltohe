@@ -151,9 +151,44 @@ function TechwearHeroSlideView({ config, productMissing }: { config: SlideConfig
   const [activeColor, setActiveColor] = useState(safeColorIndex);
   const [activeSize, setActiveSize] = useState<string>(config.defaultSize);
   const { data: stock } = useProductStock(config.productId);
+  const { data: products } = useProducts();
+  const linkedProduct = useMemo(
+    () => (config.productId ? products?.find((p) => p.id === config.productId) : undefined),
+    [products, config.productId]
+  );
 
   useEffect(() => { setActiveColor(safeColorIndex); }, [safeColorIndex, config.colorOptions.length]);
   useEffect(() => { setActiveSize(config.defaultSize); }, [config.defaultSize]);
+
+  // Live announcement (debounced) for color/size/stock/price updates
+  const [liveMsg, setLiveMsg] = useState('');
+  const colorNameForLive = config.colorOptions[activeColor]?.name ?? '';
+  const qtyForLive = stock?.bySize?.[activeSize];
+  useEffect(() => {
+    const parts: string[] = [];
+    if (colorNameForLive) parts.push(`Couleur ${colorNameForLive}`);
+    if (activeSize) parts.push(`taille ${activeSize}`);
+    if (typeof qtyForLive === 'number') {
+      parts.push(
+        qtyForLive === 0
+          ? 'épuisé'
+          : qtyForLive < 10
+            ? `stock faible, ${qtyForLive} restants`
+            : `${qtyForLive} en stock`
+      );
+    } else if (stock && stock.total > 0) {
+      parts.push(`${stock.total} en stock`);
+    }
+    if (linkedProduct) {
+      const price = linkedProduct.salePrice && linkedProduct.salePrice < linkedProduct.price
+        ? linkedProduct.salePrice
+        : linkedProduct.price;
+      if (typeof price === 'number') parts.push(`prix ${price} euros`);
+    }
+    const msg = parts.join(', ') + '.';
+    const t = window.setTimeout(() => setLiveMsg(msg), 150);
+    return () => window.clearTimeout(t);
+  }, [colorNameForLive, activeSize, qtyForLive, stock, linkedProduct]);
 
   if (config.colorOptions.length === 0) return null;
 
