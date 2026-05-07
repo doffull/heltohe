@@ -31,9 +31,10 @@ export function UnifiedFabEditor() {
   const [posD, setPosD] = useState(initial.position_desktop || { corner: 'br', x: 24, y: 24 });
   const [posM, setPosM] = useState(initial.position_mobile || { corner: 'br', x: 16, y: 16 });
   const [items, setItems] = useState(initial.items?.length ? initial.items : DEFAULT_ITEMS);
-  const [mode, setMode] = useState<'socle' | 'free' | 'grouped'>(initial.mode || 'socle');
+  const [mode, setMode] = useState<'socle' | 'free' | 'grouped' | 'cluster'>(initial.mode || 'socle');
   const [groupSide, setGroupSide] = useState<'left' | 'right'>(initial.groupSide || 'left');
   const [groupOffsetY, setGroupOffsetY] = useState<number>(initial.groupOffsetY ?? 220);
+  const [clusterDir, setClusterDir] = useState<'row' | 'col'>(initial.clusterDir || 'col');
 
   useEffect(() => {
     const cur = (designSettings as any).unifiedFab || {};
@@ -43,7 +44,12 @@ export function UnifiedFabEditor() {
   const save = async () => {
     await updateDesignSettings({
       ...(designSettings as any),
-      unifiedFab: { enabled, accentColor: accent, mode, groupSide, groupOffsetY, position_desktop: posD, position_mobile: posM, items },
+      unifiedFab: {
+        ...initial,
+        enabled, accentColor: accent, mode, groupSide, groupOffsetY,
+        clusterDir,
+        position_desktop: posD, position_mobile: posM, items,
+      },
     } as any);
     toast.success('Bouton flottant enregistré');
   };
