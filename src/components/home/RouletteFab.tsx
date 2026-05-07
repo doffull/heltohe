@@ -245,7 +245,7 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
     }
   };
 
-  const fabPos: FabPos = (isMobile ? rfab.position_mobile : rfab.position_desktop) || { corner: 'cc', x: 0, y: 0 };
+  const fabPos: FabPos = fabPosCurrent;
   const variant = rfab.variant || 'glossy';
   const shape = rfab.shape || 'pill';
   const size = rfab.size || 'md';
