@@ -245,6 +245,7 @@ export default function Admin() {
         <div className="p-3 lg:p-8">
           <Routes>
             <Route index element={<AdminDashboard />} />
+            <Route path="live/*" element={<AdminLive />} />
             <Route path="produits/*" element={<AdminProducts />} />
             <Route path="commandes/*" element={<AdminOrders />} />
             <Route path="preparations/*" element={<AdminPreparations />} />
