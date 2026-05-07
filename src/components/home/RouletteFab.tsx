@@ -111,13 +111,24 @@ function Wheel({
   );
 }
 
-export function RouletteFab() {
+interface RouletteFabProps {
+  open?: boolean;
+  onOpenChange?: (v: boolean) => void;
+  hideTrigger?: boolean;
+}
+
+export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: RouletteFabProps = {}) {
   const { user } = useAuth();
   const { data: config } = useRouletteConfig();
   const { data: segments = [] } = useRouletteSegments();
   const spin = useSpinRoulette();
 
-  const [open, setOpen] = useState(false);
+  const [openInternal, setOpenInternal] = useState(false);
+  const open = openProp !== undefined ? openProp : openInternal;
+  const setOpen = (v: boolean) => {
+    onOpenChange?.(v);
+    if (openProp === undefined) setOpenInternal(v);
+  };
   const [email, setEmail] = useState('');
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
