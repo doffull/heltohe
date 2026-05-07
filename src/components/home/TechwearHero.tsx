@@ -357,12 +357,7 @@ function TechwearHeroSlideView({ config, productMissing, slideId }: { config: Sl
                 />
               )}
 
-              {config.showModelBadge && !isAdmin && !badgePos && (
-                <div className="hw-model-badge" aria-label="Référence modèle">
-                  <div className="hw-mb-1">{config.modelBadge.line1}</div>
-                  <div className="hw-mb-2">{config.modelBadge.line2}</div>
-                </div>
-              )}
+              {/* MODEL badge rendered at slide-inner level for free positioning */}
 
               {config.ctaStyle?.enabled && (() => {
                 const s = config.ctaStyle!;
