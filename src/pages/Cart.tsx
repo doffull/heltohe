@@ -298,7 +298,8 @@ export default function Cart() {
 
               {/* Checkout Button */}
               <Button 
-                className="w-full mt-6 chamfer-hud-sm h-12 text-lg"
+                className="w-full mt-6 chamfer-hud-sm h-12 text-base sm:text-lg text-white hover:opacity-90"
+                style={{ backgroundColor: `hsl(var(--step-address))` }}
                 onClick={() => navigate('/checkout')}
               >
                 PASSER COMMANDE
