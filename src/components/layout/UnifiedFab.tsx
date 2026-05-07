@@ -186,9 +186,16 @@ export function UnifiedFab() {
     toast.success('Mini-socle repositionné');
   };
 
+  const saveClusterPos = (pos: FabPos) => {
+    const key = isMobile ? 'clusterPos_mobile' : 'clusterPos_desktop';
+    updateDesignSettings({ ...(designSettings as any), unifiedFab: { ...cfg, [key]: pos } } as any);
+    toast.success('Cluster repositionné');
+  };
+
   // ── Per-button drag hooks ────────────────────────────────────────
   // Group socle drag
   const groupDrag = useAdminDrag({ enabled: isAdmin, isMobile, onCommit: saveGroupPos });
+  const clusterDrag = useAdminDrag({ enabled: isAdmin, isMobile, onCommit: saveClusterPos });
 
   return (
     <>
