@@ -656,6 +656,7 @@ export function TechwearHero({ overrideConfig, onlySlideId }: TechwearHeroPropsE
         key={`slide-${currentIdx}`}
         config={current}
         productMissing={productMissing}
+        slideId={(current as any).id}
       />
 
       {showArrows && (
