@@ -14,6 +14,9 @@ import { MannequinHotspots } from './MannequinHotspot';
 import { SidebarProductHUD } from './SidebarProductHUD';
 import { ChatBotWidget } from './ChatBotWidget';
 import { SubscribeFab } from './SubscribeFab';
+import { SidebarNewsletter } from './SidebarNewsletter';
+import { NewsletterPopupHost } from '@/components/home/NewsletterPopupHost';
+import { VoiceCommandFab } from '@/components/voice/VoiceCommandFab';
 import { InlineEditable } from '@/components/visual-editor/InlineEditable';
 import { 
   Search, 
