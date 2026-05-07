@@ -78,6 +78,7 @@ export const DEFAULT_SECTION_COLORS: Record<string, string> = {
 
 const SIDEBAR_ITEMS = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/admin' },
+  { icon: Activity, label: 'Live', href: '/admin/live' },
   { icon: Package, label: 'Produits', href: '/admin/produits' },
   { icon: ShoppingCart, label: 'Commandes', href: '/admin/commandes' },
   { icon: ClipboardCheck, label: 'Préparations', href: '/admin/preparations' },
