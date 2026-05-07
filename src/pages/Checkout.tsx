@@ -227,53 +227,57 @@ export default function Checkout() {
   // CONFIRMATION PAGE
   if (step === 'confirmation') {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="chamfer-hud bg-card/50 p-8 max-w-lg w-full text-center space-y-6">
+      <div className="min-h-screen bg-background flex items-center justify-center p-3 sm:p-4">
+        <div className="chamfer-hud bg-card/50 p-5 sm:p-8 max-w-lg w-full text-center space-y-5 sm:space-y-6 border-t-4" style={{ borderTopColor: `hsl(var(--step-confirm))` }}>
           <div className="flex justify-center">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <CheckCircle className="h-10 w-10 text-primary" />
+            <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: `hsl(var(--step-confirm)/0.15)` }}>
+              <CheckCircle className="h-10 w-10" style={{ color: `hsl(var(--step-confirm))` }} />
             </div>
           </div>
           <div>
-            <h1 className="text-2xl font-bold hud-text mb-2">COMMANDE CONFIRMÉE</h1>
+            <h1 className="text-xl sm:text-2xl font-bold hud-text mb-2">COMMANDE CONFIRMÉE</h1>
             <p className="text-muted-foreground text-sm">Merci {form.firstName} ! Votre commande a été enregistrée.</p>
-            <p className="text-xs text-muted-foreground mt-1">N° {orderNumber}</p>
+            <p className="text-xs text-muted-foreground mt-1 break-all">N° {orderNumber}</p>
           </div>
 
-          <div className="bg-secondary/30 chamfer-hud-sm p-4 text-left space-y-3">
+          <div className="bg-secondary/30 chamfer-hud-sm p-3 sm:p-4 text-left space-y-3">
             <p className="text-sm font-bold hud-text flex items-center gap-2">
-              <Shield className="h-4 w-4 text-primary" />
+              <Shield className="h-4 w-4" style={{ color: `hsl(var(--step-confirm))` }} />
               INFORMATIONS DE PAIEMENT
             </p>
-            <p className="text-xs text-muted-foreground">
-              Votre commande est en attente de paiement. Veuillez effectuer un virement bancaire avec la référence <span className="font-bold text-foreground">{orderNumber}</span>.
+            <p className="text-[11px] sm:text-xs text-muted-foreground break-words">
+              Votre commande est en attente de paiement. Veuillez effectuer un virement bancaire avec la référence <span className="font-bold text-foreground break-all">{orderNumber}</span>.
             </p>
-            <div className="border border-border chamfer-hud-sm p-3 text-xs space-y-1 font-mono">
-              <div className="flex justify-between"><span className="text-muted-foreground">Bénéficiaire :</span><span>LVTK6 Concept</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Montant :</span><span className="text-primary font-bold">{orderTotal.toFixed(2)} €</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Référence :</span><span>{orderNumber}</span></div>
+            <div className="border border-border chamfer-hud-sm p-3 text-[11px] sm:text-xs space-y-1 font-mono">
+              <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Bénéficiaire :</span><span className="text-right break-words">LVTK6 Concept</span></div>
+              <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Montant :</span><span className="font-bold" style={{ color: `hsl(var(--step-confirm))` }}>{orderTotal.toFixed(2)} €</span></div>
+              <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Référence :</span><span className="text-right break-all">{orderNumber}</span></div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Une confirmation vous sera envoyée à <span className="font-medium text-foreground">{form.email}</span> dès réception du paiement.
+            <p className="text-[11px] sm:text-xs text-muted-foreground break-words">
+              Une confirmation vous sera envoyée à <span className="font-medium text-foreground break-all">{form.email}</span> dès réception du paiement.
             </p>
           </div>
 
           {deliveryMode === 'relay' && selectedRelay && (
-            <div className="bg-primary/10 border border-primary/20 chamfer-hud-sm p-3 text-left">
-              <p className="text-xs font-bold hud-text mb-1 flex items-center gap-1"><MapPin className="h-3 w-3 text-primary" />POINT RELAIS SÉLECTIONNÉ</p>
-              <p className="text-xs text-foreground font-medium">{selectedRelay.nom}</p>
-              <p className="text-xs text-muted-foreground">{selectedRelay.adresse1}, {selectedRelay.codePostal} {selectedRelay.localite}</p>
+            <div className="chamfer-hud-sm p-3 text-left border" style={{ borderColor: `hsl(var(--step-confirm)/0.3)`, backgroundColor: `hsl(var(--step-confirm)/0.1)` }}>
+              <p className="text-xs font-bold hud-text mb-1 flex items-center gap-1"><MapPin className="h-3 w-3" style={{ color: `hsl(var(--step-confirm))` }} />POINT RELAIS SÉLECTIONNÉ</p>
+              <p className="text-xs text-foreground font-medium break-words">{selectedRelay.nom}</p>
+              <p className="text-xs text-muted-foreground break-words">{selectedRelay.adresse1}, {selectedRelay.codePostal} {selectedRelay.localite}</p>
             </div>
           )}
 
-          <div className="bg-primary/10 border border-primary/20 chamfer-hud-sm p-3">
-            <p className="text-xs text-primary flex items-center gap-2">
-              <Truck className="h-3 w-3 flex-shrink-0" />
-              Expédition Colissimo {deliveryMode === 'relay' ? 'Point Relais' : 'Domicile'} dès validation du paiement
+          <div className="chamfer-hud-sm p-3 border" style={{ borderColor: `hsl(var(--step-confirm)/0.3)`, backgroundColor: `hsl(var(--step-confirm)/0.1)` }}>
+            <p className="text-xs flex items-start gap-2" style={{ color: `hsl(var(--step-confirm))` }}>
+              <Truck className="h-3 w-3 flex-shrink-0 mt-0.5" />
+              <span className="break-words text-left">Expédition Colissimo {deliveryMode === 'relay' ? 'Point Relais' : 'Domicile'} dès validation du paiement</span>
             </p>
           </div>
 
-          <Button className="w-full chamfer-hud-sm" onClick={() => navigate('/boutique')}>
+          <Button
+            className="w-full chamfer-hud-sm h-12 text-white hover:opacity-90"
+            style={{ backgroundColor: `hsl(var(--step-confirm))` }}
+            onClick={() => navigate('/boutique')}
+          >
             Continuer mes achats
           </Button>
         </div>
