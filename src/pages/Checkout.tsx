@@ -283,49 +283,72 @@ export default function Checkout() {
 
   const steps: Step[] = ['address', 'delivery', 'confirmation'];
   const stepLabels = { address: 'Adresse', delivery: 'Livraison', confirmation: 'Confirmation' };
+  const stepColorVar: Record<Step, string> = {
+    address: '--step-address',
+    delivery: '--step-delivery',
+    confirmation: '--step-confirm',
+  };
+  const currentColor = `hsl(var(${stepColorVar[step]}))`;
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 max-w-5xl">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-5xl">
         {/* Header */}
-        <div className="mb-8">
-          <Button variant="ghost" onClick={() => navigate('/panier')} className="mb-4">
+        <div className="mb-6 sm:mb-8">
+          <Button variant="ghost" onClick={() => navigate('/panier')} className="mb-3 sm:mb-4 h-9 px-2 sm:px-3">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Retour au panier
           </Button>
-          <h1 className="text-xl sm:text-3xl font-bold hud-text flex items-center gap-2 sm:gap-3 flex-wrap">
-            <ClipboardCheck className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+          <h1 className="text-lg sm:text-3xl font-bold hud-text flex items-center gap-2 sm:gap-3 flex-wrap">
+            <ClipboardCheck className="h-5 w-5 sm:h-8 sm:w-8" style={{ color: currentColor }} />
             FINALISER LA COMMANDE
           </h1>
         </div>
 
         {/* Progress steps */}
-        <div className="flex items-center gap-2 sm:gap-4 mb-8">
-          {steps.map((s, i) => (
-            <div key={s} className="flex items-center gap-1 sm:gap-2">
-              <button
-                onClick={() => {
-                  if (s === 'address') setStep('address');
-                  if (s === 'delivery') setStep('delivery');
-                }}
-                className={cn(
-                  'w-8 h-8 flex items-center justify-center text-sm font-bold transition-colors',
-                  step === s ? 'bg-primary text-primary-foreground' :
-                  (steps as string[]).indexOf(step) > i ? 'bg-foreground/20 text-foreground' : 'bg-secondary text-muted-foreground',
+        <div className="flex items-start justify-between gap-1 sm:gap-4 mb-6 sm:mb-8 px-1">
+          {steps.map((s, i) => {
+            const color = `hsl(var(${stepColorVar[s]}))`;
+            const idx = (steps as string[]).indexOf(step);
+            const isActive = step === s;
+            const isPast = idx > i;
+            return (
+              <div key={s} className="flex items-center gap-1 sm:gap-2 flex-1 last:flex-none">
+                <div className="flex flex-col items-center gap-1 min-w-0">
+                  <button
+                    onClick={() => {
+                      if (s === 'address') setStep('address');
+                      if (s === 'delivery') setStep('delivery');
+                    }}
+                    className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-sm font-bold transition-colors"
+                    style={{
+                      backgroundColor: isActive || isPast ? color : 'hsl(var(--secondary))',
+                      color: isActive || isPast ? 'white' : 'hsl(var(--muted-foreground))',
+                      opacity: isPast && !isActive ? 0.65 : 1,
+                      clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)',
+                    }}
+                  >
+                    {isPast ? <CheckCircle className="h-4 w-4" /> : i + 1}
+                  </button>
+                  <span
+                    className="text-[10px] sm:text-xs font-medium leading-tight text-center"
+                    style={{ color: isActive ? color : 'hsl(var(--muted-foreground))' }}
+                  >
+                    {stepLabels[s]}
+                  </span>
+                </div>
+                {i < steps.length - 1 && (
+                  <div
+                    className="h-px flex-1 mt-4 sm:mt-5"
+                    style={{ backgroundColor: isPast ? color : 'hsl(var(--border))' }}
+                  />
                 )}
-                style={{ clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)' }}
-              >
-                {(steps as string[]).indexOf(step) > i ? <CheckCircle className="h-4 w-4" /> : i + 1}
-              </button>
-              <span className={cn('text-xs font-medium hidden sm:block', step === s ? 'text-foreground' : 'text-muted-foreground')}>
-                {stepLabels[s]}
-              </span>
-              {i < steps.length - 1 && <div className="w-8 h-px bg-border" />}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
 
