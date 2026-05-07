@@ -243,39 +243,14 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
   const iconSize = size === 'sm' ? 'h-3.5 w-3.5' : size === 'lg' ? 'h-5 w-5' : size === 'xl' ? 'h-6 w-6' : 'h-4 w-4';
   const shapeStyle = shape === 'round' ? { borderRadius: '9999px' } : shape === 'rect-bevel' ? { clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' } : { borderRadius: '9999px' };
 
-  // Admin drag for the trigger
-  const onPointerDown = (e: React.PointerEvent<HTMLElement>) => {
-    if (!isAdmin) return;
-    const target = e.currentTarget as HTMLElement;
-    const rect = target.getBoundingClientRect();
-    const startX = e.clientX, startY = e.clientY;
-    let dragging = false;
-    const move = (ev: PointerEvent) => {
-      if (!dragging && Math.hypot(ev.clientX - startX, ev.clientY - startY) < 5) return;
-      dragging = true;
-      ev.preventDefault();
-      target.style.position = 'fixed';
-      target.style.left = `${rect.left + (ev.clientX - startX)}px`;
-      target.style.top = `${rect.top + (ev.clientY - startY)}px`;
-      target.style.right = 'auto'; target.style.bottom = 'auto'; target.style.transform = 'none';
-    };
-    const up = () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-      if (!dragging) return;
-      dragRef.current.blocked = true;
-      setTimeout(() => { dragRef.current.blocked = false; }, 50);
-      const left = parseFloat(target.style.left || '0');
-      const top = parseFloat(target.style.top || '0');
-      const pos = pxToPos(left, top, window.innerWidth, window.innerHeight, target.offsetWidth);
+  const rouletteDrag = useAdminDrag({
+    enabled: !!isAdmin,
+    onCommit: (pos) => {
       const key = isMobile ? 'position_mobile' : 'position_desktop';
       updateDesignSettings({ ...(designSettings as any), unifiedFab: { ...cfg, rouletteFab: { ...rfab, [key]: pos } } } as any);
-      target.style.cssText = '';
       toast.success('Jeu-concours repositionné');
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up);
-  };
+    },
+  });
 
   return (
     <>
