@@ -173,6 +173,8 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
     return () => clearTimeout(t);
   }, [config?.enabled, segments.length, canSpin, location.pathname]);
 
+  const dragRef = useRef({ blocked: false });
+
   if (!config?.enabled || segments.length === 0) return null;
 
   const handleSpin = async () => {
