@@ -58,7 +58,7 @@ export function useAdminDrag(opts: {
       setTimeout(() => { blockClickRef.current = false; }, 80);
       const left = parseFloat(target.style.left || '0');
       const top = parseFloat(target.style.top || '0');
-      const pos = pxToPos(left, top, window.innerWidth, window.innerHeight, w);
+      const pos = pxToPos(left, top, window.innerWidth, window.innerHeight, w, h);
       onCommit(pos);
       // Clear only the props we set; re-render places via cornerStyle
       target.style.left = '';
