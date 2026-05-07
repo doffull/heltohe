@@ -530,6 +530,7 @@ export type Database = {
           show_logo: boolean | null
           show_overlays: boolean | null
           show_sidebar_gallery: boolean | null
+          show_sidebar_newsletter: boolean | null
           show_sidebar_product_card: boolean | null
           show_sidebar_product_number: boolean | null
           show_sidebar_sizes: boolean | null
@@ -545,6 +546,8 @@ export type Database = {
           sidebar_image: string | null
           sidebar_image_opacity: number | null
           sidebar_info_text: string | null
+          sidebar_newsletter_cta: string | null
+          sidebar_newsletter_title: string | null
           sidebar_product_description: string | null
           sidebar_product_title: string | null
           sidebar_reappear_delay: number | null
@@ -574,6 +577,7 @@ export type Database = {
           unit_id_label: string | null
           unit_id_style: Json | null
           updated_at: string
+          voice_command_enabled: boolean | null
         }
         Insert: {
           accent_color?: string | null
@@ -635,6 +639,7 @@ export type Database = {
           show_logo?: boolean | null
           show_overlays?: boolean | null
           show_sidebar_gallery?: boolean | null
+          show_sidebar_newsletter?: boolean | null
           show_sidebar_product_card?: boolean | null
           show_sidebar_product_number?: boolean | null
           show_sidebar_sizes?: boolean | null
@@ -650,6 +655,8 @@ export type Database = {
           sidebar_image?: string | null
           sidebar_image_opacity?: number | null
           sidebar_info_text?: string | null
+          sidebar_newsletter_cta?: string | null
+          sidebar_newsletter_title?: string | null
           sidebar_product_description?: string | null
           sidebar_product_title?: string | null
           sidebar_reappear_delay?: number | null
@@ -679,6 +686,7 @@ export type Database = {
           unit_id_label?: string | null
           unit_id_style?: Json | null
           updated_at?: string
+          voice_command_enabled?: boolean | null
         }
         Update: {
           accent_color?: string | null
@@ -740,6 +748,7 @@ export type Database = {
           show_logo?: boolean | null
           show_overlays?: boolean | null
           show_sidebar_gallery?: boolean | null
+          show_sidebar_newsletter?: boolean | null
           show_sidebar_product_card?: boolean | null
           show_sidebar_product_number?: boolean | null
           show_sidebar_sizes?: boolean | null
@@ -755,6 +764,8 @@ export type Database = {
           sidebar_image?: string | null
           sidebar_image_opacity?: number | null
           sidebar_info_text?: string | null
+          sidebar_newsletter_cta?: string | null
+          sidebar_newsletter_title?: string | null
           sidebar_product_description?: string | null
           sidebar_product_title?: string | null
           sidebar_reappear_delay?: number | null
@@ -784,6 +795,7 @@ export type Database = {
           unit_id_label?: string | null
           unit_id_style?: Json | null
           updated_at?: string
+          voice_command_enabled?: boolean | null
         }
         Relationships: []
       }
@@ -966,6 +978,60 @@ export type Database = {
           is_read?: boolean | null
           message?: string
           name?: string
+        }
+        Relationships: []
+      }
+      newsletter_popups: {
+        Row: {
+          bg_color: string | null
+          created_at: string
+          cta_label: string
+          delay_seconds: number
+          display_trigger: string
+          frequency_days: number
+          id: string
+          image_url: string | null
+          is_active: boolean
+          name: string
+          sort_order: number
+          subtitle: string | null
+          text_color: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          bg_color?: string | null
+          created_at?: string
+          cta_label?: string
+          delay_seconds?: number
+          display_trigger?: string
+          frequency_days?: number
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          subtitle?: string | null
+          text_color?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          bg_color?: string | null
+          created_at?: string
+          cta_label?: string
+          delay_seconds?: number
+          display_trigger?: string
+          frequency_days?: number
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          subtitle?: string | null
+          text_color?: string | null
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
