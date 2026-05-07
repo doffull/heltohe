@@ -28,9 +28,22 @@ const DEFAULT_BG: TechwearBackground = {
 };
 
 export function TechwearHeroTab() {
-  const { designSettings, updateDesignSettings } = useApp();
+  const { designSettings, updateDesignSettings, flushDesignSettings } = useApp();
   const cfg = designSettings.techwearHero;
   const { data: products } = useProducts();
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await flushDesignSettings();
+      toast.success('Hero Techwear enregistré');
+    } catch (e) {
+      toast.error('Erreur lors de l\'enregistrement');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // Always work on a slides[] array. Migrate legacy on first edit.
   const slides: TechwearHeroSlideData[] = useMemo(() => getSlides(cfg), [cfg]);
@@ -159,6 +172,9 @@ export function TechwearHeroTab() {
             {cfg.enabled ? 'Actif' : 'Désactivé'}
           </Badge>
           <Switch checked={cfg.enabled} onCheckedChange={(v) => updateDesignSettings({ techwearHero: { ...cfg, enabled: v, slides } })} />
+          <Button size="sm" onClick={handleSave} disabled={saving}>
+            {saving ? 'Enregistrement…' : 'Enregistrer'}
+          </Button>
         </div>
       </div>
 
