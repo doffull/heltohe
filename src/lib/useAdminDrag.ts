@@ -12,14 +12,23 @@ function readLocked(): boolean {
   try { return localStorage.getItem('admin_drag_locked') === '1'; } catch { return false; }
 }
 function snapVal(v: number, grid = 8) { return Math.round(v / grid) * grid; }
-function magnet(v: number, targets: number[], range = 10) {
-  for (const t of targets) if (Math.abs(v - t) < range) return t;
+function magnet(v: number, t1: number, t2: number, t3: number, range = 10) {
+  if (Math.abs(v - t1) < range) return t1;
+  if (Math.abs(v - t2) < range) return t2;
+  if (Math.abs(v - t3) < range) return t3;
   return v;
 }
 
 /**
  * Generic admin drag helper — fluid GPU drag using translate3d while moving,
  * commits left/top/corner only on pointerup. Pointer-capture for stable input.
+ *
+ * Optimizations vs naive impl:
+ *  - Single rAF coalesces multiple pointermove events (one paint per frame)
+ *  - Viewport + element dims cached on pointerdown (no layout reads during move)
+ *  - HUD updated inside the same rAF, never per-event
+ *  - touch-action: none set on the dragged element to suppress browser scroll/zoom
+ *  - Passive listener with preventDefault only when actually dragging
  */
 export function useAdminDrag(opts: {
   enabled: boolean;
@@ -36,68 +45,81 @@ export function useAdminDrag(opts: {
     if ((e.target as HTMLElement).closest('[data-no-drag]')) return;
     const target = e.currentTarget as HTMLElement;
     try { target.setPointerCapture(e.pointerId); } catch { /* noop */ }
+
+    // Cache everything once — no layout reads during the drag loop.
     const rect = target.getBoundingClientRect();
     const w = rect.width || target.offsetWidth || 56;
     const h = rect.height || target.offsetHeight || 56;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
     const startX = e.clientX;
     const startY = e.clientY;
     const baseLeft = rect.left;
     const baseTop = rect.top;
-    let dragging = false;
     const useSnap = readSnap();
+    const safeTop = 56;
+    const maxLeft = vw - w;
+    const maxTop = vh - h - 0;
+    const cxA = vw / 2 - w / 2;
+    const cxB = 0;
+    const cxC = vw - w;
+    const cyA = vh / 2 - h / 2;
+    const cyB = safeTop;
+    const cyC = vh - h;
 
-    // Safe areas
-    const safeTop = 56, safeRight = 0, safeBottom = 0, safeLeft = 0;
+    let dragging = false;
     let dx = 0, dy = 0;
     let raf = 0;
     let hud: HTMLDivElement | null = null;
+    const prevTouchAction = target.style.touchAction;
+    const prevUserSelect = document.body.style.userSelect;
 
     const ensureHud = () => {
       if (hud) return;
       hud = document.createElement('div');
-      hud.style.cssText = 'position:fixed;z-index:9999;background:hsl(var(--foreground));color:hsl(var(--background));font:bold 10px/1 ui-monospace,monospace;padding:4px 6px;letter-spacing:.05em;pointer-events:none;border-radius:2px;';
+      hud.style.cssText = 'position:fixed;z-index:9999;background:hsl(var(--foreground));color:hsl(var(--background));font:bold 10px/1 ui-monospace,monospace;padding:4px 6px;letter-spacing:.05em;pointer-events:none;border-radius:2px;will-change:transform;';
       document.body.appendChild(hud);
     };
-    const updateHud = (l: number, t: number) => {
-      if (!hud) return;
-      hud.style.left = `${startX + dx + 14}px`;
-      hud.style.top = `${startY + dy + 14}px`;
-      hud.textContent = `${Math.round(l)} × ${Math.round(t)}`;
-    };
 
-    const applyTransform = () => {
+    const paint = () => {
       raf = 0;
+      // Single write — transform on element + transform on HUD. No reads.
       target.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
-      updateHud(baseLeft + dx, baseTop + dy);
+      if (hud) {
+        const hx = startX + dx + 14;
+        const hy = startY + dy + 14;
+        hud.style.transform = `translate3d(${hx}px, ${hy}px, 0)`;
+        hud.textContent = `${Math.round(baseLeft + dx)} × ${Math.round(baseTop + dy)}`;
+      }
     };
 
     const move = (ev: PointerEvent) => {
       const rdx = ev.clientX - startX;
       const rdy = ev.clientY - startY;
-      if (!dragging && Math.hypot(rdx, rdy) < DRAG_THRESHOLD) return;
       if (!dragging) {
+        if (Math.hypot(rdx, rdy) < DRAG_THRESHOLD) return;
         dragging = true;
         target.style.willChange = 'transform';
         target.style.transition = 'none';
+        target.style.touchAction = 'none';
+        document.body.style.userSelect = 'none';
         ensureHud();
       }
       ev.preventDefault();
       let nl = baseLeft + rdx;
       let nt = baseTop + rdy;
-      // Clamp to viewport
-      nl = Math.max(safeLeft, Math.min(window.innerWidth - w - safeRight, nl));
-      nt = Math.max(safeTop, Math.min(window.innerHeight - h - safeBottom, nt));
+      // Clamp (cached vw/vh)
+      if (nl < 0) nl = 0; else if (nl > maxLeft) nl = maxLeft;
+      if (nt < safeTop) nt = safeTop; else if (nt > maxTop) nt = maxTop;
       if (useSnap) {
         nl = snapVal(nl);
         nt = snapVal(nt);
-        // Magnet to viewport center / edges
-        const vw = window.innerWidth, vh = window.innerHeight;
-        nl = magnet(nl + w / 2, [vw / 2, w / 2, vw - w / 2]) - w / 2;
-        nt = magnet(nt + h / 2, [vh / 2, h / 2, vh - h / 2]) - h / 2;
+        nl = magnet(nl, cxA, cxB, cxC);
+        nt = magnet(nt, cyA, cyB, cyC);
       }
       dx = nl - baseLeft;
       dy = nt - baseTop;
-      if (!raf) raf = requestAnimationFrame(applyTransform);
+      if (!raf) raf = requestAnimationFrame(paint);
     };
 
     const cleanup = () => {
@@ -106,10 +128,12 @@ export function useAdminDrag(opts: {
       window.removeEventListener('pointercancel', up);
       window.removeEventListener('keydown', onKey);
       try { target.releasePointerCapture(e.pointerId); } catch { /* noop */ }
-      if (raf) cancelAnimationFrame(raf);
+      if (raf) { cancelAnimationFrame(raf); raf = 0; }
       target.style.willChange = '';
       target.style.transition = '';
       target.style.transform = '';
+      target.style.touchAction = prevTouchAction;
+      document.body.style.userSelect = prevUserSelect;
       if (hud) { hud.remove(); hud = null; }
     };
 
@@ -120,7 +144,7 @@ export function useAdminDrag(opts: {
       const finalLeft = baseLeft + dx;
       const finalTop = baseTop + dy;
       cleanup();
-      const pos = pxToPos(finalLeft, finalTop, window.innerWidth, window.innerHeight, w, h);
+      const pos = pxToPos(finalLeft, finalTop, vw, vh, w, h);
       if (autoCommit) {
         onCommit(pos);
       } else {
