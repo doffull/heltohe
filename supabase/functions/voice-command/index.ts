@@ -8,7 +8,77 @@ const corsHeaders = {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
-    const { transcript, products = [], context = {} } = await req.json();
+    const body = await req.json();
+    const { transcript, products = [], context = {}, mode } = body;
+
+    // ─── Mode "search": recherche/recommandation produits ───
+    if (mode === 'search' || mode === 'recommend') {
+      if (!transcript || typeof transcript !== 'string' || transcript.length > 500) {
+        return new Response(JSON.stringify({ error: 'Invalid query' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+      if (!LOVABLE_API_KEY) throw new Error('Missing LOVABLE_API_KEY');
+
+      // Compact catalog for the model
+      const catalog = products.slice(0, 120).map((p: any, i: number) => ({
+        idx: i,
+        id: p.id,
+        name: p.name,
+        category: p.category,
+        price: p.price,
+        sizes: p.sizes,
+        colors: p.colors,
+        description: (p.description || '').slice(0, 120),
+      }));
+
+      const searchPrompt = `Tu es l'assistant shopping vocal de LVTK6. À partir de la requête utilisateur en français, sélectionne 1 à 6 produits du catalogue qui correspondent le mieux (par nom, couleur, type, mots-clés).
+${mode === 'recommend' ? 'Mode RECOMMANDATION : propose 3 produits pertinents avec une raison parlée naturelle.' : 'Mode RECHERCHE : retourne les meilleurs résultats correspondants.'}
+Catalogue JSON:\n${JSON.stringify(catalog)}\n
+Réponds via la fonction search_results.`;
+
+      const searchResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'google/gemini-3-flash-preview',
+          messages: [
+            { role: 'system', content: searchPrompt },
+            { role: 'user', content: transcript },
+          ],
+          tools: [{
+            type: 'function',
+            function: {
+              name: 'search_results',
+              description: 'Renvoie les produits correspondants',
+              parameters: {
+                type: 'object',
+                properties: {
+                  productIds: { type: 'array', items: { type: 'string' } },
+                  spoken: { type: 'string', description: 'Phrase à dire à voix haute (max 30 mots)' },
+                  reason: { type: 'string', description: 'Pourquoi ces produits' },
+                },
+                required: ['productIds', 'spoken'],
+              },
+            },
+          }],
+          tool_choice: { type: 'function', function: { name: 'search_results' } },
+        }),
+      });
+
+      if (!searchResp.ok) {
+        if (searchResp.status === 429) return new Response(JSON.stringify({ error: 'Rate limited' }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        if (searchResp.status === 402) return new Response(JSON.stringify({ error: 'Payment required' }), { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        return new Response(JSON.stringify({ error: 'AI error' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      const sd = await searchResp.json();
+      const sc = sd.choices?.[0]?.message?.tool_calls?.[0];
+      let result: any = { productIds: [], spoken: 'Aucun résultat' };
+      if (sc?.function?.arguments) { try { result = JSON.parse(sc.function.arguments); } catch {} }
+      return new Response(JSON.stringify(result), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     if (!transcript || typeof transcript !== "string" || transcript.length > 1000) {
       return new Response(JSON.stringify({ error: "Invalid transcript" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
