@@ -145,6 +145,29 @@ function BackgroundLayer({ bg }: { bg: TechwearBackground }) {
 }
 
 type SlideConfig = TechwearHeroConfig;
+type Corner = 'tl' | 'tr' | 'bl' | 'br';
+type FreePos = { corner: Corner; x: number; y: number };
+
+function freeStyle(p?: FreePos, fallback?: React.CSSProperties): React.CSSProperties {
+  if (!p) return fallback || {};
+  const s: React.CSSProperties = { position: 'absolute', zIndex: 5 };
+  if (p.corner.endsWith('r')) s.right = p.x; else s.left = p.x;
+  if (p.corner.startsWith('b')) s.bottom = p.y; else s.top = p.y;
+  return s;
+}
+
+function pxToCornerPos(left: number, top: number, w: number, h: number, elW: number, elH: number): FreePos {
+  const cx = left + elW / 2;
+  const cy = top + elH / 2;
+  const right = cx > w / 2;
+  const bottom = cy > h / 2;
+  const corner: Corner = `${bottom ? 'b' : 't'}${right ? 'r' : 'l'}` as Corner;
+  return {
+    corner,
+    x: Math.max(0, Math.round(right ? w - left - elW : left)),
+    y: Math.max(0, Math.round(bottom ? h - top - elH : top)),
+  };
+}
 
 function TechwearHeroSlideView({ config, productMissing }: { config: SlideConfig; productMissing: boolean }) {
   const viewport = useViewport();
