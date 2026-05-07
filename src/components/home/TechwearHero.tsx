@@ -413,12 +413,20 @@ function TechwearHeroSlideView({ config, productMissing, slideId }: { config: Sl
             style={panelStyleFree}
           >
             {isAdmin && (
-              <div
-                onPointerDown={startDrag('panel')}
-                className="text-[9px] uppercase tracking-widest font-bold bg-foreground text-background px-2 py-1 cursor-grab active:cursor-grabbing select-none"
-                style={{ touchAction: 'none' }}
-                title="Glisser pour repositionner le panneau"
-              >⠿ Panneau (déplacer)</div>
+              <div className="flex items-center gap-1">
+                <div
+                  onPointerDown={startDrag('panel')}
+                  className="text-[9px] uppercase tracking-widest font-bold bg-foreground text-background px-2 py-1 cursor-grab active:cursor-grabbing select-none"
+                  style={{ touchAction: 'none' }}
+                  title="Glisser pour repositionner le panneau"
+                >⠿ Panneau (déplacer)</div>
+                <button
+                  type="button"
+                  onClick={() => { setPanelPos(undefined); persistPos('panel', undefined as any); }}
+                  className="text-[9px] uppercase tracking-widest font-bold bg-background text-foreground border border-foreground px-2 py-1"
+                  title="Réinitialiser la position du panneau"
+                >⟳ Reset</button>
+              </div>
             )}
             {config.showColors && (
               <div className="hw-panel hw-panel--colors" role="radiogroup" aria-label="Choisir une couleur">
