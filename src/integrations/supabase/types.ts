@@ -1341,6 +1341,9 @@ export type Database = {
           image: string
           is_active: boolean | null
           material: string | null
+          model_height: string | null
+          model_name: string | null
+          model_size_worn: string | null
           name: string
           price: number
           promo_ends_at: string | null
@@ -1365,6 +1368,9 @@ export type Database = {
           image: string
           is_active?: boolean | null
           material?: string | null
+          model_height?: string | null
+          model_name?: string | null
+          model_size_worn?: string | null
           name: string
           price: number
           promo_ends_at?: string | null
@@ -1389,6 +1395,9 @@ export type Database = {
           image?: string
           is_active?: boolean | null
           material?: string | null
+          model_height?: string | null
+          model_name?: string | null
+          model_size_worn?: string | null
           name?: string
           price?: number
           promo_ends_at?: string | null

@@ -34,6 +34,7 @@ import Confidentialite from "./pages/legal/Confidentialite";
 import Cookies from "./pages/legal/Cookies";
 import Retours from "./pages/legal/Retours";
 import MentionsLegales from "./pages/legal/MentionsLegales";
+import SizeGuide from "./pages/SizeGuide";
 
 // Layout
 import { MainLayout } from "./components/layout/MainLayout";
@@ -138,6 +139,7 @@ function AnimatedRoutes() {
           <Route path="/cookies" element={<MainLayout><Cookies /></MainLayout>} />
           <Route path="/retours" element={<MainLayout><Retours /></MainLayout>} />
           <Route path="/mentions-legales" element={<MainLayout><MentionsLegales /></MainLayout>} />
+          <Route path="/guide-des-tailles" element={<MainLayout><SizeGuide /></MainLayout>} />
           <Route path="/:categorySlug" element={<MainLayout><CategoryPageRouter /></MainLayout>} />
           <Route path="*" element={<MainLayout><NotFound /></MainLayout>} />
         </Routes>

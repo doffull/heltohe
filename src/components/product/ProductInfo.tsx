@@ -1,6 +1,10 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Truck, Shield, RotateCcw, Sparkles } from 'lucide-react';
+import { Check, Truck, Shield, RotateCcw, Sparkles, Ruler, User } from 'lucide-react';
 import { Product } from '@/types';
+import { Button } from '@/components/ui/button';
+import { SizeGuideAIModal } from './SizeGuideAIModal';
+import type { SizeCategory } from '@/lib/sizeCharts';
 
 interface ProductInfoProps {
   product: Product;
@@ -13,6 +17,13 @@ const fadeUp = {
 };
 
 export default function ProductInfo({ product, isNew }: ProductInfoProps) {
+  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
+  const guessCategory = (): SizeCategory => {
+    const c = (product.category || '').toLowerCase();
+    if (c.includes('femme')) return 'femme';
+    if (c.includes('enfant') || c.includes('kid')) return 'enfant';
+    return 'homme';
+  };
   return (
     <>
       {/* Category & SKU */}
@@ -83,6 +94,36 @@ export default function ProductInfo({ product, isNew }: ProductInfoProps) {
           <span className="text-destructive font-bold">Rupture de stock</span>
         )}
       </motion.div>
+
+      {/* Model info */}
+      {(product.modelHeight || product.modelSizeWorn) && (
+        <motion.div className="flex items-center gap-2 rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-xs" {...fadeUp} transition={{ delay: 0.27 }}>
+          <User className="h-3.5 w-3.5 text-primary shrink-0" />
+          <span className="text-muted-foreground">
+            {product.modelName ? `${product.modelName} mesure ` : 'Le mannequin mesure '}
+            <span className="font-semibold text-foreground">{product.modelHeight || '—'}</span>
+            {product.modelSizeWorn && <> et porte la taille <span className="font-semibold text-foreground">{product.modelSizeWorn}</span></>}
+          </span>
+        </motion.div>
+      )}
+
+      {/* Size guide AI button */}
+      {product.sizes && product.sizes.length > 0 && (
+        <motion.div {...fadeUp} transition={{ delay: 0.28 }}>
+          <Button variant="outline" size="sm" onClick={() => setSizeGuideOpen(true)} className="gap-2 w-full sm:w-auto">
+            <Ruler className="h-3.5 w-3.5" />
+            <Sparkles className="h-3 w-3" />
+            Trouver ma taille
+          </Button>
+          <SizeGuideAIModal
+            open={sizeGuideOpen}
+            onOpenChange={setSizeGuideOpen}
+            productName={product.name}
+            availableSizes={product.sizes}
+            defaultCategory={guessCategory()}
+          />
+        </motion.div>
+      )}
 
       {/* Features bar */}
       <motion.div

@@ -29,6 +29,9 @@ export interface Product {
   videoUrl?: string;
   tags?: string[];
   promoEndsAt?: string;
+  modelHeight?: string;
+  modelSizeWorn?: string;
+  modelName?: string;
 }
 
 export interface OrderItem {
