@@ -7,6 +7,7 @@ import { Gift, X, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
+import { useAdminViewport } from '@/context/AdminViewportContext';
 import { cornerStyle, type FabPos } from '@/lib/fabPosition';
 import { useAdminDrag } from '@/lib/useAdminDrag';
 import { getIcon } from '@/components/admin/IconPicker';
@@ -176,20 +177,26 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
 
   const cfg = (designSettings as any).unifiedFab || {};
   const rfab = cfg.rouletteFab || {};
-  const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false;
+  const { effectiveDevice } = useAdminViewport();
+  const deviceKey = effectiveDevice; // 'mobile' | 'tablet' | 'desktop'
+  const posKey = `position_${deviceKey}` as const;
+  const sizeKey = `size_${deviceKey}` as const;
 
-  const fabPosCurrent: FabPos = (isMobile ? rfab.position_mobile : rfab.position_desktop) || { corner: 'cc', x: 0, y: 0 };
+  const fabPosCurrent: FabPos =
+    rfab[posKey] ||
+    (deviceKey === 'mobile' ? rfab.position_mobile : rfab.position_desktop) ||
+    { corner: 'cc', x: 0, y: 0 };
+
   const rouletteDrag = useAdminDrag({
     enabled: !!isAdmin,
     currentPos: fabPosCurrent,
     onCommit: (pos) => {
-      const key = isMobile ? 'position_mobile' : 'position_desktop';
-      updateDesignSettings({ ...(designSettings as any), unifiedFab: { ...cfg, rouletteFab: { ...rfab, [key]: pos } } } as any);
+      updateDesignSettings({ ...(designSettings as any), unifiedFab: { ...cfg, rouletteFab: { ...rfab, [posKey]: pos } } } as any);
     },
   });
   const handleConfirmDrag = () => {
     rouletteDrag.confirmPending();
-    toast.success('Position du Jeu-concours validée (mobile + desktop)');
+    toast.success(`Position validée pour ${deviceKey}`);
   };
 
   if (!config?.enabled || segments.length === 0) return null;
@@ -248,7 +255,7 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
   const fabPos: FabPos = fabPosCurrent;
   const variant = rfab.variant || 'glossy';
   const shape = rfab.shape || 'pill';
-  const size = rfab.size || 'md';
+  const size = rfab[sizeKey] || rfab.size || 'md';
   const accentColor = rfab.accentColor || 'hsl(var(--primary))';
   const Icon = rfab.icon ? getIcon(rfab.icon) : Gift;
   const label = rfab.label || config.fab_label;
@@ -299,27 +306,46 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
               </div>
             </button>
             {isAdmin && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const reset = { corner: 'cc', x: 0, y: 0 } as FabPos;
-                  updateDesignSettings({
-                    ...(designSettings as any),
-                    unifiedFab: {
-                      ...cfg,
-                      rouletteFab: { ...rfab, position_desktop: reset, position_mobile: reset },
-                    },
-                  } as any);
-                  toast.success('Position du Jeu-concours réinitialisée');
-                }}
-                className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-background border border-primary/60 text-foreground rounded shadow"
-                title="Réinitialiser la position"
-              >⟳</button>
+              <div className="flex flex-col gap-1" data-no-drag>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const reset = { corner: 'cc', x: 0, y: 0 } as FabPos;
+                    updateDesignSettings({
+                      ...(designSettings as any),
+                      unifiedFab: {
+                        ...cfg,
+                        rouletteFab: { ...rfab, [posKey]: reset },
+                      },
+                    } as any);
+                    toast.success(`Position ${deviceKey} réinitialisée`);
+                  }}
+                  className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-background border border-primary/60 text-foreground rounded shadow"
+                  title={`Réinitialiser position ${deviceKey}`}
+                >⟳ {deviceKey[0].toUpperCase()}</button>
+                <select
+                  value={size}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    updateDesignSettings({
+                      ...(designSettings as any),
+                      unifiedFab: { ...cfg, rouletteFab: { ...rfab, [sizeKey]: v } },
+                    } as any);
+                    toast.success(`Taille ${deviceKey}: ${v.toUpperCase()}`);
+                  }}
+                  className="text-[9px] font-bold uppercase border border-primary/60 bg-background px-1 py-0.5"
+                  title={`Taille pour ${deviceKey}`}
+                >
+                  {(['sm','md','lg','xl'] as const).map((s) => (
+                    <option key={s} value={s}>{s.toUpperCase()}</option>
+                  ))}
+                </select>
+              </div>
             )}
             {isAdmin && rouletteDrag.pending && (
-              <div className="flex items-center gap-1 ml-1 bg-background border-2 border-primary px-2 py-1 shadow">
-                <span className="text-[9px] uppercase tracking-widest font-bold">Position OK ?</span>
+              <div className="flex items-center gap-1 ml-1 bg-background border-2 border-primary px-2 py-1 shadow" data-no-drag>
+                <span className="text-[9px] uppercase tracking-widest font-bold">{deviceKey} OK ?</span>
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); handleConfirmDrag(); }}
