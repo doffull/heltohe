@@ -1,118 +1,119 @@
+## 1 · Génération IA étendue (Hero Techwear)
 
-# Plan — Itération vocal, FABs & Newsletter
+Étendre `AiTextButton` pour accepter de nouveaux `field` :
+- `slide_name` — nom interne de la slide
+- `badge_line1` / `badge_line2` — badge MODEL
+- `cta_primary` / `cta_secondary` — libellés des deux CTA
 
-## 1. Mode test commande vocale (dry-run)
+Backend `supabase/functions/generate-slide-text/index.ts` :
+- Étendre `FIELD_GUIDES` avec les 5 nouvelles entrées (consignes courtes, MAJUSCULES pour badges/CTA, ton mode/luxe FR).
+- Conserver le contract tool-call `return_text`.
 
-**Objectif** : avant d'exécuter une action (ajout panier, navigation), afficher la transcription + l'action reconnue + bouton "Confirmer / Annuler".
+Front `TechwearHeroTab.tsx` :
+- Ajouter un `<AiTextButton>` à côté des champs : nom de la slide, badge ligne 1, badge ligne 2, CTA principal texte, CTA secondaire texte.
+- Le `context` envoyé inclut le nom de la slide active + produit lié (si présent) pour des suggestions cohérentes.
 
-- `VoiceCommandFab.tsx` :
-  - Ajouter un état `pendingAction` qui stocke `{ transcript, action, message }` après l'appel à `voice-command`.
-  - **Ne plus exécuter automatiquement** l'action dans `handleCommand`. À la place, afficher dans la modale :
-    - Transcription brute (« Vous avez dit »)
-    - Action interprétée traduite en français lisible (ex : « Ajouter T-shirt Noir taille M au panier »)
-    - Boutons **Confirmer** (exécute) / **Réessayer** (relance le micro) / **Annuler**.
-  - Toggle « Mode test » (par défaut **activé**) dans la modale ; persisté en `localStorage` (`voice_test_mode`).
-  - Si mode test désactivé → comportement actuel (auto-exécution + TTS).
-- Helper `formatActionLabel(action, products)` pour rendre l'action humainement lisible.
+## 2 · CTA Hero Techwear : design glossy + positionnement libre
 
-## 2. Onboarding vocal visible à l'arrivée
+### Modèle de données (frontend uniquement, stocké dans `techwearHero.slides[].ctaStyle`)
+Étendre `TechwearHeroSlideData` avec un objet optionnel `ctaStyle` :
+```ts
+ctaStyle?: {
+  variant: 'glossy' | 'glass' | 'neon' | 'metal' | 'outline' | 'minimal';
+  size: 'sm' | 'md' | 'lg' | 'xl';
+  radius: 'none' | 'sm' | 'md' | 'pill';
+  // Position relative à la zone image (en %), mobile et desktop séparés
+  position: {
+    desktop: { x: number; y: number; layout: 'row' | 'column' };
+    mobile:  { x: number; y: number; layout: 'row' | 'column' };
+  };
+  gap: number; // px
+  // Couleurs personnalisables (override)
+  primaryBg?: string; primaryFg?: string;
+  secondaryBg?: string; secondaryFg?: string;
+}
+```
 
-**Objectif** : faire connaître la commande vocale dès l'entrée sur le site.
+### Rendu (`TechwearHero.tsx`)
+- Remplacer le bloc actuel `.hw-cta-primary / .hw-cta-secondary` par un conteneur positionné en `absolute` au-dessus de l'image lorsqu'un `ctaStyle.position` est défini (sinon fallback inline actuel).
+- Ajouter une classe `hw-cta-{variant}` avec styles dans `index.css` :
+  - `glossy` : dégradé blanc→argent + reflet `::before`, ombre douce.
+  - `glass` : `backdrop-blur-md` + bord translucide.
+  - `neon` : bord lumineux accent + glow.
+  - `metal` : dégradé acier + grain subtil.
+  - `outline` / `minimal` : variantes simples.
+- Tous respectent les tokens HSL (`--foreground`, `--background`, `--accent`).
 
-- Nouveau composant `VoiceOnboardingHint.tsx` :
-  - Pulse + tooltip animé attaché au FAB micro pendant ~6s à la première visite (`localStorage: voice_hint_seen`).
-  - Texte : « Nouveau — Commandez à la voix », flèche vers le micro.
-  - Mobile-first (360px) ; positionné au-dessus du FAB.
-- Rendu uniquement si `designSettings.voiceCommandEnabled` et utilisateur sur la home.
-- Toggle admin `voiceOnboardingHint` (par défaut true) dans Marketing → Voix.
+### Admin (`TechwearHeroTab.tsx`)
+Nouvelle carte **« Design des CTA »** sous la section CTAs :
+- Sélecteur de variant (6 vignettes).
+- Sliders size / radius / gap.
+- Color pickers (primaire/secondaire).
+- Mini éditeur de position : 2 sliders X (0–100 %) et Y (0–100 %) pour Desktop + Mobile, plus toggle row/column.
+- Bouton **« Suggestions IA »** appelant un nouveau endpoint `generate-cta-style` qui renvoie 3 presets (variant + couleurs + size). L'edge function utilise `google/gemini-2.5-flash` avec tool-call `return_styles` (array de 3 styles).
+- Aperçu live des deux boutons en haut de la carte.
 
-## 3. Refonte des FABs (intégration discrète mais visible)
+## 3 · Éditeur d'icônes fixes (Home FAB)
 
-**Objectif** : que Roulette + Voix + Chatbot s'intègrent visuellement au site (Industrial Luxury, noir/blanc, 45°) au lieu de flotter en pastilles colorées.
+### Schéma DB (migration)
+Nouvelle table `home_fab_buttons` :
+```sql
+id uuid pk, label text, icon text (lucide name),
+action_type text check in ('route','external','roulette','voice','chat','newsletter'),
+action_value text, -- href ou identifiant
+variant text default 'glossy',
+position_desktop jsonb default '{"corner":"br","x":24,"y":24}',
+position_mobile  jsonb default '{"corner":"br","x":16,"y":16}',
+visible_desktop bool default true, visible_mobile bool default true,
+sort_order int default 0, is_active bool default true,
+created_at, updated_at
+```
+RLS : lecture publique si `is_active`, écriture admin (`has_role(auth.uid(),'admin')`).
 
-- Créer `src/components/layout/FabStack.tsx` :
-  - Conteneur unique en bas-droite (`fixed bottom-4 right-4 z-40`) qui empile verticalement les FABs avec un design unifié :
-    - Forme carrée 44×44 avec **coin coupé 45°** (clip-path), bordure 1px `border-foreground/20`, fond `background/80 backdrop-blur`.
-    - Icône monochrome `text-foreground`, label uppercase tracking-wider en tooltip.
-    - Variante "primary" (Voix) → fond inversé pour appel à l'action.
-  - Slots: VoiceCommandFab, RouletteFab, ChatBotWidget toggle.
-- Refactor `VoiceCommandFab`, `RouletteFab`, `ChatBotWidget` pour exposer un bouton trigger via prop ou render-prop, et déléguer le rendu du bouton au `FabStack`.
-- Suppression des positions fixes individuelles (`bottom-36`, etc.) → orchestrées par `FabStack`.
-- Mounted dans `MainLayout.tsx` (non-admin uniquement).
+### Front
+- `useHomeFabButtons.ts` (React Query) — fetch + cache.
+- Refonte de `FabStack.tsx` :
+  - Si la table renvoie des entrées, on les rend (positionnées par `corner`+offsets, layout vertical).
+  - Sinon fallback aux 3 FAB hard-codés actuels (rétrocompatible).
+  - Chaque bouton mappe `action_type` → onClick (ouverture roulette / voice / chat, navigation, ouverture popup newsletter).
+  - Variants visuels partagés avec le système des CTA (glossy/glass/neon/metal/outline/minimal) via classe utilitaire commune.
 
-## 4. Admin Newsletter — section dédiée et visible
+### Admin
+Nouvelle page `src/pages/admin/AdminHomeIcons.tsx` (entrée sidebar « Icônes Accueil ») :
+- Liste drag-handle réordonnable (`sort_order`).
+- Form par bouton : label, icône (picker parmi ~40 icônes lucide), action (select + champ), variant, visibilités desktop/mobile, position (corner BL/BR/TL/TR + offsets X/Y en px) avec aperçu temps réel sur cadre 360 × 640 et 1280 × 720.
+- Actions : ajouter / dupliquer / supprimer / activer.
 
-**Objectif** : la newsletter doit avoir sa propre place dans la sidebar admin et un dashboard avec stats de conversion.
+## 4 · Détails techniques
 
-- Nouvelle page `src/pages/admin/AdminNewsletter.tsx` :
-  - **Onglet Vue d'ensemble** : KPIs (abonnés totaux, abonnés 7j, taux conversion popup, top popup, désinscriptions).
-  - **Onglet Abonnés** : liste filtrable (réutilise `useNewsletters`) + export CSV + suppression.
-  - **Onglet Pop-ups** : déplace `NewsletterPopupsManager` ici.
-  - **Onglet Sidebar widget** : toggles `showSidebarNewsletter`, `sidebarNewsletterTitle`, `sidebarNewsletterCta` (déplacés depuis Marketing).
-  - **Onglet Configuration** : email d'expédition, fréquence par défaut, RGPD checkbox text.
-- Ajout entrée « Newsletter » dans la sidebar admin (`Admin.tsx` ou route registry) avec icône `Mail`.
-- Retirer la duplication dans `AdminMarketing.tsx`.
+- Pas de modif du Sidebar ni du checkout.
+- Toute couleur via tokens HSL et `cn()` ; aucune couleur brute en dehors des color pickers utilisateur.
+- Edge functions ajoutées : `generate-cta-style` (réutilise pattern `generate-slide-text`).
+- `IconPicker.tsx` : composant léger qui mappe nom → composant lucide via `import * as Icons from 'lucide-react'`.
+- Mobile-first 360 px : positions par défaut conservatrices (coin bas-droit) ; éditeur permet override.
 
-## 5. Tracking conversions newsletter
+## 5 · Hors périmètre
 
-**Objectif** : mesurer combien d'abonnements proviennent de chaque source.
+- Pas d'A/B testing sur les CTA.
+- Pas de génération d'icônes SVG personnalisées (uniquement choix dans la lib lucide).
+- Pas de migration des FAB existants vers la DB (fallback automatique : l'admin ajoute manuellement ce qu'il veut).
 
-- **Migration DB** :
-  - Ajouter colonnes à `newsletters` :
-    - `source text` (`sidebar`, `popup`, `roulette`, `footer`, `manual`)
-    - `popup_id uuid` (nullable, ref `newsletter_popups`)
-    - `referrer_path text` (URL de la page d'inscription)
-  - Ajouter table `newsletter_popup_views` :
-    - `popup_id uuid`, `viewed_at timestamptz`, `session_id text`, `converted boolean default false`
-  - RLS : insert public (avec validation), select admin only.
-- **`subscribeToNewsletter`** : étendre signature `(email, opts: { source, popupId?, referrerPath? })`.
-- **`NewsletterPopupHost`** :
-  - Insert `newsletter_popup_views` quand un popup s'affiche.
-  - À la conversion, mise à jour `converted = true`.
-- **`SidebarNewsletter`** : passe `source: 'sidebar'`.
-- **Stats RPC** `get_newsletter_stats()` (security definer) renvoyant les agrégats utilisés par le dashboard.
+## Fichiers
 
-## 6. Configuration roue — notifications & préférences
+**Création**
+- `supabase/functions/generate-cta-style/index.ts`
+- `supabase/migrations/<ts>_home_fab_buttons.sql`
+- `src/hooks/useHomeFabButtons.ts`
+- `src/components/admin/IconPicker.tsx`
+- `src/components/admin/HomeFabEditor.tsx`
+- `src/pages/admin/AdminHomeIcons.tsx`
 
-**Objectif** : compléter la config roulette demandée.
-
-- Ajouter à `roulette_config` :
-  - `notify_admin_on_win boolean default true`
-  - `notify_admin_email text` (fallback `admin_config.admin_notification_email`)
-  - `auto_open_on_landing boolean default true`
-  - `auto_open_delay_ms integer default 1500`
-  - `show_after_dismiss_hours integer default 24`
-- Section **Notifications & Préférences** dans `AdminRoulette.tsx` (toggles + champs).
-- `RouletteFab` lit `auto_open_*` et `show_after_dismiss_hours` depuis la config.
-- Edge function `spin-roulette` envoie un email admin (Resend) si `notify_admin_on_win` et que le segment a une valeur ≥ seuil (réutilise `send-order-notification` pattern).
-
-## 7. Détails techniques
-
-**Fichiers à créer**
-- `src/components/voice/VoiceOnboardingHint.tsx`
-- `src/components/layout/FabStack.tsx`
-- `src/pages/admin/AdminNewsletter.tsx`
-- `src/components/admin/NewsletterStatsTab.tsx`
-- `src/components/admin/NewsletterSubscribersTab.tsx`
-- Migration : `add_newsletter_tracking_and_roulette_prefs.sql`
-
-**Fichiers à modifier**
-- `VoiceCommandFab.tsx`, `RouletteFab.tsx`, `ChatBotWidget.tsx` (extraction trigger)
-- `MainLayout.tsx` (mount FabStack au lieu de FABs individuels)
-- `AdminMarketing.tsx` (retirer onglets newsletter/popups)
-- `AdminRoulette.tsx` (notifications & préférences)
-- `useNewsletterPopups.ts` (signature subscribe + tracking views)
-- `SidebarNewsletter.tsx`, `NewsletterPopupHost.tsx` (sources tracking)
-- `useDesignSettings.ts`, `types/index.ts` (`voiceOnboardingHint`)
-- `App.tsx` (route `/admin/newsletter`)
-- `supabase/functions/spin-roulette/index.ts` (notification admin)
-
-**Sécurité / Mémoire projet respectée**
-- RLS strict sur `newsletter_popup_views` (insert public via validation, select admin).
-- Honeypot + délai 10s conservés sur tous les forms.
-- Pas de logique sensible côté client.
-
-## Hors-scope volontaire
-- Pas de A/B testing popups (peut venir en v2).
-- Pas de templates email automatisés newsletter (envoi reste manuel via Resend).
-- Pas de modification du paiement vocal (sécurité).
+**Modification**
+- `supabase/functions/generate-slide-text/index.ts` (nouveaux champs)
+- `src/components/admin/AiTextButton.tsx` (élargir le type `field`)
+- `src/components/admin/TechwearHeroTab.tsx` (boutons IA + carte Design CTA)
+- `src/components/home/TechwearHero.tsx` (rendu CTA positionnés + variants)
+- `src/index.css` (classes `.hw-cta-glossy`, `.hw-cta-glass`, `.hw-cta-neon`, `.hw-cta-metal`, `.hw-cta-outline`, `.hw-cta-minimal`)
+- `src/components/layout/FabStack.tsx` (lit la nouvelle table, fallback intact)
+- `src/types/index.ts` (`ctaStyle` sur slide + types FAB)
+- `src/App.tsx` + sidebar admin (route `/admin/home-icons`)
