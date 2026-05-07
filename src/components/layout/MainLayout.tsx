@@ -535,6 +535,11 @@ export function MainLayout({ children }: MainLayoutProps) {
           
           {/* Sidebar Content - Product Card HUD */}
           <SidebarProductHUD />
+
+          {/* Sidebar Newsletter (discrete, bottom) */}
+          <div className="absolute bottom-0 left-0 right-0 z-20">
+            <SidebarNewsletter />
+          </div>
         </div>
       )}
 
