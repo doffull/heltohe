@@ -131,7 +131,7 @@ Règles:
               properties: {
                 type: {
                   type: "string",
-                  enum: ["add_to_cart", "remove_from_cart", "navigate", "search", "set_address", "set_delivery", "apply_promo", "read_cart", "place_order", "clarify"],
+                  enum: ["add_to_cart", "remove_from_cart", "navigate", "search", "search_products", "recommend", "select_result", "set_address", "set_delivery", "apply_promo", "read_cart", "place_order", "clarify"],
                 },
                 productId: { type: "string" },
                 productQuery: { type: "string" },
