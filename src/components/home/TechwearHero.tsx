@@ -189,14 +189,15 @@ function TechwearHeroSlideView({ config, productMissing, slideId }: { config: Sl
   const [panelPos, setPanelPos] = useState<FreePos | undefined>(config.sidePanelPos);
   useEffect(() => { setBadgePos(config.modelBadgePos); setPanelPos(config.sidePanelPos); }, [config.modelBadgePos, config.sidePanelPos]);
 
-  const persistPos = (which: 'badge' | 'panel', pos: FreePos) => {
+  const persistPos = (which: 'badge' | 'panel', pos: FreePos | undefined) => {
     const cur = (designSettings as any).techwearHero || {};
     const slides = Array.isArray(cur.slides) ? cur.slides : null;
+    const key = which === 'badge' ? 'modelBadgePos' : 'sidePanelPos';
     if (slides && slideId) {
-      const next = slides.map((s: any) => s.id === slideId ? { ...s, [which === 'badge' ? 'modelBadgePos' : 'sidePanelPos']: pos } : s);
-      updateDesignSettings({ techwearHero: { ...cur, slides: next, ...(slides[0]?.id === slideId ? { [which === 'badge' ? 'modelBadgePos' : 'sidePanelPos']: pos } : {}) } } as any);
+      const next = slides.map((s: any) => s.id === slideId ? { ...s, [key]: pos } : s);
+      updateDesignSettings({ techwearHero: { ...cur, slides: next, ...(slides[0]?.id === slideId ? { [key]: pos } : {}) } } as any);
     } else {
-      updateDesignSettings({ techwearHero: { ...cur, [which === 'badge' ? 'modelBadgePos' : 'sidePanelPos']: pos } } as any);
+      updateDesignSettings({ techwearHero: { ...cur, [key]: pos } } as any);
     }
   };
 
