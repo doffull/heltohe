@@ -130,14 +130,6 @@ export default function ProductInfo({ product, isNew }: ProductInfoProps) {
         className="grid grid-cols-3 gap-2 py-4 border-y border-border"
         {...fadeUp}
         transition={{ delay: 0.5 }}
-      ></motion.div>
-      <motion.div
-        className="grid grid-cols-3 gap-2 py-4 border-y border-border"
-        {...fadeUp}
-        transition={{ delay: 0.5 }}
-      >
-        {...fadeUp}
-        transition={{ delay: 0.5 }}
       >
         {[
           { icon: Truck, label: 'Livraison gratuite dès 200€ en point relais' },
