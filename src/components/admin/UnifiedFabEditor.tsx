@@ -169,6 +169,7 @@ export function UnifiedFabEditor() {
           <Label className="text-xs uppercase tracking-wider">Sous-boutons (ordre & visibilité)</Label>
           {[...items].sort((a: any, b: any) => a.order - b.order).map((it: any) => {
             const grouped = (it.groupedIn ?? (it.id === 'voice' || it.id === 'chat' ? 'group' : 'free')) === 'group';
+            const clusterFree = it.clusterFree ?? (it.id === 'roulette');
             return (
               <div key={it.id} className="flex items-center gap-3 p-2 border rounded flex-wrap">
                 <GripVertical className="h-4 w-4 text-muted-foreground" />
@@ -183,13 +184,20 @@ export function UnifiedFabEditor() {
                     className={`text-[10px] uppercase tracking-wider px-2 py-1 border-2 ${grouped ? 'border-primary bg-primary/10' : 'border-border'}`}
                   >{grouped ? 'Dans le socle' : 'Libre'}</button>
                 )}
+                {mode === 'cluster' && (
+                  <button
+                    type="button"
+                    onClick={() => setItems(items.map((x: any) => x.id === it.id ? { ...x, clusterFree: !clusterFree } : x))}
+                    className={`text-[10px] uppercase tracking-wider px-2 py-1 border-2 ${clusterFree ? 'border-primary bg-primary/10' : 'border-border'}`}
+                  >{clusterFree ? 'Isolé (libre)' : 'Dans le cluster'}</button>
+                )}
                 <Button size="sm" variant="ghost" onClick={() => move(it.id, -1)}>↑</Button>
                 <Button size="sm" variant="ghost" onClick={() => move(it.id, 1)}>↓</Button>
                 <Switch checked={it.visible} onCheckedChange={() => toggle(it.id)} />
               </div>
             );
           })}
-          <p className="text-[10px] text-muted-foreground">Astuce : en mode admin, vous pouvez aussi glisser-déposer le socle directement sur la page d'accueil.</p>
+          <p className="text-[10px] text-muted-foreground">Astuce : en mode admin, glissez-déposez directement les boutons et le cluster sur la page d'accueil pour les repositionner.</p>
         </div>
 
         <div className="flex justify-end">
