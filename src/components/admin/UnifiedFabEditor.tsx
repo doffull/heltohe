@@ -145,18 +145,28 @@ export function UnifiedFabEditor() {
         {/* Items */}
         <div className="space-y-2">
           <Label className="text-xs uppercase tracking-wider">Sous-boutons (ordre & visibilité)</Label>
-          {[...items].sort((a: any, b: any) => a.order - b.order).map((it: any) => (
-            <div key={it.id} className="flex items-center gap-3 p-2 border rounded">
-              <GripVertical className="h-4 w-4 text-muted-foreground" />
-              <div className="flex-1 text-sm">
-                <span className="font-medium">{it.label}</span>
-                <span className="text-xs text-muted-foreground ml-2">({it.id})</span>
+          {[...items].sort((a: any, b: any) => a.order - b.order).map((it: any) => {
+            const grouped = (it.groupedIn ?? (it.id === 'voice' || it.id === 'chat' ? 'group' : 'free')) === 'group';
+            return (
+              <div key={it.id} className="flex items-center gap-3 p-2 border rounded flex-wrap">
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+                <div className="flex-1 text-sm min-w-[120px]">
+                  <span className="font-medium">{it.label}</span>
+                  <span className="text-xs text-muted-foreground ml-2">({it.id})</span>
+                </div>
+                {mode === 'grouped' && (
+                  <button
+                    type="button"
+                    onClick={() => setItems(items.map((x: any) => x.id === it.id ? { ...x, groupedIn: grouped ? 'free' : 'group' } : x))}
+                    className={`text-[10px] uppercase tracking-wider px-2 py-1 border-2 ${grouped ? 'border-primary bg-primary/10' : 'border-border'}`}
+                  >{grouped ? 'Dans le socle' : 'Libre'}</button>
+                )}
+                <Button size="sm" variant="ghost" onClick={() => move(it.id, -1)}>↑</Button>
+                <Button size="sm" variant="ghost" onClick={() => move(it.id, 1)}>↓</Button>
+                <Switch checked={it.visible} onCheckedChange={() => toggle(it.id)} />
               </div>
-              <Button size="sm" variant="ghost" onClick={() => move(it.id, -1)}>↑</Button>
-              <Button size="sm" variant="ghost" onClick={() => move(it.id, 1)}>↓</Button>
-              <Switch checked={it.visible} onCheckedChange={() => toggle(it.id)} />
-            </div>
-          ))}
+            );
+          })}
           <p className="text-[10px] text-muted-foreground">Astuce : en mode admin, vous pouvez aussi glisser-déposer le socle directement sur la page d'accueil.</p>
         </div>
 
