@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Mic, Gift, Bot, Sparkles, X } from 'lucide-react';
+import { Mic, Gift, Bot, Sparkles, X, Pencil } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { useRouletteConfig } from '@/hooks/useRoulette';
 import { useHomeFabButtons, useHomeFabMutations } from '@/hooks/useHomeFabButtons';
@@ -11,6 +11,7 @@ import { getIcon } from '@/components/admin/IconPicker';
 import { cn } from '@/lib/utils';
 import { pxToPos, cornerStyle, type FabPos } from '@/lib/fabPosition';
 import { toast } from 'sonner';
+import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
 import type { HomeFabButton } from '@/types';
 
 const HINT_KEY = 'voice_hint_seen';
