@@ -66,6 +66,7 @@ export function UnifiedFab() {
   const dockShowVoice = cfg.dockShowVoice !== false;
   const dockShowChat = cfg.dockShowChat !== false;
   const dockShowVisualEditor = cfg.dockShowVisualEditor !== false;
+  const dockShowRoulette = cfg.dockShowRoulette !== false;
 
   const voiceEnabled = designSettings.voiceCommandEnabled;
   const hintEnabled = (designSettings as any).voiceOnboardingHint !== false;
