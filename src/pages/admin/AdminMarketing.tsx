@@ -14,8 +14,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { FileDropZone } from '@/components/admin/FileDropZone';
 import { 
   Plus, Trash2, Pencil, Image, Tag, Mail, 
-  MoreHorizontal, Megaphone, Palette, Check
+  MoreHorizontal, Megaphone, Palette, Check, Bell
 } from 'lucide-react';
+import { NewsletterPopupsManager } from '@/components/admin/NewsletterPopupsManager';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -263,6 +264,7 @@ export default function AdminMarketing() {
           <TabsTrigger value="banners" className="gap-1.5 text-xs sm:text-sm"><Image className="h-3.5 w-3.5" />Bannières</TabsTrigger>
           <TabsTrigger value="promos" className="gap-1.5 text-xs sm:text-sm"><Tag className="h-3.5 w-3.5" />Promos</TabsTrigger>
           <TabsTrigger value="newsletter" className="gap-1.5 text-xs sm:text-sm"><Mail className="h-3.5 w-3.5" />Newsletter</TabsTrigger>
+          <TabsTrigger value="popups" className="gap-1.5 text-xs sm:text-sm"><Bell className="h-3.5 w-3.5" />Pop-ups</TabsTrigger>
           <TabsTrigger value="styles" className="gap-1.5 text-xs sm:text-sm"><Palette className="h-3.5 w-3.5" />Styles</TabsTrigger>
         </TabsList>
 
@@ -471,6 +473,11 @@ export default function AdminMarketing() {
               </div>
             )}
           </div>
+        </TabsContent>
+
+        {/* ── POPUPS TAB ── */}
+        <TabsContent value="popups" className="space-y-4">
+          <NewsletterPopupsManager />
         </TabsContent>
 
         {/* ── STYLES TAB ── */}

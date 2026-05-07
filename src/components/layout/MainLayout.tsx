@@ -14,6 +14,9 @@ import { MannequinHotspots } from './MannequinHotspot';
 import { SidebarProductHUD } from './SidebarProductHUD';
 import { ChatBotWidget } from './ChatBotWidget';
 import { SubscribeFab } from './SubscribeFab';
+import { SidebarNewsletter } from './SidebarNewsletter';
+import { NewsletterPopupHost } from '@/components/home/NewsletterPopupHost';
+import { VoiceCommandFab } from '@/components/voice/VoiceCommandFab';
 import { InlineEditable } from '@/components/visual-editor/InlineEditable';
 import { 
   Search, 
@@ -532,6 +535,11 @@ export function MainLayout({ children }: MainLayoutProps) {
           
           {/* Sidebar Content - Product Card HUD */}
           <SidebarProductHUD />
+
+          {/* Sidebar Newsletter (discrete, bottom) */}
+          <div className="absolute bottom-0 left-0 right-0 z-20">
+            <SidebarNewsletter />
+          </div>
         </div>
       )}
 
@@ -715,6 +723,12 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Subscribe FAB - hidden for admins */}
       {!isAdmin && <SubscribeFab />}
+
+      {/* Voice Command FAB - hidden for admins */}
+      {!isAdmin && <VoiceCommandFab />}
+
+      {/* Newsletter Popup Host */}
+      {!isAdmin && <NewsletterPopupHost />}
     </div>
   );
 }
