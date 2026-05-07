@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { FileDropZone } from '@/components/admin/FileDropZone';
 import { AiImageButton } from '@/components/admin/AiImageButton';
+import { AiTextButton } from '@/components/admin/AiTextButton';
 import { Plus, Trash2, RefreshCw, Sparkles, Eye, EyeOff, Copy, ChevronUp, ChevronDown } from 'lucide-react';
 import type { TechwearHeroConfig, TechwearHeroSlideData, TechwearColorOption, TechwearBackground } from '@/types';
 import { toast } from 'sonner';
