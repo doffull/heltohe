@@ -34,9 +34,12 @@ export default function ProductImageGallery({
   colorOptions = [],
   selectedColor,
   onColorChange,
+  modelHeight,
+  modelSizeWorn,
 }: ProductImageGalleryProps) {
   const isMobile = useIsMobile();
   const [activeMedia, setActiveMedia] = useState<'image' | 'video'>('image');
+  const [showModelBadge, setShowModelBadge] = useState(true);
   const [isZoomed, setIsZoomed] = useState(false);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
