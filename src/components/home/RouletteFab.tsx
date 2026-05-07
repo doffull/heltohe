@@ -6,6 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Gift, X, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
+import { useApp } from '@/context/AppContext';
+import { cornerStyle, pxToPos, type FabPos } from '@/lib/fabPosition';
+import { getIcon } from '@/components/admin/IconPicker';
+import { cn } from '@/lib/utils';
 import {
   useRouletteConfig,
   useRouletteSegments,
@@ -119,6 +123,8 @@ interface RouletteFabProps {
 
 export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: RouletteFabProps = {}) {
   const { user } = useAuth();
+  const { isAdmin } = useAuth() as any;
+  const { designSettings, updateDesignSettings } = useApp();
   const { data: config } = useRouletteConfig();
   const { data: segments = [] } = useRouletteSegments();
   const spin = useSpinRoulette();
@@ -220,25 +226,89 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
     }
   };
 
+  const cfg = (designSettings as any).unifiedFab || {};
+  const rfab = cfg.rouletteFab || {};
+  const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false;
+  const fabPos: FabPos = (isMobile ? rfab.position_mobile : rfab.position_desktop) || { corner: 'cc', x: 0, y: 0 };
+  const variant = rfab.variant || 'glossy';
+  const shape = rfab.shape || 'pill';
+  const size = rfab.size || 'md';
+  const accentColor = rfab.accentColor || 'hsl(var(--primary))';
+  const Icon = rfab.icon ? getIcon(rfab.icon) : Gift;
+  const label = rfab.label || config.fab_label;
+  const sizeClass = size === 'sm' ? 'px-3 py-2 text-[10px]' : size === 'lg' ? 'px-6 py-4 text-sm' : size === 'xl' ? 'px-8 py-5 text-base' : 'px-4 py-3 text-xs';
+  const iconSize = size === 'sm' ? 'h-3.5 w-3.5' : size === 'lg' ? 'h-5 w-5' : size === 'xl' ? 'h-6 w-6' : 'h-4 w-4';
+  const shapeStyle = shape === 'round' ? { borderRadius: '9999px' } : shape === 'rect-bevel' ? { clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' } : { borderRadius: '9999px' };
+
+  // Admin drag for the trigger
+  const dragRef = useRef({ blocked: false });
+  const onPointerDown = (e: React.PointerEvent<HTMLElement>) => {
+    if (!isAdmin) return;
+    const target = e.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    const startX = e.clientX, startY = e.clientY;
+    let dragging = false;
+    const move = (ev: PointerEvent) => {
+      if (!dragging && Math.hypot(ev.clientX - startX, ev.clientY - startY) < 5) return;
+      dragging = true;
+      ev.preventDefault();
+      target.style.position = 'fixed';
+      target.style.left = `${rect.left + (ev.clientX - startX)}px`;
+      target.style.top = `${rect.top + (ev.clientY - startY)}px`;
+      target.style.right = 'auto'; target.style.bottom = 'auto'; target.style.transform = 'none';
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      if (!dragging) return;
+      dragRef.current.blocked = true;
+      setTimeout(() => { dragRef.current.blocked = false; }, 50);
+      const left = parseFloat(target.style.left || '0');
+      const top = parseFloat(target.style.top || '0');
+      const pos = pxToPos(left, top, window.innerWidth, window.innerHeight, target.offsetWidth);
+      const key = isMobile ? 'position_mobile' : 'position_desktop';
+      updateDesignSettings({ ...(designSettings as any), unifiedFab: { ...cfg, rouletteFab: { ...rfab, [key]: pos } } } as any);
+      target.style.cssText = '';
+      toast.success('Jeu-concours repositionné');
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
   return (
     <>
       {!hideTrigger && (
         <button
-          onClick={() => setOpen(true)}
-          className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-40 group"
+          onClick={() => { if (dragRef.current.blocked) return; setOpen(true); }}
+          onPointerDown={onPointerDown}
+          className={cn('group z-40', isAdmin && 'ring-2 ring-primary/60 cursor-grab active:cursor-grabbing')}
+          style={{ ...cornerStyle(fabPos.corner, fabPos.x, fabPos.y), touchAction: isAdmin ? 'none' : undefined }}
           aria-label="Ouvrir la roulette"
         >
           <div className="relative">
-            {canSpin && (
-              <span className="absolute inset-0 bg-foreground/20 animate-ping" style={{ clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' }} />
+            {canSpin && rfab.pulse !== false && (
+              <span className="absolute inset-0 animate-ping" style={{ ...shapeStyle, background: `${accentColor}33` }} />
             )}
             <div
-              className="relative bg-background text-foreground border border-foreground/30 backdrop-blur-md px-4 py-3 shadow-xl flex items-center gap-2 hover:bg-foreground hover:text-background transition-colors"
-              style={{ clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' }}
+              className={cn(
+                'relative flex items-center gap-2 shadow-xl transition-all',
+                sizeClass,
+                variant === 'glass' && 'bg-white/10 backdrop-blur-xl border border-white/20 text-foreground',
+                variant === 'neon' && 'bg-foreground text-background border-2',
+                variant === 'metal' && 'bg-gradient-to-b from-zinc-200 to-zinc-400 text-zinc-900 border border-zinc-500',
+                variant === 'outline' && 'bg-transparent text-foreground border-2 border-foreground',
+                variant === 'minimal' && 'bg-background text-foreground border border-foreground/20',
+                variant === 'glossy' && 'bg-background text-foreground border border-foreground/30 backdrop-blur-md hover:bg-foreground hover:text-background'
+              )}
+              style={{
+                ...shapeStyle,
+                boxShadow: `0 8px 28px ${accentColor}55`,
+                borderColor: variant === 'neon' ? accentColor : undefined,
+              }}
             >
-              <Gift className="h-4 w-4" />
-              <span className="font-bold tracking-wider text-[10px] md:text-xs uppercase">
-                {config.fab_label}
+              <Icon className={iconSize} />
+              <span className="font-bold tracking-wider uppercase">
+                {label}
               </span>
             </div>
           </div>

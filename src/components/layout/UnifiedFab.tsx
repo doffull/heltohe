@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Mic, Gift, Bot, Sparkles, X } from 'lucide-react';
+import { Mic, Gift, Bot, Sparkles, X, Pencil } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { useRouletteConfig } from '@/hooks/useRoulette';
 import { useHomeFabButtons, useHomeFabMutations } from '@/hooks/useHomeFabButtons';
@@ -11,6 +11,7 @@ import { getIcon } from '@/components/admin/IconPicker';
 import { cn } from '@/lib/utils';
 import { pxToPos, cornerStyle, type FabPos } from '@/lib/fabPosition';
 import { toast } from 'sonner';
+import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
 import type { HomeFabButton } from '@/types';
 
 const HINT_KEY = 'voice_hint_seen';
@@ -107,8 +108,8 @@ export function UnifiedFab() {
 
   const cfg = (designSettings as any).unifiedFab || {};
   const accent = cfg.accentColor || '#ffffff';
-  const mode: 'socle' | 'free' | 'grouped' | 'cluster' =
-    cfg.mode === 'free' ? 'free' : cfg.mode === 'grouped' ? 'grouped' : cfg.mode === 'cluster' ? 'cluster' : 'socle';
+  const mode: 'socle' | 'free' | 'grouped' | 'cluster' | 'dock' =
+    cfg.mode === 'free' ? 'free' : cfg.mode === 'grouped' ? 'grouped' : cfg.mode === 'cluster' ? 'cluster' : cfg.mode === 'dock' ? 'dock' : 'socle';
   const groupSide: 'left' | 'right' = cfg.groupSide === 'right' ? 'right' : 'left';
   const groupOffsetY: number = typeof cfg.groupOffsetY === 'number' ? cfg.groupOffsetY : 220;
   const items = (cfg.items && cfg.items.length ? cfg.items : DEFAULT_ITEMS) as any[];
@@ -118,6 +119,13 @@ export function UnifiedFab() {
   const clusterPos: FabPos = (isMobile ? cfg.clusterPos_mobile : cfg.clusterPos_desktop) || { corner: 'br', x: 16, y: 90 };
   const clusterDir: 'row' | 'col' = cfg.clusterDir === 'row' ? 'row' : 'col';
   const freeCustomIds: string[] = Array.isArray(cfg.freeCustomIds) ? cfg.freeCustomIds : [];
+  const dockPos: FabPos = (isMobile ? cfg.dockPos_mobile : cfg.dockPos_desktop) || { corner: 'bc', x: 0, y: 24 };
+  const dockDir: 'row' | 'col' = cfg.dockDir === 'col' ? 'col' : 'row';
+  const dockSize: number = cfg.dockSize || 44;
+  const dockBlur: number = cfg.dockBlur ?? 24;
+  const dockShowVoice = cfg.dockShowVoice !== false;
+  const dockShowChat = cfg.dockShowChat !== false;
+  const dockShowVisualEditor = cfg.dockShowVisualEditor !== false;
 
   const voiceEnabled = designSettings.voiceCommandEnabled;
   const hintEnabled = (designSettings as any).voiceOnboardingHint !== false;
@@ -192,16 +200,25 @@ export function UnifiedFab() {
     toast.success('Cluster repositionné');
   };
 
+  const saveDockPos = (pos: FabPos) => {
+    const key = isMobile ? 'dockPos_mobile' : 'dockPos_desktop';
+    updateDesignSettings({ ...(designSettings as any), unifiedFab: { ...cfg, [key]: pos } } as any);
+    toast.success('Dock repositionné');
+  };
+
   // ── Per-button drag hooks ────────────────────────────────────────
-  // Group socle drag
   const groupDrag = useAdminDrag({ enabled: isAdmin, isMobile, onCommit: saveGroupPos });
   const clusterDrag = useAdminDrag({ enabled: isAdmin, isMobile, onCommit: saveClusterPos });
+  const dockDrag = useAdminDrag({ enabled: isAdmin, isMobile, onCommit: saveDockPos });
+
+  // Visual editor toggle for admins (used in dock). Provider always present at App root.
+  const ve = useVisualEditor();
 
   return (
     <>
-      {/* Custom DB FABs (skipped in cluster mode unless marked free) */}
+      {/* Custom DB FABs (skipped in cluster/dock mode unless marked free) */}
       {visibleCustom
-        .filter((b) => mode !== 'cluster' || freeCustomIds.includes(b.id))
+        .filter((b) => (mode !== 'cluster' && mode !== 'dock') || freeCustomIds.includes(b.id))
         .map((b) => {
           const pos = isMobile ? b.position_mobile : b.position_desktop;
           const I = getIcon(b.icon);
@@ -232,7 +249,26 @@ export function UnifiedFab() {
 
       <ChatBotWidget open={chatOpen} onOpenChange={setChatOpen} hideTrigger />
 
-      {mode === 'cluster' ? (
+      {mode === 'dock' ? (
+        <Dock
+          dockPos={dockPos}
+          dockDir={dockDir}
+          dockSize={dockSize}
+          dockBlur={dockBlur}
+          dockDrag={dockDrag}
+          isAdmin={isAdmin}
+          accent={accent}
+          voiceEnabled={!!voiceEnabled}
+          dockShowVoice={dockShowVoice}
+          dockShowChat={dockShowChat}
+          dockShowVisualEditor={dockShowVisualEditor && isAdmin}
+          customs={visibleCustom.filter((b) => !freeCustomIds.includes(b.id))}
+          onVoice={() => triggerItem('voice')}
+          onChat={() => triggerItem('chat')}
+          onVisualEditor={() => ve?.setIsOpen(!ve.isOpen)}
+          onCustom={(b) => handleAction(b)}
+        />
+      ) : mode === 'cluster' ? (
         <>
           {/* Free socle items (e.g. Jeu-concours isolé) */}
           {visibleItems
@@ -482,6 +518,47 @@ function SocleStack({ posCfg, isAdmin, isMobile, accent, open, setOpen, visibleI
         <span className="absolute inset-0 rounded-full animate-pulse pointer-events-none" style={{ boxShadow: `0 0 20px ${accent}66`, opacity: 0.6 }} />
         {open ? <X className="h-5 w-5 relative -rotate-45" /> : <Sparkles className="h-5 w-5 relative" />}
       </button>
+    </div>
+  );
+}
+
+function Dock({ dockPos, dockDir, dockSize, dockBlur, dockDrag, isAdmin, accent, voiceEnabled, dockShowVoice, dockShowChat, dockShowVisualEditor, customs, onVoice, onChat, onVisualEditor, onCustom }: any) {
+  const items: Array<{ key: string; Icon: any; label: string; onClick: () => void }> = [];
+  if (dockShowVoice && voiceEnabled) items.push({ key: 'voice', Icon: Mic, label: 'Voix', onClick: onVoice });
+  if (dockShowChat) items.push({ key: 'chat', Icon: Bot, label: 'Assistant', onClick: onChat });
+  customs.forEach((b: any) => items.push({ key: b.id, Icon: getIcon(b.icon), label: b.label, onClick: () => onCustom(b) }));
+  if (dockShowVisualEditor) items.push({ key: 've', Icon: Pencil, label: 'Éditeur visuel', onClick: onVisualEditor });
+  if (items.length === 0) return null;
+  return (
+    <div
+      onPointerDown={dockDrag.onPointerDown}
+      className={cn(
+        'flex items-center gap-2 p-2 rounded-full border shadow-2xl',
+        dockDir === 'col' ? 'flex-col' : 'flex-row',
+        isAdmin && 'ring-2 ring-primary/60 cursor-grab active:cursor-grabbing'
+      )}
+      style={{
+        ...cornerStyle(dockPos.corner, dockPos.x, dockPos.y),
+        backdropFilter: `blur(${dockBlur}px) saturate(180%)`,
+        WebkitBackdropFilter: `blur(${dockBlur}px) saturate(180%)`,
+        background: 'rgba(255,255,255,0.06)',
+        borderColor: 'rgba(255,255,255,0.18)',
+        boxShadow: `0 12px 40px ${accent}33, inset 0 1px 0 rgba(255,255,255,0.18)`,
+        touchAction: isAdmin ? 'none' : undefined,
+      } as any}
+    >
+      {items.map((it) => (
+        <button
+          key={it.key}
+          onClick={(e) => { e.stopPropagation(); if (dockDrag.blockClickRef.current) return; it.onClick(); }}
+          aria-label={it.label}
+          title={it.label}
+          className="rounded-full flex items-center justify-center text-foreground hover:bg-foreground/15 transition-colors"
+          style={{ width: dockSize, height: dockSize }}
+        >
+          <it.Icon className="h-5 w-5" />
+        </button>
+      ))}
     </div>
   );
 }

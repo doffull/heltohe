@@ -31,10 +31,24 @@ export function UnifiedFabEditor() {
   const [posD, setPosD] = useState(initial.position_desktop || { corner: 'br', x: 24, y: 24 });
   const [posM, setPosM] = useState(initial.position_mobile || { corner: 'br', x: 16, y: 16 });
   const [items, setItems] = useState(initial.items?.length ? initial.items : DEFAULT_ITEMS);
-  const [mode, setMode] = useState<'socle' | 'free' | 'grouped' | 'cluster'>(initial.mode || 'socle');
+  const [mode, setMode] = useState<'socle' | 'free' | 'grouped' | 'cluster' | 'dock'>(initial.mode || 'socle');
   const [groupSide, setGroupSide] = useState<'left' | 'right'>(initial.groupSide || 'left');
   const [groupOffsetY, setGroupOffsetY] = useState<number>(initial.groupOffsetY ?? 220);
   const [clusterDir, setClusterDir] = useState<'row' | 'col'>(initial.clusterDir || 'col');
+  const [dockDir, setDockDir] = useState<'row' | 'col'>(initial.dockDir || 'row');
+  const [dockSize, setDockSize] = useState<number>(initial.dockSize || 44);
+  const [dockBlur, setDockBlur] = useState<number>(initial.dockBlur ?? 24);
+  const [dockShowVoice, setDockShowVoice] = useState<boolean>(initial.dockShowVoice !== false);
+  const [dockShowChat, setDockShowChat] = useState<boolean>(initial.dockShowChat !== false);
+  const [dockShowVisualEditor, setDockShowVisualEditor] = useState<boolean>(initial.dockShowVisualEditor !== false);
+  const rouletteFab = initial.rouletteFab || {};
+  const [rfVariant, setRfVariant] = useState<string>(rouletteFab.variant || 'glossy');
+  const [rfSize, setRfSize] = useState<string>(rouletteFab.size || 'md');
+  const [rfShape, setRfShape] = useState<string>(rouletteFab.shape || 'pill');
+  const [rfAccent, setRfAccent] = useState<string>(rouletteFab.accentColor || '#ffffff');
+  const [rfLabel, setRfLabel] = useState<string>(rouletteFab.label || '');
+  const [rfPulse, setRfPulse] = useState<boolean>(rouletteFab.pulse !== false);
+  const [rfCorner, setRfCorner] = useState<string>((rouletteFab.position_desktop?.corner) || 'cc');
 
   useEffect(() => {
     const cur = (designSettings as any).unifiedFab || {};
@@ -48,6 +62,15 @@ export function UnifiedFabEditor() {
         ...initial,
         enabled, accentColor: accent, mode, groupSide, groupOffsetY,
         clusterDir,
+        dockDir, dockSize, dockBlur,
+        dockShowVoice, dockShowChat, dockShowVisualEditor,
+        rouletteFab: {
+          ...rouletteFab,
+          variant: rfVariant, size: rfSize, shape: rfShape,
+          accentColor: rfAccent, label: rfLabel, pulse: rfPulse,
+          position_desktop: { corner: rfCorner, x: rouletteFab.position_desktop?.x || 0, y: rouletteFab.position_desktop?.y || 0 },
+          position_mobile: rouletteFab.position_mobile || { corner: rfCorner, x: 0, y: 0 },
+        },
         position_desktop: posD, position_mobile: posM, items,
       },
     } as any);
@@ -79,11 +102,12 @@ export function UnifiedFabEditor() {
         {/* Mode */}
         <div className="space-y-2 p-3 border rounded">
           <Label className="text-xs uppercase tracking-wider">Mode d'affichage</Label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
             {[
+              { v: 'dock', label: 'Dock unifié (glass)' },
               { v: 'socle', label: 'Socle unifié' },
               { v: 'grouped', label: 'Voix+Assistant groupés' },
-              { v: 'cluster', label: 'Cluster CTA (tout regroupé)' },
+              { v: 'cluster', label: 'Cluster CTA' },
               { v: 'free', label: 'Icônes libres' },
             ].map((m) => (
               <button
@@ -94,6 +118,39 @@ export function UnifiedFabEditor() {
               >{m.label}</button>
             ))}
           </div>
+
+          {mode === 'dock' && (
+            <div className="mt-3 space-y-3 border-t pt-3">
+              <p className="text-[11px] text-muted-foreground">Pill glassmorphism regroupant tous les outils. Glissez-le sur la home en mode admin. Position par défaut : bas centre.</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-[10px]">Direction</Label>
+                  <div className="flex gap-2 mt-1">
+                    {(['row', 'col'] as const).map((d) => (
+                      <button key={d} type="button" onClick={() => setDockDir(d)}
+                        className={`flex-1 text-xs p-2 border-2 ${dockDir === d ? 'border-primary bg-primary/10' : 'border-border'}`}>
+                        {d === 'row' ? 'Horizontal' : 'Vertical'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-[10px]">Taille des icônes ({dockSize}px)</Label>
+                  <Slider value={[dockSize]} min={32} max={64} step={2} onValueChange={([v]) => setDockSize(v)} />
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-[10px]">Intensité du blur ({dockBlur}px)</Label>
+                  <Slider value={[dockBlur]} min={0} max={48} step={2} onValueChange={([v]) => setDockBlur(v)} />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <label className="flex items-center justify-between border rounded p-2 text-xs">Voix <Switch checked={dockShowVoice} onCheckedChange={setDockShowVoice} /></label>
+                <label className="flex items-center justify-between border rounded p-2 text-xs">Chatbot <Switch checked={dockShowChat} onCheckedChange={setDockShowChat} /></label>
+                <label className="flex items-center justify-between border rounded p-2 text-xs">Éditeur visuel (admin) <Switch checked={dockShowVisualEditor} onCheckedChange={setDockShowVisualEditor} /></label>
+              </div>
+              <p className="text-[10px] text-muted-foreground">Les boutons custom (Notifications, Message…) sont automatiquement inclus sauf s'ils sont marqués « Isolé » ci-dessous.</p>
+            </div>
+          )}
 
           {mode === 'cluster' && (
             <div className="mt-3 space-y-2">
@@ -198,6 +255,72 @@ export function UnifiedFabEditor() {
             );
           })}
           <p className="text-[10px] text-muted-foreground">Astuce : en mode admin, glissez-déposez directement les boutons et le cluster sur la page d'accueil pour les repositionner.</p>
+        </div>
+
+        {/* Roulette / Jeu-concours design */}
+        <div className="space-y-3 p-3 border-2 border-primary/30 rounded">
+          <Label className="text-xs uppercase tracking-wider">🎁 Bouton Jeu-concours</Label>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <div>
+              <Label className="text-[10px]">Style</Label>
+              <Select value={rfVariant} onValueChange={setRfVariant}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {['glossy','glass','neon','metal','outline','minimal'].map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-[10px]">Forme</Label>
+              <Select value={rfShape} onValueChange={setRfShape}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pill">Pill</SelectItem>
+                  <SelectItem value="round">Rond</SelectItem>
+                  <SelectItem value="rect-bevel">Biseauté</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-[10px]">Taille</Label>
+              <Select value={rfSize} onValueChange={setRfSize}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {['sm','md','lg','xl'].map((v) => <SelectItem key={v} value={v}>{v.toUpperCase()}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-[10px]">Position par défaut</Label>
+              <Select value={rfCorner} onValueChange={setRfCorner}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cc">Centre de l'écran</SelectItem>
+                  <SelectItem value="bc">Bas centre</SelectItem>
+                  <SelectItem value="tc">Haut centre</SelectItem>
+                  <SelectItem value="br">Bas droite</SelectItem>
+                  <SelectItem value="bl">Bas gauche</SelectItem>
+                  <SelectItem value="tr">Haut droite</SelectItem>
+                  <SelectItem value="tl">Haut gauche</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-[10px]">Libellé</Label>
+              <Input value={rfLabel} onChange={(e) => setRfLabel(e.target.value)} placeholder="Jeu-concours" />
+            </div>
+            <div>
+              <Label className="text-[10px]">Couleur d'accent</Label>
+              <div className="flex gap-2">
+                <Input type="color" value={rfAccent} onChange={(e) => setRfAccent(e.target.value)} className="w-12 h-9 p-1" />
+                <Input value={rfAccent} onChange={(e) => setRfAccent(e.target.value)} />
+              </div>
+            </div>
+            <label className="flex items-center justify-between border rounded p-2 text-xs col-span-2 md:col-span-3">
+              Animation pulsation <Switch checked={rfPulse} onCheckedChange={setRfPulse} />
+            </label>
+          </div>
+          <p className="text-[10px] text-muted-foreground">Astuce : en mode admin, glissez le bouton Jeu-concours directement sur la home pour ajuster sa position. Le centre est idéal pour maximiser la visibilité.</p>
         </div>
 
         <div className="flex justify-end">
