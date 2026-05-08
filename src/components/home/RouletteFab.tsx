@@ -190,14 +190,11 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
   const rouletteDrag = useAdminDrag({
     enabled: !!isAdmin,
     currentPos: fabPosCurrent,
+    validationLabel: `${deviceKey} OK ?`,
     onCommit: (pos) => {
       updateDesignSettings({ ...(designSettings as any), unifiedFab: { ...cfg, rouletteFab: { ...rfab, [posKey]: pos } } } as any);
     },
   });
-  const handleConfirmDrag = () => {
-    rouletteDrag.confirmPending();
-    toast.success(`Position validée pour ${deviceKey}`);
-  };
 
   if (!config?.enabled || segments.length === 0) return null;
 
@@ -341,21 +338,6 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
                     <option key={s} value={s}>{s.toUpperCase()}</option>
                   ))}
                 </select>
-              </div>
-            )}
-            {isAdmin && rouletteDrag.pending && (
-              <div className="flex items-center gap-1 ml-1 bg-background border-2 border-primary px-2 py-1 shadow" data-no-drag>
-                <span className="text-[9px] uppercase tracking-widest font-bold">{deviceKey} OK ?</span>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); handleConfirmDrag(); }}
-                  className="text-[9px] uppercase tracking-widest font-bold bg-foreground text-background px-2 py-0.5"
-                >✓</button>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); rouletteDrag.cancelPending(); }}
-                  className="text-[9px] uppercase tracking-widest font-bold bg-background text-foreground border border-foreground px-2 py-0.5"
-                >✕</button>
               </div>
             )}
           </div>

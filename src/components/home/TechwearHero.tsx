@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useProducts } from '@/hooks/useProducts';
 import { useProductStock, stockBadgeColor } from '@/hooks/useProductStock';
 import { DEFAULT_TECHWEAR_HERO } from '@/config/homeConfig';
+import { showValidationHUD } from '@/lib/dragValidationHUD';
 import type { TechwearHeroConfig, TechwearColorOption, TechwearBackground } from '@/types';
 import '@/styles/home-techwear.css';
 
@@ -188,8 +189,6 @@ function TechwearHeroSlideView({ config, productMissing, slideId }: { config: Sl
   // Local positions (override config; persisted on dragend)
   const [badgePos, setBadgePos] = useState<FreePos | undefined>(config.modelBadgePos);
   const [panelPos, setPanelPos] = useState<FreePos | undefined>(config.sidePanelPos);
-  // Pending validation: { which, prev, next } — set after a drag ends, awaiting confirm/cancel
-  const [pending, setPending] = useState<{ which: 'badge' | 'panel'; prev: FreePos | undefined; next: FreePos } | null>(null);
   useEffect(() => { setBadgePos(config.modelBadgePos); setPanelPos(config.sidePanelPos); }, [config.modelBadgePos, config.sidePanelPos]);
   const panelRef = useRef<HTMLDivElement | null>(null);
   // Clamp panel inside container if persisted position pushes it offscreen
@@ -251,22 +250,20 @@ function TechwearHeroSlideView({ config, productMissing, slideId }: { config: Sl
       target.style.willChange = '';
       const pos = pxToCornerPos(nextLeft, nextTop, cRect.width, cRect.height, elW, elH);
       if (which === 'badge') setBadgePos(pos); else setPanelPos(pos);
-      setPending({ which, prev, next: pos });
+      const prevPos = which === 'badge' ? badgePos : panelPos;
+      showValidationHUD({
+        label: which === 'badge' ? 'Badge modèle — valider ?' : 'Panneau — valider ?',
+        onConfirm: () => {
+          persistPos(which, pos);
+          toast.success(which === 'badge' ? 'Badge modèle validé' : 'Panneau validé');
+        },
+        onCancel: () => {
+          if (which === 'badge') setBadgePos(prevPos); else setPanelPos(prevPos);
+        },
+      });
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
-  };
-
-  const confirmPending = () => {
-    if (!pending) return;
-    persistPos(pending.which, pending.next);
-    toast.success(pending.which === 'badge' ? 'Badge modèle validé' : 'Panneau validé');
-    setPending(null);
-  };
-  const cancelPending = () => {
-    if (!pending) return;
-    if (pending.which === 'badge') setBadgePos(pending.prev); else setPanelPos(pending.prev);
-    setPending(null);
   };
 
   useEffect(() => { setActiveColor(safeColorIndex); }, [safeColorIndex, config.colorOptions.length]);
@@ -603,27 +600,6 @@ function TechwearHeroSlideView({ config, productMissing, slideId }: { config: Sl
         >
           <div className="text-[9px] font-bold uppercase tracking-[0.15em]">{config.modelBadge.line1}</div>
           <div className="text-xs font-bold mt-0.5">{config.modelBadge.line2}</div>
-        </div>
-      )}
-
-      {isAdmin && pending && (
-        <div
-          style={{ position: 'absolute', left: '50%', bottom: 16, transform: 'translateX(-50%)', zIndex: 50 }}
-          className="flex items-center gap-2 bg-background border-2 border-primary px-3 py-2 shadow-xl"
-        >
-          <span className="text-[10px] uppercase tracking-widest font-bold">
-            {pending.which === 'badge' ? 'Nouveau badge' : 'Nouveau panneau'} — visible mobile + desktop ?
-          </span>
-          <button
-            type="button"
-            onClick={confirmPending}
-            className="text-[10px] uppercase tracking-widest font-bold bg-foreground text-background px-3 py-1"
-          >✓ Valider</button>
-          <button
-            type="button"
-            onClick={cancelPending}
-            className="text-[10px] uppercase tracking-widest font-bold bg-background text-foreground border border-foreground px-3 py-1"
-          >✕ Annuler</button>
         </div>
       )}
     </div>

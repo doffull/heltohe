@@ -1,9 +1,8 @@
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { pxToPos, type FabPos } from './fabPosition';
+import { showValidationHUD, hideValidationHUD } from './dragValidationHUD';
 
 const DRAG_THRESHOLD = 4;
-
-export type PendingDrag = { prev: FabPos | null; next: FabPos } | null;
 
 function readSnap(): boolean {
   try { const v = localStorage.getItem('admin_drag_snap'); return v === null ? true : v === '1'; } catch { return true; }
@@ -26,7 +25,8 @@ function magnet(v: number, t1: number, t2: number, t3: number, range = 10) {
  * Optimizations vs naive impl:
  *  - Single rAF coalesces multiple pointermove events (one paint per frame)
  *  - Viewport + element dims cached on pointerdown (no layout reads during move)
- *  - HUD updated inside the same rAF, never per-event
+ *  - Coordinate HUD updated inside the same rAF, never per-event
+ *  - Validation HUD (✓/✕) is DOM-based: zero React re-renders
  *  - touch-action: none set on the dragged element to suppress browser scroll/zoom
  *  - Passive listener with preventDefault only when actually dragging
  */
@@ -35,11 +35,10 @@ export function useAdminDrag(opts: {
   onCommit: (pos: FabPos) => void;
   currentPos?: FabPos | null;
   autoCommit?: boolean;
+  validationLabel?: string;
 }) {
-  const { enabled, onCommit, currentPos = null, autoCommit = false } = opts;
+  const { enabled, onCommit, currentPos = null, autoCommit = false, validationLabel = 'Valider la position ?' } = opts;
   const blockClickRef = useRef(false);
-  const [pending, setPending] = useState<PendingDrag>(null);
-
   const activePointerRef = useRef<number | null>(null);
 
   const onPointerDown = (e: React.PointerEvent<HTMLElement>) => {
@@ -49,6 +48,10 @@ export function useAdminDrag(opts: {
     if (activePointerRef.current !== null) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     activePointerRef.current = e.pointerId;
+
+    // Hide any lingering validation HUD from a previous drag
+    hideValidationHUD();
+
     const target = e.currentTarget as HTMLElement;
     // iOS Safari: prevent text selection callout, tap highlight, and native gestures
     const prevWebkitCallout = (target.style as any).webkitTouchCallout;
@@ -187,13 +190,17 @@ export function useAdminDrag(opts: {
       if (autoCommit) {
         onCommit(pos);
       } else {
-        setPending({ prev: currentPos, next: pos });
-        onCommit(pos);
+        // DOM-based validation HUD: zero React re-renders
+        showValidationHUD({
+          label: validationLabel,
+          onConfirm: () => onCommit(pos),
+          onCancel: () => { if (currentPos) onCommit(currentPos); },
+        });
       }
     };
 
     const onKey = (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape') { dragging = false; cleanup(); }
+      if (ev.key === 'Escape') { dragging = false; hideValidationHUD(); cleanup(); }
     };
 
     window.addEventListener('pointermove', move, { passive: false });
@@ -202,11 +209,5 @@ export function useAdminDrag(opts: {
     window.addEventListener('keydown', onKey);
   };
 
-  const confirmPending = () => setPending(null);
-  const cancelPending = () => {
-    if (pending) onCommit(pending.prev as FabPos);
-    setPending(null);
-  };
-
-  return { onPointerDown, blockClickRef, pending, confirmPending, cancelPending };
+  return { onPointerDown, blockClickRef };
 }
