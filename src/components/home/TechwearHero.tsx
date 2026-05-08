@@ -602,8 +602,6 @@ function TechwearHeroSlideView({ config, productMissing, slideId }: { config: Sl
           <div className="text-xs font-bold mt-0.5">{config.modelBadge.line2}</div>
         </div>
       )}
-
-      </div>
     </div>
   );
 }
