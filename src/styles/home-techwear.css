@@ -467,13 +467,13 @@
 @media (max-width: 768px) {
   #hw-hero {
     --hw-card-width: min(100vw, 520px);
-    --hw-card-height: min(78svh, 680px);
+    --hw-card-height: min(62svh, 480px);
     --hw-card-bevel: 18px;
     --hw-hero-padding: 0px;
     padding-top: 48px;
     min-height: 0;
-    padding-bottom: 8px;
-    margin-bottom: 4px;
+    padding-bottom: 20px;
+    margin-bottom: 32px;
     display: flex;
     flex-direction: column;
   }
@@ -587,7 +587,7 @@
 @media (max-width: 480px) {
   #hw-hero {
     --hw-card-width: 100vw;
-    --hw-card-height: min(76svh, 620px);
+    --hw-card-height: min(60svh, 440px);
     padding-top: 48px;
   }
   .hw-stage-inner { gap: 3px; }
