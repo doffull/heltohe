@@ -501,9 +501,9 @@
     flex-direction: column;
     margin: 0;
   }
-  .hw-cta-primary { width: min(calc(100vw - 24px), 340px); height: 42px; font-size: 13px; }
-  .hw-cta-secondary { width: min(calc(100vw - 24px), 340px); height: 30px; font-size: 10px; }
-  .hw-ctas { position: relative; bottom: auto; left: auto; transform: none; margin-top: 6px; gap: 4px; }
+  .hw-cta-primary { width: min(calc(100vw - 32px), 320px); height: 34px; font-size: 11px; letter-spacing: .12em; }
+  .hw-cta-secondary { width: min(calc(100vw - 32px), 320px); height: 26px; font-size: 9px; letter-spacing: .12em; }
+  .hw-ctas { position: relative; bottom: auto; left: auto; transform: none; margin-top: 4px; gap: 3px; }
   .hw-card { margin: 0 auto; }
   .hw-model-badge { left: -8px; bottom: 18px; padding: 6px 12px; }
   .hw-model-badge .hw-mb-1 { font-size: 8px; }
