@@ -466,14 +466,14 @@
 
 @media (max-width: 768px) {
   #hw-hero {
-    --hw-card-width: min(82vw, 320px);
-    --hw-card-height: min(46svh, 380px);
-    --hw-card-bevel: 14px;
-    --hw-hero-padding: 6px;
-    padding-top: 56px;
+    --hw-card-width: min(96vw, 460px);
+    --hw-card-height: min(62svh, 540px);
+    --hw-card-bevel: 16px;
+    --hw-hero-padding: 4px;
+    padding-top: 52px;
     min-height: 0;
-    padding-bottom: 12px;
-    margin-bottom: 8px;
+    padding-bottom: 10px;
+    margin-bottom: 6px;
     display: flex;
     flex-direction: column;
   }
@@ -501,9 +501,9 @@
     flex-direction: column;
     margin: 0;
   }
-  .hw-cta-primary { width: min(calc(100vw - 24px), 340px); height: 42px; font-size: 13px; }
-  .hw-cta-secondary { width: min(calc(100vw - 24px), 340px); height: 30px; font-size: 10px; }
-  .hw-ctas { position: relative; bottom: auto; left: auto; transform: none; margin-top: 6px; gap: 4px; }
+  .hw-cta-primary { width: min(calc(100vw - 32px), 320px); height: 34px; font-size: 11px; letter-spacing: .12em; }
+  .hw-cta-secondary { width: min(calc(100vw - 32px), 320px); height: 26px; font-size: 9px; letter-spacing: .12em; }
+  .hw-ctas { position: relative; bottom: auto; left: auto; transform: none; margin-top: 4px; gap: 3px; }
   .hw-card { margin: 0 auto; }
   .hw-model-badge { left: -8px; bottom: 18px; padding: 6px 12px; }
   .hw-model-badge .hw-mb-1 { font-size: 8px; }
@@ -662,10 +662,10 @@
   .hw-cta-sz-lg,
   .hw-cta-sz-xl {
     width: 100%;
-    min-height: 42px;
-    padding: 10px 16px;
-    font-size: 12px;
-    letter-spacing: 0.12em;
+    min-height: 32px;
+    padding: 6px 12px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
   }
 }
 

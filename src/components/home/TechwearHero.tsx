@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useProducts } from '@/hooks/useProducts';
 import { useProductStock, stockBadgeColor } from '@/hooks/useProductStock';
 import { DEFAULT_TECHWEAR_HERO } from '@/config/homeConfig';
-import { showValidationHUD } from '@/lib/dragValidationHUD';
+
 import type { TechwearHeroConfig, TechwearColorOption, TechwearBackground } from '@/types';
 import '@/styles/home-techwear.css';
 
@@ -186,10 +186,16 @@ function TechwearHeroSlideView({ config, productMissing, slideId }: { config: Sl
     [products, config.productId]
   );
 
-  // Local positions (override config; persisted on dragend)
-  const [badgePos, setBadgePos] = useState<FreePos | undefined>(config.modelBadgePos);
-  const [panelPos, setPanelPos] = useState<FreePos | undefined>(config.sidePanelPos);
-  useEffect(() => { setBadgePos(config.modelBadgePos); setPanelPos(config.sidePanelPos); }, [config.modelBadgePos, config.sidePanelPos]);
+  // Per-device position keys (matches AdminDragBar copyTo)
+  const cfgAny: any = config as any;
+  const initBadge = cfgAny[`modelBadgePos_${viewport}`] ?? config.modelBadgePos;
+  const initPanel = cfgAny[`sidePanelPos_${viewport}`] ?? config.sidePanelPos;
+  const [badgePos, setBadgePos] = useState<FreePos | undefined>(initBadge);
+  const [panelPos, setPanelPos] = useState<FreePos | undefined>(initPanel);
+  useEffect(() => {
+    setBadgePos(cfgAny[`modelBadgePos_${viewport}`] ?? config.modelBadgePos);
+    setPanelPos(cfgAny[`sidePanelPos_${viewport}`] ?? config.sidePanelPos);
+  }, [config.modelBadgePos, config.sidePanelPos, cfgAny[`modelBadgePos_${viewport}`], cfgAny[`sidePanelPos_${viewport}`], viewport]);
   const panelRef = useRef<HTMLDivElement | null>(null);
   // Clamp panel inside container if persisted position pushes it offscreen
   useEffect(() => {
@@ -206,12 +212,13 @@ function TechwearHeroSlideView({ config, productMissing, slideId }: { config: Sl
   const persistPos = (which: 'badge' | 'panel', pos: FreePos | undefined) => {
     const cur = (designSettings as any).techwearHero || {};
     const slides = Array.isArray(cur.slides) ? cur.slides : null;
-    const key = which === 'badge' ? 'modelBadgePos' : 'sidePanelPos';
+    const baseKey = which === 'badge' ? 'modelBadgePos' : 'sidePanelPos';
+    const deviceKey = `${baseKey}_${viewport}`;
     if (slides && slideId) {
-      const next = slides.map((s: any) => s.id === slideId ? { ...s, [key]: pos } : s);
-      updateDesignSettings({ techwearHero: { ...cur, slides: next, ...(slides[0]?.id === slideId ? { [key]: pos } : {}) } } as any);
+      const next = slides.map((s: any) => s.id === slideId ? { ...s, [baseKey]: pos, [deviceKey]: pos } : s);
+      updateDesignSettings({ techwearHero: { ...cur, slides: next, ...(slides[0]?.id === slideId ? { [baseKey]: pos, [deviceKey]: pos } : {}) } } as any);
     } else {
-      updateDesignSettings({ techwearHero: { ...cur, [key]: pos } } as any);
+      updateDesignSettings({ techwearHero: { ...cur, [baseKey]: pos, [deviceKey]: pos } } as any);
     }
   };
 
@@ -225,7 +232,6 @@ function TechwearHeroSlideView({ config, productMissing, slideId }: { config: Sl
     const offX = e.clientX - tRect.left;
     const offY = e.clientY - tRect.top;
     const elW = tRect.width, elH = tRect.height;
-    const prev = which === 'badge' ? badgePos : panelPos;
     target.style.willChange = 'left, top';
     let nextLeft = tRect.left - cRect.left;
     let nextTop = tRect.top - cRect.top;
@@ -249,18 +255,10 @@ function TechwearHeroSlideView({ config, productMissing, slideId }: { config: Sl
       if (raf) cancelAnimationFrame(raf);
       target.style.willChange = '';
       const pos = pxToCornerPos(nextLeft, nextTop, cRect.width, cRect.height, elW, elH);
+      // Auto-commit: la position est sauvegardée définitivement au lâcher
       if (which === 'badge') setBadgePos(pos); else setPanelPos(pos);
-      const prevPos = which === 'badge' ? badgePos : panelPos;
-      showValidationHUD({
-        label: which === 'badge' ? 'Badge modèle — valider ?' : 'Panneau — valider ?',
-        onConfirm: () => {
-          persistPos(which, pos);
-          toast.success(which === 'badge' ? 'Badge modèle validé' : 'Panneau validé');
-        },
-        onCancel: () => {
-          if (which === 'badge') setBadgePos(prevPos); else setPanelPos(prevPos);
-        },
-      });
+      persistPos(which, pos);
+      toast.success(`${which === 'badge' ? 'Badge' : 'Panneau'} sauvegardé (${viewport})`);
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);

@@ -190,9 +190,11 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
   const rouletteDrag = useAdminDrag({
     enabled: !!isAdmin,
     currentPos: fabPosCurrent,
+    autoCommit: true,
     validationLabel: `${deviceKey} OK ?`,
     onCommit: (pos) => {
       updateDesignSettings({ ...(designSettings as any), unifiedFab: { ...cfg, rouletteFab: { ...rfab, [posKey]: pos } } } as any);
+      toast.success(`Position ${deviceKey} sauvegardée`);
     },
   });
 
