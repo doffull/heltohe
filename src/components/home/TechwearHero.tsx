@@ -250,22 +250,20 @@ function TechwearHeroSlideView({ config, productMissing, slideId }: { config: Sl
       target.style.willChange = '';
       const pos = pxToCornerPos(nextLeft, nextTop, cRect.width, cRect.height, elW, elH);
       if (which === 'badge') setBadgePos(pos); else setPanelPos(pos);
-      setPending({ which, prev, next: pos });
+      const prevPos = which === 'badge' ? badgePos : panelPos;
+      showValidationHUD({
+        label: which === 'badge' ? 'Badge modèle — valider ?' : 'Panneau — valider ?',
+        onConfirm: () => {
+          persistPos(which, pos);
+          toast.success(which === 'badge' ? 'Badge modèle validé' : 'Panneau validé');
+        },
+        onCancel: () => {
+          if (which === 'badge') setBadgePos(prevPos); else setPanelPos(prevPos);
+        },
+      });
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
-  };
-
-  const confirmPending = () => {
-    if (!pending) return;
-    persistPos(pending.which, pending.next);
-    toast.success(pending.which === 'badge' ? 'Badge modèle validé' : 'Panneau validé');
-    setPending(null);
-  };
-  const cancelPending = () => {
-    if (!pending) return;
-    if (pending.which === 'badge') setBadgePos(pending.prev); else setPanelPos(pending.prev);
-    setPending(null);
   };
 
   useEffect(() => { setActiveColor(safeColorIndex); }, [safeColorIndex, config.colorOptions.length]);
