@@ -189,8 +189,6 @@ function TechwearHeroSlideView({ config, productMissing, slideId }: { config: Sl
   // Local positions (override config; persisted on dragend)
   const [badgePos, setBadgePos] = useState<FreePos | undefined>(config.modelBadgePos);
   const [panelPos, setPanelPos] = useState<FreePos | undefined>(config.sidePanelPos);
-  // Pending validation: { which, prev, next } — set after a drag ends, awaiting confirm/cancel
-  const [pending, setPending] = useState<{ which: 'badge' | 'panel'; prev: FreePos | undefined; next: FreePos } | null>(null);
   useEffect(() => { setBadgePos(config.modelBadgePos); setPanelPos(config.sidePanelPos); }, [config.modelBadgePos, config.sidePanelPos]);
   const panelRef = useRef<HTMLDivElement | null>(null);
   // Clamp panel inside container if persisted position pushes it offscreen
