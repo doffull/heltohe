@@ -1,5 +1,6 @@
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { pxToPos, type FabPos } from './fabPosition';
+import { showValidationHUD, hideValidationHUD } from './dragValidationHUD';
 
 const DRAG_THRESHOLD = 4;
 
