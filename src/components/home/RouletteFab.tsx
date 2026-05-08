@@ -179,13 +179,17 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
   const cfg = (designSettings as any).unifiedFab || {};
   const rfab = cfg.rouletteFab || {};
   const { effectiveDevice } = useAdminViewport();
+  const isMobile = useIsMobile();
   const deviceKey = effectiveDevice; // 'mobile' | 'tablet' | 'desktop'
   const posKey = `position_${deviceKey}` as const;
   const sizeKey = `size_${deviceKey}` as const;
 
+  const mobileDefaultPos: FabPos = { corner: 'bl', x: 12, y: 96 };
   const fabPosCurrent: FabPos =
     rfab[posKey] ||
-    (deviceKey === 'mobile' ? rfab.position_mobile : rfab.position_desktop) ||
+    (deviceKey === 'mobile'
+      ? rfab.position_mobile || mobileDefaultPos
+      : rfab.position_desktop) ||
     { corner: 'cc', x: 0, y: 0 };
 
   const rouletteDrag = useAdminDrag({
