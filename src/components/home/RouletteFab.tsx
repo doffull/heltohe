@@ -281,33 +281,65 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
               className={cn('group', isAdmin && 'ring-2 ring-primary/60 cursor-grab active:cursor-grabbing')}
               aria-label="Ouvrir la roulette"
             >
-              <div className="relative">
-                {canSpin && rfab.pulse !== false && (
-                  <span className="absolute inset-0 animate-ping" style={{ ...shapeStyle, background: `${accentColor}33` }} />
-                )}
-                <div
-                  className={cn(
-                    'relative flex items-center gap-2 shadow-xl transition-all',
-                    sizeClass,
-                    variant === 'glass' && 'bg-white/10 backdrop-blur-xl border border-white/20 text-foreground',
-                    variant === 'neon' && 'bg-foreground text-background border-2',
-                    variant === 'metal' && 'bg-gradient-to-b from-zinc-200 to-zinc-400 text-zinc-900 border border-zinc-500',
-                    variant === 'outline' && 'bg-transparent text-foreground border-2 border-foreground',
-                    variant === 'minimal' && 'bg-background text-foreground border border-foreground/20',
-                    variant === 'glossy' && 'bg-background text-foreground border border-foreground/30 backdrop-blur-md hover:bg-foreground hover:text-background'
-                  )}
-                  style={{
-                    ...shapeStyle,
-                    boxShadow: `0 8px 28px ${accentColor}55`,
-                    borderColor: variant === 'neon' ? accentColor : undefined,
-                  }}
-                >
-                  <Icon className={iconSize} />
-                  <span className="font-bold tracking-wider uppercase">
+              {isMobile ? (
+                <div className="relative flex flex-col items-center gap-1">
+                  <div className="relative">
+                    {canSpin && rfab.pulse !== false && (
+                      <span
+                        className="absolute inset-0 animate-ping rounded-full"
+                        style={{ background: `${accentColor}33` }}
+                      />
+                    )}
+                    <div
+                      className="relative flex items-center justify-center rounded-full shadow-xl"
+                      style={{
+                        width: 48,
+                        height: 48,
+                        background: 'hsl(var(--background))',
+                        color: 'hsl(var(--foreground))',
+                        border: '1px solid hsl(var(--foreground) / 0.3)',
+                        boxShadow: `0 6px 20px ${accentColor}55`,
+                      }}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </div>
+                  </div>
+                  <span
+                    className="font-bold tracking-wider uppercase text-[8px] leading-none px-1.5 py-0.5 rounded bg-background/85 border border-foreground/20"
+                    style={{ maxWidth: 64, textAlign: 'center' }}
+                  >
                     {label}
                   </span>
                 </div>
-              </div>
+              ) : (
+                <div className="relative">
+                  {canSpin && rfab.pulse !== false && (
+                    <span className="absolute inset-0 animate-ping" style={{ ...shapeStyle, background: `${accentColor}33` }} />
+                  )}
+                  <div
+                    className={cn(
+                      'relative flex items-center gap-2 shadow-xl transition-all',
+                      sizeClass,
+                      variant === 'glass' && 'bg-white/10 backdrop-blur-xl border border-white/20 text-foreground',
+                      variant === 'neon' && 'bg-foreground text-background border-2',
+                      variant === 'metal' && 'bg-gradient-to-b from-zinc-200 to-zinc-400 text-zinc-900 border border-zinc-500',
+                      variant === 'outline' && 'bg-transparent text-foreground border-2 border-foreground',
+                      variant === 'minimal' && 'bg-background text-foreground border border-foreground/20',
+                      variant === 'glossy' && 'bg-background text-foreground border border-foreground/30 backdrop-blur-md hover:bg-foreground hover:text-background'
+                    )}
+                    style={{
+                      ...shapeStyle,
+                      boxShadow: `0 8px 28px ${accentColor}55`,
+                      borderColor: variant === 'neon' ? accentColor : undefined,
+                    }}
+                  >
+                    <Icon className={iconSize} />
+                    <span className="font-bold tracking-wider uppercase">
+                      {label}
+                    </span>
+                  </div>
+                </div>
+              )}
             </button>
             {isAdmin && (
               <div className="flex flex-col gap-1" data-no-drag>
