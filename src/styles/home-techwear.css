@@ -662,10 +662,10 @@
   .hw-cta-sz-lg,
   .hw-cta-sz-xl {
     width: 100%;
-    min-height: 42px;
-    padding: 10px 16px;
-    font-size: 12px;
-    letter-spacing: 0.12em;
+    min-height: 32px;
+    padding: 6px 12px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
   }
 }
 
