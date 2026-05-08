@@ -340,21 +340,6 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
                 </select>
               </div>
             )}
-            {isAdmin && rouletteDrag.pending && (
-              <div className="flex items-center gap-1 ml-1 bg-background border-2 border-primary px-2 py-1 shadow" data-no-drag>
-                <span className="text-[9px] uppercase tracking-widest font-bold">{deviceKey} OK ?</span>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); handleConfirmDrag(); }}
-                  className="text-[9px] uppercase tracking-widest font-bold bg-foreground text-background px-2 py-0.5"
-                >✓</button>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); rouletteDrag.cancelPending(); }}
-                  className="text-[9px] uppercase tracking-widest font-bold bg-background text-foreground border border-foreground px-2 py-0.5"
-                >✕</button>
-              </div>
-            )}
           </div>
         </div>
       )}
