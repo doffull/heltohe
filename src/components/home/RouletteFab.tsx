@@ -184,7 +184,7 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
   const posKey = `position_${deviceKey}` as const;
   const sizeKey = `size_${deviceKey}` as const;
 
-  const mobileDefaultPos: FabPos = { corner: 'bl', x: 12, y: 96 };
+  const mobileDefaultPos: FabPos = { corner: 'bl', x: 12, y: 48 };
   const fabPosCurrent: FabPos =
     rfab[posKey] ||
     (deviceKey === 'mobile'
