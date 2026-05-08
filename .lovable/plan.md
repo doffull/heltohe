@@ -1,19 +1,32 @@
-## Plan d’intervention
+## Plan
 
-1. **Agrandir le Hero Techwear sur mobile**
-   - Augmenter la largeur/hauteur du carré image pour qu’il occupe presque toute la largeur du téléphone.
-   - Garder le panneau couleurs/tailles sous l’image, compact, sans décalage quand l’image grandit.
-   - Réduire les CTA “Acheter” / “Découvrir” sur mobile : boutons plus fins, moins hauts, moins imposants, mais toujours lisibles.
+### 1. Bouton "Jeu du jour" mobile — rond + label dessous, à gauche
+Dans `src/components/home/RouletteFab.tsx` :
+- Détecter mobile via `useIsMobile()`.
+- Sur mobile, forcer un rendu spécifique :
+  - Petit cercle (~48px) avec uniquement l'icône cadeau au centre.
+  - Label court (ex. "Jeu") en petit texte juste **en dessous** du rond, centré.
+  - Position par défaut : coin bas-gauche (`corner: 'bl'`), avec un offset suffisant (ex. `x: 12`, `y: 96`) pour ne gêner ni la barre de navigation/onglets en bas, ni les CTA Acheter/Découvrir du Hero, ni le sidebar/chatbot à droite.
+- Garder le drag admin (`useAdminDrag`) inchangé : si l'admin a déjà déplacé le bouton sur mobile (`position_mobile`), on respecte sa position ; sinon on applique le nouveau défaut bas-gauche.
+- Conserver desktop/tablet tels quels (variant pill actuel).
 
-2. **Corriger la validation définitive des positions du Hero Techwear**
-   - Remplacer le drag local actuel du badge/nom produit et du panneau par une logique plus stable basée sur les réglages par device déjà prévus.
-   - Sauvegarder la position validée dans la configuration mobile/tablette/desktop correspondante, au lieu d’écraser seulement une position globale.
-   - Éviter le “retour à la place initiale” après validation en synchronisant l’état local avec la position réellement persistée.
+### 2. Hero Techwear mobile — image ×2, couleurs/tailles compactes
+Dans `src/styles/home-techwear.css` (bloc `@media (max-width: 768px)` et `@media (max-width: 480px)`) :
+- **Image (carte) beaucoup plus grande** :
+  - `--hw-card-width: min(100vw, 520px)` (full width)
+  - `--hw-card-height: min(78svh, 640px)` (≈ 2× la taille actuelle)
+  - Réduire le padding du wrapper et la marge basse pour maximiser la place visible.
+- **Couleurs** : chips encore plus petits (ex. `min-height: 22px`, `padding: 2px 6px 2px 3px`, `font-size: 9px`, pastille couleur 12px).
+- **Tailles** : `min-height: 26px`, `min-width: 30px`, `font-size: 10px`, gap réduit.
+- **CTA Acheter / Découvrir** : encore plus discrets (`hw-cta-primary` ~28px de hauteur, `font-size: 10px` ; `hw-cta-secondary` ~22px, `font-size: 9px`), padding horizontal réduit.
+- **Stats** : masquées ou ultra-compactes sur mobile (barres 1px, labels 8px) pour ne pas voler de place à l'image.
+- Vérifier que le panneau couleurs/tailles reste **sous** l'image sans recouvrement (déjà géré par `position: static !important` sur `.hw-right`).
 
-3. **Ajouter le redimensionnement du bouton “Jeu du jour”**
-   - Ajouter une poignée/admin control simple pour redimensionner le bouton en plus du glisser-déposer.
-   - Persister séparément la taille par device, comme pour la position.
-   - Faire en sorte que la validation ✓ rende la position/taille définitive et que le bouton ne revienne plus à sa place précédente.
+### 3. Vérification
+- Viewport 360×621 : image occupe quasi tout l'écran ; sous l'image, panneau compact (couleurs + tailles + CTA petits) ; bouton "Jeu" en rond bas-gauche, label dessous, ne chevauche aucun autre FAB/CTA/nav.
+- Drag admin et persistance par device toujours fonctionnels.
 
-4. **Vérification ciblée mobile**
-   - Contrôler le rendu sur viewport mobile 360px : image plus grande, CTA compacts, panneau sous l’image, positions sauvegardées après validation.
+### Détails techniques
+- Aucun changement backend, aucun changement de logique métier.
+- Modifs purement CSS + un branchement conditionnel `isMobile` dans `RouletteFab.tsx` (markup différent + position par défaut différente).
+- Pas de migration, pas de nouveau fichier.
