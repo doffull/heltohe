@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useProducts } from '@/hooks/useProducts';
 import { useProductStock, stockBadgeColor } from '@/hooks/useProductStock';
 import { DEFAULT_TECHWEAR_HERO } from '@/config/homeConfig';
-import { showValidationHUD } from '@/lib/dragValidationHUD';
+
 import type { TechwearHeroConfig, TechwearColorOption, TechwearBackground } from '@/types';
 import '@/styles/home-techwear.css';
 
