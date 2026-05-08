@@ -603,26 +603,7 @@ function TechwearHeroSlideView({ config, productMissing, slideId }: { config: Sl
         </div>
       )}
 
-      {isAdmin && pending && (
-        <div
-          style={{ position: 'absolute', left: '50%', bottom: 16, transform: 'translateX(-50%)', zIndex: 50 }}
-          className="flex items-center gap-2 bg-background border-2 border-primary px-3 py-2 shadow-xl"
-        >
-          <span className="text-[10px] uppercase tracking-widest font-bold">
-            {pending.which === 'badge' ? 'Nouveau badge' : 'Nouveau panneau'} — visible mobile + desktop ?
-          </span>
-          <button
-            type="button"
-            onClick={confirmPending}
-            className="text-[10px] uppercase tracking-widest font-bold bg-foreground text-background px-3 py-1"
-          >✓ Valider</button>
-          <button
-            type="button"
-            onClick={cancelPending}
-            className="text-[10px] uppercase tracking-widest font-bold bg-background text-foreground border border-foreground px-3 py-1"
-          >✕ Annuler</button>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
