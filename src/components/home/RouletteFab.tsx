@@ -7,6 +7,7 @@ import { Gift, X, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useAdminViewport } from '@/context/AdminViewportContext';
 import { cornerStyle, type FabPos } from '@/lib/fabPosition';
 import { useAdminDrag } from '@/lib/useAdminDrag';
