@@ -530,10 +530,34 @@ export function MainLayout({ children }: MainLayoutProps) {
                         <ChevronRight className="h-5 w-5" />
                       </Link>
                       {isAdmin && (
-                        <Link to="/admin" className="flex items-center justify-between py-3">
-                          <span className="text-lg font-medium">Administration</span>
-                          <Shield className="h-5 w-5" />
-                        </Link>
+                        <>
+                          <Link to="/admin" className="flex items-center justify-between py-3">
+                            <span className="text-lg font-medium">Administration</span>
+                            <Shield className="h-5 w-5" />
+                          </Link>
+                          <Link to="/admin/notifications" className="flex items-center justify-between py-3">
+                            <span className="text-lg font-medium">Notifications</span>
+                            <span className="flex items-center gap-2">
+                              {unreadCount > 0 && (
+                                <span className="bg-destructive text-destructive-foreground text-[10px] min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full font-bold">
+                                  {unreadCount > 9 ? '9+' : unreadCount}
+                                </span>
+                              )}
+                              <Bell className="h-5 w-5" />
+                            </span>
+                          </Link>
+                          <Link to="/admin/messages" className="flex items-center justify-between py-3">
+                            <span className="text-lg font-medium">Messages clients</span>
+                            <span className="flex items-center gap-2">
+                              {chatCount > 0 && (
+                                <span className="bg-primary text-primary-foreground text-[10px] min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full font-bold">
+                                  {chatCount > 9 ? '9+' : chatCount}
+                                </span>
+                              )}
+                              <MailIcon className="h-5 w-5" />
+                            </span>
+                          </Link>
+                        </>
                       )}
                       <button
                         onClick={() => setChatOpen(true)}
