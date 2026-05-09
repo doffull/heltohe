@@ -366,21 +366,21 @@ export function MainLayout({ children }: MainLayoutProps) {
                 </Button>
               </Link>
 
-              {/* Admin - desktop only (mobile via menu) */}
+              {/* Admin */}
               {isAdmin && (
-                <Link to="/admin" className="hidden lg:inline-flex" aria-label="Administration" title="Administration">
-                  <Button variant="ghost" size="icon" className="h-9 w-9 lg:h-10 lg:w-10" tabIndex={-1}>
-                    <Shield className="h-[18px] w-[18px] lg:h-5 lg:w-5" aria-hidden="true" />
+                <Link to="/admin" aria-label="Administration" title="Administration">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-10 lg:w-10" tabIndex={-1}>
+                    <Shield className="h-4 w-4 lg:h-5 lg:w-5" aria-hidden="true" />
                   </Button>
                 </Link>
               )}
 
-              {/* Admin Notifications - desktop only */}
+              {/* Admin Notifications */}
               {isAdmin && (
                 <Sheet open={notifOpen} onOpenChange={setNotifOpen}>
                   <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative h-9 w-9 lg:h-10 lg:w-10 hidden lg:inline-flex" title="Notifications" aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} non lu${unreadCount > 1 ? 's' : ''})` : ''}`}>
-                      <Bell className="h-5 w-5" aria-hidden="true" />
+                    <Button variant="ghost" size="icon" className="relative h-8 w-8 lg:h-10 lg:w-10" title="Notifications" aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} non lu${unreadCount > 1 ? 's' : ''})` : ''}`}>
+                      <Bell className="h-4 w-4 lg:h-5 lg:w-5" aria-hidden="true" />
                       {unreadCount > 0 && (
                         <span aria-hidden="true" className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
                           {unreadCount > 9 ? '9+' : unreadCount}
@@ -424,8 +424,8 @@ export function MainLayout({ children }: MainLayoutProps) {
               {isAdmin && (
                 <Sheet>
                   <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative h-9 w-9 lg:h-10 lg:w-10 hidden lg:inline-flex" title="Messages clients" aria-label={`Messages clients${chatCount > 0 ? ` (${chatCount})` : ''}`}>
-                      <MailIcon className="h-5 w-5" aria-hidden="true" />
+                    <Button variant="ghost" size="icon" className="relative h-8 w-8 lg:h-10 lg:w-10" title="Messages clients" aria-label={`Messages clients${chatCount > 0 ? ` (${chatCount})` : ''}`}>
+                      <MailIcon className="h-4 w-4 lg:h-5 lg:w-5" aria-hidden="true" />
                       {chatCount > 0 && (
                         <span aria-hidden="true" className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
                           {chatCount > 9 ? '9+' : chatCount}
