@@ -1323,6 +1323,7 @@ export type Database = {
           customer_zip: string
           id: string
           items: Json
+          loyalty_awarded_at: string | null
           notes: string | null
           order_number: string
           payment_method: string | null
@@ -1351,6 +1352,7 @@ export type Database = {
           customer_zip: string
           id?: string
           items?: Json
+          loyalty_awarded_at?: string | null
           notes?: string | null
           order_number: string
           payment_method?: string | null
@@ -1379,6 +1381,7 @@ export type Database = {
           customer_zip?: string
           id?: string
           items?: Json
+          loyalty_awarded_at?: string | null
           notes?: string | null
           order_number?: string
           payment_method?: string | null
@@ -2502,6 +2505,7 @@ export type Database = {
       }
     }
     Functions: {
+      award_loyalty_points: { Args: { p_order_id: string }; Returns: Json }
       consume_order_stock: { Args: { p_order_id: string }; Returns: Json }
       get_newsletter_stats: { Args: never; Returns: Json }
       has_role: {
@@ -2522,6 +2526,7 @@ export type Database = {
         Args: { p_code: string; p_subtotal: number }
         Returns: Json
       }
+      redeem_loyalty_reward: { Args: { p_reward_id: string }; Returns: Json }
       release_order_stock: { Args: { p_order_id: string }; Returns: Json }
       reserve_order_stock: { Args: { p_order_id: string }; Returns: Json }
       spin_roulette:
