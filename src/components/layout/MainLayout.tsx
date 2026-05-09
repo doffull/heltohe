@@ -333,8 +333,9 @@ export function MainLayout({ children }: MainLayoutProps) {
                 onClick={() => setChatOpen(true)}
                 className="gap-1.5 px-2 lg:px-3 hidden lg:inline-flex"
                 title="Assistant"
+                aria-label="Ouvrir l'assistant"
               >
-                <Bot className="h-5 w-5" />
+                <Bot className="h-5 w-5" aria-hidden="true" />
                 <span className="hidden xl:inline text-xs font-medium uppercase tracking-wider">Aide</span>
               </Button>
 
