@@ -415,7 +415,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               {isAdmin && (
                 <Sheet>
                   <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative h-9 w-9 lg:h-10 lg:w-10" title="Messages clients">
+                    <Button variant="ghost" size="icon" className="relative h-9 w-9 lg:h-10 lg:w-10 hidden lg:inline-flex" title="Messages clients">
                       <MailIcon className="h-5 w-5" />
                       {chatCount > 0 && (
                         <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
