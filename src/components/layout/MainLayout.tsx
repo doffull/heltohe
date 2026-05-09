@@ -256,7 +256,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                   alt="Logo" 
                   className={cn(
                     "w-auto object-contain max-w-full",
-                    headerPreset === 'centered' ? "h-8 lg:h-12" : "h-7 sm:h-8 lg:h-10"
+                    headerPreset === 'centered' ? "h-8 lg:h-12" : "h-6 sm:h-8 lg:h-10"
                   )}
                 />
               ) : (
