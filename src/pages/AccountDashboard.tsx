@@ -1,18 +1,20 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { useMyLoyalty } from '@/hooks/useLoyalty';
 import { Button } from '@/components/ui/button';
-import { 
-  User, 
-  Package, 
-  MapPin, 
-  Award, 
+import {
+  User,
+  Package,
+  MapPin,
+  Award,
   LogOut,
   ChevronRight,
-  ShoppingBag
+  ShoppingBag,
 } from 'lucide-react';
 
 export default function AccountDashboard() {
   const { user, signOut } = useAuth();
+  const { data: loyalty } = useMyLoyalty();
 
   const menuItems = [
     { 
@@ -74,17 +76,19 @@ export default function AccountDashboard() {
             </div>
           </div>
           
-          <div className="chamfer-hud bg-card/50 p-6">
+          <Link to="/compte/fidelite" className="chamfer-hud bg-card/50 p-6 hover:bg-card/70 transition-colors">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-primary/10 rounded-full">
                 <Award className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">0</p>
-                <p className="text-sm text-muted-foreground">Points fidélité</p>
+                <p className="text-2xl font-bold">{loyalty?.points ?? 0}</p>
+                <p className="text-sm text-muted-foreground">
+                  Points fidélité · <span className="uppercase">{loyalty?.currentTier.label ?? 'Bronze'}</span>
+                </p>
               </div>
             </div>
-          </div>
+          </Link>
           
           <div className="chamfer-hud bg-card/50 p-6">
             <div className="flex items-center gap-4">
