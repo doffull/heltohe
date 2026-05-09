@@ -534,6 +534,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                           <span className="text-lg font-medium">Administration</span>
                           <Shield className="h-5 w-5" />
                         </Link>
+                      )}
                       <button
                         onClick={() => setChatOpen(true)}
                         className="flex items-center justify-between py-3 w-full"
