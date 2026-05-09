@@ -729,3 +729,14 @@ img {
   0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; }
   20%, 22%, 24%, 55% { opacity: 0.55; }
 }
+
+/* iOS safe area support */
+@supports (padding: env(safe-area-inset-top)) {
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  .header-container {
+    padding-top: env(safe-area-inset-top);
+  }
+}

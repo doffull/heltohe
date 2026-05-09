@@ -241,7 +241,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       >
         <div className="container mx-auto px-4">
           <div className={cn(
-            "flex items-center h-14 lg:h-20",
+            "flex items-center h-12 lg:h-20",
             headerPreset === 'centered' ? "flex-col justify-center gap-1 h-auto py-3 lg:py-4" : "",
             headerPreset === 'fullwidth' ? "gap-6" : "",
           )}>
@@ -299,7 +299,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             </nav>
 
             {/* Actions */}
-            <div className={cn("flex items-center ml-auto", sidebarActive ? "gap-1 xl:gap-2" : "gap-2 lg:gap-3")}>
+            <div className={cn("flex items-center ml-auto", sidebarActive ? "gap-1 xl:gap-2" : "gap-1 lg:gap-3")}>
               {/* Search - Expandable (hidden when sidebar pushes header) */}
               <div className={cn(
                 "items-center transition-all duration-300",
@@ -326,12 +326,12 @@ export function MainLayout({ children }: MainLayoutProps) {
                 )}
               </div>
 
-              {/* Chatbot trigger */}
+              {/* Chatbot trigger - desktop only */}
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setChatOpen(true)}
-                className="gap-1.5 px-2 lg:px-3"
+                className="gap-1.5 px-2 lg:px-3 hidden lg:inline-flex"
                 title="Assistant"
               >
                 <Bot className="h-5 w-5" />
@@ -350,27 +350,27 @@ export function MainLayout({ children }: MainLayoutProps) {
                 </Button>
               </Link>
 
-              {/* User */}
-              <Link to={user ? '/compte' : '/auth'}>
+              {/* User - desktop only */}
+              <Link to={user ? '/compte' : '/auth'} className="hidden lg:inline-flex">
                 <Button variant="ghost" size="icon">
                   <User className="h-5 w-5" />
                 </Button>
               </Link>
 
-              {/* Admin */}
+              {/* Admin - desktop only */}
               {isAdmin && (
-                <Link to="/admin">
+                <Link to="/admin" className="hidden lg:inline-flex">
                   <Button variant="ghost" size="icon">
                     <Shield className="h-5 w-5" />
                   </Button>
                 </Link>
               )}
 
-              {/* Admin Notifications */}
+              {/* Admin Notifications - desktop only */}
               {isAdmin && (
                 <Sheet open={notifOpen} onOpenChange={setNotifOpen}>
                   <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative" title="Notifications">
+                    <Button variant="ghost" size="icon" className="relative hidden lg:inline-flex" title="Notifications">
                       <Bell className="h-5 w-5" />
                       {unreadCount > 0 && (
                         <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
@@ -411,11 +411,11 @@ export function MainLayout({ children }: MainLayoutProps) {
                 </Sheet>
               )}
 
-              {/* Admin Customer Chat Messages */}
+              {/* Admin Customer Chat Messages - desktop only */}
               {isAdmin && (
                 <Sheet>
                   <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative" title="Messages clients">
+                    <Button variant="ghost" size="icon" className="relative hidden lg:inline-flex" title="Messages clients">
                       <MailIcon className="h-5 w-5" />
                       {chatCount > 0 && (
                         <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
@@ -535,6 +535,13 @@ export function MainLayout({ children }: MainLayoutProps) {
                           <Shield className="h-5 w-5" />
                         </Link>
                       )}
+                      <button
+                        onClick={() => setChatOpen(true)}
+                        className="flex items-center justify-between py-3 w-full"
+                      >
+                        <span className="text-lg font-medium">Aide</span>
+                        <Bot className="h-5 w-5" />
+                      </button>
                       <button
                         onClick={() => setLanguage(language === 'FR' ? 'EN' : 'FR')}
                         className="flex items-center justify-between py-3 w-full"
