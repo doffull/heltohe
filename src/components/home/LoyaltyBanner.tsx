@@ -79,7 +79,7 @@ export function LoyaltyBanner() {
                 </Button>
               </div>
             ) : (
-              <Button className="uppercase tracking-wider" onClick={() => navigate('/auth')}>
+              <Button className="uppercase tracking-wider" onClick={() => navigate('/fidelite')}>
                 Rejoindre le programme
               </Button>
             )}

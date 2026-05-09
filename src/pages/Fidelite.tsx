@@ -1,4 +1,4 @@
-import { Helmet } from 'react-helmet-async';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Award, Crown, Gem, Shield, Star, TrendingUp, Gift, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,16 +19,26 @@ export default function Fidelite() {
   const { user } = useAuth();
   const { data: rewards = [] } = useLoyaltyRewards();
 
+  useEffect(() => {
+    const prevTitle = document.title;
+    document.title = 'Programme Fidélité — Gagnez des points à chaque achat';
+    let meta = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
+    const prevDesc = meta?.content ?? '';
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'description';
+      document.head.appendChild(meta);
+    }
+    meta.content =
+      'Rejoignez notre programme fidélité : cumulez des points, débloquez des paliers Bronze, Silver, Gold et Platinum, et échangez vos points contre des réductions exclusives.';
+    return () => {
+      document.title = prevTitle;
+      if (meta && prevDesc) meta.content = prevDesc;
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
-      <Helmet>
-        <title>Programme Fidélité — Gagnez des points à chaque achat</title>
-        <meta
-          name="description"
-          content="Rejoignez notre programme fidélité : cumulez des points, débloquez des paliers Bronze, Silver, Gold et Platinum, et échangez vos points contre des réductions exclusives."
-        />
-        <link rel="canonical" href={typeof window !== 'undefined' ? window.location.href : ''} />
-      </Helmet>
 
       {/* Hero */}
       <section className="border-b border-border">
