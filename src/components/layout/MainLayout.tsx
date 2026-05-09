@@ -340,8 +340,8 @@ export function MainLayout({ children }: MainLayoutProps) {
 
               {/* Cart */}
               <Link to="/panier">
-                <Button variant="ghost" size="icon" className="relative h-9 w-9 lg:h-10 lg:w-10">
-                  <ShoppingBag className="h-[18px] w-[18px] lg:h-5 lg:w-5" />
+                <Button variant="ghost" size="icon" className="relative h-8 w-8 lg:h-10 lg:w-10">
+                  <ShoppingBag className="h-4 w-4 lg:h-5 lg:w-5" />
                   {itemCount > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 bg-foreground text-background text-[10px] min-w-[16px] h-4 px-0.5 flex items-center justify-center font-medium">
                       {itemCount > 9 ? '9+' : itemCount}
@@ -352,14 +352,14 @@ export function MainLayout({ children }: MainLayoutProps) {
 
               {/* User */}
               <Link to={user ? '/compte' : '/auth'}>
-                <Button variant="ghost" size="icon" className="h-9 w-9 lg:h-10 lg:w-10">
-                  <User className="h-[18px] w-[18px] lg:h-5 lg:w-5" />
+                <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-10 lg:w-10">
+                  <User className="h-4 w-4 lg:h-5 lg:w-5" />
                 </Button>
               </Link>
 
-              {/* Admin */}
+              {/* Admin - desktop only (mobile via menu) */}
               {isAdmin && (
-                <Link to="/admin">
+                <Link to="/admin" className="hidden lg:inline-flex">
                   <Button variant="ghost" size="icon" className="h-9 w-9 lg:h-10 lg:w-10">
                     <Shield className="h-[18px] w-[18px] lg:h-5 lg:w-5" />
                   </Button>
