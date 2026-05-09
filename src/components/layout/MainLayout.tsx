@@ -458,6 +458,8 @@ export function MainLayout({ children }: MainLayoutProps) {
               {/* Language selector */}
               <button
                 onClick={() => setLanguage(language === 'FR' ? 'EN' : 'FR')}
+                aria-label={`Changer la langue (actuellement ${language})`}
+                title={`Changer la langue (actuellement ${language})`}
                 className={cn(
                   "text-xs font-bold tracking-wider text-muted-foreground hover:text-foreground transition-colors",
                   sidebarActive ? "hidden xl:block" : "hidden md:block"
@@ -469,8 +471,8 @@ export function MainLayout({ children }: MainLayoutProps) {
               {/* Mobile Menu */}
               <Sheet>
                 <SheetTrigger asChild className={headerPreset === 'minimal' ? '' : 'lg:hidden'}>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-9 lg:w-9 rounded-none">
-                    <Menu className="h-4 w-4 lg:h-[18px] lg:w-[18px]" />
+                  <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-9 lg:w-9 rounded-none" aria-label="Ouvrir le menu" title="Menu">
+                    <Menu className="h-4 w-4 lg:h-[18px] lg:w-[18px]" aria-hidden="true" />
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="right" className="w-[320px] bg-background">
