@@ -247,7 +247,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           )}>
             {/* Logo in header - always visible on all pages */}
             <Link to="/" className={cn(
-              "flex items-center gap-2 mr-auto",
+              "flex items-center gap-2 mr-auto shrink-0 min-w-0",
               headerPreset === 'centered' ? "justify-center" : ""
             )}>
               {designSettings.hudLogo ? (
@@ -340,10 +340,10 @@ export function MainLayout({ children }: MainLayoutProps) {
 
               {/* Cart */}
               <Link to="/panier">
-                <Button variant="ghost" size="icon" className="relative">
-                  <ShoppingBag className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="relative h-9 w-9 lg:h-10 lg:w-10">
+                  <ShoppingBag className="h-[18px] w-[18px] lg:h-5 lg:w-5" />
                   {itemCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-foreground text-background text-xs w-5 h-5 flex items-center justify-center font-medium">
+                    <span className="absolute -top-0.5 -right-0.5 bg-foreground text-background text-[10px] min-w-[16px] h-4 px-0.5 flex items-center justify-center font-medium">
                       {itemCount > 9 ? '9+' : itemCount}
                     </span>
                   )}
@@ -460,8 +460,8 @@ export function MainLayout({ children }: MainLayoutProps) {
               {/* Mobile Menu */}
               <Sheet>
                 <SheetTrigger asChild className={headerPreset === 'minimal' ? '' : 'lg:hidden'}>
-                  <Button variant="ghost" size="icon">
-                    <Menu className="h-5 w-5" />
+                  <Button variant="ghost" size="icon" className="h-9 w-9 rounded-none">
+                    <Menu className="h-[18px] w-[18px]" />
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="right" className="w-[320px] bg-background">
