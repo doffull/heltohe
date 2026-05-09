@@ -315,13 +315,13 @@ export function MainLayout({ children }: MainLayoutProps) {
                       autoFocus
                       onBlur={() => setSearchOpen(false)}
                     />
-                    <Button variant="ghost" size="icon" className="absolute right-0 top-0" onClick={() => setSearchOpen(false)}>
-                      <X className="h-4 w-4" />
+                    <Button variant="ghost" size="icon" className="absolute right-0 top-0" onClick={() => setSearchOpen(false)} aria-label="Fermer la recherche" title="Fermer la recherche">
+                      <X className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </div>
                 ) : (
-                  <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)}>
-                    <Search className="h-5 w-5" />
+                  <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)} aria-label="Rechercher" title="Rechercher">
+                    <Search className="h-5 w-5" aria-hidden="true" />
                   </Button>
                 )}
               </div>
