@@ -239,15 +239,15 @@ export function MainLayout({ children }: MainLayoutProps) {
           color: headerTextColor || undefined,
         }}
       >
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-3 lg:px-4">
           <div className={cn(
-            "flex items-center h-12 lg:h-20",
+            "flex items-center gap-2 h-12 lg:h-20 min-w-0",
             headerPreset === 'centered' ? "flex-col justify-center gap-1 h-auto py-3 lg:py-4" : "",
             headerPreset === 'fullwidth' ? "gap-6" : "",
           )}>
-            {/* Logo in header - always visible on all pages */}
+            {/* Logo in header - always visible, takes priority space */}
             <Link to="/" className={cn(
-              "flex items-center gap-2 mr-auto shrink-0 min-w-0",
+              "flex items-center gap-2 mr-auto min-w-0 flex-1 lg:flex-none overflow-hidden",
               headerPreset === 'centered' ? "justify-center" : ""
             )}>
               {designSettings.hudLogo ? (
@@ -255,18 +255,18 @@ export function MainLayout({ children }: MainLayoutProps) {
                   src={designSettings.hudLogo} 
                   alt="Logo" 
                   className={cn(
-                    "w-auto object-contain",
-                    headerPreset === 'centered' ? "h-8 lg:h-12" : "h-8 lg:h-10"
+                    "w-auto object-contain max-w-full",
+                    headerPreset === 'centered' ? "h-8 lg:h-12" : "h-7 sm:h-8 lg:h-10"
                   )}
                 />
               ) : (
-                <span className="font-bold text-base tracking-wider uppercase">
+                <span className="font-bold text-sm sm:text-base tracking-wider uppercase truncate">
                   <InlineEditable
                     fieldKey="header-sitename"
                     value={(designSettings as any).siteName || 'LVTK6'}
                     onChange={(v) => updateDesignSettings({ siteName: v } as any)}
                     as="span"
-                    className="font-bold text-base tracking-wider uppercase"
+                    className="font-bold text-sm sm:text-base tracking-wider uppercase"
                   />
                 </span>
               )}
@@ -299,7 +299,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             </nav>
 
             {/* Actions */}
-            <div className={cn("flex items-center ml-auto", sidebarActive ? "gap-1 xl:gap-2" : "gap-1 lg:gap-3")}>
+            <div className={cn("flex items-center ml-auto shrink-0", sidebarActive ? "gap-1 xl:gap-2" : "gap-0.5 lg:gap-3")}>
               {/* Search - Expandable (hidden when sidebar pushes header) */}
               <div className={cn(
                 "items-center transition-all duration-300",
