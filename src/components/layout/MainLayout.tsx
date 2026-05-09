@@ -338,9 +338,9 @@ export function MainLayout({ children }: MainLayoutProps) {
                 <span className="hidden xl:inline text-xs font-medium uppercase tracking-wider">Aide</span>
               </Button>
 
-              {/* Cart - mobile compact, desktop normal */}
-              <Link to="/panier" className="lg:contents">
-                <Button variant="ghost" size="icon" className="relative h-9 w-9 lg:h-10 lg:w-10 rounded-none lg:rounded-md">
+              {/* Cart */}
+              <Link to="/panier">
+                <Button variant="ghost" size="icon" className="relative h-9 w-9 lg:h-10 lg:w-10">
                   <ShoppingBag className="h-[18px] w-[18px] lg:h-5 lg:w-5" />
                   {itemCount > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 bg-foreground text-background text-[10px] min-w-[16px] h-4 px-0.5 flex items-center justify-center font-medium">
