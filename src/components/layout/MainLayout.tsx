@@ -247,7 +247,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           )}>
             {/* Logo in header - always visible on all pages */}
             <Link to="/" className={cn(
-              "flex items-center gap-2 mr-auto",
+              "flex items-center gap-2 mr-auto shrink-0 min-w-0",
               headerPreset === 'centered' ? "justify-center" : ""
             )}>
               {designSettings.hudLogo ? (
