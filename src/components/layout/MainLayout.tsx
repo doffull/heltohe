@@ -315,13 +315,13 @@ export function MainLayout({ children }: MainLayoutProps) {
                       autoFocus
                       onBlur={() => setSearchOpen(false)}
                     />
-                    <Button variant="ghost" size="icon" className="absolute right-0 top-0" onClick={() => setSearchOpen(false)}>
-                      <X className="h-4 w-4" />
+                    <Button variant="ghost" size="icon" className="absolute right-0 top-0" onClick={() => setSearchOpen(false)} aria-label="Fermer la recherche" title="Fermer la recherche">
+                      <X className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </div>
                 ) : (
-                  <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)}>
-                    <Search className="h-5 w-5" />
+                  <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)} aria-label="Rechercher" title="Rechercher">
+                    <Search className="h-5 w-5" aria-hidden="true" />
                   </Button>
                 )}
               </div>
@@ -333,17 +333,22 @@ export function MainLayout({ children }: MainLayoutProps) {
                 onClick={() => setChatOpen(true)}
                 className="gap-1.5 px-2 lg:px-3 hidden lg:inline-flex"
                 title="Assistant"
+                aria-label="Ouvrir l'assistant"
               >
-                <Bot className="h-5 w-5" />
+                <Bot className="h-5 w-5" aria-hidden="true" />
                 <span className="hidden xl:inline text-xs font-medium uppercase tracking-wider">Aide</span>
               </Button>
 
               {/* Cart */}
-              <Link to="/panier">
-                <Button variant="ghost" size="icon" className="relative h-8 w-8 lg:h-10 lg:w-10">
-                  <ShoppingBag className="h-4 w-4 lg:h-5 lg:w-5" />
+              <Link
+                to="/panier"
+                aria-label={`Panier (${itemCount} article${itemCount > 1 ? 's' : ''})`}
+                title="Panier"
+              >
+                <Button variant="ghost" size="icon" className="relative h-8 w-8 lg:h-10 lg:w-10" tabIndex={-1}>
+                  <ShoppingBag className="h-4 w-4 lg:h-5 lg:w-5" aria-hidden="true" />
                   {itemCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 bg-foreground text-background text-[10px] min-w-[16px] h-4 px-0.5 flex items-center justify-center font-medium">
+                    <span aria-hidden="true" className="absolute -top-0.5 -right-0.5 bg-foreground text-background text-[10px] min-w-[16px] h-4 px-0.5 flex items-center justify-center font-medium">
                       {itemCount > 9 ? '9+' : itemCount}
                     </span>
                   )}
@@ -351,17 +356,21 @@ export function MainLayout({ children }: MainLayoutProps) {
               </Link>
 
               {/* User */}
-              <Link to={user ? '/compte' : '/auth'}>
-                <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-10 lg:w-10">
-                  <User className="h-4 w-4 lg:h-5 lg:w-5" />
+              <Link
+                to={user ? '/compte' : '/auth'}
+                aria-label={user ? 'Mon compte' : 'Se connecter'}
+                title={user ? 'Mon compte' : 'Se connecter'}
+              >
+                <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-10 lg:w-10" tabIndex={-1}>
+                  <User className="h-4 w-4 lg:h-5 lg:w-5" aria-hidden="true" />
                 </Button>
               </Link>
 
               {/* Admin - desktop only (mobile via menu) */}
               {isAdmin && (
-                <Link to="/admin" className="hidden lg:inline-flex">
-                  <Button variant="ghost" size="icon" className="h-9 w-9 lg:h-10 lg:w-10">
-                    <Shield className="h-[18px] w-[18px] lg:h-5 lg:w-5" />
+                <Link to="/admin" className="hidden lg:inline-flex" aria-label="Administration" title="Administration">
+                  <Button variant="ghost" size="icon" className="h-9 w-9 lg:h-10 lg:w-10" tabIndex={-1}>
+                    <Shield className="h-[18px] w-[18px] lg:h-5 lg:w-5" aria-hidden="true" />
                   </Button>
                 </Link>
               )}
@@ -370,10 +379,10 @@ export function MainLayout({ children }: MainLayoutProps) {
               {isAdmin && (
                 <Sheet open={notifOpen} onOpenChange={setNotifOpen}>
                   <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative h-9 w-9 lg:h-10 lg:w-10 hidden lg:inline-flex" title="Notifications">
-                      <Bell className="h-5 w-5" />
+                    <Button variant="ghost" size="icon" className="relative h-9 w-9 lg:h-10 lg:w-10 hidden lg:inline-flex" title="Notifications" aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} non lu${unreadCount > 1 ? 's' : ''})` : ''}`}>
+                      <Bell className="h-5 w-5" aria-hidden="true" />
                       {unreadCount > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
+                        <span aria-hidden="true" className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
                           {unreadCount > 9 ? '9+' : unreadCount}
                         </span>
                       )}
@@ -415,10 +424,10 @@ export function MainLayout({ children }: MainLayoutProps) {
               {isAdmin && (
                 <Sheet>
                   <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative h-9 w-9 lg:h-10 lg:w-10 hidden lg:inline-flex" title="Messages clients">
-                      <MailIcon className="h-5 w-5" />
+                    <Button variant="ghost" size="icon" className="relative h-9 w-9 lg:h-10 lg:w-10 hidden lg:inline-flex" title="Messages clients" aria-label={`Messages clients${chatCount > 0 ? ` (${chatCount})` : ''}`}>
+                      <MailIcon className="h-5 w-5" aria-hidden="true" />
                       {chatCount > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
+                        <span aria-hidden="true" className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
                           {chatCount > 9 ? '9+' : chatCount}
                         </span>
                       )}
@@ -449,6 +458,8 @@ export function MainLayout({ children }: MainLayoutProps) {
               {/* Language selector */}
               <button
                 onClick={() => setLanguage(language === 'FR' ? 'EN' : 'FR')}
+                aria-label={`Changer la langue (actuellement ${language})`}
+                title={`Changer la langue (actuellement ${language})`}
                 className={cn(
                   "text-xs font-bold tracking-wider text-muted-foreground hover:text-foreground transition-colors",
                   sidebarActive ? "hidden xl:block" : "hidden md:block"
@@ -460,8 +471,8 @@ export function MainLayout({ children }: MainLayoutProps) {
               {/* Mobile Menu */}
               <Sheet>
                 <SheetTrigger asChild className={headerPreset === 'minimal' ? '' : 'lg:hidden'}>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-9 lg:w-9 rounded-none">
-                    <Menu className="h-4 w-4 lg:h-[18px] lg:w-[18px]" />
+                  <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-9 lg:w-9 rounded-none" aria-label="Ouvrir le menu" title="Menu">
+                    <Menu className="h-4 w-4 lg:h-[18px] lg:w-[18px]" aria-hidden="true" />
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="right" className="w-[320px] bg-background">
