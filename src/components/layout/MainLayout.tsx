@@ -350,18 +350,18 @@ export function MainLayout({ children }: MainLayoutProps) {
                 </Button>
               </Link>
 
-              {/* User - desktop only */}
-              <Link to={user ? '/compte' : '/auth'} className="hidden lg:inline-flex">
-                <Button variant="ghost" size="icon">
-                  <User className="h-5 w-5" />
+              {/* User */}
+              <Link to={user ? '/compte' : '/auth'}>
+                <Button variant="ghost" size="icon" className="h-9 w-9 lg:h-10 lg:w-10">
+                  <User className="h-[18px] w-[18px] lg:h-5 lg:w-5" />
                 </Button>
               </Link>
 
-              {/* Admin - desktop only */}
+              {/* Admin */}
               {isAdmin && (
-                <Link to="/admin" className="hidden lg:inline-flex">
-                  <Button variant="ghost" size="icon">
-                    <Shield className="h-5 w-5" />
+                <Link to="/admin">
+                  <Button variant="ghost" size="icon" className="h-9 w-9 lg:h-10 lg:w-10">
+                    <Shield className="h-[18px] w-[18px] lg:h-5 lg:w-5" />
                   </Button>
                 </Link>
               )}
@@ -370,7 +370,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               {isAdmin && (
                 <Sheet open={notifOpen} onOpenChange={setNotifOpen}>
                   <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative hidden lg:inline-flex" title="Notifications">
+                    <Button variant="ghost" size="icon" className="relative h-9 w-9 lg:h-10 lg:w-10" title="Notifications">
                       <Bell className="h-5 w-5" />
                       {unreadCount > 0 && (
                         <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
@@ -415,7 +415,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               {isAdmin && (
                 <Sheet>
                   <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative hidden lg:inline-flex" title="Messages clients">
+                    <Button variant="ghost" size="icon" className="relative h-9 w-9 lg:h-10 lg:w-10" title="Messages clients">
                       <MailIcon className="h-5 w-5" />
                       {chatCount > 0 && (
                         <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
