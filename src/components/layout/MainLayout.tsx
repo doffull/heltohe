@@ -340,11 +340,15 @@ export function MainLayout({ children }: MainLayoutProps) {
               </Button>
 
               {/* Cart */}
-              <Link to="/panier">
-                <Button variant="ghost" size="icon" className="relative h-8 w-8 lg:h-10 lg:w-10">
-                  <ShoppingBag className="h-4 w-4 lg:h-5 lg:w-5" />
+              <Link
+                to="/panier"
+                aria-label={`Panier (${itemCount} article${itemCount > 1 ? 's' : ''})`}
+                title="Panier"
+              >
+                <Button variant="ghost" size="icon" className="relative h-8 w-8 lg:h-10 lg:w-10" tabIndex={-1}>
+                  <ShoppingBag className="h-4 w-4 lg:h-5 lg:w-5" aria-hidden="true" />
                   {itemCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 bg-foreground text-background text-[10px] min-w-[16px] h-4 px-0.5 flex items-center justify-center font-medium">
+                    <span aria-hidden="true" className="absolute -top-0.5 -right-0.5 bg-foreground text-background text-[10px] min-w-[16px] h-4 px-0.5 flex items-center justify-center font-medium">
                       {itemCount > 9 ? '9+' : itemCount}
                     </span>
                   )}
@@ -352,17 +356,21 @@ export function MainLayout({ children }: MainLayoutProps) {
               </Link>
 
               {/* User */}
-              <Link to={user ? '/compte' : '/auth'}>
-                <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-10 lg:w-10">
-                  <User className="h-4 w-4 lg:h-5 lg:w-5" />
+              <Link
+                to={user ? '/compte' : '/auth'}
+                aria-label={user ? 'Mon compte' : 'Se connecter'}
+                title={user ? 'Mon compte' : 'Se connecter'}
+              >
+                <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-10 lg:w-10" tabIndex={-1}>
+                  <User className="h-4 w-4 lg:h-5 lg:w-5" aria-hidden="true" />
                 </Button>
               </Link>
 
               {/* Admin - desktop only (mobile via menu) */}
               {isAdmin && (
-                <Link to="/admin" className="hidden lg:inline-flex">
-                  <Button variant="ghost" size="icon" className="h-9 w-9 lg:h-10 lg:w-10">
-                    <Shield className="h-[18px] w-[18px] lg:h-5 lg:w-5" />
+                <Link to="/admin" className="hidden lg:inline-flex" aria-label="Administration" title="Administration">
+                  <Button variant="ghost" size="icon" className="h-9 w-9 lg:h-10 lg:w-10" tabIndex={-1}>
+                    <Shield className="h-[18px] w-[18px] lg:h-5 lg:w-5" aria-hidden="true" />
                   </Button>
                 </Link>
               )}
