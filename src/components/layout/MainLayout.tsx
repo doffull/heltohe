@@ -256,7 +256,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                   alt="Logo" 
                   className={cn(
                     "w-auto object-contain max-w-full",
-                    headerPreset === 'centered' ? "h-8 lg:h-12" : "h-7 sm:h-8 lg:h-10"
+                    headerPreset === 'centered' ? "h-8 lg:h-12" : "h-6 sm:h-8 lg:h-10"
                   )}
                 />
               ) : (
@@ -299,7 +299,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             </nav>
 
             {/* Actions */}
-            <div className={cn("flex items-center ml-auto shrink-0", sidebarActive ? "gap-1 xl:gap-2" : "gap-0.5 lg:gap-3")}>
+            <div className={cn("flex items-center ml-auto shrink-0", sidebarActive ? "gap-1 xl:gap-2" : "gap-0 lg:gap-3")}>
               {/* Search - Expandable (hidden when sidebar pushes header) */}
               <div className={cn(
                 "items-center transition-all duration-300",
@@ -340,8 +340,8 @@ export function MainLayout({ children }: MainLayoutProps) {
 
               {/* Cart */}
               <Link to="/panier">
-                <Button variant="ghost" size="icon" className="relative h-9 w-9 lg:h-10 lg:w-10">
-                  <ShoppingBag className="h-[18px] w-[18px] lg:h-5 lg:w-5" />
+                <Button variant="ghost" size="icon" className="relative h-8 w-8 lg:h-10 lg:w-10">
+                  <ShoppingBag className="h-4 w-4 lg:h-5 lg:w-5" />
                   {itemCount > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 bg-foreground text-background text-[10px] min-w-[16px] h-4 px-0.5 flex items-center justify-center font-medium">
                       {itemCount > 9 ? '9+' : itemCount}
@@ -352,14 +352,14 @@ export function MainLayout({ children }: MainLayoutProps) {
 
               {/* User */}
               <Link to={user ? '/compte' : '/auth'}>
-                <Button variant="ghost" size="icon" className="h-9 w-9 lg:h-10 lg:w-10">
-                  <User className="h-[18px] w-[18px] lg:h-5 lg:w-5" />
+                <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-10 lg:w-10">
+                  <User className="h-4 w-4 lg:h-5 lg:w-5" />
                 </Button>
               </Link>
 
-              {/* Admin */}
+              {/* Admin - desktop only (mobile via menu) */}
               {isAdmin && (
-                <Link to="/admin">
+                <Link to="/admin" className="hidden lg:inline-flex">
                   <Button variant="ghost" size="icon" className="h-9 w-9 lg:h-10 lg:w-10">
                     <Shield className="h-[18px] w-[18px] lg:h-5 lg:w-5" />
                   </Button>
@@ -370,7 +370,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               {isAdmin && (
                 <Sheet open={notifOpen} onOpenChange={setNotifOpen}>
                   <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative h-9 w-9 lg:h-10 lg:w-10" title="Notifications">
+                    <Button variant="ghost" size="icon" className="relative h-9 w-9 lg:h-10 lg:w-10 hidden lg:inline-flex" title="Notifications">
                       <Bell className="h-5 w-5" />
                       {unreadCount > 0 && (
                         <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
@@ -415,7 +415,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               {isAdmin && (
                 <Sheet>
                   <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative h-9 w-9 lg:h-10 lg:w-10" title="Messages clients">
+                    <Button variant="ghost" size="icon" className="relative h-9 w-9 lg:h-10 lg:w-10 hidden lg:inline-flex" title="Messages clients">
                       <MailIcon className="h-5 w-5" />
                       {chatCount > 0 && (
                         <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
@@ -460,8 +460,8 @@ export function MainLayout({ children }: MainLayoutProps) {
               {/* Mobile Menu */}
               <Sheet>
                 <SheetTrigger asChild className={headerPreset === 'minimal' ? '' : 'lg:hidden'}>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 rounded-none">
-                    <Menu className="h-[18px] w-[18px]" />
+                  <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-9 lg:w-9 rounded-none">
+                    <Menu className="h-4 w-4 lg:h-[18px] lg:w-[18px]" />
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="right" className="w-[320px] bg-background">
@@ -530,10 +530,34 @@ export function MainLayout({ children }: MainLayoutProps) {
                         <ChevronRight className="h-5 w-5" />
                       </Link>
                       {isAdmin && (
-                        <Link to="/admin" className="flex items-center justify-between py-3">
-                          <span className="text-lg font-medium">Administration</span>
-                          <Shield className="h-5 w-5" />
-                        </Link>
+                        <>
+                          <Link to="/admin" className="flex items-center justify-between py-3">
+                            <span className="text-lg font-medium">Administration</span>
+                            <Shield className="h-5 w-5" />
+                          </Link>
+                          <Link to="/admin/notifications" className="flex items-center justify-between py-3">
+                            <span className="text-lg font-medium">Notifications</span>
+                            <span className="flex items-center gap-2">
+                              {unreadCount > 0 && (
+                                <span className="bg-destructive text-destructive-foreground text-[10px] min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full font-bold">
+                                  {unreadCount > 9 ? '9+' : unreadCount}
+                                </span>
+                              )}
+                              <Bell className="h-5 w-5" />
+                            </span>
+                          </Link>
+                          <Link to="/admin/messages" className="flex items-center justify-between py-3">
+                            <span className="text-lg font-medium">Messages clients</span>
+                            <span className="flex items-center gap-2">
+                              {chatCount > 0 && (
+                                <span className="bg-primary text-primary-foreground text-[10px] min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full font-bold">
+                                  {chatCount > 9 ? '9+' : chatCount}
+                                </span>
+                              )}
+                              <MailIcon className="h-5 w-5" />
+                            </span>
+                          </Link>
+                        </>
                       )}
                       <button
                         onClick={() => setChatOpen(true)}
