@@ -460,8 +460,8 @@ export function MainLayout({ children }: MainLayoutProps) {
               {/* Mobile Menu */}
               <Sheet>
                 <SheetTrigger asChild className={headerPreset === 'minimal' ? '' : 'lg:hidden'}>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 rounded-none">
-                    <Menu className="h-[18px] w-[18px]" />
+                  <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-9 lg:w-9 rounded-none">
+                    <Menu className="h-4 w-4 lg:h-[18px] lg:w-[18px]" />
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="right" className="w-[320px] bg-background">
