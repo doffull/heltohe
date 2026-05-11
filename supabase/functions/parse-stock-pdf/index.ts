@@ -86,9 +86,9 @@ Ignore les en-têtes/totaux/lignes vides. Retourne UNIQUEMENT le JSON, sans text
     if (!aiRes.ok) {
       const txt = await aiRes.text();
       console.error("AI error", aiRes.status, txt);
-      if (aiRes.status === 429) return json({ error: "Rate limit, réessayez dans un instant." }, 429);
-      if (aiRes.status === 402) return json({ error: "Crédits AI épuisés." }, 402);
-      return json({ error: "AI extraction failed" }, 500);
+      if (aiRes.status === 429) return json({ error: "RATE_LIMIT", message: "Trop de requêtes, réessayez dans un instant.", items: [] }, 200);
+      if (aiRes.status === 402) return json({ error: "AI_CREDITS_EXHAUSTED", message: "Crédits IA épuisés. Ajoutez des crédits dans Settings → Workspace → Usage.", items: [] }, 200);
+      return json({ error: "AI_FAILED", message: "Extraction IA échouée", items: [] }, 200);
     }
 
     const aiJson = await aiRes.json();
