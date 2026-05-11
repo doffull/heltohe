@@ -92,11 +92,10 @@ export async function subscribeToNewsletter(email: string, firstName?: string, o
   if (error) throw error;
   // Mark popup view as converted if applicable
   if (opts.popupId && opts.sessionId) {
-    await supabase
-      .from('newsletter_popup_views' as any)
-      .update({ converted: true, converted_at: new Date().toISOString() } as any)
-      .eq('popup_id', opts.popupId)
-      .eq('session_id', opts.sessionId);
+    await supabase.rpc('mark_popup_converted' as any, {
+      p_popup_id: opts.popupId,
+      p_session_id: opts.sessionId,
+    });
   }
 }
 

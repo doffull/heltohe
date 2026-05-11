@@ -1,33 +1,75 @@
-## Objectif
+# Audit complet du site avant mise en ligne
 
-Rendre les icônes d'action du header accessibles aux lecteurs d'écran et utilisateurs au survol, avec des libellés cohérents et dynamiques.
+Objectif : passer en revue **tout le site** (front public + back-office admin), corriger les bugs restants, garantir la fluidité et le responsive (mobile 360px → desktop), et valider la sécurité avant publication.
 
-## Modifications dans `src/components/layout/MainLayout.tsx`
+---
 
-Ajouter `aria-label` (et `title` si manquant) sur chaque bouton/lien d'icône du bloc Actions :
+## Phase 1 — Diagnostic technique automatisé
 
-| Icône | aria-label | title |
-|---|---|---|
-| Recherche (Search) | "Rechercher" / "Fermer la recherche" | idem |
-| Recherche – bouton fermeture (X) | "Fermer la recherche" | idem |
-| Chatbot (Bot) | "Ouvrir l'assistant" | "Assistant" (déjà) |
-| Panier (ShoppingBag) | `Panier (${itemCount} article${itemCount>1?'s':''})` | "Panier" |
-| Compte (User) | `user ? 'Mon compte' : 'Se connecter'` | idem |
-| Admin (Shield) | "Administration" | "Administration" |
-| Notifications (Bell) | `Notifications (${unreadCount} non lu${unreadCount>1?'s':''})` | déjà "Notifications" |
-| Messages clients (MailIcon) | `Messages clients (${chatCount})` | déjà "Messages clients" |
-| Sélecteur langue | `Changer la langue (actuellement ${language})` | idem |
-| Menu mobile (hamburger) | "Ouvrir le menu" | idem |
+1. **Build & TypeScript** : compilation complète, résolution de toutes les erreurs TS/ESLint restantes.
+2. **Audit Supabase** : exécution du linter DB (RLS, policies, fonctions sans `search_path`, index manquants).
+3. **Scan sécurité** : exécution du scan sécurité (RLS, données exposées, secrets, edge functions).
+4. **Audit dépendances** : vulnérabilités npm critiques/élevées.
+5. **Console & réseau** : revue des warnings (ex. `Missing Description for DialogContent` déjà repéré) et requêtes en erreur.
 
-Pour les badges numériques (panier, notifs, messages) : ajouter `aria-hidden="true"` sur le `<span>` du badge puisque l'info est déjà reprise dans `aria-label`.
+## Phase 2 — Audit fonctionnel par parcours utilisateur
 
-Pour les liens englobant un bouton (`<Link><Button/></Link>`) : appliquer `aria-label` sur le `<Link>` (élément réellement focusable côté navigation) **et** garder `aria-label` sur le `<Button>` pour cohérence — ou plus propre, mettre uniquement sur le `Link` et `aria-hidden` sur l'icône `lucide`. Choix retenu : `aria-label` sur le `Link`, icônes restent décoratives implicitement.
+Pour chaque parcours, test en **mobile 360px**, **tablette 768px**, **desktop 1280px+** :
 
-## Aucune autre logique modifiée
+- **Accueil** : hero, slider, sections produits, bannière fidélité, popup newsletter, FAB roulette, chatbot.
+- **Boutique & catégories** : filtres, tri, pagination, URLs propres, SEO.
+- **Fiche produit** : galerie zoom 3.5x, sélecteur taille/couleur, ajout panier, recommandations.
+- **Panier & Checkout** : 3 étapes, validation RPC, Colissimo (domicile + point relais), codes promo, calcul TVA.
+- **Compte client** : inscription/login (email + Google), tableau de bord, commandes, profil, adresses, fidélité.
+- **Pages légales** : CGV, Confidentialité, Cookies, Retours, Mentions légales, Guide des tailles, Fidélité.
+- **Header** : icônes (compte, admin, notifications, messages, panier, langue, recherche, chatbot) — vérifier visibilité mobile et accessibilité.
+- **Footer & Sidebar** : liens, comportement de réapparition.
 
-Pas de changement de comportement, uniquement d'attributs d'accessibilité. Pas de migration ni de modif de styles.
+## Phase 3 — Audit du Back-Office Admin
 
-## Vérification
+Test responsive (sidebar mobile sheet + desktop 240px) sur **toutes les sections** :
+Dashboard, Live, Produits, Commandes, Préparations, Checkout, Clients, Pages, Média, Marketing, Roulette, Design, Icônes Accueil, Stock, Colissimo, Notifications, Chatbot, WooCommerce, Audit, Paramètres.
 
-- Inspecter le header avec les DevTools Accessibility tree : chaque action a un nom accessible non vide.
-- Les libellés se mettent à jour quand `itemCount` / `unreadCount` / `chatCount` / `language` / `user` changent.
+Pour chaque page admin :
+- Affichage correct sur mobile (tableaux scrollables, formulaires lisibles).
+- CRUD fonctionnel (create / read / update / delete).
+- Sauvegardes manuelles explicites (pas d'auto-save).
+- Permissions (admin vs stock_manager vs preparator).
+
+## Phase 4 — Corrections
+
+Selon les résultats des phases 1-3, corrections regroupées par priorité :
+
+- **P0 Bloquant** : erreurs build, RLS manquantes, crashs, parcours achat cassé.
+- **P1 Important** : bugs responsive, accessibilité (aria, focus), warnings console récurrents, SEO (meta, H1, alt).
+- **P2 Polish** : micro-interactions, cohérence visuelle, performance (lazy load, taille images).
+
+## Phase 5 — Validation finale
+
+- Re-run linter Supabase + scan sécurité → 0 finding bloquant.
+- Re-build → 0 erreur TS.
+- Test parcours achat complet (mobile + desktop) avec capture preview.
+- Vérification du `/admin/audit` interne (dashboard d'intégrité existant).
+
+---
+
+## Format du rapport livré
+
+À la fin, je fournirai :
+1. **Liste des problèmes trouvés** (regroupés P0/P1/P2) avec fichier concerné.
+2. **Correctifs appliqués** (résumé des modifications).
+3. **Points restants à valider manuellement** par toi (ex. tester un vrai paiement Colissimo, vérifier un envoi Resend réel).
+4. **Checklist de mise en ligne** (DNS, domaine custom, visibilité publication, RGPD/cookies).
+
+---
+
+## Détails techniques
+
+**Outils utilisés** : `supabase--linter`, `security--run_security_scan`, `code--dependency_scan`, lecture systématique des fichiers via `code--view`, navigation preview multi-viewport via les outils browser, `code--read_console_logs` / `code--read_network_requests`.
+
+**Périmètre exclu** (sauf demande) :
+- Tests E2E automatisés (non installés actuellement).
+- Refonte design ou ajout de fonctionnalités (favoris, comparateur — déjà mentionnés mais non demandés ici).
+- Migration de données ou changement d'architecture backend.
+
+**Estimation** : audit + corrections P0/P1 sur plusieurs itérations. Je traiterai par lots cohérents et te donnerai un rapport intermédiaire à chaque phase pour que tu puisses valider avant de passer à la suite.
