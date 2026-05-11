@@ -47,7 +47,7 @@ export class HeroErrorBoundary extends Component<Props, State> {
         <Link
           to="/boutique"
           style={{
-            background: '#fff', color: '#000', padding: '14px 32px',
+            background: 'hsl(var(--foreground))', color: 'hsl(var(--background))', padding: '14px 32px',
             fontWeight: 700, letterSpacing: '0.12em', textDecoration: 'none',
           }}
         >
