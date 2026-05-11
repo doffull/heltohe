@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { InventoryProductDialog } from '@/components/admin/InventoryProductDialog';
 import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
+import { StockPdfImportDialog } from '@/components/admin/StockPdfImportDialog';
+import { InlineStockEditor } from '@/components/admin/InlineStockEditor';
 import { useAuth } from '@/context/AuthContext';
 import {
   BarChart3, Package, Store, ArrowLeftRight, AlertTriangle,
@@ -623,6 +625,7 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
   const [deleteTarget, setDeleteTarget] = useState<InventoryItem | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [stockPdfOpen, setStockPdfOpen] = useState(false);
 
   // ── Transfer state ──
   const [transferTarget, setTransferTarget] = useState<InventoryItem | null>(null);
@@ -991,6 +994,9 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
           <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
             <Upload className="h-4 w-4" /> Importer fichier
           </Button>
+          <Button variant="outline" className="gap-2" onClick={() => setStockPdfOpen(true)}>
+            <FileText className="h-4 w-4" /> Importer stock (PDF)
+          </Button>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Rechercher..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9 w-48" />
@@ -1174,9 +1180,19 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                   {/* Per-location totals */}
                   {webLocation && (
                     <TableCell className="text-right font-mono" onClick={e => e.stopPropagation()}>
-                      <span className={cn("text-sm font-bold", webQty === 0 ? "text-destructive/70" : "text-primary")}>
-                        {reserved > 0 ? `${reserved} | ` : ''}{webQty ?? 0}
-                      </span>
+                      {hasVariants ? (
+                        <span className={cn("text-sm font-bold", webQty === 0 ? "text-destructive/70" : "text-primary")}>
+                          {reserved > 0 ? `${reserved} | ` : ''}{webQty ?? 0}
+                        </span>
+                      ) : (
+                        <InlineStockEditor
+                          inventoryId={item.id}
+                          locationId={webLocation.id}
+                          currentValue={webQty ?? 0}
+                          onSaved={onRefresh}
+                          className={cn("text-sm font-bold", webQty === 0 ? "text-destructive/70" : "text-primary")}
+                        />
+                      )}
                     </TableCell>
                   )}
                   {/* Aggregated hidden boutiques column */}
@@ -1198,7 +1214,17 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                             return (
                               <div key={loc.id} className="flex items-center justify-between px-1 py-1 text-sm">
                                 <span className="text-muted-foreground truncate mr-2">{loc.name}</span>
-                                <span className={cn("font-mono font-semibold", locQty === 0 ? "text-muted-foreground/40" : "text-foreground")}>{locQty}</span>
+                                {hasVariants ? (
+                                  <span className={cn("font-mono font-semibold", locQty === 0 ? "text-muted-foreground/40" : "text-foreground")}>{locQty}</span>
+                                ) : (
+                                  <InlineStockEditor
+                                    inventoryId={item.id}
+                                    locationId={loc.id}
+                                    currentValue={locQty}
+                                    onSaved={onRefresh}
+                                    className={cn("font-mono font-semibold", locQty === 0 ? "text-muted-foreground/40" : "text-foreground")}
+                                  />
+                                )}
                               </div>
                             );
                           })}
@@ -1211,9 +1237,19 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                     const locQty = getStockForItem(item.id, loc.id);
                     return (
                       <TableCell key={loc.id} className="text-right font-mono" onClick={e => e.stopPropagation()}>
-                        <span className={cn("text-sm font-semibold", locQty === 0 ? "text-muted-foreground/40" : "text-foreground")}>
-                          {locQty}
-                        </span>
+                        {hasVariants ? (
+                          <span className={cn("text-sm font-semibold", locQty === 0 ? "text-muted-foreground/40" : "text-foreground")}>
+                            {locQty}
+                          </span>
+                        ) : (
+                          <InlineStockEditor
+                            inventoryId={item.id}
+                            locationId={loc.id}
+                            currentValue={locQty}
+                            onSaved={onRefresh}
+                            className={cn("text-sm font-semibold", locQty === 0 ? "text-muted-foreground/40" : "text-foreground")}
+                          />
+                        )}
                       </TableCell>
                     );
                   })}
@@ -1534,6 +1570,15 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
         onSaved={onRefresh}
         locations={locations}
         editData={editTarget}
+      />
+
+      <StockPdfImportDialog
+        open={stockPdfOpen}
+        onOpenChange={setStockPdfOpen}
+        locations={locations}
+        inventory={inventory}
+        stockLevels={stockLevels}
+        onComplete={onRefresh}
       />
 
       {/* Delete Confirmation */}
