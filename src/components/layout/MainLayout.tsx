@@ -79,13 +79,48 @@ export function MainLayout({ children }: MainLayoutProps) {
   const ds = designSettings as any;
 
   // ─── Global CSS variable injection ───
-  // Convert hex → HSL string for CSS variable compatibility
+  // Convert any color string → HSL components, robust to short hex / rgb / hsl / named.
   useEffect(() => {
-    function hexToHsl(hex: string): string | null {
-      if (!hex || hex === 'transparent') return null;
-      const r = parseInt(hex.slice(1, 3), 16) / 255;
-      const g = parseInt(hex.slice(3, 5), 16) / 255;
-      const b = parseInt(hex.slice(5, 7), 16) / 255;
+    function toHslComponents(input: string | undefined | null): string | null {
+      if (!input) return null;
+      const raw = String(input).trim();
+      if (!raw || raw.toLowerCase() === 'transparent' || raw.toLowerCase() === 'none') return null;
+
+      // Pass-through hsl()/hsla() — strip wrapper, keep "H S% L%"
+      const hslMatch = raw.match(/^hsla?\(\s*([-\d.]+)\s*,?\s*([\d.]+)%\s*,?\s*([\d.]+)%/i);
+      if (hslMatch) return `${Math.round(+hslMatch[1])} ${Math.round(+hslMatch[2])}% ${Math.round(+hslMatch[3])}%`;
+
+      let r = 0, g = 0, b = 0;
+      const rgbMatch = raw.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+      if (rgbMatch) {
+        r = +rgbMatch[1] / 255; g = +rgbMatch[2] / 255; b = +rgbMatch[3] / 255;
+      } else {
+        // Hex: #fff | #ffff | #ffffff | #ffffffff
+        let hex = raw.startsWith('#') ? raw.slice(1) : raw;
+        if (!/^[0-9a-fA-F]{3,8}$/.test(hex)) {
+          // Fallback: let the browser resolve named colors via a temp element
+          if (typeof document !== 'undefined') {
+            const probe = document.createElement('div');
+            probe.style.color = raw;
+            document.body.appendChild(probe);
+            const computed = getComputedStyle(probe).color;
+            document.body.removeChild(probe);
+            const m = computed.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+            if (!m) return null;
+            r = +m[1] / 255; g = +m[2] / 255; b = +m[3] / 255;
+          } else return null;
+        } else {
+          if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+          if (hex.length === 4) hex = hex.slice(0, 3).split('').map(c => c + c).join(''); // drop alpha
+          if (hex.length === 8) hex = hex.slice(0, 6);
+          if (hex.length !== 6) return null;
+          r = parseInt(hex.slice(0, 2), 16) / 255;
+          g = parseInt(hex.slice(2, 4), 16) / 255;
+          b = parseInt(hex.slice(4, 6), 16) / 255;
+        }
+      }
+      if ([r, g, b].some(n => Number.isNaN(n))) return null;
+
       const max = Math.max(r, g, b), min = Math.min(r, g, b);
       let h = 0, s = 0;
       const l = (max + min) / 2;
@@ -102,14 +137,13 @@ export function MainLayout({ children }: MainLayoutProps) {
     }
 
     const root = document.documentElement;
-    const apply = (cssVar: string, hex: string | undefined) => {
-      if (hex) {
-        const hsl = hexToHsl(hex);
-        if (hsl) root.style.setProperty(cssVar, hsl);
-        else root.style.removeProperty(cssVar);
-      } else {
-        root.style.removeProperty(cssVar);
-      }
+    const apply = (cssVar: string, value: string | undefined) => {
+      // Always start from default — never leave a stale dark value applied.
+      root.style.removeProperty(cssVar);
+      if (!value) return;
+      const hsl = toHslComponents(value);
+      if (hsl) root.style.setProperty(cssVar, hsl);
+      else if (typeof console !== 'undefined') console.warn(`[theme] invalid color for ${cssVar}:`, value);
     };
 
     apply('--background', ds.globalBgColor);
