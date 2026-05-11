@@ -79,9 +79,7 @@ export function useVisitorTracking({ enabled = true, userId = null }: Options = 
 
     const hb = setInterval(() => {
       supabase
-        .from('visitor_sessions')
-        .update({ last_seen_at: new Date().toISOString() })
-        .eq('session_id', sessionIdRef.current)
+        .rpc('track_session_heartbeat' as any, { p_session_id: sessionIdRef.current })
         .then(() => {});
     }, 15000);
 
