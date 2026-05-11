@@ -433,6 +433,54 @@ export type Database = {
         }
         Relationships: []
       }
+      client_error_logs: {
+        Row: {
+          component_stack: string | null
+          console_tail: Json | null
+          created_at: string
+          extra: Json | null
+          id: string
+          label: string | null
+          message: string | null
+          pixel_ratio: number | null
+          source: string
+          stack: string | null
+          url: string | null
+          user_agent: string | null
+          viewport: string | null
+        }
+        Insert: {
+          component_stack?: string | null
+          console_tail?: Json | null
+          created_at?: string
+          extra?: Json | null
+          id?: string
+          label?: string | null
+          message?: string | null
+          pixel_ratio?: number | null
+          source: string
+          stack?: string | null
+          url?: string | null
+          user_agent?: string | null
+          viewport?: string | null
+        }
+        Update: {
+          component_stack?: string | null
+          console_tail?: Json | null
+          created_at?: string
+          extra?: Json | null
+          id?: string
+          label?: string | null
+          message?: string | null
+          pixel_ratio?: number | null
+          source?: string
+          stack?: string | null
+          url?: string | null
+          user_agent?: string | null
+          viewport?: string | null
+        }
+        Relationships: []
+      }
       colissimo_bordereaux: {
         Row: {
           bordereau_date: string
