@@ -1,75 +1,83 @@
-# Audit complet du site avant mise en ligne
+## Objectif
 
-Objectif : passer en revue **tout le site** (front public + back-office admin), corriger les bugs restants, garantir la fluidité et le responsive (mobile 360px → desktop), et valider la sécurité avant publication.
+Reproduire et corriger les problèmes signalés sur le site **publié** (https://warltkfr.lovable.app) : sur certains navigateurs (Firefox, Samsung Internet, Safari iOS, Edge), la page apparaît **toute noire**, sans logo, sans header — alors que le thème est blanc.
 
----
+## Diagnostic préliminaire (déjà fait)
 
-## Phase 1 — Diagnostic technique automatisé
+En lisant le code, j'ai identifié **3 causes probables**, à confirmer en testant :
 
-1. **Build & TypeScript** : compilation complète, résolution de toutes les erreurs TS/ESLint restantes.
-2. **Audit Supabase** : exécution du linter DB (RLS, policies, fonctions sans `search_path`, index manquants).
-3. **Scan sécurité** : exécution du scan sécurité (RLS, données exposées, secrets, edge functions).
-4. **Audit dépendances** : vulnérabilités npm critiques/élevées.
-5. **Console & réseau** : revue des warnings (ex. `Missing Description for DialogContent` déjà repéré) et requêtes en erreur.
+### 1. Injection dynamique de variables CSS dans `MainLayout.tsx` (cause #1 la plus probable)
+Un `useEffect` écrase `--background`, `--foreground`, `--card`, `--primary` à chaque render à partir de `designSettings` (sauvés en base). La fonction `hexToHsl` :
+- ne gère **que** les hex 6 caractères (`#ffffff`) → un `#fff` saisi en admin produit `NaN NaN% NaN%` → variable invalide → la valeur reste à la précédente (parfois noire).
+- ne gère ni `rgb()`, ni `hsl()`, ni les noms de couleur.
+- est appelée même quand `designSettings` n'a pas fini de charger → flash noir possible.
+- Si `globalBgColor` ou `globalTextColor` a été enregistré à une mauvaise valeur en base (ou hérité d'un test), tout le site bascule en noir **uniquement en prod** (où la base est différente du dev seed).
 
-## Phase 2 — Audit fonctionnel par parcours utilisateur
+### 2. `HeroErrorBoundary` à fond noir
+Le fallback du hero utilise `background: linear-gradient(135deg,#1a1a1a,#000)` → si le composant `TechwearHero` crash sur un navigateur (ex. API non supportée, image manquante), l'utilisateur voit **un grand bloc noir** à la place du hero, ce qui ressemble exactement à la description.
 
-Pour chaque parcours, test en **mobile 360px**, **tablette 768px**, **desktop 1280px+** :
+### 3. Compatibilité CSS
+- `clip-path: polygon(...)` est utilisé sur `sidebar-left-panel`, `bevel-corners`, header bevels → supporté partout, mais **mal rendu sur Samsung Internet ancien** (peut masquer le contenu).
+- `backdrop-filter` sans préfixe sur certaines règles → Firefox <103 affiche le fond opaque → si la couleur de fond de la `glass-dark` est trop sombre, le contenu derrière disparaît.
+- Aucun `<meta name="theme-color">` ni `color-scheme: light` dans `index.html` → certains navigateurs (Samsung, iOS) appliquent un thème sombre système au chrome de la page.
 
-- **Accueil** : hero, slider, sections produits, bannière fidélité, popup newsletter, FAB roulette, chatbot.
-- **Boutique & catégories** : filtres, tri, pagination, URLs propres, SEO.
-- **Fiche produit** : galerie zoom 3.5x, sélecteur taille/couleur, ajout panier, recommandations.
-- **Panier & Checkout** : 3 étapes, validation RPC, Colissimo (domicile + point relais), codes promo, calcul TVA.
-- **Compte client** : inscription/login (email + Google), tableau de bord, commandes, profil, adresses, fidélité.
-- **Pages légales** : CGV, Confidentialité, Cookies, Retours, Mentions légales, Guide des tailles, Fidélité.
-- **Header** : icônes (compte, admin, notifications, messages, panier, langue, recherche, chatbot) — vérifier visibilité mobile et accessibilité.
-- **Footer & Sidebar** : liens, comportement de réapparition.
+## Plan d'action
 
-## Phase 3 — Audit du Back-Office Admin
+### Phase 1 — Reproduction (browser tool + URL publiée)
+1. Ouvrir l'URL **publiée** (`https://warltkfr.lovable.app`) avec le browser tool sur 3 viewports (360, 768, 1280).
+2. Lire `console` + `network` pour repérer toute erreur JS ou ressource 404 (logo, image hero, fonts).
+3. Inspecter `getComputedStyle(document.documentElement)` pour `--background`, `--foreground` → confirmer la valeur effective en prod.
+4. Inspecter `designSettings` réellement renvoyés par Supabase pour cette URL.
 
-Test responsive (sidebar mobile sheet + desktop 240px) sur **toutes les sections** :
-Dashboard, Live, Produits, Commandes, Préparations, Checkout, Clients, Pages, Média, Marketing, Roulette, Design, Icônes Accueil, Stock, Colissimo, Notifications, Chatbot, WooCommerce, Audit, Paramètres.
+### Phase 2 — Corrections ciblées (frontend uniquement)
 
-Pour chaque page admin :
-- Affichage correct sur mobile (tableaux scrollables, formulaires lisibles).
-- CRUD fonctionnel (create / read / update / delete).
-- Sauvegardes manuelles explicites (pas d'auto-save).
-- Permissions (admin vs stock_manager vs preparator).
+**A. `index.html`**
+- Ajouter `<meta name="color-scheme" content="light only">` et `<meta name="theme-color" content="#ffffff">` pour empêcher les navigateurs d'inverser la palette.
+- Ajouter un fallback CSS inline dans `<head>` : `html,body{background:#fff;color:#000;}` pour éviter le flash noir avant chargement React.
 
-## Phase 4 — Corrections
+**B. `src/components/layout/MainLayout.tsx`**
+- Durcir `hexToHsl` :
+  - Accepter `#fff`, `#ffffff`, `rgb()`, `hsl()`, et chaînes vides.
+  - Retourner `null` proprement si parsing échoue (au lieu de `NaN`).
+- Ne **pas** appliquer la variable si `hsl` est `null` (ne pas écraser la valeur par défaut).
+- Ne lancer le `useEffect` qu'**après** que `designSettings` soit réellement chargé (guard sur la présence d'une valeur connue).
+- Logger un warning console si une couleur invalide est détectée.
 
-Selon les résultats des phases 1-3, corrections regroupées par priorité :
+**C. `src/components/home/HeroErrorBoundary.tsx`**
+- Remplacer le fond noir par un fond `hsl(var(--background))` cohérent avec le thème (blanc), pour éviter le “bloc noir” sur erreur.
+- Logger l'erreur dans Supabase / `console.error` détaillé pour diagnostic.
 
-- **P0 Bloquant** : erreurs build, RLS manquantes, crashs, parcours achat cassé.
-- **P1 Important** : bugs responsive, accessibilité (aria, focus), warnings console récurrents, SEO (meta, H1, alt).
-- **P2 Polish** : micro-interactions, cohérence visuelle, performance (lazy load, taille images).
+**D. `src/index.css` + `src/styles/home-techwear.css`**
+- Ajouter `@supports not (backdrop-filter: blur(10px))` → fallback solide opaque clair pour `.glass`, `.glass-dark`, panneaux techwear, afin que Firefox ancien ne montre pas un bloc noir.
+- Vérifier que toutes les règles `backdrop-filter` ont leur jumeau `-webkit-backdrop-filter` (pour Safari).
+- Vérifier que les `clip-path` critiques (header, logo wrapper, sidebar) ne masquent pas le contenu si non supportés → ajouter `@supports (clip-path: polygon(0 0))` pour les rendre conditionnels.
 
-## Phase 5 — Validation finale
+**E. Préchargement / robustesse logo**
+- Dans `BrandLogo.tsx`, ajouter `onError` sur l'`<img>` pour basculer sur le texte de marque si le logo Supabase ne charge pas (ressource 404 sur certains navigateurs / régions).
+- Ajouter `loading="eager"` + `decoding="async"` au logo header (au lieu du défaut).
 
-- Re-run linter Supabase + scan sécurité → 0 finding bloquant.
-- Re-build → 0 erreur TS.
-- Test parcours achat complet (mobile + desktop) avec capture preview.
-- Vérification du `/admin/audit` interne (dashboard d'intégrité existant).
+**F. Vérification de la base `design_settings`**
+- Lire la ligne `design_settings` en prod via `supabase--read_query` et confirmer que `globalBgColor`, `globalTextColor`, `headerBgColor` ne contiennent pas de valeur sombre involontaire. Si oui, proposer un patch (migration ou simple update via admin) — **sans modifier la base sans accord**.
 
----
+### Phase 3 — Validation cross-navigateur
 
-## Format du rapport livré
+Le browser tool ne fournit qu'un seul moteur (Chromium). Je vais donc :
+1. Vérifier le rendu sur viewports 360 / 768 / 1280 dans le browser tool après corrections.
+2. Lister les **points à valider manuellement** par toi sur Firefox, Safari iOS, Samsung Internet, Edge, après publication d'une nouvelle version :
+   - Page d'accueil non-noire au premier chargement.
+   - Logo + header présents.
+   - Sidebar et panneaux glass lisibles.
+3. Fournir une checklist + extraits console à me renvoyer si un cas reste cassé.
 
-À la fin, je fournirai :
-1. **Liste des problèmes trouvés** (regroupés P0/P1/P2) avec fichier concerné.
-2. **Correctifs appliqués** (résumé des modifications).
-3. **Points restants à valider manuellement** par toi (ex. tester un vrai paiement Colissimo, vérifier un envoi Resend réel).
-4. **Checklist de mise en ligne** (DNS, domaine custom, visibilité publication, RGPD/cookies).
+## Hors scope
 
----
+- Pas de refonte design.
+- Pas de changement de logique métier ou de schéma DB.
+- Pas de polyfill JS lourd : seulement CSS `@supports` et fallbacks ciblés.
+- Pas d'écriture en base sans confirmation explicite.
 
-## Détails techniques
+## Livrables
 
-**Outils utilisés** : `supabase--linter`, `security--run_security_scan`, `code--dependency_scan`, lecture systématique des fichiers via `code--view`, navigation preview multi-viewport via les outils browser, `code--read_console_logs` / `code--read_network_requests`.
-
-**Périmètre exclu** (sauf demande) :
-- Tests E2E automatisés (non installés actuellement).
-- Refonte design ou ajout de fonctionnalités (favoris, comparateur — déjà mentionnés mais non demandés ici).
-- Migration de données ou changement d'architecture backend.
-
-**Estimation** : audit + corrections P0/P1 sur plusieurs itérations. Je traiterai par lots cohérents et te donnerai un rapport intermédiaire à chaque phase pour que tu puisses valider avant de passer à la suite.
+- 4–6 fichiers modifiés (index.html, MainLayout.tsx, HeroErrorBoundary.tsx, BrandLogo.tsx, index.css, home-techwear.css).
+- Un récap des erreurs console / network observées en prod.
+- Une checklist de validation manuelle multi-navigateurs.
