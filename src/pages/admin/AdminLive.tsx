@@ -42,7 +42,7 @@ export default function AdminLive() {
   const [clicks, setClicks] = useState<ClickEvent[]>([]);
   const [now, setNow] = useState(Date.now());
 
-  // Load + realtime
+  // Load sessions + polling (realtime disabled for PII protection)
   useEffect(() => {
     let alive = true;
     const load = async () => {
@@ -54,25 +54,23 @@ export default function AdminLive() {
       if (alive && data) setSessions(data as Session[]);
     };
     load();
-    const ch = supabase
-      .channel('live-visitors')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'visitor_sessions' }, () => load())
-      .subscribe();
+    const poll = setInterval(load, 10_000);
     const t = setInterval(() => setNow(Date.now()), 5000);
     return () => {
       alive = false;
-      supabase.removeChannel(ch);
+      clearInterval(poll);
       clearInterval(t);
     };
   }, []);
 
-  // Selected session details
+  // Selected session details + polling
   useEffect(() => {
     if (!selected) {
       setViews([]);
       setClicks([]);
       return;
     }
+    let alive = true;
     const load = async () => {
       const [v, c] = await Promise.all([
         supabase
@@ -88,25 +86,15 @@ export default function AdminLive() {
           .order('clicked_at', { ascending: true })
           .limit(200),
       ]);
+      if (!alive) return;
       setViews((v.data as PageView[]) || []);
       setClicks((c.data as ClickEvent[]) || []);
     };
     load();
-    const ch = supabase
-      .channel(`live-detail-${selected}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'page_views', filter: `session_id=eq.${selected}` },
-        () => load()
-      )
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'click_events', filter: `session_id=eq.${selected}` },
-        () => load()
-      )
-      .subscribe();
+    const poll = setInterval(load, 8_000);
     return () => {
-      supabase.removeChannel(ch);
+      alive = false;
+      clearInterval(poll);
     };
   }, [selected]);
 
