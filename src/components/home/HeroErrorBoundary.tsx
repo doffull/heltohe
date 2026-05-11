@@ -35,8 +35,8 @@ export class HeroErrorBoundary extends Component<Props, State> {
           justifyContent: 'center',
           gap: 16,
           padding: 40,
-          background: 'linear-gradient(135deg,#1a1a1a,#000)',
-          color: '#fff',
+          background: 'hsl(var(--background))',
+          color: 'hsl(var(--foreground))',
           textAlign: 'center',
         }}
       >
