@@ -1,5 +1,5 @@
 import { useApp } from '@/context/AppContext';
-import { CSSProperties } from 'react';
+import { CSSProperties, useState, useEffect } from 'react';
 
 export type LogoVariant = 'header' | 'footer' | 'sidebar' | 'splash';
 
