@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="light only" />
     <meta name="theme-color" content="#ffffff" />
+    <!-- Force le HTML d'entrée à toujours être rechargé après publication
+         (les assets JS/CSS ont déjà des hashes uniques gérés par Vite). -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <style>
       /* Cross-browser paint fallback — prevents black flash on Firefox / Samsung Internet / Safari iOS
          when CSS variables haven't loaded or browser auto-applies a dark scheme. */
