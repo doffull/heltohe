@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { InventoryProductDialog } from '@/components/admin/InventoryProductDialog';
 import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
+import { StockPdfImportDialog } from '@/components/admin/StockPdfImportDialog';
+import { InlineStockEditor } from '@/components/admin/InlineStockEditor';
 import { useAuth } from '@/context/AuthContext';
 import {
   BarChart3, Package, Store, ArrowLeftRight, AlertTriangle,
@@ -623,6 +625,7 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
   const [deleteTarget, setDeleteTarget] = useState<InventoryItem | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [stockPdfOpen, setStockPdfOpen] = useState(false);
 
   // ── Transfer state ──
   const [transferTarget, setTransferTarget] = useState<InventoryItem | null>(null);
@@ -990,6 +993,9 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
           </Button>
           <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
             <Upload className="h-4 w-4" /> Importer fichier
+          </Button>
+          <Button variant="outline" className="gap-2" onClick={() => setStockPdfOpen(true)}>
+            <FileText className="h-4 w-4" /> Importer stock (PDF)
           </Button>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
