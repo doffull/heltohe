@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { ImportMockupDialog } from '@/components/admin/ImportMockupDialog';
 import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
+import { CsvImportDialog } from '@/components/admin/CsvImportDialog';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -74,6 +75,7 @@ export default function AdminProducts() {
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
   const [isMockupDialogOpen, setIsMockupDialogOpen] = useState(false);
   const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
+  const [isCsvDialogOpen, setIsCsvDialogOpen] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [extractedProducts, setExtractedProducts] = useState<ExtractedProduct[]>([]);
   const [isImporting, setIsImporting] = useState(false);
@@ -329,6 +331,9 @@ export default function AdminProducts() {
           </Button>
           <Button variant="outline" size="sm" onClick={() => setIsPdfDialogOpen(true)} className="chamfer-hud-sm text-xs">
             <Upload className="h-3.5 w-3.5 mr-1.5" />PDF
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setIsCsvDialogOpen(true)} className="chamfer-hud-sm text-xs">
+            <Upload className="h-3.5 w-3.5 mr-1.5" />CSV
           </Button>
           <Button size="sm" onClick={() => { setEditingProduct(null); setIsFormOpen(true); }} className="chamfer-hud-sm text-xs">
             <Plus className="h-3.5 w-3.5 mr-1.5" />Ajouter
@@ -754,6 +759,7 @@ export default function AdminProducts() {
       />
 
       <WordPressSyncDialog open={isSyncDialogOpen} onOpenChange={setIsSyncDialogOpen} />
+      <CsvImportDialog open={isCsvDialogOpen} onOpenChange={setIsCsvDialogOpen} />
     </div>
   );
 }
