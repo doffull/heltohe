@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import {
   CheckCircle2, XCircle, AlertTriangle, Play, RotateCcw,
   Globe, Database, HardDrive, Navigation, Zap, Clock,
-  ChevronDown, ChevronUp, RefreshCw
+  ChevronDown, ChevronUp, RefreshCw, Eye
 } from 'lucide-react';
 import { useRoleAuditLog } from '@/hooks/useUserRoles';
 
