@@ -61,13 +61,54 @@ Deno.serve(async (req) => {
   const cleanUrl = storeUrl.replace(/\/+$/, '');
   const authParam = `consumer_key=${encodeURIComponent(consumerKey)}&consumer_secret=${encodeURIComponent(consumerSecret)}`;
 
+  const RETRY_STATUSES = new Set([408, 429, 502, 503, 504]);
+  const MAX_ATTEMPTS = 4;
+  const REQUEST_TIMEOUT_MS = 25_000;
+
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  const fetchWithRetry = async (url: string): Promise<Response> => {
+    let lastErr: any = null;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
+      try {
+        const res = await fetch(url, {
+          signal: ctrl.signal,
+          headers: { 'User-Agent': 'Lovable-WooSync/1.0', 'Accept': 'application/json' },
+        });
+        clearTimeout(timer);
+        if (res.ok) return res;
+        if (!RETRY_STATUSES.has(res.status) || attempt === MAX_ATTEMPTS) return res;
+        // Honor Retry-After when present
+        const ra = parseInt(res.headers.get('retry-after') || '0', 10);
+        await res.body?.cancel().catch(() => {});
+        const backoff = ra > 0 ? ra * 1000 : Math.pow(2, attempt - 1) * 1000 + Math.floor(Math.random() * 500) - 250;
+        console.log(`[wc-retry] ${res.status} on attempt ${attempt}/${MAX_ATTEMPTS}, waiting ${backoff}ms`);
+        await sleep(Math.max(250, backoff));
+      } catch (err: any) {
+        clearTimeout(timer);
+        lastErr = err;
+        if (attempt === MAX_ATTEMPTS) throw err;
+        const backoff = Math.pow(2, attempt - 1) * 1000 + Math.floor(Math.random() * 500) - 250;
+        console.log(`[wc-retry] network error on attempt ${attempt}/${MAX_ATTEMPTS}: ${err?.message}, waiting ${backoff}ms`);
+        await sleep(Math.max(250, backoff));
+      }
+    }
+    throw lastErr ?? new Error('fetchWithRetry: exhausted attempts');
+  };
+
   const wcFetch = async (path: string, page = 1) => {
-    const res = await fetch(`${cleanUrl}/wp-json/wc/v3/${path}?per_page=100&page=${page}&${authParam}`);
+    const url = `${cleanUrl}/wp-json/wc/v3/${path}?per_page=50&page=${page}&${authParam}`;
+    const res = await fetchWithRetry(url);
     if (!res.ok) {
       const statusCode = res.status;
       const errorText = await res.text().catch(() => '');
-      if (statusCode >= 500) {
-        throw new WcServiceError(`Le serveur WooCommerce est temporairement indisponible (erreur ${statusCode}). Réessayez dans quelques instants.`, statusCode);
+      if (statusCode >= 500 || statusCode === 408 || statusCode === 429) {
+        throw new WcServiceError(
+          `Le serveur WooCommerce reste indisponible après ${MAX_ATTEMPTS} tentatives (erreur ${statusCode}). Vérifie l'état de ton hébergement ou réessaie dans quelques minutes.`,
+          statusCode,
+        );
       }
       throw new Error(`Erreur API WooCommerce ${statusCode} pour ${path}: ${errorText.substring(0, 200)}`);
     }
@@ -85,6 +126,7 @@ Deno.serve(async (req) => {
       all.push(...result.data);
       totalPages = result.totalPages;
       page++;
+      if (page <= totalPages) await sleep(150); // douceur côté WP
     } while (page <= totalPages);
     return all;
   };
