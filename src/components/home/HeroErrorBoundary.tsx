@@ -35,8 +35,8 @@ export class HeroErrorBoundary extends Component<Props, State> {
           justifyContent: 'center',
           gap: 16,
           padding: 40,
-          background: 'linear-gradient(135deg,#1a1a1a,#000)',
-          color: '#fff',
+          background: 'hsl(var(--background))',
+          color: 'hsl(var(--foreground))',
           textAlign: 'center',
         }}
       >
@@ -47,7 +47,7 @@ export class HeroErrorBoundary extends Component<Props, State> {
         <Link
           to="/boutique"
           style={{
-            background: '#fff', color: '#000', padding: '14px 32px',
+            background: 'hsl(var(--foreground))', color: 'hsl(var(--background))', padding: '14px 32px',
             fontWeight: 700, letterSpacing: '0.12em', textDecoration: 'none',
           }}
         >

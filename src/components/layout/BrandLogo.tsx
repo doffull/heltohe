@@ -1,5 +1,5 @@
 import { useApp } from '@/context/AppContext';
-import { CSSProperties } from 'react';
+import { CSSProperties, useState, useEffect } from 'react';
 
 export type LogoVariant = 'header' | 'footer' | 'sidebar' | 'splash';
 
@@ -55,10 +55,21 @@ export function BrandLogo({ variant = 'header', size, className, altOverride }: 
     display: 'block',
   };
 
+  const [imgError, setImgError] = useState(false);
+  useEffect(() => { setImgError(false); }, [url]);
+  const showImage = !!url && !imgError;
+
   return (
     <span className={className} style={wrapperStyle} aria-label={altOverride || brandName}>
-      {url ? (
-        <img src={url} alt={altOverride || brandName} style={imgStyle} />
+      {showImage ? (
+        <img
+          src={url}
+          alt={altOverride || brandName}
+          style={imgStyle}
+          loading="eager"
+          decoding="async"
+          onError={() => setImgError(true)}
+        />
       ) : (
         <span style={{
           fontWeight: 900, letterSpacing: '0.18em',

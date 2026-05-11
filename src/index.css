@@ -228,7 +228,12 @@
     border: 1px solid rgba(0, 0, 0, 0.1);
   }
 
-  /* Product card with full-width footer button */
+  /* Cross-browser fallback: when backdrop-filter is unsupported (older Firefox / Samsung Internet),
+     use opaque-enough backgrounds so content remains legible instead of looking transparent-on-black. */
+  @supports not ((backdrop-filter: blur(10px)) or (-webkit-backdrop-filter: blur(10px))) {
+    .glass { background: rgba(255, 255, 255, 0.92); }
+    .glass-dark { background: rgba(20, 20, 20, 0.88); }
+  }
   .product-card-footer {
     @apply w-full bg-primary text-primary-foreground py-3 text-center uppercase tracking-wider text-sm font-medium;
     @apply transition-all duration-300 hover:bg-primary/90;
