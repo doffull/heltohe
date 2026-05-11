@@ -1,5 +1,6 @@
 import { Component, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { logClientError } from '@/lib/clientErrorLogger';
 
 interface Props { children: ReactNode; label?: string }
 interface State { hasError: boolean; error?: Error }
@@ -18,6 +19,12 @@ export class HeroErrorBoundary extends Component<Props, State> {
       message: error.message,
       stack: error.stack,
       componentStack: info.componentStack,
+    });
+    void logClientError({
+      source: 'hero_error_boundary',
+      label: this.props.label,
+      error,
+      componentStack: info.componentStack ?? undefined,
     });
   }
 
