@@ -401,8 +401,9 @@ export default function Contact() {
                   onClick={() => sendChat()}
                   disabled={isLoading || !input.trim()}
                   className="shrink-0"
+                  aria-label="Envoyer le message"
                 >
-                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Send className="h-4 w-4" aria-hidden="true" />}
                 </Button>
               </div>
             </div>

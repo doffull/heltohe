@@ -211,8 +211,8 @@ export function ChatBotWidget({ open: openProp, onOpenChange, hideTrigger }: Cha
                   En ligne
                 </p>
               </div>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setOpen(false)}>
-                <X className="h-4 w-4" />
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setOpen(false)} aria-label="Fermer le chat">
+                <X className="h-4 w-4" aria-hidden="true" />
               </Button>
             </div>
 
@@ -282,8 +282,8 @@ export function ChatBotWidget({ open: openProp, onOpenChange, hideTrigger }: Cha
                   className="flex-1 h-10 text-sm bg-secondary/50 border-border/30"
                   disabled={isLoading}
                 />
-                <Button type="submit" size="icon" className="h-10 w-10 flex-shrink-0" disabled={isLoading || !input.trim()}>
-                  <Send className="h-4 w-4" />
+                <Button type="submit" size="icon" className="h-10 w-10 flex-shrink-0" disabled={isLoading || !input.trim()} aria-label="Envoyer le message">
+                  <Send className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </form>
             </div>

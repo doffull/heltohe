@@ -185,7 +185,8 @@ export default function Auth() {
       <div className="relative w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-3 mb-4">
+          <h1 className="sr-only">Connexion à votre compte LVTK6</h1>
+          <div className="inline-flex items-center gap-3 mb-4" aria-hidden="true">
             <Shield className="h-10 w-10 text-primary" />
             <span className="text-3xl font-bold tracking-wider hud-text">LVTK6</span>
           </div>
