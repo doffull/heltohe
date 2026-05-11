@@ -1180,9 +1180,19 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                   {/* Per-location totals */}
                   {webLocation && (
                     <TableCell className="text-right font-mono" onClick={e => e.stopPropagation()}>
-                      <span className={cn("text-sm font-bold", webQty === 0 ? "text-destructive/70" : "text-primary")}>
-                        {reserved > 0 ? `${reserved} | ` : ''}{webQty ?? 0}
-                      </span>
+                      {hasVariants ? (
+                        <span className={cn("text-sm font-bold", webQty === 0 ? "text-destructive/70" : "text-primary")}>
+                          {reserved > 0 ? `${reserved} | ` : ''}{webQty ?? 0}
+                        </span>
+                      ) : (
+                        <InlineStockEditor
+                          inventoryId={item.id}
+                          locationId={webLocation.id}
+                          currentValue={webQty ?? 0}
+                          onSaved={onRefresh}
+                          className={cn("text-sm font-bold", webQty === 0 ? "text-destructive/70" : "text-primary")}
+                        />
+                      )}
                     </TableCell>
                   )}
                   {/* Aggregated hidden boutiques column */}
@@ -1204,7 +1214,17 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                             return (
                               <div key={loc.id} className="flex items-center justify-between px-1 py-1 text-sm">
                                 <span className="text-muted-foreground truncate mr-2">{loc.name}</span>
-                                <span className={cn("font-mono font-semibold", locQty === 0 ? "text-muted-foreground/40" : "text-foreground")}>{locQty}</span>
+                                {hasVariants ? (
+                                  <span className={cn("font-mono font-semibold", locQty === 0 ? "text-muted-foreground/40" : "text-foreground")}>{locQty}</span>
+                                ) : (
+                                  <InlineStockEditor
+                                    inventoryId={item.id}
+                                    locationId={loc.id}
+                                    currentValue={locQty}
+                                    onSaved={onRefresh}
+                                    className={cn("font-mono font-semibold", locQty === 0 ? "text-muted-foreground/40" : "text-foreground")}
+                                  />
+                                )}
                               </div>
                             );
                           })}
@@ -1217,9 +1237,19 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                     const locQty = getStockForItem(item.id, loc.id);
                     return (
                       <TableCell key={loc.id} className="text-right font-mono" onClick={e => e.stopPropagation()}>
-                        <span className={cn("text-sm font-semibold", locQty === 0 ? "text-muted-foreground/40" : "text-foreground")}>
-                          {locQty}
-                        </span>
+                        {hasVariants ? (
+                          <span className={cn("text-sm font-semibold", locQty === 0 ? "text-muted-foreground/40" : "text-foreground")}>
+                            {locQty}
+                          </span>
+                        ) : (
+                          <InlineStockEditor
+                            inventoryId={item.id}
+                            locationId={loc.id}
+                            currentValue={locQty}
+                            onSaved={onRefresh}
+                            className={cn("text-sm font-semibold", locQty === 0 ? "text-muted-foreground/40" : "text-foreground")}
+                          />
+                        )}
                       </TableCell>
                     );
                   })}
