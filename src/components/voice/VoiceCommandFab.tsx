@@ -275,9 +275,25 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
         body: { transcript: text, products: lite, context: ctx },
       });
       if (error) throw error;
+
+      // Backend can return a structured error payload
+      if (data?.error && !data?.action) {
+        const userMessage: string = data.userMessage || 'Service vocal indisponible';
+        setReply(userMessage);
+        toast.error(userMessage);
+        return;
+      }
+
       const action = data?.action || {};
-      const message: string = data?.message || 'OK';
+      const message: string = data?.message || data?.userMessage || 'OK';
       setReply(message);
+
+      // If backend ran in degraded mode, surface it discreetly
+      if (data?.degraded) {
+        toast.message('Mode vocal dégradé', {
+          description: data.userMessage || 'L\'IA est temporairement indisponible, commandes simples uniquement.',
+        });
+      }
 
       const sensitive = ['add_to_cart', 'place_order', 'set_address', 'remove_from_cart', 'apply_promo'].includes(action.type);
       if (testMode && sensitive) {
@@ -288,9 +304,12 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
         await executeAction(action);
       }
     } catch (e: any) {
-      const msg = e?.message?.includes('429')
-        ? 'Trop de requêtes, réessayez dans un instant'
-        : "Erreur lors du traitement vocal";
+      // Network / unknown errors
+      const status = e?.context?.status ?? e?.status;
+      let msg = "Service vocal indisponible. Réessayez dans un instant.";
+      if (status === 429 || /429/.test(e?.message || '')) msg = 'Trop de requêtes, patientez un instant.';
+      else if (status === 402 || /402/.test(e?.message || '')) msg = 'Crédits IA épuisés — le service vocal est temporairement indisponible.';
+      else if (status === 400) msg = 'Phrase vocale non comprise.';
       setReply(msg);
       toast.error(msg);
     } finally {

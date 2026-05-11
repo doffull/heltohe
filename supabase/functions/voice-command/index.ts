@@ -5,24 +5,83 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// ─── Fallback parser (used when AI gateway is unavailable: 402/429/5xx) ───
+function fallbackParse(transcript: string, products: any[]): any {
+  const t = (transcript || "").toLowerCase();
+
+  if (/\b(panier|mon panier|qu['e]?st.*panier|liste)\b/.test(t)) {
+    return { action: { type: "read_cart" }, message: "Voici votre panier." };
+  }
+  if (/\b(je\s+confirme|valide(?:z)?\s+ma\s+commande|passer.*commande|finaliser)\b/.test(t)) {
+    return { action: { type: "place_order" }, message: "Direction le paiement." };
+  }
+  if (/\b(domicile|chez\s+moi)\b/.test(t)) {
+    return { action: { type: "set_delivery", deliveryMode: "home" }, message: "Livraison à domicile sélectionnée." };
+  }
+  if (/\b(point\s+relais|relais|mondial\s+relay)\b/.test(t)) {
+    return { action: { type: "set_delivery", deliveryMode: "relay" }, message: "Livraison en point relais sélectionnée." };
+  }
+  if (/\b(cherche|trouve|montre|j['e]?\s*aimerais)\b/.test(t)) {
+    return { action: { type: "search_products", query: transcript }, message: "Je cherche dans le catalogue." };
+  }
+  if (/\b(propose|conseille|sugg[eè]re|recommande)\b/.test(t)) {
+    return { action: { type: "recommend", query: transcript }, message: "Voici quelques recommandations." };
+  }
+  if (/\b(ajoute|prends|mets)\b/.test(t)) {
+    // Try to find a product by name in transcript
+    const match = (products || []).find((p: any) =>
+      p?.name && t.includes(String(p.name).toLowerCase())
+    );
+    if (match) {
+      const sizeMatch = t.match(/\b(taille\s+)?(xs|s|m|l|xl|xxl|xxxl|3[6-9]|4[0-9]|5[0-2])\b/i);
+      return {
+        action: { type: "add_to_cart", productId: match.id, quantity: 1, size: sizeMatch?.[2]?.toUpperCase() },
+        message: `${match.name} ajouté au panier.`,
+        requiresConfirmation: true,
+      };
+    }
+    return { action: { type: "search_products", query: transcript }, message: "Je n'ai pas trouvé ce produit, je lance une recherche." };
+  }
+  return { action: { type: "clarify" }, message: "Service vocal en mode dégradé. Dites par exemple : « cherche un t-shirt noir », « livraison à domicile », « lis mon panier », « je confirme »." };
+}
+
+function clientErrorResponse(status: number, code: string, userMessage: string) {
+  return new Response(JSON.stringify({ error: code, userMessage, status }), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
   try {
-    const body = await req.json();
-    const { transcript, products = [], context = {}, mode } = body;
+    const body = await req.json().catch(() => ({}));
+    const { transcript, products = [], context = {}, mode } = body || {};
 
-    // ─── Mode "search": recherche/recommandation produits ───
-    if (mode === 'search' || mode === 'recommend') {
-      const q = (typeof transcript === 'string' ? transcript : '').trim().slice(0, 500);
-      if (!q) {
-        return new Response(JSON.stringify({ productIds: [], spoken: 'Que cherches-tu ?' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-      if (!LOVABLE_API_KEY) throw new Error('Missing LOVABLE_API_KEY');
+    // ─── Validate ───
+    if (typeof transcript !== "string" || transcript.length === 0 || transcript.length > 1000) {
+      return clientErrorResponse(400, "INVALID_TRANSCRIPT", "Phrase vocale invalide ou trop longue.");
+    }
+    if (mode && !["search", "recommend"].includes(mode)) {
+      return clientErrorResponse(400, "INVALID_MODE", "Mode non supporté.");
+    }
+    if (!Array.isArray(products) || products.length > 200) {
+      return clientErrorResponse(400, "INVALID_PRODUCTS", "Liste produits invalide.");
+    }
 
-      // Compact catalog for the model
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      // No key configured: degrade gracefully
+      const parsed = fallbackParse(transcript, products);
+      return new Response(JSON.stringify({ ...parsed, degraded: "no_api_key" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ─── Mode "search"/"recommend": product retrieval ───
+    if (mode === "search" || mode === "recommend") {
+      const q = transcript.trim().slice(0, 500);
       const catalog = products.slice(0, 120).map((p: any, i: number) => ({
         idx: i,
         id: p.id,
@@ -31,96 +90,97 @@ serve(async (req) => {
         price: p.price,
         sizes: p.sizes,
         colors: p.colors,
-        description: (p.description || '').slice(0, 120),
+        description: (p.description || "").slice(0, 120),
       }));
 
-      const searchPrompt = `Tu es l'assistant shopping vocal de LVTK6. À partir de la requête utilisateur en français, sélectionne 1 à 6 produits du catalogue qui correspondent le mieux (par nom, couleur, type, mots-clés).
-${mode === 'recommend' ? 'Mode RECOMMANDATION : propose 3 produits pertinents avec une raison parlée naturelle.' : 'Mode RECHERCHE : retourne les meilleurs résultats correspondants.'}
+      const searchPrompt = `Tu es l'assistant shopping vocal de LVTK6. À partir de la requête utilisateur en français, sélectionne 1 à 6 produits du catalogue qui correspondent le mieux.
+${mode === "recommend" ? "Mode RECOMMANDATION : propose 3 produits avec une raison parlée naturelle." : "Mode RECHERCHE : retourne les meilleurs résultats."}
 Catalogue JSON:\n${JSON.stringify(catalog)}\n
 Réponds via la fonction search_results.`;
 
-      const searchResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'google/gemini-3-flash-preview',
-          messages: [
-            { role: 'system', content: searchPrompt },
-            { role: 'user', content: q },
-          ],
-          tools: [{
-            type: 'function',
-            function: {
-              name: 'search_results',
-              description: 'Renvoie les produits correspondants',
-              parameters: {
-                type: 'object',
-                properties: {
-                  productIds: { type: 'array', items: { type: 'string' } },
-                  spoken: { type: 'string', description: 'Phrase à dire à voix haute (max 30 mots)' },
-                  reason: { type: 'string', description: 'Pourquoi ces produits' },
+      let searchResp: Response;
+      try {
+        searchResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "google/gemini-3-flash-preview",
+            messages: [
+              { role: "system", content: searchPrompt },
+              { role: "user", content: q },
+            ],
+            tools: [{
+              type: "function",
+              function: {
+                name: "search_results",
+                description: "Renvoie les produits correspondants",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    productIds: { type: "array", items: { type: "string" } },
+                    spoken: { type: "string" },
+                    reason: { type: "string" },
+                  },
+                  required: ["productIds", "spoken"],
                 },
-                required: ['productIds', 'spoken'],
               },
-            },
-          }],
-          tool_choice: { type: 'function', function: { name: 'search_results' } },
-        }),
-      });
+            }],
+            tool_choice: { type: "function", function: { name: "search_results" } },
+          }),
+        });
+      } catch (netErr) {
+        console.error("voice-command search network error", netErr);
+        return new Response(JSON.stringify({ productIds: [], spoken: "Service vocal indisponible.", degraded: "network" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
       if (!searchResp.ok) {
-        if (searchResp.status === 429) return new Response(JSON.stringify({ error: 'Rate limited' }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-        if (searchResp.status === 402) return new Response(JSON.stringify({ error: 'Payment required' }), { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-        return new Response(JSON.stringify({ error: 'AI error' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        const status = searchResp.status;
+        let userMessage = "Recherche vocale indisponible.";
+        if (status === 429) userMessage = "Trop de requêtes vocales, réessayez dans un instant.";
+        else if (status === 402) userMessage = "Crédits IA épuisés. Le service vocal sera réactivé prochainement.";
+        return new Response(JSON.stringify({ productIds: [], spoken: userMessage, error: status === 429 ? "RATE_LIMITED" : status === 402 ? "PAYMENT_REQUIRED" : "AI_ERROR", status }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
-      const sd = await searchResp.json();
-      const sc = sd.choices?.[0]?.message?.tool_calls?.[0];
-      let result: any = { productIds: [], spoken: 'Aucun résultat' };
-      if (sc?.function?.arguments) { try { result = JSON.parse(sc.function.arguments); } catch {} }
-      return new Response(JSON.stringify(result), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
 
-    if (!transcript || typeof transcript !== "string" || transcript.length > 1000) {
-      return new Response(JSON.stringify({ error: "Invalid transcript" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      const sd = await searchResp.json();
+      const sc = sd?.choices?.[0]?.message?.tool_calls?.[0];
+      let result: any = { productIds: [], spoken: "Aucun résultat" };
+      if (sc?.function?.arguments) {
+        try { result = JSON.parse(sc.function.arguments); } catch {}
+      }
+      return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("Missing LOVABLE_API_KEY");
 
+    // ─── Default: action parser ───
     const productList = products.slice(0, 80).map((p: any) =>
-      `- ${p.id} | ${p.name} | ${p.category} | ${p.price}€ | sizes:${(p.sizes || []).join(',')}`
-    ).join('\n');
+      `- ${p.id} | ${p.name} | ${p.category} | ${p.price}€ | sizes:${(p.sizes || []).join(",")}`
+    ).join("\n");
 
     const cartSummary = (context.cart || []).map((i: any) =>
-      `${i.quantity}× ${i.name}${i.size ? ' T:' + i.size : ''}${i.color ? ' C:' + i.color : ''} @${i.price}€`
-    ).join(' | ') || 'vide';
+      `${i.quantity}× ${i.name}${i.size ? " T:" + i.size : ""}${i.color ? " C:" + i.color : ""} @${i.price}€`
+    ).join(" | ") || "vide";
 
     const addr = context.address || {};
-    const addrSummary = [addr.name, addr.address, addr.zip, addr.city, addr.phone].filter(Boolean).join(', ') || 'non renseignée';
+    const addrSummary = [addr.name, addr.address, addr.zip, addr.city, addr.phone].filter(Boolean).join(", ") || "non renseignée";
 
-    const systemPrompt = `Tu es un assistant vocal e-commerce francophone pour LVTK6 (mode techwear luxe).
-Reconnais l'intention dans la phrase utilisateur et retourne UNE action via tool calling.
-Reste concis dans le champ "message" (max 25 mots), parle naturellement.
+    const systemPrompt = `Tu es un assistant vocal e-commerce francophone pour LVTK6.
+Reconnais l'intention dans la phrase et retourne UNE action via tool calling.
+Reste concis (max 25 mots).
 
-Contexte courant:
+Contexte:
 - Panier: ${cartSummary}
 - Adresse: ${addrSummary}
-- Mode livraison: ${context.deliveryMode || 'non choisi'}
+- Mode livraison: ${context.deliveryMode || "non choisi"}
 
 Catalogue:
 ${productList}
 
-Règles:
-- Si l'utilisateur cherche un produit ("cherche…", "trouve…", "montre-moi…", "j'aimerais…") sans nommer un produit précis -> action search_products avec query=mots-clés.
-- Si l'utilisateur demande une recommandation ("propose-moi…", "qu'est-ce que tu me conseilles…", "suggère…") -> action recommend avec query=contexte.
-- Si l'utilisateur réfère à un résultat précédent ("le 2", "le deuxième", "le rouge") -> select_result avec resultIndex (1-based) et éventuellement size/color/quantity.
-- Pour ajouter au panier directement quand le produit est sans ambiguïté: add_to_cart avec productId.
-- Pour adresse: extrais nom complet, adresse, code postal, ville, téléphone (place_order ne marche que si adresse complète).
-- Pour livraison: 'home' (domicile) ou 'relay' (point relais).
-- Pour valider la commande: l'utilisateur doit dire explicitement "je confirme" / "valide ma commande" -> place_order.
-- Pour lire panier/total: read_cart.
-- Si tu n'es pas sûr: clarify avec une question courte.`;
+Règles: search_products pour rechercher, recommend pour conseiller, select_result pour "le 2", add_to_cart si produit identifié sans ambiguïté, set_address, set_delivery (home/relay), apply_promo, read_cart, place_order uniquement si "je confirme", clarify sinon.`;
 
     const tools = [{
       type: "function",
@@ -133,10 +193,7 @@ Règles:
             action: {
               type: "object",
               properties: {
-                type: {
-                  type: "string",
-                  enum: ["add_to_cart", "remove_from_cart", "navigate", "search", "search_products", "recommend", "select_result", "set_address", "set_delivery", "apply_promo", "read_cart", "place_order", "clarify"],
-                },
+                type: { type: "string", enum: ["add_to_cart", "remove_from_cart", "navigate", "search", "search_products", "recommend", "select_result", "set_address", "set_delivery", "apply_promo", "read_cart", "place_order", "clarify"] },
                 productId: { type: "string" },
                 productQuery: { type: "string" },
                 size: { type: "string" },
@@ -147,55 +204,77 @@ Règles:
                 address: {
                   type: "object",
                   properties: {
-                    name: { type: "string" },
-                    address: { type: "string" },
-                    zip: { type: "string" },
-                    city: { type: "string" },
-                    phone: { type: "string" },
-                    email: { type: "string" },
+                    name: { type: "string" }, address: { type: "string" }, zip: { type: "string" }, city: { type: "string" }, phone: { type: "string" }, email: { type: "string" },
                   },
                 },
                 deliveryMode: { type: "string", enum: ["home", "relay"] },
                 promoCode: { type: "string" },
-                resultIndex: { type: "number", description: "1-based index dans la dernière liste de résultats" },
+                resultIndex: { type: "number" },
               },
               required: ["type"],
             },
-            message: { type: "string", description: "Réponse vocale courte FR" },
-            requiresConfirmation: { type: "boolean", description: "true pour les actions sensibles (add_to_cart, place_order, set_address)" },
+            message: { type: "string" },
+            requiresConfirmation: { type: "boolean" },
           },
           required: ["action", "message"],
         },
       },
     }];
 
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: transcript },
-        ],
-        tools,
-        tool_choice: { type: "function", function: { name: "execute_action" } },
-      }),
-    });
+    let resp: Response;
+    try {
+      resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: transcript },
+          ],
+          tools,
+          tool_choice: { type: "function", function: { name: "execute_action" } },
+        }),
+      });
+    } catch (netErr) {
+      console.error("voice-command network error", netErr);
+      const parsed = fallbackParse(transcript, products);
+      return new Response(JSON.stringify({ ...parsed, degraded: "network" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (!resp.ok) {
-      if (resp.status === 429) return new Response(JSON.stringify({ error: "Rate limited" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (resp.status === 402) return new Response(JSON.stringify({ error: "Payment required" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      const t = await resp.text();
-      console.error("AI error", resp.status, t);
-      return new Response(JSON.stringify({ error: "AI error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const status = resp.status;
+      const t = await resp.text().catch(() => "");
+      console.error("voice-command AI error", status, t.slice(0, 300));
+
+      // Graceful fallback for credit/rate issues so users keep working
+      if (status === 402 || status === 429 || status >= 500) {
+        const parsed = fallbackParse(transcript, products);
+        const userMessage = status === 402
+          ? "Crédits IA épuisés — mode vocal dégradé activé."
+          : status === 429
+            ? "Trop de requêtes — mode vocal dégradé activé."
+            : "Service vocal momentanément indisponible — mode dégradé activé.";
+        return new Response(JSON.stringify({
+          ...parsed,
+          degraded: status === 402 ? "payment_required" : status === 429 ? "rate_limited" : "ai_error",
+          userMessage,
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return clientErrorResponse(status, "AI_ERROR", "Erreur de traitement vocal.");
     }
 
     const data = await resp.json();
-    const call = data.choices?.[0]?.message?.tool_calls?.[0];
+    const call = data?.choices?.[0]?.message?.tool_calls?.[0];
     let parsed: any = { action: { type: "clarify" }, message: "Je n'ai pas compris" };
     if (call?.function?.arguments) {
-      try { parsed = JSON.parse(call.function.arguments); } catch { /* ignore */ }
+      try { parsed = JSON.parse(call.function.arguments); } catch {}
     }
 
     return new Response(JSON.stringify(parsed), {
@@ -203,8 +282,6 @@ Règles:
     });
   } catch (e) {
     console.error("voice-command error", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return clientErrorResponse(500, "UNEXPECTED", "Erreur inattendue côté serveur vocal.");
   }
 });
