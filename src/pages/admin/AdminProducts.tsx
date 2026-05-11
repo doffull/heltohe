@@ -75,6 +75,7 @@ export default function AdminProducts() {
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
   const [isMockupDialogOpen, setIsMockupDialogOpen] = useState(false);
   const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
+  const [isCsvDialogOpen, setIsCsvDialogOpen] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [extractedProducts, setExtractedProducts] = useState<ExtractedProduct[]>([]);
   const [isImporting, setIsImporting] = useState(false);
