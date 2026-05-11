@@ -146,6 +146,14 @@ const initialGroups = (): TestGroup[] => [
     { id: 'promo-active', label: 'Codes promo (s\'il y en a, ils ont une date valide)' },
     { id: 'orders-rls', label: 'RLS orders : accès anonyme bloqué' },
   ]),
+  makeGroup('published', 'Rendu Publié (Pré-publication)', <Eye className="h-4 w-4" />, [
+    { id: 'published-reachable', label: 'Site publié répond (HTTP 200)' },
+    { id: 'published-design', label: 'design_settings_public lisible en anonyme' },
+    { id: 'published-logo', label: 'Logo configuré et accessible' },
+    { id: 'published-hero', label: 'Hero slides présents en publié' },
+    { id: 'published-sitename', label: 'Nom du site cohérent base ↔ publié' },
+    { id: 'published-products', label: 'Produits actifs visibles publiquement' },
+  ]),
 ];
 
 export default function AdminAudit() {
