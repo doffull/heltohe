@@ -332,6 +332,9 @@ export default function AdminProducts() {
           <Button variant="outline" size="sm" onClick={() => setIsPdfDialogOpen(true)} className="chamfer-hud-sm text-xs">
             <Upload className="h-3.5 w-3.5 mr-1.5" />PDF
           </Button>
+          <Button variant="outline" size="sm" onClick={() => setIsCsvDialogOpen(true)} className="chamfer-hud-sm text-xs">
+            <Upload className="h-3.5 w-3.5 mr-1.5" />CSV
+          </Button>
           <Button size="sm" onClick={() => { setEditingProduct(null); setIsFormOpen(true); }} className="chamfer-hud-sm text-xs">
             <Plus className="h-3.5 w-3.5 mr-1.5" />Ajouter
           </Button>
