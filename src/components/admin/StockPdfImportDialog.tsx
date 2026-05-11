@@ -55,6 +55,10 @@ export function StockPdfImportDialog({ open, onOpenChange, locations, inventory,
         body: { fileBase64, fileType: ext },
       });
       if (error) throw error;
+      if (data?.error) {
+        toast.error(data.message || data.error);
+        return;
+      }
       const items: ExtractedItem[] = data?.items || [];
       if (items.length === 0) {
         toast.error('Aucun produit détecté dans le fichier');
