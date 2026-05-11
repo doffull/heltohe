@@ -71,15 +71,7 @@ export default function AdminWooCommerce() {
     }
   };
 
-  const handleImport = async () => {
-    if (!storeUrl || !consumerKey || !consumerSecret) {
-      toast({ title: 'Champs manquants', description: 'Remplis tous les champs avant de lancer l\'import.', variant: 'destructive' });
-      return;
-    }
-    if (!importProducts && !importOrders && !importCustomers) {
-      toast({ title: 'Rien à importer', description: 'Coche au moins une section à importer.', variant: 'destructive' });
-      return;
-    }
+  const runImport = async () => {
     setImporting(true);
     setResult(null);
     try {
@@ -95,7 +87,19 @@ export default function AdminWooCommerce() {
       });
       if (error) throw error;
       if (data?.fallback || data?.error) {
-        toast({ title: 'Serveur WooCommerce indisponible', description: data.error || 'Le serveur est temporairement inaccessible. Réessayez plus tard.', variant: 'destructive' });
+        toast({
+          title: 'Serveur WooCommerce indisponible',
+          description: data.error || 'Le serveur est temporairement inaccessible après plusieurs tentatives. Réessayez plus tard.',
+          variant: 'destructive',
+          action: (
+            <button
+              onClick={() => runImport()}
+              className="text-xs underline whitespace-nowrap"
+            >
+              Réessayer
+            </button>
+          ) as any,
+        });
       } else {
         setResult(data);
         toast({ title: 'Import terminé ✓', description: 'Les données ont été importées avec succès.' });
@@ -105,6 +109,18 @@ export default function AdminWooCommerce() {
     } finally {
       setImporting(false);
     }
+  };
+
+  const handleImport = async () => {
+    if (!storeUrl || !consumerKey || !consumerSecret) {
+      toast({ title: 'Champs manquants', description: 'Remplis tous les champs avant de lancer l\'import.', variant: 'destructive' });
+      return;
+    }
+    if (!importProducts && !importOrders && !importCustomers) {
+      toast({ title: 'Rien à importer', description: 'Coche au moins une section à importer.', variant: 'destructive' });
+      return;
+    }
+    await runImport();
   };
 
   return (
