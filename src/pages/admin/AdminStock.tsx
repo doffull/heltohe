@@ -1542,6 +1542,15 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
         editData={editTarget}
       />
 
+      <StockPdfImportDialog
+        open={stockPdfOpen}
+        onOpenChange={setStockPdfOpen}
+        locations={locations}
+        inventory={inventory}
+        stockLevels={stockLevels}
+        onComplete={onRefresh}
+      />
+
       {/* Delete Confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
         <AlertDialogContent>
