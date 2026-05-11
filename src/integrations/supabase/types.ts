@@ -2522,6 +2522,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      mark_popup_converted: {
+        Args: { p_popup_id: string; p_session_id: string }
+        Returns: undefined
+      }
       preview_promo_code: {
         Args: { p_code: string; p_subtotal: number }
         Returns: Json
@@ -2532,6 +2536,10 @@ export type Database = {
       spin_roulette:
         | { Args: { p_email?: string }; Returns: Json }
         | { Args: { p_email?: string; p_ip_hash?: string }; Returns: Json }
+      track_session_heartbeat: {
+        Args: { p_session_id: string }
+        Returns: undefined
+      }
       validate_and_create_order: {
         Args: {
           p_delivery_mode: string
