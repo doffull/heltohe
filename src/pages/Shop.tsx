@@ -197,11 +197,11 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
               </SelectContent>
             </Select>
             <div className="flex border border-border">
-              <Button variant={viewMode === 'grid' ? 'default' : 'ghost'} size="icon" className="rounded-none h-12 w-12" onClick={() => setViewMode('grid')}>
-                <Grid3X3 className="h-4 w-4" />
+              <Button variant={viewMode === 'grid' ? 'default' : 'ghost'} size="icon" className="rounded-none h-12 w-12" onClick={() => setViewMode('grid')} aria-label="Affichage en grille" aria-pressed={viewMode === 'grid'}>
+                <Grid3X3 className="h-4 w-4" aria-hidden="true" />
               </Button>
-              <Button variant={viewMode === 'list' ? 'default' : 'ghost'} size="icon" className="rounded-none h-12 w-12" onClick={() => setViewMode('list')}>
-                <LayoutList className="h-4 w-4" />
+              <Button variant={viewMode === 'list' ? 'default' : 'ghost'} size="icon" className="rounded-none h-12 w-12" onClick={() => setViewMode('list')} aria-label="Affichage en liste" aria-pressed={viewMode === 'list'}>
+                <LayoutList className="h-4 w-4" aria-hidden="true" />
               </Button>
             </div>
           </div>
@@ -316,7 +316,7 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
                       )}
                     </div>
                     <div className="flex gap-2 sm:gap-3">
-                      <Button variant="outline" size="icon" className="h-10 w-10 sm:h-12 sm:w-12"><Heart className="h-4 w-4 sm:h-5 sm:w-5" /></Button>
+                      <Button variant="outline" size="icon" className="h-10 w-10 sm:h-12 sm:w-12" aria-label="Ajouter aux favoris"><Heart className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" /></Button>
                       <Button className="h-10 sm:h-12 px-4 sm:px-8 uppercase tracking-wider text-xs sm:text-sm" onClick={() => handleAddToCart(product)} disabled={product.stock === 0}>
                         {product.stock === 0 ? 'Épuisé' : 'Ajouter'}
                       </Button>

@@ -172,17 +172,19 @@ export default function Cart() {
                         size="icon"
                         className="h-8 w-8"
                         onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                        aria-label="Diminuer la quantité"
                       >
-                        <Minus className="h-3 w-3" />
+                        <Minus className="h-3 w-3" aria-hidden="true" />
                       </Button>
-                      <span className="w-7 text-center font-bold text-sm">{item.quantity}</span>
+                      <span className="w-7 text-center font-bold text-sm" aria-live="polite">{item.quantity}</span>
                       <Button
                         variant="outline"
                         size="icon"
                         className="h-8 w-8"
                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        aria-label="Augmenter la quantité"
                       >
-                        <Plus className="h-3 w-3" />
+                        <Plus className="h-3 w-3" aria-hidden="true" />
                       </Button>
                       
                       {/* Remove */}
@@ -191,8 +193,9 @@ export default function Cart() {
                         size="icon"
                         className="h-8 w-8 text-destructive hover:bg-destructive/10"
                         onClick={() => removeItem(item.id)}
+                        aria-label="Retirer du panier"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
                       </Button>
                     </div>
 

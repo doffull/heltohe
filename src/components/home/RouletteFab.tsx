@@ -409,8 +409,8 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
                 {result.code && (
                   <div className="flex items-center justify-center gap-2 p-3 bg-muted rounded-lg border-2 border-dashed border-primary/40">
                     <code className="text-lg font-mono font-bold tracking-wider">{result.code}</code>
-                    <Button size="icon" variant="ghost" onClick={copyCode} className="h-8 w-8">
-                      {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                    <Button size="icon" variant="ghost" onClick={copyCode} className="h-8 w-8" aria-label={copied ? 'Code copié' : 'Copier le code'}>
+                      {copied ? <Check className="h-4 w-4 text-green-600" aria-hidden="true" /> : <Copy className="h-4 w-4" aria-hidden="true" />}
                     </Button>
                   </div>
                 )}
