@@ -369,6 +369,119 @@ export default function AdminAudit() {
     });
     tick();
 
+    // ── GROUP: Published rendering ──────────────────────────────────────
+    const PUBLISHED_URL = 'https://warltkfr.lovable.app';
+    const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL as string;
+    const SUPABASE_KEY = (import.meta as any).env?.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+
+    // 1. Reachable
+    setRunningTest('published', 'published-reachable');
+    try {
+      const r = await fetch(PUBLISHED_URL + '/', { method: 'GET', cache: 'no-store', mode: 'cors' });
+      updateTest('published', 'published-reachable', {
+        status: r.ok ? 'pass' : 'warn',
+        detail: r.ok ? `Site publié OK (HTTP ${r.status})` : `HTTP ${r.status}`,
+      });
+    } catch (e: any) {
+      updateTest('published', 'published-reachable', { status: 'warn', detail: 'Vérification CORS impossible — site probablement accessible mais non testable depuis l\'admin' });
+    }
+    tick();
+
+    // 2-5. Anonymous fetch of design_settings_public via direct REST (no session cookies)
+    let publishedDesign: any = null;
+    let publishedFetchError: string | null = null;
+    setRunningTest('published', 'published-design');
+    try {
+      const url = `${SUPABASE_URL}/rest/v1/design_settings_public?settings_key=eq.main&select=*`;
+      const res = await fetch(url, {
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${SUPABASE_KEY}`,
+        },
+      });
+      if (!res.ok) {
+        publishedFetchError = `HTTP ${res.status}`;
+        updateTest('published', 'published-design', {
+          status: 'fail',
+          detail: `Impossible à lire en anonyme (HTTP ${res.status}) — le site publié sera cassé pour les visiteurs !`,
+        });
+      } else {
+        const arr = await res.json();
+        publishedDesign = Array.isArray(arr) ? arr[0] : null;
+        updateTest('published', 'published-design', {
+          status: publishedDesign ? 'pass' : 'fail',
+          detail: publishedDesign ? 'Lecture anonyme OK' : 'Aucune ligne retournée',
+        });
+      }
+    } catch (e: any) {
+      publishedFetchError = String(e);
+      updateTest('published', 'published-design', { status: 'fail', detail: `Erreur réseau: ${e?.message || e}` });
+    }
+    tick();
+
+    // 3. Logo
+    setRunningTest('published', 'published-logo');
+    const pubLogo = publishedDesign?.hud_logo;
+    if (!pubLogo) {
+      updateTest('published', 'published-logo', { status: 'warn', detail: 'Aucun logo configuré' });
+    } else {
+      try {
+        const r = await fetch(pubLogo, { method: 'HEAD' });
+        updateTest('published', 'published-logo', {
+          status: r.ok ? 'pass' : 'warn',
+          detail: r.ok ? `Logo accessible (${pubLogo.slice(0, 60)})` : `Logo HTTP ${r.status}`,
+        });
+      } catch {
+        updateTest('published', 'published-logo', { status: 'warn', detail: 'Logo non vérifiable' });
+      }
+    }
+    tick();
+
+    // 4. Hero slides
+    setRunningTest('published', 'published-hero');
+    const pubSlides = publishedDesign?.hero_slides;
+    const slideN = Array.isArray(pubSlides) ? pubSlides.length : 0;
+    updateTest('published', 'published-hero', {
+      status: slideN > 0 ? 'pass' : 'warn',
+      detail: slideN > 0 ? `${slideN} slide(s) servi(s) en publié` : 'Aucun slide en publié — fallback affiché',
+    });
+    tick();
+
+    // 5. Site name parity
+    setRunningTest('published', 'published-sitename');
+    const dbName = (ds as any)?.site_name;
+    const pubName = publishedDesign?.site_name;
+    if (!publishedDesign) {
+      updateTest('published', 'published-sitename', { status: 'skip', detail: 'Design publié non lu' });
+    } else if (dbName === pubName) {
+      updateTest('published', 'published-sitename', { status: 'pass', detail: `Cohérent : "${dbName || '(vide)'}"` });
+    } else {
+      updateTest('published', 'published-sitename', {
+        status: 'warn',
+        detail: `Désynchro : base="${dbName}" vs publié="${pubName}" — republier`,
+      });
+    }
+    tick();
+
+    // 6. Public products visibility
+    setRunningTest('published', 'published-products');
+    try {
+      const url = `${SUPABASE_URL}/rest/v1/products?is_active=eq.true&select=id&limit=1`;
+      const res = await fetch(url, {
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+      });
+      const arr = res.ok ? await res.json() : [];
+      updateTest('published', 'published-products', {
+        status: res.ok && arr.length > 0 ? 'pass' : 'warn',
+        detail: !res.ok
+          ? `HTTP ${res.status} — RLS bloque l'accès anonyme`
+          : arr.length > 0 ? 'Au moins un produit visible publiquement' : 'Aucun produit actif visible',
+      });
+    } catch (e: any) {
+      updateTest('published', 'published-products', { status: 'fail', detail: String(e?.message || e) });
+    }
+    tick();
+
     setElapsed(Math.round(performance.now() - t0));
     setRunning(false);
   };
