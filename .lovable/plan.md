@@ -1,76 +1,75 @@
-## Diagnostic — cause racine confirmée
 
-J'ai chargé le site publié `https://warltkfr.lovable.app/` et inspecté le réseau.
-Toutes les requêtes vers `design_settings_public` renvoient **HTTP 401 — `permission denied for table design_settings`** (code Postgres `42501`).
+# Plan — Sécurité fonctions, commande vocale, validation visuelle du publié
 
-Conséquence directe :
-- `useDesignSettings()` retourne `null`
-- `AppContext` reste sur `INITIAL_DESIGN_SETTINGS` (valeurs par défaut)
-- Donc : `hudLogo = ""` → logo absent, `siteName = "Mon Site"` → titre faux, `heroSlides = []` → hero vide, couleurs et header tombent sur les fallbacks → impression de site « cassé / décalé / sans header / sans images ».
+## 1. Sécuriser les fonctions SECURITY DEFINER
 
-Pourquoi ça marche dans l'aperçu Lovable mais pas en publié : l'aperçu utilise un rôle `sandbox_exec` qui a les droits ; le visiteur final utilise `anon` qui ne les a pas.
+Le linter remonte **31 avertissements** : 5 policies trop permissives + 26 fonctions `SECURITY DEFINER` exécutables par tout le monde (anon ou authenticated) sans raison.
 
-Ce que la base contient aujourd'hui :
+Audit terminé. Voici la classification cible :
 
-```text
-design_settings        (table) — RLS ON
-  GRANTS: sandbox_exec (SELECT, INSERT)        ← anon/authenticated absents
-  POLICIES:
-    - "Admins can manage design settings"      (ALL)
-    - "Public can read design_settings safe columns" (SELECT, anon+authenticated)
-       → la policy autorise, mais le GRANT manque → 401
+| Fonction | Doit rester appelable par | Action |
+|---|---|---|
+| `has_role` | anon + authenticated (utilisée dans RLS) | Garder accès |
+| `preview_promo_code` | anon + authenticated (panier invité) | Garder accès |
+| `track_session_heartbeat`, `mark_popup_converted` | anon + authenticated (analytics public) | Garder accès |
+| `spin_roulette` (les 2 signatures) | anon + authenticated (jeu visiteur) | Garder accès |
+| `validate_and_create_order` | **authenticated uniquement** (déjà vérifie auth.uid() côté RPC via policy orders) | Révoquer anon |
+| `redeem_loyalty_reward` | **authenticated uniquement** | Révoquer anon |
+| `award_loyalty_points`, `consume_order_stock`, `release_order_stock`, `reserve_order_stock` | **service role / admin uniquement** (appelées par triggers ou edge functions) | Révoquer anon + authenticated |
+| `get_newsletter_stats`, `list_users_by_role` | déjà gardées par `has_role` interne mais inutile d'exposer à anon | Révoquer anon |
+| `trigger_award_loyalty_points`, `audit_role_change`, `auto_create_inventory_on_product_insert`, `auto_create_category_page`, `generate_category_slug`, `sanitize_techwear_hero`, `update_updated_at_column` | triggers internes uniquement | Révoquer anon + authenticated (laisser uniquement à postgres/service_role) |
 
-design_settings_public (vue, security_invoker=true)
-  GRANTS: sandbox_exec uniquement              ← anon/authenticated absents
-```
+Policies trop permissives à corriger :
+- `visitor_sessions` UPDATE `USING (true)` → restreindre par `session_id` ou supprimer la policy (le heartbeat passe déjà par la RPC SECURITY DEFINER `track_session_heartbeat`).
+- `click_events`, `page_views`, `client_error_logs`, `newsletter_popup_views` INSERT `WITH CHECK (true)` → ajouter une contrainte minimale (`session_id IS NOT NULL` ou rate limiting via index unique court terme) — sans casser l'analytics.
 
-Postgres exige **les deux** : un GRANT au niveau table + une RLS policy. Il manque le GRANT, d'où le 401.
+Une migration unique applique tous les `REVOKE EXECUTE … FROM anon, authenticated, public` ciblés et resserre les 5 policies. Aucun comportement utilisateur changé.
 
-Le même problème touche aussi `visitor_sessions` (POST 401 observé) — à corriger par cohérence.
+## 2. Corriger la commande vocale
 
-## Plan de correction
+Cause racine confirmée par test : l'edge function `voice-command` répond **HTTP 402 « Payment required »** depuis le gateway Lovable AI. Le code propage cette erreur vers le client qui affiche « Erreur lors du traitement vocal ». Ce n'est ni un bug navigateur ni un problème de permission micro.
 
-### 1. Migration SQL — restaurer l'accès public lecture seule
+Améliorations :
 
-Une seule migration corrige le bug visuel principal :
+- **Côté edge function** (`supabase/functions/voice-command/index.ts`) :
+  - Détecter explicitement les codes 402 / 429 / 5xx du gateway et renvoyer un payload structuré `{ error, userMessage }` au lieu d'une 500 opaque.
+  - Garder un fallback local ultra-simple (regex sur "ajoute", "panier", "livraison", "domicile", "relais", "confirme") quand l'IA est indisponible, pour que l'utilisateur ne soit jamais bloqué.
+  - Ajouter validation Zod stricte des entrées (transcript ≤ 1000, mode whitelist).
 
-- `GRANT SELECT ON public.design_settings TO anon, authenticated;`
-  (RLS reste activée et la policy existante "Public can read design_settings safe columns" continue de filtrer les colonnes sensibles via la vue).
-- `GRANT SELECT ON public.design_settings_public TO anon, authenticated;`
-- Vérifier `visitor_sessions` (le POST 401 indique le même schéma de problème) et restaurer les droits `INSERT/UPDATE` cohérents avec sa policy publique existante.
+- **Côté UI** (`VoiceCommandFab.tsx`) :
+  - Afficher un message clair selon le code (`402` → « Service vocal temporairement indisponible, réessayez dans quelques minutes » ; `429` → « Trop de requêtes »).
+  - Stabiliser le `onresult` via `useRef` (pattern recommandé pour les API Speech) pour éviter les pertes silencieuses entre re-renders.
+  - Synchroniser `speechSynthesis.speak()` au geste utilisateur (créer l'utterance dans le handler de bouton, pas après un `await`) pour Safari iOS.
+  - Garder un toast dédié + bouton « Réessayer » plutôt que la simple toast d'erreur générique actuelle.
 
-Aucune donnée sensible n'est exposée : la vue `design_settings_public` ne sélectionne que les colonnes d'affichage (logo, couleurs, hero, header, etc.) — les colonnes admin restent dans `design_settings` et seul l'admin peut les lire grâce à la policy "Admins can manage…".
+- **Crédits AI** : informer dans la chat que le 402 vient des crédits IA Lovable épuisés ou du quota de la clé — la correction code rend l'expérience propre, mais l'utilisateur devra recharger les crédits IA pour que la voix reprenne pleinement.
 
-### 2. Garde-fous front-end (anti-régression)
+## 3. Validation visuelle automatique du rendu publié
 
-Pour éviter qu'un futur 401 ne casse à nouveau l'affichage :
+Aujourd'hui `/admin/audit` couvre les routes, la DB, le storage et la logique métier mais ne **regarde** pas le rendu publié. Ajouts :
 
-- `useDesignSettings` : afficher un `console.error` clair si la requête échoue (au lieu d'un null silencieux), et exposer l'`error` dans `AppContext` pour debug.
-- `AppContext` : si `dbSettings` est `null` ET qu'on détecte une erreur réseau, retenter une fois après 1,5 s (transitoire réseau).
-- Splash screen : ne pas se masquer tant que la première requête `design_settings_public` n'a pas répondu (succès OU erreur), pour éviter le « flash » avec valeurs par défaut.
+- Nouvelle section **« Rendu publié »** dans `AdminAudit.tsx` qui exécute, depuis le navigateur admin :
+  1. `fetch('https://warltkfr.lovable.app/')` et vérifie `200 OK` + présence de `<title>` non vide + balise meta description.
+  2. `fetch` du JSON `design_settings_public` côté client anonyme (sans session) → vérifie que `hud_logo`, `site_name`, `hero_slides` reviennent bien (c'était la racine du problème précédent : un 401 RLS rendait le site « tout noir »).
+  3. Comparaison "preview vs publié" : compare `site_name`, taille du logo, et nombre de hero slides entre la valeur en base et celle servie publiquement → alerte si désynchro.
+  4. Score visuel via une iframe cachée pointant sur `https://warltkfr.lovable.app/` : on attend 3 s puis on lit `iframe.contentDocument` quand same-origin (le site publié l'est) et on vérifie présence d'au moins un `<header>`, un `<main>`, un `<img>` chargé.
 
-### 3. Cache & minification (demandes secondaires de l'utilisateur)
+- Section **« Avant publication »** : bouton « Lancer la pré-publication ». Exécute les mêmes checks contre l'URL preview pour garantir parité dev↔publié, et bloque visuellement la publication si une régression est détectée (badge rouge dans le header admin).
 
-À expliquer clairement : **le cache n'est pas la cause** de ce que tu vois. Vite minifie déjà tout le JS/CSS en production et les fichiers servis ont des hashes uniques (`index-ABC123.js`) qui forcent les navigateurs à recharger la nouvelle version dès que tu re-publies. Ajouter un « vide-cache » manuel ne résoudrait rien ici.
-
-Cela dit, pour ta tranquillité, j'ajouterai :
-
-- `<meta http-equiv="Cache-Control" content="no-cache">` sur `index.html` (le HTML de point d'entrée uniquement, pas les assets) → garantit que chaque visiteur voit toujours la dernière publication.
-- Un petit utilitaire admin `/admin` → bouton **« Forcer le rechargement »** qui appelle `caches.keys().then(k => k.forEach(caches.delete))` + `location.reload(true)` — utile si jamais un Service Worker s'installait un jour.
-- Vérification que `vite.config.ts` active bien `build.minify: 'esbuild'` (défaut) et `build.cssMinify: true` — à confirmer dans la config.
-
-### 4. Vérification
-
-Après application :
-
-1. Recharger `https://warltkfr.lovable.app/` en navigation privée.
-2. Vérifier dans le DevTools réseau que `design_settings_public` renvoie **200** avec un JSON contenant `hud_logo`, `hero_slides`, `site_name`, etc.
-3. Vérifier visuellement que logo, header, hero, couleurs apparaissent comme dans l'aperçu Lovable.
-4. Tester sur Firefox, Chrome, Edge, Safari — l'identité visuelle doit être strictement identique (le bug n'était pas lié au navigateur, c'était un 401 universel).
+- **Auto-monitoring** : un cron client toutes les 60 s côté `/admin` (uniquement) qui ping `design_settings_public` en mode anonyme et logge dans `client_error_logs` toute régression → notifications dans `/admin/errors`.
 
 ## Détails techniques
 
-- Migration unique, idempotente (`GRANT … IF NOT EXISTS` n'existe pas en SQL standard mais `GRANT` est sûr à rejouer).
-- Aucune modification du schéma, aucune perte de données.
-- Aucun changement de RLS policy → la sécurité des colonnes admin (`legal_*`, secrets, etc.) reste intacte parce qu'elles ne sont pas exposées par la vue `design_settings_public`.
-- Le composant `HeroErrorBoundary` et le système de logs d'erreurs créés précédemment restent en place (utiles à long terme), mais ils ne sont **pas** la solution — ils ne capturaient pas l'erreur car un 401 réseau ne déclenche pas d'erreur React, juste des données vides.
+- Migration SQL unique pour partie 1 ; aucun changement de schéma, uniquement `REVOKE EXECUTE` + 5 réécritures de policies.
+- Aucune modification de `validate_and_create_order` (déjà sûre) ni de `has_role` (utilisée par RLS).
+- L'edge function `voice-command` reste publique (`verify_jwt = false` par défaut Lovable) — l'UX reste sans login obligatoire.
+- L'audit visuel reste **côté client admin** : pas d'edge function supplémentaire, pas de coût IA.
+- Le quota 402 du gateway IA n'est pas un bug code mais un état réel ; le plan ajoute juste une expérience dégradée propre.
+
+## Ordre d'exécution
+
+1. Migration SQL (sécurité fonctions + policies).
+2. Patch `voice-command` edge function (gestion 402/429 + fallback regex).
+3. Patch `VoiceCommandFab.tsx` (messages d'erreur clairs, useRef, gesture-safe TTS).
+4. Section « Rendu publié » + bouton pré-publication dans `AdminAudit.tsx`.
+5. Vérification : relancer le linter → 0 critique restant ; lancer l'audit `/admin/audit` complet ; tester la commande vocale en mode dégradé.
