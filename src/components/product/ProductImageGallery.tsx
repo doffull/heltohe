@@ -388,19 +388,21 @@ export default function ProductImageGallery({
           ))
         ) : (
           <>
-            {/* Image thumbnail */}
-            <button
-              onClick={switchToImage}
-              className={`w-20 h-20 chamfer-hud-sm overflow-hidden border-2 bg-card/30 relative transition-colors ${activeMedia === 'image' ? 'border-primary' : 'border-border/30 opacity-60 hover:opacity-100'}`}
-            >
-              <img src={image} alt={name} className="w-full h-full object-cover" />
-              {videoUrl && (
-                <div className="absolute bottom-1 left-1">
-                  <ImageIcon className="h-3 w-3 text-foreground drop-shadow-md" />
-                </div>
-              )}
-            </button>
-
+            {/* One thumbnail per image (cover + gallery) */}
+            {imageList.map((img, i) => (
+              <button
+                key={`${img}-${i}`}
+                onClick={() => { switchToImage(); setActiveImageIndex(i); }}
+                className={`w-20 h-20 chamfer-hud-sm overflow-hidden border-2 bg-card/30 relative transition-colors ${activeMedia === 'image' && activeImageIndex === i ? 'border-primary' : 'border-border/30 opacity-60 hover:opacity-100'}`}
+              >
+                <img src={img} alt={`${name} ${i + 1}`} className="w-full h-full object-cover" />
+                {i === 0 && videoUrl && (
+                  <div className="absolute bottom-1 left-1">
+                    <ImageIcon className="h-3 w-3 text-foreground drop-shadow-md" />
+                  </div>
+                )}
+              </button>
+            ))}
           </>
         )}
 
