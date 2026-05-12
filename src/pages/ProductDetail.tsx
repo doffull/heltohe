@@ -144,6 +144,7 @@ export default function ProductDetail() {
               image={product.image}
               name={product.name}
               videoUrl={product.videoUrl}
+              galleryImages={product.galleryImages}
               colorOptions={product.colorOptions}
               selectedColor={selectedColor}
               onColorChange={handleColorChange}
