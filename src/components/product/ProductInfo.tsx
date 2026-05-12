@@ -132,7 +132,11 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
           />
         </motion.div>
       )}
+        </>
+      )}
 
+      {showDetails && (
+        <>
       {/* Features bar */}
       <motion.div
         className="grid grid-cols-3 gap-2 py-4 border-y border-border"
