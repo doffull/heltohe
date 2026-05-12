@@ -32,10 +32,9 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
   const showDetails = !headerOnly;
   return (
     <>
-      {showHeader && <></>}
-  return (
-    <>
-      {/* Category & SKU */}
+      {showHeader && (
+        <>
+          {/* Category & SKU */}
       <motion.div
         className="flex items-center justify-between"
         {...fadeUp}
