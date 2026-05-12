@@ -314,9 +314,9 @@ export function MainLayout({ children }: MainLayoutProps) {
 
             {/* Desktop Navigation */}
             <nav className={cn(
-              "items-center",
-              sidebarActive ? "gap-3 xl:gap-5" : "gap-6 xl:gap-8",
-              headerPreset === 'minimal' ? "hidden" : "hidden lg:flex",
+              "items-center min-w-0",
+              sidebarActive ? "gap-3 2xl:gap-5" : "gap-6 xl:gap-8",
+              headerPreset === 'minimal' ? "hidden" : (sidebarActive ? "hidden 2xl:flex" : "hidden lg:flex"),
               headerPreset === 'fullwidth' ? "flex-1 justify-center" : "",
               headerPreset === 'centered' ? "justify-center" : "",
             )}>
