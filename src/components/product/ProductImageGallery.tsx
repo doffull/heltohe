@@ -41,6 +41,7 @@ export default function ProductImageGallery({
 }: ProductImageGalleryProps) {
   const isMobile = useIsMobile();
   const [activeMedia, setActiveMedia] = useState<'image' | 'video'>('image');
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [showModelBadge, setShowModelBadge] = useState(true);
   const [isZoomed, setIsZoomed] = useState(false);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
@@ -48,6 +49,14 @@ export default function ProductImageGallery({
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastTapRef = useRef(0);
+  const touchStartX = useRef<number | null>(null);
+
+  // Build the image list: cover first then gallery, deduped, filtering out empties
+  const imageList = useMemo(() => {
+    const all = [image, ...(galleryImages || [])].filter(Boolean) as string[];
+    return Array.from(new Set(all));
+  }, [image, galleryImages]);
+  const hasMultipleImages = imageList.length > 1;
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!containerRef.current || !isZoomed || activeMedia !== 'image') return;
