@@ -97,7 +97,7 @@ export function CategoriesMenu({ compact = false }: { compact?: boolean } = {}) 
               </Link>
             );
           })}
-        </nav>
+        </nav>}
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
