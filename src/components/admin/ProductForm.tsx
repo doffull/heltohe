@@ -95,6 +95,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         modelHeight: product.modelHeight || '',
         modelSizeWorn: product.modelSizeWorn || '',
         modelName: product.modelName || '',
+        galleryImages: product.galleryImages || [],
       });
     }
   }, [product]);
