@@ -3,7 +3,6 @@ import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
 import { Language } from '@/types';
 import { BrandLogo } from '@/components/layout/BrandLogo';
-import { CategoriesMenu } from '@/components/layout/CategoriesMenu';
 
 export function Header() {
   const { language, setLanguage, designSettings } = useApp();

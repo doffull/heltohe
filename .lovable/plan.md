@@ -1,112 +1,36 @@
-## Objectif
+## Problème
 
-Renforcer l'import CSV avec une **validation pré-import**, ajouter un **import de stock depuis PDF** (type rapport ATUM), et permettre l'**édition rapide du stock en cliquant sur un nombre** dans `/admin/stock`.
+Le composant `CategoriesMenu` a bien été créé, mais je l'ai ajouté à `src/components/layout/Header.tsx` — un composant qui **n'est importé nulle part** dans l'app. Le header visible sur la page d'accueil (et tout le site public) provient de `src/components/layout/MainLayout.tsx`, qui a sa propre barre avec logo, nav, recherche, panier et compte. C'est pour ça que rien n'a changé à l'écran.
 
----
+## Plan
 
-## 1. Validation pré-import CSV (produits)
+### 1. Intégrer `CategoriesMenu` dans `MainLayout.tsx`
 
-Modifier `src/components/admin/CsvImportDialog.tsx` + `src/lib/csvProductMapper.ts`.
+Dans la barre d'actions du header (autour de la ligne 336, à côté de la recherche / panier / compte), insérer le bouton **CATÉGORIES** qui ouvre la modal déjà créée.
 
-**Nouvelle étape "Validation"** entre le parsing et la prévisualisation :
+Position proposée : juste avant la recherche, pour que ce soit le premier élément de la zone droite — le plus visible.
 
-- Détection **colonnes manquantes** : vérifier la présence des colonnes critiques (`Nom`/`name`, `UGS`/`sku` ou `ID`, `Tarif régulier`/`price`). Affiche un bandeau rouge bloquant si une colonne essentielle manque.
-- Détection **SKU dupliqués dans le CSV** (même SKU sur plusieurs lignes).
-- Détection **SKU déjà existants en base** (déjà fait, mais marqué comme warning explicite par ligne).
-- **Prix incohérents** :
-  - `price <= 0`
-  - `sale_price >= price` (promo invalide)
-  - `sale_price < 0`
-- **Stock incohérent** : `stock < 0` ou non-numérique.
-- **Image manquante** ou URL invalide (warning, non bloquant).
+### 2. Éviter les doublons
 
-**Rapport d'erreurs par ligne** :
-- Nouvelle colonne "Validation" dans le tableau de prévisualisation avec icône statut (`✓ OK`, `⚠ warning`, `✗ erreur`).
-- Tooltip/popover par ligne listant les problèmes détectés.
-- Compteur en haut : `X OK • Y warnings • Z erreurs`.
-- Bouton "Exporter le rapport" → CSV des erreurs.
-- Toggle "Ignorer les lignes en erreur" (par défaut activé) : seules les lignes valides + warnings sont importées.
-- Bouton "Importer" désactivé si 0 ligne valide.
+Le `MainLayout` actuel a déjà :
+- une icône Panier avec badge
+- une icône Compte (User)
+- une recherche extensible
 
-**Fichier nouveau** : `src/lib/csvProductValidator.ts` exposant :
-```ts
-validateMappedRows(rows: MappedCsvProduct[], existingSkus: Set<string>) 
-  => { row: MappedCsvProduct; errors: string[]; warnings: string[] }[]
-validateHeaders(headers: string[]) => { missing: string[] }
-```
+Donc dans le `CategoriesMenu`, on **désactive la nav rapide** (Favoris / Comparer / Panier / Compte) sur desktop pour ne pas dupliquer ce qui existe déjà dans le header — on garde seulement le **bouton Catégories + la modal** (recherche, grille de catégories, CTA).
 
----
+Si vous préférez quand même afficher Favoris + Comparer (qui n'existent pas encore dans le header), je les ajoute en plus.
 
-## 2. Import de stock par PDF (rapport ATUM)
+### 3. Nettoyer
 
-Format détecté dans le fichier uploadé : tableau ATUM avec colonnes SKU, Nom, Stock actuel, etc.
+- Supprimer l'import et l'usage ajoutés dans `src/components/layout/Header.tsx` (fichier mort, mais on évite la confusion).
 
-**Nouvelle Edge Function** `supabase/functions/parse-stock-pdf/index.ts` :
-- Accepte un PDF en base64.
-- Appelle Lovable AI (`google/gemini-2.5-pro`) avec vision pour extraire un tableau JSON `[{ sku, name, stock, location? }]`.
-- Retourne le JSON normalisé.
+### Fichiers modifiés
 
-**Nouveau composant** `src/components/admin/StockPdfImportDialog.tsx` :
-- Drop zone PDF (ou Excel `.xlsx`/`.csv` en bonus).
-- Appel de l'edge function → prévisualisation tableau.
-- Pour chaque ligne extraite :
-  - Match SKU avec `inventory.sku` existant.
-  - Affiche : SKU, nom détecté, stock actuel BDD, **nouveau stock**, delta (+/-).
-  - Statut : `✓ Match`, `⚠ SKU inconnu`, `✗ Format invalide`.
-- Sélecteur de **location cible** (web / boutique / B2B).
-- Mode : `Remplacer` (set quantity) ou `Ajouter` (delta).
-- Bouton "Appliquer" → upsert dans `stock_levels` pour chaque SKU matché.
+- `src/components/layout/MainLayout.tsx` — import + insertion du `<CategoriesMenu />` dans la barre d'actions
+- `src/components/layout/CategoriesMenu.tsx` — option `compact` pour masquer la nav redondante sur desktop
+- `src/components/layout/Header.tsx` — retrait du `CategoriesMenu` (fichier non utilisé)
 
-**Bouton d'entrée** : ajouté dans `AdminStock.tsx` vue `inventory` à côté de "Sync WordPress" → "Importer stock (PDF)".
+### Question
 
----
-
-## 3. Édition rapide du stock par clic
-
-Dans `AdminStock.tsx`, sur les vues `inventory` et `boutiques`, le **nombre de stock** affiché dans chaque colonne (Web / Boutiques / B2B / par variante) devient un bouton inline éditable.
-
-Comportement :
-- Hover : surlignage léger + curseur pointer + petite icône crayon.
-- Clic : transforme la cellule en `<Input type="number">` focus auto.
-- Validation par `Enter` ou blur → `supabase.from('stock_levels').upsert(...)`.
-- `Escape` annule.
-- Toast de confirmation, refresh realtime.
-- Permission : réservé aux admins (déjà géré par RLS).
-
-**Composant nouveau** : `src/components/admin/InlineStockEditor.tsx`
-```tsx
-<InlineStockEditor 
-  inventoryId={...} 
-  locationId={...} 
-  size={...} 
-  color={...} 
-  currentValue={qty}
-  onSaved={refresh}
-/>
-```
-
-Remplace les `<span>{qty}</span>` actuels dans le tableau inventaire global et dans les popovers couleurs/tailles.
-
----
-
-## Hors scope
-
-- Pas de modification du schéma BDD (les tables `stock_levels`, `inventory`, `products` couvrent déjà tout).
-- Pas de gestion multi-fichiers PDF en batch.
-- Pas d'OCR custom : on s'appuie sur Gemini Vision via Lovable AI Gateway (pas de clé API requise).
-- Pas de modification du flux WooCommerce existant.
-
----
-
-## Fichiers impactés
-
-**Créés**
-- `src/lib/csvProductValidator.ts`
-- `src/components/admin/StockPdfImportDialog.tsx`
-- `src/components/admin/InlineStockEditor.tsx`
-- `supabase/functions/parse-stock-pdf/index.ts`
-
-**Modifiés**
-- `src/components/admin/CsvImportDialog.tsx` (étape validation + rapport)
-- `src/pages/admin/AdminStock.tsx` (bouton import PDF + remplacement des spans stock par `InlineStockEditor`)
-- `supabase/config.toml` (déclaration de la nouvelle edge function avec `verify_jwt = false` si nécessaire)
+Voulez-vous que j'ajoute aussi **Favoris** et **Comparer** dans le header (en plus du Panier/Compte déjà présents), ou seulement le bouton **CATÉGORIES** + sa modal ?
