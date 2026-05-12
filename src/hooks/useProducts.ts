@@ -28,6 +28,7 @@ function dbToAppProduct(db: Record<string, unknown>): Product {
     modelHeight: (db.model_height as string) || undefined,
     modelSizeWorn: (db.model_size_worn as string) || undefined,
     modelName: (db.model_name as string) || undefined,
+    galleryImages: (db.gallery_images as string[]) || [],
   };
 }
 
