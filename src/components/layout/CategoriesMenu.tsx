@@ -30,7 +30,7 @@ const FALLBACK_CATEGORIES = [
   { title: 'Nouveautés', slug: 'nouveautes', icon: Star },
 ];
 
-export function CategoriesMenu() {
+export function CategoriesMenu({ compact = false }: { compact?: boolean } = {}) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const navigate = useNavigate();
