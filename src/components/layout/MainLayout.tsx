@@ -15,6 +15,7 @@ import { MannequinHotspots } from './MannequinHotspot';
 import { SidebarProductHUD } from './SidebarProductHUD';
 import { UnifiedFab } from './UnifiedFab';
 import { SidebarNewsletter } from './SidebarNewsletter';
+import { CategoriesMenu } from './CategoriesMenu';
 import { NewsletterPopupHost } from '@/components/home/NewsletterPopupHost';
 import { InlineEditable } from '@/components/visual-editor/InlineEditable';
 import { 
