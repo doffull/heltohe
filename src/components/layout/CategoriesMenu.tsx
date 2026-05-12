@@ -30,7 +30,7 @@ const FALLBACK_CATEGORIES = [
   { title: 'Nouveautés', slug: 'nouveautes', icon: Star },
 ];
 
-export function CategoriesMenu() {
+export function CategoriesMenu({ compact = false }: { compact?: boolean } = {}) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const navigate = useNavigate();
@@ -75,7 +75,7 @@ export function CategoriesMenu() {
           <span className="hidden sm:inline">Catégories</span>
         </button>
 
-        <nav className="hidden md:flex items-center gap-1">
+        {!compact && <nav className="hidden md:flex items-center gap-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -97,7 +97,7 @@ export function CategoriesMenu() {
               </Link>
             );
           })}
-        </nav>
+        </nav>}
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
