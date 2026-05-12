@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 import { MannequinHotspots } from './MannequinHotspot';
 import { SidebarProductHUD } from './SidebarProductHUD';
 import { UnifiedFab } from './UnifiedFab';
-import { SidebarNewsletter } from './SidebarNewsletter';
+// SidebarNewsletter retiré du panneau latéral
 import { MiniNavbar } from '@/components/ui/mini-navbar';
 import { NewsletterPopupHost } from '@/components/home/NewsletterPopupHost';
 import { InlineEditable } from '@/components/visual-editor/InlineEditable';
@@ -272,10 +272,10 @@ export function MainLayout({ children }: MainLayoutProps) {
       >
         <MiniNavbar
           expanded={searchOpen}
-          transparent={headerPreset === 'transparent'}
-          className="pointer-events-auto mx-auto w-[calc(100%-1rem)] max-w-6xl shadow-[0_8px_24px_-12px_hsl(var(--foreground)/0.18)]"
+          transparent={isHomePage || headerPreset === 'transparent'}
+          className="pointer-events-auto mx-auto w-[calc(100%-1.5rem)] max-w-7xl"
           style={{
-            backgroundColor: headerPreset === 'transparent' ? 'transparent' : (headerBgColor || undefined),
+            backgroundColor: (isHomePage || headerPreset === 'transparent') ? undefined : (headerBgColor || undefined),
             color: headerTextColor || undefined,
           }}
         >
@@ -314,9 +314,9 @@ export function MainLayout({ children }: MainLayoutProps) {
 
             {/* Desktop Navigation */}
             <nav className={cn(
-              "items-center",
-              sidebarActive ? "gap-3 xl:gap-5" : "gap-6 xl:gap-8",
-              headerPreset === 'minimal' ? "hidden" : "hidden lg:flex",
+              "items-center min-w-0",
+              sidebarActive ? "gap-3 2xl:gap-5" : "gap-6 xl:gap-8",
+              headerPreset === 'minimal' ? "hidden" : (sidebarActive ? "hidden 2xl:flex" : "hidden lg:flex"),
               headerPreset === 'fullwidth' ? "flex-1 justify-center" : "",
               headerPreset === 'centered' ? "justify-center" : "",
             )}>
@@ -715,10 +715,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           {/* Sidebar Content - Product Card HUD */}
           <SidebarProductHUD />
 
-          {/* Sidebar Newsletter (discrete, bottom) */}
-          <div className="absolute bottom-0 left-0 right-0 z-20">
-            <SidebarNewsletter />
-          </div>
+          {/* Newsletter retirée du sidebar */}
         </div>
       )}
 

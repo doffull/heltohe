@@ -57,6 +57,7 @@ const NAV_ITEMS = [
   { key: 'categories',  label: 'Catégories',   icon: Grid3x3,         desc: 'Grille d\'accueil' },
   { key: 'hotspots',    label: 'Hotspots',     icon: Crosshair,       desc: 'Points interactifs' },
   { key: 'catalogue',   label: 'Catalogue',    icon: BookOpen,        desc: 'Affichage produits' },
+  { key: 'promo-parallax', label: 'Promo / Parallaxe', icon: ImagePlay, desc: 'Image ou vidéo sous catégories' },
   { key: 'admin-colors', label: 'Couleurs Admin', icon: Palette,      desc: 'Sections du dashboard' },
 ];
 
@@ -2482,6 +2483,133 @@ function AdminColorsTab() {
   );
 }
 
+function PromoParallaxTab() {
+  const { designSettings, updateDesignSettings } = useApp() as any;
+  const cfg = designSettings.promoParallax || {};
+  const update = (patch: any) =>
+    updateDesignSettings({ promoParallax: { ...cfg, ...patch } } as any);
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-xl bg-gradient-to-r from-primary/20 via-primary/10 to-transparent border border-primary/20 p-4">
+        <h3 className="text-base font-bold flex items-center gap-2">
+          <ImagePlay className="h-4 w-4 text-primary" /> Promo / Parallaxe
+        </h3>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Section affichée sur la page d'accueil, juste sous les catégories.
+        </p>
+      </div>
+
+      <Card>
+        <CardContent className="pt-5 space-y-5">
+          <div className="flex items-center justify-between">
+            <Label>Activer la section</Label>
+            <Switch checked={!!cfg.enabled} onCheckedChange={(v) => update({ enabled: v })} />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs">Type de média</Label>
+            <Select
+              value={cfg.mediaType || 'image'}
+              onValueChange={(v) => update({ mediaType: v })}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="image">Image (parallaxe)</SelectItem>
+                <SelectItem value="video">Vidéo (autoplay, muet, boucle)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label className="text-xs mb-1.5 block">Média desktop</Label>
+              <FileDropZone
+                accept={cfg.mediaType === 'video' ? ['video'] : ['image', 'video']}
+                folder="promo-parallax"
+                currentFile={cfg.mediaUrl || ''}
+                onUpload={(url) => update({ mediaUrl: url })}
+                label="Image ou vidéo"
+              />
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block">Média mobile (optionnel)</Label>
+              <FileDropZone
+                accept={cfg.mediaType === 'video' ? ['video'] : ['image', 'video']}
+                folder="promo-parallax"
+                currentFile={cfg.mobileMediaUrl || ''}
+                onUpload={(url) => update({ mobileMediaUrl: url })}
+                label="Format mobile"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label className="text-xs">Sur-titre</Label>
+              <Input
+                value={cfg.subtitle || ''}
+                onChange={(e) => update({ subtitle: e.target.value })}
+                placeholder="NOUVELLE COLLECTION"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Titre</Label>
+              <Input
+                value={cfg.title || ''}
+                onChange={(e) => update({ title: e.target.value })}
+                placeholder="Disponible maintenant"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Texte du bouton</Label>
+              <Input
+                value={cfg.ctaLabel || ''}
+                onChange={(e) => update({ ctaLabel: e.target.value })}
+                placeholder="Découvrir"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">URL du bouton</Label>
+              <Input
+                value={cfg.ctaUrl || ''}
+                onChange={(e) => update({ ctaUrl: e.target.value })}
+                placeholder="/boutique"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs">
+              Hauteur : {cfg.height || '60vh'}
+            </Label>
+            <Slider
+              value={[parseInt(cfg.height || '60', 10) || 60]}
+              min={30}
+              max={100}
+              step={5}
+              onValueChange={([v]) => update({ height: `${v}vh` })}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs">
+              Opacité de l'overlay : {Math.round((cfg.overlayOpacity ?? 0.4) * 100)}%
+            </Label>
+            <Slider
+              value={[(cfg.overlayOpacity ?? 0.4) * 100]}
+              min={0}
+              max={90}
+              step={5}
+              onValueChange={([v]) => update({ overlayOpacity: v / 100 })}
+            />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 const TAB_COMPONENTS: Record<string, React.ComponentType> = {
   disposition: DispositionTab,
   hero:        HeroSliderTab,
@@ -2493,6 +2621,7 @@ const TAB_COMPONENTS: Record<string, React.ComponentType> = {
   categories:  CategoriesTab,
   hotspots:    HotspotsTab,
   catalogue:   CatalogueTab,
+  'promo-parallax': PromoParallaxTab,
   'admin-colors': AdminColorsTab,
 };
 

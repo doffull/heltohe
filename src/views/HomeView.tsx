@@ -1,6 +1,7 @@
 import { HeroSlider } from '@/components/home/HeroSlider';
 import { CategoryGrid } from '@/components/home/CategoryGrid';
 import { ProductSections } from '@/components/home/ProductSections';
+import { PromoParallax } from '@/components/home/PromoParallax';
 import { HUDStats, HUDUnitID, HUDLogo } from '@/components/hud/HUDOverlays';
 
 export function HomeView() {
@@ -18,7 +19,10 @@ export function HomeView() {
       
       {/* Categories */}
       <CategoryGrid />
-      
+
+      {/* Promo Parallax / Video */}
+      <PromoParallax />
+
       {/* Product Sections */}
       <ProductSections />
     </div>
