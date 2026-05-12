@@ -55,7 +55,6 @@ export default function ProductOptions({
 }: ProductOptionsProps) {
   const { designSettings } = useApp();
   const displayMode = designSettings.colorDisplayMode || 'swatches';
-  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
 
   // Build color items from colorOptions or colors
   const colorItems = product.colorOptions?.length
