@@ -15,6 +15,7 @@ import { MannequinHotspots } from './MannequinHotspot';
 import { SidebarProductHUD } from './SidebarProductHUD';
 import { UnifiedFab } from './UnifiedFab';
 import { SidebarNewsletter } from './SidebarNewsletter';
+import { MiniNavbar } from '@/components/ui/mini-navbar';
 import { NewsletterPopupHost } from '@/components/home/NewsletterPopupHost';
 import { InlineEditable } from '@/components/visual-editor/InlineEditable';
 import { 
@@ -261,21 +262,26 @@ export function MainLayout({ children }: MainLayoutProps) {
       )}
 
 
-      <header
+      <div
         className={cn(
-          "top-0 left-0 right-0 z-40 border-b border-border header-container transition-all duration-500",
-          headerFixed ? "fixed" : "sticky",
-          headerPreset === 'transparent' ? "bg-transparent border-transparent" : "bg-background",
-          sidebarActive ? "lg:ml-[35%]" : "lg:ml-0"
+          'top-0 left-0 right-0 z-40 transition-all duration-500 pointer-events-none',
+          headerFixed ? 'fixed' : 'sticky',
+          sidebarActive ? 'lg:ml-[35%]' : 'lg:ml-0',
+          topBanner.enabled && topBanner.text ? 'pt-9' : 'pt-2 lg:pt-3',
         )}
-        style={{
-          backgroundColor: headerPreset === 'transparent' ? 'transparent' : (headerBgColor || undefined),
-          color: headerTextColor || undefined,
-        }}
       >
-        <div className="container mx-auto px-3 lg:px-4">
+        <MiniNavbar
+          expanded={searchOpen}
+          transparent={headerPreset === 'transparent'}
+          className="pointer-events-auto mx-auto w-[calc(100%-1rem)] max-w-6xl shadow-[0_8px_24px_-12px_hsl(var(--foreground)/0.18)]"
+          style={{
+            backgroundColor: headerPreset === 'transparent' ? 'transparent' : (headerBgColor || undefined),
+            color: headerTextColor || undefined,
+          }}
+        >
+        <div className="px-3 lg:px-5">
           <div className={cn(
-            "flex items-center gap-2 h-12 lg:h-20 min-w-0",
+            "flex items-center gap-2 h-12 lg:h-14 min-w-0",
             headerPreset === 'centered' ? "flex-col justify-center gap-1 h-auto py-3 lg:py-4" : "",
             headerPreset === 'fullwidth' ? "gap-6" : "",
           )}>
@@ -625,7 +631,8 @@ export function MainLayout({ children }: MainLayoutProps) {
             </div>
           </div>
         </div>
-      </header>
+        </MiniNavbar>
+      </div>
 
       {/* Mobile Sidebar Toggle Button - Only on home page */}
       {showSidebar && (
