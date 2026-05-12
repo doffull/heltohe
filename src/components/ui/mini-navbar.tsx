@@ -2,21 +2,15 @@ import { ReactNode, useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * MiniNavbar — Industrial Luxury floating pill header shell.
- *
- * Presentational only: caller supplies logo / links / actions slots.
- * Mirrors the reference mini-navbar's shape morph: compact chamfered
- * pill at rest, slightly larger chamfered panel when `expanded` is true,
- * with a 300ms delayed return to compact (matches the original UX).
- *
- * Tokens only — no raw colors. 45° chamfered edges via `chamfer-hud-sm`.
+ * MiniNavbar — Industrial Luxury floating glossy header shell.
+ * Always floating; glassmorphism with backdrop blur + saturate.
+ * `transparent` softens the background for use over hero imagery.
  */
 export interface MiniNavbarProps {
   children: ReactNode;
   expanded?: boolean;
   transparent?: boolean;
   className?: string;
-  /** Inline style passthrough (for admin headerBgColor / headerTextColor). */
   style?: React.CSSProperties;
 }
 
@@ -45,15 +39,29 @@ export function MiniNavbar({
   return (
     <div
       className={cn(
-        'border border-border/40 transition-all duration-300 ease-out',
-        'backdrop-blur-md supports-[backdrop-filter]:bg-background/70',
-        transparent ? 'bg-transparent border-transparent' : 'bg-background/85',
+        'transition-all duration-300 ease-out',
+        'backdrop-blur-xl backdrop-saturate-150',
+        'ring-1 ring-foreground/10',
+        'shadow-[0_8px_32px_-12px_hsl(var(--foreground)/0.25)]',
+        transparent
+          ? 'bg-foreground/5 border border-foreground/10'
+          : 'bg-gradient-to-b from-background/75 to-background/55 border border-border/40',
         shapeClass,
         className,
       )}
       style={style}
     >
-      {children}
+      {/* Glossy top sheen */}
+      <div
+        aria-hidden
+        className={cn(
+          'pointer-events-none absolute inset-x-0 top-0 h-1/2',
+          'bg-gradient-to-b from-foreground/5 to-transparent',
+          shapeClass,
+        )}
+        style={{ position: 'absolute' }}
+      />
+      <div className="relative">{children}</div>
     </div>
   );
 }
