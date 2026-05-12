@@ -1,80 +1,115 @@
-## Objectif
+## Objectifs
 
-3 changements ciblés sur la fiche produit :
-
-1. **Galerie multi-images** par produit (au lieu d'une seule image)
-2. **Mobile : remonter** le bloc Tailles + bouton « Ajouter au panier » au-dessus de la description
-3. **Supprimer** le lien « Guide des tailles → » (le bouton « Trouver ma taille » suffit)
+1. **Header desktop** : tous les icônes (recherche, aide, panier, compte, admin, notifs, messages, langue) doivent rester visibles sans débordement, et le header doit être glossy & flottant en permanence (transparent sur l'accueil).
+2. **Sidebar** : retirer le bloc Newsletter en bas du panneau latéral.
+3. **Accueil** : ajouter une section "Parallaxe / Vidéo Promo" juste sous les catégories, configurable depuis l'admin Design.
 
 ---
 
-## 1. Galerie multi-images
+## 1. Header desktop — responsive & glossy flottant
 
-### Base de données
-Migration : ajouter `gallery_images TEXT[] DEFAULT '{}'` sur `products` (l'image principale `image` reste le « cover » utilisé partout — listings, panier, etc.).
+Fichier : `src/components/layout/MainLayout.tsx` + `src/components/ui/mini-navbar.tsx`.
 
-### Types & hook
-- `src/types/index.ts` : ajouter `galleryImages?: string[]` sur `Product`.
-- `src/hooks/useProducts.ts` : mapper `gallery_images` ↔ `galleryImages` dans `dbToAppProduct` / `appToDbProduct`.
+**Cause du problème actuel** : à 1024–1366px avec sidebar ouverte (`lg:ml-[35%]`), la `MiniNavbar` est limitée à `max-w-6xl` mais coincée dans 65% de la largeur. La nav centrale + 8 icônes ne tiennent plus → certains icônes (admin, notifs, mail, langue) sont rognés.
 
-### Admin — ProductForm.tsx
-Sous le champ « Image du produit », nouvelle section **« Galerie d'images supplémentaires »** :
-- Liste réordonnable des images (drag pour réordonner, bouton X pour supprimer).
-- Bouton « + Ajouter une image » qui ouvre une `FileDropZone` (multi-upload accepté).
-- Limite raisonnable (ex. 10 images).
+**Corrections** :
+- Réduire intelligemment quand `sidebarActive` :
+  - cacher la nav principale en `lg` (`lg:hidden xl:flex`) lorsque sidebar ouverte, ou la mettre dans un menu déroulant compact.
+  - réduire les paddings/icônes (`h-8 w-8`) pour tous les boutons quand `sidebarActive`.
+  - ajouter `flex-wrap` désactivé + `min-w-0` sur le bloc nav, et `shrink-0` sur le bloc actions (déjà présent).
+- Augmenter `max-w-6xl` → `max-w-7xl` et utiliser `w-[calc(100%-2rem)]`.
+- S'assurer que les boutons "Aide", "Langue" et les badges admin sont masqués sous `xl` quand sidebar active (déjà partiellement le cas — étendre).
 
-### Affichage — ProductImageGallery.tsx
-- Construire `mediaList` = `[image cover, ...galleryImages]` dédupliqué.
-- État `activeIndex` au lieu de `activeMedia: 'image' | 'video'` seulement → étendu à `'image-N' | 'video'`.
-- **Bande de miniatures** (déjà présente) : afficher une vignette par image de la galerie quand pas de `colorOptions`. Quand `colorOptions` est utilisé, ses swatches restent prioritaires (comportement actuel inchangé) **et** les images de galerie apparaissent en miniatures additionnelles.
-- Swipe gauche/droite mobile + flèches desktop pour naviguer entre images.
-- L'image affichée (`displayImage`) prend en compte `activeIndex` quand aucun `colorOption.image` n'est actif.
-
----
-
-## 2. UX Mobile — réordonner les blocs
-
-`src/pages/ProductDetail.tsx` colonne droite actuelle :
-```
-ProductInfo (titre/prix/description)
-ProductOptions (tailles, couleurs, qty, CTA)
-```
-
-Nouvel ordre **mobile uniquement** (desktop inchangé) en utilisant `order-*` Tailwind :
-```
-ProductInfo > en-tête (titre, prix, badges)   order-1
-ProductOptions (tailles + couleurs + CTA)     order-2  ← remonté
-ProductInfo > description / matière / care    order-3
-```
-
-Implémentation : scinder `ProductInfo` en deux sous-blocs (`<ProductInfoHeader />` et `<ProductInfoDetails />`) **ou** ajouter une prop `splitForMobile` qui rend deux fragments. Le wrapper dans `ProductDetail.tsx` devient `flex flex-col` avec classes `order-` responsives, puis revient en `lg:block` sur desktop pour préserver l'ordre actuel.
+**Glossy flottant permanent** : dans `MiniNavbar.tsx`
+- Toujours floating : déjà `fixed/sticky` dans MainLayout.
+- Glossy : remplacer `bg-background/85` par un effet verre :
+  - `bg-gradient-to-b from-background/70 to-background/40`
+  - `backdrop-blur-xl backdrop-saturate-150`
+  - `ring-1 ring-foreground/10` + `shadow-[0_8px_32px_-12px_hsl(var(--foreground)/0.25)]`
+  - bordure `border-border/30`
+- Si `transparent` (homepage) : fond `bg-foreground/5` (très léger) + même blur, sans border opaque, pour rester lisible sur images claires comme sombres.
+- Conserver le morph chamfer existant.
 
 ---
 
-## 3. Retirer le lien « Guide des tailles »
+## 2. Retirer la Newsletter du sidebar
 
-`src/components/product/ProductOptions.tsx` lignes 86-99 :
-- Supprimer le bouton `Guide des tailles →` et l'état `sizeGuideOpen` + `<SizeGuideModal />`.
-- Retirer l'import `SizeGuideModal` et `useState`.
-- Le bouton « Trouver ma taille » (AI — `SizeGuideAIModal`, géré ailleurs) reste seul.
+Fichier : `src/components/layout/MainLayout.tsx` (lignes ~718–721).
+
+- Supprimer le bloc :
+  ```
+  <div className="absolute bottom-0 left-0 right-0 z-20">
+    <SidebarNewsletter />
+  </div>
+  ```
+- Retirer l'import `SidebarNewsletter`.
+- Le toggle "Newsletter dans la sidebar" dans `NewsletterPopupsManager.tsx` n'a plus d'effet visuel : on supprime ce bloc UI (le switch + ses 2 inputs) pour éviter la confusion. Les pop-ups newsletter restent intactes.
+- Le composant `src/components/layout/SidebarNewsletter.tsx` peut rester en repo (non importé) — pas de suppression de fichier.
+
+---
+
+## 3. Section Parallaxe / Vidéo Promo sous les catégories
+
+**3a. Nouveau composant** `src/components/home/PromoParallax.tsx`
+- Lit depuis `designSettings.promoParallax` :
+  ```ts
+  {
+    enabled: boolean,
+    mediaType: 'image' | 'video',
+    mediaUrl: string,
+    mobileMediaUrl?: string,
+    title?: string,
+    subtitle?: string,
+    ctaLabel?: string,
+    ctaUrl?: string,
+    height: string,        // ex '60vh'
+    overlayOpacity: number // 0–1
+  }
+  ```
+- Si `enabled=false` ou pas de média → ne rend rien (espace réservé par défaut désactivé).
+- Image : effet parallaxe via `background-attachment: fixed` (desktop) avec fallback `scroll` mobile.
+- Vidéo : `<video autoplay muted loop playsinline>` plein conteneur.
+- Overlay sombre + texte/CTA centré, design Industrial Luxury (chamfer, Helvetica-MP, tokens).
+
+**3b. Insertion accueil** : `src/views/HomeView.tsx`
+```
+<CategoryGrid />
+<PromoParallax />
+<ProductSections />
+```
+Ajouter export dans `src/components/home/index.ts`.
+
+**3c. Types** : `src/types/index.ts`
+- Étendre `DesignSettings` avec `promoParallax?: PromoParallaxConfig`.
+
+**3d. Defaults** : `src/data/initialData.ts` (ou hook `useDesignSettings`)
+- Valeur par défaut désactivée pour ne pas casser les sites existants.
+
+**3e. Onglet admin Design** : `src/pages/admin/AdminDesign.tsx`
+- Ajouter dans `NAV_ITEMS` :
+  ```
+  { key: 'promo-parallax', label: 'Promo / Parallaxe', icon: ImagePlay, desc: 'Image ou vidéo sous les catégories' }
+  ```
+- Nouveau composant `PromoParallaxTab` dans le même fichier :
+  - Switch "Activer"
+  - Select image / vidéo
+  - `FileDropZone` pour média desktop + média mobile
+  - Champs titre, sous-titre, CTA (label + URL)
+  - Slider hauteur (40–100 vh)
+  - Slider opacité overlay
+  - Aperçu live mini 16:9
+- Brancher dans le switch des onglets.
 
 ---
 
 ## Détails techniques
 
-| Fichier | Changement |
-|---|---|
-| migration SQL | `ALTER TABLE products ADD COLUMN gallery_images TEXT[] DEFAULT '{}'` |
-| `src/types/index.ts` | + `galleryImages?: string[]` |
-| `src/hooks/useProducts.ts` | mapping `gallery_images` |
-| `src/components/admin/ProductForm.tsx` | nouvelle section galerie + state `galleryImages` |
-| `src/components/product/ProductImageGallery.tsx` | support n images, navigation, miniatures |
-| `src/components/product/ProductInfo.tsx` | split header/details (ou prop) |
-| `src/pages/ProductDetail.tsx` | `order-*` responsive pour mobile |
-| `src/components/product/ProductOptions.tsx` | retrait du lien + modal Guide des tailles |
+- Aucun changement DB : `promoParallax` vit dans `design_settings` JSON existant (suit le pattern `topBanner`, `headerNavItems`).
+- Tokens uniquement (pas de couleurs raw).
+- Mobile-first 360px : la nav du header masque déjà les icônes via `hidden md:`/`hidden lg:`. Vérifier que rien ne déborde à 360.
+- Pas de migration ni d'edge function.
 
 ## Hors périmètre
 
-- Pas de changement aux listings produits (cover seul utilisé).
-- Pas de changement aux `colorOptions` (continuent de gérer 1 image par couleur).
-- Pas de zoom/lightbox repensé — on garde le double-tap fullscreen et le zoom 3.5x existants.
+- Pas de refonte fonctionnelle de la newsletter (les pop-ups restent).
+- Pas de modification du Hero Slider ni de la section Catégories.
