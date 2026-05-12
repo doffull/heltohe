@@ -24,8 +24,9 @@ export function Header() {
           </div>
         </div>
         
-        {/* Right side - Language selector */}
-        <div className="flex items-center gap-4">
+        {/* Right side - Categories menu + Language selector */}
+        <div className="flex items-center gap-3 lg:gap-4">
+          <CategoriesMenu />
           {/* Language Toggle */}
           <div className="flex items-center gap-1 bg-secondary/50 p-1 chamfer-hud-sm">
             <button
