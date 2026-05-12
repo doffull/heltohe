@@ -1,6 +1,6 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ZoomIn, ZoomOut, Play, Image as ImageIcon, X } from 'lucide-react';
+import { ZoomIn, ZoomOut, Play, Image as ImageIcon, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ColorOption } from '@/types';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -8,6 +8,7 @@ interface ProductImageGalleryProps {
   image: string;
   name: string;
   videoUrl?: string;
+  galleryImages?: string[];
   colorOptions?: ColorOption[];
   selectedColor?: string | null;
   onColorChange?: (color: string) => void;
