@@ -631,7 +631,8 @@ export function MainLayout({ children }: MainLayoutProps) {
             </div>
           </div>
         </div>
-      </header>
+        </MiniNavbar>
+      </div>
 
       {/* Mobile Sidebar Toggle Button - Only on home page */}
       {showSidebar && (
