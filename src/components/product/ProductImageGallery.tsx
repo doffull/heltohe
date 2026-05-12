@@ -276,6 +276,37 @@ export default function ProductImageGallery({
           </motion.div>
         )}
 
+        {/* Prev / Next arrows for multi-image gallery */}
+        {hasMultipleImages && activeMedia === 'image' && !activeColorOption?.image && (
+          <>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); goPrev(); }}
+              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 bg-background/70 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-background/90 transition-colors"
+              aria-label="Image précédente"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); goNext(); }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 bg-background/70 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-background/90 transition-colors"
+              aria-label="Image suivante"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+            {/* dots */}
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 flex gap-1.5 px-2 py-1 rounded-full bg-background/60 backdrop-blur-sm">
+              {imageList.map((_, i) => (
+                <span
+                  key={i}
+                  className={`w-1.5 h-1.5 rounded-full transition-all ${i === activeImageIndex ? 'bg-primary w-3' : 'bg-foreground/40'}`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
         {/* HUD corner accents */}
         <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-primary/40" />
         <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-primary/40" />
