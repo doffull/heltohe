@@ -201,6 +201,8 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
           )}
         </motion.div>
       )}
+        </>
+      )}
     </>
   );
 }
