@@ -1,11 +1,9 @@
-import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ShoppingCart, Heart, Share2, Plus, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Product } from '@/types';
 import { useApp } from '@/context/AppContext';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import SizeGuideModal from './SizeGuideModal';
 
 interface ProductOptionsProps {
   product: Product;
