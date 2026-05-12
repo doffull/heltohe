@@ -94,7 +94,34 @@ export default function ProductImageGallery({
 
   // Determine which color image to show (if colorOptions have images)
   const activeColorOption = colorOptions.find(c => c.color === selectedColor);
-  const displayImage = (activeColorOption?.image) || image;
+  const galleryActiveImage = imageList[Math.min(activeImageIndex, imageList.length - 1)] || image;
+  // Color-specific image takes precedence; otherwise the active gallery image
+  const displayImage = activeColorOption?.image || galleryActiveImage;
+
+  const goPrev = useCallback(() => {
+    if (!hasMultipleImages || activeColorOption?.image) return;
+    setActiveImageIndex((i) => (i - 1 + imageList.length) % imageList.length);
+    setIsZoomed(false);
+  }, [hasMultipleImages, imageList.length, activeColorOption]);
+
+  const goNext = useCallback(() => {
+    if (!hasMultipleImages || activeColorOption?.image) return;
+    setActiveImageIndex((i) => (i + 1) % imageList.length);
+    setIsZoomed(false);
+  }, [hasMultipleImages, imageList.length, activeColorOption]);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current == null || activeMedia !== 'image' || !hasMultipleImages) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(dx) > 50) {
+      if (dx < 0) goNext();
+      else goPrev();
+    }
+    touchStartX.current = null;
+  };
 
   return (
     <div className="space-y-4">
@@ -105,6 +132,8 @@ export default function ProductImageGallery({
         onClick={handleTap}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => isZoomed && setIsZoomed(false)}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
         initial={{ opacity: 0, x: -40 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
