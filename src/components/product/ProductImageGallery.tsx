@@ -32,6 +32,7 @@ export default function ProductImageGallery({
   image,
   name,
   videoUrl,
+  galleryImages = [],
   colorOptions = [],
   selectedColor,
   onColorChange,
