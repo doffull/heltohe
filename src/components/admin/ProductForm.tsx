@@ -59,6 +59,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
     modelHeight: '',
     modelSizeWorn: '',
     modelName: '',
+    galleryImages: [] as string[],
   });
 
   // Variant stock state (local to form — passed up on submit)
