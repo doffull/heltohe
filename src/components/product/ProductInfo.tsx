@@ -9,6 +9,10 @@ import type { SizeCategory } from '@/lib/sizeCharts';
 interface ProductInfoProps {
   product: Product;
   isNew?: boolean;
+  /** Mobile reorder: render only header block (category, title, price, stock, model, size guide CTA) */
+  headerOnly?: boolean;
+  /** Mobile reorder: render only details block (features, description, attrs, material/care) */
+  detailsOnly?: boolean;
 }
 
 const fadeUp = {
@@ -16,7 +20,7 @@ const fadeUp = {
   animate: { opacity: 1, y: 0 },
 };
 
-export default function ProductInfo({ product, isNew }: ProductInfoProps) {
+export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }: ProductInfoProps) {
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const guessCategory = (): SizeCategory => {
     const c = (product.category || '').toLowerCase();
@@ -24,6 +28,11 @@ export default function ProductInfo({ product, isNew }: ProductInfoProps) {
     if (c.includes('enfant') || c.includes('kid')) return 'enfant';
     return 'homme';
   };
+  const showHeader = !detailsOnly;
+  const showDetails = !headerOnly;
+  return (
+    <>
+      {showHeader && <></>}
   return (
     <>
       {/* Category & SKU */}
