@@ -56,6 +56,7 @@ function appToDbProduct(product: Partial<Product>) {
     model_height: product.modelHeight || null,
     model_size_worn: product.modelSizeWorn || null,
     model_name: product.modelName || null,
+    gallery_images: product.galleryImages || [],
     is_active: true,
   };
 }
