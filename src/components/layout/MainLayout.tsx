@@ -335,6 +335,9 @@ export function MainLayout({ children }: MainLayoutProps) {
 
             {/* Actions */}
             <div className={cn("flex items-center ml-auto shrink-0", sidebarActive ? "gap-1 xl:gap-2" : "gap-0 lg:gap-3")}>
+              {/* Categories mega-menu */}
+              <CategoriesMenu compact />
+
               {/* Search - Expandable (hidden when sidebar pushes header) */}
               <div className={cn(
                 "items-center transition-all duration-300",
