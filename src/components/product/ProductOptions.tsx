@@ -80,13 +80,6 @@ export default function ProductOptions({
             <label className="text-sm font-bold hud-text uppercase tracking-[0.15em]">
               Taille
             </label>
-            <button
-              type="button"
-              onClick={() => setSizeGuideOpen(true)}
-              className="text-xs text-primary underline underline-offset-2 hover:opacity-70 transition-opacity hud-text"
-            >
-              Guide des tailles →
-            </button>
           </div>
           <div className="flex flex-wrap gap-2">
             {product.sizes.map((size) => (
