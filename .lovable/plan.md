@@ -1,71 +1,80 @@
-# Mini Navbar — Industrial Luxury Edition
+## Objectif
 
-## Goal
+3 changements ciblés sur la fiche produit :
 
-Replace the current MainLayout `<header>` block with a new **floating mini-navbar** inspired by the reference design (compact pill that morphs to a rounded panel on mobile open), restyled to match the project's Industrial Luxury identity (white/gray/black, Helvetica-MP, 45° chamfered edges instead of pure rounded-full, semantic tokens only).
+1. **Galerie multi-images** par produit (au lieu d'une seule image)
+2. **Mobile : remonter** le bloc Tailles + bouton « Ajouter au panier » au-dessus de la description
+3. **Supprimer** le lien « Guide des tailles → » (le bouton « Trouver ma taille » suffit)
 
-The pasted source code is unusable (empty JSX), so the component will be rebuilt from scratch.
+---
 
-## Scope
+## 1. Galerie multi-images
 
-**In scope**
-- New `src/components/ui/mini-navbar.tsx` (presentational shell + animation).
-- New `src/components/layout/MiniNavbarHeader.tsx` (project-aware wrapper that wires logo, dynamic nav items, cart, user, admin, search, chatbot, notifications — i.e. everything the current header does).
-- Replace the `<header>…</header>` block inside `src/components/layout/MainLayout.tsx` (≈ lines 264-…) with `<MiniNavbarHeader />`. Keep the top banner, sidebar offset (`lg:ml-[35%]` when `sidebarActive`), `headerFixed` behavior, and admin notification/chat sheets intact by moving them into the wrapper.
+### Base de données
+Migration : ajouter `gallery_images TEXT[] DEFAULT '{}'` sur `products` (l'image principale `image` reste le « cover » utilisé partout — listings, panier, etc.).
 
-**Out of scope**
-- No changes to `Sidebar`, `Footer`, `MannequinHotspot`, sidebar auto-open logic, or any page content.
-- No changes to `designSettings` schema, no admin UI changes.
-- Auth/cart/admin behavior is preserved 1:1.
+### Types & hook
+- `src/types/index.ts` : ajouter `galleryImages?: string[]` sur `Product`.
+- `src/hooks/useProducts.ts` : mapper `gallery_images` ↔ `galleryImages` dans `dbToAppProduct` / `appToDbProduct`.
 
-## Design rules (must follow)
+### Admin — ProductForm.tsx
+Sous le champ « Image du produit », nouvelle section **« Galerie d'images supplémentaires »** :
+- Liste réordonnable des images (drag pour réordonner, bouton X pour supprimer).
+- Bouton « + Ajouter une image » qui ouvre une `FileDropZone` (multi-upload accepté).
+- Limite raisonnable (ex. 10 images).
 
-- Tokens only: `bg-background`, `text-foreground`, `border-border`, `text-muted-foreground`, `bg-primary`, etc. No raw hex/`text-white`/`bg-black`.
-- Shape: use the existing `chamfer-hud-sm` utility for the pill (45° corners), not `rounded-full`. Mobile-open expands to a slightly larger chamfered panel via a class swap with a 300 ms transition (mirrors the original's `rounded-full ↔ rounded-xl`).
-- Typography: `hud-text` + `uppercase tracking-wider text-xs` for nav links, matching the rest of the site.
-- Hover effect on nav links: subtle underline grow (already used in current header) — keep it.
-- Respect `headerPreset` (`classic` / `centered` / `minimal` / `transparent` / `fullwidth`) and `headerBgColor` / `headerTextColor` from `designSettings`, same as today.
+### Affichage — ProductImageGallery.tsx
+- Construire `mediaList` = `[image cover, ...galleryImages]` dédupliqué.
+- État `activeIndex` au lieu de `activeMedia: 'image' | 'video'` seulement → étendu à `'image-N' | 'video'`.
+- **Bande de miniatures** (déjà présente) : afficher une vignette par image de la galerie quand pas de `colorOptions`. Quand `colorOptions` est utilisé, ses swatches restent prioritaires (comportement actuel inchangé) **et** les images de galerie apparaissent en miniatures additionnelles.
+- Swipe gauche/droite mobile + flèches desktop pour naviguer entre images.
+- L'image affichée (`displayImage`) prend en compte `activeIndex` quand aucun `colorOption.image` n'est actif.
 
-## Component contract
+---
 
-`MiniNavbar` (presentational):
-- Props: `logo: ReactNode`, `links: { label: string; href: string }[]`, `actions: ReactNode`, `transparent?: boolean`, `className?: string`.
-- Internal state: `isOpen` (mobile menu), `shapeClass` (delayed transition like the reference).
-- Renders: floating bar with logo left, nav center (desktop only), `actions` slot right, hamburger on mobile, animated mobile drawer beneath.
+## 2. UX Mobile — réordonner les blocs
 
-`MiniNavbarHeader` (container):
-- Reads `useApp`, `useAuth`, `useCart`, `useCategories`, `useLocation` (same hooks the current header uses).
-- Builds the same `navItems` list (DEFAULT_NAV_ITEMS + DB categories, headerNavItems override).
-- Builds the right-side `actions`: search (expandable), chatbot button (desktop), cart with badge, user, admin shield, admin notifications sheet, admin chat sheet, language toggle, signout.
-- Applies `lg:ml-[35%]` when sidebar is active and `fixed`/`sticky` based on `headerFixed`.
-
-## Files
-
-- **Create** `src/components/ui/mini-navbar.tsx` — pure presentational, ~120 LOC.
-- **Create** `src/components/layout/MiniNavbarHeader.tsx` — project wiring, ~250 LOC (extracted from MainLayout's existing header JSX).
-- **Edit** `src/components/layout/MainLayout.tsx` — remove the inline `<header>` block + related state declarations that move into the wrapper (`searchOpen`, `notifOpen`, `chatOpen`, `messages`/`chatLogs` queries), replace with `<MiniNavbarHeader />`. Top banner stays in MainLayout.
-- **Edit** `src/components/layout/index.ts` — export `MiniNavbarHeader` (keep `Header` export for backward compat in case other files import it; the old `Header.tsx` file is left untouched but unused by `MainLayout`).
-
-## Technical notes
-
-```text
-MainLayout
- ├── TopBanner (unchanged)
- ├── MiniNavbarHeader            ← new
- │    └── MiniNavbar (ui)        ← new, presentational
- │         ├── logo slot         (BrandLogo)
- │         ├── nav links         (dynamic from designSettings + DB categories)
- │         └── actions slot      (search / chat / cart / user / admin / notifs)
- ├── Sidebar (unchanged)
- └── children
+`src/pages/ProductDetail.tsx` colonne droite actuelle :
+```
+ProductInfo (titre/prix/description)
+ProductOptions (tailles, couleurs, qty, CTA)
 ```
 
-Animation parity with the reference:
-- Mobile open → swap container class to expanded chamfered shape immediately.
-- Mobile close → 300 ms `setTimeout` before swapping back to compact shape, exactly like the original `useEffect` pattern.
-- Transition: `transition-all duration-300 ease-out`.
+Nouvel ordre **mobile uniquement** (desktop inchangé) en utilisant `order-*` Tailwind :
+```
+ProductInfo > en-tête (titre, prix, badges)   order-1
+ProductOptions (tailles + couleurs + CTA)     order-2  ← remonté
+ProductInfo > description / matière / care    order-3
+```
 
-## Risks
+Implémentation : scinder `ProductInfo` en deux sous-blocs (`<ProductInfoHeader />` et `<ProductInfoDetails />`) **ou** ajouter une prop `splitForMobile` qui rend deux fragments. Le wrapper dans `ProductDetail.tsx` devient `flex flex-col` avec classes `order-` responsives, puis revient en `lg:block` sur desktop pour préserver l'ordre actuel.
 
-- The current header carries a lot of behavior (admin sheets, sidebar offset). Plan keeps all of it; the visual change is the **shape / floating pill aesthetic**, not a feature reduction.
-- If you'd rather keep the floating navbar **purely visual** (logo + links + login/signup) and move cart/user/admin elsewhere, say so and I'll reduce scope.
+---
+
+## 3. Retirer le lien « Guide des tailles »
+
+`src/components/product/ProductOptions.tsx` lignes 86-99 :
+- Supprimer le bouton `Guide des tailles →` et l'état `sizeGuideOpen` + `<SizeGuideModal />`.
+- Retirer l'import `SizeGuideModal` et `useState`.
+- Le bouton « Trouver ma taille » (AI — `SizeGuideAIModal`, géré ailleurs) reste seul.
+
+---
+
+## Détails techniques
+
+| Fichier | Changement |
+|---|---|
+| migration SQL | `ALTER TABLE products ADD COLUMN gallery_images TEXT[] DEFAULT '{}'` |
+| `src/types/index.ts` | + `galleryImages?: string[]` |
+| `src/hooks/useProducts.ts` | mapping `gallery_images` |
+| `src/components/admin/ProductForm.tsx` | nouvelle section galerie + state `galleryImages` |
+| `src/components/product/ProductImageGallery.tsx` | support n images, navigation, miniatures |
+| `src/components/product/ProductInfo.tsx` | split header/details (ou prop) |
+| `src/pages/ProductDetail.tsx` | `order-*` responsive pour mobile |
+| `src/components/product/ProductOptions.tsx` | retrait du lien + modal Guide des tailles |
+
+## Hors périmètre
+
+- Pas de changement aux listings produits (cover seul utilisé).
+- Pas de changement aux `colorOptions` (continuent de gérer 1 image par couleur).
+- Pas de zoom/lightbox repensé — on garde le double-tap fullscreen et le zoom 3.5x existants.

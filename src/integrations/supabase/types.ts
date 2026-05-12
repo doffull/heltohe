@@ -1607,6 +1607,7 @@ export type Database = {
           colors: string[] | null
           created_at: string
           description: string | null
+          gallery_images: string[]
           id: string
           image: string
           is_active: boolean | null
@@ -1634,6 +1635,7 @@ export type Database = {
           colors?: string[] | null
           created_at?: string
           description?: string | null
+          gallery_images?: string[]
           id?: string
           image: string
           is_active?: boolean | null
@@ -1661,6 +1663,7 @@ export type Database = {
           colors?: string[] | null
           created_at?: string
           description?: string | null
+          gallery_images?: string[]
           id?: string
           image?: string
           is_active?: boolean | null
