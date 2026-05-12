@@ -39,7 +39,7 @@ export function MiniNavbar({
   return (
     <div
       className={cn(
-        'transition-all duration-300 ease-out',
+        'relative transition-all duration-300 ease-out',
         'backdrop-blur-xl backdrop-saturate-150',
         'ring-1 ring-foreground/10',
         'shadow-[0_8px_32px_-12px_hsl(var(--foreground)/0.25)]',
