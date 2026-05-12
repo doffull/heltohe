@@ -75,7 +75,7 @@ export function CategoriesMenu({ compact = false }: { compact?: boolean } = {}) 
           <span className="hidden sm:inline">Catégories</span>
         </button>
 
-        <nav className="hidden md:flex items-center gap-1">
+        {!compact && <nav className="hidden md:flex items-center gap-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
