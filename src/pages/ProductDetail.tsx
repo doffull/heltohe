@@ -144,6 +144,7 @@ export default function ProductDetail() {
               image={product.image}
               name={product.name}
               videoUrl={product.videoUrl}
+              galleryImages={product.galleryImages}
               colorOptions={product.colorOptions}
               selectedColor={selectedColor}
               onColorChange={handleColorChange}
@@ -153,18 +154,25 @@ export default function ProductDetail() {
           </div>
 
           {/* Right: Product Details */}
-          <div className="space-y-6">
-            <ProductInfo product={product} isNew={isNewImport} />
-            <ProductOptions
-              product={product}
-              selectedSize={selectedSize}
-              selectedColor={selectedColor}
-              quantity={quantity}
-              onSizeChange={setSelectedSize}
-              onColorChange={handleColorChange}
-              onQuantityChange={setQuantity}
-              onAddToCart={handleAddToCart}
-            />
+          <div className="flex flex-col gap-6">
+            <div className="order-1">
+              <ProductInfo product={product} isNew={isNewImport} headerOnly />
+            </div>
+            <div className="order-2 lg:order-3">
+              <ProductOptions
+                product={product}
+                selectedSize={selectedSize}
+                selectedColor={selectedColor}
+                quantity={quantity}
+                onSizeChange={setSelectedSize}
+                onColorChange={handleColorChange}
+                onQuantityChange={setQuantity}
+                onAddToCart={handleAddToCart}
+              />
+            </div>
+            <div className="order-3 lg:order-2 flex flex-col gap-6">
+              <ProductInfo product={product} detailsOnly />
+            </div>
           </div>
         </div>
 

@@ -32,6 +32,7 @@ export interface Product {
   modelHeight?: string;
   modelSizeWorn?: string;
   modelName?: string;
+  galleryImages?: string[];
 }
 
 export interface OrderItem {

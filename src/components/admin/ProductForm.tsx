@@ -59,6 +59,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
     modelHeight: '',
     modelSizeWorn: '',
     modelName: '',
+    galleryImages: [] as string[],
   });
 
   // Variant stock state (local to form — passed up on submit)
@@ -94,6 +95,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         modelHeight: product.modelHeight || '',
         modelSizeWorn: product.modelSizeWorn || '',
         modelName: product.modelName || '',
+        galleryImages: product.galleryImages || [],
       });
     }
   }, [product]);
@@ -226,6 +228,68 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
             className="bg-secondary/50 border-border/30"
             placeholder="Ou collez une URL..."
           />
+        </div>
+
+        {/* Gallery (additional images) */}
+        <div className="space-y-2">
+          <Label className="hud-text text-xs">Galerie d'images supplémentaires</Label>
+          <p className="text-[10px] text-muted-foreground">
+            L'image principale ci-dessus reste la cover. Ajoutez jusqu'à 10 images supplémentaires affichées dans la fiche produit.
+          </p>
+
+          {formData.galleryImages.length > 0 && (
+            <div className="grid grid-cols-4 gap-2">
+              {formData.galleryImages.map((img, i) => (
+                <div key={`${img}-${i}`} className="relative group border border-border/30 bg-secondary/40 aspect-square overflow-hidden">
+                  <img src={img} alt={`Galerie ${i + 1}`} className="w-full h-full object-cover" />
+                  <div className="absolute inset-x-0 bottom-0 flex justify-between items-center px-1 py-0.5 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex gap-0.5">
+                      <button
+                        type="button"
+                        disabled={i === 0}
+                        onClick={() => {
+                          const arr = [...formData.galleryImages];
+                          [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]];
+                          setFormData(prev => ({ ...prev, galleryImages: arr }));
+                        }}
+                        className="text-[10px] px-1 disabled:opacity-30"
+                      >←</button>
+                      <button
+                        type="button"
+                        disabled={i === formData.galleryImages.length - 1}
+                        onClick={() => {
+                          const arr = [...formData.galleryImages];
+                          [arr[i + 1], arr[i]] = [arr[i], arr[i + 1]];
+                          setFormData(prev => ({ ...prev, galleryImages: arr }));
+                        }}
+                        className="text-[10px] px-1 disabled:opacity-30"
+                      >→</button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, galleryImages: prev.galleryImages.filter((_, idx) => idx !== i) }))}
+                      className="text-[10px] text-destructive px-1"
+                      aria-label="Supprimer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {formData.galleryImages.length < 10 && (
+            <FileDropZone
+              accept={['image']}
+              folder="products/gallery"
+              onUpload={(url) => {
+                if (!url) return;
+                setFormData(prev => ({ ...prev, galleryImages: [...prev.galleryImages, url] }));
+              }}
+              label={`+ Ajouter une image (${formData.galleryImages.length}/10)`}
+            />
+          )}
         </div>
 
         <div className="space-y-2">

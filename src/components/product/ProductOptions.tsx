@@ -1,11 +1,9 @@
-import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ShoppingCart, Heart, Share2, Plus, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Product } from '@/types';
 import { useApp } from '@/context/AppContext';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import SizeGuideModal from './SizeGuideModal';
 
 interface ProductOptionsProps {
   product: Product;
@@ -57,7 +55,6 @@ export default function ProductOptions({
 }: ProductOptionsProps) {
   const { designSettings } = useApp();
   const displayMode = designSettings.colorDisplayMode || 'swatches';
-  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
 
   // Build color items from colorOptions or colors
   const colorItems = product.colorOptions?.length
@@ -83,13 +80,6 @@ export default function ProductOptions({
             <label className="text-sm font-bold hud-text uppercase tracking-[0.15em]">
               Taille
             </label>
-            <button
-              type="button"
-              onClick={() => setSizeGuideOpen(true)}
-              className="text-xs text-primary underline underline-offset-2 hover:opacity-70 transition-opacity hud-text"
-            >
-              Guide des tailles →
-            </button>
           </div>
           <div className="flex flex-wrap gap-2">
             {product.sizes.map((size) => (
@@ -233,7 +223,6 @@ export default function ProductOptions({
           </motion.div>
         </div>
       </motion.div>
-      <SizeGuideModal open={sizeGuideOpen} onOpenChange={setSizeGuideOpen} />
     </>
   );
 }

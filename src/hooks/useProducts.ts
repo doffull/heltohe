@@ -28,6 +28,7 @@ function dbToAppProduct(db: Record<string, unknown>): Product {
     modelHeight: (db.model_height as string) || undefined,
     modelSizeWorn: (db.model_size_worn as string) || undefined,
     modelName: (db.model_name as string) || undefined,
+    galleryImages: (db.gallery_images as string[]) || [],
   };
 }
 
@@ -55,6 +56,7 @@ function appToDbProduct(product: Partial<Product>) {
     model_height: product.modelHeight || null,
     model_size_worn: product.modelSizeWorn || null,
     model_name: product.modelName || null,
+    gallery_images: product.galleryImages || [],
     is_active: true,
   };
 }

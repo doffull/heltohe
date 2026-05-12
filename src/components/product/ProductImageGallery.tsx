@@ -1,6 +1,6 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ZoomIn, ZoomOut, Play, Image as ImageIcon, X } from 'lucide-react';
+import { ZoomIn, ZoomOut, Play, Image as ImageIcon, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ColorOption } from '@/types';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -8,6 +8,7 @@ interface ProductImageGalleryProps {
   image: string;
   name: string;
   videoUrl?: string;
+  galleryImages?: string[];
   colorOptions?: ColorOption[];
   selectedColor?: string | null;
   onColorChange?: (color: string) => void;
@@ -31,6 +32,7 @@ export default function ProductImageGallery({
   image,
   name,
   videoUrl,
+  galleryImages = [],
   colorOptions = [],
   selectedColor,
   onColorChange,
@@ -39,6 +41,7 @@ export default function ProductImageGallery({
 }: ProductImageGalleryProps) {
   const isMobile = useIsMobile();
   const [activeMedia, setActiveMedia] = useState<'image' | 'video'>('image');
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [showModelBadge, setShowModelBadge] = useState(true);
   const [isZoomed, setIsZoomed] = useState(false);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
@@ -46,6 +49,14 @@ export default function ProductImageGallery({
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastTapRef = useRef(0);
+  const touchStartX = useRef<number | null>(null);
+
+  // Build the image list: cover first then gallery, deduped, filtering out empties
+  const imageList = useMemo(() => {
+    const all = [image, ...(galleryImages || [])].filter(Boolean) as string[];
+    return Array.from(new Set(all));
+  }, [image, galleryImages]);
+  const hasMultipleImages = imageList.length > 1;
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!containerRef.current || !isZoomed || activeMedia !== 'image') return;
@@ -83,7 +94,34 @@ export default function ProductImageGallery({
 
   // Determine which color image to show (if colorOptions have images)
   const activeColorOption = colorOptions.find(c => c.color === selectedColor);
-  const displayImage = (activeColorOption?.image) || image;
+  const galleryActiveImage = imageList[Math.min(activeImageIndex, imageList.length - 1)] || image;
+  // Color-specific image takes precedence; otherwise the active gallery image
+  const displayImage = activeColorOption?.image || galleryActiveImage;
+
+  const goPrev = useCallback(() => {
+    if (!hasMultipleImages || activeColorOption?.image) return;
+    setActiveImageIndex((i) => (i - 1 + imageList.length) % imageList.length);
+    setIsZoomed(false);
+  }, [hasMultipleImages, imageList.length, activeColorOption]);
+
+  const goNext = useCallback(() => {
+    if (!hasMultipleImages || activeColorOption?.image) return;
+    setActiveImageIndex((i) => (i + 1) % imageList.length);
+    setIsZoomed(false);
+  }, [hasMultipleImages, imageList.length, activeColorOption]);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current == null || activeMedia !== 'image' || !hasMultipleImages) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(dx) > 50) {
+      if (dx < 0) goNext();
+      else goPrev();
+    }
+    touchStartX.current = null;
+  };
 
   return (
     <div className="space-y-4">
@@ -94,6 +132,8 @@ export default function ProductImageGallery({
         onClick={handleTap}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => isZoomed && setIsZoomed(false)}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
         initial={{ opacity: 0, x: -40 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
@@ -236,6 +276,37 @@ export default function ProductImageGallery({
           </motion.div>
         )}
 
+        {/* Prev / Next arrows for multi-image gallery */}
+        {hasMultipleImages && activeMedia === 'image' && !activeColorOption?.image && (
+          <>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); goPrev(); }}
+              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 bg-background/70 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-background/90 transition-colors"
+              aria-label="Image précédente"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); goNext(); }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 bg-background/70 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-background/90 transition-colors"
+              aria-label="Image suivante"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+            {/* dots */}
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 flex gap-1.5 px-2 py-1 rounded-full bg-background/60 backdrop-blur-sm">
+              {imageList.map((_, i) => (
+                <span
+                  key={i}
+                  className={`w-1.5 h-1.5 rounded-full transition-all ${i === activeImageIndex ? 'bg-primary w-3' : 'bg-foreground/40'}`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
         {/* HUD corner accents */}
         <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-primary/40" />
         <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-primary/40" />
@@ -317,19 +388,21 @@ export default function ProductImageGallery({
           ))
         ) : (
           <>
-            {/* Image thumbnail */}
-            <button
-              onClick={switchToImage}
-              className={`w-20 h-20 chamfer-hud-sm overflow-hidden border-2 bg-card/30 relative transition-colors ${activeMedia === 'image' ? 'border-primary' : 'border-border/30 opacity-60 hover:opacity-100'}`}
-            >
-              <img src={image} alt={name} className="w-full h-full object-cover" />
-              {videoUrl && (
-                <div className="absolute bottom-1 left-1">
-                  <ImageIcon className="h-3 w-3 text-foreground drop-shadow-md" />
-                </div>
-              )}
-            </button>
-
+            {/* One thumbnail per image (cover + gallery) */}
+            {imageList.map((img, i) => (
+              <button
+                key={`${img}-${i}`}
+                onClick={() => { switchToImage(); setActiveImageIndex(i); }}
+                className={`w-20 h-20 chamfer-hud-sm overflow-hidden border-2 bg-card/30 relative transition-colors ${activeMedia === 'image' && activeImageIndex === i ? 'border-primary' : 'border-border/30 opacity-60 hover:opacity-100'}`}
+              >
+                <img src={img} alt={`${name} ${i + 1}`} className="w-full h-full object-cover" />
+                {i === 0 && videoUrl && (
+                  <div className="absolute bottom-1 left-1">
+                    <ImageIcon className="h-3 w-3 text-foreground drop-shadow-md" />
+                  </div>
+                )}
+              </button>
+            ))}
           </>
         )}
 
