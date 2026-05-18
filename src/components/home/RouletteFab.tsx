@@ -145,7 +145,13 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
   const [copied, setCopied] = useState(false);
   const cooldownH = config?.cooldown_hours ?? 24;
   const { canSpin, remaining } = useCooldown(cooldownH);
-  const wheelSize = useMemo(() => (typeof window !== 'undefined' && window.innerWidth < 480 ? 280 : 360), [open]);
+  const wheelSize = useMemo(() => {
+    if (typeof window === 'undefined') return 320;
+    const w = window.innerWidth;
+    if (w < 360) return 220;
+    if (w < 480) return 260;
+    return 340;
+  }, [open]);
 
   // Restore last result if still within cooldown
   useEffect(() => {
