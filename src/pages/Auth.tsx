@@ -196,7 +196,7 @@ export default function Auth() {
         </div>
 
         {/* Auth Card */}
-        <div className="chamfer-hud bg-card/80 backdrop-blur-md border border-border/50 p-8">
+        <div className="chamfer-hud bg-card/80 backdrop-blur-md border border-border/50 p-5 sm:p-8">
           {/* Google OAuth Button */}
           <Button
             variant="outline"
