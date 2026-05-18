@@ -61,7 +61,7 @@ export default function AccountLoyalty() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold hud-text mb-8">PROGRAMME FIDÉLITÉ</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold hud-text mb-6 sm:mb-8 break-words">PROGRAMME FIDÉLITÉ</h1>
 
         {/* Current Status */}
         <div className="chamfer-hud-lg bg-gradient-to-r from-card/80 to-primary/10 p-6 sm:p-8 mb-8">
