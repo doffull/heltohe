@@ -131,7 +131,7 @@ export default function AccountLoyalty() {
         </div>
 
         {/* Rewards */}
-        <h2 className="text-2xl font-bold hud-text mb-6">RÉCOMPENSES DISPONIBLES</h2>
+        <h2 className="text-xl sm:text-2xl font-bold hud-text mb-4 sm:mb-6 break-words">RÉCOMPENSES DISPONIBLES</h2>
         {rewards.length === 0 ? (
           <p className="text-muted-foreground mb-8">Aucune récompense disponible pour le moment.</p>
         ) : (
@@ -159,7 +159,7 @@ export default function AccountLoyalty() {
         )}
 
         {/* Tiers */}
-        <h2 className="text-2xl font-bold hud-text mb-6">NIVEAUX & AVANTAGES</h2>
+        <h2 className="text-xl sm:text-2xl font-bold hud-text mb-4 sm:mb-6 break-words">NIVEAUX & AVANTAGES</h2>
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {TIERS.map((tier) => {
             const Icon = TIER_ICONS[tier.key];
@@ -194,7 +194,7 @@ export default function AccountLoyalty() {
         </div>
 
         {/* History */}
-        <h2 className="text-2xl font-bold hud-text mb-6">HISTORIQUE</h2>
+        <h2 className="text-xl sm:text-2xl font-bold hud-text mb-4 sm:mb-6 break-words">HISTORIQUE</h2>
         {(loyalty?.transactions.length ?? 0) === 0 ? (
           <p className="text-muted-foreground">Aucune transaction pour le moment. Passez votre première commande pour gagner des points !</p>
         ) : (
