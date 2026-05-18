@@ -1,55 +1,55 @@
 # Audit Responsive & Cohérence — Rapport
 
-## Livraison 1 (cette session)
+## ✅ Livraison 1
 
-### ✅ Bugs bloquants corrigés
-
+### Bugs bloquants corrigés
 | # | Problème | Fichier | Fix |
 |---|----------|---------|-----|
-| 1 | **Roue Gratte & Gagne piégeait le client sur mobile** (X invisible, modal sortait du cadre) | `src/components/home/RouletteFab.tsx` | Modal `max-w-md`, bouton fermer custom 44×44px visible top-right, padding réduit, roue dimensionnée par paliers (220/260/340px) |
-| 2 | **Dialogs débordaient sur petits écrans** (max-h absent → contenu coupé) | `src/components/ui/dialog.tsx` | `w-[calc(100vw-1rem)] max-h-[90dvh] overflow-y-auto overscroll-contain` appliqué à TOUS les dialogs du site |
-| 3 | Safari ignorait `backdrop-blur` (header, modals flous KO) | `src/index.css` | `-webkit-backdrop-filter` ajouté |
-| 4 | iPhone notch / Android nav bar cachaient le contenu bas | `src/index.css` | `padding-bottom: env(safe-area-inset-bottom)` sur body |
+| 1 | **Roue Gratte & Gagne piégeait le client sur mobile** (X invisible, modal débordait) | `src/components/home/RouletteFab.tsx` | Modal `max-w-md`, bouton fermer 44×44px visible top-right, padding réduit, roue 220/260/340px selon viewport |
+| 2 | Dialogs débordaient (contenu coupé) | `src/components/ui/dialog.tsx` | `max-h-[90dvh] overflow-y-auto` appliqué globalement |
+| 3 | Safari ignorait `backdrop-blur` | `src/index.css` | `-webkit-backdrop-filter` ajouté |
+| 4 | iPhone notch cachait contenu | `src/index.css` | `padding-bottom: env(safe-area-inset-bottom)` |
 
-### 🧹 Ménage
+### Ménage
+- Supprimé `src/components/layout/SidebarNewsletter.tsx`
+- Supprimé toggle "Newsletter sidebar" mort
+- Vidé `src/App.css`
 
-- Supprimé `src/components/layout/SidebarNewsletter.tsx` (composant orphelin)
-- Supprimé le toggle "Newsletter sidebar" dans `NewsletterPopupsManager.tsx` (UI morte)
-- Nettoyé `src/App.css` (stub Vite par défaut inutile)
+## ✅ Livraison 2 — Pages utilisateur mobile
 
-### 🧪 Vérifié dans le navigateur
+### Pages testées (iPhone SE 320, Samsung 360, iPhone 14 390)
+| Page | 320px | 360px | 390px | Notes |
+|------|-------|-------|-------|-------|
+| `/` Home | ⚠️→✅ | ✅ | ✅ | "ACCESSOIRES" coupé corrigé |
+| `/boutique` | ✅ | ✅ | ✅ | Grille 2 cols, prix + CTA visibles |
+| `/boutique/:id` | ✅ | ✅ | ✅ | Tailles wrap, CTA full-width |
+| `/panier` (vide) | ✅ | ✅ | ✅ | Empty state propre |
+| `/auth` | ✅ | ✅ | ✅ | (redirige si connecté) |
 
-- Modal roulette OK à 360×800 (Galaxy / iPhone SE)
-- `overflow-x: hidden` global confirmé sur html/body
+### Corrections appliquées
+- **Catégories home** (`src/pages/Home.tsx`) : titres `text-sm sm:text-lg lg:text-xl` + padding réduit + `break-words leading-tight` → plus de coupure "ACCESSOIRE"
+- **Ménage code mort** : supprimé `src/views/HomeView.tsx`, `ShopView.tsx`, `DashboardView.tsx`, `ProductDetailView.tsx` (non importés, restes d'une ancienne refonte)
+
+### Note importante
+La barre flottante `OUVERT / AUTO / M / T / D / →M` visible dans les screenshots est **l'éditeur Lovable** (preview wrapper), pas du code projet. **Elle n'apparaît jamais en production** — les utilisateurs finaux ne la voient pas.
 
 ---
 
-## Livraisons restantes (à valider — chacune ~1 session)
-
-Le plan complet couvre 15+ pages. Je propose de découper :
-
-### Livraison 2 — Audit pages utilisateur (mobile pass)
-- `/`, `/boutique`, `/boutique/:id`, `/categorie/:slug`
-- Sticky CTA mobile sur fiche produit, galerie images, cart drawer
+## 📋 Livraisons restantes
 
 ### Livraison 3 — Tunnel commande & compte
-- `/panier`, `/checkout` (formulaires, étapes mobile)
-- `/auth`, `/compte/*` (tableaux orders → scroll horizontal)
+- `/checkout` (4 étapes mobile, sticky récap)
+- `/compte/*` (tableaux orders → scroll horizontal)
+- Cart drawer ouvert avec items
 
 ### Livraison 4 — Admin & pages secondaires
-- `/admin/*` : tables responsive, scroll horizontal, bandeau "optimisé desktop"
+- `/admin/*` : bandeau "optimisé desktop" + tables scrollables
 - `/fidelite`, `/contact`, `/about`, pages légales
 
-### Livraison 5 — Cross-browser & polish final
+### Livraison 5 — Cross-browser final
 - Tests Firefox / Safari / Edge
-- Remplacer `100vh` → `100dvh` partout (hero)
-- Fallback `clip-path` chamfer-hud pour vieux Safari
-- Suppression imports & composants morts détectés par `rg`
+- `100vh` → `100dvh` partout
+- Fallback `clip-path` chamfer-hud
+- Scan final imports/composants morts
 
----
-
-## Pourquoi par lots ?
-
-Tout faire en un coup = beaucoup de crédits, risque de régression non détectée, et impossible à QA correctement. En livrant par lot je peux **screenshoter chaque page après fix** et te montrer ce qui change.
-
-**Dis-moi simplement "Livraison 2"** et j'enchaîne.
+Dis "Livraison 3" pour continuer.

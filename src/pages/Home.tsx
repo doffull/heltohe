@@ -230,8 +230,8 @@ export default function Home() {
                     <img src={cat.image} alt={cat.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                     <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/20 to-transparent" />
                     <div className="absolute inset-0 border-2 border-transparent group-hover:border-foreground/40 transition-colors duration-300 bevel-corners" />
-                    <div className="absolute bottom-0 left-0 right-0 p-5 lg:p-6">
-                      <h3 className="text-lg lg:text-xl font-bold uppercase tracking-wider text-background group-hover:text-background/80 transition-colors">{cat.title}</h3>
+                    <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-5 lg:p-6">
+                      <h3 className="text-sm sm:text-lg lg:text-xl font-bold uppercase tracking-wider text-background group-hover:text-background/80 transition-colors break-words leading-tight">{cat.title}</h3>
                       <div className="mt-2 h-0.5 w-0 bg-background group-hover:w-12 transition-all duration-500" />
                     </div>
                   </Link>
