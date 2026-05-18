@@ -1,115 +1,104 @@
-## Objectifs
+# Audit global responsive + grand ménage
 
-1. **Header desktop** : tous les icônes (recherche, aide, panier, compte, admin, notifs, messages, langue) doivent rester visibles sans débordement, et le header doit être glossy & flottant en permanence (transparent sur l'accueil).
-2. **Sidebar** : retirer le bloc Newsletter en bas du panneau latéral.
-3. **Accueil** : ajouter une section "Parallaxe / Vidéo Promo" juste sous les catégories, configurable depuis l'admin Design.
+Objectif : rendre le site 100% utilisable sur mobile (iPhone SE 320px → Pro Max 430px, Samsung 360–412px), tablette, desktop, et cohérent sur Chrome / Firefox / Safari / Edge. Corriger les bugs bloquants, nettoyer le code mort.
 
----
+## Phase 1 — Correctifs bloquants (priorité absolue)
 
-## 1. Header desktop — responsive & glossy flottant
+### 1. Roue "Gratte & Gagne" (RouletteFab) — bug bloquant mobile
+- **Problème** : `DialogContent` utilise `max-w-lg` sans `max-h` ni scroll → sur mobile la modal déborde, le bouton fermer sort de l'écran, le client est piégé.
+- **Correctif** :
+  - `max-w-[calc(100vw-1rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto`
+  - Bouton "Fermer" visible (X custom en `absolute top-2 right-2 z-50`, taille 44×44px tactile)
+  - Roue : `aspect-square w-full max-w-[280px] mx-auto` (au lieu de taille fixe)
+  - Textes des segments : `text-[10px] sm:text-xs`, rotation + ellipsis pour ne pas déborder
+  - Padding réduit (`p-4 sm:p-6`)
+  - Bloquer le scroll body quand ouverte uniquement (déjà géré par Radix)
 
-Fichier : `src/components/layout/MainLayout.tsx` + `src/components/ui/mini-navbar.tsx`.
-
-**Cause du problème actuel** : à 1024–1366px avec sidebar ouverte (`lg:ml-[35%]`), la `MiniNavbar` est limitée à `max-w-6xl` mais coincée dans 65% de la largeur. La nav centrale + 8 icônes ne tiennent plus → certains icônes (admin, notifs, mail, langue) sont rognés.
-
-**Corrections** :
-- Réduire intelligemment quand `sidebarActive` :
-  - cacher la nav principale en `lg` (`lg:hidden xl:flex`) lorsque sidebar ouverte, ou la mettre dans un menu déroulant compact.
-  - réduire les paddings/icônes (`h-8 w-8`) pour tous les boutons quand `sidebarActive`.
-  - ajouter `flex-wrap` désactivé + `min-w-0` sur le bloc nav, et `shrink-0` sur le bloc actions (déjà présent).
-- Augmenter `max-w-6xl` → `max-w-7xl` et utiliser `w-[calc(100%-2rem)]`.
-- S'assurer que les boutons "Aide", "Langue" et les badges admin sont masqués sous `xl` quand sidebar active (déjà partiellement le cas — étendre).
-
-**Glossy flottant permanent** : dans `MiniNavbar.tsx`
-- Toujours floating : déjà `fixed/sticky` dans MainLayout.
-- Glossy : remplacer `bg-background/85` par un effet verre :
-  - `bg-gradient-to-b from-background/70 to-background/40`
-  - `backdrop-blur-xl backdrop-saturate-150`
-  - `ring-1 ring-foreground/10` + `shadow-[0_8px_32px_-12px_hsl(var(--foreground)/0.25)]`
-  - bordure `border-border/30`
-- Si `transparent` (homepage) : fond `bg-foreground/5` (très léger) + même blur, sans border opaque, pour rester lisible sur images claires comme sombres.
-- Conserver le morph chamfer existant.
-
----
-
-## 2. Retirer la Newsletter du sidebar
-
-Fichier : `src/components/layout/MainLayout.tsx` (lignes ~718–721).
-
-- Supprimer le bloc :
+### 2. Tous les Dialogs / Sheets / Drawers du projet
+- Auditer chaque `DialogContent` (cart, auth, size guide, size guide AI, category, newsletter popup, FAB editor, etc.)
+- Pattern standard appliqué partout :
   ```
-  <div className="absolute bottom-0 left-0 right-0 z-20">
-    <SidebarNewsletter />
-  </div>
+  max-w-[calc(100vw-1rem)] sm:max-w-lg max-h-[90dvh] overflow-y-auto
   ```
-- Retirer l'import `SidebarNewsletter`.
-- Le toggle "Newsletter dans la sidebar" dans `NewsletterPopupsManager.tsx` n'a plus d'effet visuel : on supprime ce bloc UI (le switch + ses 2 inputs) pour éviter la confusion. Les pop-ups newsletter restent intactes.
-- Le composant `src/components/layout/SidebarNewsletter.tsx` peut rester en repo (non importé) — pas de suppression de fichier.
+- Ajouter `DialogDescription` ou `aria-describedby` (warning console actuel)
 
----
+### 3. Header / MiniNavbar
+- Sur 360px : vérifier que les icônes ne sortent pas, hamburger toujours visible
+- `min-w-0`, `truncate`, `shrink-0` sur les bons éléments
+- HUDOverlays (`HUDStats`, `HUDUnitID`) déjà en `hidden lg:block` ✓
 
-## 3. Section Parallaxe / Vidéo Promo sous les catégories
+### 4. Overflow horizontal global
+- Ajouter `overflow-x-hidden` sur `<body>` et `#root` (sécurité)
+- Audit `rg "w-screen|100vw"` → remplacer par `w-full` quand approprié
+- Vérifier toutes les grilles `grid-cols-*` ont une variante mobile
 
-**3a. Nouveau composant** `src/components/home/PromoParallax.tsx`
-- Lit depuis `designSettings.promoParallax` :
-  ```ts
-  {
-    enabled: boolean,
-    mediaType: 'image' | 'video',
-    mediaUrl: string,
-    mobileMediaUrl?: string,
-    title?: string,
-    subtitle?: string,
-    ctaLabel?: string,
-    ctaUrl?: string,
-    height: string,        // ex '60vh'
-    overlayOpacity: number // 0–1
-  }
-  ```
-- Si `enabled=false` ou pas de média → ne rend rien (espace réservé par défaut désactivé).
-- Image : effet parallaxe via `background-attachment: fixed` (desktop) avec fallback `scroll` mobile.
-- Vidéo : `<video autoplay muted loop playsinline>` plein conteneur.
-- Overlay sombre + texte/CTA centré, design Industrial Luxury (chamfer, Helvetica-MP, tokens).
+## Phase 2 — Audit page par page (mobile 360px → desktop 1920px)
 
-**3b. Insertion accueil** : `src/views/HomeView.tsx`
-```
-<CategoryGrid />
-<PromoParallax />
-<ProductSections />
-```
-Ajouter export dans `src/components/home/index.ts`.
+Pages auditées et corrigées :
+- `/` Home (hero, catégories, parallax, products, loyalty, newsletter)
+- `/boutique` + `/boutique/:id` (galerie produit, options, sticky CTA mobile)
+- `/categorie/:slug` (CategoryPageRouter)
+- `/panier`, `/checkout` (formulaires, étapes)
+- `/auth`, `/compte/*` (formulaires, tableaux orders)
+- `/fidelite`, `/contact`, `/about`
+- `/admin/*` (déjà desktop-first, ajouter avertissement "Mieux sur desktop" + scroll horizontal sur tables)
+- Pages légales (CGV, mentions, etc.)
 
-**3c. Types** : `src/types/index.ts`
-- Étendre `DesignSettings` avec `promoParallax?: PromoParallaxConfig`.
+Checklist appliquée à chaque page :
+- Aucun débordement horizontal
+- Textes lisibles (≥ 14px body)
+- Boutons tactiles ≥ 44×44px
+- Images `max-w-full h-auto`
+- Tables → `overflow-x-auto` wrapper
+- Forms : `w-full`, labels visibles, focus visible
 
-**3d. Defaults** : `src/data/initialData.ts` (ou hook `useDesignSettings`)
-- Valeur par défaut désactivée pour ne pas casser les sites existants.
+## Phase 3 — Cohérence cross-browser
 
-**3e. Onglet admin Design** : `src/pages/admin/AdminDesign.tsx`
-- Ajouter dans `NAV_ITEMS` :
-  ```
-  { key: 'promo-parallax', label: 'Promo / Parallaxe', icon: ImagePlay, desc: 'Image ou vidéo sous les catégories' }
-  ```
-- Nouveau composant `PromoParallaxTab` dans le même fichier :
-  - Switch "Activer"
-  - Select image / vidéo
-  - `FileDropZone` pour média desktop + média mobile
-  - Champs titre, sous-titre, CTA (label + URL)
-  - Slider hauteur (40–100 vh)
-  - Slider opacité overlay
-  - Aperçu live mini 16:9
-- Brancher dans le switch des onglets.
+- `-webkit-backdrop-filter` ajouté partout où `backdrop-blur` est utilisé (Safari)
+- `100dvh` au lieu de `100vh` pour les héros (mobile Safari/Chrome address bar)
+- Remplacer `aspect-[X/Y]` dynamiques par classes statiques (Safari ancien)
+- Ajouter polyfill / fallback pour `gap` dans flex (Safari < 14)
+- Tester `clip-path` chamfer-hud → fallback `border-radius` si non supporté
+- `font-display: swap` sur fonts custom
+- Meta viewport vérifié (`width=device-width, initial-scale=1, viewport-fit=cover`)
+- `safe-area-inset` sur les FABs et headers (iPhone notch)
 
----
+## Phase 4 — Grand ménage (code mort)
+
+- `SidebarNewsletter.tsx` (plus importé) → supprimé
+- Composants non référencés détectés via `rg` → supprimés
+- Imports inutilisés → nettoyés
+- `App.css` (logo Vite par défaut) → nettoyé
+- Console warnings (`DialogContent` aria) → corrigés
+- `console.log` de debug → retirés
+
+## Phase 5 — Rapport final
+
+Document `AUDIT_REPORT.md` à la racine listant :
+- Bugs trouvés (avec sévérité) + fix appliqué
+- Pages testées avec captures avant/après aux 3 viewports
+- Recommandations restantes (ex : tests E2E, monitoring Sentry)
+- Améliorations UX suggérées
 
 ## Détails techniques
 
-- Aucun changement DB : `promoParallax` vit dans `design_settings` JSON existant (suit le pattern `topBanner`, `headerNavItems`).
-- Tokens uniquement (pas de couleurs raw).
-- Mobile-first 360px : la nav du header masque déjà les icônes via `hidden md:`/`hidden lg:`. Vérifier que rien ne déborde à 360.
-- Pas de migration ni d'edge function.
+Fichiers principalement modifiés :
+- `src/components/home/RouletteFab.tsx` (critique)
+- `src/components/ui/dialog.tsx`, `sheet.tsx`, `drawer.tsx` (defaults responsive)
+- `src/components/ui/mini-navbar.tsx`, `src/components/layout/*`
+- `src/index.css` (overflow-x-hidden, safe-area, dvh)
+- `src/views/*`, `src/pages/*` (passes responsive ciblées)
+- Suppression : `src/components/layout/SidebarNewsletter.tsx`, `src/App.css` nettoyé
 
-## Hors périmètre
+Tests :
+- Browser tool : iPhone 14 (390×844), Galaxy S20 (360×800), iPad (768×1024), Desktop (1440×900)
+- Vérification visuelle de chaque page principale
+- Screenshots avant/après dans le rapport
 
-- Pas de refonte fonctionnelle de la newsletter (les pop-ups restent).
-- Pas de modification du Hero Slider ni de la section Catégories.
+## Ce que je NE fais PAS (pour rester focus)
+- Refonte design profonde des sections (le style "Industrial Luxury" est conservé)
+- Nouvelles features
+- Refacto backend / RLS
+- Changements de logique métier
+
+Vu l'ampleur (15+ pages, multiples composants), je procéderai par lots : Phase 1 (bloquants) → Phase 2 par sections → ménage → rapport. Si tu veux que je découpe en plusieurs livraisons plus petites, dis-le moi.
