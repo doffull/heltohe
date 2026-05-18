@@ -384,20 +384,21 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg p-0 overflow-hidden bg-background border-2 border-primary/20">
+        <DialogContent className="max-w-md sm:max-w-lg p-0 bg-background border-2 border-primary/20">
           <DialogTitle className="sr-only">{config.title}</DialogTitle>
           <button
             onClick={() => setOpen(false)}
-            className="absolute right-3 top-3 z-20 p-1.5 rounded-full bg-background/80 hover:bg-muted"
+            aria-label="Fermer"
+            className="absolute right-2 top-2 z-30 inline-flex h-11 w-11 items-center justify-center rounded-full bg-background/90 hover:bg-muted shadow-md border border-border"
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
           </button>
 
-          <div className="p-6 text-center">
-            <h2 className="text-2xl font-bold tracking-wider uppercase mb-1">{config.title}</h2>
-            <p className="text-sm text-muted-foreground mb-6">{config.subtitle}</p>
+          <div className="p-4 sm:p-6 text-center">
+            <h2 className="text-xl sm:text-2xl font-bold tracking-wider uppercase mb-1 pr-10">{config.title}</h2>
+            <p className="text-xs sm:text-sm text-muted-foreground mb-4 sm:mb-6">{config.subtitle}</p>
 
-            <div className="flex justify-center mb-6">
+            <div className="flex justify-center mb-4 sm:mb-6">
               <Wheel segments={segments} rotation={rotation} size={wheelSize} />
             </div>
 
