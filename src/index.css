@@ -110,6 +110,17 @@
     font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* iOS notch / Android nav bar */
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Safari backdrop-filter compatibility */
+  .backdrop-blur-xl,
+  .backdrop-blur-lg,
+  .backdrop-blur-md,
+  .backdrop-blur-sm,
+  .backdrop-blur {
+    -webkit-backdrop-filter: blur(16px);
   }
 
   /* Custom scrollbar - Minimal */

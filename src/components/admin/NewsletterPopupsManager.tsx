@@ -55,36 +55,7 @@ export function NewsletterPopupsManager() {
 
   return (
     <div className="space-y-6">
-      {/* Sidebar newsletter toggle */}
-      <div className="chamfer-hud bg-card/50 p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-bold text-sm uppercase tracking-wider">Newsletter dans la sidebar</p>
-            <p className="text-xs text-muted-foreground">Affiche un mini-formulaire en bas du panneau latéral</p>
-          </div>
-          <Switch
-            checked={!!designSettings.showSidebarNewsletter}
-            onCheckedChange={(v) => updateDesignSettings({ showSidebarNewsletter: v })}
-          />
-        </div>
-        {designSettings.showSidebarNewsletter && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs">Titre</Label>
-              <Input value={designSettings.sidebarNewsletterTitle || ''}
-                onChange={(e) => updateDesignSettings({ sidebarNewsletterTitle: e.target.value })} />
-            </div>
-            <div>
-              <Label className="text-xs">Bouton</Label>
-              <Input value={designSettings.sidebarNewsletterCta || ''}
-                onChange={(e) => updateDesignSettings({ sidebarNewsletterCta: e.target.value })} />
-            </div>
-            <Button size="sm" variant="outline" className="md:col-span-2" onClick={() => flushDesignSettings?.()}>
-              Enregistrer
-            </Button>
-          </div>
-        )}
-      </div>
+      {/* Newsletter sidebar — fonctionnalité retirée */}
 
       <div className="flex items-center justify-between">
         <div>
