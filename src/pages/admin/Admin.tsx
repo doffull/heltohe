@@ -101,6 +101,7 @@ const SIDEBAR_ITEMS = [
   { icon: ShoppingBag, label: 'WooCommerce', href: '/admin/woocommerce' },
   { icon: ClipboardCheck, label: 'Audit', href: '/admin/audit' },
   { icon: Activity, label: 'Erreurs Client', href: '/admin/errors' },
+  { icon: UserCog, label: 'Rôles', href: '/admin/roles' },
   { icon: Settings, label: 'Paramètres', href: '/admin/parametres' },
 ];
 
