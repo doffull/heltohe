@@ -2558,6 +2558,14 @@ export type Database = {
     Functions: {
       award_loyalty_points: { Args: { p_order_id: string }; Returns: Json }
       consume_order_stock: { Args: { p_order_id: string }; Returns: Json }
+      find_user_by_email: {
+        Args: { p_email: string }
+        Returns: {
+          email: string
+          roles: Database["public"]["Enums"]["app_role"][]
+          user_id: string
+        }[]
+      }
       get_newsletter_stats: { Args: never; Returns: Json }
       has_role: {
         Args: {
