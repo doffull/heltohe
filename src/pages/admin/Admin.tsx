@@ -56,6 +56,7 @@ import AdminPreparations from './AdminPreparations';
 import AdminRoulette from './AdminRoulette';
 import AdminHomeIcons from './AdminHomeIcons';
 import AdminLive from './AdminLive';
+import AdminRoles from './AdminRoles';
 
 export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin': '#6B7280',
