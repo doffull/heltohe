@@ -27,7 +27,8 @@ import {
   Bell,
   Gift,
   MousePointer,
-  Activity
+  Activity,
+  UserCog
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -55,6 +56,7 @@ import AdminPreparations from './AdminPreparations';
 import AdminRoulette from './AdminRoulette';
 import AdminHomeIcons from './AdminHomeIcons';
 import AdminLive from './AdminLive';
+import AdminRoles from './AdminRoles';
 
 export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin': '#6B7280',
@@ -75,6 +77,7 @@ export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin/audit': '#6B7280',
   '/admin/roulette': '#F59E0B',
   '/admin/parametres': '#64748B',
+  '/admin/roles': '#DC2626',
 };
 
 const SIDEBAR_ITEMS = [
@@ -98,6 +101,7 @@ const SIDEBAR_ITEMS = [
   { icon: ShoppingBag, label: 'WooCommerce', href: '/admin/woocommerce' },
   { icon: ClipboardCheck, label: 'Audit', href: '/admin/audit' },
   { icon: Activity, label: 'Erreurs Client', href: '/admin/errors' },
+  { icon: UserCog, label: 'Rôles', href: '/admin/roles' },
   { icon: Settings, label: 'Paramètres', href: '/admin/parametres' },
 ];
 
@@ -267,6 +271,7 @@ export default function Admin() {
             <Route path="woocommerce/*" element={<AdminWooCommerce />} />
             <Route path="audit/*" element={<AdminAudit />} />
             <Route path="errors/*" element={<AdminErrorLogs />} />
+            <Route path="roles/*" element={<AdminRoles />} />
             <Route path="parametres/*" element={<AdminSettings />} />
           </Routes>
         </div>
