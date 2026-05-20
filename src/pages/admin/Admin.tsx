@@ -77,6 +77,7 @@ export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin/audit': '#6B7280',
   '/admin/roulette': '#F59E0B',
   '/admin/parametres': '#64748B',
+  '/admin/roles': '#DC2626',
 };
 
 const SIDEBAR_ITEMS = [
