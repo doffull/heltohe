@@ -271,6 +271,7 @@ export default function Admin() {
             <Route path="woocommerce/*" element={<AdminWooCommerce />} />
             <Route path="audit/*" element={<AdminAudit />} />
             <Route path="errors/*" element={<AdminErrorLogs />} />
+            <Route path="roles/*" element={<AdminRoles />} />
             <Route path="parametres/*" element={<AdminSettings />} />
           </Routes>
         </div>
