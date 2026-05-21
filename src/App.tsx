@@ -80,8 +80,8 @@ function FaviconManager() {
 }
 
 function SplashScreen({ onDone }: { onDone: () => void }) {
-  const { designSettings } = useApp();
-  const logo = designSettings.hudLogo;
+  const { data: settings } = useDesignSettings();
+  const logo = (settings as any)?.hudLogo;
   useEffect(() => {
     const timer = setTimeout(onDone, 1200);
     return () => clearTimeout(timer);
