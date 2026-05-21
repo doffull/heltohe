@@ -865,7 +865,16 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         </div>
       </div>
       <div className="space-y-4">
-        <h4 className="hud-text text-xs text-primary">// ATTRIBUTS TECHNIQUES</h4>
+        <div className="flex items-center justify-between">
+          <h4 className="hud-text text-xs text-primary">// ATTRIBUTS TECHNIQUES</h4>
+          <AiAttributesButton
+            name={formData.name}
+            category={formData.category}
+            imageUrl={formData.image}
+            onGenerated={(items) => setFormData(prev => ({ ...prev, attributes: { ...prev.attributes, ...items } }))}
+          />
+        </div>
+
         
         <div className="space-y-2">
           {Object.entries(formData.attributes).map(([key, value]) => (
