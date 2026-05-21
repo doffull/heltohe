@@ -73,6 +73,36 @@ export type Database = {
           },
         ]
       }
+      admin_access_log: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          ip_hash: string | null
+          route: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          ip_hash?: string | null
+          route?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          ip_hash?: string | null
+          route?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       admin_config: {
         Row: {
           admin_notification_email: string | null

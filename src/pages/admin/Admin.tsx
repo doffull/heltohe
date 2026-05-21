@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useDesignSettings } from '@/hooks/useDesignSettings';
 import { 
@@ -185,6 +186,20 @@ export default function Admin() {
   const { user, isAdmin, isStockManager, isPreparator, hasAdminPanelAccess, isLoading, signOut } = useAuth();
   const { data: designSettings } = useDesignSettings();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Log admin panel access (audit trail) — fires once per session per route group
+  useEffect(() => {
+    if (!user || !hasAdminPanelAccess) return;
+    const key = `admin_logged_${getActiveHref(location.pathname)}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, '1');
+    supabase.from('admin_access_log' as any).insert({
+      user_id: user.id,
+      email: user.email,
+      route: location.pathname,
+      user_agent: navigator.userAgent.slice(0, 500),
+    }).then(() => {}, () => {});
+  }, [user, hasAdminPanelAccess, location.pathname]);
 
   const sectionColors: Record<string, string> = {
     ...DEFAULT_SECTION_COLORS,
