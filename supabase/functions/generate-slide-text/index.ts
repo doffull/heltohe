@@ -61,12 +61,12 @@ Réponds uniquement via l'outil "return_text".`;
     });
 
     if (!resp.ok) {
-      const status = resp.status === 429 ? 429 : resp.status === 402 ? 402 : 500;
-      const msg = status === 429 ? "Trop de requêtes, réessayez."
-        : status === 402 ? "Crédits IA épuisés."
+      const msg = resp.status === 429 ? "Trop de requêtes, réessayez."
+        : resp.status === 402 ? "Crédits IA épuisés."
         : "Erreur du service IA.";
-      return new Response(JSON.stringify({ error: msg }), {
-        status, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      // Return 200 with error payload so supabase-js doesn't throw and crash the UI
+      return new Response(JSON.stringify({ error: msg, fallback: true, status: resp.status }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
