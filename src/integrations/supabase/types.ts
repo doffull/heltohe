@@ -602,6 +602,7 @@ export type Database = {
           footer_logo: string | null
           glitch_duration: number | null
           glitch_intensity: number | null
+          global_product_sizes: Json
           gradient_intensity: number | null
           header_bg_color: string | null
           header_fixed: boolean | null
@@ -712,6 +713,7 @@ export type Database = {
           footer_logo?: string | null
           glitch_duration?: number | null
           glitch_intensity?: number | null
+          global_product_sizes?: Json
           gradient_intensity?: number | null
           header_bg_color?: string | null
           header_fixed?: boolean | null
@@ -822,6 +824,7 @@ export type Database = {
           footer_logo?: string | null
           glitch_duration?: number | null
           glitch_intensity?: number | null
+          global_product_sizes?: Json
           gradient_intensity?: number | null
           header_bg_color?: string | null
           header_fixed?: boolean | null
