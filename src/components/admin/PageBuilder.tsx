@@ -9,6 +9,7 @@ import {
   Heading1, Heading2, LayoutGrid, ChevronUp, ChevronDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { FileDropZone } from '@/components/admin/FileDropZone';
 import type { PageSection } from '@/hooks/usePages';
 
 const SECTION_TYPES = [
@@ -77,7 +78,16 @@ function SectionEditor({
           <div className="space-y-3">
             <Input placeholder="Titre du Hero" value={section.content.title || ''} onChange={e => updateContent('title', e.target.value)} />
             <Input placeholder="Sous-titre" value={section.content.subtitle || ''} onChange={e => updateContent('subtitle', e.target.value)} />
-            <Input placeholder="URL image de fond" value={section.content.backgroundImage || ''} onChange={e => updateContent('backgroundImage', e.target.value)} />
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Image de fond</div>
+              <FileDropZone
+                accept={['image']}
+                folder="home/hero"
+                currentFile={section.content.backgroundImage || ''}
+                onUpload={(url) => updateContent('backgroundImage', url)}
+                label="Glissez une image de fond"
+              />
+            </div>
             <Input placeholder="Texte du bouton CTA" value={section.content.ctaText || ''} onChange={e => updateContent('ctaText', e.target.value)} />
             <Input placeholder="Lien du bouton CTA" value={section.content.ctaUrl || ''} onChange={e => updateContent('ctaUrl', e.target.value)} />
           </div>
@@ -86,7 +96,13 @@ function SectionEditor({
         {/* Image */}
         {section.type === 'image' && (
           <div className="space-y-3">
-            <Input placeholder="URL de l'image" value={section.content.url || ''} onChange={e => updateContent('url', e.target.value)} />
+            <FileDropZone
+              accept={['image']}
+              folder="home/images"
+              currentFile={section.content.url || ''}
+              onUpload={(url) => updateContent('url', url)}
+              label="Glissez une image ou cliquez pour téléverser"
+            />
             <Input placeholder="Texte alternatif (alt)" value={section.content.alt || ''} onChange={e => updateContent('alt', e.target.value)} />
             <Select value={section.content.size || 'full'} onValueChange={v => updateContent('size', v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -102,7 +118,13 @@ function SectionEditor({
         {/* Video */}
         {section.type === 'video' && (
           <div className="space-y-3">
-            <Input placeholder="URL vidéo (mp4 ou YouTube)" value={section.content.url || ''} onChange={e => updateContent('url', e.target.value)} />
+            <FileDropZone
+              accept={['video']}
+              folder="home/videos"
+              currentFile={section.content.url || ''}
+              onUpload={(url) => updateContent('url', url)}
+              label="Glissez une vidéo MP4/WebM ou cliquez pour téléverser"
+            />
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={section.content.autoplay ?? true} onChange={e => updateContent('autoplay', e.target.checked)} />
               Lecture automatique
@@ -113,12 +135,31 @@ function SectionEditor({
         {/* Slider */}
         {section.type === 'slider' && (
           <div className="space-y-3">
-            <Textarea
-              placeholder="URLs des images (une par ligne)"
-              value={(section.content.images || []).join('\n')}
-              onChange={e => updateContent('images', e.target.value.split('\n').filter(Boolean))}
-              rows={4}
-            />
+            {((section.content.images as string[]) || []).map((img, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <div className="flex-1">
+                  <FileDropZone
+                    accept={['image']}
+                    folder="home/slider"
+                    currentFile={img}
+                    onUpload={(url) => {
+                      const next = [...((section.content.images as string[]) || [])];
+                      if (url) next[i] = url; else next.splice(i, 1);
+                      updateContent('images', next);
+                    }}
+                    label={`Image ${i + 1}`}
+                  />
+                </div>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => updateContent('images', [...((section.content.images as string[]) || []), ''])}
+            >
+              <Plus className="h-3 w-3 mr-1" /> Ajouter une image
+            </Button>
           </div>
         )}
 

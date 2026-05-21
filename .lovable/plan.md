@@ -1,39 +1,52 @@
-## Plan d’intervention
+## Problème identifié
 
-1. **Roulette : un seul bouton + affichage 24h**
-   - Garder le jeu uniquement dans le menu compact flottant en bas à droite (`UnifiedFab`).
-   - Retirer le bouton roulette autonome de la home qui crée le doublon.
-   - Conserver l’auto-ouverture avec `auto_open_delay_ms = 8000` et `show_after_dismiss_hours = 24`.
-   - Vérifier le comportement après plusieurs refresh :
-     - première visite sans cache local : ouverture après 8s ;
-     - fermeture/refresh : pas de réouverture avant 24h ;
-     - cache/cookies/localStorage conservés : le blocage 24h reste actif.
+1. **Les sections personnalisées ne s'affichent pas** sur la page d'accueil parce qu'elles ne sont jamais sauvegardées en base. Le rendu existe bien dans `src/pages/Home.tsx` (lignes 363-370 via `PageRenderer`), mais `settingsToDb()` dans `src/hooks/useDesignSettings.ts` ne mappe que les champs connus : le champ `homeCustomSections` est silencieusement supprimé lors de l'`upsert`. Au rechargement, `dbToSettings()` renvoie `undefined` → tableau vide → rien à afficher.
 
-2. **Accès admin mobile**
-   - Corriger la course de chargement des rôles : actuellement `/admin` peut rediriger vers `/` avant que le rôle admin soit fini de charger.
-   - Faire attendre l’application jusqu’à ce que session + rôles soient tous les deux prêts avant de décider l’accès admin.
-   - Tester sur viewport mobile : clic bouton admin du header, navigation directe `/admin`, refresh sur `/admin`.
+2. **Les médias sont gérés par URL** dans `src/components/admin/PageBuilder.tsx` (Image, Vidéo, Slider, Hero background). Tu veux pouvoir uploader ou drag & drop, comme dans le reste du back-office (le composant `FileDropZone` existe déjà et utilise le bucket `media` via `useFileUpload`).
 
-3. **Menu header mobile qui clignote**
-   - Stabiliser la navbar mobile au-dessus du héros : réduire les transitions inutiles et éviter le changement de forme différé qui peut provoquer un effet de flicker.
-   - Vérifier l’ouverture/fermeture du menu mobile sur la home, pendant que la vidéo/hero tourne derrière.
+## Plan
 
-4. **Sidebar gauche mobile opaque**
-   - Remplacer le fond transparent du panneau par une vraie surface opaque issue du thème.
-   - Garder l’image/vidéo interne visible uniquement dans le panneau, sans voir le héros derrière.
-   - Vérifier ouverture/fermeture du panneau sur mobile.
+### 1. Persister `homeCustomSections` en base
 
-5. **Édition live simplifiée**
-   - Supprimer la barre “Admin Drag” du bas sur mobile/visiteur admin, car elle encombre et n’est pas adaptée.
-   - Rendre le bouton stylo plus utile : accès clair à l’éditeur live, position mobile propre, sans superposition avec le header ou les CTA.
-   - Réduire l’éditeur live aux essentiels : sauvegarder, hero, couleurs, sections principales ; retirer les éléments de positionnement avancés inutiles du parcours principal.
+- Migration SQL :
+  - Ajouter `home_custom_sections JSONB NOT NULL DEFAULT '[]'::jsonb` sur `public.design_settings`.
+  - Recréer la vue `public.design_settings_public` pour exposer cette colonne (lecture publique).
+- `src/hooks/useDesignSettings.ts` :
+  - Dans `dbToSettings()` : `homeCustomSections: (d.home_custom_sections as any) ?? []`.
+  - Dans `settingsToDb()` : `home_custom_sections: (s as any).homeCustomSections ?? []`.
+- `src/types/index.ts` : déclarer `homeCustomSections?: PageSection[]` sur `DesignSettings` pour supprimer les casts `as any`.
+- `src/components/admin/HomeCustomSectionsEditor.tsx` :
+  - Après `updateDesignSettings`, appeler `flushDesignSettings()` pour forcer la persistance immédiate (sinon le debounce + rechargement peut effacer l'état).
+  - Conserver le bouton « Enregistrer » + ajouter un toast d'erreur si l'upsert échoue.
 
-6. **Validation finale**
-   - Tester en mobile 360px : home, bouton admin, menu mobile, sidebar, bouton roulette unique, auto-open 8s/24h.
-   - Contrôler console et requêtes réseau pour vérifier l’absence d’erreurs critiques.
+### 2. Auto-affichage sur la home
 
-## Détails techniques
+Le rendu est déjà branché dans `Home.tsx`. Une fois la persistance corrigée, toute section ajoutée et enregistrée apparaîtra automatiquement à la suite des blocs principaux (`data-home-block="custom"`). Aucune action manuelle de publication ne sera requise.
 
-- Le problème admin vient probablement de `AuthContext` : `isLoading` passe à `false` avant la fin de `loadRoles()`, donc `Admin.tsx` voit temporairement `hasAdminPanelAccess = false` et redirige vers `/`.
-- Le doublon roulette vient de `Home.tsx` qui rend `<RouletteFab />` en plus de `MainLayout.tsx` qui rend déjà `<UnifiedFab />` avec la roulette intégrée.
-- La configuration backend de la roulette est déjà correcte : delay 8000ms, cooldown 24h, réaffichage après 24h.
+### 3. Upload / drag & drop partout dans le PageBuilder
+
+Dans `src/components/admin/PageBuilder.tsx`, remplacer les `<Input placeholder="URL...">` par le composant existant `FileDropZone` (déjà drag & drop + upload Supabase Storage + preview image/vidéo) :
+
+- **Section Hero** : champ `backgroundImage` → `FileDropZone accept={['image']} folder="home/hero"`.
+- **Section Image** : champ `url` → `FileDropZone accept={['image']} folder="home/images"`.
+- **Section Vidéo** : champ `url` → `FileDropZone accept={['video']} folder="home/videos"` (on garde un petit toggle pour autoriser une URL YouTube si besoin, sinon on supprime).
+- **Section Slider** : remplacer le `Textarea` « URLs (une par ligne) » par une liste dynamique de `FileDropZone` (« + Ajouter une image », réordonnable, suppression par image).
+- Les autres types (title, subtitle, text, products) restent inchangés.
+
+### 4. Convention globale
+
+Désormais, **toute nouvelle interface admin manipulant un média** (image / vidéo / audio / logo / favicon / bannière) doit utiliser `FileDropZone` (ou un wrapper équivalent basé sur `useFileUpload`). Plus aucun champ `URL d'image` saisi à la main, sauf cas spécifique (vidéo YouTube embed).
+
+### Fichiers touchés
+
+- `supabase/migrations/<timestamp>_home_custom_sections.sql` (nouveau)
+- `src/hooks/useDesignSettings.ts`
+- `src/types/index.ts`
+- `src/components/admin/PageBuilder.tsx`
+- `src/components/admin/HomeCustomSectionsEditor.tsx`
+
+### Vérifications après implémentation
+
+- Ouvrir Admin → Icônes & Sections d'accueil → ajouter une section Image via drag & drop → Enregistrer → aller sur `/` : la section doit apparaître.
+- Rafraîchir la page d'accueil : la section persiste.
+- Tester slider avec 3 images uploadées et une vidéo MP4 uploadée.
