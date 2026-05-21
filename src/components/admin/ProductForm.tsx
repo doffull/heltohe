@@ -244,7 +244,21 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         </div>
 
         <div className="space-y-2">
-          <Label className="hud-text text-xs">Sous-titre</Label>
+          <div className="flex items-center justify-between">
+            <Label className="hud-text text-xs">Sous-titre</Label>
+            <Button
+              type="button" size="sm" variant="ghost"
+              className="h-6 px-2 gap-1 text-primary hover:bg-primary/10"
+              disabled={aiBusy === 'subtitle'}
+              onClick={async () => {
+                const r = await runProductAi('subtitle');
+                if (r?.value) setFormData(prev => ({ ...prev, subtitle: r.value }));
+              }}
+            >
+              {aiBusy === 'subtitle' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+              <span className="text-[10px]">IA</span>
+            </Button>
+          </div>
           <Input
             value={formData.subtitle}
             onChange={(e) => setFormData(prev => ({ ...prev, subtitle: e.target.value }))}
@@ -333,7 +347,14 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         </div>
 
         <div className="space-y-2">
-          <Label className="hud-text text-xs">Vidéo du produit</Label>
+          <div className="flex items-center justify-between">
+            <Label className="hud-text text-xs">Vidéo du produit</Label>
+            <AiProductVideoButton
+              imageUrl={formData.image}
+              durationSec={10}
+              onGenerated={(url) => setFormData(prev => ({ ...prev, videoUrl: url }))}
+            />
+          </div>
           <FileDropZone
             accept={['video']}
             folder="products/videos"
