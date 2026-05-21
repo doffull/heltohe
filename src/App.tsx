@@ -17,6 +17,8 @@ import { VisualEditorPanel } from "@/components/visual-editor/VisualEditorPanel"
 import { ImageProtection } from "@/components/security/ImageProtection";
 import { AdminViewportProvider } from "@/context/AdminViewportContext";
 import { AdminDragBar } from "@/components/admin/AdminDragBar";
+import { MegaMenuProvider } from "@/context/MegaMenuContext";
+import { MegaMenu } from "@/components/layout/MegaMenu";
 
 // Pages
 import Home from "./pages/Home";
