@@ -27,7 +27,7 @@ export interface VariantStockData {
 }
 
 const CATEGORIES = ['Homme', 'Femme', 'Enfant', 'Accessoires'];
-const DEFAULT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+const DEFAULT_SIZES_FALLBACK = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
 const COLOR_HEX_MAP: Record<string, string> = {
   '#000000': '#000000', '#ffffff': '#ffffff',

@@ -20,7 +20,7 @@ import { getSlides, makeEmptySlide, duplicateSlide } from '@/lib/techwearHero';
 import { HERO_PRESETS } from '@/config/techwearHeroPresets';
 import { IconPicker } from '@/components/admin/IconPicker';
 
-const ALL_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+const ALL_SIZES_FALLBACK = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
 const DEFAULT_BG: TechwearBackground = {
   type: 'gradient',
