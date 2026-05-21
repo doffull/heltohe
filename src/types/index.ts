@@ -396,7 +396,8 @@ export interface DesignSettings {
   // Categories and sections
   categories: Category[];
   homeSections: HomeSection[];
-  homeCustomSections?: any[];
+ homeCustomSections?: any[];
+ homePageBlocks?: { id: string; visible: boolean }[];
   homePageBlocks?: Array<{ id: 'hero' | 'categories' | 'featured' | 'flash' | 'newArrivals' | 'productSections' | 'loyalty' | 'newsletter'; visible: boolean }>;
   
   // Presets and scheduling
