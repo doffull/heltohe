@@ -80,6 +80,37 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
   const [newAttrValue, setNewAttrValue] = useState('');
   const [newColor, setNewColor] = useState('#000000');
   const [newColorLabel, setNewColorLabel] = useState('');
+  const [aiBusy, setAiBusy] = useState<string | null>(null);
+
+  // Generic helper for product-ai-helpers edge function
+  const runProductAi = async (action: string, extra: Record<string, any> = {}) => {
+    setAiBusy(action);
+    try {
+      const { data, error } = await supabase.functions.invoke('product-ai-helpers', {
+        body: { action, name: formData.name, category: formData.category, imageUrl: formData.image, ...extra },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      return data as any;
+    } catch (e: any) {
+      toast.error(e.message || 'Erreur IA');
+      return null;
+    } finally {
+      setAiBusy(null);
+    }
+  };
+
+  // Auto-name new color when hex changes and label is empty
+  useEffect(() => {
+    if (!newColor || newColorLabel) return;
+    const t = setTimeout(async () => {
+      if (newColorLabel) return; // user typed in the meantime
+      const res = await runProductAi('color-name', { hex: newColor });
+      if (res?.value && !newColorLabel) setNewColorLabel(res.value);
+    }, 700);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newColor]);
 
   useEffect(() => {
     if (product) {
