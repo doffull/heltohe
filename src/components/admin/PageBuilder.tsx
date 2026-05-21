@@ -78,7 +78,16 @@ function SectionEditor({
           <div className="space-y-3">
             <Input placeholder="Titre du Hero" value={section.content.title || ''} onChange={e => updateContent('title', e.target.value)} />
             <Input placeholder="Sous-titre" value={section.content.subtitle || ''} onChange={e => updateContent('subtitle', e.target.value)} />
-            <Input placeholder="URL image de fond" value={section.content.backgroundImage || ''} onChange={e => updateContent('backgroundImage', e.target.value)} />
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Image de fond</div>
+              <FileDropZone
+                accept={['image']}
+                folder="home/hero"
+                currentFile={section.content.backgroundImage || ''}
+                onUpload={(url) => updateContent('backgroundImage', url)}
+                label="Glissez une image de fond"
+              />
+            </div>
             <Input placeholder="Texte du bouton CTA" value={section.content.ctaText || ''} onChange={e => updateContent('ctaText', e.target.value)} />
             <Input placeholder="Lien du bouton CTA" value={section.content.ctaUrl || ''} onChange={e => updateContent('ctaUrl', e.target.value)} />
           </div>
