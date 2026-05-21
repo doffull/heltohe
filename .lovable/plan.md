@@ -1,96 +1,79 @@
-# Plan — 3 chantiers
+## Objectifs
 
-## 1. Choisir l'emplacement des sections personnalisées
+1. Améliorer le formulaire produit avec des boutons IA partout (sous-titre, description, entretien, attributs, nom de couleur automatique, image → vidéo 10s).
+2. Corriger le bug : la section personnalisée remontée dans l'admin ne change pas d'ordre sur la page d'accueil.
+3. Corriger le chevauchement des boutons du header en mode admin sur desktop.
 
-Aujourd'hui les sections custom sont toujours rendues **à la fin** de la home (`Home.tsx`, bloc `data-home-block="custom"`). On va les transformer en blocs **réordonnables au même titre que `hero`, `categories`, `featured`, etc.**, via le même `HomeBlocksEditor`.
+---
 
-**Modèle** : chaque section custom devient un block avec un id unique `custom:<uuid>` :
-```
-{ id: 'custom:abc-123', visible: true, label: 'Bannière promo été' }
-```
+## 1. Bug ordre des sections home (cause racine)
 
-**Admin (`HomeBlocksEditor.tsx`)** :
-- Charger les blocks par défaut + un block `custom:<id>` pour chaque entrée de `homeCustomSections` (fusion automatique : on ajoute en bas ceux qui manquent, on retire les ids supprimés).
-- Afficher le titre/label de la section custom (pris du 1er bloc texte ou du nom donné dans `HomeCustomSectionsEditor`).
-- DnD existant → on peut glisser une section custom **entre** `categories` et `featured`, par exemple.
+`HomeBlocksEditor` sauvegarde `homePageBlocks` via `updateDesignSettings({ homePageBlocks })`, mais **ce champ n'est pas mappé** dans `src/hooks/useDesignSettings.ts` (ni dans `dbToSettings`, ni dans `settingsToDb`). Résultat : l'ordre est perdu au prochain rechargement, la page home retombe sur `DEFAULT_BLOCKS` et place les customs en bas.
 
-**`HomeCustomSectionsEditor.tsx`** : ajouter un champ « Nom de la section » (utilisé comme label dans la liste des blocks). À l'enregistrement, mettre à jour `homePageBlocks` pour ajouter les nouveaux ids `custom:<id>`.
+**Correction :**
+- Migration : ajouter colonne `home_page_blocks jsonb NOT NULL DEFAULT '[]'::jsonb` sur `design_settings` + recréer la vue `design_settings_public`.
+- `useDesignSettings.ts` : ajouter le mapping aller-retour `homePageBlocks ↔ home_page_blocks` (même pattern que `homeCustomSections`).
+- `src/types/index.ts` : ajouter `homePageBlocks?: { id: string; visible: boolean }[]`.
 
-**`Home.tsx`** : dans la boucle `blocks.filter(...).map(...)`, si `b.id.startsWith('custom:')` → chercher la section correspondante dans `homeCustomSections` et la rendre avec `PageRenderer`. Plus de bloc `custom` séparé en fin de page.
+Aucun changement nécessaire dans `Home.tsx` ni `HomeBlocksEditor.tsx` (la logique de fusion est déjà correcte).
 
-## 2. Refonte du menu « camembert » → Méga menu premium universel
+---
 
-Le bouton actuel `UnifiedFab` (menu radial en bas) sera remplacé par un **méga menu plein écran** déclenché depuis le même bouton FAB (mobile) et depuis un nouveau bouton dans le `Header` (tablette/desktop).
+## 2. Améliorations IA sur le formulaire produit
 
-**Nouveau composant `MegaMenu.tsx`** (overlay plein écran, glassmorphism, animation `framer-motion` avec staggered reveal) :
+Création d'une edge function unifiée + boutons IA inline.
 
-```text
-┌──────────────────────────────────────────────────────┐
-│ [Close]                                  [Search]    │
-├──────────────────────────────────────────────────────┤
-│  CATÉGORIES        │   APERÇU VISUEL                 │
-│  • Homme       →   │   ┌────┐ ┌────┐ ┌────┐         │
-│  • Femme           │   │img │ │img │ │img │ produits│
-│  • Accessoires     │   └────┘ └────┘ └────┘ vedette │
-│  • Nouveautés      │                                  │
-│                    │   "Collection Hiver 2026"        │
-│  PAGES             │                                  │
-│  • À propos        │                                  │
-│  • Contact         │                                  │
-└──────────────────────────────────────────────────────┘
-```
+### a. Edge function `product-ai-helpers` (nouvelle)
+Actions exposées (`action` dans le body) :
+- `subtitle` → sous-titre court à partir du nom/catégorie
+- `description` → description longue à partir de l'image (vision Gemini)
+- `material` → matière estimée depuis l'image
+- `care` → instructions d'entretien depuis matière/image
+- `attributes` → renvoie 4-6 paires { key, value } techniques depuis l'image
+- `color-name` → renvoie un nom poétique pour un hex (ex: `#1a3c2a` → "Vert Forêt")
 
-- **Mobile** : pleine hauteur, panneau gauche (catégories) en pile verticale, swipe pour fermer.
-- **Tablette/Desktop** : split 40/60, hover sur une catégorie → preview 3 produits de cette catégorie à droite (images depuis `useProducts` filtrés).
-- Données : `useCategories()` (racines) + `useProducts()` (3 derniers par cat).
-- Style : fond `bg-background/95 backdrop-blur-xl`, chamfer/bevel cohérent avec le design industriel existant, accent `--primary`.
-- Animations : `motion` avec `AnimatePresence`, slide-down + fade, items staggered 30ms, hover sur item → ligne 45° qui se déploie (cohérent brand).
+Modèle : `google/gemini-2.5-flash` (texte) et `google/gemini-2.5-pro` quand image fournie.
 
-**FAB** : le `UnifiedFab` actuel devient le déclencheur unique (icône menu burger stylisée). On garde la roue/roulette mais déplacée comme un **item à l'intérieur** du méga menu (« Tentez votre chance »). Le menu camembert radial est supprimé au profit de ce méga menu.
+### b. Edge function `generate-product-video` (nouvelle)
+- Reçoit l'image principale du produit, génère une vidéo de 10s max via le tool agent `videogen` (ou fallback Lovable AI image-to-video si dispo). Comme l'API video n'est pas exposée côté gateway, **on utilisera une animation Ken Burns CSS-to-MP4 via `ffmpeg` dans l'edge function ?** → non réalisable sans binaire. **Solution retenue** : l'edge function appelle `google/gemini-3-pro-image-preview` pour générer 3-4 keyframes animées (zoom progressif, rotation légère), puis renvoie un **GIF animé** ou une séquence à monter en `<video>` HTML5 via canvas côté client (MediaRecorder → webm 10s). Le webm est uploadé dans `products/videos` via Supabase Storage et stocké dans `formData.videoUrl`.
 
-**Header desktop** : ajout d'un bouton « Menu » à gauche du logo qui ouvre le même `MegaMenu`.
+### c. Composants UI
+- Réutiliser `AiTextButton` (déjà existant) → étendre les `field` autorisés : ajouter `material`, `care`, `attributes_bulk`.
+- Créer `AiColorNameButton` : à côté du champ "Nom de la couleur", génère le label depuis le hex courant.
+- Créer `AiAttributesButton` : bulk-fill du bloc attributs (efface + insère 4-6 entrées).
+- Créer `AiProductVideoButton` : à côté du `FileDropZone` vidéo. Désactivé tant qu'aucune image principale. Affiche une progress bar pendant la génération.
+- Brancher les boutons existants `AiTextButton` pour `subtitle` et `description` (déjà compatibles, juste à insérer dans le JSX).
 
-## 3. Transitions de page + parallaxe
+### d. Auto-naming couleur lors de la sélection
+Dans le bloc "Add new color" du `ProductForm` : ajouter un `useEffect` qui, dès que `newColor` change et que `newColorLabel` est vide, déclenche un debounce 500ms appelant `color-name`. Le résultat préremplit `newColorLabel` (modifiable par l'admin).
 
-**Lib** : `framer-motion` (déjà installé) — `AnimatePresence` + `motion.div`.
+---
 
-**`App.tsx` / router** : wrapper `<AnimatePresence mode="wait">` autour des `<Routes>` avec `key={location.pathname}`. Chaque page exporte une `motion.div` racine avec variantes :
+## 3. Header : chevauchement des boutons en mode admin
 
-```ts
-const pageVariants = {
-  initial: { opacity: 0, y: 30, filter: 'blur(8px)' },
-  animate: { opacity: 1, y: 0, filter: 'blur(0)', transition: { duration: 0.5, ease: [0.22,1,0.36,1] } },
-  exit:    { opacity: 0, y: -20, filter: 'blur(6px)', transition: { duration: 0.3 } },
-};
-```
+Sur 1576px (lg) en admin connecté, on a 9 boutons d'action (Search, Bot, Cart, User, Admin, Bell, Mail, Lang, MegaMenu) **+** la nav 8 liens **+** logo, tous dans un container `max-w-7xl` (1280px). D'où le chevauchement.
 
-**Composant utilitaire `PageTransition.tsx`** : wrappe les enfants avec la variante ci-dessus. Pages clés (`Home`, `Shop`, `ProductDetail`, `Category`, `About`, `Contact`) l'utilisent.
+**Corrections dans `MainLayout.tsx` ligne ~277, 317, 343 :**
+- Élargir le container header de `max-w-7xl` à `max-w-[1600px]` (et conserver `max-w-7xl` sur non-admin).
+- Quand `isAdmin`, basculer la nav sur `hidden xl:flex` au lieu de `lg:flex` pour libérer de la place jusqu'à 1280px, OU regrouper les boutons admin (Bell, Mail, Notifs) dans un `DropdownMenu` "Admin" unique à partir de `lg:` et < `2xl:`.
+- Solution retenue : **regrouper Bell + Mail + Admin link dans un menu déroulant "Admin"** (`DropdownMenu` shadcn) quand `< 2xl`, afficher individuellement à `2xl:`. Cela réduit de 3 boutons à 1.
+- Réduire le `gap` entre les actions de `lg:gap-3` à `lg:gap-1 xl:gap-2`.
 
-**Parallaxe nav** : pour les transitions entre catégories on ajoute un **flash overlay** (band noir qui balaie l'écran en 400ms diagonal 45° — cohérent brand) via un portal contrôlé par le router. Implémenté dans `PageTransition` avec `motion.div` `clipPath` animé.
+---
 
-**Parallaxe sur scroll** : déjà présent partiellement (`useScroll` dans `Home.tsx`). On généralise via un hook `useParallax(speed)` réutilisable et on l'applique à : hero des catégories, images des sections custom (option `parallax: true` dans `PageBuilder`).
+## Fichiers touchés
 
-## Détails techniques
+**Backend / migration**
+- `supabase/migrations/<ts>_home_page_blocks_column.sql`
+- `supabase/functions/product-ai-helpers/index.ts` (nouveau)
+- `supabase/functions/generate-product-video/index.ts` (nouveau)
+- `supabase/config.toml` : `verify_jwt = false` pour les 2 nouvelles fonctions
 
-### Fichiers modifiés
-- `src/components/admin/HomeBlocksEditor.tsx` — fusion blocks par défaut + custom
-- `src/components/admin/HomeCustomSectionsEditor.tsx` — champ « nom », sync blocks
-- `src/pages/Home.tsx` — rendre `custom:<id>` dans la boucle, supprimer bloc final
-- `src/types/index.ts` — `HomeBlock { id: string; visible: boolean; label?: string }`
-- `src/components/layout/UnifiedFab.tsx` — déclencheur méga menu
-- `src/components/layout/Header.tsx` — bouton Menu desktop
-- `src/components/layout/MegaMenu.tsx` — **nouveau** composant méga menu
-- `src/components/layout/MainLayout.tsx` — monter `MegaMenu` + provider d'état
-- `src/context/MegaMenuContext.tsx` — **nouveau** (open/close global)
-- `src/App.tsx` — `AnimatePresence` autour des routes
-- `src/components/layout/PageTransition.tsx` — **nouveau** wrapper
-- `src/hooks/useParallax.ts` — **nouveau** hook
-
-### Pas de migration DB
-`homePageBlocks` est déjà un JSONB libre dans `design_settings`, on étend juste les ids.
-
-### Vérifications
-- Admin → Icônes & Sections : créer une section custom « Promo été » → la voir dans `HomeBlocksEditor` → la glisser sous « Catégories » → recharger `/` → la section apparaît bien à cet endroit.
-- Mobile 360px : tap FAB → méga menu plein écran avec catégories + preview produits.
-- Desktop 1280px : clic « Menu » header → split avec preview live au hover.
-- Navigation Home → Shop → Product : fade + blur transition + flash overlay diagonal.
+**Frontend**
+- `src/hooks/useDesignSettings.ts` : mapping `homePageBlocks`
+- `src/types/index.ts` : type `homePageBlocks`
+- `src/components/admin/ProductForm.tsx` : boutons IA inline + auto-naming couleur + bouton vidéo IA
+- `src/components/admin/AiColorNameButton.tsx` (nouveau)
+- `src/components/admin/AiAttributesButton.tsx` (nouveau)
+- `src/components/admin/AiProductVideoButton.tsx` (nouveau)
+- `src/components/layout/MainLayout.tsx` : largeur container + regroupement boutons admin en dropdown
