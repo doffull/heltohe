@@ -370,17 +370,18 @@ export default function Home() {
       <h1 className="sr-only">{(designSettings as any).siteName || 'LVTK6'} — {(designSettings as any).siteTagline || 'Boutique de mode techwear'}</h1>
       <PromoBanner />
       {blocks.filter((b) => b.visible).map((b) => {
+        if (b.id.startsWith('custom:')) {
+          const section = customMap.get(b.id);
+          if (!section) return null;
+          return (
+            <section key={b.id} className={sectionPy} data-home-block={b.id}>
+              <PageRenderer sections={[section]} />
+            </section>
+          );
+        }
         const r = blockRenderers[b.id];
         return r ? <div key={b.id} data-home-block={b.id}>{r()}</div> : null;
       })}
-      {(() => {
-        const custom = ((designSettings as any).homeCustomSections || []) as PageSection[];
-        return custom.length > 0 ? (
-          <section className={sectionPy} data-home-block="custom">
-            <PageRenderer sections={custom} />
-          </section>
-        ) : null;
-      })()}
       <PopupBanner />
     </div>
   );
