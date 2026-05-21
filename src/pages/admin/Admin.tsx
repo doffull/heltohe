@@ -187,6 +187,20 @@ export default function Admin() {
   const { data: designSettings } = useDesignSettings();
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  // Log admin panel access (audit trail) — fires once per session per route group
+  useEffect(() => {
+    if (!user || !hasAdminPanelAccess) return;
+    const key = `admin_logged_${getActiveHref(location.pathname)}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, '1');
+    supabase.from('admin_access_log' as any).insert({
+      user_id: user.id,
+      email: user.email,
+      route: location.pathname,
+      user_agent: navigator.userAgent.slice(0, 500),
+    }).then(() => {}, () => {});
+  }, [user, hasAdminPanelAccess, location.pathname]);
+
   const sectionColors: Record<string, string> = {
     ...DEFAULT_SECTION_COLORS,
     ...((designSettings as any)?.admin_section_colors || {}),
