@@ -264,7 +264,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       <div
         className={cn(
-          'top-0 left-0 right-0 z-40 transition-all duration-500 pointer-events-none',
+          'top-0 left-0 right-0 z-40 pointer-events-none lg:transition-all lg:duration-500',
           headerFixed ? 'fixed' : 'sticky',
           sidebarActive ? 'lg:ml-[35%]' : 'lg:ml-0',
           topBanner.enabled && topBanner.text ? 'pt-9' : 'pt-2 lg:pt-3',

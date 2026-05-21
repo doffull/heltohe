@@ -19,7 +19,7 @@ export function VisualEditorToggle() {
   return (
     <motion.button
       onClick={() => setIsOpen(!isOpen)}
-      className="fixed left-4 top-1/2 -translate-y-1/2 z-[80] flex flex-col items-center gap-1 group"
+      className="fixed left-3 bottom-24 lg:left-4 lg:top-1/2 lg:bottom-auto lg:-translate-y-1/2 z-[80] flex flex-col items-center gap-1 group"
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       title={isOpen ? "Fermer l'éditeur" : 'Ouvrir l\'éditeur visuel'}

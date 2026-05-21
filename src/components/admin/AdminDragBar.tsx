@@ -71,7 +71,7 @@ export function AdminDragBar() {
 
   return (
     <div
-      className="fixed left-1/2 bottom-3 z-[60] -translate-x-1/2 flex items-center gap-1 bg-background border-2 border-primary/60 px-2 py-1.5 shadow-2xl"
+      className="fixed left-1/2 bottom-3 z-[60] -translate-x-1/2 hidden lg:flex items-center gap-1 bg-background border-2 border-primary/60 px-2 py-1.5 shadow-2xl"
       style={{ backdropFilter: 'blur(12px)' }}
     >
       <span className="text-[9px] uppercase tracking-widest font-bold opacity-60 px-1">Admin Drag</span>
