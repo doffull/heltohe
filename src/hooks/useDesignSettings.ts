@@ -225,6 +225,7 @@ function settingsToDb(s: DesignSettings) {
     techwear_hero: s.techwearHero as unknown as Json,
     social_links: s.socialLinks as unknown as Json,
     home_sections: s.homeSections as unknown as Json,
+    home_custom_sections: ((s as any).homeCustomSections ?? []) as unknown as Json,
     presets: s.presets as unknown as Json,
     schedules: s.schedules as unknown as Json,
     pages: s.pages as unknown as Json,
