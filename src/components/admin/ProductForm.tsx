@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Trash2 } from 'lucide-react';
+import { X, Plus, Trash2, Sparkles, Loader2 } from 'lucide-react';
 import { Product, ColorOption } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { FileDropZone } from '@/components/admin/FileDropZone';
 import { useApp } from '@/context/AppContext';
+import { AiTextButton } from '@/components/admin/AiTextButton';
+import { AiColorNameButton } from '@/components/admin/AiColorNameButton';
+import { AiAttributesButton } from '@/components/admin/AiAttributesButton';
+import { AiProductVideoButton } from '@/components/admin/AiProductVideoButton';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface ProductFormProps {
   product?: Product;
