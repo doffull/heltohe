@@ -60,21 +60,26 @@ export function useVisitorTracking({ enabled = true, userId = null }: Options = 
 
     if (!startedRef.current) {
       startedRef.current = true;
+      // INSERT only (avoid upsert which needs SELECT permission for returning row).
+      // Subsequent updates are handled by the heartbeat RPC below.
       supabase
         .from('visitor_sessions')
-        .upsert(
-          {
-            session_id: sessionIdRef.current,
-            user_id: userId || null,
-            user_agent: navigator.userAgent.slice(0, 500),
-            device: detectDevice(),
-            referrer: document.referrer?.slice(0, 500) || null,
-            landing_path: window.location.pathname,
-            last_seen_at: new Date().toISOString(),
-          },
-          { onConflict: 'session_id' }
-        )
-        .then(() => {});
+        .insert({
+          session_id: sessionIdRef.current,
+          user_id: userId || null,
+          user_agent: navigator.userAgent.slice(0, 500),
+          device: detectDevice(),
+          referrer: document.referrer?.slice(0, 500) || null,
+          landing_path: window.location.pathname,
+          last_seen_at: new Date().toISOString(),
+        })
+        .then(({ error }) => {
+          // Ignore duplicate session conflicts (existing row) and forbidden (silently)
+          if (error && !['23505', '42501'].includes((error as any).code)) {
+            // surface only unexpected errors
+            console.warn('[visitor-tracking] insert failed', error);
+          }
+        });
     }
 
     const hb = setInterval(() => {
