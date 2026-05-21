@@ -1,18 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { GripVertical, Save, Eye, EyeOff } from 'lucide-react';
+import { GripVertical, Save, Eye, EyeOff, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import type { PageSection } from '@/hooks/usePages';
 
-type BlockId = 'hero' | 'categories' | 'featured' | 'flash' | 'newArrivals' | 'loyalty' | 'newsletter';
-interface Block { id: BlockId; visible: boolean }
+type BuiltinId = 'hero' | 'categories' | 'featured' | 'flash' | 'newArrivals' | 'loyalty' | 'newsletter';
+interface Block { id: string; visible: boolean; label?: string }
 
-const LABELS: Record<BlockId, string> = {
+const BUILTIN_LABELS: Record<BuiltinId, string> = {
   hero: 'Hero (slider ou techwear)',
   categories: 'Grille catégories',
   featured: 'Produits en vedette',
@@ -22,17 +23,20 @@ const LABELS: Record<BlockId, string> = {
   newsletter: 'Newsletter CTA',
 };
 
-const DEFAULT_BLOCKS: Block[] = [
-  { id: 'hero', visible: true },
-  { id: 'categories', visible: true },
-  { id: 'featured', visible: true },
-  { id: 'flash', visible: true },
-  { id: 'newArrivals', visible: true },
-  { id: 'loyalty', visible: true },
-  { id: 'newsletter', visible: true },
-];
+const DEFAULT_BUILTIN: Block[] = (Object.keys(BUILTIN_LABELS) as BuiltinId[]).map((id) => ({
+  id, visible: true, label: BUILTIN_LABELS[id],
+}));
 
-function Row({ b, onToggle }: { b: Block; onToggle: () => void }) {
+function sectionLabel(s: PageSection): string {
+  const c = s.content || {};
+  return (
+    (c.name as string) || (c.title as string) || (c.subtitle as string) ||
+    (typeof c.text === 'string' ? c.text.slice(0, 40) : '') ||
+    `Section ${s.type}`
+  );
+}
+
+function Row({ b, onToggle, isCustom }: { b: Block; onToggle: () => void; isCustom: boolean }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: b.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   return (
@@ -40,9 +44,10 @@ function Row({ b, onToggle }: { b: Block; onToggle: () => void }) {
       <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none p-1">
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </button>
-      <div className="flex-1">
-        <div className="text-sm font-medium">{LABELS[b.id]}</div>
-        <div className="text-[10px] text-muted-foreground">{b.id}</div>
+      {isCustom && <Sparkles className="h-4 w-4 text-primary" />}
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium truncate">{b.label || b.id}</div>
+        <div className="text-[10px] text-muted-foreground truncate">{isCustom ? 'Section personnalisée' : b.id}</div>
       </div>
       {b.visible ? <Eye className="h-4 w-4 text-primary" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
       <Switch checked={b.visible} onCheckedChange={onToggle} />
@@ -51,17 +56,36 @@ function Row({ b, onToggle }: { b: Block; onToggle: () => void }) {
 }
 
 export function HomeBlocksEditor() {
-  const { designSettings, updateDesignSettings } = useApp();
+  const { designSettings, updateDesignSettings, flushDesignSettings } = useApp();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
-  const initial = ((designSettings as any).homePageBlocks?.length
-    ? (designSettings as any).homePageBlocks
-    : DEFAULT_BLOCKS) as Block[];
-  const [blocks, setBlocks] = useState<Block[]>(initial);
 
-  useEffect(() => {
-    const cur = (designSettings as any).homePageBlocks;
-    if (cur?.length) setBlocks(cur);
-  }, [designSettings]);
+  const customSections = ((designSettings as any).homeCustomSections || []) as PageSection[];
+
+  // Merge: keep saved order, add missing customs at bottom, drop deleted ones.
+  const merged = useMemo<Block[]>(() => {
+    const saved = ((designSettings as any).homePageBlocks || []) as Block[];
+    const customIds = new Set(customSections.map((s) => `custom:${s.id}`));
+    const customLabelMap = new Map(customSections.map((s) => [`custom:${s.id}`, sectionLabel(s)]));
+
+    const validSaved = saved.filter((b) =>
+      b.id.startsWith('custom:') ? customIds.has(b.id) : (b.id in BUILTIN_LABELS)
+    ).map((b) => ({
+      ...b,
+      label: b.id.startsWith('custom:') ? customLabelMap.get(b.id) || 'Section' : BUILTIN_LABELS[b.id as BuiltinId],
+    }));
+
+    // Add missing builtins
+    DEFAULT_BUILTIN.forEach((d) => { if (!validSaved.find((b) => b.id === d.id)) validSaved.push({ ...d }); });
+    // Add missing customs at the end
+    customSections.forEach((s) => {
+      const id = `custom:${s.id}`;
+      if (!validSaved.find((b) => b.id === id)) validSaved.push({ id, visible: true, label: sectionLabel(s) });
+    });
+    return validSaved;
+  }, [designSettings, customSections]);
+
+  const [blocks, setBlocks] = useState<Block[]>(merged);
+  useEffect(() => { setBlocks(merged); /* eslint-disable-next-line */ }, [JSON.stringify(merged.map(b => b.id))]);
 
   const onDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
@@ -71,14 +95,17 @@ export function HomeBlocksEditor() {
     setBlocks(arrayMove(blocks, oi, ni));
   };
 
-  const toggle = (id: BlockId) => setBlocks(blocks.map((b) => b.id === id ? { ...b, visible: !b.visible } : b));
+  const toggle = (id: string) => setBlocks(blocks.map((b) => b.id === id ? { ...b, visible: !b.visible } : b));
 
   const save = async () => {
-    await updateDesignSettings({ ...(designSettings as any), homePageBlocks: blocks } as any);
+    updateDesignSettings({ homePageBlocks: blocks } as any);
+    await flushDesignSettings();
     toast.success("Ordre des sections enregistré");
   };
 
-  const reset = () => setBlocks(DEFAULT_BLOCKS);
+  const reset = () => setBlocks(DEFAULT_BUILTIN.concat(customSections.map((s) => ({
+    id: `custom:${s.id}`, visible: true, label: sectionLabel(s),
+  }))));
 
   return (
     <Card className="border-2 border-primary/20">
@@ -86,11 +113,16 @@ export function HomeBlocksEditor() {
         <CardTitle>Sections de la page d'accueil</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-xs text-muted-foreground">Glissez pour réordonner les grands blocs de la home. Désactivez ceux que vous ne voulez pas afficher.</p>
+        <p className="text-xs text-muted-foreground">
+          Glissez pour réordonner les blocs (incluant vos sections personnalisées). Désactivez ceux à masquer.
+          Les sections marquées <Sparkles className="inline h-3 w-3 text-primary" /> sont vos sections personnalisées.
+        </p>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-2">
-              {blocks.map((b) => <Row key={b.id} b={b} onToggle={() => toggle(b.id)} />)}
+              {blocks.map((b) => (
+                <Row key={b.id} b={b} onToggle={() => toggle(b.id)} isCustom={b.id.startsWith('custom:')} />
+              ))}
             </div>
           </SortableContext>
         </DndContext>
