@@ -9,6 +9,7 @@ import {
   Heading1, Heading2, LayoutGrid, ChevronUp, ChevronDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { FileDropZone } from '@/components/admin/FileDropZone';
 import type { PageSection } from '@/hooks/usePages';
 
 const SECTION_TYPES = [
