@@ -1,51 +1,39 @@
-# Audit total LVTK6 — Plan de livraison
+## Plan d’intervention
 
-## Point bloquant admin — RÉSOLU
-- Compte connecté actuellement : `6000art@gmail.com` ✅ rôle `admin` confirmé en base
-- Dernière connexion réussie : 21/05 à 10:05
-- Les 2 autres comptes (`amsy94`, `kolrparis`) n'ont aucun rôle → redirection normale vers `/`
-- Tu peux maintenant accéder à `/admin`. Si besoin de promouvoir un autre compte : page `/admin/roles` créée à la livraison précédente.
+1. **Roulette : un seul bouton + affichage 24h**
+   - Garder le jeu uniquement dans le menu compact flottant en bas à droite (`UnifiedFab`).
+   - Retirer le bouton roulette autonome de la home qui crée le doublon.
+   - Conserver l’auto-ouverture avec `auto_open_delay_ms = 8000` et `show_after_dismiss_hours = 24`.
+   - Vérifier le comportement après plusieurs refresh :
+     - première visite sans cache local : ouverture après 8s ;
+     - fermeture/refresh : pas de réouverture avant 24h ;
+     - cache/cookies/localStorage conservés : le blocage 24h reste actif.
 
-## Méthode
-Chaque livraison = (1) audit code + DB + logs, (2) tests en navigateur réel aux 3 tailles (360 / 768 / 1440), (3) corrections, (4) re-test, (5) rapport dans `AUDIT_REPORT.md`. Je ne passe pas à la suivante sans ton OK.
+2. **Accès admin mobile**
+   - Corriger la course de chargement des rôles : actuellement `/admin` peut rediriger vers `/` avant que le rôle admin soit fini de charger.
+   - Faire attendre l’application jusqu’à ce que session + rôles soient tous les deux prêts avant de décider l’accès admin.
+   - Tester sur viewport mobile : clic bouton admin du header, navigation directe `/admin`, refresh sur `/admin`.
 
-## Périmètre — 6 livraisons
+3. **Menu header mobile qui clignote**
+   - Stabiliser la navbar mobile au-dessus du héros : réduire les transitions inutiles et éviter le changement de forme différé qui peut provoquer un effet de flicker.
+   - Vérifier l’ouverture/fermeture du menu mobile sur la home, pendant que la vidéo/hero tourne derrière.
 
-### Livraison 1 — Parcours visiteur (front public)
-Pages : `/`, `/boutique`, `/boutique/:slug`, `/:categorySlug`, `/a-propos`, `/contact`, `/fidelite`, `/guide-des-tailles`, pages légales (5)
-Tests : navigation header/sidebar, hero, grilles produits, filtres, galerie zoom, ajout panier, formulaire contact, popups newsletter, FAB roulette/chat, responsive 360/768/1440.
+4. **Sidebar gauche mobile opaque**
+   - Remplacer le fond transparent du panneau par une vraie surface opaque issue du thème.
+   - Garder l’image/vidéo interne visible uniquement dans le panneau, sans voir le héros derrière.
+   - Vérifier ouverture/fermeture du panneau sur mobile.
 
-### Livraison 2 — Compte client & authentification
-Pages : `/auth` (signup/login/reset), `/compte`, `/compte/profil`, `/compte/adresses`, `/compte/commandes`, `/compte/fidelite`
-Tests : inscription, connexion email, Google OAuth, déconnexion, édition profil, ajout adresse, historique commandes, points fidélité, échange récompense.
+5. **Édition live simplifiée**
+   - Supprimer la barre “Admin Drag” du bas sur mobile/visiteur admin, car elle encombre et n’est pas adaptée.
+   - Rendre le bouton stylo plus utile : accès clair à l’éditeur live, position mobile propre, sans superposition avec le header ou les CTA.
+   - Réduire l’éditeur live aux essentiels : sauvegarder, hero, couleurs, sections principales ; retirer les éléments de positionnement avancés inutiles du parcours principal.
 
-### Livraison 3 — Tunnel commande (sans paiement réel)
-Pages : `/panier`, `/checkout` (étapes adresse → livraison Colissimo → récap → commande créée en `pending`)
-Tests : ajout/modif/suppression panier, codes promo, livraison domicile vs point relais (carte Leaflet), validation Gemini identité, création commande, email de confirmation Resend, réservation stock.
+6. **Validation finale**
+   - Tester en mobile 360px : home, bouton admin, menu mobile, sidebar, bouton roulette unique, auto-open 8s/24h.
+   - Contrôler console et requêtes réseau pour vérifier l’absence d’erreurs critiques.
 
-### Livraison 4 — Admin : catalogue & opérations
-Pages : Dashboard, Live, Produits, Catégories, Stock, Préparations, Commandes, Clients, Médias, Pages
-Tests : CRUD produits, import PDF/CSV via Gemini, drag&drop catégories, édition stock inline, validation commande 3 étapes, génération bons Colissimo.
+## Détails techniques
 
-### Livraison 5 — Admin : marketing, design & config
-Pages : Marketing, Roulette, Notifications, Chatbot, Design, Home-icons, Checkout, Colissimo, WooCommerce, Paramètres, Rôles, Audit, Erreurs
-Tests : éditeur visuel live, popups newsletter, segments roulette, templates email/SMS, sync WooCommerce, attribution rôles.
-
-### Livraison 6 — Transverse & durcissement
-- Erreur runtime détectée : `Cannot read properties of undefined (reading 'toLowerCase')` dans ImageProtection → à corriger
-- Lint Supabase (RLS, fonctions search_path)
-- Edge functions : logs des 14 fonctions
-- SEO : meta, H1, alt, JSON-LD sur toutes les pages publiques
-- Accessibilité : warnings Radix DialogTitle/Description
-- Performance : taille bundle, lazy loading
-- Rapport final consolidé dans `AUDIT_REPORT.md`
-
-## Hors périmètre (à ta demande)
-- Paiement réel (Stripe/Paddle) → à brancher après
-- Tests de charge / E2E automatisés (Playwright) → on reste sur tests manuels navigateur
-
-## Livrable
-- `AUDIT_REPORT.md` mis à jour à chaque livraison avec : bugs trouvés / corrigés / restants, captures clés, recommandations.
-
-## Démarrage
-Je commence par la **Livraison 1** (front visiteur) dès ton feu vert. Confirme-moi : on enchaîne les 6 livraisons l'une après l'autre, ou tu veux qu'on s'arrête après chacune pour valider ?
+- Le problème admin vient probablement de `AuthContext` : `isLoading` passe à `false` avant la fin de `loadRoles()`, donc `Admin.tsx` voit temporairement `hasAdminPanelAccess = false` et redirige vers `/`.
+- Le doublon roulette vient de `Home.tsx` qui rend `<RouletteFab />` en plus de `MainLayout.tsx` qui rend déjà `<UnifiedFab />` avec la roulette intégrée.
+- La configuration backend de la roulette est déjà correcte : delay 8000ms, cooldown 24h, réaffichage après 24h.

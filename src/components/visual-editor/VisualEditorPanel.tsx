@@ -36,7 +36,7 @@ export function VisualEditorPanel() {
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: -340, opacity: 0 }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-          className="fixed left-0 top-0 h-screen w-80 z-[75] flex flex-col bg-background border-r border-border shadow-2xl"
+          className="fixed left-0 top-0 h-screen w-full sm:w-80 z-[75] flex flex-col bg-background border-r border-border shadow-2xl"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30 flex-shrink-0">

@@ -18,7 +18,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { TechwearHero } from '@/components/home/TechwearHero';
 import { HeroSlider } from '@/components/home/HeroSlider';
 import { HeroErrorBoundary } from '@/components/home/HeroErrorBoundary';
-import { RouletteFab } from '@/components/home/RouletteFab';
+// RouletteFab removed from Home — handled globally by UnifiedFab in MainLayout to avoid duplicate buttons
 
 const PLACEHOLDER = '/placeholder.svg';
 
@@ -354,7 +354,6 @@ export default function Home() {
     <div className="min-h-screen bg-background overflow-hidden">
       <h1 className="sr-only">{(designSettings as any).siteName || 'LVTK6'} — {(designSettings as any).siteTagline || 'Boutique de mode techwear'}</h1>
       <PromoBanner />
-      <RouletteFab />
       {blocks.filter((b) => b.visible).map((b) => {
         const r = blockRenderers[b.id];
         return r ? <div key={b.id} data-home-block={b.id}>{r()}</div> : null;

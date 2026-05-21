@@ -26,6 +26,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [roles, setRoles] = useState<AppRole[]>([]);
+  // Tracks whether the initial session has been checked AND its roles loaded.
+  // Prevents `/admin` from redirecting to `/` during the race between
+  // session restore and the user_roles query.
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const [rolesLoaded, setRolesLoaded] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -33,23 +38,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
+          setRolesLoaded(false);
           setTimeout(() => { loadRoles(session.user.id); }, 0);
         } else {
           setIsAdmin(false);
           setRoles([]);
+          setRolesLoaded(true);
         }
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) loadRoles(session.user.id);
-      setIsLoading(false);
+      if (session?.user) {
+        await loadRoles(session.user.id);
+      } else {
+        setRolesLoaded(true);
+      }
+      setSessionChecked(true);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Only mark loading complete once both session is checked AND roles are loaded
+  useEffect(() => {
+    if (sessionChecked && rolesLoaded) setIsLoading(false);
+  }, [sessionChecked, rolesLoaded]);
 
   const loadRoles = async (userId: string) => {
     try {
@@ -62,6 +78,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsAdmin(list.includes('admin'));
     } catch {
       setRoles([]); setIsAdmin(false);
+    } finally {
+      setRolesLoaded(true);
     }
   };
 
