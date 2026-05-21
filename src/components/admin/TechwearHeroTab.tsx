@@ -33,6 +33,7 @@ const DEFAULT_BG: TechwearBackground = {
 export function TechwearHeroTab() {
   const { designSettings, updateDesignSettings, flushDesignSettings } = useApp();
   const cfg = designSettings.techwearHero;
+  const ALL_SIZES = designSettings.globalProductSizes?.length ? designSettings.globalProductSizes : ALL_SIZES_FALLBACK;
   const { data: products } = useProducts();
   const [saving, setSaving] = useState(false);
 
