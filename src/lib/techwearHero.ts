@@ -35,8 +35,9 @@ export function makeEmptySlide(name?: string): TechwearHeroSlideData {
     ctaPrimary: { ...d.ctaPrimary },
     ctaSecondary: { ...d.ctaSecondary },
     stats: d.stats.map((x) => ({ ...x })),
-    visibleSizes: [...d.visibleSizes],
-    defaultSize: d.defaultSize,
+    // No size pre-selected — admin choisit explicitement les tailles à afficher
+    visibleSizes: [],
+    defaultSize: '',
     colorOptions: d.colorOptions.map((c) => ({ ...c })),
     defaultColor: d.defaultColor,
     imageFit: d.imageFit,
