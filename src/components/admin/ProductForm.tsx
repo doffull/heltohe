@@ -756,7 +756,22 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         <h4 className="hud-text text-xs text-primary">// DÉTAILS</h4>
         
         <div className="space-y-2">
-          <Label className="hud-text text-xs">Description</Label>
+          <div className="flex items-center justify-between">
+            <Label className="hud-text text-xs">Description</Label>
+            <Button
+              type="button" size="sm" variant="ghost"
+              className="h-6 px-2 gap-1 text-primary hover:bg-primary/10"
+              disabled={aiBusy === 'description' || !formData.image}
+              title={!formData.image ? "Ajoutez d'abord une image" : "Générer depuis l'image"}
+              onClick={async () => {
+                const r = await runProductAi('description');
+                if (r?.value) setFormData(prev => ({ ...prev, description: r.value }));
+              }}
+            >
+              {aiBusy === 'description' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+              <span className="text-[10px]">IA depuis l'image</span>
+            </Button>
+          </div>
           <Textarea
             value={formData.description}
             onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
@@ -766,7 +781,21 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label className="hud-text text-xs">Matériau</Label>
+            <div className="flex items-center justify-between">
+              <Label className="hud-text text-xs">Matériau</Label>
+              <Button
+                type="button" size="sm" variant="ghost"
+                className="h-6 px-2 gap-1 text-primary hover:bg-primary/10"
+                disabled={aiBusy === 'material' || !formData.image}
+                onClick={async () => {
+                  const r = await runProductAi('material');
+                  if (r?.value) setFormData(prev => ({ ...prev, material: r.value }));
+                }}
+              >
+                {aiBusy === 'material' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                <span className="text-[10px]">IA</span>
+              </Button>
+            </div>
             <Input
               value={formData.material}
               onChange={(e) => setFormData(prev => ({ ...prev, material: e.target.value }))}
@@ -774,9 +803,23 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
               placeholder="Gore-Tex Pro 3L"
             />
           </div>
-          
+
           <div className="space-y-2">
-            <Label className="hud-text text-xs">Entretien</Label>
+            <div className="flex items-center justify-between">
+              <Label className="hud-text text-xs">Entretien</Label>
+              <Button
+                type="button" size="sm" variant="ghost"
+                className="h-6 px-2 gap-1 text-primary hover:bg-primary/10"
+                disabled={aiBusy === 'care'}
+                onClick={async () => {
+                  const r = await runProductAi('care', { material: formData.material });
+                  if (r?.value) setFormData(prev => ({ ...prev, careInstructions: r.value }));
+                }}
+              >
+                {aiBusy === 'care' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                <span className="text-[10px]">IA</span>
+              </Button>
+            </div>
             <Input
               value={formData.careInstructions}
               onChange={(e) => setFormData(prev => ({ ...prev, careInstructions: e.target.value }))}
