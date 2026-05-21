@@ -499,7 +499,10 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
             />
           </div>
           <div className="flex-1 space-y-2">
-            <Label className="hud-text text-xs">Nom de la couleur</Label>
+            <div className="flex items-center justify-between">
+              <Label className="hud-text text-xs">Nom de la couleur <span className="text-[10px] text-muted-foreground">(auto-IA)</span></Label>
+              <AiColorNameButton hex={newColor} onGenerated={setNewColorLabel} />
+            </div>
             <Input
               value={newColorLabel}
               onChange={(e) => setNewColorLabel(e.target.value)}
