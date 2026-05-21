@@ -75,7 +75,7 @@ export function HomeBlocksEditor() {
     }));
 
     // Add missing builtins
-    DEFAULT_BUILTIN.forEach((d) => { if (!validSaved.find((b) => b.id === d.id)) validSaved.push({ ...d }); });
+    DEFAULT_BUILTIN.forEach((d) => { if (!validSaved.find((b) => b.id === d.id)) validSaved.push({ id: d.id, visible: d.visible, label: d.label }); });
     // Add missing customs at the end
     customSections.forEach((s) => {
       const id = `custom:${s.id}`;
