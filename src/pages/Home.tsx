@@ -18,6 +18,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { TechwearHero } from '@/components/home/TechwearHero';
 import { HeroSlider } from '@/components/home/HeroSlider';
 import { HeroErrorBoundary } from '@/components/home/HeroErrorBoundary';
+import PageRenderer from '@/components/page/PageRenderer';
+import type { PageSection } from '@/hooks/usePages';
 // RouletteFab removed from Home — handled globally by UnifiedFab in MainLayout to avoid duplicate buttons
 
 const PLACEHOLDER = '/placeholder.svg';
@@ -358,6 +360,14 @@ export default function Home() {
         const r = blockRenderers[b.id];
         return r ? <div key={b.id} data-home-block={b.id}>{r()}</div> : null;
       })}
+      {(() => {
+        const custom = ((designSettings as any).homeCustomSections || []) as PageSection[];
+        return custom.length > 0 ? (
+          <section className={sectionPy} data-home-block="custom">
+            <PageRenderer sections={custom} />
+          </section>
+        ) : null;
+      })()}
       <PopupBanner />
     </div>
   );

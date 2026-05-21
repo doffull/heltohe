@@ -11,6 +11,7 @@ import { IconPicker, getIcon } from '@/components/admin/IconPicker';
 import { Plus, Trash2, Copy, ChevronUp, ChevronDown, Sparkles } from 'lucide-react';
 import { UnifiedFabEditor } from '@/components/admin/UnifiedFabEditor';
 import { HomeBlocksEditor } from '@/components/admin/HomeBlocksEditor';
+import { HomeCustomSectionsEditor } from '@/components/admin/HomeCustomSectionsEditor';
 import { FabLivePreview } from '@/components/admin/FabLivePreview';
 import { toast } from 'sonner';
 import type { HomeFabButton } from '@/types';
@@ -84,6 +85,7 @@ export default function AdminHomeIcons() {
       </div>
 
       <HomeBlocksEditor />
+      <HomeCustomSectionsEditor />
       <UnifiedFabEditor />
       <FabLivePreview />
 
