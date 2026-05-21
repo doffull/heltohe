@@ -420,6 +420,8 @@ export interface DesignSettings {
   
   // Configurable sizes for sidebar
   sidebarSizes: string[];
+  // Global product size catalogue (admin-managed, used everywhere)
+  globalProductSizes?: string[];
   
   // Stat bar colors
   statBarFilledColor: string;

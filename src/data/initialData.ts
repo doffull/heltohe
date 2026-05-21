@@ -306,6 +306,7 @@ export const INITIAL_DESIGN_SETTINGS: DesignSettings = {
   sidebarImageOpacity: 1,
   mobileSidebarImage: '',
   sidebarSizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'],
+  globalProductSizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'],
   statBarFilledColor: '#000000',
   statBarEmptyColor: '#e5e5e5',
   sidebarProductTitle: '',

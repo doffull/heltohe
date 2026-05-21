@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { ProductForm, VariantStockData } from '@/components/admin/ProductForm';
 import { InventoryProductDialog } from '@/components/admin/InventoryProductDialog';
+import { GlobalSizesEditor } from '@/components/admin/GlobalSizesEditor';
 import { Textarea } from '@/components/ui/textarea';
 
 interface ExtractedProduct {
@@ -345,7 +346,12 @@ export default function AdminProducts() {
         <TabsList className="bg-muted/50">
           <TabsTrigger value="products" className="gap-2"><Package className="h-4 w-4" />Produits</TabsTrigger>
           <TabsTrigger value="looks" className="gap-2"><Layers2 className="h-4 w-4" />Looks</TabsTrigger>
+          <TabsTrigger value="sizes" className="gap-2"><Tag className="h-4 w-4" />Tailles</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="sizes" className="space-y-4 mt-4">
+          <GlobalSizesEditor />
+        </TabsContent>
 
         <TabsContent value="products" className="space-y-4 mt-4">
       <div className="chamfer-hud bg-card/50 p-3 lg:p-4 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 lg:gap-3">

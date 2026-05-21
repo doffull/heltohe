@@ -20,7 +20,7 @@ import { getSlides, makeEmptySlide, duplicateSlide } from '@/lib/techwearHero';
 import { HERO_PRESETS } from '@/config/techwearHeroPresets';
 import { IconPicker } from '@/components/admin/IconPicker';
 
-const ALL_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+const ALL_SIZES_FALLBACK = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
 const DEFAULT_BG: TechwearBackground = {
   type: 'gradient',
@@ -33,6 +33,7 @@ const DEFAULT_BG: TechwearBackground = {
 export function TechwearHeroTab() {
   const { designSettings, updateDesignSettings, flushDesignSettings } = useApp();
   const cfg = designSettings.techwearHero;
+  const ALL_SIZES = designSettings.globalProductSizes?.length ? designSettings.globalProductSizes : ALL_SIZES_FALLBACK;
   const { data: products } = useProducts();
   const [saving, setSaving] = useState(false);
 

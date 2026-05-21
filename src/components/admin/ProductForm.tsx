@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { FileDropZone } from '@/components/admin/FileDropZone';
+import { useApp } from '@/context/AppContext';
 
 interface ProductFormProps {
   product?: Product;
@@ -27,7 +28,7 @@ export interface VariantStockData {
 }
 
 const CATEGORIES = ['Homme', 'Femme', 'Enfant', 'Accessoires'];
-const DEFAULT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+const DEFAULT_SIZES_FALLBACK = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
 const COLOR_HEX_MAP: Record<string, string> = {
   '#000000': '#000000', '#ffffff': '#ffffff',
@@ -38,6 +39,8 @@ function colorSwatch(hex: string) {
 }
 
 export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductFormProps) {
+  const { designSettings } = useApp();
+  const DEFAULT_SIZES = designSettings.globalProductSizes?.length ? designSettings.globalProductSizes : DEFAULT_SIZES_FALLBACK;
   const [formData, setFormData] = useState({
     name: '',
     subtitle: '',

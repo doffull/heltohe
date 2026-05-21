@@ -60,6 +60,7 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     // Sidebar image opacity + sizes
     sidebarImageOpacity: (db.sidebar_image_opacity as number) ?? 1,
     sidebarSizes: (db.sidebar_sizes as string[]) || base.sidebarSizes,
+    globalProductSizes: (db.global_product_sizes as string[]) || base.globalProductSizes || ['XS','S','M','L','XL','XXL','XXXL'],
 
     // Stat bar colors
     statBarFilledColor: (db.stat_bar_filled_color as string) ?? '#ffffff',
@@ -191,6 +192,7 @@ function settingsToDb(s: DesignSettings) {
     // Sidebar image opacity + sizes
     sidebar_image_opacity: s.sidebarImageOpacity ?? 1,
     sidebar_sizes: s.sidebarSizes as unknown as Json,
+    global_product_sizes: (s.globalProductSizes ?? ['XS','S','M','L','XL','XXL','XXXL']) as unknown as Json,
     // Stat bar colors
     stat_bar_filled_color: s.statBarFilledColor ?? '#ffffff',
     stat_bar_empty_color: s.statBarEmptyColor ?? '#333333',
