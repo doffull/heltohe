@@ -176,6 +176,7 @@ function AppShell() {
     <AppProvider>
       <AdminViewportProvider>
       <VisualEditorProvider>
+        <MegaMenuProvider>
         <TooltipProvider>
           <FaviconManager />
           <ImageProtection />
@@ -186,8 +187,10 @@ function AppShell() {
             {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
           </AnimatePresence>
           <AnimatedRoutes />
+          <MegaMenu />
           <AdminVisualEditor />
         </TooltipProvider>
+        </MegaMenuProvider>
       </VisualEditorProvider>
       </AdminViewportProvider>
     </AppProvider>
