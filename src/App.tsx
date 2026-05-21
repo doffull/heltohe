@@ -17,6 +17,8 @@ import { VisualEditorPanel } from "@/components/visual-editor/VisualEditorPanel"
 import { ImageProtection } from "@/components/security/ImageProtection";
 import { AdminViewportProvider } from "@/context/AdminViewportContext";
 import { AdminDragBar } from "@/components/admin/AdminDragBar";
+import { MegaMenuProvider } from "@/context/MegaMenuContext";
+import { MegaMenu } from "@/components/layout/MegaMenu";
 
 // Pages
 import Home from "./pages/Home";
@@ -45,15 +47,15 @@ import { MainLayout } from "./components/layout/MainLayout";
 const queryClient = new QueryClient();
 
 const pageVariants = {
-  initial: { opacity: 0, y: 60 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -40 },
+  initial: { opacity: 0, y: 24, filter: 'blur(6px)' as any },
+  animate: { opacity: 1, y: 0, filter: 'blur(0px)' as any },
+  exit: { opacity: 0, y: -16, filter: 'blur(4px)' as any },
 };
 
 const pageTransition = {
   type: "tween" as const,
   ease: [0.22, 1, 0.36, 1] as const,
-  duration: 0.45,
+  duration: 0.5,
 };
 
 function ScrollToTop() {
@@ -113,10 +115,27 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
   );
 }
 
+function FlashOverlay({ k }: { k: string }) {
+  return (
+    <motion.div
+      key={`flash-${k}`}
+      className="fixed inset-0 z-[80] pointer-events-none bg-foreground"
+      initial={{ clipPath: 'polygon(0 0, 0 0, 0 100%, 0 100%)' }}
+      animate={{ clipPath: [
+        'polygon(0 0, 0 0, 0 100%, 0 100%)',
+        'polygon(0 0, 100% 0, 100% 100%, 0 100%)',
+        'polygon(100% 0, 100% 0, 100% 100%, 100% 100%)',
+      ] }}
+      transition={{ duration: 0.55, times: [0, 0.5, 1], ease: [0.7, 0, 0.3, 1] }}
+    />
+  );
+}
+
 function AnimatedRoutes() {
   const location = useLocation();
   return (
     <AnimatePresence mode="wait">
+      <FlashOverlay key={`f-${location.pathname}`} k={location.pathname} />
       <motion.div
         key={location.pathname}
         variants={pageVariants}
@@ -174,6 +193,7 @@ function AppShell() {
     <AppProvider>
       <AdminViewportProvider>
       <VisualEditorProvider>
+        <MegaMenuProvider>
         <TooltipProvider>
           <FaviconManager />
           <ImageProtection />
@@ -184,8 +204,10 @@ function AppShell() {
             {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
           </AnimatePresence>
           <AnimatedRoutes />
+          <MegaMenu />
           <AdminVisualEditor />
         </TooltipProvider>
+        </MegaMenuProvider>
       </VisualEditorProvider>
       </AdminViewportProvider>
     </AppProvider>

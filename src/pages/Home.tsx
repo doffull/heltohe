@@ -176,15 +176,28 @@ export default function Home() {
   const slide = heroSlides[currentSlide];
 
   const DEFAULT_BLOCKS = [
-    { id: 'hero' as const, visible: true },
-    { id: 'categories' as const, visible: true },
-    { id: 'featured' as const, visible: true },
-    { id: 'flash' as const, visible: true },
-    { id: 'newArrivals' as const, visible: true },
-    { id: 'loyalty' as const, visible: true },
-    { id: 'newsletter' as const, visible: true },
-  ];
-  const blocks = ((designSettings as any).homePageBlocks?.length ? (designSettings as any).homePageBlocks : DEFAULT_BLOCKS) as typeof DEFAULT_BLOCKS;
+    { id: 'hero', visible: true },
+    { id: 'categories', visible: true },
+    { id: 'featured', visible: true },
+    { id: 'flash', visible: true },
+    { id: 'newArrivals', visible: true },
+    { id: 'loyalty', visible: true },
+    { id: 'newsletter', visible: true },
+  ] as Array<{ id: string; visible: boolean }>;
+  const savedBlocks = (designSettings as any).homePageBlocks as Array<{ id: string; visible: boolean }> | undefined;
+  const customSections = ((designSettings as any).homeCustomSections || []) as PageSection[];
+  const customMap = new Map(customSections.map((s) => [`custom:${s.id}`, s]));
+
+  // Merge: keep order, add missing customs at end
+  const baseBlocks = savedBlocks?.length ? savedBlocks : DEFAULT_BLOCKS;
+  const blocks = (() => {
+    const out = [...baseBlocks.filter((b) => !b.id.startsWith('custom:') || customMap.has(b.id))];
+    customSections.forEach((s) => {
+      const id = `custom:${s.id}`;
+      if (!out.find((b) => b.id === id)) out.push({ id, visible: true });
+    });
+    return out;
+  })();
 
   const blockRenderers: Record<string, () => JSX.Element | null> = {
     hero: () =>
@@ -357,17 +370,18 @@ export default function Home() {
       <h1 className="sr-only">{(designSettings as any).siteName || 'LVTK6'} — {(designSettings as any).siteTagline || 'Boutique de mode techwear'}</h1>
       <PromoBanner />
       {blocks.filter((b) => b.visible).map((b) => {
+        if (b.id.startsWith('custom:')) {
+          const section = customMap.get(b.id);
+          if (!section) return null;
+          return (
+            <section key={b.id} className={sectionPy} data-home-block={b.id}>
+              <PageRenderer sections={[section]} />
+            </section>
+          );
+        }
         const r = blockRenderers[b.id];
         return r ? <div key={b.id} data-home-block={b.id}>{r()}</div> : null;
       })}
-      {(() => {
-        const custom = ((designSettings as any).homeCustomSections || []) as PageSection[];
-        return custom.length > 0 ? (
-          <section className={sectionPy} data-home-block="custom">
-            <PageRenderer sections={custom} />
-          </section>
-        ) : null;
-      })()}
       <PopupBanner />
     </div>
   );

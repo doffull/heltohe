@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { MannequinHotspots } from './MannequinHotspot';
 import { SidebarProductHUD } from './SidebarProductHUD';
 import { UnifiedFab } from './UnifiedFab';
+import { MegaMenuTrigger } from './MegaMenuTrigger';
 // SidebarNewsletter retiré du panneau latéral
 import { MiniNavbar } from '@/components/ui/mini-navbar';
 import { NewsletterPopupHost } from '@/components/home/NewsletterPopupHost';
@@ -508,9 +509,12 @@ export function MainLayout({ children }: MainLayoutProps) {
                 {language}
               </button>
 
-              {/* Mobile Menu */}
+              {/* MegaMenu trigger — visible toutes tailles */}
+              <MegaMenuTrigger className="border border-foreground/20 hover:border-foreground" />
+
+              {/* Mobile detailed Sheet (kept as secondary, hidden on lg+) — only burger icon */}
               <Sheet>
-                <SheetTrigger asChild className={headerPreset === 'minimal' ? '' : 'lg:hidden'}>
+                <SheetTrigger asChild className="hidden">
                   <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-9 lg:w-9 rounded-none" aria-label="Ouvrir le menu" title="Menu">
                     <Menu className="h-4 w-4 lg:h-[18px] lg:w-[18px]" aria-hidden="true" />
                   </Button>

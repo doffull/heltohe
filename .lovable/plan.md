@@ -1,52 +1,96 @@
-## Problème identifié
+# Plan — 3 chantiers
 
-1. **Les sections personnalisées ne s'affichent pas** sur la page d'accueil parce qu'elles ne sont jamais sauvegardées en base. Le rendu existe bien dans `src/pages/Home.tsx` (lignes 363-370 via `PageRenderer`), mais `settingsToDb()` dans `src/hooks/useDesignSettings.ts` ne mappe que les champs connus : le champ `homeCustomSections` est silencieusement supprimé lors de l'`upsert`. Au rechargement, `dbToSettings()` renvoie `undefined` → tableau vide → rien à afficher.
+## 1. Choisir l'emplacement des sections personnalisées
 
-2. **Les médias sont gérés par URL** dans `src/components/admin/PageBuilder.tsx` (Image, Vidéo, Slider, Hero background). Tu veux pouvoir uploader ou drag & drop, comme dans le reste du back-office (le composant `FileDropZone` existe déjà et utilise le bucket `media` via `useFileUpload`).
+Aujourd'hui les sections custom sont toujours rendues **à la fin** de la home (`Home.tsx`, bloc `data-home-block="custom"`). On va les transformer en blocs **réordonnables au même titre que `hero`, `categories`, `featured`, etc.**, via le même `HomeBlocksEditor`.
 
-## Plan
+**Modèle** : chaque section custom devient un block avec un id unique `custom:<uuid>` :
+```
+{ id: 'custom:abc-123', visible: true, label: 'Bannière promo été' }
+```
 
-### 1. Persister `homeCustomSections` en base
+**Admin (`HomeBlocksEditor.tsx`)** :
+- Charger les blocks par défaut + un block `custom:<id>` pour chaque entrée de `homeCustomSections` (fusion automatique : on ajoute en bas ceux qui manquent, on retire les ids supprimés).
+- Afficher le titre/label de la section custom (pris du 1er bloc texte ou du nom donné dans `HomeCustomSectionsEditor`).
+- DnD existant → on peut glisser une section custom **entre** `categories` et `featured`, par exemple.
 
-- Migration SQL :
-  - Ajouter `home_custom_sections JSONB NOT NULL DEFAULT '[]'::jsonb` sur `public.design_settings`.
-  - Recréer la vue `public.design_settings_public` pour exposer cette colonne (lecture publique).
-- `src/hooks/useDesignSettings.ts` :
-  - Dans `dbToSettings()` : `homeCustomSections: (d.home_custom_sections as any) ?? []`.
-  - Dans `settingsToDb()` : `home_custom_sections: (s as any).homeCustomSections ?? []`.
-- `src/types/index.ts` : déclarer `homeCustomSections?: PageSection[]` sur `DesignSettings` pour supprimer les casts `as any`.
-- `src/components/admin/HomeCustomSectionsEditor.tsx` :
-  - Après `updateDesignSettings`, appeler `flushDesignSettings()` pour forcer la persistance immédiate (sinon le debounce + rechargement peut effacer l'état).
-  - Conserver le bouton « Enregistrer » + ajouter un toast d'erreur si l'upsert échoue.
+**`HomeCustomSectionsEditor.tsx`** : ajouter un champ « Nom de la section » (utilisé comme label dans la liste des blocks). À l'enregistrement, mettre à jour `homePageBlocks` pour ajouter les nouveaux ids `custom:<id>`.
 
-### 2. Auto-affichage sur la home
+**`Home.tsx`** : dans la boucle `blocks.filter(...).map(...)`, si `b.id.startsWith('custom:')` → chercher la section correspondante dans `homeCustomSections` et la rendre avec `PageRenderer`. Plus de bloc `custom` séparé en fin de page.
 
-Le rendu est déjà branché dans `Home.tsx`. Une fois la persistance corrigée, toute section ajoutée et enregistrée apparaîtra automatiquement à la suite des blocs principaux (`data-home-block="custom"`). Aucune action manuelle de publication ne sera requise.
+## 2. Refonte du menu « camembert » → Méga menu premium universel
 
-### 3. Upload / drag & drop partout dans le PageBuilder
+Le bouton actuel `UnifiedFab` (menu radial en bas) sera remplacé par un **méga menu plein écran** déclenché depuis le même bouton FAB (mobile) et depuis un nouveau bouton dans le `Header` (tablette/desktop).
 
-Dans `src/components/admin/PageBuilder.tsx`, remplacer les `<Input placeholder="URL...">` par le composant existant `FileDropZone` (déjà drag & drop + upload Supabase Storage + preview image/vidéo) :
+**Nouveau composant `MegaMenu.tsx`** (overlay plein écran, glassmorphism, animation `framer-motion` avec staggered reveal) :
 
-- **Section Hero** : champ `backgroundImage` → `FileDropZone accept={['image']} folder="home/hero"`.
-- **Section Image** : champ `url` → `FileDropZone accept={['image']} folder="home/images"`.
-- **Section Vidéo** : champ `url` → `FileDropZone accept={['video']} folder="home/videos"` (on garde un petit toggle pour autoriser une URL YouTube si besoin, sinon on supprime).
-- **Section Slider** : remplacer le `Textarea` « URLs (une par ligne) » par une liste dynamique de `FileDropZone` (« + Ajouter une image », réordonnable, suppression par image).
-- Les autres types (title, subtitle, text, products) restent inchangés.
+```text
+┌──────────────────────────────────────────────────────┐
+│ [Close]                                  [Search]    │
+├──────────────────────────────────────────────────────┤
+│  CATÉGORIES        │   APERÇU VISUEL                 │
+│  • Homme       →   │   ┌────┐ ┌────┐ ┌────┐         │
+│  • Femme           │   │img │ │img │ │img │ produits│
+│  • Accessoires     │   └────┘ └────┘ └────┘ vedette │
+│  • Nouveautés      │                                  │
+│                    │   "Collection Hiver 2026"        │
+│  PAGES             │                                  │
+│  • À propos        │                                  │
+│  • Contact         │                                  │
+└──────────────────────────────────────────────────────┘
+```
 
-### 4. Convention globale
+- **Mobile** : pleine hauteur, panneau gauche (catégories) en pile verticale, swipe pour fermer.
+- **Tablette/Desktop** : split 40/60, hover sur une catégorie → preview 3 produits de cette catégorie à droite (images depuis `useProducts` filtrés).
+- Données : `useCategories()` (racines) + `useProducts()` (3 derniers par cat).
+- Style : fond `bg-background/95 backdrop-blur-xl`, chamfer/bevel cohérent avec le design industriel existant, accent `--primary`.
+- Animations : `motion` avec `AnimatePresence`, slide-down + fade, items staggered 30ms, hover sur item → ligne 45° qui se déploie (cohérent brand).
 
-Désormais, **toute nouvelle interface admin manipulant un média** (image / vidéo / audio / logo / favicon / bannière) doit utiliser `FileDropZone` (ou un wrapper équivalent basé sur `useFileUpload`). Plus aucun champ `URL d'image` saisi à la main, sauf cas spécifique (vidéo YouTube embed).
+**FAB** : le `UnifiedFab` actuel devient le déclencheur unique (icône menu burger stylisée). On garde la roue/roulette mais déplacée comme un **item à l'intérieur** du méga menu (« Tentez votre chance »). Le menu camembert radial est supprimé au profit de ce méga menu.
 
-### Fichiers touchés
+**Header desktop** : ajout d'un bouton « Menu » à gauche du logo qui ouvre le même `MegaMenu`.
 
-- `supabase/migrations/<timestamp>_home_custom_sections.sql` (nouveau)
-- `src/hooks/useDesignSettings.ts`
-- `src/types/index.ts`
-- `src/components/admin/PageBuilder.tsx`
-- `src/components/admin/HomeCustomSectionsEditor.tsx`
+## 3. Transitions de page + parallaxe
 
-### Vérifications après implémentation
+**Lib** : `framer-motion` (déjà installé) — `AnimatePresence` + `motion.div`.
 
-- Ouvrir Admin → Icônes & Sections d'accueil → ajouter une section Image via drag & drop → Enregistrer → aller sur `/` : la section doit apparaître.
-- Rafraîchir la page d'accueil : la section persiste.
-- Tester slider avec 3 images uploadées et une vidéo MP4 uploadée.
+**`App.tsx` / router** : wrapper `<AnimatePresence mode="wait">` autour des `<Routes>` avec `key={location.pathname}`. Chaque page exporte une `motion.div` racine avec variantes :
+
+```ts
+const pageVariants = {
+  initial: { opacity: 0, y: 30, filter: 'blur(8px)' },
+  animate: { opacity: 1, y: 0, filter: 'blur(0)', transition: { duration: 0.5, ease: [0.22,1,0.36,1] } },
+  exit:    { opacity: 0, y: -20, filter: 'blur(6px)', transition: { duration: 0.3 } },
+};
+```
+
+**Composant utilitaire `PageTransition.tsx`** : wrappe les enfants avec la variante ci-dessus. Pages clés (`Home`, `Shop`, `ProductDetail`, `Category`, `About`, `Contact`) l'utilisent.
+
+**Parallaxe nav** : pour les transitions entre catégories on ajoute un **flash overlay** (band noir qui balaie l'écran en 400ms diagonal 45° — cohérent brand) via un portal contrôlé par le router. Implémenté dans `PageTransition` avec `motion.div` `clipPath` animé.
+
+**Parallaxe sur scroll** : déjà présent partiellement (`useScroll` dans `Home.tsx`). On généralise via un hook `useParallax(speed)` réutilisable et on l'applique à : hero des catégories, images des sections custom (option `parallax: true` dans `PageBuilder`).
+
+## Détails techniques
+
+### Fichiers modifiés
+- `src/components/admin/HomeBlocksEditor.tsx` — fusion blocks par défaut + custom
+- `src/components/admin/HomeCustomSectionsEditor.tsx` — champ « nom », sync blocks
+- `src/pages/Home.tsx` — rendre `custom:<id>` dans la boucle, supprimer bloc final
+- `src/types/index.ts` — `HomeBlock { id: string; visible: boolean; label?: string }`
+- `src/components/layout/UnifiedFab.tsx` — déclencheur méga menu
+- `src/components/layout/Header.tsx` — bouton Menu desktop
+- `src/components/layout/MegaMenu.tsx` — **nouveau** composant méga menu
+- `src/components/layout/MainLayout.tsx` — monter `MegaMenu` + provider d'état
+- `src/context/MegaMenuContext.tsx` — **nouveau** (open/close global)
+- `src/App.tsx` — `AnimatePresence` autour des routes
+- `src/components/layout/PageTransition.tsx` — **nouveau** wrapper
+- `src/hooks/useParallax.ts` — **nouveau** hook
+
+### Pas de migration DB
+`homePageBlocks` est déjà un JSONB libre dans `design_settings`, on étend juste les ids.
+
+### Vérifications
+- Admin → Icônes & Sections : créer une section custom « Promo été » → la voir dans `HomeBlocksEditor` → la glisser sous « Catégories » → recharger `/` → la section apparaît bien à cet endroit.
+- Mobile 360px : tap FAB → méga menu plein écran avec catégories + preview produits.
+- Desktop 1280px : clic « Menu » header → split avec preview live au hover.
+- Navigation Home → Shop → Product : fade + blur transition + flash overlay diagonal.
