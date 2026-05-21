@@ -30,6 +30,7 @@ export function ImageProtection() {
       if (!isInteractive(e.target)) e.preventDefault();
     };
     const onKey = (e: KeyboardEvent) => {
+      if (!e.key || typeof e.key !== 'string') return;
       const k = e.key.toLowerCase();
       // F12
       if (e.key === 'F12') { e.preventDefault(); return; }
