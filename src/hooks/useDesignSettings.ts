@@ -107,6 +107,7 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     techwearHero: (db.techwear_hero as typeof base.techwearHero) || base.techwearHero,
     socialLinks: (db.social_links as typeof base.socialLinks) || base.socialLinks,
     homeSections: (db.home_sections as typeof base.homeSections) || base.homeSections,
+    homeCustomSections: ((db.home_custom_sections as any) ?? []) as any,
     presets: (db.presets as typeof base.presets) || base.presets,
     schedules: (db.schedules as typeof base.schedules) || base.schedules,
     pages: (db.pages as typeof base.pages) || base.pages,
