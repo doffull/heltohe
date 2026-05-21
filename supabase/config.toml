@@ -25,3 +25,7 @@ verify_jwt = false
 [functions.recommend-size]
 verify_jwt = false
 
+[functions.product-ai-helpers]
+verify_jwt = false
+
+
