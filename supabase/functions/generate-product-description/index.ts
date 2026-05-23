@@ -63,7 +63,7 @@ La description doit être vendeuse, concise et professionnelle. Ne mets pas de g
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
+        model: "google/gemini-3.5-flash",
         messages: [
           { role: "system", content: "Tu es un copywriter expert en mode et textile." },
           { role: "user", content: prompt },
