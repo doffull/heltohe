@@ -75,7 +75,7 @@ Vérifie :
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-3.5-flash",
         messages: [
           { role: "system", content: "Tu es un expert en vérification d'identité client pour un e-commerce. Tu analyses les informations et détectes les incohérences." },
           { role: "user", content: prompt },

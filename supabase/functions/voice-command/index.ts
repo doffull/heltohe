@@ -104,7 +104,7 @@ Réponds via la fonction search_results.`;
           method: "POST",
           headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: "google/gemini-3-flash-preview",
+            model: "google/gemini-3.5-flash",
             messages: [
               { role: "system", content: searchPrompt },
               { role: "user", content: q },
@@ -227,7 +227,7 @@ Règles: search_products pour rechercher, recommend pour conseiller, select_resu
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: "google/gemini-3.5-flash",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: transcript },

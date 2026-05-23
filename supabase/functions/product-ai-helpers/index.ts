@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
       ? [{ type: "text", text: user }, { type: "image_url", image_url: { url: body.imageUrl } }]
       : user;
 
-    const model = multimodal && body.imageUrl ? "google/gemini-2.5-pro" : "google/gemini-2.5-flash";
+    const model = multimodal && body.imageUrl ? "google/gemini-3.5-flash" : "google/gemini-3.5-flash";
 
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

@@ -150,7 +150,7 @@ If you cannot extract any products, return an empty array [].`;
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "google/gemini-3.5-flash",
           messages,
         }),
       }

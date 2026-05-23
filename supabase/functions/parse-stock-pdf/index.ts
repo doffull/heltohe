@@ -69,7 +69,7 @@ Ignore les en-têtes/totaux/lignes vides. Retourne UNIQUEMENT le JSON, sans text
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: "google/gemini-3.5-flash",
         messages: [
           {
             role: "user",
