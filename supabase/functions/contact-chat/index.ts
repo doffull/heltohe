@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+import { callGemini } from "../_shared/gemini.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -93,11 +94,8 @@ serve(async (req) => {
         content: String(m.content ?? "").slice(0, MAX_CONTENT_LENGTH),
       }));
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    // Gemini API key checked inside callGemini()
 
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
-    }
 
     // Fetch bot config from DB (best-effort, fallback to default)
     let systemPrompt = DEFAULT_SYSTEM_PROMPT;

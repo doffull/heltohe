@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
+import { callGemini } from "../_shared/gemini.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -70,8 +71,7 @@ serve(async (req) => {
       return clientErrorResponse(400, "INVALID_PRODUCTS", "Liste produits invalide.");
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
+    // Gemini API key checked inside callGemini()
       // No key configured: degrade gracefully
       const parsed = fallbackParse(transcript, products);
       return new Response(JSON.stringify({ ...parsed, degraded: "no_api_key" }), {
@@ -100,10 +100,7 @@ Réponds via la fonction search_results.`;
 
       let searchResp: Response;
       try {
-        searchResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
+        searchResp = callGemini({
             model: "google/gemini-3.5-flash",
             messages: [
               { role: "system", content: searchPrompt },
@@ -126,8 +123,7 @@ Réponds via la fonction search_results.`;
               },
             }],
             tool_choice: { type: "function", function: { name: "search_results" } },
-          }),
-        });
+          });
       } catch (netErr) {
         console.error("voice-command search network error", netErr);
         return new Response(JSON.stringify({ productIds: [], spoken: "Service vocal indisponible.", degraded: "network" }), {
@@ -223,10 +219,7 @@ Règles: search_products pour rechercher, recommend pour conseiller, select_resu
 
     let resp: Response;
     try {
-      resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
+      resp = callGemini({
           model: "google/gemini-3.5-flash",
           messages: [
             { role: "system", content: systemPrompt },
@@ -234,8 +227,7 @@ Règles: search_products pour rechercher, recommend pour conseiller, select_resu
           ],
           tools,
           tool_choice: { type: "function", function: { name: "execute_action" } },
-        }),
-      });
+        });
     } catch (netErr) {
       console.error("voice-command network error", netErr);
       const parsed = fallbackParse(transcript, products);

@@ -8,8 +8,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
     const { context } = await req.json().catch(() => ({}));
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
+    // Gemini API key checked inside callGemini()
 
     const sys = `Tu es un directeur artistique pour une marque techwear/luxe minimaliste (LVTK6).
 Tu proposes UN preset de design pour deux boutons CTA (principal + secondaire) sur un hero produit.
@@ -17,10 +16,7 @@ Choisis des combinaisons audacieuses mais lisibles. Réponds uniquement via l'ou
 
     const user = `Brief: ${context || "slide hero techwear"}. Propose un preset visuel.`;
 
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const resp = callGemini({
         model: "google/gemini-3.5-flash",
         messages: [{ role: "system", content: sys }, { role: "user", content: user }],
         tools: [{
@@ -48,8 +44,7 @@ Choisis des combinaisons audacieuses mais lisibles. Réponds uniquement via l'ou
           },
         }],
         tool_choice: { type: "function", function: { name: "return_preset" } },
-      }),
-    });
+      });
 
     if (!resp.ok) {
       const status = resp.status === 429 ? 429 : resp.status === 402 ? 402 : 500;
