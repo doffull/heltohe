@@ -134,7 +134,13 @@ export default function AdminWooCommerce() {
         <h1 className="text-xl lg:text-3xl font-bold uppercase hud-text">WooCommerce</h1>
         <p className="text-xs lg:text-sm text-muted-foreground mt-1">Synchronise tes produits, commandes et clients depuis ton site WooCommerce.</p>
       </div>
+      <Tabs defaultValue="sync" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="sync"><Zap className="h-3 w-3 mr-1" /> Synchronisation</TabsTrigger>
+          <TabsTrigger value="logs"><FileText className="h-3 w-3 mr-1" /> Logs</TabsTrigger>
+        </TabsList>
 
+        <TabsContent value="sync">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Connection form */}
         <div className="bg-card border border-border p-6 space-y-6">
