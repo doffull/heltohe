@@ -59,6 +59,7 @@ Deno.serve(async (req) => {
   }
 
   const startedAt = Date.now();
+  const correlationId = crypto.randomUUID();
   let normalizedUrl = String(storeUrl).trim().replace(/\/+$/, '');
   if (!/^https?:\/\//i.test(normalizedUrl)) normalizedUrl = `https://${normalizedUrl}`;
   const cleanUrl = normalizedUrl;
@@ -70,13 +71,14 @@ Deno.serve(async (req) => {
   ) => {
     try {
       await supabase.from('wp_sync_logs').insert({
+        correlation_id: correlationId,
         direction: 'import',
         status,
         total: payload.total,
         succeeded: payload.succeeded,
         failed: payload.failed,
         message: payload.message?.slice(0, 1000) || null,
-        details: { ...(payload.details || {}), storeUrl: cleanUrl, durationMs: Date.now() - startedAt },
+        details: { ...(payload.details || {}), correlationId, storeUrl: cleanUrl, durationMs: Date.now() - startedAt },
         triggered_by: user.id,
       });
     } catch (e: any) {
