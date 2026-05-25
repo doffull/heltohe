@@ -1,36 +1,60 @@
+# Migration vers ton compte Gemini (Gemini 2.5 Pro)
+
 ## Objectif
+Remplacer l'AI Gateway Lovable (qui consomme tes crédits Lovable et tombe en 402) par des appels directs à l'API Google Gemini avec **ta propre clé API**. Toute l'IA du site passera par **ton compte Google**, facturé directement par Google.
 
-Migrer toutes les fonctions IA texte/vision du site vers **`google/gemini-3.5-flash`** (dernière version disponible sur Lovable AI), pour bénéficier d'un meilleur raisonnement, d'une vitesse accrue et d'une qualité de réponse améliorée sur l'ensemble des features IA.
+## Étape 1 — Ajout de ta clé API
+Je te demanderai d'ajouter un secret `GEMINI_API_KEY` (formulaire sécurisé, jamais visible côté client). Tu colles la clé de https://aistudio.google.com/apikey.
 
-## Modèle cible
+## Étape 2 — Edge functions à migrer (11 fonctions)
+Pour chacune, remplacer l'appel `https://ai.gateway.lovable.dev/v1/chat/completions` (format OpenAI) par l'API Google native `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent` (format Gemini natif) :
 
-- **Texte + Vision** → `google/gemini-3.5-flash` (nouveau)
-- **Génération d'images** → inchangé (`gemini-2.5-flash-image` / Nano Banana — Gemini 3.5 ne génère pas d'image)
+- `contact-chat` (chatbot streaming)
+- `voice-command` (commande vocale)
+- `analyze-product-image` (analyse mockup produit)
+- `generate-product-description` (descriptions produits)
+- `parse-products-pdf` + `parse-stock-pdf` (import catalogue/stock)
+- `recommend-size` (recommandation taille)
+- `verify-customer-info` (vérif identité commande)
+- `product-ai-helpers` (helpers produits)
+- `generate-cta-style` + `generate-slide-text` (éditeur visuel)
 
-## Fonctions Edge à mettre à jour (13 emplacements dans 11 fichiers)
+Modèle utilisé partout : **`gemini-2.5-pro`**.
 
-| Fichier | Modèle actuel | Nouveau modèle |
-|---|---|---|
-| `product-ai-helpers/index.ts` (sous-titre, description, matière, entretien, attributs, nom couleur) | `gemini-2.5-flash` + `gemini-2.5-pro` (vision) | `gemini-3.5-flash` |
-| `generate-product-description/index.ts` | `gemini-2.5-flash-lite` | `gemini-3.5-flash` |
-| `analyze-product-image/index.ts` (vision produit) | `gemini-2.5-pro` | `gemini-3.5-flash` |
-| `parse-products-pdf/index.ts` (import catalogue PDF) | `gemini-2.5-flash` | `gemini-3.5-flash` |
-| `parse-stock-pdf/index.ts` (import stock PDF) | `gemini-2.5-pro` | `gemini-3.5-flash` |
-| `contact-chat/index.ts` (chatbot support streaming) | `gemini-3-flash-preview` | `gemini-3.5-flash` |
-| `voice-command/index.ts` (×2) | `gemini-3-flash-preview` | `gemini-3.5-flash` |
-| `recommend-size/index.ts` | `gemini-3-flash-preview` | `gemini-3.5-flash` |
-| `verify-customer-info/index.ts` (scoring identité commande) | `gemini-2.5-flash` | `gemini-3.5-flash` |
-| `generate-slide-text/index.ts` | `gemini-2.5-flash` | `gemini-3.5-flash` |
-| `generate-cta-style/index.ts` | `gemini-2.5-flash` | `gemini-3.5-flash` |
-| `generate-slide-image/index.ts` | `gemini-2.5-flash-image` | **inchangé** (image gen) |
+Pour le streaming (`contact-chat`, `voice-command`) : utiliser `:streamGenerateContent?alt=sse` et adapter le parser SSE côté client.
 
-## Notes techniques
+## Étape 3 — Cas spécial : génération d'images
+`generate-slide-image` utilise actuellement Nano Banana (Gemini 2.5 Flash Image) via Lovable. **Gemini 2.5 Pro ne génère pas d'images.** Deux options :
+- **A (recommandé)** : garder Nano Banana sur l'AI Gateway Lovable uniquement pour la génération d'images (peu coûteux, peu utilisé).
+- **B** : migrer aussi vers l'API Google Imagen 3 (nécessite Vertex AI + facturation GCP, plus complexe).
 
-- `gemini-3.5-flash` est multimodal (texte + image), donc le fallback `gemini-2.5-pro` pour la vision dans `product-ai-helpers` n'est plus nécessaire — un seul modèle pour tous les cas.
-- Aucune modification frontend nécessaire : les fonctions Edge encapsulent le choix du modèle.
-- Aucune migration DB.
-- Toutes les fonctions seront redéployées automatiquement.
+Je pars sur **option A** sauf indication contraire.
 
-## Déploiement
+## Étape 4 — Mémoire projet
+Mettre à jour `mem://backend/architecture-supabase` pour acter que l'IA passe par `GEMINI_API_KEY` directe (modèle `gemini-2.5-pro`), et non plus par Lovable AI Gateway.
 
-Après les modifications, les 11 edge functions seront redéployées en une fois. La validation se fera via un appel test au chatbot `contact-chat` et au bouton ✨ de description produit pour confirmer que `gemini-3.5-flash` répond bien.
+## Détails techniques
+
+Format Gemini natif (différent d'OpenAI) :
+```ts
+POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GEMINI_API_KEY}
+{
+  "system_instruction": { "parts": [{ "text": "..." }] },
+  "contents": [{ "role": "user", "parts": [{ "text": "..." }] }],
+  "generationConfig": { "temperature": 0.1, "responseMimeType": "application/json" }
+}
+```
+
+Pour images (vision) : `parts: [{ inline_data: { mime_type, data: base64 } }, { text }]`.
+
+Gestion d'erreurs préservée (429 rate limit, 402 quota → message clair côté UI).
+
+## Ce qui ne change pas
+- Aucune modification du frontend visuelle (header, hero, etc.)
+- Pas de migration SQL
+- Pas de changement RLS
+- Le chatbot, le vocal, l'éditeur, les imports — tout continue de fonctionner pareil côté utilisateur
+
+## Risques
+- Si tu épuises ton quota Google gratuit, l'IA tombera en erreur 429 (même comportement qu'aujourd'hui avec Lovable). Tu pourras ajouter de la facturation directement dans Google Cloud.
+- Gemini 2.5 Pro est plus lent que Flash sur les requêtes simples (chatbot). Si la latence te gêne, on pourra basculer le chatbot sur Flash plus tard.
