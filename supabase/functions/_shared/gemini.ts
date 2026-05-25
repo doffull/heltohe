@@ -184,8 +184,8 @@ export async function callGemini(openaiBody: OAIBody): Promise<Response> {
     // and billing/spend-cap exhaustion. Keep rate limits as 429, but surface
     // spend/quota/billing exhaustion as 402 so the UI does not show a false
     // "try again later" message when the account needs billing action.
-    const isQuotaOrBillingIssue = /RESOURCE_EXHAUSTED|quota|billing|spend cap|spending cap|monthly spending cap|exceeded its monthly spending cap/i.test(text);
-    if ((upstream.status === 429 || upstream.status === 403) && isQuotaOrBillingIssue) {
+    const isBillingIssue = /billing|spend cap|spending cap|monthly spending|payment|paid plan/i.test(text);
+    if ((upstream.status === 429 || upstream.status === 403) && isBillingIssue) {
       return jsonResponse(402, {
         error: "Gemini quota or billing limit exceeded. Please review your Google AI Studio billing/spend cap.",
       });
