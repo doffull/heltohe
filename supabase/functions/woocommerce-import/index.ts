@@ -460,7 +460,7 @@ Deno.serve(async (req) => {
     },
   });
 
-  return new Response(JSON.stringify(result), {
+  return new Response(JSON.stringify({ ...result, correlationId }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 });
