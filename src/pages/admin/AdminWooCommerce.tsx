@@ -285,6 +285,12 @@ export default function AdminWooCommerce() {
           )}
         </div>
       </div>
+        </TabsContent>
+
+        <TabsContent value="logs">
+          <AdminWooCommerceLogs />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
