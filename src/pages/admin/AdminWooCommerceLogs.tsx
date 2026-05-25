@@ -159,20 +159,30 @@ export default function AdminWooCommerceLogs() {
                 </TableCell>
               </TableRow>
             )}
-          <TableBody>
-            {filtered.length === 0 && !loading && (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-8">
-                  Aucun log à afficher. Lance une synchro pour générer des entrées.
-                </TableCell>
-              </TableRow>
-            )}
             {filtered.map((l) => {
               const meta = statusVariant[l.status];
               const Icon = meta.icon;
+              const shortCid = l.correlation_id ? l.correlation_id.slice(0, 8) : '—';
               return (
                 <TableRow key={l.id} className="cursor-pointer" onClick={() => setSelected(l)}>
                   <TableCell className="text-xs font-mono">{new Date(l.created_at).toLocaleString('fr-FR')}</TableCell>
+                  <TableCell className="font-mono text-[11px]">
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 hover:text-foreground text-muted-foreground"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (l.correlation_id) {
+                          navigator.clipboard.writeText(l.correlation_id);
+                          toast.success('ID copié');
+                        }
+                      }}
+                      title={l.correlation_id || ''}
+                    >
+                      {shortCid}
+                      {l.correlation_id && <Copy className="h-3 w-3" />}
+                    </button>
+                  </TableCell>
                   <TableCell><Badge variant="outline" className="uppercase text-[10px]">{l.direction}</Badge></TableCell>
                   <TableCell>
                     <Badge variant={meta.variant} className="gap-1">
