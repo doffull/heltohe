@@ -140,20 +140,10 @@ If you cannot extract any products, return an empty array [].`;
       ];
     }
 
-    const response = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-3.5-flash",
-          messages,
-        }),
-      }
-    );
+    const response = await callGemini({
+      model: "google/gemini-2.5-pro",
+      messages,
+    });
 
     if (!response.ok) {
       if (response.status === 429) {
