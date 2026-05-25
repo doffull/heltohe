@@ -62,7 +62,7 @@ Extrais TOUS les produits sous forme JSON: { "items": [{ "sku": string, "name": 
 - "stock": quantité actuelle en nombre entier (0 si vide).
 Ignore les en-têtes/totaux/lignes vides. Retourne UNIQUEMENT le JSON, sans texte autour.`;
 
-    const aiRes = callGemini({
+    const aiRes = await callGemini({
         model: "google/gemini-3.5-flash",
         messages: [
           {

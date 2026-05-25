@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
 
     const model = multimodal && body.imageUrl ? "google/gemini-3.5-flash" : "google/gemini-3.5-flash";
 
-    const resp = callGemini({
+    const resp = await callGemini({
         model,
         messages: [{ role: "system", content: SYS }, { role: "user", content: userContent }],
         tools: [{ type: "function", function: { name: tool.name, description: "Réponse structurée", parameters: tool.params } }],

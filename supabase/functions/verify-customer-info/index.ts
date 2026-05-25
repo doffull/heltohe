@@ -68,7 +68,7 @@ Vérifie :
 4. Le nom semble-t-il réel (pas de caractères suspects, pas de spam)
 5. L'adresse semble-t-elle complète et cohérente`;
 
-    const response = callGemini({
+    const response = await callGemini({
         model: "google/gemini-3.5-flash",
         messages: [
           { role: "system", content: "Tu es un expert en vérification d'identité client pour un e-commerce. Tu analyses les informations et détectes les incohérences." },

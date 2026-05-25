@@ -79,7 +79,7 @@ CRITICAL for colorOptions:
 
 Return ONLY the JSON object, no markdown, no explanation.`;
 
-    const response = callGemini({
+    const response = await callGemini({
         model: "google/gemini-3.5-flash",
         messages: [
           { role: "system", content: systemPrompt },

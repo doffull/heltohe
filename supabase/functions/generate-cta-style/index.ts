@@ -16,7 +16,7 @@ Choisis des combinaisons audacieuses mais lisibles. Réponds uniquement via l'ou
 
     const user = `Brief: ${context || "slide hero techwear"}. Propose un preset visuel.`;
 
-    const resp = callGemini({
+    const resp = await callGemini({
         model: "google/gemini-3.5-flash",
         messages: [{ role: "system", content: sys }, { role: "user", content: user }],
         tools: [{
