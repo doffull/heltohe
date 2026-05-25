@@ -436,6 +436,28 @@ Deno.serve(async (req) => {
     }
   }
 
+  const totals = (result.products || 0) + (result.orders || 0) + (result.customers || 0) + (result.stock || 0);
+  const failedCount = result.errors.length;
+  const status: 'success' | 'partial' | 'failed' = failedCount === 0
+    ? 'success'
+    : totals > 0 ? 'partial' : 'failed';
+  await writeSyncLog(status, {
+    total: totals + failedCount,
+    succeeded: totals,
+    failed: failedCount,
+    message: status === 'success'
+      ? `Import OK (${totals} entrées)`
+      : result.errors[0] || 'Import terminé avec erreurs',
+    details: {
+      products: result.products,
+      orders: result.orders,
+      customers: result.customers,
+      stock: result.stock,
+      errors: result.errors,
+      flags: { importProducts: !!importProducts, importOrders: !!importOrders, importCustomers: !!importCustomers, importStock: !!importStock },
+    },
+  });
+
   return new Response(JSON.stringify(result), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
