@@ -214,6 +214,21 @@ export default function AdminWooCommerceLogs() {
                 <div><span className="text-muted-foreground">Direction :</span> {selected.direction}</div>
                 <div><span className="text-muted-foreground">Statut :</span> {statusVariant[selected.status].label}</div>
                 <div><span className="text-muted-foreground">Totaux :</span> {selected.succeeded} OK / {selected.failed} KO / {selected.total}</div>
+                <div className="col-span-2">
+                  <span className="text-muted-foreground">ID corrélation :</span>{' '}
+                  <code className="font-mono text-[11px] bg-muted px-1 py-0.5 rounded">{selected.correlation_id || '—'}</code>
+                  {selected.correlation_id && (
+                    <button
+                      type="button"
+                      className="ml-2 text-[11px] underline text-muted-foreground hover:text-foreground"
+                      onClick={() => {
+                        const url = `${window.location.origin}${window.location.pathname}?cid=${selected.correlation_id}`;
+                        navigator.clipboard.writeText(url);
+                        toast.success('Lien copié');
+                      }}
+                    >Copier le lien</button>
+                  )}
+                </div>
               </div>
               {selected.message && (
                 <div>
