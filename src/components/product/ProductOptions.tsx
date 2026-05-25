@@ -82,18 +82,29 @@ export default function ProductOptions({
             </label>
           </div>
           <div className="flex flex-wrap gap-2">
-            {product.sizes.map((size) => (
-              <motion.div key={size} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  variant={selectedSize === size ? 'default' : 'outline'}
-                  className="min-w-[48px] transition-all"
+            {product.sizes.map((size) => {
+              const isSelected = selectedSize === size;
+              return (
+                <motion.button
+                  key={size}
+                  type="button"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={() => onSizeChange(size)}
+                  aria-pressed={isSelected}
+                  className={
+                    'min-w-[48px] h-10 px-4 text-sm font-bold uppercase tracking-wider border transition-all ' +
+                    (isSelected
+                      ? 'bg-foreground text-background border-foreground ring-2 ring-foreground ring-offset-2 ring-offset-background'
+                      : 'bg-transparent text-foreground border-border hover:border-foreground')
+                  }
                 >
                   {size}
-                </Button>
-              </motion.div>
-            ))}
+                </motion.button>
+              );
+            })}
           </div>
+
         </motion.div>
       )}
 
