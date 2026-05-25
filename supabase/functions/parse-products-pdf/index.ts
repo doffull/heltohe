@@ -140,39 +140,17 @@ If you cannot extract any products, return an empty array [].`;
       ];
     }
 
-    const response = await callGemini({
-      model: "google/gemini-2.5-pro",
-      messages,
-    });
+    const aiRes = await callGeminiText({ messages }, "parse-products-pdf");
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Payment required. Please add credits." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      console.error("AI gateway error:", response.status);
-      throw new Error("AI gateway error");
+    if (!aiRes.ok) {
+      return new Response(
+        JSON.stringify({ error: aiRes.message }),
+        { status: aiRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || "[]";
-
-    let products = [];
-    try {
-      const jsonMatch = content.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        products = JSON.parse(jsonMatch[0]);
-      }
-    } catch (parseErr) {
-      console.error("Failed to parse AI response");
+    const products = extractJson<unknown[]>(aiRes.text) ?? [];
+    if (!Array.isArray(products)) {
       return new Response(
         JSON.stringify({ error: "Failed to parse product data from file" }),
         { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -182,6 +160,7 @@ If you cannot extract any products, return an empty array [].`;
     return new Response(JSON.stringify({ products }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+
   } catch (e) {
     console.error("parse-products-pdf error:", e);
     return new Response(
