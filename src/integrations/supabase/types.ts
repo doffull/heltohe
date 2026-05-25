@@ -2237,6 +2237,45 @@ export type Database = {
           },
         ]
       }
+      wp_sync_logs: {
+        Row: {
+          created_at: string
+          details: Json | null
+          direction: string
+          failed: number
+          id: string
+          message: string | null
+          status: string
+          succeeded: number
+          total: number
+          triggered_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          direction: string
+          failed?: number
+          id?: string
+          message?: string | null
+          status: string
+          succeeded?: number
+          total?: number
+          triggered_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          direction?: string
+          failed?: number
+          id?: string
+          message?: string | null
+          status?: string
+          succeeded?: number
+          total?: number
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       bot_config_public: {
