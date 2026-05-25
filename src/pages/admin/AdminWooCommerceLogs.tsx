@@ -12,11 +12,12 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { RefreshCw, Eye, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
+import { RefreshCw, Eye, AlertCircle, CheckCircle2, XCircle, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface SyncLog {
   id: string;
+  correlation_id: string | null;
   created_at: string;
   direction: 'import' | 'export';
   status: 'success' | 'partial' | 'failed';
@@ -55,6 +56,21 @@ export default function AdminWooCommerceLogs() {
   };
 
   useEffect(() => { load(); }, []);
+
+  // Deep link: ?cid=<correlation_id> ou ?logId=<row id>
+  useEffect(() => {
+    if (!logs.length) return;
+    const params = new URLSearchParams(window.location.search);
+    const cid = params.get('cid');
+    const logId = params.get('logId');
+    if (cid) {
+      const match = logs.find((l) => l.correlation_id === cid);
+      if (match) setSelected(match);
+    } else if (logId) {
+      const match = logs.find((l) => l.id === logId);
+      if (match) setSelected(match);
+    }
+  }, [logs]);
 
   const filtered = useMemo(() => {
     return logs.filter((l) => {
@@ -127,6 +143,7 @@ export default function AdminWooCommerceLogs() {
           <TableHeader>
             <TableRow>
               <TableHead>Date</TableHead>
+              <TableHead>ID corrélation</TableHead>
               <TableHead>Direction</TableHead>
               <TableHead>Statut</TableHead>
               <TableHead className="text-right">OK / KO / Total</TableHead>
@@ -137,7 +154,7 @@ export default function AdminWooCommerceLogs() {
           <TableBody>
             {filtered.length === 0 && !loading && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">
                   Aucun log à afficher. Lance une synchro pour générer des entrées.
                 </TableCell>
               </TableRow>
@@ -145,9 +162,27 @@ export default function AdminWooCommerceLogs() {
             {filtered.map((l) => {
               const meta = statusVariant[l.status];
               const Icon = meta.icon;
+              const shortCid = l.correlation_id ? l.correlation_id.slice(0, 8) : '—';
               return (
                 <TableRow key={l.id} className="cursor-pointer" onClick={() => setSelected(l)}>
                   <TableCell className="text-xs font-mono">{new Date(l.created_at).toLocaleString('fr-FR')}</TableCell>
+                  <TableCell className="font-mono text-[11px]">
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 hover:text-foreground text-muted-foreground"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (l.correlation_id) {
+                          navigator.clipboard.writeText(l.correlation_id);
+                          toast.success('ID copié');
+                        }
+                      }}
+                      title={l.correlation_id || ''}
+                    >
+                      {shortCid}
+                      {l.correlation_id && <Copy className="h-3 w-3" />}
+                    </button>
+                  </TableCell>
                   <TableCell><Badge variant="outline" className="uppercase text-[10px]">{l.direction}</Badge></TableCell>
                   <TableCell>
                     <Badge variant={meta.variant} className="gap-1">
@@ -179,6 +214,21 @@ export default function AdminWooCommerceLogs() {
                 <div><span className="text-muted-foreground">Direction :</span> {selected.direction}</div>
                 <div><span className="text-muted-foreground">Statut :</span> {statusVariant[selected.status].label}</div>
                 <div><span className="text-muted-foreground">Totaux :</span> {selected.succeeded} OK / {selected.failed} KO / {selected.total}</div>
+                <div className="col-span-2">
+                  <span className="text-muted-foreground">ID corrélation :</span>{' '}
+                  <code className="font-mono text-[11px] bg-muted px-1 py-0.5 rounded">{selected.correlation_id || '—'}</code>
+                  {selected.correlation_id && (
+                    <button
+                      type="button"
+                      className="ml-2 text-[11px] underline text-muted-foreground hover:text-foreground"
+                      onClick={() => {
+                        const url = `${window.location.origin}${window.location.pathname}?cid=${selected.correlation_id}`;
+                        navigator.clipboard.writeText(url);
+                        toast.success('Lien copié');
+                      }}
+                    >Copier le lien</button>
+                  )}
+                </div>
               </div>
               {selected.message && (
                 <div>

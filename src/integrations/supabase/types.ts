@@ -2239,6 +2239,7 @@ export type Database = {
       }
       wp_sync_logs: {
         Row: {
+          correlation_id: string | null
           created_at: string
           details: Json | null
           direction: string
@@ -2251,6 +2252,7 @@ export type Database = {
           triggered_by: string | null
         }
         Insert: {
+          correlation_id?: string | null
           created_at?: string
           details?: Json | null
           direction: string
@@ -2263,6 +2265,7 @@ export type Database = {
           triggered_by?: string | null
         }
         Update: {
+          correlation_id?: string | null
           created_at?: string
           details?: Json | null
           direction?: string

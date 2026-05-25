@@ -105,7 +105,23 @@ export default function AdminWooCommerce() {
         });
       } else {
         setResult(data);
-        toast({ title: 'Import terminé ✓', description: 'Les données ont été importées avec succès.' });
+        const cid = data?.correlationId;
+        toast({
+          title: 'Import terminé ✓',
+          description: cid
+            ? `ID corrélation : ${String(cid).slice(0, 8)}…`
+            : 'Les données ont été importées avec succès.',
+          action: cid
+            ? (
+                <a
+                  href={`/admin/woocommerce?tab=logs&cid=${cid}`}
+                  className="text-xs underline whitespace-nowrap"
+                >
+                  Voir le log
+                </a>
+              ) as any
+            : undefined,
+        });
       }
     } catch (err: any) {
       toast({ title: 'Erreur d\'import', description: err?.message || 'Une erreur s\'est produite.', variant: 'destructive' });
