@@ -78,14 +78,12 @@ type OAIBody = {
   temperature?: number;
 };
 
-function mapModel(m?: string): string {
-  if (!m) return DEFAULT_MODEL;
-  // Strip vendor prefix and normalize old Lovable model ids onto Gemini 2.5 Pro
-  // (user explicitly requested Gemini 2.5 Pro for everything).
+function stripVendor(m?: string): string | undefined {
+  if (!m) return undefined;
   if (m.startsWith("google/")) m = m.slice("google/".length);
-  // Force Pro for everything as per user preference
-  return DEFAULT_MODEL;
+  return m;
 }
+
 
 async function fetchToInlineData(url: string): Promise<{ mime_type: string; data: string }> {
   if (url.startsWith("data:")) {
