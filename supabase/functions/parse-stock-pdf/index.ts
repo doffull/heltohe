@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+import { callGemini } from "../_shared/gemini.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -43,8 +44,7 @@ serve(async (req) => {
       return json({ error: "Invalid or oversized file" }, 400);
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) return json({ error: "AI not configured" }, 500);
+    // Gemini API key checked inside callGemini()
 
     const mime =
       fileType === "pdf" ? "application/pdf" :
@@ -62,13 +62,7 @@ Extrais TOUS les produits sous forme JSON: { "items": [{ "sku": string, "name": 
 - "stock": quantité actuelle en nombre entier (0 si vide).
 Ignore les en-têtes/totaux/lignes vides. Retourne UNIQUEMENT le JSON, sans texte autour.`;
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const aiRes = await callGemini({
         model: "google/gemini-3.5-flash",
         messages: [
           {
@@ -80,8 +74,7 @@ Ignore les en-têtes/totaux/lignes vides. Retourne UNIQUEMENT le JSON, sans text
           },
         ],
         response_format: { type: "json_object" },
-      }),
-    });
+      });
 
     if (!aiRes.ok) {
       const txt = await aiRes.text();

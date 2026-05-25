@@ -27,8 +27,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
+    // Gemini API key checked inside callGemini()
 
     const sys = `Tu es un copywriter pour une marque de mode/streetwear "Industrial Luxury" (LVTK6).
 Style: minimaliste, mode, premium, français.
@@ -38,10 +37,7 @@ Réponds uniquement via l'outil "return_text".`;
 
     const user = `Contexte/brief: ${context || "Slide hero du site e-commerce mode."}\nGénère le ${field}.`;
 
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const resp = await callGemini({
         model: "google/gemini-3.5-flash",
         messages: [{ role: "system", content: sys }, { role: "user", content: user }],
         tools: [{
@@ -57,8 +53,7 @@ Réponds uniquement via l'outil "return_text".`;
           },
         }],
         tool_choice: { type: "function", function: { name: "return_text" } },
-      }),
-    });
+      });
 
     if (!resp.ok) {
       const msg = resp.status === 429 ? "Trop de requêtes, réessayez."

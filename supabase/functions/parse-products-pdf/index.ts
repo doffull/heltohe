@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+import { callGemini } from "../_shared/gemini.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -73,10 +74,8 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
-    }
+    // Gemini API key checked inside callGemini()
+
 
     const systemPrompt = `You are a product data extraction assistant. You receive the content of a product catalog file and must extract ALL products found in it.
 
@@ -141,20 +140,10 @@ If you cannot extract any products, return an empty array [].`;
       ];
     }
 
-    const response = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-3.5-flash",
-          messages,
-        }),
-      }
-    );
+    const response = await callGemini({
+      model: "google/gemini-2.5-pro",
+      messages,
+    });
 
     if (!response.ok) {
       if (response.status === 429) {
