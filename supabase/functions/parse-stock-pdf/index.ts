@@ -62,39 +62,26 @@ Extrais TOUS les produits sous forme JSON: { "items": [{ "sku": string, "name": 
 - "stock": quantité actuelle en nombre entier (0 si vide).
 Ignore les en-têtes/totaux/lignes vides. Retourne UNIQUEMENT le JSON, sans texte autour.`;
 
-    const aiRes = await callGemini({
-        model: "google/gemini-3.5-flash",
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: prompt },
-              { type: "image_url", image_url: { url: dataUrl } },
-            ],
-          },
-        ],
-        response_format: { type: "json_object" },
-      });
+    const aiRes = await callGeminiText({
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: prompt },
+            { type: "image_url", image_url: { url: dataUrl } },
+          ],
+        },
+      ],
+      response_format: { type: "json_object" },
+    }, "parse-stock-pdf");
 
     if (!aiRes.ok) {
-      const txt = await aiRes.text();
-      console.error("AI error", aiRes.status, txt);
-      if (aiRes.status === 429) return json({ error: "RATE_LIMIT", message: "Trop de requêtes, réessayez dans un instant.", items: [] }, 200);
-      if (aiRes.status === 402) return json({ error: "AI_CREDITS_EXHAUSTED", message: "Crédits IA épuisés. Ajoutez des crédits dans Settings → Workspace → Usage.", items: [] }, 200);
-      return json({ error: "AI_FAILED", message: "Extraction IA échouée", items: [] }, 200);
+      return json({ error: aiRes.message, items: [] }, aiRes.status);
     }
 
-    const aiJson = await aiRes.json();
-    const content = aiJson?.choices?.[0]?.message?.content || "{}";
-    let parsed: any = {};
-    try {
-      parsed = JSON.parse(content);
-    } catch {
-      // try to extract JSON block
-      const m = content.match(/\{[\s\S]*\}/);
-      if (m) parsed = JSON.parse(m[0]);
-    }
+    const parsed = extractJson<{ items?: unknown[] }>(aiRes.text) ?? {};
     const items = Array.isArray(parsed.items) ? parsed.items : [];
+
     const cleaned = items
       .map((it: any) => ({
         sku: String(it.sku ?? "").trim(),
