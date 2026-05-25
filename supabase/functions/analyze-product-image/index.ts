@@ -79,60 +79,35 @@ CRITICAL for colorOptions:
 
 Return ONLY the JSON object, no markdown, no explanation.`;
 
-    const response = await callGemini({
-        model: "google/gemini-3.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          {
-            role: "user",
-            content: [
-              {
-                type: "image_url",
-                image_url: { url: `data:${mimeType};base64,${imageBase64}` },
-              },
-              {
-                type: "text",
-                text: "Analyze this product mockup image and extract all product information including exact colors with hex codes.",
-              },
-            ],
-          },
-        ],
-        temperature: 0.1,
+    const aiResult = await callGeminiText({
+      messages: [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: [
+            { type: "image_url", image_url: { url: `data:${mimeType};base64,${imageBase64}` } },
+            { type: "text", text: "Analyze this product mockup image and extract all product information including exact colors with hex codes." },
+          ],
+        },
+      ],
+      temperature: 0.1,
+      response_format: { type: "json_object" },
+    }, "analyze-product-image");
+
+    if (!aiResult.ok) {
+      return new Response(JSON.stringify({ error: aiResult.message }), {
+        status: aiResult.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Limite temporaire Gemini atteinte. Veuillez réessayer dans quelques instants." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Quota ou plafond de dépense Gemini atteint. Ouvrez Google AI Studio > Billing/Spend cap pour augmenter le plafond, puis relancez l’analyse." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const errText = await response.text();
-      throw new Error(`AI gateway error: ${response.status} ${errText}`);
     }
 
-    const aiData = await response.json();
-    const content = aiData.choices?.[0]?.message?.content || "";
-
-    // Parse JSON from response
-    let extracted: Record<string, unknown>;
-    try {
-      // Remove any potential markdown code blocks
-      const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-      extracted = JSON.parse(cleaned);
-    } catch {
-      // Try to extract JSON from the response
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        extracted = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error("Could not parse AI response as JSON");
-      }
+    const extracted = extractJson<Record<string, unknown>>(aiResult.text);
+    if (!extracted) {
+      return new Response(JSON.stringify({ error: "L'IA n'a pas retourné un JSON valide. Réessayez avec une image plus nette." }), {
+        status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
+
 
     // Ensure required fields
     const result = {
