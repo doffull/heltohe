@@ -3,7 +3,56 @@
 // This lets all edge functions migrate from Lovable AI Gateway to the user's
 // own Gemini API key without changing their request/response handling logic.
 
-const DEFAULT_MODEL = "gemini-2.5-pro";
+const FALLBACK_MODEL = "gemini-3.5-pro";
+
+// In-memory cache of the latest detected Gemini Pro model.
+// Refreshed every 5 minutes so when Google releases a new version
+// (e.g. gemini-3.7-pro) the site auto-upgrades within minutes.
+let _cachedModel: string | null = null;
+let _cachedAt = 0;
+const MODEL_CACHE_TTL_MS = 5 * 60 * 1000;
+
+async function detectLatestProModel(apiKey: string): Promise<string> {
+  // Manual override via secret takes priority.
+  const override = Deno.env.get("GEMINI_MODEL");
+  if (override) return override;
+
+  const now = Date.now();
+  if (_cachedModel && now - _cachedAt < MODEL_CACHE_TTL_MS) return _cachedModel;
+
+  try {
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+    );
+    if (!r.ok) throw new Error(`models list ${r.status}`);
+    const data = await r.json();
+    const names: string[] = (data?.models ?? [])
+      .map((m: any) => String(m?.name || "").replace(/^models\//, ""))
+      .filter((n: string) =>
+        /^gemini-\d+(\.\d+)?-pro$/.test(n) && !/preview|exp/i.test(n)
+      );
+    // Sort by numeric version descending (e.g. 3.5 > 3.1 > 2.5)
+    names.sort((a, b) => {
+      const va = parseFloat(a.match(/gemini-(\d+(?:\.\d+)?)-pro/)?.[1] ?? "0");
+      const vb = parseFloat(b.match(/gemini-(\d+(?:\.\d+)?)-pro/)?.[1] ?? "0");
+      return vb - va;
+    });
+    _cachedModel = names[0] ?? FALLBACK_MODEL;
+    _cachedAt = now;
+    return _cachedModel;
+  } catch (e) {
+    console.warn("model auto-detect failed, using fallback:", e);
+    _cachedModel = FALLBACK_MODEL;
+    _cachedAt = now;
+    return FALLBACK_MODEL;
+  }
+}
+
+function redact(text: string, apiKey: string): string {
+  if (!apiKey) return text;
+  return text.split(apiKey).join("***REDACTED***");
+}
+
 
 type OAIRole = "system" | "user" | "assistant" | "tool";
 type OAIContentPart =
@@ -29,14 +78,12 @@ type OAIBody = {
   temperature?: number;
 };
 
-function mapModel(m?: string): string {
-  if (!m) return DEFAULT_MODEL;
-  // Strip vendor prefix and normalize old Lovable model ids onto Gemini 2.5 Pro
-  // (user explicitly requested Gemini 2.5 Pro for everything).
+function stripVendor(m?: string): string | undefined {
+  if (!m) return undefined;
   if (m.startsWith("google/")) m = m.slice("google/".length);
-  // Force Pro for everything as per user preference
-  return DEFAULT_MODEL;
+  return m;
 }
+
 
 async function fetchToInlineData(url: string): Promise<{ mime_type: string; data: string }> {
   if (url.startsWith("data:")) {
@@ -163,7 +210,12 @@ export async function callGemini(openaiBody: OAIBody): Promise<Response> {
   if (!apiKey) {
     return jsonResponse(500, { error: "GEMINI_API_KEY is not configured" });
   }
-  const model = mapModel(openaiBody.model);
+  // Prefer caller-specified concrete Gemini model; otherwise auto-detect the
+  // latest Pro version from Google so the site upgrades itself when Google
+  // ships a new release.
+  const callerModel = stripVendor(openaiBody.model);
+  const looksLikeGemini = callerModel && /^gemini-/.test(callerModel);
+  const model = looksLikeGemini ? callerModel! : await detectLatestProModel(apiKey);
   const stream = !!openaiBody.stream;
   const geminiBody = await buildGeminiBody(openaiBody);
 
@@ -178,12 +230,9 @@ export async function callGemini(openaiBody: OAIBody): Promise<Response> {
   });
 
   if (!upstream.ok) {
-    const text = await upstream.text();
+    const rawText = await upstream.text();
+    const text = redact(rawText, apiKey);
     console.error("Gemini error:", upstream.status, text);
-    // Google returns RESOURCE_EXHAUSTED as 429 for both short-term rate limits
-    // and billing/spend-cap exhaustion. Keep rate limits as 429, but surface
-    // spend/quota/billing exhaustion as 402 so the UI does not show a false
-    // "try again later" message when the account needs billing action.
     const isBillingIssue = /billing|spend cap|spending cap|monthly spending|payment|paid plan/i.test(text);
     if ((upstream.status === 429 || upstream.status === 403) && isBillingIssue) {
       return jsonResponse(402, {
@@ -195,6 +244,7 @@ export async function callGemini(openaiBody: OAIBody): Promise<Response> {
     }
     return jsonResponse(upstream.status, { error: "Gemini API error", details: text });
   }
+
 
   if (!stream) {
     const data = await upstream.json();
