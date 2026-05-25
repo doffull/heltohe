@@ -210,7 +210,12 @@ export async function callGemini(openaiBody: OAIBody): Promise<Response> {
   if (!apiKey) {
     return jsonResponse(500, { error: "GEMINI_API_KEY is not configured" });
   }
-  const model = mapModel(openaiBody.model);
+  // Prefer caller-specified concrete Gemini model; otherwise auto-detect the
+  // latest Pro version from Google so the site upgrades itself when Google
+  // ships a new release.
+  const callerModel = stripVendor(openaiBody.model);
+  const looksLikeGemini = callerModel && /^gemini-/.test(callerModel);
+  const model = looksLikeGemini ? callerModel! : await detectLatestProModel(apiKey);
   const stream = !!openaiBody.stream;
   const geminiBody = await buildGeminiBody(openaiBody);
 
@@ -225,12 +230,9 @@ export async function callGemini(openaiBody: OAIBody): Promise<Response> {
   });
 
   if (!upstream.ok) {
-    const text = await upstream.text();
+    const rawText = await upstream.text();
+    const text = redact(rawText, apiKey);
     console.error("Gemini error:", upstream.status, text);
-    // Google returns RESOURCE_EXHAUSTED as 429 for both short-term rate limits
-    // and billing/spend-cap exhaustion. Keep rate limits as 429, but surface
-    // spend/quota/billing exhaustion as 402 so the UI does not show a false
-    // "try again later" message when the account needs billing action.
     const isBillingIssue = /billing|spend cap|spending cap|monthly spending|payment|paid plan/i.test(text);
     if ((upstream.status === 429 || upstream.status === 403) && isBillingIssue) {
       return jsonResponse(402, {
@@ -242,6 +244,7 @@ export async function callGemini(openaiBody: OAIBody): Promise<Response> {
     }
     return jsonResponse(upstream.status, { error: "Gemini API error", details: text });
   }
+
 
   if (!stream) {
     const data = await upstream.json();
