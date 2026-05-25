@@ -3,7 +3,56 @@
 // This lets all edge functions migrate from Lovable AI Gateway to the user's
 // own Gemini API key without changing their request/response handling logic.
 
-const DEFAULT_MODEL = "gemini-2.5-pro";
+const FALLBACK_MODEL = "gemini-3.5-pro";
+
+// In-memory cache of the latest detected Gemini Pro model.
+// Refreshed every 5 minutes so when Google releases a new version
+// (e.g. gemini-3.7-pro) the site auto-upgrades within minutes.
+let _cachedModel: string | null = null;
+let _cachedAt = 0;
+const MODEL_CACHE_TTL_MS = 5 * 60 * 1000;
+
+async function detectLatestProModel(apiKey: string): Promise<string> {
+  // Manual override via secret takes priority.
+  const override = Deno.env.get("GEMINI_MODEL");
+  if (override) return override;
+
+  const now = Date.now();
+  if (_cachedModel && now - _cachedAt < MODEL_CACHE_TTL_MS) return _cachedModel;
+
+  try {
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+    );
+    if (!r.ok) throw new Error(`models list ${r.status}`);
+    const data = await r.json();
+    const names: string[] = (data?.models ?? [])
+      .map((m: any) => String(m?.name || "").replace(/^models\//, ""))
+      .filter((n: string) =>
+        /^gemini-\d+(\.\d+)?-pro$/.test(n) && !/preview|exp/i.test(n)
+      );
+    // Sort by numeric version descending (e.g. 3.5 > 3.1 > 2.5)
+    names.sort((a, b) => {
+      const va = parseFloat(a.match(/gemini-(\d+(?:\.\d+)?)-pro/)?.[1] ?? "0");
+      const vb = parseFloat(b.match(/gemini-(\d+(?:\.\d+)?)-pro/)?.[1] ?? "0");
+      return vb - va;
+    });
+    _cachedModel = names[0] ?? FALLBACK_MODEL;
+    _cachedAt = now;
+    return _cachedModel;
+  } catch (e) {
+    console.warn("model auto-detect failed, using fallback:", e);
+    _cachedModel = FALLBACK_MODEL;
+    _cachedAt = now;
+    return FALLBACK_MODEL;
+  }
+}
+
+function redact(text: string, apiKey: string): string {
+  if (!apiKey) return text;
+  return text.split(apiKey).join("***REDACTED***");
+}
+
 
 type OAIRole = "system" | "user" | "assistant" | "tool";
 type OAIContentPart =
