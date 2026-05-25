@@ -85,7 +85,11 @@ export function ImportMockupDialog({ open, onOpenChange, onSuccess }: ImportMock
       const { data, error } = await supabase.functions.invoke('analyze-product-image', {
         body: { imageBase64: base64, mimeType: file.type },
       });
-      if (error) throw error;
+      if (error) {
+        const context = (error as { context?: Response }).context;
+        const payload = context ? await context.json().catch(() => null) : null;
+        throw new Error(payload?.error || error.message);
+      }
       if (data?.error) throw new Error(data.error);
       if (!data?.product) throw new Error("Aucune donnée extraite");
       
@@ -97,7 +101,8 @@ export function ImportMockupDialog({ open, onOpenChange, onSuccess }: ImportMock
       setEditableColors(p.colorOptions || []);
       toast.success(`Produit analysé : ${p.name}`);
     } catch (err: any) {
-      toast.error(err.message || "Erreur lors de l'analyse");
+      const message = err.message || "Erreur lors de l'analyse";
+      toast.error(message);
     } finally {
       setAnalyzing(false);
     }

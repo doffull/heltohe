@@ -102,12 +102,12 @@ Return ONLY the JSON object, no markdown, no explanation.`;
 
     if (!response.ok) {
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
+        return new Response(JSON.stringify({ error: "Limite temporaire Gemini atteinte. Veuillez réessayer dans quelques instants." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Payment required. Please add credits to your workspace." }), {
+        return new Response(JSON.stringify({ error: "Quota ou plafond de dépense Gemini atteint. Ouvrez Google AI Studio > Billing/Spend cap pour augmenter le plafond, puis relancez l’analyse." }), {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
