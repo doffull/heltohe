@@ -58,8 +58,31 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: 'Missing credentials' }), { status: 400, headers: corsHeaders });
   }
 
-  const cleanUrl = storeUrl.replace(/\/+$/, '');
+  const startedAt = Date.now();
+  let normalizedUrl = String(storeUrl).trim().replace(/\/+$/, '');
+  if (!/^https?:\/\//i.test(normalizedUrl)) normalizedUrl = `https://${normalizedUrl}`;
+  const cleanUrl = normalizedUrl;
   const authParam = `consumer_key=${encodeURIComponent(consumerKey)}&consumer_secret=${encodeURIComponent(consumerSecret)}`;
+
+  const writeSyncLog = async (
+    status: 'success' | 'partial' | 'failed',
+    payload: { total: number; succeeded: number; failed: number; message?: string; details?: any },
+  ) => {
+    try {
+      await supabase.from('wp_sync_logs').insert({
+        direction: 'import',
+        status,
+        total: payload.total,
+        succeeded: payload.succeeded,
+        failed: payload.failed,
+        message: payload.message?.slice(0, 1000) || null,
+        details: { ...(payload.details || {}), storeUrl: cleanUrl, durationMs: Date.now() - startedAt },
+        triggered_by: user.id,
+      });
+    } catch (e: any) {
+      console.error('[wp_sync_logs] insert failed:', e?.message);
+    }
+  };
 
   const RETRY_STATUSES = new Set([408, 429, 502, 503, 504]);
   const MAX_ATTEMPTS = 4;
@@ -412,6 +435,28 @@ Deno.serve(async (req) => {
       result.errors.push(`Stocks: ${e.message}`);
     }
   }
+
+  const totals = (result.products || 0) + (result.orders || 0) + (result.customers || 0) + (result.stock || 0);
+  const failedCount = result.errors.length;
+  const status: 'success' | 'partial' | 'failed' = failedCount === 0
+    ? 'success'
+    : totals > 0 ? 'partial' : 'failed';
+  await writeSyncLog(status, {
+    total: totals + failedCount,
+    succeeded: totals,
+    failed: failedCount,
+    message: status === 'success'
+      ? `Import OK (${totals} entrées)`
+      : result.errors[0] || 'Import terminé avec erreurs',
+    details: {
+      products: result.products,
+      orders: result.orders,
+      customers: result.customers,
+      stock: result.stock,
+      errors: result.errors,
+      flags: { importProducts: !!importProducts, importOrders: !!importOrders, importCustomers: !!importCustomers, importStock: !!importStock },
+    },
+  });
 
   return new Response(JSON.stringify(result), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
