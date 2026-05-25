@@ -12,11 +12,12 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { RefreshCw, Eye, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
+import { RefreshCw, Eye, AlertCircle, CheckCircle2, XCircle, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface SyncLog {
   id: string;
+  correlation_id: string | null;
   created_at: string;
   direction: 'import' | 'export';
   status: 'success' | 'partial' | 'failed';
@@ -55,6 +56,21 @@ export default function AdminWooCommerceLogs() {
   };
 
   useEffect(() => { load(); }, []);
+
+  // Deep link: ?cid=<correlation_id> ou ?logId=<row id>
+  useEffect(() => {
+    if (!logs.length) return;
+    const params = new URLSearchParams(window.location.search);
+    const cid = params.get('cid');
+    const logId = params.get('logId');
+    if (cid) {
+      const match = logs.find((l) => l.correlation_id === cid);
+      if (match) setSelected(match);
+    } else if (logId) {
+      const match = logs.find((l) => l.id === logId);
+      if (match) setSelected(match);
+    }
+  }, [logs]);
 
   const filtered = useMemo(() => {
     return logs.filter((l) => {
@@ -127,6 +143,7 @@ export default function AdminWooCommerceLogs() {
           <TableHeader>
             <TableRow>
               <TableHead>Date</TableHead>
+              <TableHead>ID corrélation</TableHead>
               <TableHead>Direction</TableHead>
               <TableHead>Statut</TableHead>
               <TableHead className="text-right">OK / KO / Total</TableHead>
@@ -134,6 +151,14 @@ export default function AdminWooCommerceLogs() {
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
+          <TableBody>
+            {filtered.length === 0 && !loading && (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">
+                  Aucun log à afficher. Lance une synchro pour générer des entrées.
+                </TableCell>
+              </TableRow>
+            )}
           <TableBody>
             {filtered.length === 0 && !loading && (
               <TableRow>
