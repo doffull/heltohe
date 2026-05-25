@@ -72,12 +72,7 @@ serve(async (req) => {
     }
 
     // Gemini API key checked inside callGemini()
-      // No key configured: degrade gracefully
-      const parsed = fallbackParse(transcript, products);
-      return new Response(JSON.stringify({ ...parsed, degraded: "no_api_key" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+
 
     // ─── Mode "search"/"recommend": product retrieval ───
     if (mode === "search" || mode === "recommend") {
