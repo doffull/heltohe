@@ -58,8 +58,31 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: 'Missing credentials' }), { status: 400, headers: corsHeaders });
   }
 
-  const cleanUrl = storeUrl.replace(/\/+$/, '');
+  const startedAt = Date.now();
+  let normalizedUrl = String(storeUrl).trim().replace(/\/+$/, '');
+  if (!/^https?:\/\//i.test(normalizedUrl)) normalizedUrl = `https://${normalizedUrl}`;
+  const cleanUrl = normalizedUrl;
   const authParam = `consumer_key=${encodeURIComponent(consumerKey)}&consumer_secret=${encodeURIComponent(consumerSecret)}`;
+
+  const writeSyncLog = async (
+    status: 'success' | 'partial' | 'failed',
+    payload: { total: number; succeeded: number; failed: number; message?: string; details?: any },
+  ) => {
+    try {
+      await supabase.from('wp_sync_logs').insert({
+        direction: 'import',
+        status,
+        total: payload.total,
+        succeeded: payload.succeeded,
+        failed: payload.failed,
+        message: payload.message?.slice(0, 1000) || null,
+        details: { ...(payload.details || {}), storeUrl: cleanUrl, durationMs: Date.now() - startedAt },
+        triggered_by: user.id,
+      });
+    } catch (e: any) {
+      console.error('[wp_sync_logs] insert failed:', e?.message);
+    }
+  };
 
   const RETRY_STATUSES = new Set([408, 429, 502, 503, 504]);
   const MAX_ATTEMPTS = 4;
