@@ -191,12 +191,12 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
   const sizeKey = `size_${deviceKey}` as const;
 
   const mobileDefaultPos: FabPos = { corner: 'bl', x: 12, y: 48 };
+  const desktopDefaultPos: FabPos = { corner: 'bl', x: 24, y: 24 };
   const fabPosCurrent: FabPos =
     rfab[posKey] ||
     (deviceKey === 'mobile'
       ? rfab.position_mobile || mobileDefaultPos
-      : rfab.position_desktop) ||
-    { corner: 'cc', x: 0, y: 0 };
+      : rfab.position_desktop || desktopDefaultPos);
 
   const rouletteDrag = useAdminDrag({
     enabled: !!isAdmin,

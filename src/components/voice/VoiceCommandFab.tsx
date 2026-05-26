@@ -128,13 +128,53 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
     } catch { /* ignore */ }
   };
 
-  const startListening = () => {
+  const ensureMicPermission = async (): Promise<boolean> => {
+    // HTTPS context required
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      toast.error('Le micro requiert une connexion sécurisée (HTTPS).');
+      return false;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      toast.error("Votre navigateur ne permet pas l'accès au micro.");
+      return false;
+    }
+    try {
+      // Probe current state if Permissions API is available
+      const perm: any = (navigator as any).permissions;
+      if (perm?.query) {
+        try {
+          const status = await perm.query({ name: 'microphone' as PermissionName });
+          if (status.state === 'denied') {
+            toast.error('Micro bloqué — autorisez-le dans les réglages du navigateur (icône 🔒 dans la barre d\'adresse).', { duration: 6000 });
+            return false;
+          }
+        } catch { /* not supported, fall through */ }
+      }
+      // Trigger the browser prompt and immediately release the stream
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((t) => t.stop());
+      return true;
+    } catch (err: any) {
+      if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
+        toast.error('Accès au micro refusé.');
+      } else if (err?.name === 'NotFoundError') {
+        toast.error('Aucun micro détecté sur cet appareil.');
+      } else {
+        toast.error('Impossible d\'accéder au micro.');
+      }
+      return false;
+    }
+  };
+
+  const startListening = async () => {
     const SpeechRecognition: any =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      toast.error("Reconnaissance vocale non supportée par ce navigateur");
+      toast.error("Reconnaissance vocale non supportée par ce navigateur. Utilisez le chat IGRA à la place.");
       return;
     }
+    const allowed = await ensureMicPermission();
+    if (!allowed) return;
     const rec = new SpeechRecognition();
     rec.lang = 'fr-FR';
     rec.continuous = false;
@@ -145,7 +185,16 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
       setListening(false);
       handleCommand(text);
     };
-    rec.onerror = () => { setListening(false); toast.error("Erreur micro"); };
+    rec.onerror = (e: any) => {
+      setListening(false);
+      if (e?.error === 'not-allowed' || e?.error === 'service-not-allowed') {
+        toast.error('Accès au micro refusé.');
+      } else if (e?.error === 'no-speech') {
+        toast.message('Aucune voix détectée, réessayez.');
+      } else {
+        toast.error('Erreur micro');
+      }
+    };
     rec.onend = () => setListening(false);
     recRef.current = rec;
     setListening(true);
