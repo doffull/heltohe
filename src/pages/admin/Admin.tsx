@@ -30,7 +30,9 @@ import {
   MousePointer,
   Activity,
   UserCog,
-  ShieldAlert
+  ShieldAlert,
+  Sparkles,
+  BarChart3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -60,6 +62,8 @@ import AdminHomeIcons from './AdminHomeIcons';
 import AdminLive from './AdminLive';
 import AdminRoles from './AdminRoles';
 import AdminSecurity from './AdminSecurity';
+import AdminTransitions from './AdminTransitions';
+import AdminBannersAnalytics from './AdminBannersAnalytics';
 
 export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin': '#6B7280',
@@ -98,6 +102,8 @@ const SIDEBAR_ITEMS = [
   { icon: Gift, label: 'Roulette', href: '/admin/roulette' },
   { icon: Palette, label: 'Design', href: '/admin/design' },
   { icon: MousePointer, label: 'Icônes Accueil', href: '/admin/home-icons' },
+  { icon: Sparkles, label: 'Transitions', href: '/admin/transitions' },
+  { icon: BarChart3, label: 'Analytique Bannières', href: '/admin/bannieres-analytics' },
   { icon: Warehouse, label: 'Stock', href: '/admin/stock' },
   { icon: Truck, label: 'Colissimo', href: '/admin/colissimo' },
   { icon: Bell, label: 'Notifications', href: '/admin/notifications' },
@@ -296,6 +302,8 @@ export default function Admin() {
             <Route path="roles/*" element={<AdminRoles />} />
             <Route path="security/*" element={<AdminSecurity />} />
             <Route path="parametres/*" element={<AdminSettings />} />
+            <Route path="transitions/*" element={<AdminTransitions />} />
+            <Route path="bannieres-analytics/*" element={<AdminBannersAnalytics />} />
           </Routes>
         </div>
       </main>

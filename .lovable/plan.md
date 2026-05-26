@@ -1,103 +1,58 @@
-# Plan — Polish, transitions, card game & UX fixes
+# Plan — Améliorations admin & expérience d'accueil
 
-## 1. Suppression de la transition "barre métallique"
-- Supprimer `ChromeBarTransition` de `src/App.tsx` (et le fichier `src/components/transitions/ChromeBarTransition.tsx`).
-- Remplacer par une transition **décomposition / recomposition** (effet "shatter / rebuild") :
-  - Nouveau composant `src/components/transitions/PageShatterTransition.tsx`.
-  - Variants Framer Motion sur la `<motion.div>` qui wrappe les Routes :
-    - **Exit** : la page se fragmente — `filter: blur(0→8px)`, `scale: 1→1.08`, `opacity: 1→0`, léger `rotateX` ; combiné à un overlay grid (12 cellules) où chaque cellule part dans une direction aléatoire avec stagger 20ms.
-    - **Enter** : 12 cellules reconviennent au centre (translate aléatoire → 0, opacity 0→1) avec stagger 15ms, puis page `blur 6→0`, `scale 1.04→1`, `opacity 0→1`.
-  - Durée totale ≈ 600ms, ease `[0.22, 1, 0.36, 1]`.
-  - Respecte `prefers-reduced-motion` (fallback simple fade 200ms).
+## 1. Bouton « Ajouter une section » bien visible (Admin → Icônes accueil)
+- Dans `HomeCustomSectionsEditor.tsx`, ajouter en haut un bandeau d'action avec un **gros bouton « + Ajouter une section »** qui ouvre un menu (Hero, Image, Vidéo, Slider, Titre, Sous-titre, Texte, Grille produits).
+- Dans `PageBuilder.tsx`, déplacer la barre de sélection des types de sections en **sticky en haut** + ajouter un bouton flottant « + Ajouter » en bas de la liste pour les longues pages.
+- Surfacer un état vide pédagogique : « Aucune section. Cliquez sur + pour ajouter du contenu personnalisé. »
 
-## 2. Réactivation du jeu de cartes (ex‑roulette)
-- La FAB cadeau dans `FabStack.tsx` est conditionnée par `rouletteConfig?.enabled`. Vérifier en base et **forcer `enabled=true`** via insert si nécessaire.
-- Confirmer que `RouletteFab` ouvre bien le **jeu de cartes** (3‑6 cartes face cachée) — sinon, brancher le composant `CardGameModal` à la place de la roue.
-- Ajouter un badge "Jeu" visible et un libellé "Tentez votre chance" sur la FAB.
-- S'assurer que la config admin (`/admin/roulette`) permet de basculer entre roue/cartes et de définir le nombre de cartes (3–6).
+## 2. Réactiver la roulette + ordre d'apparition au chargement
+- Vérification : `roulette_config.enabled = true` en base. Le composant `RouletteFab` se cache si `segments.length === 0` — vérifier qu'il existe au moins 1 segment actif, sinon insérer un jeu par défaut (6 cartes).
+- Orchestrer une **séquence d'apparition** dans `Home.tsx` (nouveau hook `useHomepageIntroSequence`) :
+  1. **CGV popup** (si non acceptées) → bloque
+  2. **Roulette / Jeu de cartes** auto-ouverte 1×/24h (clé `lvtk:roulette:lastSeen` en localStorage)
+  3. Sidebar / autres popups ensuite
+- `RouletteFab` : retirer le délai aléatoire actuel, écouter un event `lvtk:intro:open-roulette` déclenché par la séquence.
 
-## 3. Bannière IGRA / commande vocale — version premium colorée
-- Refonte de `src/components/home/VoiceAssistantBanner.tsx` :
-  - Fond **gradient bleu premium** (deep navy → electric blue → cyan glow), conserve l'esprit chamfer/glass.
-  - Halo radial bleu animé (slow pulse), liseré chromé fin, micro‑particules.
-  - Deux CTA différenciés :
-    - **"Commandez à la voix"** — primary bleu glossy avec icône Mic animée (pulse à l'idle).
-    - **"Parler à IGRA"** — secondary glass blanc/cyan avec icône Bot.
-  - Typo : eyebrow "NOUVEAU · IA VOCALE" + titre + sous‑titre court.
-  - Respecte `prefers-reduced-motion`.
-- Tokens HSL ajoutés dans `index.css` : `--voice-blue-deep`, `--voice-blue-bright`, `--voice-cyan-glow` + utilitaire `.voice-gradient`.
+## 3. Finaliser la transition « shutter » + gestionnaire de transitions
+- Compléter `PageShatterTransition.tsx` : finir les variantes (timing courbes, easing, sheen métallique sur les cellules, fallback `prefers-reduced-motion`).
+- Créer **`src/components/transitions/transitionRegistry.ts`** listant les transitions disponibles : `shatter`, `fade`, `chrome-bar`, `none`.
+- Nouvelle page admin **`/admin/transitions`** (`AdminTransitions.tsx`) :
+  - Sélecteur de transition active (stockée dans `design_settings.pageTransition`)
+  - Réglages : durée, easing, intensité, désactiver pour `prefers-reduced-motion`
+  - Aperçu live (bouton « Tester la transition »)
+- Brancher `App.tsx` (`AnimatedRoutes`) pour lire `designSettings.pageTransition` et choisir dynamiquement le composant.
+- Ajouter l'entrée « Transitions » dans la sidebar admin (`Admin.tsx`).
 
-## 4. Activation vocale — permissions & robustesse
-- Audit de `src/components/voice/VoiceCommandFab.tsx` + `supabase/functions/voice-command` :
-  - Appel explicite à `navigator.mediaDevices.getUserMedia({ audio: true })` **avant** d'initier la reconnaissance, avec gestion des 3 états : `granted` / `denied` / `prompt`.
-  - Toasts clairs : "Microphone refusé — activez‑le dans les réglages du navigateur" avec lien d'aide.
-  - Détection `SpeechRecognition` indisponible → fallback message + bouton chat.
-  - Affichage explicite d'un état "Écoute…" avec animation + bouton stop.
-  - Test contexte HTTPS (sinon message d'erreur).
+## 4. Analytique des bannières
+- Migration : nouvelle table `banner_analytics` (banner_id, banner_type, event `view|click|dismiss`, session_hash, url, created_at) + RLS : insert public, select admin.
+- Hook `useBannerAnalytics()` exposant `trackView/Click/Dismiss`.
+- Instrumenter : `VoiceAssistantBanner`, `PopupBanner`, `NewsletterPopupHost`, `LoyaltyBanner`, `PromoBanner`, `PromoCountdown`.
+- Nouvelle page admin **`/admin/banners-analytics`** : tableau (vues, clics, dismiss, CTR, taux de conversion sur 7/30j) + graphique simple.
 
-## 5. Éditeur IGRA admin complet
-- Page `/admin/chatbot` (`AdminChatbot.tsx`) étendue :
-  - Onglets : **Identité** (nom, avatar, ton), **Prompt système**, **FAQ rapide**, **Commandes vocales** (mots‑clés → action), **Apparence** (couleurs bulle, position), **Logs**.
-  - Persistance via `admin_config` clé `chatbot_settings` (extension de l'existant).
-  - Sauvegarde manuelle explicite (pas d'auto‑save).
+## 5. FAB configurable + fallbacks micro + mode démo
+- **FAB configurable** : compléter `UnifiedFabEditor` pour exposer tous les réglages (taille, opacité, variante glossy/glass/neon, position desktop/mobile, badge, action). Stocker dans `design_settings.fabConfig`.
+- **Fallbacks micro** dans `VoiceCommandFab.tsx` :
+  - Détecter `SpeechRecognition` indisponible → bascule UI « Écrire à IGRA »
+  - HTTPS manquant → toast + lien doc
+  - `permissions.query({name:'microphone'})` → afficher état (granted/denied/prompt)
+  - `denied` → modal expliquant comment réautoriser (Chrome/Safari/Firefox)
+  - Tester aussi sur iOS Safari (utiliser `webkitSpeechRecognition`).
+- **Mode démo** :
+  - Toggle dans `/admin/settings` → `design_settings.demoMode = true`
+  - Effets : sidebar visible en permanence, roulette auto-ouverte à chaque visite, popups réinitialisés à chaque chargement, badge « DEMO » en bas à droite
+  - Hook `useDemoMode()` consommé par PopupBanner, RouletteFab, Sidebar, NewsletterPopupHost.
 
-## 6. Sidebar — pop‑up max 1× / jour après fermeture
-- Dans `src/context/SidebarContext.tsx` (et/ou le composant qui re‑ouvre auto) :
-  - Quand l'utilisateur **ferme** la sidebar, écrire `localStorage.setItem('sidebar_dismissed_at', Date.now())`.
-  - Le timer de réapparition (actuellement 10s–1min) ne se déclenche **que si** `Date.now() - dismissed_at > 24h`.
-  - Sinon, la sidebar reste fermée jusqu'au prochain refresh manuel par l'utilisateur ou au lendemain.
-  - Idem pour `PopupBanner` / `NewsletterPopupHost` : clé `popup_dismissed_at_<id>` avec TTL 24h.
+## Détails techniques
+- **Fichiers créés** : `AdminTransitions.tsx`, `transitionRegistry.ts`, `useHomepageIntroSequence.ts`, `useBannerAnalytics.ts`, `useDemoMode.ts`, page `AdminBannersAnalytics.tsx`.
+- **Fichiers modifiés** : `HomeCustomSectionsEditor.tsx`, `PageBuilder.tsx`, `Home.tsx`, `App.tsx`, `Admin.tsx`, `RouletteFab.tsx`, `VoiceCommandFab.tsx`, `UnifiedFabEditor.tsx`, `PageShatterTransition.tsx`, bannières instrumentées.
+- **Migration** : table `banner_analytics` + RLS + index.
+- **Data seed** (si vide) : INSERT de 6 segments roulette par défaut.
 
-## 7. Accessibilité des animations
-- Hook utilitaire `useReducedMotion()` (déjà fourni par Framer Motion) appliqué à :
-  - `PageShatterTransition`, `VoiceAssistantBanner`, `BrandLogo` (sheen/breathe), header "frozen" overlay, FABs.
-- Si `reduce` → animations désactivées (durée 0 ou simple fade).
-- Ajout d'attributs `aria-hidden="true"` sur les overlays décoratifs purs.
-- Vérifier focus visible sur les FABs et CTA bannière.
-
-## 8. Warnings `fetchpriority`
-- Recherche globale des `<img fetchPriority="...">` mal cassés (React attend `fetchPriority` camelCase, certains endroits utilisent `fetchpriority`).
-- Correction dans : `HeroSlider`, `BrandLogo`, `ProductCard`, `CategoryGrid`, tout composant image LCP.
-- Sur les images non‑critiques : `loading="lazy"` + `decoding="async"`.
-
-## 9. Tests événements
-- Ajout de tests Vitest :
-  - `VoiceAssistantBanner.test.tsx` : clic CTA voix dispatch `lvtk:open-voice`, clic IGRA dispatch `lvtk:open-chatbot`.
-  - `SidebarContext.test.ts` : après dismiss, pas de re‑open avant 24h.
-  - `PageShatterTransition.test.tsx` : rend les enfants, respecte reduced‑motion.
-
-## 10. Vérification finale
-- Build + smoke test :
-  - Home charge sans erreur console.
-  - FAB jeu de cartes visible et cliquable.
-  - Bannière IGRA rendue avec gradient bleu.
-  - Transition shatter fonctionne entre 2 routes.
-  - Sidebar ne réapparaît pas après fermeture (test localStorage).
-  - Vocal : prompt permission micro affiché.
-
-## Fichiers touchés
-
-**Créés**
-- `src/components/transitions/PageShatterTransition.tsx`
-- `src/components/home/__tests__/VoiceAssistantBanner.test.tsx`
-- `src/context/__tests__/SidebarContext.test.ts`
-
-**Modifiés**
-- `src/App.tsx` (remplace ChromeBar par Shatter, pageVariants simplifiés)
-- `src/components/home/VoiceAssistantBanner.tsx` (refonte premium bleu)
-- `src/components/voice/VoiceCommandFab.tsx` (permissions micro)
-- `src/components/layout/FabStack.tsx` (jeu cartes visible)
-- `src/context/SidebarContext.tsx` (TTL 24h)
-- `src/components/home/PopupBanner.tsx` + `NewsletterPopupHost.tsx` (TTL 24h)
-- `src/pages/admin/AdminChatbot.tsx` (éditeur IGRA complet)
-- `src/index.css` (tokens bleu IGRA, retrait keyframes barre chrome inutilisée)
-- `src/components/layout/Header.tsx` + `BrandLogo.tsx` (reduced‑motion)
-- Composants image (fetchPriority camelCase)
-
-**Supprimés**
-- `src/components/transitions/ChromeBarTransition.tsx`
-
-**Données**
-- 1 `insert` éventuel : `UPDATE roulette_config SET enabled=true WHERE config_key='main'` si désactivé.
-
-Aucune migration de schéma nécessaire.
+## Ordre d'exécution
+1. Bouton « Ajouter section » (rapide, UX)
+2. Migration analytics + hook
+3. Réactivation roulette + séquence intro
+4. Finition shutter + page transitions
+5. FAB configurable + fallbacks micro
+6. Mode démo + instrumentation bannières
+7. Smoke test (build, navigation, séquence intro, micro denied/granted)

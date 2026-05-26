@@ -139,6 +139,42 @@ export type Database = {
         }
         Relationships: []
       }
+      banner_analytics: {
+        Row: {
+          banner_id: string
+          banner_type: string
+          created_at: string
+          event: string
+          id: string
+          meta: Json | null
+          session_hash: string | null
+          url: string | null
+          user_id: string | null
+        }
+        Insert: {
+          banner_id: string
+          banner_type: string
+          created_at?: string
+          event: string
+          id?: string
+          meta?: Json | null
+          session_hash?: string | null
+          url?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          banner_id?: string
+          banner_type?: string
+          created_at?: string
+          event?: string
+          id?: string
+          meta?: Json | null
+          session_hash?: string | null
+          url?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       banners: {
         Row: {
           button_text: string | null

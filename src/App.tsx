@@ -19,7 +19,7 @@ import { AdminViewportProvider } from "@/context/AdminViewportContext";
 import { AdminDragBar } from "@/components/admin/AdminDragBar";
 import { MegaMenuProvider } from "@/context/MegaMenuContext";
 import { MegaMenu } from "@/components/layout/MegaMenu";
-import { PageShatterTransition } from "@/components/transitions/PageShatterTransition";
+import { getTransition } from "@/components/transitions/transitionRegistry";
 
 // Pages
 import Home from "./pages/Home";
@@ -134,9 +134,12 @@ function FlashOverlay({ k }: { k: string }) {
 
 function AnimatedRoutes() {
   const location = useLocation();
+  const { data: settings } = useDesignSettings();
+  const transitionId = ((settings as any)?.pageTransition as string) || 'shatter';
+  const TransitionComp = getTransition(transitionId).Component;
   return (
     <AnimatePresence mode="wait">
-      <PageShatterTransition key={`s-${location.pathname}`} k={location.pathname} />
+      {TransitionComp && <TransitionComp key={`t-${location.pathname}`} k={location.pathname} />}
       <motion.div
         key={location.pathname}
         variants={pageVariants}
@@ -188,6 +191,22 @@ function AdminVisualEditor() {
   );
 }
 
+function DemoModeBadge() {
+  const [on, setOn] = useState(() => { try { return localStorage.getItem('lvtk:demoMode') === '1'; } catch { return false; } });
+  useEffect(() => {
+    const upd = () => { try { setOn(localStorage.getItem('lvtk:demoMode') === '1'); } catch { /* noop */ } };
+    window.addEventListener('storage', upd);
+    window.addEventListener('lvtk:demo-mode-changed', upd);
+    return () => { window.removeEventListener('storage', upd); window.removeEventListener('lvtk:demo-mode-changed', upd); };
+  }, []);
+  if (!on) return null;
+  return (
+    <div className="fixed bottom-3 right-3 z-[9000] px-2.5 py-1 rounded-full bg-amber-500/95 text-amber-950 text-[10px] font-bold uppercase tracking-widest shadow-lg pointer-events-none">
+      DEMO
+    </div>
+  );
+}
+
 function AppShell() {
   const [showSplash, setShowSplash] = useState(true);
   return (
@@ -207,6 +226,7 @@ function AppShell() {
           <AnimatedRoutes />
           <MegaMenu />
           <AdminVisualEditor />
+          <DemoModeBadge />
         </TooltipProvider>
         </MegaMenuProvider>
       </VisualEditorProvider>

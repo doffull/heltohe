@@ -4,6 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useBannerAnalytics } from '@/hooks/useBannerAnalytics';
+import { useDemoMode } from '@/hooks/useDemoMode';
 
 interface PopupBannerData {
   id: string;
@@ -19,6 +21,8 @@ interface PopupBannerData {
 export default function PopupBanner() {
   const [open, setOpen] = useState(false);
   const [banner, setBanner] = useState<PopupBannerData | null>(null);
+  const demo = useDemoMode();
+  const { trackClick, trackDismiss } = useBannerAnalytics(banner?.id || '', 'popup', Boolean(banner));
 
   const { data: banners = [] } = useQuery({
     queryKey: ['public-banners-popup'],
@@ -46,13 +50,13 @@ export default function PopupBanner() {
 
   useEffect(() => {
     if (banners.length > 0) {
-      // 24h TTL: only show again after a full day has passed since last dismiss
+      // Demo mode bypasses the 24h TTL
       const dismissedAt = Number(localStorage.getItem(`popup-dismissed-${banners[0].id}`) || 0);
       const ageMs = Date.now() - dismissedAt;
       const TTL = 24 * 3600 * 1000;
-      if (!dismissedAt || ageMs > TTL) {
+      if (demo || !dismissedAt || ageMs > TTL) {
         setBanner(banners[0]);
-        const timer = setTimeout(() => setOpen(true), banners[0].displayDelay);
+        const timer = setTimeout(() => setOpen(true), demo ? 600 : banners[0].displayDelay);
         return () => clearTimeout(timer);
       } else {
         setBanner(null);
@@ -62,10 +66,11 @@ export default function PopupBanner() {
       setBanner(null);
       setOpen(false);
     }
-  }, [banners]);
+  }, [banners, demo]);
 
   const dismiss = () => {
     setOpen(false);
+    trackDismiss();
     if (banner) localStorage.setItem(`popup-dismissed-${banner.id}`, String(Date.now()));
   };
 
@@ -100,7 +105,7 @@ export default function PopupBanner() {
               {banner.description && <p className="text-sm">{banner.description}</p>}
               <div className="flex gap-3 pt-2">
                 {banner.link && banner.buttonText && (
-                  <Button asChild className="flex-1">
+                  <Button asChild className="flex-1" onClick={() => trackClick({ link: banner.link })}>
                     <a href={banner.link}>{banner.buttonText}</a>
                   </Button>
                 )}

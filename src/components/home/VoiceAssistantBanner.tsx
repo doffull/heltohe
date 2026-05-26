@@ -1,6 +1,7 @@
 import { Mic, Bot, ArrowRight, Sparkles } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useApp } from '@/context/AppContext';
+import { useBannerAnalytics } from '@/hooks/useBannerAnalytics';
 
 interface VoiceAssistantBannerConfig {
   enabled?: boolean;
@@ -14,6 +15,7 @@ export function VoiceAssistantBanner() {
   const { designSettings } = useApp();
   const reduce = useReducedMotion();
   const cfg: VoiceAssistantBannerConfig = (designSettings as any).voiceBanner || {};
+  const { trackClick } = useBannerAnalytics('voice-assistant-home', 'voice_assistant', cfg.enabled !== false);
   if (cfg.enabled === false) return null;
 
   const title = cfg.title || 'Commandez à la voix';
@@ -108,7 +110,7 @@ export function VoiceAssistantBanner() {
             <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
               <button
                 type="button"
-                onClick={() => window.dispatchEvent(new CustomEvent('lvtk:open-voice'))}
+                onClick={() => { trackClick({ cta: 'voice' }); window.dispatchEvent(new CustomEvent('lvtk:open-voice')); }}
                 className="group inline-flex items-center justify-center gap-2 h-11 px-5 chamfer-hud-sm bg-white text-blue-950 hover:bg-cyan-100 transition-all text-xs uppercase tracking-[0.18em] font-bold shadow-[0_8px_24px_hsl(195_100%_60%/0.55)] focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-blue-900"
               >
                 <Mic className="h-4 w-4" />
@@ -117,7 +119,7 @@ export function VoiceAssistantBanner() {
               </button>
               <button
                 type="button"
-                onClick={() => window.dispatchEvent(new CustomEvent('lvtk:open-chatbot'))}
+                onClick={() => { trackClick({ cta: 'chat' }); window.dispatchEvent(new CustomEvent('lvtk:open-chatbot')); }}
                 className="group inline-flex items-center justify-center gap-2 h-11 px-5 chamfer-hud-sm border border-white/50 bg-white/10 text-white hover:bg-white/20 backdrop-blur-md transition-all text-xs uppercase tracking-[0.18em] font-semibold focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-blue-900"
               >
                 <Bot className="h-4 w-4" />
