@@ -30,7 +30,9 @@ import {
   MousePointer,
   Activity,
   UserCog,
-  ShieldAlert
+  ShieldAlert,
+  Sparkles,
+  BarChart3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
