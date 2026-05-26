@@ -137,6 +137,7 @@ export default function AdminRoles() {
                 <option value="auditor">Auditeur (lecture seule)</option>
                 <option value="stock_manager">Resp. stock</option>
                 <option value="preparator">Préparateur</option>
+                <option value="order_validator">Valideur commandes</option>
               </select>
               {!hasRole ? (
                 <Button onClick={() => setPending('grant')} className="gap-2">
