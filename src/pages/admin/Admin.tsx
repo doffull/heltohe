@@ -294,6 +294,7 @@ export default function Admin() {
             <Route path="audit/*" element={<AdminAudit />} />
             <Route path="errors/*" element={<AdminErrorLogs />} />
             <Route path="roles/*" element={<AdminRoles />} />
+            <Route path="security/*" element={<AdminSecurity />} />
             <Route path="parametres/*" element={<AdminSettings />} />
           </Routes>
         </div>
