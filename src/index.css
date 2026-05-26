@@ -762,3 +762,25 @@ img {
     padding-top: env(safe-area-inset-top);
   }
 }
+
+/* Glossy sheen sweep — used by voice banner, logo, header frost */
+@keyframes sheen {
+  0% { transform: translateX(-120%) rotate(12deg); opacity: 0; }
+  15% { opacity: 1; }
+  60% { opacity: 1; }
+  100% { transform: translateX(260%) rotate(12deg); opacity: 0; }
+}
+
+/* Frozen header — slow drifting frost gradient */
+@keyframes frost-drift {
+  0%   { background-position: 0% 50%; opacity: 0.35; }
+  50%  { background-position: 100% 50%; opacity: 0.6; }
+  100% { background-position: 0% 50%; opacity: 0.35; }
+}
+
+/* Logo subtle breathing */
+@keyframes logo-breathe {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50%      { transform: scale(1.015); filter: brightness(1.06); }
+}
+

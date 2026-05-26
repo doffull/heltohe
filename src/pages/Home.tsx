@@ -19,6 +19,7 @@ import { TechwearHero } from '@/components/home/TechwearHero';
 import { HeroSlider } from '@/components/home/HeroSlider';
 import { HeroErrorBoundary } from '@/components/home/HeroErrorBoundary';
 import PageRenderer from '@/components/page/PageRenderer';
+import { VoiceAssistantBanner } from '@/components/home/VoiceAssistantBanner';
 import type { PageSection } from '@/hooks/usePages';
 // RouletteFab removed from Home — handled globally by UnifiedFab in MainLayout to avoid duplicate buttons
 
@@ -181,6 +182,7 @@ export default function Home() {
     { id: 'featured', visible: true },
     { id: 'flash', visible: true },
     { id: 'newArrivals', visible: true },
+    { id: 'voiceBanner', visible: true },
     { id: 'loyalty', visible: true },
     { id: 'newsletter', visible: true },
   ] as Array<{ id: string; visible: boolean }>;
@@ -331,6 +333,7 @@ export default function Home() {
         </div>
       </section>
     ),
+    voiceBanner: () => <VoiceAssistantBanner />,
     loyalty: () => <LoyaltyBanner />,
     newsletter: () => (
       <RevealSection>

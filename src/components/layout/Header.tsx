@@ -12,8 +12,29 @@ export function Header() {
   };
   
   return (
-    <header className="fixed top-0 left-16 lg:left-64 right-0 z-30 h-14 bg-background/80 backdrop-blur-sm border-b border-border/30">
-      <div className="h-full px-4 lg:px-8 flex items-center justify-between">
+    <header className="fixed top-0 left-16 lg:left-64 right-0 z-30 h-14 bg-background/80 backdrop-blur-sm border-b border-border/30 overflow-hidden">
+      {/* Frozen header — slow drifting frost overlay */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 animate-[frost-drift_12s_ease-in-out_infinite]"
+        style={{
+          backgroundImage:
+            'linear-gradient(120deg, hsl(var(--foreground)/0.04) 0%, hsl(var(--background)/0.6) 35%, hsl(var(--foreground)/0.06) 55%, hsl(var(--background)/0.4) 75%, hsl(var(--foreground)/0.04) 100%)',
+          backgroundSize: '200% 100%',
+          mixBlendMode: 'overlay',
+        }}
+      />
+      {/* Subtle grain glaze */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.04]"
+        style={{
+          backgroundImage:
+            'radial-gradient(circle at 20% 50%, hsl(var(--foreground)) 0.5px, transparent 0.5px), radial-gradient(circle at 70% 30%, hsl(var(--foreground)) 0.5px, transparent 0.5px)',
+          backgroundSize: '6px 6px, 9px 9px',
+        }}
+      />
+      <div className="relative h-full px-4 lg:px-8 flex items-center justify-between">
         {/* Left side - Logo + System info */}
         <div className="flex items-center gap-4">
           {designSettings.showLogo !== false && <BrandLogo variant="header" />}

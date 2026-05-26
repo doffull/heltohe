@@ -82,6 +82,12 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
     onOpenChange?.(v);
     if (openProp === undefined) setOpenInternal(v);
   };
+  useEffect(() => {
+    const h = () => setOpen(true);
+    window.addEventListener('lvtk:open-voice', h);
+    return () => window.removeEventListener('lvtk:open-voice', h);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [reply, setReply] = useState('');
