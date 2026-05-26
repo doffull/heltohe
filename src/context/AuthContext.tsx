@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
-type AppRole = 'admin' | 'stock_manager' | 'preparator' | 'auditor';
+type AppRole = 'admin' | 'stock_manager' | 'preparator' | 'auditor' | 'order_validator';
 
 interface AuthContextType {
   user: User | null;
@@ -13,6 +13,7 @@ interface AuthContextType {
   isStockManager: boolean;
   isPreparator: boolean;
   isAuditor: boolean;
+  isOrderValidator: boolean;
   hasAdminPanelAccess: boolean;
   signUp: (email: string, password: string, firstName?: string, lastName?: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -147,13 +148,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isStockManager = roles.includes('stock_manager');
   const isPreparator = roles.includes('preparator');
   const isAuditor = roles.includes('auditor');
-  const hasAdminPanelAccess = isAdmin || isStockManager || isPreparator || isAuditor;
+  const isOrderValidator = roles.includes('order_validator');
+  const hasAdminPanelAccess = isAdmin || isStockManager || isPreparator || isAuditor || isOrderValidator;
 
   return (
     <AuthContext.Provider
       value={{
         user, session, isLoading, isAdmin, roles,
-        isStockManager, isPreparator, isAuditor, hasAdminPanelAccess,
+        isStockManager, isPreparator, isAuditor, isOrderValidator, hasAdminPanelAccess,
         signUp, signIn, signOut,
       }}
     >
