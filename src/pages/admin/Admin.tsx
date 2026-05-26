@@ -302,6 +302,8 @@ export default function Admin() {
             <Route path="roles/*" element={<AdminRoles />} />
             <Route path="security/*" element={<AdminSecurity />} />
             <Route path="parametres/*" element={<AdminSettings />} />
+            <Route path="transitions/*" element={<AdminTransitions />} />
+            <Route path="bannieres-analytics/*" element={<AdminBannersAnalytics />} />
           </Routes>
         </div>
       </main>
