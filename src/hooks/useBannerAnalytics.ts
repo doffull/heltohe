@@ -24,14 +24,14 @@ async function track(
 ) {
   if (!bannerId || !bannerType) return;
   try {
-    await supabase.from('banner_analytics').insert({
+    await supabase.from('banner_analytics').insert([{
       banner_id: bannerId,
       banner_type: bannerType,
       event,
       session_hash: getSessionHash(),
       url: typeof window !== 'undefined' ? window.location.pathname : null,
-      meta: meta || {},
-    });
+      meta: (meta || {}) as any,
+    }]);
   } catch {
     /* silent — analytics must never break UX */
   }
