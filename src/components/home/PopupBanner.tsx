@@ -21,6 +21,8 @@ interface PopupBannerData {
 export default function PopupBanner() {
   const [open, setOpen] = useState(false);
   const [banner, setBanner] = useState<PopupBannerData | null>(null);
+  const demo = useDemoMode();
+  const { trackClick, trackDismiss } = useBannerAnalytics(banner?.id || '', 'popup', Boolean(banner));
 
   const { data: banners = [] } = useQuery({
     queryKey: ['public-banners-popup'],
