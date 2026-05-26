@@ -127,24 +127,34 @@ export default function AdminRoles() {
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2 pt-2">
-              {!isAdmin ? (
+            <div className="flex flex-col sm:flex-row gap-2 pt-2 items-stretch sm:items-center">
+              <select
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value as AppRole)}
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="admin">Admin</option>
+                <option value="auditor">Auditeur (lecture seule)</option>
+                <option value="stock_manager">Resp. stock</option>
+                <option value="preparator">Préparateur</option>
+              </select>
+              {!hasRole ? (
                 <Button onClick={() => setPending('grant')} className="gap-2">
-                  <ShieldCheck className="h-4 w-4" /> Promouvoir admin
+                  <ShieldCheck className="h-4 w-4" /> Attribuer
                 </Button>
               ) : (
                 <Button
                   variant="destructive"
                   onClick={() => setPending('revoke')}
-                  disabled={isSelf}
+                  disabled={isSelf && selectedRole === 'admin'}
                   className="gap-2"
-                  title={isSelf ? 'Vous ne pouvez pas retirer votre propre rôle admin' : undefined}
+                  title={isSelf && selectedRole === 'admin' ? 'Vous ne pouvez pas retirer votre propre rôle admin' : undefined}
                 >
-                  <ShieldOff className="h-4 w-4" /> Retirer admin
+                  <ShieldOff className="h-4 w-4" /> Retirer
                 </Button>
               )}
             </div>
-            {isSelf && isAdmin && (
+            {isSelf && hasRole && selectedRole === 'admin' && (
               <p className="text-xs text-muted-foreground">Vous ne pouvez pas retirer votre propre rôle admin.</p>
             )}
           </div>
