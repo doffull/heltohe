@@ -143,8 +143,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       clearTimeout(saveTimerRef.current);
       saveTimerRef.current = null;
     }
-    await saveDesignSettings.mutateAsync(designSettings);
-  }, [saveDesignSettings, designSettings]);
+    // Use ref → always the latest state, never stale closure
+    await saveDesignSettings.mutateAsync(designSettingsRef.current);
+  }, [saveDesignSettings]);
 
   const navigate = useNavigate();
   const { data: allCategories = [] } = useCategories();
