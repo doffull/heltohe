@@ -75,13 +75,13 @@ export default function AdminHomeIcons() {
   };
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Icônes flottantes (Page d'accueil)</h1>
-          <p className="text-sm text-muted-foreground">Gérez les boutons fixes affichés sur la home (Jeu-concours, Voix, Chat, etc.)</p>
+    <div className="space-y-4 p-3 md:p-6 overflow-x-hidden">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl md:text-2xl font-bold">Icônes flottantes (Page d'accueil)</h1>
+          <p className="text-xs md:text-sm text-muted-foreground">Gérez les boutons fixes affichés sur la home (Jeu-concours, Voix, Chat, etc.)</p>
         </div>
-        <Button onClick={handleAdd} className="gap-1.5"><Plus className="h-4 w-4" /> Ajouter un bouton</Button>
+        <Button onClick={handleAdd} className="gap-1.5 w-full sm:w-auto"><Plus className="h-4 w-4" /> Ajouter un bouton</Button>
       </div>
 
       <HomeBlocksEditor />
