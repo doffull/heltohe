@@ -188,7 +188,7 @@ function SidebarContent({ user, signOut, location, sectionColors, allowedHrefs, 
 
 export default function Admin() {
   const location = useLocation();
-  const { user, isAdmin, isStockManager, isPreparator, hasAdminPanelAccess, isLoading, signOut } = useAuth();
+  const { user, isAdmin, isStockManager, isPreparator, isAuditor, hasAdminPanelAccess, isLoading, signOut } = useAuth();
   const { data: designSettings } = useDesignSettings();
   const [mobileOpen, setMobileOpen] = useState(false);
 
