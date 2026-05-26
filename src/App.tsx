@@ -19,7 +19,7 @@ import { AdminViewportProvider } from "@/context/AdminViewportContext";
 import { AdminDragBar } from "@/components/admin/AdminDragBar";
 import { MegaMenuProvider } from "@/context/MegaMenuContext";
 import { MegaMenu } from "@/components/layout/MegaMenu";
-import { PageShatterTransition } from "@/components/transitions/PageShatterTransition";
+import { getTransition } from "@/components/transitions/transitionRegistry";
 
 // Pages
 import Home from "./pages/Home";
