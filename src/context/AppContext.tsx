@@ -80,8 +80,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { data: dbSettings } = useDesignSettings();
   const saveDesignSettings = useSaveDesignSettings();
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const designSettingsRef = useRef<DesignSettings>(designSettings);
-  useEffect(() => { designSettingsRef.current = designSettings; }, [designSettings]);
 
   // Sync cloud → local ONLY on first load (avoid overwriting user edits)
   const initializedRef = useRef(false);
@@ -143,9 +141,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       clearTimeout(saveTimerRef.current);
       saveTimerRef.current = null;
     }
-    // Use ref → always the latest state, never stale closure
-    await saveDesignSettings.mutateAsync(designSettingsRef.current);
-  }, [saveDesignSettings]);
+    await saveDesignSettings.mutateAsync(designSettings);
+  }, [saveDesignSettings, designSettings]);
 
   const navigate = useNavigate();
   const { data: allCategories = [] } = useCategories();
