@@ -119,7 +119,7 @@ export function VoiceAssistantBanner() {
               </button>
               <button
                 type="button"
-                onClick={() => window.dispatchEvent(new CustomEvent('lvtk:open-chatbot'))}
+                onClick={() => { trackClick({ cta: 'chat' }); window.dispatchEvent(new CustomEvent('lvtk:open-chatbot')); }}
                 className="group inline-flex items-center justify-center gap-2 h-11 px-5 chamfer-hud-sm border border-white/50 bg-white/10 text-white hover:bg-white/20 backdrop-blur-md transition-all text-xs uppercase tracking-[0.18em] font-semibold focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-blue-900"
               >
                 <Bot className="h-4 w-4" />
