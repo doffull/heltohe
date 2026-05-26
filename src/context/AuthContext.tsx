@@ -148,7 +148,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isStockManager = roles.includes('stock_manager');
   const isPreparator = roles.includes('preparator');
   const isAuditor = roles.includes('auditor');
-  const hasAdminPanelAccess = isAdmin || isStockManager || isPreparator || isAuditor;
+  const isOrderValidator = roles.includes('order_validator');
+  const hasAdminPanelAccess = isAdmin || isStockManager || isPreparator || isAuditor || isOrderValidator;
 
   return (
     <AuthContext.Provider
