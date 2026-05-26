@@ -164,6 +164,13 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
   // Auto-open on home if user can spin and hasn't been auto-prompted today
   const location = useLocation();
   const autoOpenedRef = useRef(false);
+  const demoMode = (() => { try { return localStorage.getItem('lvtk:demoMode') === '1'; } catch { return false; } })();
+  useEffect(() => {
+    // External event to open the roulette (used by intro sequence)
+    const onOpen = () => setOpen(true);
+    window.addEventListener('lvtk:open-roulette', onOpen);
+    return () => window.removeEventListener('lvtk:open-roulette', onOpen);
+  }, []);
   useEffect(() => {
     if (autoOpenedRef.current) return;
     if (!config?.enabled || segments.length === 0) return;
@@ -172,15 +179,15 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
     if (!canSpin) return;
     const dismissH = (config as any).show_after_dismiss_hours ?? 24;
     const lastPrompt = Number(localStorage.getItem('roulette_auto_prompt_at') || 0);
-    if (lastPrompt && Date.now() - lastPrompt < dismissH * 3600_000) return;
+    if (!demoMode && lastPrompt && Date.now() - lastPrompt < dismissH * 3600_000) return;
     autoOpenedRef.current = true;
-    const delay = (config as any).auto_open_delay_ms ?? 1500;
+    const delay = demoMode ? 800 : ((config as any).auto_open_delay_ms ?? 1500);
     const t = setTimeout(() => {
       setOpen(true);
-      localStorage.setItem('roulette_auto_prompt_at', String(Date.now()));
+      if (!demoMode) localStorage.setItem('roulette_auto_prompt_at', String(Date.now()));
     }, delay);
     return () => clearTimeout(t);
-  }, [config?.enabled, segments.length, canSpin, location.pathname]);
+  }, [config?.enabled, segments.length, canSpin, location.pathname, demoMode]);
 
   const cfg = (designSettings as any).unifiedFab || {};
   const rfab = cfg.rouletteFab || {};
