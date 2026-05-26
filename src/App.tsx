@@ -19,7 +19,7 @@ import { AdminViewportProvider } from "@/context/AdminViewportContext";
 import { AdminDragBar } from "@/components/admin/AdminDragBar";
 import { MegaMenuProvider } from "@/context/MegaMenuContext";
 import { MegaMenu } from "@/components/layout/MegaMenu";
-import { ChromeBarTransition } from "@/components/transitions/ChromeBarTransition";
+import { PageShatterTransition } from "@/components/transitions/PageShatterTransition";
 
 // Pages
 import Home from "./pages/Home";
@@ -136,7 +136,7 @@ function AnimatedRoutes() {
   const location = useLocation();
   return (
     <AnimatePresence mode="wait">
-      <ChromeBarTransition key={`c-${location.pathname}`} k={location.pathname} />
+      <PageShatterTransition key={`s-${location.pathname}`} k={location.pathname} />
       <motion.div
         key={location.pathname}
         variants={pageVariants}

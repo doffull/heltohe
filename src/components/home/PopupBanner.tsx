@@ -46,8 +46,11 @@ export default function PopupBanner() {
 
   useEffect(() => {
     if (banners.length > 0) {
-      const dismissed = sessionStorage.getItem(`popup-dismissed-${banners[0].id}`);
-      if (!dismissed) {
+      // 24h TTL: only show again after a full day has passed since last dismiss
+      const dismissedAt = Number(localStorage.getItem(`popup-dismissed-${banners[0].id}`) || 0);
+      const ageMs = Date.now() - dismissedAt;
+      const TTL = 24 * 3600 * 1000;
+      if (!dismissedAt || ageMs > TTL) {
         setBanner(banners[0]);
         const timer = setTimeout(() => setOpen(true), banners[0].displayDelay);
         return () => clearTimeout(timer);
@@ -56,7 +59,6 @@ export default function PopupBanner() {
         setOpen(false);
       }
     } else {
-      // Banner deactivated/deleted — clear state
       setBanner(null);
       setOpen(false);
     }
@@ -64,7 +66,7 @@ export default function PopupBanner() {
 
   const dismiss = () => {
     setOpen(false);
-    if (banner) sessionStorage.setItem(`popup-dismissed-${banner.id}`, 'true');
+    if (banner) localStorage.setItem(`popup-dismissed-${banner.id}`, String(Date.now()));
   };
 
   if (!banner) return null;
