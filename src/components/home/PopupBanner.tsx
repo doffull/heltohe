@@ -105,7 +105,7 @@ export default function PopupBanner() {
               {banner.description && <p className="text-sm">{banner.description}</p>}
               <div className="flex gap-3 pt-2">
                 {banner.link && banner.buttonText && (
-                  <Button asChild className="flex-1">
+                  <Button asChild className="flex-1" onClick={() => trackClick({ link: banner.link })}>
                     <a href={banner.link}>{banner.buttonText}</a>
                   </Button>
                 )}
