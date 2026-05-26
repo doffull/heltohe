@@ -119,7 +119,16 @@ const SIDEBAR_ITEMS = [
 // Routes accessibles selon les rôles non-admin
 const STOCK_MANAGER_ROUTES = new Set(['/admin', '/admin/commandes', '/admin/preparations', '/admin/stock']);
 const PREPARATOR_ROUTES = new Set(['/admin/preparations']);
-const AUDITOR_ROUTES = new Set(['/admin', '/admin/audit', '/admin/errors', '/admin/security']);
+const AUDITOR_ROUTES = new Set([
+  '/admin', '/admin/live', '/admin/produits', '/admin/commandes', '/admin/preparations',
+  '/admin/checkout', '/admin/clients', '/admin/media', '/admin/stock', '/admin/colissimo',
+  '/admin/notifications', '/admin/chatbot', '/admin/woocommerce', '/admin/audit',
+  '/admin/errors', '/admin/security', '/admin/bannieres-analytics', '/admin/roles',
+]);
+const ORDER_VALIDATOR_ROUTES = new Set([
+  '/admin', '/admin/produits', '/admin/commandes', '/admin/preparations',
+  '/admin/checkout', '/admin/clients', '/admin/stock', '/admin/colissimo', '/admin/chatbot',
+]);
 
 function getActiveHref(pathname: string): string {
   if (pathname === '/admin') return '/admin';
