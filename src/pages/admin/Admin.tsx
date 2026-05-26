@@ -102,6 +102,8 @@ const SIDEBAR_ITEMS = [
   { icon: Gift, label: 'Roulette', href: '/admin/roulette' },
   { icon: Palette, label: 'Design', href: '/admin/design' },
   { icon: MousePointer, label: 'Icônes Accueil', href: '/admin/home-icons' },
+  { icon: Sparkles, label: 'Transitions', href: '/admin/transitions' },
+  { icon: BarChart3, label: 'Analytique Bannières', href: '/admin/bannieres-analytics' },
   { icon: Warehouse, label: 'Stock', href: '/admin/stock' },
   { icon: Truck, label: 'Colissimo', href: '/admin/colissimo' },
   { icon: Bell, label: 'Notifications', href: '/admin/notifications' },
