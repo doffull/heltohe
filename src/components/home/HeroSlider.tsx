@@ -75,7 +75,7 @@ export function HeroSlider() {
     : (currentSlide.objectPosition || 'center');
 
   return (
-    <div className="relative h-[55vh] sm:h-[70vh] lg:h-[80vh] overflow-hidden">
+    <div className="relative -mx-3 lg:-mx-5 -mt-3 lg:-mt-5 h-[100svh] sm:h-[92vh] lg:h-[94vh] overflow-hidden bg-black">
       {/* Background Layer (slowest parallax) */}
       <motion.div
         className={cn(
@@ -89,14 +89,14 @@ export function HeroSlider() {
             src={bgMedia}
             autoPlay muted loop playsInline
             className="w-full h-full"
-            style={{ objectFit, objectPosition }}
+            style={{ objectFit: 'cover', objectPosition }}
           />
         ) : (
           <img
             src={bgMedia}
             alt={currentSlide.title}
             className="w-full h-full"
-            style={{ objectFit, objectPosition }}
+            style={{ objectFit: 'cover', objectPosition }}
             fetchPriority="high"
           />
         )}
@@ -130,111 +130,114 @@ export function HeroSlider() {
         </motion.div>
       )}
 
-      {/* Overlay */}
+      {/* Bottom-up gradient overlay for legibility */}
       <div
-        className={cn(
-          "absolute inset-0 z-[3]",
-          showSliderOverlay
-            ? "bg-gradient-to-r from-background via-background/70 to-transparent"
-            : "bg-gradient-to-t from-background via-background/50 to-transparent"
-        )}
+        className="absolute inset-0 z-[3] pointer-events-none"
+        style={{
+          background:
+            'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.55) 25%, rgba(0,0,0,0.15) 55%, rgba(0,0,0,0) 75%)',
+        }}
       />
 
-      {/* Content */}
-      <div className="relative z-10 h-full flex flex-col justify-center px-6 lg:px-16">
-        <div className="max-w-2xl space-y-6 animate-slide-in-left">
-          {/* Subtitle — inline editable */}
-          <InlineEditable
-            fieldKey={`hero-subtitle-${currentIndex}`}
-            value={currentSlide.subtitle || ''}
-            onChange={(v) => updateCurrentSlide({ subtitle: v })}
-            as="div"
-            className="hud-text text-sm tracking-[0.3em]"
-            style={{ color: currentSlide.accentColor }}
-          />
+      {/* Content — anchored at bottom-left */}
+      <div className="relative z-10 h-full flex flex-col justify-end px-5 sm:px-10 lg:px-16 pb-16 sm:pb-20 lg:pb-24">
+        <div className="max-w-4xl space-y-3 sm:space-y-4 animate-fade-in">
+          {/* Eyebrow / Subtitle */}
+          {currentSlide.subtitle && (
+            <InlineEditable
+              fieldKey={`hero-subtitle-${currentIndex}`}
+              value={currentSlide.subtitle || ''}
+              onChange={(v) => updateCurrentSlide({ subtitle: v })}
+              as="div"
+              className="hud-text text-[10px] sm:text-xs tracking-[0.3em] text-white/80 uppercase"
+              style={{ color: currentSlide.accentColor || undefined }}
+            />
+          )}
 
-          {/* Title — inline editable */}
-          <h1 className="text-2xl sm:text-4xl lg:text-6xl xl:text-7xl font-bold tracking-tight">
+          {/* Big bold title */}
+          <h1
+            className="font-bold uppercase tracking-tight text-white leading-[0.92]"
+            style={{ fontSize: 'clamp(2.25rem, 9vw, 5.5rem)' }}
+          >
             <InlineEditable
               fieldKey={`hero-title-${currentIndex}`}
               value={currentSlide.title || ''}
               onChange={(v) => updateCurrentSlide({ title: v })}
               as="span"
-              className={cn(
-                "glitch-effect",
-                isOpen && "!no-underline"
-              )}
-              style={isOpen ? undefined : undefined}
+              className={cn(isOpen && "!no-underline")}
             >
-              <span className="glitch-effect" data-text={currentSlide.title}>
+              <span className="whitespace-pre-line drop-shadow-[0_2px_24px_rgba(0,0,0,0.35)]">
                 {currentSlide.title}
               </span>
             </InlineEditable>
           </h1>
 
-          {/* CTA button — inline editable label */}
-          <Button
-            onClick={() => { if (!isOpen) setCurrentView('Shop'); }}
-            className={cn(
-              "chamfer-hud px-5 py-4 sm:px-8 sm:py-6 hud-text text-xs sm:text-sm tracking-wider",
-              "bg-primary text-primary-foreground hover:bg-primary/90",
-              "transition-all duration-300 hover:scale-105",
-              isOpen && "cursor-default hover:scale-100"
-            )}
-            style={{ backgroundColor: currentSlide.accentColor }}
-          >
-            <InlineEditable
-              fieldKey={`hero-cta-${currentIndex}`}
-              value={currentSlide.ctaText || ''}
-              onChange={(v) => updateCurrentSlide({ ctaText: v })}
-              as="span"
-            />
-          </Button>
+          {/* CTA */}
+          {currentSlide.ctaText && (
+            <div className="pt-2 sm:pt-3">
+              <Button
+                onClick={() => { if (!isOpen) setCurrentView('Shop'); }}
+                className={cn(
+                  "px-6 py-5 sm:px-8 sm:py-6 text-xs sm:text-sm tracking-wider uppercase font-bold",
+                  "bg-white text-black hover:bg-white/90 rounded-none",
+                  "transition-all duration-300",
+                  isOpen && "cursor-default"
+                )}
+                style={{
+                  backgroundColor: currentSlide.accentColor || undefined,
+                  color: currentSlide.accentColor ? '#fff' : undefined,
+                }}
+              >
+                <InlineEditable
+                  fieldKey={`hero-cta-${currentIndex}`}
+                  value={currentSlide.ctaText || ''}
+                  onChange={(v) => updateCurrentSlide({ ctaText: v })}
+                  as="span"
+                />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Navigation arrows */}
+      {/* Navigation arrows — discreet */}
       {heroSlides.length > 1 && (
         <>
           <button
             onClick={goToPrev}
-            className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-3 bg-background/50 backdrop-blur-sm border border-border/30 chamfer-hud-sm hover:bg-background/80 transition-colors"
+            aria-label="Slide précédent"
+            className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-20 p-2.5 sm:p-3 bg-black/30 backdrop-blur-sm text-white hover:bg-black/60 transition-colors rounded-full"
           >
-            <ChevronLeft className="h-6 w-6" />
+            <ChevronLeft className="h-5 w-5" />
           </button>
           <button
             onClick={goToNext}
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-3 bg-background/50 backdrop-blur-sm border border-border/30 chamfer-hud-sm hover:bg-background/80 transition-colors"
+            aria-label="Slide suivant"
+            className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-20 p-2.5 sm:p-3 bg-black/30 backdrop-blur-sm text-white hover:bg-black/60 transition-colors rounded-full"
           >
-            <ChevronRight className="h-6 w-6" />
+            <ChevronRight className="h-5 w-5" />
           </button>
         </>
       )}
 
-      {/* Dots */}
+      {/* Dots — bottom right */}
       {heroSlides.length > 1 && (
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3">
+        <div className="absolute bottom-5 right-5 sm:bottom-6 sm:right-8 z-20 flex items-center gap-2">
           {heroSlides.map((_, index) => (
             <button
               key={index}
               onClick={() => goToSlide(index)}
+              aria-label={`Aller au slide ${index + 1}`}
               className={cn(
-                "w-2 h-2 transition-all duration-300",
+                "h-1 transition-all duration-300 rounded-full",
                 index === currentIndex
-                  ? "w-8 bg-primary"
-                  : "bg-muted-foreground/50 hover:bg-muted-foreground"
+                  ? "w-8 bg-white"
+                  : "w-3 bg-white/40 hover:bg-white/70"
               )}
             />
           ))}
         </div>
       )}
-
-      {/* Slide counter */}
-      <div className="absolute bottom-8 right-8 z-20 hud-text text-sm text-muted-foreground">
-        <span className="text-primary">{String(currentIndex + 1).padStart(2, '0')}</span>
-        <span className="mx-2">/</span>
-        <span>{String(heroSlides.length).padStart(2, '0')}</span>
-      </div>
 
       {/* Visual editor hint overlay */}
       {isOpen && (
