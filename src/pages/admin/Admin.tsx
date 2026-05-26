@@ -105,6 +105,7 @@ const SIDEBAR_ITEMS = [
   { icon: ShoppingBag, label: 'WooCommerce', href: '/admin/woocommerce' },
   { icon: ClipboardCheck, label: 'Audit', href: '/admin/audit' },
   { icon: Activity, label: 'Erreurs Client', href: '/admin/errors' },
+  { icon: ShieldAlert, label: 'Sécurité', href: '/admin/security' },
   { icon: UserCog, label: 'Rôles', href: '/admin/roles' },
   { icon: Settings, label: 'Paramètres', href: '/admin/parametres' },
 ];
@@ -112,6 +113,7 @@ const SIDEBAR_ITEMS = [
 // Routes accessibles selon les rôles non-admin
 const STOCK_MANAGER_ROUTES = new Set(['/admin', '/admin/commandes', '/admin/preparations', '/admin/stock']);
 const PREPARATOR_ROUTES = new Set(['/admin/preparations']);
+const AUDITOR_ROUTES = new Set(['/admin', '/admin/audit', '/admin/errors', '/admin/security']);
 
 function getActiveHref(pathname: string): string {
   if (pathname === '/admin') return '/admin';
