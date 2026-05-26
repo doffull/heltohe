@@ -23,6 +23,7 @@ export default function AdminRoles() {
   const [searching, setSearching] = useState(false);
   const [found, setFound] = useState<FoundUser | null>(null);
   const [searched, setSearched] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<AppRole>('admin');
   const [pending, setPending] = useState<null | 'grant' | 'revoke'>(null);
   const [busy, setBusy] = useState(false);
   const { data: audit, refetch: refetchAudit } = useRoleAuditLog();
