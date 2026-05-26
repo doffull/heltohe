@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useApp } from '@/context/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,7 @@ export function HomeCustomSectionsEditor() {
   const initial = ((designSettings as any).homeCustomSections || []) as PageSection[];
   const [sections, setSections] = useState<PageSection[]>(initial);
   const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const cur = (designSettings as any).homeCustomSections;
@@ -23,7 +25,10 @@ export function HomeCustomSectionsEditor() {
     try {
       setSaving(true);
       updateDesignSettings({ homeCustomSections: sections } as any);
+      // Wait a tick so the ref in AppContext picks up the latest state before flushing
+      await new Promise((r) => setTimeout(r, 0));
       await flushDesignSettings();
+      await queryClient.invalidateQueries({ queryKey: ['design_settings'] });
       toast.success('Sections enregistrées — elles sont visibles sur la page d\'accueil.');
     } catch (e: any) {
       toast.error('Erreur lors de l\'enregistrement', { description: e?.message });

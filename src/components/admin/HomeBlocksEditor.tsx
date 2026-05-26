@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { GripVertical, Save, Eye, EyeOff, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+import { DndContext, closestCenter, PointerSensor, TouchSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { PageSection } from '@/hooks/usePages';
@@ -40,16 +40,21 @@ function Row({ b, onToggle, isCustom }: { b: Block; onToggle: () => void; isCust
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: b.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   return (
-    <div ref={setNodeRef} style={style} className="flex items-center gap-3 p-3 border rounded bg-background">
-      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none p-1">
-        <GripVertical className="h-4 w-4 text-muted-foreground" />
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2 p-2 sm:p-3 border rounded bg-background min-h-14">
+      <button
+        {...attributes}
+        {...listeners}
+        aria-label="Glisser pour réordonner"
+        className="cursor-grab active:cursor-grabbing touch-none p-2 -m-1 rounded hover:bg-muted shrink-0"
+      >
+        <GripVertical className="h-5 w-5 text-muted-foreground" />
       </button>
-      {isCustom && <Sparkles className="h-4 w-4 text-primary" />}
+      {isCustom && <Sparkles className="h-4 w-4 text-primary shrink-0" />}
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium truncate">{b.label || b.id}</div>
         <div className="text-[10px] text-muted-foreground truncate">{isCustom ? 'Section personnalisée' : b.id}</div>
       </div>
-      {b.visible ? <Eye className="h-4 w-4 text-primary" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
+      {b.visible ? <Eye className="h-4 w-4 text-primary shrink-0" /> : <EyeOff className="h-4 w-4 text-muted-foreground shrink-0" />}
       <Switch checked={b.visible} onCheckedChange={onToggle} />
     </div>
   );
@@ -57,7 +62,11 @@ function Row({ b, onToggle, isCustom }: { b: Block; onToggle: () => void; isCust
 
 export function HomeBlocksEditor() {
   const { designSettings, updateDesignSettings, flushDesignSettings } = useApp();
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 8 } }),
+    useSensor(KeyboardSensor),
+  );
 
   const customSections = ((designSettings as any).homeCustomSections || []) as PageSection[];
 
@@ -99,6 +108,7 @@ export function HomeBlocksEditor() {
 
   const save = async () => {
     updateDesignSettings({ homePageBlocks: blocks } as any);
+    await new Promise((r) => setTimeout(r, 0));
     await flushDesignSettings();
     toast.success("Ordre des sections enregistré");
   };
