@@ -62,7 +62,11 @@ function Row({ b, onToggle, isCustom }: { b: Block; onToggle: () => void; isCust
 
 export function HomeBlocksEditor() {
   const { designSettings, updateDesignSettings, flushDesignSettings } = useApp();
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 8 } }),
+    useSensor(KeyboardSensor),
+  );
 
   const customSections = ((designSettings as any).homeCustomSections || []) as PageSection[];
 
