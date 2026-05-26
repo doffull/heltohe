@@ -10,7 +10,7 @@ import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } 
 import { CSS } from '@dnd-kit/utilities';
 import type { PageSection } from '@/hooks/usePages';
 
-type BuiltinId = 'hero' | 'categories' | 'featured' | 'flash' | 'newArrivals' | 'loyalty' | 'newsletter';
+type BuiltinId = 'hero' | 'categories' | 'featured' | 'flash' | 'newArrivals' | 'voiceBanner' | 'loyalty' | 'newsletter';
 interface Block { id: string; visible: boolean; label?: string }
 
 const BUILTIN_LABELS: Record<BuiltinId, string> = {
@@ -19,6 +19,7 @@ const BUILTIN_LABELS: Record<BuiltinId, string> = {
   featured: 'Produits en vedette',
   flash: 'Flash promo (compte à rebours)',
   newArrivals: 'Dernières arrivées',
+  voiceBanner: 'Bannière Commandes vocales + IGRA',
   loyalty: 'Bandeau fidélité',
   newsletter: 'Newsletter CTA',
 };

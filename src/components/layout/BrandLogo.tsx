@@ -59,8 +59,19 @@ export function BrandLogo({ variant = 'header', size, className, altOverride }: 
   useEffect(() => { setImgError(false); }, [url]);
   const showImage = !!url && !imgError;
 
+  const isHeader = variant === 'header';
+
   return (
-    <span className={className} style={wrapperStyle} aria-label={altOverride || brandName}>
+    <span
+      className={className}
+      style={{
+        ...wrapperStyle,
+        position: 'relative',
+        overflow: 'hidden',
+        animation: isHeader ? 'logo-breathe 8s ease-in-out infinite' : undefined,
+      }}
+      aria-label={altOverride || brandName}
+    >
       {showImage ? (
         <img
           src={url}
@@ -79,6 +90,23 @@ export function BrandLogo({ variant = 'header', size, className, altOverride }: 
         }}>
           {brandName}
         </span>
+      )}
+      {isHeader && (
+        <span
+          aria-hidden
+          style={{
+            position: 'absolute',
+            top: '-20%',
+            left: '-40%',
+            width: '60%',
+            height: '140%',
+            background:
+              'linear-gradient(100deg, transparent 0%, rgba(255,255,255,0.55) 50%, transparent 100%)',
+            mixBlendMode: 'overlay',
+            pointerEvents: 'none',
+            animation: 'sheen 6s ease-in-out infinite',
+          }}
+        />
       )}
     </span>
   );

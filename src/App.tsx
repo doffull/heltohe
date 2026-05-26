@@ -19,6 +19,7 @@ import { AdminViewportProvider } from "@/context/AdminViewportContext";
 import { AdminDragBar } from "@/components/admin/AdminDragBar";
 import { MegaMenuProvider } from "@/context/MegaMenuContext";
 import { MegaMenu } from "@/components/layout/MegaMenu";
+import { ChromeBarTransition } from "@/components/transitions/ChromeBarTransition";
 
 // Pages
 import Home from "./pages/Home";
@@ -47,15 +48,15 @@ import { MainLayout } from "./components/layout/MainLayout";
 const queryClient = new QueryClient();
 
 const pageVariants = {
-  initial: { opacity: 0, y: 24, filter: 'blur(6px)' as any },
-  animate: { opacity: 1, y: 0, filter: 'blur(0px)' as any },
-  exit: { opacity: 0, y: -16, filter: 'blur(4px)' as any },
+  initial: { opacity: 0, scale: 1.04, filter: 'grayscale(1) blur(6px)' as any },
+  animate: { opacity: 1, scale: 1, filter: 'grayscale(0) blur(0px)' as any },
+  exit: { opacity: 0, scale: 1.05, filter: 'grayscale(1) blur(4px)' as any },
 };
 
 const pageTransition = {
   type: "tween" as const,
   ease: [0.22, 1, 0.36, 1] as const,
-  duration: 0.5,
+  duration: 0.7,
 };
 
 function ScrollToTop() {
@@ -135,7 +136,7 @@ function AnimatedRoutes() {
   const location = useLocation();
   return (
     <AnimatePresence mode="wait">
-      <FlashOverlay key={`f-${location.pathname}`} k={location.pathname} />
+      <ChromeBarTransition key={`c-${location.pathname}`} k={location.pathname} />
       <motion.div
         key={location.pathname}
         variants={pageVariants}
