@@ -1,116 +1,64 @@
-# Plan d'implémentation
+# Corrections admin Page d'accueil
 
-Travail séquentiel avec vérification (build + smoke test console/network) après chaque bloc.
+## Diagnostic
 
----
+J'ai trouvé **un bug racine** qui explique pourquoi rien ne s'enregistre vraiment côté site.
 
-## 1. Rôle "auditor" (lecture seule + audit/logs)
+Dans `src/context/AppContext.tsx`, `flushDesignSettings()` sauve la variable `designSettings` capturée par closure :
 
-**Backend**
-- Ajouter `'auditor'` à l'enum `app_role`.
-- Politiques RLS additionnelles `SELECT` pour `auditor` sur : `orders`, `products`, `customers` (sans email/téléphone exposés via une vue), `error_logs`, `role_audit_log`, `design_settings`, `inventory`, `stock_levels`.
-- **Aucune** policy INSERT/UPDATE/DELETE pour `auditor`.
-- Mise à jour `hasAdminPanelAccess` dans `AuthContext` → ajouter `isAuditor`.
+```ts
+const flushDesignSettings = useCallback(async () => {
+  await saveDesignSettings.mutateAsync(designSettings); // ← état STALE
+}, [saveDesignSettings, designSettings]);
+```
 
-**Frontend**
-- Sidebar admin : pour `auditor`, n'afficher que `Dashboard`, `Audit`, `Error Logs`, `Security` (nouveau).
-- Guard `<RequireRole>` qui bloque routes non-autorisées avec redirection vers `/admin/audit`.
-- Composant global `<ReadOnlyGuard>` qui désactive boutons "Enregistrer / Supprimer / Modifier" si `isAuditor`.
-- Page `/admin/roles` : permettre à l'admin de créer un compte auditor (invite par email + assignation du rôle).
+Or dans `HomeCustomSectionsEditor` (et `HomeBlocksEditor`) on fait :
+```ts
+updateDesignSettings({ homeCustomSections: sections });
+await flushDesignSettings(); // appelé avec l'ancien état React
+```
 
----
+Comme `setState` est asynchrone, le flush envoie en BDD **les anciennes données**, sans la nouvelle section image. Le toast dit "enregistré" mais la home ne change pas. C'est exactement le symptôme décrit.
 
-## 2. Tableau de bord `/admin/security`
+## Corrections
 
-Nouvelle page agrégeant :
-- **Erreurs JS récentes** (depuis `error_logs`, 7 derniers jours, groupées par message).
-- **Tentatives de connexion échouées** (depuis `auth.audit_log_entries` via RPC `security_definer`).
-- **Audit RLS** : liste des tables sans RLS activée, fonctions sans `search_path`, vues `SECURITY DEFINER` (RPC qui lit `pg_catalog`).
-- **Intégrité RPC** : check que les fonctions critiques (`validate_and_create_order`, `spin_roulette`) existent toujours.
-- **Score global** : 0–100 calculé côté serveur.
-- Bouton "Re-scan maintenant" qui appelle une edge function `security-scan`.
+### 1. Fix sauvegarde (AppContext)
+- Maintenir un `designSettingsRef` synchronisé via `useEffect`.
+- `flushDesignSettings()` lit la valeur depuis le ref → toujours à jour.
+- Annule le debounce avant de pousser pour éviter les écritures concurrentes.
 
----
+### 2. Sections personnalisées visibles sur la home
+- Vérifier que les `custom:*` blocs absents de `homePageBlocks` sont bien ajoutés à la volée (déjà le cas dans `Home.tsx` lignes 192-200, mais ne fonctionnait pas à cause du bug 1).
+- Après fix, ajouter dans `HomeCustomSectionsEditor` une **invalidation explicite** du cache React Query `['design_settings']` après save, pour forcer un re-render immédiat sur les autres onglets.
 
-## 3. Cache intelligent + invalidation au publish
+### 3. Drag-and-drop mobile-friendly (HomeBlocksEditor)
+- Agrandir la zone de poignée tactile (`p-2`, `min-h-12`, `touch-none`).
+- Activer `KeyboardSensor` + `TouchSensor` en complément de PointerSensor (déjà partiellement présent).
+- Layout vertical empilé sur mobile, suppression du débordement horizontal.
 
-**Cache client**
-- React Query : `staleTime` long (5 min) pour données semi-statiques (`design_settings`, `categories`, `products` listing), court (0) pour `orders`, `cart`.
-- Service Worker (Workbox via vite-plugin-pwa) : cache `network-first` pour HTML, `stale-while-revalidate` pour assets hashés.
+### 4. UX mobile de `/admin/home-icons`
+- Conteneur racine : `space-y-4 p-3` (au lieu de `p-4 md:p-6`).
+- Grille édition : passer de `lg:grid-cols-3` à un layout 1 colonne sur < `lg`, sans scroll latéral.
+- Boutons d'action (Monter/Descendre/Dupliquer/Supprimer) : empilement vertical sur mobile + zone tactile 36×36 minimum.
+- Sticky header "Ajouter un bouton" pour rester accessible.
 
-**Invalidation automatique au publish**
-- Fichier `public/version.json` régénéré au build avec un hash unique (plugin Vite).
-- Hook `useAppVersion` qui poll `/version.json` toutes les 60 s. Si le hash change → toast "Nouvelle version disponible" + `window.location.reload(true)` + `caches.delete()` + `queryClient.clear()`.
-- Headers `Cache-Control: no-cache` sur `index.html` et `version.json` via meta tags + SW.
+### 5. Cohérence visuelle
+- Le `HomeCustomSectionsEditor` réutilise déjà `PageBuilder` qui gère le drag (boutons ↑/↓). On garde, mais on augmente les zones tactiles.
 
----
+## Vérification post-fix
 
-## 4. Jeu de tirage au sort par cartes (remplace la roulette)
+1. `npm` build (auto par harness).
+2. Smoke test :
+   - Ajouter section Image → Enregistrer → ouvrir `/` → la section apparaît à la fin.
+   - Réordonner via drag dans `HomeBlocksEditor` → Enregistrer → ouvrir `/` → l'ordre correspond.
+   - Tester sur viewport 360px : scroll vertical uniquement, drag possible au doigt.
 
-**Nouveau composant** `CardLuckyDraw` (mobile-first 360px) :
-- Affiche 5 cartes face cachée alignées (grid responsive : 5 colonnes desktop, 2 lignes × 3 mobile).
-- Animation flip 3D au clic sur la carte choisie (CSS `transform: rotateY` + perspective).
-- Confettis légers à la révélation.
-- Réutilise **intégralement** la table `roulette_segments` (cartes = segments actifs) et la RPC `spin_roulette` côté backend — aucune migration nécessaire.
-- Renomme `RouletteFab` → `LuckyDrawFab` ; le label admin reste "Jeu-concours".
-- La vieille roulette canvas est supprimée, mais la config admin (`AdminRoulette`) est conservée et adaptée (label "Cartes" au lieu de "Segments").
+## Fichiers touchés
 
----
+- `src/context/AppContext.tsx` (fix flush via ref)
+- `src/components/admin/HomeBlocksEditor.tsx` (DnD tactile + layout mobile)
+- `src/components/admin/HomeCustomSectionsEditor.tsx` (invalidation cache après save)
+- `src/pages/admin/AdminHomeIcons.tsx` (responsive mobile)
+- `src/components/admin/PageBuilder.tsx` (zones tactiles élargies)
 
-## 5. Popup CGV bloquant à la 1ère visite
-
-- Composant `<CgvConsentGate>` monté dans `App.tsx`, rendu **au-dessus** de tout le contenu si pas de consentement.
-- Stockage : `localStorage` (`cgv_consent_v1` = `{ version, acceptedAt }`) + table `cgv_consents` (id, session_hash, ip_hash, version, accepted_at, user_agent) via RPC `record_cgv_consent`.
-- Versionning : si on change `cgv_version` dans `design_settings`, le popup réapparaît.
-- Bouton **Refuser** → écran de blocage avec lien externe (google.com) et message "Vous devez accepter les CGV pour utiliser ce site".
-- Bouton **Accepter** → ferme le gate.
-- Lien "Lire les CGV" → ouvre `/cgv` dans nouvel onglet sans fermer le popup.
-
----
-
-## 6. Popup newsletter récurrent
-
-> ⚠️ Toutes les 20–30 s c'est **agressif** (risque SEO + UX). Implémentation choisie :
-> **1ère apparition à 30 s, puis si fermé sans inscription → réapparition toutes les 5 min jusqu'à 3 fois max par session**, puis plus jamais avant 24 h.
-> Si tu confirmes vouloir vraiment 20–30 s strict, dis-le et j'ajuste.
-
-- Réutilise le système `newsletter_popups` existant (`NewsletterPopupHost`).
-- Ajout d'un mode `recurring` dans `display_trigger` avec `interval_seconds` et `max_per_session`.
-- Inscription = arrête définitivement la récurrence (localStorage flag).
-
----
-
-## 7. Vérification systématique après chaque bloc
-
-Après chaque tâche ci-dessus :
-1. Build TypeScript propre (auto par le harness).
-2. Smoke test : ouvrir route concernée, lire `console` + `network` pour repérer 4xx/5xx ou erreurs JS.
-3. Si admin/auditor : login dans les deux rôles et vérifier les permissions.
-
----
-
-## Ordre d'exécution proposé
-
-1. **Rôle auditor** (migration + AuthContext + guards) → vérif
-2. **Dashboard /admin/security** (RPC + UI) → vérif
-3. **Jeu de cartes** (remplace roulette, mobile-first) → vérif
-4. **Popup CGV bloquant** → vérif
-5. **Newsletter récurrent** → vérif
-6. **Cache + invalidation publish** (en dernier car SW impacte tout) → vérif complète
-
----
-
-## Détails techniques
-
-- **Nouvelles migrations** : enum `auditor`, table `cgv_consents`, RPC `record_cgv_consent`, RPC `security_audit_snapshot`, policies SELECT auditor.
-- **Nouvelles edge functions** : `security-scan` (cron quotidien optionnel à activer plus tard).
-- **Nouveaux fichiers front** :
-  - `src/pages/admin/AdminSecurity.tsx`
-  - `src/components/security/CgvConsentGate.tsx`
-  - `src/components/home/CardLuckyDraw.tsx` (+ FAB renommé)
-  - `src/hooks/useAppVersion.ts`
-  - `src/lib/auditorPermissions.ts`
-- **Vite plugins** : `vite-plugin-pwa` pour SW.
-- **Pas de modification** de `client.ts`, `types.ts`, ni du `config.toml` (sauf si edge function avec config spécifique).
-
-Confirme ce plan (ou demande des ajustements, notamment sur la fréquence du popup newsletter) et je lance l'implémentation bloc par bloc.
+Aucun changement BDD, aucun changement de logique métier — uniquement bug fix + UX mobile.
