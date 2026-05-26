@@ -15,6 +15,7 @@ export function VoiceAssistantBanner() {
   const { designSettings } = useApp();
   const reduce = useReducedMotion();
   const cfg: VoiceAssistantBannerConfig = (designSettings as any).voiceBanner || {};
+  const { trackClick } = useBannerAnalytics('voice-assistant-home', 'voice_assistant', cfg.enabled !== false);
   if (cfg.enabled === false) return null;
 
   const title = cfg.title || 'Commandez à la voix';
