@@ -134,9 +134,12 @@ function FlashOverlay({ k }: { k: string }) {
 
 function AnimatedRoutes() {
   const location = useLocation();
+  const { data: settings } = useDesignSettings();
+  const transitionId = ((settings as any)?.pageTransition as string) || 'shatter';
+  const TransitionComp = getTransition(transitionId).Component;
   return (
     <AnimatePresence mode="wait">
-      <PageShatterTransition key={`s-${location.pathname}`} k={location.pathname} />
+      {TransitionComp && <TransitionComp key={`t-${location.pathname}`} k={location.pathname} />}
       <motion.div
         key={location.pathname}
         variants={pageVariants}
