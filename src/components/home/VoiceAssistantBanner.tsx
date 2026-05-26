@@ -1,6 +1,7 @@
 import { Mic, Bot, ArrowRight, Sparkles } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useApp } from '@/context/AppContext';
+import { useBannerAnalytics } from '@/hooks/useBannerAnalytics';
 
 interface VoiceAssistantBannerConfig {
   enabled?: boolean;
