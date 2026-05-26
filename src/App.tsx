@@ -191,6 +191,22 @@ function AdminVisualEditor() {
   );
 }
 
+function DemoModeBadge() {
+  const [on, setOn] = useState(() => { try { return localStorage.getItem('lvtk:demoMode') === '1'; } catch { return false; } });
+  useEffect(() => {
+    const upd = () => { try { setOn(localStorage.getItem('lvtk:demoMode') === '1'); } catch { /* noop */ } };
+    window.addEventListener('storage', upd);
+    window.addEventListener('lvtk:demo-mode-changed', upd);
+    return () => { window.removeEventListener('storage', upd); window.removeEventListener('lvtk:demo-mode-changed', upd); };
+  }, []);
+  if (!on) return null;
+  return (
+    <div className="fixed bottom-3 right-3 z-[9000] px-2.5 py-1 rounded-full bg-amber-500/95 text-amber-950 text-[10px] font-bold uppercase tracking-widest shadow-lg pointer-events-none">
+      DEMO
+    </div>
+  );
+}
+
 function AppShell() {
   const [showSplash, setShowSplash] = useState(true);
   return (
