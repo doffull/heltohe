@@ -230,11 +230,13 @@ export default function Admin() {
     ? new Set(SIDEBAR_ITEMS.map(i => i.href))
     : isAuditor
       ? AUDITOR_ROUTES
-      : isStockManager
-        ? STOCK_MANAGER_ROUTES
-        : isPreparator
-          ? PREPARATOR_ROUTES
-          : new Set();
+      : isOrderValidator
+        ? ORDER_VALIDATOR_ROUTES
+        : isStockManager
+          ? STOCK_MANAGER_ROUTES
+          : isPreparator
+            ? PREPARATOR_ROUTES
+            : new Set();
 
   const activeHref = getActiveHref(location.pathname);
   const activeColor = sectionColors[activeHref] || '#6B7280';
