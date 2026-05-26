@@ -237,15 +237,34 @@ export default function PageBuilder({ sections, onChange }: PageBuilderProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold uppercase tracking-wider">Sections de la page</h3>
-        <span className="text-xs text-muted-foreground">{sections.length} section{sections.length !== 1 ? 's' : ''}</span>
+      <div className="sticky top-0 z-10 -mx-1 px-1 py-2 bg-background/95 backdrop-blur border-b border-border">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Plus className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-bold uppercase tracking-wider">Ajouter une section</h3>
+          </div>
+          <span className="text-xs text-muted-foreground">{sections.length} section{sections.length !== 1 ? 's' : ''}</span>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          {SECTION_TYPES.map(t => (
+            <Button
+              key={t.value}
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={() => addSection(t.value)}
+            >
+              <t.icon className="h-3 w-3" />
+              {t.label}
+            </Button>
+          ))}
+        </div>
       </div>
 
       {sections.length === 0 && (
         <div className="border-2 border-dashed border-border rounded-lg p-8 text-center text-muted-foreground">
           <LayoutGrid className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">Aucune section. Ajoutez-en une ci-dessous.</p>
+          <p className="text-sm">Aucune section. Cliquez sur un bouton ci-dessus pour ajouter du contenu personnalisé.</p>
         </div>
       )}
 
@@ -264,21 +283,23 @@ export default function PageBuilder({ sections, onChange }: PageBuilderProps) {
         ))}
       </div>
 
-      {/* Add section */}
-      <div className="flex gap-2 flex-wrap">
-        {SECTION_TYPES.map(t => (
-          <Button
-            key={t.value}
-            variant="outline"
-            size="sm"
-            className="gap-1.5 text-xs"
-            onClick={() => addSection(t.value)}
-          >
-            <t.icon className="h-3 w-3" />
-            {t.label}
-          </Button>
-        ))}
-      </div>
+      {sections.length > 2 && (
+        <div className="flex gap-2 flex-wrap pt-3 border-t border-border">
+          <span className="text-xs text-muted-foreground w-full mb-1">+ Ajouter une autre section :</span>
+          {SECTION_TYPES.map(t => (
+            <Button
+              key={`bottom-${t.value}`}
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={() => addSection(t.value)}
+            >
+              <t.icon className="h-3 w-3" />
+              {t.label}
+            </Button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
