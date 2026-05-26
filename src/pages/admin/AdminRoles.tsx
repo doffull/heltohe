@@ -52,14 +52,14 @@ export default function AdminRoles() {
     setBusy(true);
     try {
       if (pending === 'grant') {
-        const { error } = await supabase.from('user_roles').insert({ user_id: found.user_id, role: 'admin' });
+        const { error } = await supabase.from('user_roles').insert({ user_id: found.user_id, role: selectedRole });
         if (error && !`${error.message}`.includes('duplicate')) throw error;
-        toast({ title: 'Rôle admin attribué', description: found.email });
+        toast({ title: `Rôle ${selectedRole} attribué`, description: found.email });
       } else {
         const { error } = await supabase.from('user_roles').delete()
-          .eq('user_id', found.user_id).eq('role', 'admin');
+          .eq('user_id', found.user_id).eq('role', selectedRole);
         if (error) throw error;
-        toast({ title: 'Rôle admin retiré', description: found.email });
+        toast({ title: `Rôle ${selectedRole} retiré`, description: found.email });
       }
       setPending(null);
       await search();
@@ -73,7 +73,7 @@ export default function AdminRoles() {
   };
 
   const isSelf = found?.user_id === user?.id;
-  const isAdmin = !!found?.roles?.includes('admin');
+  const hasRole = !!found?.roles?.includes(selectedRole);
 
   return (
     <div className="space-y-6 max-w-3xl">
