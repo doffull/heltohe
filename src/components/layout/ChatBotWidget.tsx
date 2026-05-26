@@ -85,6 +85,12 @@ export function ChatBotWidget({ open: openProp, onOpenChange, hideTrigger }: Cha
     if (onOpenChange) onOpenChange(v);
     if (openProp === undefined) setOpenInternal(v);
   };
+  useEffect(() => {
+    const h = () => setOpen(true);
+    window.addEventListener('lvtk:open-chatbot', h);
+    return () => window.removeEventListener('lvtk:open-chatbot', h);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
