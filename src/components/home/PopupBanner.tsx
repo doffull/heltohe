@@ -4,6 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useBannerAnalytics } from '@/hooks/useBannerAnalytics';
+import { useDemoMode } from '@/hooks/useDemoMode';
 
 interface PopupBannerData {
   id: string;
