@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
-type AppRole = 'admin' | 'stock_manager' | 'preparator';
+type AppRole = 'admin' | 'stock_manager' | 'preparator' | 'auditor';
 
 interface AuthContextType {
   user: User | null;
@@ -12,6 +12,7 @@ interface AuthContextType {
   roles: AppRole[];
   isStockManager: boolean;
   isPreparator: boolean;
+  isAuditor: boolean;
   hasAdminPanelAccess: boolean;
   signUp: (email: string, password: string, firstName?: string, lastName?: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -145,13 +146,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isStockManager = roles.includes('stock_manager');
   const isPreparator = roles.includes('preparator');
-  const hasAdminPanelAccess = isAdmin || isStockManager || isPreparator;
+  const isAuditor = roles.includes('auditor');
+  const hasAdminPanelAccess = isAdmin || isStockManager || isPreparator || isAuditor;
 
   return (
     <AuthContext.Provider
       value={{
         user, session, isLoading, isAdmin, roles,
-        isStockManager, isPreparator, hasAdminPanelAccess,
+        isStockManager, isPreparator, isAuditor, hasAdminPanelAccess,
         signUp, signIn, signOut,
       }}
     >

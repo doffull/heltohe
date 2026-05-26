@@ -29,7 +29,8 @@ import {
   Gift,
   MousePointer,
   Activity,
-  UserCog
+  UserCog,
+  ShieldAlert
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -58,6 +59,7 @@ import AdminRoulette from './AdminRoulette';
 import AdminHomeIcons from './AdminHomeIcons';
 import AdminLive from './AdminLive';
 import AdminRoles from './AdminRoles';
+import AdminSecurity from './AdminSecurity';
 
 export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin': '#6B7280',
@@ -79,6 +81,7 @@ export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin/roulette': '#F59E0B',
   '/admin/parametres': '#64748B',
   '/admin/roles': '#DC2626',
+  '/admin/security': '#0EA5E9',
 };
 
 const SIDEBAR_ITEMS = [
@@ -102,6 +105,7 @@ const SIDEBAR_ITEMS = [
   { icon: ShoppingBag, label: 'WooCommerce', href: '/admin/woocommerce' },
   { icon: ClipboardCheck, label: 'Audit', href: '/admin/audit' },
   { icon: Activity, label: 'Erreurs Client', href: '/admin/errors' },
+  { icon: ShieldAlert, label: 'Sécurité', href: '/admin/security' },
   { icon: UserCog, label: 'Rôles', href: '/admin/roles' },
   { icon: Settings, label: 'Paramètres', href: '/admin/parametres' },
 ];
@@ -109,6 +113,7 @@ const SIDEBAR_ITEMS = [
 // Routes accessibles selon les rôles non-admin
 const STOCK_MANAGER_ROUTES = new Set(['/admin', '/admin/commandes', '/admin/preparations', '/admin/stock']);
 const PREPARATOR_ROUTES = new Set(['/admin/preparations']);
+const AUDITOR_ROUTES = new Set(['/admin', '/admin/audit', '/admin/errors', '/admin/security']);
 
 function getActiveHref(pathname: string): string {
   if (pathname === '/admin') return '/admin';
@@ -183,7 +188,7 @@ function SidebarContent({ user, signOut, location, sectionColors, allowedHrefs, 
 
 export default function Admin() {
   const location = useLocation();
-  const { user, isAdmin, isStockManager, isPreparator, hasAdminPanelAccess, isLoading, signOut } = useAuth();
+  const { user, isAdmin, isStockManager, isPreparator, isAuditor, hasAdminPanelAccess, isLoading, signOut } = useAuth();
   const { data: designSettings } = useDesignSettings();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -208,11 +213,13 @@ export default function Admin() {
 
   const allowedHrefs: Set<string> = isAdmin
     ? new Set(SIDEBAR_ITEMS.map(i => i.href))
-    : isStockManager
-      ? STOCK_MANAGER_ROUTES
-      : isPreparator
-        ? PREPARATOR_ROUTES
-        : new Set();
+    : isAuditor
+      ? AUDITOR_ROUTES
+      : isStockManager
+        ? STOCK_MANAGER_ROUTES
+        : isPreparator
+          ? PREPARATOR_ROUTES
+          : new Set();
 
   const activeHref = getActiveHref(location.pathname);
   const activeColor = sectionColors[activeHref] || '#6B7280';
@@ -287,6 +294,7 @@ export default function Admin() {
             <Route path="audit/*" element={<AdminAudit />} />
             <Route path="errors/*" element={<AdminErrorLogs />} />
             <Route path="roles/*" element={<AdminRoles />} />
+            <Route path="security/*" element={<AdminSecurity />} />
             <Route path="parametres/*" element={<AdminSettings />} />
           </Routes>
         </div>

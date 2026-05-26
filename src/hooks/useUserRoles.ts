@@ -1,18 +1,20 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-export type AppRole = 'admin' | 'stock_manager' | 'preparator';
+export type AppRole = 'admin' | 'stock_manager' | 'preparator' | 'auditor';
 
 export const ROLE_LABELS: Record<AppRole, string> = {
   admin: 'Admin',
   stock_manager: 'Resp. stock',
   preparator: 'Préparateur',
+  auditor: 'Auditeur',
 };
 
 export const ROLE_COLORS: Record<AppRole, string> = {
   admin: 'bg-red-500/20 text-red-500 border-red-500/30',
   stock_manager: 'bg-amber-500/20 text-amber-500 border-amber-500/30',
   preparator: 'bg-green-500/20 text-green-500 border-green-500/30',
+  auditor: 'bg-sky-500/20 text-sky-500 border-sky-500/30',
 };
 
 /** Fetch all role rows once and group by user_id (admin-only via RLS). */

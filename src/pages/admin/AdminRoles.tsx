@@ -23,6 +23,7 @@ export default function AdminRoles() {
   const [searching, setSearching] = useState(false);
   const [found, setFound] = useState<FoundUser | null>(null);
   const [searched, setSearched] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<AppRole>('admin');
   const [pending, setPending] = useState<null | 'grant' | 'revoke'>(null);
   const [busy, setBusy] = useState(false);
   const { data: audit, refetch: refetchAudit } = useRoleAuditLog();
@@ -51,14 +52,14 @@ export default function AdminRoles() {
     setBusy(true);
     try {
       if (pending === 'grant') {
-        const { error } = await supabase.from('user_roles').insert({ user_id: found.user_id, role: 'admin' });
+        const { error } = await supabase.from('user_roles').insert({ user_id: found.user_id, role: selectedRole });
         if (error && !`${error.message}`.includes('duplicate')) throw error;
-        toast({ title: 'Rôle admin attribué', description: found.email });
+        toast({ title: `Rôle ${selectedRole} attribué`, description: found.email });
       } else {
         const { error } = await supabase.from('user_roles').delete()
-          .eq('user_id', found.user_id).eq('role', 'admin');
+          .eq('user_id', found.user_id).eq('role', selectedRole);
         if (error) throw error;
-        toast({ title: 'Rôle admin retiré', description: found.email });
+        toast({ title: `Rôle ${selectedRole} retiré`, description: found.email });
       }
       setPending(null);
       await search();
@@ -72,7 +73,7 @@ export default function AdminRoles() {
   };
 
   const isSelf = found?.user_id === user?.id;
-  const isAdmin = !!found?.roles?.includes('admin');
+  const hasRole = !!found?.roles?.includes(selectedRole);
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -126,24 +127,34 @@ export default function AdminRoles() {
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2 pt-2">
-              {!isAdmin ? (
+            <div className="flex flex-col sm:flex-row gap-2 pt-2 items-stretch sm:items-center">
+              <select
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value as AppRole)}
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="admin">Admin</option>
+                <option value="auditor">Auditeur (lecture seule)</option>
+                <option value="stock_manager">Resp. stock</option>
+                <option value="preparator">Préparateur</option>
+              </select>
+              {!hasRole ? (
                 <Button onClick={() => setPending('grant')} className="gap-2">
-                  <ShieldCheck className="h-4 w-4" /> Promouvoir admin
+                  <ShieldCheck className="h-4 w-4" /> Attribuer
                 </Button>
               ) : (
                 <Button
                   variant="destructive"
                   onClick={() => setPending('revoke')}
-                  disabled={isSelf}
+                  disabled={isSelf && selectedRole === 'admin'}
                   className="gap-2"
-                  title={isSelf ? 'Vous ne pouvez pas retirer votre propre rôle admin' : undefined}
+                  title={isSelf && selectedRole === 'admin' ? 'Vous ne pouvez pas retirer votre propre rôle admin' : undefined}
                 >
-                  <ShieldOff className="h-4 w-4" /> Retirer admin
+                  <ShieldOff className="h-4 w-4" /> Retirer
                 </Button>
               )}
             </div>
-            {isSelf && isAdmin && (
+            {isSelf && hasRole && selectedRole === 'admin' && (
               <p className="text-xs text-muted-foreground">Vous ne pouvez pas retirer votre propre rôle admin.</p>
             )}
           </div>

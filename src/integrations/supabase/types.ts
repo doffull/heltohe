@@ -361,6 +361,42 @@ export type Database = {
           },
         ]
       }
+      cgv_consents: {
+        Row: {
+          accepted: boolean
+          created_at: string
+          id: string
+          ip_hash: string | null
+          session_hash: string | null
+          url: string | null
+          user_agent: string | null
+          user_id: string | null
+          version: string
+        }
+        Insert: {
+          accepted: boolean
+          created_at?: string
+          id?: string
+          ip_hash?: string | null
+          session_hash?: string | null
+          url?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+          version: string
+        }
+        Update: {
+          accepted?: boolean
+          created_at?: string
+          id?: string
+          ip_hash?: string | null
+          session_hash?: string | null
+          url?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+          version?: string
+        }
+        Relationships: []
+      }
       chat_logs: {
         Row: {
           bot_response: string | null
@@ -1195,7 +1231,9 @@ export type Database = {
           frequency_days: number
           id: string
           image_url: string | null
+          interval_seconds: number
           is_active: boolean
+          max_per_session: number
           name: string
           sort_order: number
           subtitle: string | null
@@ -1212,7 +1250,9 @@ export type Database = {
           frequency_days?: number
           id?: string
           image_url?: string | null
+          interval_seconds?: number
           is_active?: boolean
+          max_per_session?: number
           name: string
           sort_order?: number
           subtitle?: string | null
@@ -1229,7 +1269,9 @@ export type Database = {
           frequency_days?: number
           id?: string
           image_url?: string | null
+          interval_seconds?: number
           is_active?: boolean
+          max_per_session?: number
           name?: string
           sort_order?: number
           subtitle?: string | null
@@ -2697,9 +2739,20 @@ export type Database = {
         Args: { p_code: string; p_subtotal: number }
         Returns: Json
       }
+      record_cgv_consent: {
+        Args: {
+          p_accepted: boolean
+          p_session_hash?: string
+          p_url?: string
+          p_user_agent?: string
+          p_version: string
+        }
+        Returns: string
+      }
       redeem_loyalty_reward: { Args: { p_reward_id: string }; Returns: Json }
       release_order_stock: { Args: { p_order_id: string }; Returns: Json }
       reserve_order_stock: { Args: { p_order_id: string }; Returns: Json }
+      security_audit_snapshot: { Args: never; Returns: Json }
       spin_roulette:
         | { Args: { p_email?: string }; Returns: Json }
         | { Args: { p_email?: string; p_ip_hash?: string }; Returns: Json }
@@ -2718,7 +2771,13 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user" | "stock_manager" | "preparator"
+      app_role:
+        | "admin"
+        | "moderator"
+        | "user"
+        | "stock_manager"
+        | "preparator"
+        | "auditor"
       banner_type: "hero" | "promo" | "popup" | "sidebar"
       loyalty_tier: "bronze" | "silver" | "gold" | "platinum"
       promo_type: "percentage" | "fixed_amount" | "free_shipping"
@@ -2849,7 +2908,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator", "user", "stock_manager", "preparator"],
+      app_role: [
+        "admin",
+        "moderator",
+        "user",
+        "stock_manager",
+        "preparator",
+        "auditor",
+      ],
       banner_type: ["hero", "promo", "popup", "sidebar"],
       loyalty_tier: ["bronze", "silver", "gold", "platinum"],
       promo_type: ["percentage", "fixed_amount", "free_shipping"],
