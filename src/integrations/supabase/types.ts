@@ -2814,6 +2814,7 @@ export type Database = {
         | "stock_manager"
         | "preparator"
         | "auditor"
+        | "order_validator"
       banner_type: "hero" | "promo" | "popup" | "sidebar"
       loyalty_tier: "bronze" | "silver" | "gold" | "platinum"
       promo_type: "percentage" | "fixed_amount" | "free_shipping"
@@ -2951,6 +2952,7 @@ export const Constants = {
         "stock_manager",
         "preparator",
         "auditor",
+        "order_validator",
       ],
       banner_type: ["hero", "promo", "popup", "sidebar"],
       loyalty_tier: ["bronze", "silver", "gold", "platinum"],
