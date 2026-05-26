@@ -226,6 +226,7 @@ function AppShell() {
           <AnimatedRoutes />
           <MegaMenu />
           <AdminVisualEditor />
+          <DemoModeBadge />
         </TooltipProvider>
         </MegaMenuProvider>
       </VisualEditorProvider>
