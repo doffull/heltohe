@@ -108,6 +108,7 @@ export function HomeBlocksEditor() {
 
   const save = async () => {
     updateDesignSettings({ homePageBlocks: blocks } as any);
+    await new Promise((r) => setTimeout(r, 0));
     await flushDesignSettings();
     toast.success("Ordre des sections enregistré");
   };
