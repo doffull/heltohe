@@ -213,11 +213,13 @@ export default function Admin() {
 
   const allowedHrefs: Set<string> = isAdmin
     ? new Set(SIDEBAR_ITEMS.map(i => i.href))
-    : isStockManager
-      ? STOCK_MANAGER_ROUTES
-      : isPreparator
-        ? PREPARATOR_ROUTES
-        : new Set();
+    : isAuditor
+      ? AUDITOR_ROUTES
+      : isStockManager
+        ? STOCK_MANAGER_ROUTES
+        : isPreparator
+          ? PREPARATOR_ROUTES
+          : new Set();
 
   const activeHref = getActiveHref(location.pathname);
   const activeColor = sectionColors[activeHref] || '#6B7280';
