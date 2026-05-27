@@ -6,6 +6,14 @@ import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider
 import { Check, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 
+const CATEGORY_PLACEHOLDER = '/placeholder.svg';
+
+function keepCategoryFallback(event: React.SyntheticEvent<HTMLImageElement>) {
+  if (!event.currentTarget.src.endsWith(CATEGORY_PLACEHOLDER)) {
+    event.currentTarget.src = CATEGORY_PLACEHOLDER;
+  }
+}
+
 export function CategoryGrid() {
   const { navigateToCategory, language } = useApp();
   const { data: dbCategories = [] } = useCategories();
@@ -19,7 +27,7 @@ export function CategoryGrid() {
   const categories = dbCategories
     .filter(c => !c.parentId)
     .sort((a, b) => a.sortOrder - b.sortOrder)
-    .map(c => ({ id: c.id, title: c.title, image: c.image || '/placeholder.svg', sortOrder: c.sortOrder, ...c }));
+    .map(c => ({ id: c.id, title: c.title, image: c.image || CATEGORY_PLACEHOLDER, sortOrder: c.sortOrder, ...c }));
 
   function startEdit(id: string, title: string, e: React.MouseEvent) {
     if (!isEditorOpen) return;
@@ -76,6 +84,9 @@ export function CategoryGrid() {
                 src={category.image}
                 alt={category.title}
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                loading="lazy"
+                decoding="async"
+                onError={keepCategoryFallback}
               />
 
               {/* Overlay */}
