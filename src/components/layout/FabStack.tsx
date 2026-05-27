@@ -5,7 +5,7 @@ import { useApp } from '@/context/AppContext';
 import { useRouletteConfig } from '@/hooks/useRoulette';
 import { useHomeFabButtons } from '@/hooks/useHomeFabButtons';
 import { VoiceCommandFab } from '@/components/voice/VoiceCommandFab';
-import { RouletteFab } from '@/components/home/RouletteFab';
+import { GameRouter } from '@/components/games/GameRouter';
 import { ChatBotWidget } from './ChatBotWidget';
 import { getIcon } from '@/components/admin/IconPicker';
 import { cn } from '@/lib/utils';
@@ -151,7 +151,7 @@ export function FabStack() {
         )}
       </div>
       <VoiceCommandFab open={voiceOpen} onOpenChange={setVoiceOpen} hideTrigger />
-      <RouletteFab open={rouletteOpen} onOpenChange={setRouletteOpen} hideTrigger />
+      <GameRouter open={rouletteOpen} onOpenChange={setRouletteOpen} hideTrigger />
     </>
   );
 }
