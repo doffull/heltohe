@@ -92,7 +92,7 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
   const { data: settings } = useDesignSettings();
   const logo = (settings as any)?.hudLogo;
   useEffect(() => {
-    const timer = setTimeout(onDone, 1200);
+    const timer = setTimeout(onDone, 450);
     return () => clearTimeout(timer);
   }, [onDone]);
   return (
@@ -101,7 +101,7 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
       initial={{ opacity: 1 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.4 }}
+      transition={{ duration: 0.2 }}
     >
       <motion.div
         initial={{ scale: 0.7, opacity: 0 }}
