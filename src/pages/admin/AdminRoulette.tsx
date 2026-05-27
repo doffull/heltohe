@@ -131,6 +131,9 @@ export default function AdminRoulette() {
             );
           })}
         </div>
+      </Card>
+
+
 
       <Tabs defaultValue="config">
         <TabsList>
