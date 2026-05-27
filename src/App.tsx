@@ -10,7 +10,7 @@ import { AppProvider, useApp } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { useDesignSettings } from "@/hooks/useDesignSettings";
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { VisualEditorProvider } from "@/components/visual-editor/VisualEditorProvider";
 import { VisualEditorToggle } from "@/components/visual-editor/VisualEditorToggle";
 import { VisualEditorPanel } from "@/components/visual-editor/VisualEditorPanel";
@@ -21,26 +21,32 @@ import { MegaMenuProvider } from "@/context/MegaMenuContext";
 import { MegaMenu } from "@/components/layout/MegaMenu";
 import { getTransition } from "@/components/transitions/transitionRegistry";
 
-// Pages
+// Pages — Home eager (LCP), the rest lazy for faster initial paint
 import Home from "./pages/Home";
-import Shop from "./pages/Shop";
-import BoutiqueRouter from "./pages/BoutiqueRouter";
-import CategoryPageRouter from "./pages/CategoryPageRouter";
-import Cart from "./pages/Cart";
-import Checkout from "./pages/Checkout";
-import Auth from "./pages/Auth";
-import Account from "./pages/Account";
-import Admin from "./pages/admin/Admin";
-import NotFound from "./pages/NotFound";
-import About from "./pages/About";
-import Contact from "./pages/Contact";
-import CGV from "./pages/legal/CGV";
-import Confidentialite from "./pages/legal/Confidentialite";
-import Cookies from "./pages/legal/Cookies";
-import Retours from "./pages/legal/Retours";
-import MentionsLegales from "./pages/legal/MentionsLegales";
-import SizeGuide from "./pages/SizeGuide";
-import Fidelite from "./pages/Fidelite";
+const Shop = lazy(() => import("./pages/Shop"));
+const BoutiqueRouter = lazy(() => import("./pages/BoutiqueRouter"));
+const CategoryPageRouter = lazy(() => import("./pages/CategoryPageRouter"));
+const Cart = lazy(() => import("./pages/Cart"));
+const Checkout = lazy(() => import("./pages/Checkout"));
+const Auth = lazy(() => import("./pages/Auth"));
+const Account = lazy(() => import("./pages/Account"));
+const Admin = lazy(() => import("./pages/admin/Admin"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const About = lazy(() => import("./pages/About"));
+const Contact = lazy(() => import("./pages/Contact"));
+const CGV = lazy(() => import("./pages/legal/CGV"));
+const Confidentialite = lazy(() => import("./pages/legal/Confidentialite"));
+const Cookies = lazy(() => import("./pages/legal/Cookies"));
+const Retours = lazy(() => import("./pages/legal/Retours"));
+const MentionsLegales = lazy(() => import("./pages/legal/MentionsLegales"));
+const SizeGuide = lazy(() => import("./pages/SizeGuide"));
+const Fidelite = lazy(() => import("./pages/Fidelite"));
+
+const RouteFallback = () => (
+  <div className="min-h-[40vh] w-full flex items-center justify-center">
+    <div className="h-6 w-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin" />
+  </div>
+);
 
 // Layout
 import { MainLayout } from "./components/layout/MainLayout";
@@ -48,15 +54,15 @@ import { MainLayout } from "./components/layout/MainLayout";
 const queryClient = new QueryClient();
 
 const pageVariants = {
-  initial: { opacity: 0, scale: 1.04, filter: 'grayscale(1) blur(6px)' as any },
-  animate: { opacity: 1, scale: 1, filter: 'grayscale(0) blur(0px)' as any },
-  exit: { opacity: 0, scale: 1.05, filter: 'grayscale(1) blur(4px)' as any },
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0 },
 };
 
 const pageTransition = {
   type: "tween" as const,
   ease: [0.22, 1, 0.36, 1] as const,
-  duration: 0.7,
+  duration: 0.25,
 };
 
 function ScrollToTop() {
