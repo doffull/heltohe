@@ -459,7 +459,7 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
           <Mic className="h-5 w-5" />
         </button>
       )}
-      <Dialog open={open} onOpenChange={(v) => { if (!v) { recRef.current?.stop?.(); window.speechSynthesis?.cancel(); } setOpen(v); }}>
+      <Dialog open={open} onOpenChange={(v) => { if (!v) { shouldRestartRef.current = false; try { recRef.current?.abort?.(); } catch { /* noop */ } window.speechSynthesis?.cancel(); } setOpen(v); }}>
         <DialogContent className="max-w-md p-6 border-2 border-foreground/20 bg-background max-h-[90vh] overflow-y-auto">
           <DialogTitle className="text-base font-bold uppercase tracking-wider">Achat vocal</DialogTitle>
           <p className="text-xs text-muted-foreground">
