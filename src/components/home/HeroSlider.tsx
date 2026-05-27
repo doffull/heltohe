@@ -9,9 +9,25 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { InlineEditable } from '@/components/visual-editor/InlineEditable';
 import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
 
+const HERO_PLACEHOLDER = '/placeholder.svg';
+
+const FALLBACK_HERO_SLIDE: HeroSlide = {
+  id: 'fallback-home-hero',
+  media: HERO_PLACEHOLDER,
+  mediaType: 'image',
+  title: 'LVTK6',
+  subtitle: 'COLLECTION TECHNIQUE PREMIUM',
+  ctaText: 'Découvrir',
+  ctaUrl: '/boutique',
+  objectFit: 'cover',
+  objectPosition: 'center',
+};
+
 export function HeroSlider() {
   const { designSettings, updateDesignSettings, setCurrentView } = useApp();
-  const { heroSlides, sliderAutoPlay, sliderSpeed, showSliderOverlay, sliderGrayscale } = designSettings;
+  const { sliderAutoPlay, sliderSpeed, sliderGrayscale } = designSettings;
+  const configuredSlides = designSettings.heroSlides || [];
+  const heroSlides = configuredSlides.length > 0 ? configuredSlides : [FALLBACK_HERO_SLIDE];
   const [currentIndex, setCurrentIndex] = useState(0);
   const { scrollY } = useScroll();
   const isMobile = useIsMobile();
@@ -42,14 +58,13 @@ export function HeroSlider() {
     }
   }, [heroSlides.length, currentIndex]);
 
-  if (heroSlides.length === 0) return null;
-
   const currentSlide = heroSlides[currentIndex] ?? heroSlides[0];
   if (!currentSlide) return null;
 
   // Helper to update a specific field of the current slide
   function updateCurrentSlide(changes: Partial<HeroSlide>) {
-    const next = heroSlides.map((s, i) => i === currentIndex ? { ...s, ...changes } : s);
+    const sourceSlides = configuredSlides.length > 0 ? configuredSlides : [currentSlide];
+    const next = sourceSlides.map((s, i) => i === currentIndex ? { ...s, ...changes } : s);
     updateDesignSettings({ heroSlides: next });
     setIsDirty(true);
   }
@@ -58,7 +73,7 @@ export function HeroSlider() {
   const useMobileMedia = isMobile && currentSlide.mobileImage;
   const bgMedia = useMobileMedia
     ? currentSlide.mobileImage!
-    : (currentSlide.backgroundMedia || currentSlide.media);
+    : (currentSlide.backgroundMedia || currentSlide.media || HERO_PLACEHOLDER);
 
   // Determine media type for mobile
   const mobileIsVideo = currentSlide.mobileMediaType === 'video';
@@ -88,6 +103,7 @@ export function HeroSlider() {
           <video
             src={bgMedia}
             autoPlay muted loop playsInline
+            poster={HERO_PLACEHOLDER}
             className="w-full h-full"
             style={{ objectFit: 'cover', objectPosition }}
           />
@@ -98,6 +114,7 @@ export function HeroSlider() {
             className="w-full h-full"
             style={{ objectFit: 'cover', objectPosition }}
             fetchPriority="high"
+            onError={(e) => { e.currentTarget.src = HERO_PLACEHOLDER; }}
           />
         )}
       </motion.div>
