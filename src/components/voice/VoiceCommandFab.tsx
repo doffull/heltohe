@@ -242,8 +242,10 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
             id: p.id, name: p.name, category: p.category, price: p.price,
             sizes: p.sizes, colors: p.colors, description: p.description,
           }));
+          const q = (action.query || transcript || '').trim().slice(0, 1000);
+          if (!q) { speak('Précisez votre recherche'); break; }
           const { data, error } = await supabase.functions.invoke('voice-command', {
-            body: { mode: action.type === 'recommend' ? 'recommend' : 'search', transcript: action.query || transcript, products: lite },
+            body: { mode: action.type === 'recommend' ? 'recommend' : 'search', transcript: q, products: lite },
           });
           if (error) throw error;
           const ids: string[] = data?.productIds || [];
