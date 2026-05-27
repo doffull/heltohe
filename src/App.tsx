@@ -154,6 +154,7 @@ function AnimatedRoutes() {
         exit="exit"
         transition={pageTransition}
       >
+          <Suspense fallback={<RouteFallback />}>
           <Routes location={location}>
           <Route path="/" element={<MainLayout><Home /></MainLayout>} />
           <Route path="/boutique" element={<MainLayout><Shop /></MainLayout>} />
@@ -176,6 +177,7 @@ function AnimatedRoutes() {
           <Route path="/:categorySlug" element={<MainLayout><CategoryPageRouter /></MainLayout>} />
           <Route path="*" element={<MainLayout><NotFound /></MainLayout>} />
         </Routes>
+        </Suspense>
       </motion.div>
     </AnimatePresence>
   );
@@ -214,7 +216,13 @@ function DemoModeBadge() {
 }
 
 function AppShell() {
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(() => {
+    try { return sessionStorage.getItem('lvtk:splashShown') !== '1'; } catch { return true; }
+  });
+  useEffect(() => {
+    if (!showSplash) return;
+    try { sessionStorage.setItem('lvtk:splashShown', '1'); } catch { /* noop */ }
+  }, [showSplash]);
   return (
     <AppProvider>
       <AdminViewportProvider>
