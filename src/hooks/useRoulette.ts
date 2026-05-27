@@ -64,7 +64,9 @@ export function useRouletteSegments(includeInactive = false) {
   return useQuery({
     queryKey: ['roulette-segments', includeInactive],
     queryFn: async () => {
-      let q = supabase.from('roulette_segments' as any).select('*').order('sort_order');
+      // Admin contexts (includeInactive) read full table; public reads sanitized view.
+      const source = includeInactive ? 'roulette_segments' : 'roulette_segments_public';
+      let q = supabase.from(source as any).select('*').order('sort_order');
       if (!includeInactive) q = q.eq('is_active', true);
       const { data, error } = await q;
       if (error) throw error;
