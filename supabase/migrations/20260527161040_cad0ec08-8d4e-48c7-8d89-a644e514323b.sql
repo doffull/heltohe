@@ -1,0 +1,1 @@
+ALTER VIEW public.design_settings_public RESET (security_invoker);

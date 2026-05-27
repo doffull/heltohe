@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect } from 'react';
+import { ReactNode, SyntheticEvent, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useVisitorTracking } from '@/hooks/useVisitorTracking';
@@ -40,6 +40,13 @@ import {
 } from "@/components/ui/sheet";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+
+const IMAGE_FALLBACK = '/placeholder.svg';
+
+const withImageFallback = (event: SyntheticEvent<HTMLImageElement>) => {
+  const img = event.currentTarget;
+  if (!img.src.endsWith(IMAGE_FALLBACK)) img.src = IMAGE_FALLBACK;
+};
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -178,14 +185,15 @@ export function MainLayout({ children }: MainLayoutProps) {
     : baseNavItems;
 
   const showSidebar = isHomePage;
-  const sidebarActive = showSidebar && desktopSidebarOpen;
+  // Keep public layout stable: the image sidebar overlays the page, but never pushes logo/header/content.
+  const sidebarActive = false;
 
   // Auto-open sidebar after configurable delay on home page
   // sidebarReappearDelay: number (ms) or 0 = OFF
   const sidebarReappearDelay = (designSettings as any).sidebarReappearDelay ?? (designSettings as any).sidebarDelay ?? 10000;
   // Desktop auto-open — always respect admin-configured delay, no cap
   useEffect(() => {
-    if (!isMobile && isHomePage && sidebarReappearDelay > 0 && !desktopSidebarOpen) {
+    if (!isMobile && isHomePage && sidebarReappearDelay > 0 && !desktopSidebarOpen && !sidebarClosedByUser) {
       const timer = setTimeout(() => {
         setDesktopSidebarOpen(true);
         setSidebarClosedByUser(false);
@@ -196,7 +204,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   // Mobile auto-open — always respect admin-configured delay, no cap
   useEffect(() => {
-    if (isMobile && isHomePage && sidebarReappearDelay > 0 && !sidebarOpen) {
+    if (isMobile && isHomePage && sidebarReappearDelay > 0 && !sidebarOpen && !mobileSidebarClosedByUser) {
       const timer = setTimeout(() => {
         setSidebarOpen(true);
         setMobileSidebarClosedByUser(false);
@@ -286,9 +294,9 @@ export function MainLayout({ children }: MainLayoutProps) {
             headerPreset === 'centered' ? "flex-col justify-center gap-1 h-auto py-3 lg:py-4" : "",
             headerPreset === 'fullwidth' ? "gap-6" : "",
           )}>
-            {/* Logo in header - always visible, takes priority space */}
+            {/* Logo in header - always visible, fixed dimensions to prevent update-time layout shifts */}
             <Link to="/" className={cn(
-              "flex items-center gap-2 mr-auto min-w-0 flex-1 lg:flex-none overflow-hidden",
+              "flex items-center gap-2 mr-auto min-w-0 shrink-0 overflow-hidden",
               headerPreset === 'centered' ? "justify-center" : ""
             )}>
               {designSettings.hudLogo ? (
@@ -296,9 +304,13 @@ export function MainLayout({ children }: MainLayoutProps) {
                   src={designSettings.hudLogo} 
                   alt="Logo" 
                   className={cn(
-                    "w-auto object-contain max-w-full",
-                    headerPreset === 'centered' ? "h-8 lg:h-12" : "h-6 sm:h-8 lg:h-10"
+                    "w-auto object-contain shrink-0 max-w-[9rem] sm:max-w-[12rem] lg:max-w-[14rem]",
+                    headerPreset === 'centered' ? "h-8 lg:h-12" : "h-8 lg:h-10"
                   )}
+                  width={176}
+                  height={40}
+                  decoding="async"
+                  onError={withImageFallback}
                 />
               ) : (
                 <span className="font-bold text-sm sm:text-base tracking-wider uppercase truncate">
@@ -755,6 +767,11 @@ export function MainLayout({ children }: MainLayoutProps) {
                   src={footerLogo || designSettings.hudLogo} 
                   alt="Logo" 
                   className="h-10 w-auto object-contain mb-4 lg:mb-6" 
+                  width={160}
+                  height={40}
+                  loading="lazy"
+                  decoding="async"
+                  onError={withImageFallback}
                 />
               ) : (
                 <div className="w-10 h-10 lg:w-12 lg:h-12 bg-background border-2 border-foreground flex items-center justify-center transform rotate-45 mb-4 lg:mb-6">
