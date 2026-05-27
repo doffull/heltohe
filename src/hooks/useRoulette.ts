@@ -53,7 +53,7 @@ export function useRouletteConfig() {
     queryKey: ['roulette-config'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('roulette_config' as any)
+        .from('roulette_config_public' as any)
         .select('*')
         .eq('config_key', 'main')
         .maybeSingle();
