@@ -2702,6 +2702,57 @@ export type Database = {
         }
         Relationships: []
       }
+      roulette_config_public: {
+        Row: {
+          auto_open_delay_ms: number | null
+          auto_open_on_landing: boolean | null
+          button_label: string | null
+          config_key: string | null
+          cooldown_hours: number | null
+          enabled: boolean | null
+          fab_label: string | null
+          game_type: string | null
+          id: string | null
+          require_email: boolean | null
+          reward_validity_days: number | null
+          show_after_dismiss_hours: number | null
+          subtitle: string | null
+          title: string | null
+        }
+        Insert: {
+          auto_open_delay_ms?: number | null
+          auto_open_on_landing?: boolean | null
+          button_label?: string | null
+          config_key?: string | null
+          cooldown_hours?: number | null
+          enabled?: boolean | null
+          fab_label?: string | null
+          game_type?: string | null
+          id?: string | null
+          require_email?: boolean | null
+          reward_validity_days?: number | null
+          show_after_dismiss_hours?: number | null
+          subtitle?: string | null
+          title?: string | null
+        }
+        Update: {
+          auto_open_delay_ms?: number | null
+          auto_open_on_landing?: boolean | null
+          button_label?: string | null
+          config_key?: string | null
+          cooldown_hours?: number | null
+          enabled?: boolean | null
+          fab_label?: string | null
+          game_type?: string | null
+          id?: string | null
+          require_email?: boolean | null
+          reward_validity_days?: number | null
+          show_after_dismiss_hours?: number | null
+          subtitle?: string | null
+          title?: string | null
+        }
+        Relationships: []
+      }
       roulette_segments_public: {
         Row: {
           color: string | null
