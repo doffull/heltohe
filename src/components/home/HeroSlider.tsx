@@ -129,6 +129,7 @@ export function HeroSlider() {
             src={currentSlide.midgroundMedia}
             alt=""
             className="w-full h-full object-cover mix-blend-overlay opacity-60"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
           />
         </motion.div>
       )}
@@ -143,6 +144,7 @@ export function HeroSlider() {
             src={currentSlide.foregroundMedia}
             alt=""
             className="w-full h-full object-contain"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
           />
         </motion.div>
       )}
