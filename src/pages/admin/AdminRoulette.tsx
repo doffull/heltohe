@@ -99,6 +99,39 @@ export default function AdminRoulette() {
         </div>
       </Card>
 
+      {/* GAME TYPE SELECTOR */}
+      <Card className="p-4 border-2 border-foreground/20">
+        <div className="mb-3">
+          <h2 className="text-sm font-bold uppercase tracking-wider">Type de jeu</h2>
+          <p className="text-xs text-muted-foreground">Choisis le format affiché aux visiteurs. Les lots et codes promo restent identiques.</p>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {([
+            { id: 'scratch', emoji: '🃏', name: 'Cartes à gratter', desc: '3 cartes, design industriel minimal' },
+            { id: 'wheel', emoji: '🎡', name: 'Roulette classique', desc: 'Roue tournante avec segments colorés' },
+            { id: 'mystery', emoji: '📦', name: 'Boîte mystère', desc: 'Une boîte à ouvrir (à venir = scratch)' },
+            { id: 'flash', emoji: '⚡', name: 'Promo flash', desc: 'Compte à rebours (à venir = scratch)' },
+          ] as const).map((g) => {
+            const active = ((config as any)?.game_type || 'scratch') === g.id;
+            return (
+              <button
+                key={g.id}
+                type="button"
+                onClick={async () => {
+                  await updateConfig.mutateAsync({ game_type: g.id } as any);
+                  toast.success(`Jeu : ${g.name}`);
+                }}
+                className={`text-left border-2 p-3 transition ${active ? 'border-foreground bg-foreground/5' : 'border-border hover:border-foreground/60'}`}
+              >
+                <div className="text-2xl mb-1">{g.emoji}</div>
+                <div className="text-sm font-bold uppercase tracking-wider">{g.name}</div>
+                <div className="text-[10px] text-muted-foreground mt-1">{g.desc}</div>
+                {active && <div className="mt-2 text-[9px] uppercase tracking-wider bg-foreground text-background inline-block px-1.5 py-0.5">Actif</div>}
+              </button>
+            );
+          })}
+        </div>
+
       <Tabs defaultValue="config">
         <TabsList>
           <TabsTrigger value="config">Configuration</TabsTrigger>
