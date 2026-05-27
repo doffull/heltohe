@@ -314,6 +314,11 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
   };
 
   const handleCommand = async (text: string) => {
+    const clean = (text || '').trim().slice(0, 1000);
+    if (!clean) {
+      toast.message('Aucune voix détectée, réessayez.');
+      return;
+    }
     setBusy(true);
     try {
       const lite = products.slice(0, 80).map((p) => ({
