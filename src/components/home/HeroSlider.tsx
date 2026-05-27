@@ -113,7 +113,7 @@ export function HeroSlider() {
             alt={currentSlide.title}
             className="w-full h-full"
             style={{ objectFit: 'cover', objectPosition }}
-            fetchPriority="high"
+            {...({ fetchpriority: 'high' } as any)}
             onError={(e) => { e.currentTarget.src = HERO_PLACEHOLDER; }}
           />
         )}

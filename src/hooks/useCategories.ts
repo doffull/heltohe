@@ -42,6 +42,10 @@ export function useCategories() {
       if (error) throw error;
       return (data || []).map((d) => dbToCat(d as Record<string, unknown>));
     },
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnWindowFocus: false,
+    placeholderData: (prev) => prev,
   });
 }
 

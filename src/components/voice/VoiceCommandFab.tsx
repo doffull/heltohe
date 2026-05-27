@@ -104,6 +104,10 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
     try { return localStorage.getItem(VOICE_DELIVERY_KEY) || ''; } catch { return ''; }
   });
   const recRef = useRef<SR | null>(null);
+  const shouldRestartRef = useRef(false);
+  const autoRestartCountRef = useRef(0);
+  const openRef = useRef(open);
+  useEffect(() => { openRef.current = open; }, [open]);
 
   useEffect(() => {
     try { localStorage.setItem(TEST_MODE_KEY, testMode ? 'on' : 'off'); } catch {}
@@ -175,33 +179,82 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
     }
     const allowed = await ensureMicPermission();
     if (!allowed) return;
+
+    // Stop any previous instance cleanly to avoid InvalidStateError
+    try { recRef.current?.abort?.(); } catch { /* noop */ }
+
     const rec = new SpeechRecognition();
     rec.lang = 'fr-FR';
     rec.continuous = false;
     rec.interimResults = false;
+    shouldRestartRef.current = true;
+    autoRestartCountRef.current = 0;
+
     rec.onresult = (e: any) => {
-      const text = e.results[0][0].transcript;
-      setTranscript(text);
+      const text = e.results?.[0]?.[0]?.transcript || '';
+      const clean = text.trim();
+      setTranscript(clean);
       setListening(false);
-      handleCommand(text);
+      shouldRestartRef.current = false; // got speech, stop auto-restart loop
+      if (!clean) {
+        toast.message('Aucune voix détectée, réessayez.');
+        return;
+      }
+      handleCommand(clean);
     };
     rec.onerror = (e: any) => {
       setListening(false);
       if (e?.error === 'not-allowed' || e?.error === 'service-not-allowed') {
+        shouldRestartRef.current = false;
         toast.error('Accès au micro refusé.');
       } else if (e?.error === 'no-speech') {
-        toast.message('Aucune voix détectée, réessayez.');
+        // Silence detected — DO NOT invoke edge function. Soft retry up to 2 times if dialog still open.
+        if (openRef.current && shouldRestartRef.current && autoRestartCountRef.current < 2) {
+          autoRestartCountRef.current += 1;
+          toast.message('Silence détecté, j\'écoute à nouveau…');
+        } else {
+          shouldRestartRef.current = false;
+          toast.message('Aucune voix détectée. Appuyez pour réessayer.');
+        }
+      } else if (e?.error === 'aborted') {
+        shouldRestartRef.current = false;
+      } else if (e?.error === 'network') {
+        shouldRestartRef.current = false;
+        toast.error('Réseau indisponible pour le micro.');
       } else {
+        shouldRestartRef.current = false;
         toast.error('Erreur micro');
       }
     };
-    rec.onend = () => setListening(false);
+    rec.onend = () => {
+      setListening(false);
+      // Auto-restart only after a soft no-speech, while dialog is open and not busy
+      if (
+        shouldRestartRef.current &&
+        openRef.current &&
+        !busy &&
+        autoRestartCountRef.current > 0 &&
+        autoRestartCountRef.current <= 2
+      ) {
+        try {
+          setListening(true);
+          rec.start();
+        } catch {
+          shouldRestartRef.current = false;
+          setListening(false);
+        }
+      }
+    };
     recRef.current = rec;
     setListening(true);
     setTranscript('');
     setReply('');
     setPending(null);
-    rec.start();
+    try {
+      rec.start();
+    } catch {
+      setListening(false);
+    }
   };
 
   const addressComplete = (a: VoiceAddress) =>
@@ -406,7 +459,7 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
           <Mic className="h-5 w-5" />
         </button>
       )}
-      <Dialog open={open} onOpenChange={(v) => { if (!v) { recRef.current?.stop?.(); window.speechSynthesis?.cancel(); } setOpen(v); }}>
+      <Dialog open={open} onOpenChange={(v) => { if (!v) { shouldRestartRef.current = false; try { recRef.current?.abort?.(); } catch { /* noop */ } window.speechSynthesis?.cancel(); } setOpen(v); }}>
         <DialogContent className="max-w-md p-6 border-2 border-foreground/20 bg-background max-h-[90vh] overflow-y-auto">
           <DialogTitle className="text-base font-bold uppercase tracking-wider">Achat vocal</DialogTitle>
           <p className="text-xs text-muted-foreground">

@@ -1,43 +1,41 @@
 ## Objectif
+Rendre le site stable après chaque update/publication : commandes vocales sans invocation vide, logo/hero/vidéo/produits/design persistants, et chargement plus rapide.
 
-Ajouter un nouveau rôle « Valideur de commandes » et restreindre la vue du rôle « Auditeur » dans le tableau de bord admin.
+## Ce que je vais corriger
 
-## 1. Nouveau rôle : `order_validator`
+### 1. Micro et commande vocale
+- Modifier `src/components/voice/VoiceCommandFab.tsx` pour empêcher toute invocation `voice-command` si aucune voix n’est captée.
+- Gérer explicitement les états `no-speech`, `aborted`, `not-allowed`, `network` et les transcripts vides/trop longs.
+- Ajouter un auto-restart contrôlé de l’écoute après `no-speech`, sans renvoyer de requête IA.
+- Garder une référence stable de la logique de traitement pour éviter les callbacks obsolètes.
+- Ne plus relancer le micro si la popup est fermée, si une commande est en cours, ou si le navigateur bloque l’autorisation.
 
-### Base de données (migration)
-- Ajouter la valeur `'order_validator'` à l'enum `app_role`.
-- Les politiques RLS existantes basées sur `admin` continuent de fonctionner ; aucune table n'a besoin de nouvelles policies pour le moment (le rôle sert d'abord à filtrer le menu admin côté client).
+### 2. Persistance réelle du design entre preview et site publié
+- Sécuriser `src/context/AppContext.tsx` et `src/hooks/useDesignSettings.ts` pour ne jamais retomber brutalement sur les réglages initiaux quand la base répond lentement.
+- Ajouter une sauvegarde complète des réglages design dans la base via un champ JSON global, afin que les nouveaux champs du header, couleurs, hero, blocs homepage, logo, vidéo, etc. ne soient plus perdus faute de colonne dédiée.
+- Garder les colonnes existantes pour compatibilité, mais fusionner avec le JSON complet à la lecture.
+- Ajouter un cache local uniquement comme filet de sécurité visuel : si la requête design tarde ou échoue, le dernier design connu reste affiché au lieu de disparaître.
 
-### Code
-- `src/context/AuthContext.tsx` : ajouter `'order_validator'` au type `AppRole`, exposer `isOrderValidator` et l'inclure dans `hasAdminPanelAccess`.
-- `src/hooks/useUserRoles.ts` : ajouter `order_validator` dans `AppRole`, `ROLE_LABELS` (« Valideur commandes ») et `ROLE_COLORS`.
-- `src/pages/admin/AdminRoles.tsx` : ajouter l'option `<option value="order_validator">` dans le select d'attribution de rôle.
-- `src/pages/admin/Admin.tsx` :
-  - Importer `isOrderValidator` depuis `useAuth`.
-  - Ajouter constante `ORDER_VALIDATOR_ROUTES = new Set([` `/admin`, `/admin/produits`, `/admin/commandes`, `/admin/preparations`, `/admin/checkout`, `/admin/clients`, `/admin/stock`, `/admin/colissimo`, `/admin/chatbot` `])`.
-  - L'ajouter dans le calcul de `allowedHrefs`.
+### 3. Logo, hero, vidéo et médias robustes
+- Centraliser le rendu du logo avec un fallback stable : logo image si disponible, sinon nom du site, dimensions fixes pour éviter les déplacements.
+- Renforcer `HeroSlider` : image/vidéo invalide ou lente -> fallback immédiat, poster stable, pas de hero vide.
+- Remplacer l’attribut React problématique `fetchPriority` par `fetchpriority` pour supprimer l’erreur console.
+- Ajouter une logique de sécurité pour les médias externes cassés : si une image WordPress ou storage échoue, elle bascule proprement sur `/placeholder.svg` sans casser le layout.
 
-## 2. Restriction du rôle Auditeur
+### 4. Produits et catégories toujours visibles
+- Améliorer `useProducts` et `useCategories` avec cache React Query plus long, retry contrôlé, données précédentes conservées, et fallback visuel si la base met trop de temps.
+- Éviter que la page passe par un état vide complet pendant un refresh ou après publication.
+- Vérifier les composants homepage qui lisent produits/catégories pour qu’ils affichent soit les données valides, soit un fallback propre — jamais une zone cassée.
 
-Modifier `AUDITOR_ROUTES` dans `src/pages/admin/Admin.tsx` pour **exclure** : Design, Paramètres, Icônes Accueil, Roulette, Marketing, Pages, Transitions.
+### 5. Nettoyage performance
+- Définir des options globales React Query : `staleTime`, `gcTime`, retry léger, pas de refetch inutile au focus.
+- Différer les requêtes non critiques après le premier affichage : analytics visiteur, chat, roulette, popups/newsletter, widgets flottants.
+- Corriger `AnimatePresence mode="wait"` qui anime plusieurs enfants et peut provoquer des comportements visuels instables.
+- Réduire le coût initial des animations lourdes sur mobile et respecter les fallbacks.
 
-Nouvelle liste autorisée pour l'auditeur :
-`/admin`, `/admin/live`, `/admin/produits`, `/admin/commandes`, `/admin/preparations`, `/admin/checkout`, `/admin/clients`, `/admin/media`, `/admin/stock`, `/admin/colissimo`, `/admin/notifications`, `/admin/chatbot`, `/admin/woocommerce`, `/admin/audit`, `/admin/errors`, `/admin/security`, `/admin/bannieres-analytics`, `/admin/roles`.
-
-(L'auditeur garde un accès lecture seule : aucune policy RLS n'est modifiée, seule la navigation est filtrée.)
-
-## Détails techniques
-
-- Migration SQL :
-  ```sql
-  ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'order_validator';
-  ```
-- Aucun changement aux tables existantes, aux composants produit/commande, ni à la logique métier.
-- Le filtrage menu est déjà géré par `allowedHrefs.filter(...)` dans le `SidebarContent`, et la redirection automatique si la route active n'est pas autorisée fonctionne déjà.
-
-## Fichiers modifiés
-- `supabase/migrations/<timestamp>.sql` (nouveau)
-- `src/context/AuthContext.tsx`
-- `src/hooks/useUserRoles.ts`
-- `src/pages/admin/AdminRoles.tsx`
-- `src/pages/admin/Admin.tsx`
+### 6. Vérification après patch
+- Tester la home en mobile et desktop.
+- Vérifier console : plus d’erreur `fetchPriority`, plus d’avertissement `AnimatePresence` sur la route principale.
+- Vérifier réseau : les requêtes design/produits/catégories restent en cache et les médias cassés ne cassent pas l’UI.
+- Tester le micro : silence -> aucune invocation IA, message clair, relance automatique de l’écoute.
+- Vérifier que logo, hero, vidéo, couleurs, produits et catégories restent présents après reload.

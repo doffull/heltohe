@@ -269,7 +269,10 @@ export function useDesignSettings() {
       if (!data) return null;
       return dbToSettings(data as Record<string, unknown>);
     },
-    staleTime: 0, // Always fresh — local state is source of truth after init
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnWindowFocus: false,
+    retry: 2,
   });
 }
 
