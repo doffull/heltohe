@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect } from 'react';
+import { ReactNode, SyntheticEvent, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useVisitorTracking } from '@/hooks/useVisitorTracking';
@@ -43,7 +43,7 @@ import { fr } from 'date-fns/locale';
 
 const IMAGE_FALLBACK = '/placeholder.svg';
 
-const withImageFallback = (event: React.SyntheticEvent<HTMLImageElement>) => {
+const withImageFallback = (event: SyntheticEvent<HTMLImageElement>) => {
   const img = event.currentTarget;
   if (!img.src.endsWith(IMAGE_FALLBACK)) img.src = IMAGE_FALLBACK;
 };
