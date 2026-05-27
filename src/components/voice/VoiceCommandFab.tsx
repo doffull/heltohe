@@ -242,8 +242,10 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
             id: p.id, name: p.name, category: p.category, price: p.price,
             sizes: p.sizes, colors: p.colors, description: p.description,
           }));
+          const q = (action.query || transcript || '').trim().slice(0, 1000);
+          if (!q) { speak('Précisez votre recherche'); break; }
           const { data, error } = await supabase.functions.invoke('voice-command', {
-            body: { mode: action.type === 'recommend' ? 'recommend' : 'search', transcript: action.query || transcript, products: lite },
+            body: { mode: action.type === 'recommend' ? 'recommend' : 'search', transcript: q, products: lite },
           });
           if (error) throw error;
           const ids: string[] = data?.productIds || [];
@@ -314,6 +316,11 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
   };
 
   const handleCommand = async (text: string) => {
+    const clean = (text || '').trim().slice(0, 1000);
+    if (!clean) {
+      toast.message('Aucune voix détectée, réessayez.');
+      return;
+    }
     setBusy(true);
     try {
       const lite = products.slice(0, 80).map((p) => ({
@@ -327,7 +334,7 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
         deliveryMode,
       };
       const { data, error } = await supabase.functions.invoke('voice-command', {
-        body: { transcript: text, products: lite, context: ctx },
+        body: { transcript: clean, products: lite, context: ctx },
       });
       if (error) throw error;
 
