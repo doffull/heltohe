@@ -2046,6 +2046,13 @@ export type Database = {
             referencedRelation: "roulette_segments"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "roulette_spins_segment_id_fkey"
+            columns: ["segment_id"]
+            isOneToOne: false
+            referencedRelation: "roulette_segments_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       stock_history: {
@@ -2686,6 +2693,42 @@ export type Database = {
           updated_at?: string | null
           voice_command_enabled?: boolean | null
           voice_onboarding_hint?: boolean | null
+        }
+        Relationships: []
+      }
+      roulette_segments_public: {
+        Row: {
+          color: string | null
+          description: string | null
+          icon: string | null
+          id: string | null
+          is_active: boolean | null
+          label: string | null
+          reward_type: string | null
+          sort_order: number | null
+          text_color: string | null
+        }
+        Insert: {
+          color?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          label?: string | null
+          reward_type?: string | null
+          sort_order?: number | null
+          text_color?: string | null
+        }
+        Update: {
+          color?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          label?: string | null
+          reward_type?: string | null
+          sort_order?: number | null
+          text_color?: string | null
         }
         Relationships: []
       }
