@@ -712,6 +712,7 @@ export type Database = {
           pages: Json | null
           presets: Json | null
           schedules: Json | null
+          settings_json: Json
           settings_key: string
           show_logo: boolean | null
           show_overlays: boolean | null
@@ -825,6 +826,7 @@ export type Database = {
           pages?: Json | null
           presets?: Json | null
           schedules?: Json | null
+          settings_json?: Json
           settings_key?: string
           show_logo?: boolean | null
           show_overlays?: boolean | null
@@ -938,6 +940,7 @@ export type Database = {
           pages?: Json | null
           presets?: Json | null
           schedules?: Json | null
+          settings_json?: Json
           settings_key?: string
           show_logo?: boolean | null
           show_overlays?: boolean | null
@@ -1890,6 +1893,7 @@ export type Database = {
           created_at: string
           enabled: boolean
           fab_label: string
+          game_type: string
           id: string
           notify_admin_email: string | null
           notify_admin_on_win: boolean
@@ -1909,6 +1913,7 @@ export type Database = {
           created_at?: string
           enabled?: boolean
           fab_label?: string
+          game_type?: string
           id?: string
           notify_admin_email?: string | null
           notify_admin_on_win?: boolean
@@ -1928,6 +1933,7 @@ export type Database = {
           created_at?: string
           enabled?: boolean
           fab_label?: string
+          game_type?: string
           id?: string
           notify_admin_email?: string | null
           notify_admin_on_win?: boolean
