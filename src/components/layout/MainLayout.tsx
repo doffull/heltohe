@@ -185,14 +185,15 @@ export function MainLayout({ children }: MainLayoutProps) {
     : baseNavItems;
 
   const showSidebar = isHomePage;
-  const sidebarActive = showSidebar && desktopSidebarOpen;
+  // Keep public layout stable: the image sidebar overlays the page, but never pushes logo/header/content.
+  const sidebarActive = false;
 
   // Auto-open sidebar after configurable delay on home page
   // sidebarReappearDelay: number (ms) or 0 = OFF
   const sidebarReappearDelay = (designSettings as any).sidebarReappearDelay ?? (designSettings as any).sidebarDelay ?? 10000;
   // Desktop auto-open — always respect admin-configured delay, no cap
   useEffect(() => {
-    if (!isMobile && isHomePage && sidebarReappearDelay > 0 && !desktopSidebarOpen) {
+    if (!isMobile && isHomePage && sidebarReappearDelay > 0 && !desktopSidebarOpen && !sidebarClosedByUser) {
       const timer = setTimeout(() => {
         setDesktopSidebarOpen(true);
         setSidebarClosedByUser(false);
@@ -203,7 +204,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   // Mobile auto-open — always respect admin-configured delay, no cap
   useEffect(() => {
-    if (isMobile && isHomePage && sidebarReappearDelay > 0 && !sidebarOpen) {
+    if (isMobile && isHomePage && sidebarReappearDelay > 0 && !sidebarOpen && !mobileSidebarClosedByUser) {
       const timer = setTimeout(() => {
         setSidebarOpen(true);
         setMobileSidebarClosedByUser(false);
