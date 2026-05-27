@@ -332,7 +332,7 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
         deliveryMode,
       };
       const { data, error } = await supabase.functions.invoke('voice-command', {
-        body: { transcript: text, products: lite, context: ctx },
+        body: { transcript: clean, products: lite, context: ctx },
       });
       if (error) throw error;
 
