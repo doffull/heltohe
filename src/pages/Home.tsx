@@ -25,6 +25,12 @@ import type { PageSection } from '@/hooks/usePages';
 
 const PLACEHOLDER = '/placeholder.svg';
 
+function keepFallbackImage(event: React.SyntheticEvent<HTMLImageElement>) {
+  if (!event.currentTarget.src.endsWith(PLACEHOLDER)) {
+    event.currentTarget.src = PLACEHOLDER;
+  }
+}
+
 const DEFAULT_HERO_SLIDES = [
 {
   image: PLACEHOLDER,
@@ -244,7 +250,7 @@ export default function Home() {
                     to={cat.href}
                     className={cn("group relative overflow-hidden bevel-corners block", `aspect-[${ar}]`)}
                     style={{ aspectRatio: ar }}>
-                    <img src={cat.image} alt={cat.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                    <img src={cat.image || PLACEHOLDER} alt={cat.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy" decoding="async" onError={keepFallbackImage} />
                     <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/20 to-transparent" />
                     <div className="absolute inset-0 border-2 border-transparent group-hover:border-foreground/40 transition-colors duration-300 bevel-corners" />
                     <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-5 lg:p-6">
@@ -277,7 +283,7 @@ export default function Home() {
             {featuredProducts.map((product) => (
               <motion.div key={product.id} variants={cardVariants} whileHover={{ y: -8, transition: { duration: 0.3 } }} className="group bg-background bevel-corners overflow-hidden border border-border hover:border-foreground hover:shadow-hmp-lg transition-colors">
                 <div className="relative aspect-[3/4] overflow-hidden cursor-pointer" onClick={() => navigate(`/boutique/${product.id}`)}>
-                  <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                  <img src={product.image || PLACEHOLDER} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="lazy" decoding="async" onError={keepFallbackImage} />
                   {product.salePrice && <div className="absolute top-3 left-3 bg-foreground text-background px-2 py-1 text-[10px] font-bold uppercase">Promo</div>}
                   {product.stock <= 5 && product.stock > 0 && <div className="absolute top-3 right-3 bg-destructive text-destructive-foreground px-2 py-1 text-[10px] uppercase">Stock limité</div>}
                 </div>
@@ -314,7 +320,7 @@ export default function Home() {
             {newArrivals.map((product) => (
               <motion.div key={product.id} variants={cardVariants} whileHover={{ y: -6, transition: { duration: 0.3 } }} className="group bg-card bevel-corners-sm overflow-hidden border border-border hover:border-foreground transition-colors">
                 <div className="relative aspect-square overflow-hidden cursor-pointer" onClick={() => navigate(`/boutique/${product.id}`)}>
-                  <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <img src={product.image || PLACEHOLDER} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" decoding="async" onError={keepFallbackImage} />
                 </div>
                 <div className="p-4">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{product.category}</p>
