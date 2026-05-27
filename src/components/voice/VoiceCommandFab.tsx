@@ -104,6 +104,10 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
     try { return localStorage.getItem(VOICE_DELIVERY_KEY) || ''; } catch { return ''; }
   });
   const recRef = useRef<SR | null>(null);
+  const shouldRestartRef = useRef(false);
+  const autoRestartCountRef = useRef(0);
+  const openRef = useRef(open);
+  useEffect(() => { openRef.current = open; }, [open]);
 
   useEffect(() => {
     try { localStorage.setItem(TEST_MODE_KEY, testMode ? 'on' : 'off'); } catch {}
