@@ -93,7 +93,15 @@ export function MegaMenu() {
             <div className="sticky top-0 z-10 flex items-center justify-between px-4 lg:px-12 py-4 lg:py-6 bg-background/60 backdrop-blur-xl border-b border-foreground/10">
               <div className="flex items-center gap-3">
                 {designSettings.hudLogo ? (
-                  <img src={designSettings.hudLogo} alt="" className="h-7 lg:h-8 w-auto object-contain" />
+                  <img
+                    src={designSettings.hudLogo}
+                    alt=""
+                    className="h-8 w-auto max-w-[12rem] shrink-0 object-contain"
+                    width={160}
+                    height={32}
+                    decoding="async"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).src = PLACEHOLDER; }}
+                  />
                 ) : (
                   <span className="font-bold tracking-[0.3em] uppercase text-sm">
                     {(designSettings as any).siteName || 'LVTK6'}
