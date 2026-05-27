@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
+export type GameType = 'scratch' | 'wheel' | 'mystery' | 'flash';
+
 export interface RouletteConfig {
   id: string;
   enabled: boolean;
@@ -11,6 +13,7 @@ export interface RouletteConfig {
   cooldown_hours: number;
   reward_validity_days: number;
   require_email: boolean;
+  game_type?: GameType;
 }
 
 export interface RouletteSegment {

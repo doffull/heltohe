@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { MannequinHotspots } from './MannequinHotspot';
 import { SidebarProductHUD } from './SidebarProductHUD';
 import { UnifiedFab } from './UnifiedFab';
+import { BrandLogo } from './BrandLogo';
 import { MegaMenuTrigger } from './MegaMenuTrigger';
 // SidebarNewsletter retiré du panneau latéral
 import { MiniNavbar } from '@/components/ui/mini-navbar';
@@ -299,30 +300,14 @@ export function MainLayout({ children }: MainLayoutProps) {
               "flex items-center gap-2 mr-auto min-w-0 shrink-0 overflow-hidden",
               headerPreset === 'centered' ? "justify-center" : ""
             )}>
-              {designSettings.hudLogo ? (
-                <img 
-                  src={designSettings.hudLogo} 
-                  alt="Logo" 
-                  className={cn(
-                    "w-auto object-contain shrink-0 max-w-[9rem] sm:max-w-[12rem] lg:max-w-[14rem]",
-                    headerPreset === 'centered' ? "h-8 lg:h-12" : "h-8 lg:h-10"
-                  )}
-                  width={176}
-                  height={40}
-                  decoding="async"
-                  onError={withImageFallback}
-                />
-              ) : (
-                <span className="font-bold text-sm sm:text-base tracking-wider uppercase truncate">
-                  <InlineEditable
-                    fieldKey="header-sitename"
-                    value={(designSettings as any).siteName || 'LVTK6'}
-                    onChange={(v) => updateDesignSettings({ siteName: v } as any)}
-                    as="span"
-                    className="font-bold text-sm sm:text-base tracking-wider uppercase"
-                  />
-                </span>
-              )}
+              <BrandLogo
+                imgClassName={cn(
+                  'max-w-[9rem] sm:max-w-[12rem] lg:max-w-[14rem]',
+                  headerPreset === 'centered' ? 'h-8 lg:h-12' : 'h-8 lg:h-10'
+                )}
+                textClassName="text-sm sm:text-base"
+                maxHeight={headerPreset === 'centered' ? 48 : 40}
+              />
             </Link>
 
             {/* Desktop Navigation */}

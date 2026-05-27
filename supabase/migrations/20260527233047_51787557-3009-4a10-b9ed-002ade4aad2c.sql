@@ -1,0 +1,2 @@
+ALTER TABLE public.roulette_config ADD COLUMN IF NOT EXISTS game_type text NOT NULL DEFAULT 'scratch';
+ALTER TABLE public.design_settings ADD COLUMN IF NOT EXISTS settings_json jsonb NOT NULL DEFAULT '{}'::jsonb;

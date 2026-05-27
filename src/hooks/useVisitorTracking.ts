@@ -53,15 +53,17 @@ export function useVisitorTracking({ enabled = true, userId = null }: Options = 
   const lastPathRef = useRef<string>('');
   const pageStartRef = useRef<number>(Date.now());
 
-  // Init session + heartbeat
+  // Init session + heartbeat — deferred until idle so it never blocks LCP.
   useEffect(() => {
     if (!enabled) return;
     sessionIdRef.current = getOrCreateSessionId();
 
-    if (!startedRef.current) {
+    let cancelled = false;
+    let hb: ReturnType<typeof setInterval> | null = null;
+
+    const start = () => {
+      if (cancelled || startedRef.current) return;
       startedRef.current = true;
-      // INSERT only (avoid upsert which needs SELECT permission for returning row).
-      // Subsequent updates are handled by the heartbeat RPC below.
       supabase
         .from('visitor_sessions')
         .insert({
@@ -74,21 +76,28 @@ export function useVisitorTracking({ enabled = true, userId = null }: Options = 
           last_seen_at: new Date().toISOString(),
         })
         .then(({ error }) => {
-          // Ignore duplicate session conflicts (existing row) and forbidden (silently)
+          // 23505 dup, 42501 forbidden, network → silent (analytics is best-effort)
           if (error && !['23505', '42501'].includes((error as any).code)) {
-            // surface only unexpected errors
-            console.warn('[visitor-tracking] insert failed', error);
+            // intentionally silent: do not spam console for visitor analytics
           }
-        });
-    }
+        }, () => { /* network swallowed */ });
 
-    const hb = setInterval(() => {
-      supabase
-        .rpc('track_session_heartbeat' as any, { p_session_id: sessionIdRef.current })
-        .then(() => {});
-    }, 15000);
+      hb = setInterval(() => {
+        supabase
+          .rpc('track_session_heartbeat' as any, { p_session_id: sessionIdRef.current })
+          .then(() => {}, () => { /* silent */ });
+      }, 30000);
+    };
 
-    return () => clearInterval(hb);
+    const ric = (window as any).requestIdleCallback as undefined | ((cb: () => void, opts?: any) => number);
+    const id = ric ? ric(start, { timeout: 2500 }) : (window.setTimeout(start, 1500) as unknown as number);
+
+    return () => {
+      cancelled = true;
+      if (hb) clearInterval(hb);
+      if (ric && (window as any).cancelIdleCallback) (window as any).cancelIdleCallback(id);
+      else clearTimeout(id);
+    };
   }, [enabled, userId]);
 
   // Page views

@@ -256,6 +256,20 @@ function settingsToDb(s: DesignSettings) {
   };
 }
 
+const LS_DESIGN_CACHE = 'lvtk-design-cache-v1';
+
+function readDesignCache(): DesignSettings | null {
+  try {
+    const raw = localStorage.getItem(LS_DESIGN_CACHE);
+    if (!raw) return null;
+    return JSON.parse(raw) as DesignSettings;
+  } catch { return null; }
+}
+
+function writeDesignCache(s: DesignSettings) {
+  try { localStorage.setItem(LS_DESIGN_CACHE, JSON.stringify(s)); } catch { /* ignore quota */ }
+}
+
 export function useDesignSettings() {
   return useQuery({
     queryKey: ['design_settings'],
@@ -266,9 +280,13 @@ export function useDesignSettings() {
         .eq('settings_key', 'main')
         .maybeSingle();
       if (error) throw error;
-      if (!data) return null;
-      return dbToSettings(data as Record<string, unknown>);
+      if (!data) return readDesignCache();
+      const mapped = dbToSettings(data as Record<string, unknown>);
+      writeDesignCache(mapped);
+      return mapped;
     },
+    // Serve last-known settings instantly on mount → no flash, no missing logo.
+    initialData: () => readDesignCache() ?? undefined,
     staleTime: 5 * 60_000,
     gcTime: 30 * 60_000,
     refetchOnWindowFocus: false,

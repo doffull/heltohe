@@ -1,115 +1,73 @@
+import { useState, useEffect, CSSProperties } from 'react';
 import { useApp } from '@/context/AppContext';
-import { CSSProperties, useState, useEffect } from 'react';
-
-export type LogoVariant = 'header' | 'footer' | 'sidebar' | 'splash';
+import { cn } from '@/lib/utils';
 
 interface BrandLogoProps {
-  variant?: LogoVariant;
-  size?: number; // override
   className?: string;
-  altOverride?: string;
+  imgClassName?: string;
+  textClassName?: string;
+  maxHeight?: number;
+  /** Use the footer-specific logo URL when available. */
+  variant?: 'header' | 'footer';
+  style?: CSSProperties;
 }
 
-const SHAPE_CLIPS: Record<string, string | undefined> = {
-  none: undefined,
-  circle: 'circle(50% at 50% 50%)',
-  square: 'inset(0)',
-  triangle: 'polygon(50% 0%, 100% 100%, 0% 100%)',
-  hexagon: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
-  diamond: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
-  blob: 'polygon(30% 0%, 70% 5%, 100% 30%, 95% 70%, 70% 100%, 30% 95%, 0% 70%, 5% 30%)',
-};
-
-export function BrandLogo({ variant = 'header', size, className, altOverride }: BrandLogoProps) {
+/**
+ * Single robust logo renderer. Source order:
+ *  1. designSettings.hudLogo (or footerLogo for footer variant)
+ *  2. site name text
+ *  3. constant fallback "LVTK6"
+ *
+ * - Reserves height so the layout never jumps during fetch / image swap.
+ * - Falls back to text instantly on image error without leaving a hole.
+ */
+export function BrandLogo({
+  className,
+  imgClassName,
+  textClassName,
+  maxHeight = 40,
+  variant = 'header',
+  style,
+}: BrandLogoProps) {
   const { designSettings } = useApp();
-  const ds = designSettings as any;
-
   const url =
-    variant === 'footer' ? (ds.footerLogo || ds.hudLogo) :
-    ds.hudLogo;
-  const brandName = ds.siteName || 'BRAND';
+    variant === 'footer'
+      ? ((designSettings as any).footerLogo as string) || designSettings.hudLogo
+      : designSettings.hudLogo;
+  const siteName = (designSettings as any).siteName || 'LVTK6';
+  const [broken, setBroken] = useState(false);
 
-  const finalSize = size ?? (ds.logoSize || 40);
-  const shape = ds.logoBackgroundShape || 'none';
-  const bgColor = ds.logoBackgroundColor || '';
-  const padding = ds.logoBackgroundPadding ?? 8;
+  // Reset broken state when URL changes (admin save → live update).
+  useEffect(() => {
+    setBroken(false);
+  }, [url]);
 
-  const wrapperStyle: CSSProperties = {
-    width: finalSize,
-    height: finalSize,
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: shape !== 'none' ? padding : 0,
-    background: shape !== 'none' && bgColor ? bgColor : 'transparent',
-    clipPath: SHAPE_CLIPS[shape],
-    WebkitClipPath: SHAPE_CLIPS[shape],
-    transition: 'all 0.25s ease',
-    flexShrink: 0,
-  };
-
-  const imgStyle: CSSProperties = {
-    maxWidth: '100%',
-    maxHeight: '100%',
-    objectFit: 'contain',
-    display: 'block',
-  };
-
-  const [imgError, setImgError] = useState(false);
-  useEffect(() => { setImgError(false); }, [url]);
-  const showImage = !!url && !imgError;
-
-  const isHeader = variant === 'header';
+  if (url && !broken) {
+    return (
+      <img
+        src={url}
+        alt={siteName}
+        width={176}
+        height={maxHeight}
+        decoding="async"
+        loading="eager"
+        onError={() => setBroken(true)}
+        className={cn('w-auto object-contain shrink-0', imgClassName, className)}
+        style={{ maxHeight, ...style }}
+      />
+    );
+  }
 
   return (
     <span
-      className={className}
-      style={{
-        ...wrapperStyle,
-        position: 'relative',
-        overflow: 'hidden',
-        animation: isHeader ? 'logo-breathe 8s ease-in-out infinite' : undefined,
-      }}
-      aria-label={altOverride || brandName}
+      className={cn(
+        'inline-flex items-center font-bold tracking-wider uppercase truncate',
+        textClassName,
+        className
+      )}
+      style={{ minHeight: maxHeight, ...style }}
     >
-      {showImage ? (
-        <img
-          src={url}
-          alt={altOverride || brandName}
-          style={imgStyle}
-          loading="eager"
-          decoding="async"
-          onError={() => setImgError(true)}
-        />
-      ) : (
-        <span style={{
-          fontWeight: 900, letterSpacing: '0.18em',
-          fontSize: Math.max(10, finalSize / 4),
-          color: bgColor ? '#000' : 'currentColor',
-          textTransform: 'uppercase',
-        }}>
-          {brandName}
-        </span>
-      )}
-      {isHeader && (
-        <span
-          aria-hidden
-          style={{
-            position: 'absolute',
-            top: '-20%',
-            left: '-40%',
-            width: '60%',
-            height: '140%',
-            background:
-              'linear-gradient(100deg, transparent 0%, rgba(255,255,255,0.55) 50%, transparent 100%)',
-            mixBlendMode: 'overlay',
-            pointerEvents: 'none',
-            animation: 'sheen 6s ease-in-out infinite',
-          }}
-        />
-      )}
+      {siteName}
     </span>
   );
 }
-
-export default BrandLogo;
