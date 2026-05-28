@@ -1,6 +1,13 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
+import { useCategories } from '@/hooks/useCategories';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
+import { subscribeToNewsletter } from '@/hooks/useNewsletterPopups';
+import { cn } from '@/lib/utils';
 import type { PageSection } from '@/hooks/usePages';
 
 function HeroSection({ content }: { content: Record<string, any> }) {
