@@ -294,6 +294,11 @@ function SectionEditor({
         {section.type === 'popup_button' && (
           <PopupButtonEditor section={section} updateContent={updateContent} />
         )}
+
+        {/* Banner */}
+        {section.type === 'banner' && (
+          <BannerEditor section={section} updateContent={updateContent} />
+        )}
         </>
         )}
       </CardContent>
