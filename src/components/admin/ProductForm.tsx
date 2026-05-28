@@ -912,13 +912,14 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
           </div>
           <Button type="button" variant="outline" size="icon" onClick={addAttribute}>
             <Plus className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+
       <TemplateSelector
         value={formData.templateId}
         onChange={(id) => setFormData(prev => ({ ...prev, templateId: id }))}
       />
-
-      {/* Actions */}
-      </div>
 
       {/* Actions */}
       <div className="flex justify-end gap-3 pt-4 border-t border-border/30">
