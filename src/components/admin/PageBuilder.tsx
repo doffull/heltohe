@@ -241,6 +241,15 @@ function SectionEditor({
             >
               <Plus className="h-3 w-3 mr-1" /> Ajouter une image
             </Button>
+            <div className="space-y-1">
+              <Label className="text-xs">Effet au survol</Label>
+              <Select value={section.content.hoverEffect || 'none'} onValueChange={v => updateContent('hoverEffect', v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {HOVER_EFFECTS.map(h => <SelectItem key={h.value} value={h.value}>{h.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         )}
 
