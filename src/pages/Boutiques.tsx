@@ -92,12 +92,10 @@ export default function Boutiques() {
     return () => { cancelled = true; };
   }, [boutiques]);
 
+  useDocTitle('Nos boutiques — LVTK6', 'Découvrez toutes nos boutiques en France : magasins permanents et boutiques éphémères.');
+
   return (
     <>
-      <Helmet>
-        <title>Nos boutiques — LVTK6</title>
-        <meta name="description" content="Découvrez toutes nos boutiques en France : magasins permanents et boutiques éphémères." />
-      </Helmet>
       <div className="min-h-screen bg-background">
         <div className="px-6 lg:px-12 pt-10 pb-6">
           <h1 className="hud-text text-3xl md:text-4xl font-bold tracking-wider uppercase text-foreground">
