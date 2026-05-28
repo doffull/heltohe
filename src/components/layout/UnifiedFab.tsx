@@ -164,6 +164,8 @@ export function UnifiedFab() {
   // Visual editor toggle for admins (used in dock). Provider always present at App root.
   const ve = useVisualEditor();
 
+  if (!fabEnabled) return null;
+
   return (
     <>
       {/* Custom DB FABs (skipped in cluster/dock mode unless marked free) */}
