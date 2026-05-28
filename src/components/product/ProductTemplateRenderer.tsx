@@ -22,7 +22,6 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [imgIdx, setImgIdx] = useState(0);
-  const [imgIdx, setImgIdx] = useState(0);
 
   useEffect(() => {
     if (template.theme.fontHeading) loadGoogleFont(template.theme.fontHeading);
