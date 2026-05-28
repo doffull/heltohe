@@ -55,6 +55,7 @@ function SectionEditor({
   onMoveDown,
   isFirst,
   isLast,
+  defaultOpen,
 }: {
   section: PageSection;
   onChange: (s: PageSection) => void;
@@ -63,13 +64,17 @@ function SectionEditor({
   onMoveDown: () => void;
   isFirst: boolean;
   isLast: boolean;
+  defaultOpen?: boolean;
 }) {
   const typeMeta = SECTION_TYPES.find(t => t.value === section.type);
   const Icon = typeMeta?.icon || Type;
+  const [open, setOpen] = useState(!!defaultOpen);
 
   const updateContent = (key: string, value: any) => {
     onChange({ ...section, content: { ...section.content, [key]: value } });
   };
+
+  const summary = section.content.title || section.content.text || section.content.alt || section.content.buttonLabel || '';
 
   return (
     <Card className="border border-border">
