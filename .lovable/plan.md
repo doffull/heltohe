@@ -1,104 +1,75 @@
-# Refonte Premium — Templates de pages
+## Objectif
 
-## Objectifs
+Rendre la page `/admin/home-icons` 100% fonctionnelle :
+1. le bouton flottant unifié apparaît bien côté user quand il est activé,
+2. les 5 modes (Dock glass / Socle / Groupés / Cluster CTA / Libres) s'appliquent réellement et instantanément,
+3. **tout ce qui est cliquable redirige** vers l'éditeur concerné (sections, héros, blocs, etc.) — création des routes/pages manquantes si besoin.
 
-1. Presets visuels (avec aperçus images), import de presets JSON.
-2. Corriger l'erreur d'enregistrement quand on monte/descend des blocs.
-3. Gestion fluide : suppression, duplication, recherche, marquer comme défaut, aperçu.
-4. UI admin premium.
-5. Contrôle design 100 % : couleurs, typo (Google Fonts), espacements, rayons, ombres, padding global.
-6. **Variantes par bloc** (gallery, description, find-size, CTA, sizes, prix…) sélectionnables au lieu de simples props.
+## Diagnostic (constats du code actuel)
 
----
+- `src/components/layout/UnifiedFab.tsx` **n'honore pas** `cfg.enabled`. Le toggle "Activé" dans l'éditeur ne fait donc rien → l'utilisateur croit l'avoir activé alors qu'il l'était déjà, et inversement.
+- Les modes (`dock`, `socle`, `grouped`, `cluster`, `free`) sont bien câblés dans `UnifiedFab.tsx`, mais sauvegardés **en debounce 800 ms via `updateDesignSettings`** sans flush DB explicite → après reload ou autre onglet, l'état semble ne pas avoir changé. De plus, plusieurs modes (cluster/dock) lisent `clusterPos_*`/`dockPos_*` qui ne sont jamais initialisés à la 1ère sélection → bouton peut se positionner hors écran et paraître invisible.
+- `cfg.position_desktop/mobile` peut contenir une valeur Y > viewport (slider va jusqu'à 200) → FAB visible mais sous le footer mobile (360 px de large, user vient de scroller).
+- `HomeBlocksEditor` affiche un œil (visible/visible) qui **n'est qu'un indicateur**, pas un lien vers l'éditeur de ce bloc (Hero, Catégories, Flash, etc.). Aucune redirection.
+- `HomeCustomSectionsEditor` (à confirmer) édite les sections sur place, mais aucun lien rapide vers l'admin page concernée.
+- Boutons custom (`home_fab_buttons`) : l'éditeur fonctionne, mais aucun message clair quand `action_type=route` pointe vers une route 404.
 
-## 1. Corriger le bug d'enregistrement après réorganisation
+## Plan d'action
 
-**Cause probable** : après `moveBlock` / changement de `col`/`span`, la mutation upsert renvoie une erreur (souvent contrainte `slug` unique conflictuelle lors d'un upsert répété, ou JSONB invalide quand un champ devient `undefined`).
+### 1. Faire respecter `enabled` + reset positions invalides
+- `UnifiedFab.tsx` : early return si `cfg.enabled === false`.
+- Si `cfg.position_desktop.y > 600` ou `cfg.position_mobile.y > 400`, clamp + toast admin "Position corrigée".
+- Initialiser `clusterPos_*` / `dockPos_*` à un coin visible (`br` / `bc`) au **premier passage** dans ces modes.
 
-**Fix** :
-- Nettoyer le payload côté `useUpsertTemplate` (purger les `undefined`, garantir `layout.blocks` sérialisable).
-- Afficher l'erreur Supabase exacte dans le toast (déjà fait mais souvent tronquée → log + détail).
-- Ajouter une vérif côté UI : si le slug est vide, le régénérer automatiquement.
-- Vérifier que la RLS / GRANT autorise bien `UPDATE` à l'admin connecté (lecture des policies actuelles).
+### 2. Sauvegarde immédiate des changements de mode
+- Dans `UnifiedFabEditor.tsx`, supprimer le délai pour les changements **structurants** (`enabled`, `mode`) : flush DB direct + invalidation cache → mode visible sans recharger.
+- Garder le debounce 800 ms uniquement pour les sliders (taille, blur, offset, couleurs).
+- Ajouter un petit badge live « Aperçu mis à jour » qui se ferme tout seul.
 
-## 2. Presets visuels + import
+### 3. Audit complet "tout est cliquable" (page Icônes Accueil)
+Sur chaque bloc de la page, ajouter un bouton/lien **« Éditer »** qui redirige vers la sous-route admin la plus pertinente :
 
-- Ajouter un champ `previewImage` (déjà présent dans le type) à chaque preset et générer 4 vignettes (via `imagegen`) représentant chaque style (Buggy, Minimal, Classic, Magazine) + 2 nouveaux presets : **Editorial** et **Showroom**.
-- Carte preset = vignette image + nom + type + bouton "Utiliser ce preset".
-- Nouveau bouton **Importer un preset** : upload `.json` validé par un schéma Zod léger → injecté comme nouveau template.
-- Bouton **Exporter** sur chaque template existant (download JSON).
+| Bloc dans `AdminHomeIcons` | Action ajoutée | Route cible (créer si absente) |
+| --- | --- | --- |
+| `HomeBlocksEditor` → ligne « Hero » | bouton ✎ | `/admin/design#techwear-hero` (onglet `TechwearHeroTab`) |
+| ligne « Categories » | bouton ✎ | `/admin/categories` |
+| ligne « Featured / NewArrivals » | bouton ✎ | `/admin/products` |
+| ligne « Flash » | bouton ✎ | `/admin/marketing#flash` |
+| ligne « Loyalty » | bouton ✎ | `/admin/marketing#fidelite` |
+| ligne « Newsletter » | bouton ✎ | `/admin/marketing#newsletter` |
+| ligne « VoiceBanner » | bouton ✎ | scrolle vers `UnifiedFabEditor` (ancre `#unified-fab`) |
+| ligne « custom:... » | bouton ✎ | ouvre directement `HomeCustomSectionsEditor` dépliée sur la section |
+| Œil (👁) | reste un toggle visible/masqué (clarifié par tooltip) |  |
+| `UnifiedFabEditor` → bouton Roulette | lien rapide « Configurer le jeu » | `/admin/roulette` |
+| `UnifiedFabEditor` → toggle Chat | lien « Configurer l'IA » | `/admin/chatbot` |
+| `UnifiedFabEditor` → toggle Voix | lien « Paramètres voix » | `/admin/settings#voice` |
+| Carte d'un bouton custom (liste) | titre cliquable = ouvrir éditeur | déjà OK, ajouter raccourci « Tester l'action » qui exécute `handleAction` |
+| `FabLivePreview` | clic sur un bouton de l'aperçu = scroll vers son éditeur | nouveau |
 
-## 3. Gestion fluide des templates
+### 4. Création des ancres manquantes
+- `AdminDesign.tsx` : ajouter `id="techwear-hero"`, scroll-margin pour `scrollIntoView`.
+- `AdminMarketing.tsx` : ajouter ancres `#flash`, `#fidelite`, `#newsletter`.
+- `AdminSettings.tsx` : ancre `#voice`.
+- `AdminHomeIcons.tsx` : ancres `#sections`, `#custom`, `#unified-fab`, `#custom-fabs`.
 
-- Barre d'actions par carte : Éditer · Dupliquer · Définir par défaut · Exporter · Supprimer (avec `AlertDialog` au lieu de `confirm`).
-- Recherche + filtre par type (Produit / Catégorie).
-- Indicateur visuel "défaut" plus marqué.
-- Toast de succès + invalidation cache.
+### 5. Validation + UX
+- Toast d'erreur clair quand `action_value` d'un bouton custom pointe vers une route invalide (vérif via liste blanche des routes connues).
+- Tooltip explicatif sur chaque mode du `UnifiedFabEditor` décrivant en 1 phrase ce qu'il fait.
+- Bouton **« Tester sur la home »** en haut de la page = `window.open('/', '_blank')`.
 
-## 4. UI Premium
+## Fichiers touchés
 
-- Layout admin retravaillé : header sticky avec actions principales, grille de cartes avec hover élégant, ombres douces, transitions.
-- Éditeur en plein écran (drawer/sheet large) au lieu d'un dialog cramped.
-- Aperçu **live** à droite pendant l'édition (rend `ProductTemplateRenderer` avec un produit factice).
-- Onglets : Infos · Thème · Typographie · Disposition · Variantes · Aperçu.
+- `src/components/layout/UnifiedFab.tsx` (respect `enabled`, clamp positions, init cluster/dock)
+- `src/components/admin/UnifiedFabEditor.tsx` (flush immédiat des changements structurants, tooltips, liens contextuels)
+- `src/components/admin/HomeBlocksEditor.tsx` (bouton ✎ par ligne + navigate)
+- `src/components/admin/HomeCustomSectionsEditor.tsx` (déplier sur ancre)
+- `src/components/admin/FabLivePreview.tsx` (clic = scroll vers éditeur)
+- `src/pages/admin/AdminHomeIcons.tsx` (ancres, bouton "Tester")
+- `src/pages/admin/AdminDesign.tsx`, `AdminMarketing.tsx`, `AdminSettings.tsx` (ancres `id=`)
 
-## 5. Contrôle design 100 %
+Aucune migration DB nécessaire — uniquement frontend.
 
-Ajouter au type `TemplateTheme` :
-- `spacing` (échelle), `radiusScale` (sm/md/lg), `shadowScale`.
-- `fontHeading`, `fontBody` (sélection parmi ~15 Google Fonts ou import URL).
-- `fontSizes` (xs→3xl).
-- `containerWidth`, `sectionPaddingY`.
-
-Editeur thème :
-- Color pickers + saisie HEX.
-- Sliders pour rayons / espacements / ombres.
-- Sélecteur Google Fonts (pré-chargement dynamique via `<link>` injection lors du preview).
-
-## 6. Variantes de blocs
-
-Étendre `TemplateBlock` avec `variant?: string`. Chaque bloc a son catalogue :
-
-- **gallery** : `classic-thumbs-left`, `grid-2x2`, `carousel-fullbleed`, `masonry`, `slider-dots`.
-- **description** : `plain`, `accordion`, `tabs`, `bullet-features`, `magazine-drop-cap`.
-- **find_size_btn** : `outline`, `pill-icon`, `link-underline`, `modal-cta`.
-- **cta_add_to_cart** : `bold-block`, `outline-minimal`, `gradient`, `sticky-bottom`, `split-buy-now`.
-- **sizes_selector** : `chips`, `dropdown`, `grid-bordered`, `compact-pill`.
-- **price** : `large-bold`, `inline-strike`, `badge-discount`, `subscription-split`.
-- **trust_badges** : `row-3`, `icons-only`, `stacked-list`, `marquee`.
-
-Implémentation :
-- `ProductTemplateRenderer` switch sur `b.variant` pour chaque type (fallback = variant actuelle).
-- Dans l'éditeur de bloc : combobox des variantes + mini-preview.
-
-## Schéma base de données
-
-Aucune migration de schéma nécessaire (les colonnes `theme` et `layout` sont JSONB → toutes les extensions vivent dedans). Vérification : confirmer que les policies `page_templates` autorisent `UPDATE`/`DELETE` aux admins.
-
-## Détails techniques
-
-- Nouveaux fichiers :
-  - `src/config/blockVariants.ts` (catalogue + métadonnées).
-  - `src/components/admin/templates/PresetGallery.tsx`
-  - `src/components/admin/templates/TemplateCard.tsx`
-  - `src/components/admin/templates/TemplateEditorSheet.tsx` (remplace l'ancien Dialog)
-  - `src/components/admin/templates/ThemeEditor.tsx`
-  - `src/components/admin/templates/LayoutEditor.tsx`
-  - `src/components/admin/templates/BlockVariantPicker.tsx`
-  - `src/components/admin/templates/LivePreview.tsx`
-  - `src/components/admin/templates/ImportExportButtons.tsx`
-- Modifier :
-  - `src/config/templatePresets.ts` (ajouter `previewImage`, 2 presets, `fontHeading/Body`, `spacing`).
-  - `src/hooks/usePageTemplates.ts` (nettoyage payload, gestion erreurs détaillées).
-  - `src/components/product/ProductTemplateRenderer.tsx` (support `variant`).
-  - `src/pages/admin/AdminPageTemplates.tsx` (refonte UI).
-- Assets : 6 images de preview générées dans `src/assets/template-presets/`.
-
-## Hors scope (sera fait plus tard si demandé)
-
-- Drag-and-drop visuel sur la grille (on garde flèches + numéros col/span pour stabilité).
-- Templates pour autres types de pages (panier, checkout…).
-
----
-
-Confirme et je passe en build.
+## Hors périmètre
+- Refonte des autres tableaux admin (Produits, Commandes…).
+- Drag-and-drop nouveau (déjà OK).
+- Templates de pages (déjà livré séparément).
