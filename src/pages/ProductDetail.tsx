@@ -103,6 +103,11 @@ export default function ProductDetail() {
     );
   }
 
+  // If a template is assigned (or a default exists), use the dynamic renderer
+  if (activeTemplate) {
+    return <ProductTemplateRenderer template={activeTemplate} product={product} />;
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-4 md:py-8">
