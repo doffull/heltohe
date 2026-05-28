@@ -3,8 +3,10 @@ import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
 import { useCategories, useUpdateCategory } from '@/hooks/useCategories';
 import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
-import { Check, Pencil } from 'lucide-react';
+import { Check, Pencil, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+import { useBoutiques } from '@/hooks/useBoutiques';
 
 const CATEGORY_PLACEHOLDER = '/placeholder.svg';
 
@@ -17,8 +19,10 @@ function keepCategoryFallback(event: React.SyntheticEvent<HTMLImageElement>) {
 export function CategoryGrid() {
   const { navigateToCategory, language } = useApp();
   const { data: dbCategories = [] } = useCategories();
+  const { data: boutiques = [] } = useBoutiques();
   const updateCategory = useUpdateCategory();
   const { isOpen: isEditorOpen } = useVisualEditor();
+  const navigate = useNavigate();
 
   // Editing state: categoryId → local title value
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -142,6 +146,53 @@ export function CategoryGrid() {
             </div>
           );
         })}
+      </div>
+
+      {/* Elongated "Les Boutiques" card */}
+      <div className="px-6 lg:px-12 mt-4">
+        <button
+          type="button"
+          onClick={() => navigate('/boutiques')}
+          className="group relative w-full h-40 lg:h-52 overflow-hidden chamfer-hud transition-all duration-500 hover:shadow-hud animate-slide-in-up text-left"
+          style={{ animationDelay: `${categories.length * 100}ms` }}
+        >
+          {/* Background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-foreground/95 via-foreground/85 to-foreground/70" />
+          {/* Subtle map texture */}
+          <div
+            className="absolute inset-0 opacity-20 mix-blend-overlay"
+            style={{
+              backgroundImage: 'radial-gradient(circle at 20% 30%, hsl(var(--primary)) 1px, transparent 1.5px), radial-gradient(circle at 70% 60%, hsl(var(--primary)) 1px, transparent 1.5px), radial-gradient(circle at 45% 80%, hsl(var(--primary)) 1px, transparent 1.5px)',
+              backgroundSize: '120px 120px, 180px 180px, 90px 90px',
+            }}
+          />
+          <div className="absolute inset-0 border-2 border-transparent group-hover:border-primary/50 transition-colors duration-300 chamfer-hud" />
+          {/* Content */}
+          <div className="relative h-full flex items-center justify-between px-8 lg:px-12">
+            <div>
+              <div className="hud-text text-[10px] text-primary tracking-[0.3em] mb-2">
+                // {language === 'FR' ? 'NOS POINTS DE VENTE' : 'OUR STORES'}
+              </div>
+              <h3 className="hud-text text-2xl lg:text-4xl font-bold tracking-wider uppercase text-background">
+                {language === 'FR' ? 'Les Boutiques' : 'Our Boutiques'}
+              </h3>
+              <p className="text-xs lg:text-sm text-background/70 mt-2 max-w-md">
+                {boutiques.length > 0
+                  ? `${boutiques.length} ${boutiques.length > 1 ? 'boutiques' : 'boutique'} ${language === 'FR' ? 'en France — permanentes et éphémères' : 'across France'}`
+                  : language === 'FR' ? 'Magasins permanents et boutiques éphémères dans toute la France' : 'Permanent stores and pop-ups across France'}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <MapPin className="h-8 w-8 lg:h-12 lg:w-12 text-primary group-hover:scale-110 transition-transform" />
+              <div className="hud-text text-[10px] text-background/60 tracking-widest hidden sm:block">
+                {language === 'FR' ? 'VOIR LA CARTE →' : 'VIEW MAP →'}
+              </div>
+            </div>
+          </div>
+          {/* Corner accents */}
+          <div className="absolute top-3 right-3 w-6 h-6 border-t-2 border-r-2 border-primary/60" />
+          <div className="absolute bottom-3 left-3 w-6 h-6 border-b-2 border-l-2 border-primary/60" />
+        </button>
       </div>
     </section>
   );
