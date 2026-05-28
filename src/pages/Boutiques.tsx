@@ -71,17 +71,29 @@ export default function Boutiques() {
           ],
         });
         const bounds = new google.maps.LatLngBounds();
+        let openInfo: any = null;
         boutiques.forEach((b) => {
           const marker = new google.maps.Marker({
             position: { lat: b.latitude, lng: b.longitude },
             map: mapInstance.current,
             title: b.name,
           });
+          const dirUrl = `https://www.google.com/maps/dir/?api=1&destination=${b.latitude},${b.longitude}`;
+          const imgHtml = b.image
+            ? `<img src="${b.image}" alt="${b.name}" style="width:100%;height:120px;object-fit:cover;border-radius:4px;margin-bottom:8px"/>`
+            : '';
           const info = new google.maps.InfoWindow({
-            content: `<div style="font-family:sans-serif;min-width:160px"><strong>${b.name}</strong><br/><span style="font-size:12px;color:#555">${b.address}<br/>${b.postalCode || ''} ${b.city}</span></div>`,
+            content: `<div style="font-family:system-ui,sans-serif;min-width:220px;max-width:260px">
+              ${imgHtml}
+              <strong style="font-size:14px;display:block;margin-bottom:4px">${b.name}</strong>
+              <div style="font-size:12px;color:#555;line-height:1.4">${b.address}<br/>${b.postalCode || ''} ${b.city}</div>
+              <a href="${dirUrl}" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;padding:6px 12px;background:#000;color:#fff;text-decoration:none;font-size:12px;font-weight:600;border-radius:3px">→ Itinéraire</a>
+            </div>`,
           });
           marker.addListener('click', () => {
+            if (openInfo) openInfo.close();
             info.open({ map: mapInstance.current, anchor: marker });
+            openInfo = info;
             setSelectedId(b.id);
           });
           bounds.extend({ lat: b.latitude, lng: b.longitude });

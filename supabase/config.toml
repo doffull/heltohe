@@ -28,4 +28,9 @@ verify_jwt = false
 [functions.product-ai-helpers]
 verify_jwt = false
 
+[functions.boutique-lookup]
+verify_jwt = false
+
+
+
 

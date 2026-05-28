@@ -1,38 +1,53 @@
-## 1. Bouton « rouvrir le panneau » (sidebar gauche)
+## 1. Catégories admin — boutons Modifier / Supprimer visibles + confirmation
 
-Aujourd'hui c'est un gros carré noir 48×48 en bas à gauche (`MainLayout.tsx` l.638-669, `z-60`) qui chevauche les FAB (voix, assistant, roulette).
+**Où :** `src/pages/admin/AdminSettings.tsx` (onglet Catégories). Les actions existent déjà mais sont cachées dans un menu "⋯" peu visible, et la confirmation utilise `window.confirm()` (popup système).
 
-Options proposées — je choisis l'approche **discret + intelligent** :
+**Changements :**
+- Remplacer le `DropdownMenu` (sur catégories racines, sous-catégories et orphelines) par **deux boutons icônes visibles côte à côte** : ✏️ Modifier (variant `ghost`) + 🗑️ Supprimer (variant `ghost`, texte rouge).
+- Remplacer `window.confirm()` par un **`AlertDialog`** stylé (composant shadcn déjà présent) avec :
+  - Titre : « Supprimer cette catégorie ? »
+  - Description : « Cette action est définitive. Les produits liés ne seront pas supprimés mais perdront cette catégorie. » (mention sous-catégorie adaptée si besoin)
+  - Boutons : « Annuler » + « Supprimer » (rouge)
+- Un seul state `catToDelete: CategoryRecord | null` pilote le dialog.
 
-- Remplacer le carré plein par une **petite poignée fine** ancrée sur le bord gauche de l'écran (≈ 8 px de large, 56 px de haut), centrée verticalement, avec une fine flèche `›`.
-- État au repos : **semi-transparente** (opacité ~35 %, fond `bg-foreground/20`, backdrop-blur). Au survol / tap : opacité 100 %.
-- Apparaît uniquement quand le **header MiniNavbar est visible** (réutiliser le state de scroll qui contrôle déjà l'apparition du header) → quand le header se masque au scroll, la poignée disparaît aussi. Résultat : zéro collision avec les FAB en bas à droite.
-- Sur mobile : même poignée latérale, taille un peu plus haute (72 px) pour rester tactile, toujours sur le bord gauche (loin du FAB en bas à droite).
-- Garder le bouton X de fermeture **dans** le panneau inchangé.
+## 2. Boutiques admin — création assistée par IA depuis le nom
 
-## 2. Jeu-concours / Roulette / Cartes — n'apparaît plus
+**Où :** `src/pages/admin/AdminBoutiques.tsx` + nouvelle Edge Function.
 
-Le rendu côté site est piloté par `UnifiedFab.tsx` qui filtre les items via :
-```ts
-.filter((it) => it.id !== 'roulette' || rouletteConfig?.enabled)
-```
-et selon le `mode` (`socle | free | grouped | cluster | dock`) + `items[].visible` + `customFabs.visible_*` stockés dans `design_settings.unifiedFab` et la table `home_fab_buttons`.
+**UX :**
+- Dans le dialog « Nouvelle boutique », à côté du champ **Nom**, ajouter un bouton « ✨ Rechercher avec l'IA ».
+- Au clic (ou auto-déclenché 800 ms après la saisie d'au moins 4 caractères), appel à l'Edge Function. Spinner pendant la recherche.
+- Si plusieurs candidats sont trouvés → petite liste déroulante sous le champ pour choisir (ex : « Galeries Lafayette Haussmann — 40 Bd Haussmann, 75009 Paris »).
+- Au choix : remplissage automatique de **adresse, code postal, ville, pays, latitude, longitude, image** (photo Google si dispo, sinon icône `Store` SVG par défaut). Toast « Boutique trouvée ✨ ».
+- L'utilisateur peut toujours corriger manuellement avant « Enregistrer ».
 
-Plan d'investigation + correctif :
+**Edge Function `boutique-lookup` :**
+- Input : `{ query: string }` (nom de boutique/centre commercial, facultativement biaisé sur la France).
+- Appelle **Google Places API (New) `places:searchText`** via le connector gateway (déjà connecté) avec `X-Goog-FieldMask: places.id,places.displayName,places.formattedAddress,places.location,places.addressComponents,places.photos`.
+- Pour la photo (1ʳᵉ disponible) : récupère via `places/v1/{photoName}/media?maxWidthPx=800` et renvoie l'URL Google directement (le navigateur peut l'afficher).
+- Retourne jusqu'à 5 candidats normalisés `{ name, address, postalCode, city, country, lat, lng, image }`.
 
-1. Lire l'état actuel en base : `design_settings.unifiedFab` (mode, items, dockShow*, freeCustomIds) et `roulette_config.enabled` + `home_fab_buttons`. Identifier laquelle des conditions masque tout (probable : `mode=dock` avec tous les `dockShow*` à false, ou `items[].visible=false` après une sauvegarde admin, ou `rouletteConfig.enabled=false`).
-2. Ajouter un **garde-fou** dans `UnifiedFab` : si après filtres `visibleItems.length === 0 && visibleCustom.length === 0`, retomber sur les `DEFAULT_ITEMS` au lieu d'un écran vide — pour qu'une mauvaise config admin ne fasse jamais disparaître les FAB.
-3. Vérifier la sauvegarde dans `AdminRoulette.tsx`, `UnifiedFabEditor.tsx`, `AdminHomeIcons.tsx` : confirmer qu'ils écrivent bien dans `design_settings` / `roulette_config` / `home_fab_buttons`, et que le cache React Query est invalidé (sinon le site public garde l'ancienne config).
-4. Tester chaque jeu (Roulette, Scratch, etc.) : ouvrir le panneau depuis le site public et reproduire les bugs « rien ne fonctionne ». Corriger au cas par cas (handlers `triggerItem`, `RouletteFab`, `GameScratchFab`, `GameRouter`).
-5. Re-vérifier le site public après chaque correctif (preview navigateur).
+## 3. Boutiques publiques — popup riche + itinéraire
 
-## Fichiers touchés (prévisionnel)
+**Où :** `src/pages/Boutiques.tsx`.
 
-- `src/components/layout/MainLayout.tsx` — nouveau composant de poignée latérale, retrait des 2 anciens boutons carrés.
-- `src/components/layout/UnifiedFab.tsx` — fallback DEFAULT_ITEMS si tout est masqué + petits fix d'invalidation.
-- `src/pages/admin/AdminRoulette.tsx` / `UnifiedFabEditor.tsx` / `AdminHomeIcons.tsx` — invalidation React Query si manquante.
-- Possibles correctifs ciblés dans `RouletteFab.tsx`, `GameRouter.tsx`, `GameScratchFab.tsx` selon ce que révèle le test.
+- Au clic d'un marker OU d'une carte de la liste, ouvrir une **InfoWindow enrichie** :
+  - Nom (bold), image (si dispo), adresse complète.
+  - Bouton **« Itinéraire »** → ouvre `https://www.google.com/maps/dir/?api=1&destination=<lat>,<lng>&destination_place_id=...` dans un nouvel onglet (utilise l'appli Google Maps native sur mobile).
+  - Bouton **« Appeler »** masqué (pas de téléphone en base — on l'ajoutera si demandé).
+- Fermeture des autres InfoWindow avant d'ouvrir la nouvelle.
 
-## Hors-scope
+## Détails techniques
 
-Pas de refonte du système FAB, pas de migration DB sauf si un bug bloquant l'exige.
+- **Pas de migration DB** nécessaire (colonnes `image`, `latitude`, `longitude` déjà présentes sur `boutiques`).
+- **Connector Google Maps** déjà actif (la page publique l'utilise déjà). L'Edge Function réutilisera `LOVABLE_API_KEY` + `GOOGLE_MAPS_API_KEY` (auto-injectés).
+- **Sécurité** : Edge Function `verify_jwt = false` (lookup public côté admin authentifié uniquement via l'UI, pas de données sensibles renvoyées).
+- **Fallback** : si l'IA ne trouve rien, on garde le bouton « Trouver les coordonnées GPS automatiquement » (Nominatim) existant.
+
+## Fichiers touchés
+
+- `src/pages/admin/AdminSettings.tsx` — refactor boutons cat. + AlertDialog
+- `src/pages/admin/AdminBoutiques.tsx` — recherche IA par nom
+- `src/pages/Boutiques.tsx` — InfoWindow + bouton Itinéraire
+- `supabase/functions/boutique-lookup/index.ts` — nouveau
+- `supabase/config.toml` — déclarer la nouvelle fonction (`verify_jwt = false`)

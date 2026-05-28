@@ -5,11 +5,12 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Pencil, Trash2, MoreHorizontal, LayoutGrid, Settings, Paintbrush, Scale } from 'lucide-react';
+import { Plus, Pencil, Trash2, LayoutGrid, Settings, Paintbrush, Scale } from 'lucide-react';
 import { CategoryFormDialog } from '@/components/admin/CategoryFormDialog';
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAdminConfig, useSaveAdminConfig } from '@/hooks/useAdminConfig';
 
@@ -28,6 +29,7 @@ export default function AdminSettings() {
   const deleteCategory = useDeleteCategory();
   const [catDialogOpen, setCatDialogOpen] = useState(false);
   const [editingCat, setEditingCat] = useState<CategoryRecord | null>(null);
+  const [catToDelete, setCatToDelete] = useState<CategoryRecord | null>(null);
 
   const handleCatSubmit = async (data: Omit<CategoryRecord, 'id'>) => {
     try {
@@ -111,24 +113,14 @@ export default function AdminSettings() {
                             <p className="font-bold text-sm hud-text">{cat.title}</p>
                             <p className="text-xs text-muted-foreground">Position: {cat.sortOrder}</p>
                           </div>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => { setEditingCat(cat); setCatDialogOpen(true); }}>
-                                <Pencil className="h-4 w-4 mr-2" />Modifier
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive" onClick={async () => {
-                                if (confirm('Supprimer cette catégorie ?')) {
-                                  await deleteCategory.mutateAsync(cat.id);
-                                  toast({ title: 'Catégorie supprimée' });
-                                }
-                              }}>
-                                <Trash2 className="h-4 w-4 mr-2" />Supprimer
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingCat(cat); setCatDialogOpen(true); }} title="Modifier">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setCatToDelete(cat)} title="Supprimer">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                       {/* Sub-categories */}
@@ -139,24 +131,14 @@ export default function AdminSettings() {
                               <p className="text-xs text-muted-foreground">↳</p>
                               <p className="font-medium text-sm hud-text">{sub.title}</p>
                             </div>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-3 w-3" /></Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => { setEditingCat(sub); setCatDialogOpen(true); }}>
-                                  <Pencil className="h-4 w-4 mr-2" />Modifier
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="text-destructive" onClick={async () => {
-                                  if (confirm('Supprimer cette sous-catégorie ?')) {
-                                    await deleteCategory.mutateAsync(sub.id);
-                                    toast({ title: 'Sous-catégorie supprimée' });
-                                  }
-                                }}>
-                                  <Trash2 className="h-4 w-4 mr-2" />Supprimer
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <div className="flex items-center gap-1">
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingCat(sub); setCatDialogOpen(true); }} title="Modifier">
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setCatToDelete(sub)} title="Supprimer">
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -171,24 +153,14 @@ export default function AdminSettings() {
                         <p className="font-bold text-sm hud-text">{cat.title}</p>
                         <p className="text-xs text-destructive">Parent manquant</p>
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => { setEditingCat(cat); setCatDialogOpen(true); }}>
-                            <Pencil className="h-4 w-4 mr-2" />Modifier
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive" onClick={async () => {
-                            if (confirm('Supprimer ?')) {
-                              await deleteCategory.mutateAsync(cat.id);
-                              toast({ title: 'Catégorie supprimée' });
-                            }
-                          }}>
-                            <Trash2 className="h-4 w-4 mr-2" />Supprimer
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingCat(cat); setCatDialogOpen(true); }} title="Modifier">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setCatToDelete(cat)} title="Supprimer">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -570,6 +542,44 @@ export default function AdminSettings() {
         categories={categories}
         onSubmit={handleCatSubmit}
       />
+
+      <AlertDialog open={!!catToDelete} onOpenChange={(v) => { if (!v) setCatToDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Supprimer {catToDelete?.parentId ? 'cette sous-catégorie' : 'cette catégorie'} ?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              <span className="font-semibold text-foreground">« {catToDelete?.title} »</span> sera supprimée définitivement.
+              Les produits liés ne seront pas supprimés mais perdront cette catégorie.
+              {!catToDelete?.parentId && categories.some((c) => c.parentId === catToDelete?.id) && (
+                <span className="block mt-2 text-destructive">
+                  ⚠ Ses sous-catégories deviendront orphelines.
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (!catToDelete) return;
+                try {
+                  await deleteCategory.mutateAsync(catToDelete.id);
+                  toast({ title: catToDelete.parentId ? 'Sous-catégorie supprimée' : 'Catégorie supprimée' });
+                } catch {
+                  toast({ title: 'Erreur lors de la suppression', variant: 'destructive' });
+                } finally {
+                  setCatToDelete(null);
+                }
+              }}
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
