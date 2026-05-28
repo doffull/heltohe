@@ -405,8 +405,11 @@ export function UnifiedFabEditor() {
           <p className="text-[10px] text-muted-foreground">Astuce : en mode admin, glissez le bouton Jeu-concours directement sur la home pour ajuster sa position. Le centre est idéal pour maximiser la visibilité. Touche Échap pendant le drag pour annuler.</p>
         </div>
 
-        <div className="flex justify-end">
-          <Button onClick={save} className="gap-2"><Save className="h-4 w-4" /> Enregistrer</Button>
+        <div className="flex justify-end items-center gap-3">
+          {status === 'dirty' && <span className="text-xs text-amber-600">Modifications non enregistrées…</span>}
+          {status === 'saving' && <span className="text-xs text-muted-foreground">Enregistrement…</span>}
+          {status === 'saved' && <span className="text-xs text-emerald-600">Enregistré ✓</span>}
+          <Button onClick={save} className="gap-2" disabled={status === 'saving'}><Save className="h-4 w-4" /> Enregistrer</Button>
         </div>
       </CardContent>
     </Card>
