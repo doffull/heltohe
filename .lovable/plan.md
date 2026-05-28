@@ -1,66 +1,36 @@
 ## Objectif
 
-Enrichir le builder des "Sections personnalisées de la page d'accueil" avec deux nouveaux types de blocs : **Catégories** et **Popup déclenché par bouton**.
+Améliorer le PageBuilder utilisé dans « Sections personnalisées de la page d'accueil » (visible sur `/admin/home-icons`) :
 
----
+1. Rendre l'édition d'une section **pliable/dépliable** avec un bouton « Modifier » explicite et **remplacer le `Trash2` actuel par une vraie confirmation** (AlertDialog) avant suppression.
+2. Ajouter des options visuelles **parallax** et **effets au survol** sur les sections `image` et `slider`, appliquées côté rendu public.
 
-## 1. Nouvelle section `categories`
+## Détails admin — `src/components/admin/PageBuilder.tsx`
 
-**Éditeur admin (PageBuilder.tsx)**
-- Nouveau bouton "Catégories" dans la barre d'ajout.
-- Champs:
-  - Titre du bloc (optionnel)
-  - Sélection multi-choix des catégories à afficher (cases à cocher chargées depuis `useCategories`)
-  - Nombre de catégories visibles (input number, défaut = toutes celles sélectionnées)
-  - Colonnes (2 / 3 / 4 / 6)
-  - Style (carte image, icône + libellé, bandeau)
-  - Afficher le nombre de produits (toggle)
+- Ajouter un état `collapsed` par section. En-tête (toujours visible) : drag handle, icône type, libellé, **titre court** (extrait de `content.title` / `content.text` / `content.alt`), boutons :
+  - `ChevronUp` / `ChevronDown` (ordre, inchangés)
+  - **Modifier** (`Pencil`) → toggle `collapsed`
+  - **Supprimer** (`Trash2`) → ouvre `AlertDialog` (`shadcn/ui`) « Supprimer cette section ? Cette action est définitive. » avec Annuler / Supprimer.
+- Le corps de l'éditeur n'est rendu que si `!collapsed` (par défaut **plié** pour les sections existantes, **déplié** pour une section nouvellement ajoutée).
+- Dans le bloc `section.type === 'image'`, ajouter sous le `FileDropZone` :
+  - Select « Effet au survol » : `none`, `zoom`, `zoom-out`, `tilt`, `brightness`, `grayscale-off` → stocké dans `content.hoverEffect`.
+  - Switch « Parallax au scroll » → `content.parallax` (bool) + Slider « Intensité » 0.1–0.6 → `content.parallaxSpeed` (défaut 0.25).
+  - Select « Taille » (small/medium/full) déjà implicite, conserver.
+- Dans le bloc `section.type === 'slider'`, ajouter le même Select « Effet au survol » appliqué à chaque image.
 
-**Rendu public (PageRenderer.tsx)**
-- Nouveau composant `CategoriesSection` qui charge les catégories choisies, applique l'ordre & la limite, et rend une grille cliquable (navigation vers la page catégorie correspondante via le routeur existant).
+## Détails rendu — `src/components/page/PageRenderer.tsx`
 
----
+- `ImageSection` :
+  - Si `content.parallax`, envelopper l'`<img>` avec un wrapper utilisant le hook existant `useParallax(content.parallaxSpeed)` (overflow-hidden + translateY via `style`).
+  - Mapper `content.hoverEffect` vers des classes Tailwind appliquées à l'`<img>` (ajouter `transition-all duration-500`) :
+    - `zoom` → `hover:scale-110`
+    - `zoom-out` → `scale-110 hover:scale-100`
+    - `tilt` → `hover:rotate-1 hover:scale-105`
+    - `brightness` → `hover:brightness-110`
+    - `grayscale-off` → `grayscale hover:grayscale-0`
+  - Wrapper `group overflow-hidden` autour de l'image pour activer `group-hover:` si besoin.
+- `SliderSection` : même mapping appliqué à chaque `<img>`.
 
-## 2. Nouvelle section `popup_button`
+## Hors scope
 
-Bouton inséré dans la page qui, au clic, ouvre une popup configurée intégralement depuis l'éditeur (autonome, sans dépendre de `newsletter_popups`).
-
-**Éditeur admin**
-- Bouton:
-  - Libellé, style (primary / outline / ghost / link), taille, icône optionnelle, alignement (gauche / centre / droite), couleur de fond et texte.
-- Popup:
-  - Type de contenu : `image`, `vidéo`, `texte riche`, `formulaire newsletter`, `code promo`, `HTML libre`
-  - Titre, sous-titre, image/vidéo (FileDropZone), texte (Textarea)
-  - CTA secondaire (label + URL) optionnel
-  - Couleurs fond / texte / accent
-  - Taille (sm / md / lg / fullscreen)
-  - Animation d'apparition (fade / slide-up / zoom)
-  - Fermeture: bouton croix, clic extérieur, touche Echap (toggles)
-  - Affichage automatique en plus du clic (toggle + délai en secondes, fréquence en jours via localStorage)
-  - Champs formulaire (si type = newsletter): email obligatoire, prénom optionnel, label CTA, message de succès → enregistre dans `newsletters` via `subscribeToNewsletter` (source = `popup`)
-  - Code promo (si type = promo): code à révéler + bouton copier
-
-**Rendu public (PageRenderer.tsx)**
-- Nouveau composant `PopupButtonSection`:
-  - Affiche le bouton stylé
-  - Gère l'état d'ouverture via shadcn `Dialog`
-  - Rend le contenu selon `popupType`
-  - Implémente l'auto-ouverture, la fréquence (clé localStorage `popup-section-{id}`), et les options de fermeture
-  - Le formulaire newsletter réutilise `subscribeToNewsletter`
-
----
-
-## Détails techniques
-
-**Fichiers modifiés**
-- `src/hooks/usePages.ts` — étendre l'union `PageSection.type` avec `'categories' | 'popup_button'`.
-- `src/components/admin/PageBuilder.tsx` — ajouter les 2 entrées dans `SECTION_TYPES` + 2 nouveaux blocs d'édition (avec sélection multi-catégories via `useCategories`).
-- `src/components/page/PageRenderer.tsx` — ajouter `CategoriesSection` et `PopupButtonSection` (+ branches dans le `switch`).
-- `src/components/home/ProductSections.tsx` — non modifié (les sections custom sont rendues séparément).
-
-**Pas de migration DB nécessaire** : `pages.sections` est `jsonb`, les nouveaux types y sont stockés librement. Idem pour `designSettings.homeCustomSections`.
-
-**Réutilisations**
-- `useCategories()` pour la liste des catégories.
-- `subscribeToNewsletter()` pour le formulaire newsletter de la popup.
-- `Dialog` (shadcn) pour la popup, `FileDropZone` pour les médias.
+Pas de changement des autres types de sections (hero, video, products, categories, popup_button), ni du composant des boutons flottants (`AdminHomeIcons` lui-même — ses boutons ont déjà édition + suppression). Pas de migration DB (stocké dans `pages.sections` / `design_settings.homeCustomSections` JSON).
