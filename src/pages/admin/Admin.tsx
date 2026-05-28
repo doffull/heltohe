@@ -32,7 +32,8 @@ import {
   UserCog,
   ShieldAlert,
   Sparkles,
-  BarChart3
+  BarChart3,
+  Store
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -64,6 +65,7 @@ import AdminRoles from './AdminRoles';
 import AdminSecurity from './AdminSecurity';
 import AdminTransitions from './AdminTransitions';
 import AdminBannersAnalytics from './AdminBannersAnalytics';
+import AdminBoutiques from './AdminBoutiques';
 
 export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin': '#6B7280',
@@ -84,6 +86,7 @@ export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin/audit': '#6B7280',
   '/admin/roulette': '#F59E0B',
   '/admin/parametres': '#64748B',
+  '/admin/boutiques': '#0D9488',
   '/admin/roles': '#DC2626',
   '/admin/security': '#0EA5E9',
 };
@@ -106,6 +109,7 @@ const SIDEBAR_ITEMS = [
   { icon: BarChart3, label: 'Analytique Bannières', href: '/admin/bannieres-analytics' },
   { icon: Warehouse, label: 'Stock', href: '/admin/stock' },
   { icon: Truck, label: 'Colissimo', href: '/admin/colissimo' },
+  { icon: Store, label: 'Boutiques', href: '/admin/boutiques' },
   { icon: Bell, label: 'Notifications', href: '/admin/notifications' },
   { icon: Bot, label: 'Chatbot', href: '/admin/chatbot' },
   { icon: ShoppingBag, label: 'WooCommerce', href: '/admin/woocommerce' },
@@ -305,6 +309,7 @@ export default function Admin() {
             <Route path="home-icons/*" element={<AdminHomeIcons />} />
             <Route path="stock/*" element={<AdminStock />} />
             <Route path="colissimo/*" element={<AdminColissimo />} />
+            <Route path="boutiques/*" element={<AdminBoutiques />} />
             <Route path="notifications/*" element={<AdminNotifications />} />
             <Route path="chatbot/*" element={<AdminChatbot />} />
             <Route path="woocommerce/*" element={<AdminWooCommerce />} />

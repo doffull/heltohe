@@ -265,6 +265,54 @@ export type Database = {
         }
         Relationships: []
       }
+      boutiques: {
+        Row: {
+          address: string
+          city: string
+          country: string
+          created_at: string
+          id: string
+          image: string | null
+          is_active: boolean
+          latitude: number
+          longitude: number
+          name: string
+          postal_code: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          city: string
+          country?: string
+          created_at?: string
+          id?: string
+          image?: string | null
+          is_active?: boolean
+          latitude: number
+          longitude: number
+          name: string
+          postal_code?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          city?: string
+          country?: string
+          created_at?: string
+          id?: string
+          image?: string | null
+          is_active?: boolean
+          latitude?: number
+          longitude?: number
+          name?: string
+          postal_code?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cart_items: {
         Row: {
           color: string | null

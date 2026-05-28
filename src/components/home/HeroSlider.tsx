@@ -8,6 +8,7 @@ import { motion, useScroll, useTransform } from 'framer-motion';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { InlineEditable } from '@/components/visual-editor/InlineEditable';
 import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
+import { HeroVideo } from './HeroVideo';
 
 const HERO_PLACEHOLDER = '/placeholder.svg';
 
@@ -100,12 +101,10 @@ export function HeroSlider() {
         style={{ y: bgY, scale: bgScale }}
       >
         {effectiveMediaType === 'video' ? (
-          <video
+          <HeroVideo
             src={bgMedia}
-            autoPlay muted loop playsInline
-            poster={HERO_PLACEHOLDER}
-            className="w-full h-full"
-            style={{ objectFit: 'cover', objectPosition }}
+            poster={currentSlide.foregroundMedia || currentSlide.midgroundMedia || HERO_PLACEHOLDER}
+            objectPosition={objectPosition as string}
           />
         ) : (
           <img
