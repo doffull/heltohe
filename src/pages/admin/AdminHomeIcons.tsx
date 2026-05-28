@@ -49,9 +49,11 @@ const newButton = (sortOrder: number): Partial<HomeFabButton> => ({
 });
 
 export default function AdminHomeIcons() {
+  const { flushDesignSettings } = useApp();
   const { data: buttons = [], isLoading } = useHomeFabButtons({ adminAll: true });
   const { upsert, remove } = useHomeFabMutations();
   const [editing, setEditing] = useState<string | null>(null);
+  const [savingAll, setSavingAll] = useState(false);
 
   const editingBtn = buttons.find((b) => b.id === editing) || null;
 
@@ -59,6 +61,23 @@ export default function AdminHomeIcons() {
     const res = await upsert.mutateAsync(newButton(buttons.length));
     setEditing(res.id);
     toast.success('Bouton créé');
+  };
+
+  const handleSaveAll = async () => {
+    try {
+      setSavingAll(true);
+      // 1. Demander à tous les éditeurs (UnifiedFab, HomeBlocks, HomeCustomSections) de pousser leur state local
+      window.dispatchEvent(new CustomEvent('homeicons:collect'));
+      // 2. Laisser React appliquer les setState avant le flush
+      await new Promise(r => setTimeout(r, 50));
+      // 3. Un seul aller-retour DB
+      await flushDesignSettings();
+      toast.success('Tous les changements ont été enregistrés');
+    } catch (e: any) {
+      toast.error("Erreur lors de l'enregistrement global", { description: e?.message });
+    } finally {
+      setSavingAll(false);
+    }
   };
 
   const handleSave = async (patch: Partial<HomeFabButton>) => {
