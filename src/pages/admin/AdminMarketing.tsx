@@ -260,7 +260,9 @@ export default function AdminMarketing() {
         <p className="text-muted-foreground text-xs sm:text-sm mt-1">Bannières, codes promo et newsletter</p>
       </div>
 
+      <MarketingTabsHash />
       <Tabs defaultValue="banners">
+
         <TabsList className="bg-muted/50 flex flex-wrap h-auto gap-1">
           <TabsTrigger value="banners" className="gap-1.5 text-xs sm:text-sm"><Image className="h-3.5 w-3.5" />Bannières</TabsTrigger>
           <TabsTrigger value="promos" className="gap-1.5 text-xs sm:text-sm"><Tag className="h-3.5 w-3.5" />Promos</TabsTrigger>
