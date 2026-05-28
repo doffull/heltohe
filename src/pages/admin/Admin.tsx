@@ -33,7 +33,9 @@ import {
   ShieldAlert,
   Sparkles,
   BarChart3,
-  Store
+  Store,
+  LayoutTemplate
+
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -66,6 +68,8 @@ import AdminSecurity from './AdminSecurity';
 import AdminTransitions from './AdminTransitions';
 import AdminBannersAnalytics from './AdminBannersAnalytics';
 import AdminBoutiques from './AdminBoutiques';
+import AdminPageTemplates from './AdminPageTemplates';
+
 
 export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin': '#6B7280',

@@ -1,81 +1,152 @@
-## Diagnostic
 
-### Bug racine (cause des 2 problèmes signalés)
+# Page Builder Avancé — Pages Produit & Catégorie personnalisables
 
-Dans `src/context/AppContext.tsx`, `flushDesignSettings` capture `designSettings` via closure (`useCallback` avec `[..., designSettings]` en deps).
+## Objectif
 
-Quand un éditeur fait :
-```ts
-updateDesignSettings({ homePageBlocks: blocks });
-await flushDesignSettings();
+Créer dans l'admin un espace permettant de :
+1. Concevoir des **templates de pages Produit** (et Catégorie) avec disposition libre des blocs fonctionnels (galerie, titre, prix, tailles, quantité, bouton panier, description, badges…).
+2. Choisir parmi des **presets de disposition** et des **thèmes visuels** prêts à l'emploi.
+3. Uploader une **maquette (image / HTML / PDF)** et laisser **l'IA** reproduire la disposition, les couleurs et les fonctionnalités automatiquement.
+4. Livrer un **preset "Buggy"** (basé sur le HTML fourni) immédiatement utilisable.
+
+---
+
+## 1. Architecture des données
+
+Nouvelle table `page_templates` (migration) :
+- `id`, `name`, `slug`, `type` (`product` | `category`), `is_default boolean`
+- `theme jsonb` (couleurs, typographies, radius, ombres, etc.)
+- `layout jsonb` (grille + position de chaque bloc fonctionnel)
+- `created_at`, `updated_at`
+- RLS : lecture publique, écriture admin uniquement
+- GRANTS standards (anon SELECT, authenticated CRUD, service_role ALL)
+
+Sur la table `products`, ajouter une colonne optionnelle `template_id uuid` (override par produit). Idem pour `categories.template_id`.
+
+Un **template par défaut** (`is_default = true`) s'applique si rien n'est défini.
+
+---
+
+## 2. Système de blocs fonctionnels (Produit)
+
+Liste des blocs disponibles (chacun = composant React déjà utilisé dans `ProductDetail`) :
+- `gallery` (images + thumbnails + zoom + flèches)
+- `breadcrumb`
+- `category_tag`, `sku`, `title`, `collab_subtitle`
+- `price`, `stock_status`
+- `model_info` (mannequin porte taille…)
+- `find_size_btn` (IA)
+- `trust_badges` (livraison, garantie, retours)
+- `description`, `material`
+- `sizes_selector`
+- `quantity_selector`
+- `cta_add_to_cart`, `btn_wishlist`, `btn_share`
+- `related_products`
+- `custom_html` (bloc libre)
+
+Chaque bloc a : `id`, `type`, `gridPosition` (col-start, col-span, row-start, row-span), `visible`, `props` (styles inline overrides).
+
+---
+
+## 3. Éditeur visuel `/admin/page-templates`
+
+Nouvelle page admin (route + entrée sidebar "Templates Pages") avec :
+- Liste des templates existants (filtre par type)
+- Bouton "Nouveau template" (Produit / Catégorie)
+- **Éditeur drag & drop** :
+  - Canvas central représentant la page (responsive switcher mobile/desktop)
+  - Grille 12 colonnes avec snap
+  - Palette latérale des blocs disponibles (drag-to-add)
+  - Panneau "Inspecteur" : édition des props/styles du bloc sélectionné
+  - Onglet **Thème** : couleurs primaires, accent, fond, typo, radius, ombres → sauvé dans `theme`
+  - Onglet **Presets** : sélection rapide ("Buggy", "Minimal", "Magazine", "Boutique Classique")
+  - Bouton **Aperçu en direct** (ouvre la page produit demo avec ce template)
+  - **Save All** (pattern déjà utilisé pour Home Icons)
+
+Drag & drop : `@dnd-kit` déjà présent dans le projet.
+
+---
+
+## 4. Presets fournis (seeds)
+
+Au moins 4 presets insérés via migration :
+- **Buggy** — reproduit fidèlement le HTML fourni (2 colonnes, galerie sticky gauche, panneau droit scrollable, badges trust en grille 3 col, accent rouge `#e63c2f`).
+- **Minimal** — pleine largeur, galerie en haut, infos centrées dessous.
+- **Magazine** — galerie asymétrique + texte éditorial.
+- **Boutique Classique** — l'actuel `ProductDetail`.
+
+---
+
+## 5. Import de maquette par IA
+
+Nouvelle section "Importer une maquette" dans l'éditeur :
+- Upload d'une image (PNG/JPG), d'un PDF, ou collage de HTML.
+- Edge Function `template-from-mockup` (Lovable AI Gateway, `google/gemini-2.5-pro` pour vision multimodale) :
+  - Prompt système : analyse la maquette et retourne un JSON conforme à notre schéma `{ theme, layout: [blocs…] }`.
+  - Tool calling avec schéma strict pour garantir la structure.
+  - Mapping des éléments détectés (titre, prix, bouton panier…) vers nos blocs fonctionnels.
+- L'utilisateur reçoit un **brouillon de template** prérempli, modifiable dans l'éditeur avant sauvegarde.
+- Gestion 429/402 surfacée par toast.
+
+---
+
+## 6. Rendu côté boutique
+
+Refactor de `src/pages/ProductDetail.tsx` :
+- Chargement du `template` applicable (override produit > template défaut).
+- Nouveau composant `<ProductTemplateRenderer template={…} product={…} />` qui :
+  - Applique `theme` via CSS variables scoped.
+  - Itère sur `layout.blocks` et instancie chaque bloc fonctionnel à sa position grille.
+- Aucune perte de fonctionnalité : tous les hooks (panier, tailles, IA size, etc.) restent branchés sur les blocs existants.
+
+Idem pour les pages Catégorie via `CustomPage` / `BoutiqueRouter`.
+
+---
+
+## 7. Fichiers à créer / modifier
+
+**Nouveaux**
+- `supabase/migrations/<ts>_page_templates.sql`
+- `supabase/functions/template-from-mockup/index.ts`
+- `src/hooks/usePageTemplates.ts`
+- `src/pages/admin/AdminPageTemplates.tsx`
+- `src/components/admin/page-templates/TemplateEditor.tsx`
+- `src/components/admin/page-templates/BlockPalette.tsx`
+- `src/components/admin/page-templates/BlockInspector.tsx`
+- `src/components/admin/page-templates/ThemeEditor.tsx`
+- `src/components/admin/page-templates/MockupImportDialog.tsx`
+- `src/components/product/ProductTemplateRenderer.tsx`
+- `src/components/product/blocks/*` (un fichier par bloc fonctionnel)
+- `src/config/templatePresets.ts` (Buggy + autres)
+
+**Modifiés**
+- `src/pages/admin/Admin.tsx` — ajout route + item sidebar
+- `src/pages/ProductDetail.tsx` — utilisation du renderer
+- `src/integrations/supabase/types.ts` (auto)
+
+---
+
+## Détails techniques
+
+```text
+page_templates
+├── theme: { colors:{primary,accent,bg,fg,muted}, font, radius, shadow }
+└── layout: {
+      grid: { cols: 12, gap: 16, breakpoints: {…} },
+      blocks: [
+        { id, type, col, span, row, rowSpan, visible, props }
+      ]
+    }
 ```
-`updateDesignSettings` met à jour le state via `setDesignSettingsLocal(prev => ...)`, mais React n'a pas encore re-rendu → la closure de `flushDesignSettings` détient encore **l'ancien** `designSettings`. Le flush envoie donc l'**ancien** objet à la DB, écrasant les modifs locales pas encore réconciliées. → "j'enregistre, ça ne sauvegarde pas".
 
-Cela impacte directement :
-- `HomeBlocksEditor.save()` (ordre des sections home, ex. "section Image remontée")
-- `HomeCustomSectionsEditor.persist()` (sections personnalisées)
-- Tout futur appel update+flush enchaîné
+Edge Function `template-from-mockup` retourne ce même JSON via tool calling — garantie de validité.
 
-### Bug additionnel UnifiedFabEditor
+---
 
-`UnifiedFabEditor.save()` n'appelle **jamais** `flushDesignSettings()` — il s'appuie uniquement sur le debounce 800 ms. Si l'admin change d'onglet ou refresh dans la fenêtre, la modification est perdue.
+## Hors scope (pour rester focalisé)
 
-### Demande utilisateur
+- Versioning / historique des templates (peut être ajouté plus tard).
+- A/B testing entre templates.
+- Marketplace de templates partagés entre utilisateurs.
 
-Un seul bouton "Tout enregistrer" en haut de la page `/admin/home-icons` qui flush en une fois toutes les modifs (blocs, sections personnalisées, popup, bouton flottant unifié, FAB list).
-
-## Plan
-
-### 1. Corriger `flushDesignSettings` (cause racine) — `src/context/AppContext.tsx`
-
-Utiliser une ref qui suit toujours le dernier `designSettings` :
-- Ajouter `const latestRef = useRef(designSettings)` mis à jour dans un `useEffect`.
-- `flushDesignSettings` lit `latestRef.current` au lieu de la closure.
-- Variante plus sûre : exposer une signature `flushDesignSettings(override?: DesignSettings)` qui, si un override est fourni, l'utilise (et synchronise le local state + ref) — utile pour les composants qui veulent garantir l'envoi d'un snapshot précis.
-
-Effet de bord positif : **tous** les `update + flush` existants commencent à fonctionner correctement, sans toucher aux composants appelants.
-
-### 2. Fiabiliser `UnifiedFabEditor.save()` — `src/components/admin/UnifiedFabEditor.tsx`
-
-- Construire l'objet `nextUnifiedFab` puis :
-  ```ts
-  updateDesignSettings({ unifiedFab: nextUnifiedFab });
-  await flushDesignSettings(); // bénéficie de la ref corrigée
-  ```
-- Ajouter un badge d'état "Modifications non enregistrées / Enregistrement… / Enregistré ✓" (mêmes patterns que `HomeCustomSectionsEditor`).
-- Sync : quand `designSettings.unifiedFab` change depuis l'extérieur, hydrater les states locaux (actuellement seul `items` est resynchronisé).
-
-### 3. Auto-save bouton flottant unifié (filet de sécurité)
-
-Ajouter un debounce 800 ms qui appelle `updateDesignSettings({ unifiedFab })` à chaque changement local — sans toast — pour qu'un oubli de clic ne perde plus rien. Le bouton "Enregistrer" force le flush + toast.
-
-### 4. Bouton global "Tout enregistrer" — `src/pages/admin/AdminHomeIcons.tsx`
-
-- Barre sticky en haut de la page avec :
-  - Indicateur global ("Tout est à jour ✓" / "Modifications en attente…").
-  - Bouton **"Tout enregistrer"** qui :
-    1. Émet un événement custom `homeicons:flush` (que `UnifiedFabEditor`, `HomeBlocksEditor`, `HomeCustomSectionsEditor` écoutent pour pousser leur state local dans `updateDesignSettings`).
-    2. Appelle `flushDesignSettings()` une seule fois → un seul aller-retour DB.
-    3. Toast unique "Tous les changements enregistrés".
-- Chaque éditeur ajoute un `useEffect` qui s'abonne à l'événement et `updateDesignSettings(...)` avec son state courant.
-- Les boutons "Enregistrer" individuels existants restent, mais deviennent secondaires.
-
-### 5. Vérifications après changements
-
-- Tester : modifier l'ordre dans `HomeBlocksEditor` → cliquer Enregistrer → recharger /index → ordre persiste.
-- Tester : changer un paramètre dans `UnifiedFabEditor` → Enregistrer → recharger → conservé.
-- Tester : tout modifier puis "Tout enregistrer" → un seul toast, tout persiste.
-
-## Fichiers modifiés
-
-- `src/context/AppContext.tsx` — ref pour `flushDesignSettings` (fix racine).
-- `src/components/admin/UnifiedFabEditor.tsx` — flush au save, badge d'état, debounce, écoute événement global.
-- `src/components/admin/HomeBlocksEditor.tsx` — écoute événement global, badge d'état.
-- `src/components/admin/HomeCustomSectionsEditor.tsx` — écoute événement global (l'auto-save reste).
-- `src/pages/admin/AdminHomeIcons.tsx` — barre sticky + bouton "Tout enregistrer".
-
-## Hors scope
-
-- Pas de refonte du `PageBuilder` ni des sections déjà fonctionnelles.
-- Pas de modification de schéma DB.
-- Pas de changement aux FABs custom (`home_fab_buttons`), qui ont déjà leur propre persistance via React Query.
+Confirmez ce plan et je l'implémente.
