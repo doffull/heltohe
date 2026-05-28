@@ -28,7 +28,7 @@ import {
   Bell,
   BarChart3,
   Store,
-  LayoutTemplate
+  LayoutTemplate,
 
   UserCog,
   ShieldAlert,
