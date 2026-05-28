@@ -4,12 +4,15 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import {
   GripVertical, Plus, Trash2, Image, Video, Type, AlignLeft,
-  Heading1, Heading2, LayoutGrid, ChevronUp, ChevronDown
+  Heading1, Heading2, LayoutGrid, ChevronUp, ChevronDown, Grid3x3, MousePointerClick,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FileDropZone } from '@/components/admin/FileDropZone';
+import { useCategories } from '@/hooks/useCategories';
 import type { PageSection } from '@/hooks/usePages';
 
 const SECTION_TYPES = [
@@ -21,6 +24,8 @@ const SECTION_TYPES = [
   { value: 'subtitle', label: 'Sous-titre', icon: Heading2 },
   { value: 'text', label: 'Texte libre', icon: AlignLeft },
   { value: 'products', label: 'Grille produits', icon: LayoutGrid },
+  { value: 'categories', label: 'Catégories', icon: Grid3x3 },
+  { value: 'popup_button', label: 'Bouton + Popup', icon: MousePointerClick },
 ] as const;
 
 function generateId() {
