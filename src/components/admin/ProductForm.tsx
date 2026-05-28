@@ -933,3 +933,26 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
     </form>
   );
 }
+
+function TemplateSelector({ value, onChange }: { value: string | null; onChange: (id: string | null) => void }) {
+  const { data: templates = [] } = usePageTemplates('product');
+  return (
+    <div className="space-y-2">
+      <h4 className="hud-text text-xs text-primary">// TEMPLATE DE PAGE PRODUIT</h4>
+      <p className="text-[10px] text-muted-foreground">
+        Choisissez un template pour la page de ce produit. "Défaut du site" utilisera le template par défaut configuré dans Templates de pages.
+      </p>
+      <select
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value || null)}
+        className="w-full bg-secondary/50 border border-border/30 rounded px-3 py-2 text-sm"
+      >
+        <option value="">Défaut du site</option>
+        {templates.map((t: any) => (
+          <option key={t.id} value={t.id}>{t.name}{t.isDefault ? ' (par défaut)' : ''}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
