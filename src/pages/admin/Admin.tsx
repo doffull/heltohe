@@ -85,6 +85,7 @@ export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin/audit': '#6B7280',
   '/admin/roulette': '#F59E0B',
   '/admin/parametres': '#64748B',
+  '/admin/boutiques': '#0D9488',
   '/admin/roles': '#DC2626',
   '/admin/security': '#0EA5E9',
 };
@@ -107,6 +108,7 @@ const SIDEBAR_ITEMS = [
   { icon: BarChart3, label: 'Analytique Bannières', href: '/admin/bannieres-analytics' },
   { icon: Warehouse, label: 'Stock', href: '/admin/stock' },
   { icon: Truck, label: 'Colissimo', href: '/admin/colissimo' },
+  { icon: Store, label: 'Boutiques', href: '/admin/boutiques' },
   { icon: Bell, label: 'Notifications', href: '/admin/notifications' },
   { icon: Bot, label: 'Chatbot', href: '/admin/chatbot' },
   { icon: ShoppingBag, label: 'WooCommerce', href: '/admin/woocommerce' },
