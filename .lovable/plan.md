@@ -1,152 +1,104 @@
+# Refonte Premium — Templates de pages
 
-# Page Builder Avancé — Pages Produit & Catégorie personnalisables
+## Objectifs
 
-## Objectif
-
-Créer dans l'admin un espace permettant de :
-1. Concevoir des **templates de pages Produit** (et Catégorie) avec disposition libre des blocs fonctionnels (galerie, titre, prix, tailles, quantité, bouton panier, description, badges…).
-2. Choisir parmi des **presets de disposition** et des **thèmes visuels** prêts à l'emploi.
-3. Uploader une **maquette (image / HTML / PDF)** et laisser **l'IA** reproduire la disposition, les couleurs et les fonctionnalités automatiquement.
-4. Livrer un **preset "Buggy"** (basé sur le HTML fourni) immédiatement utilisable.
-
----
-
-## 1. Architecture des données
-
-Nouvelle table `page_templates` (migration) :
-- `id`, `name`, `slug`, `type` (`product` | `category`), `is_default boolean`
-- `theme jsonb` (couleurs, typographies, radius, ombres, etc.)
-- `layout jsonb` (grille + position de chaque bloc fonctionnel)
-- `created_at`, `updated_at`
-- RLS : lecture publique, écriture admin uniquement
-- GRANTS standards (anon SELECT, authenticated CRUD, service_role ALL)
-
-Sur la table `products`, ajouter une colonne optionnelle `template_id uuid` (override par produit). Idem pour `categories.template_id`.
-
-Un **template par défaut** (`is_default = true`) s'applique si rien n'est défini.
+1. Presets visuels (avec aperçus images), import de presets JSON.
+2. Corriger l'erreur d'enregistrement quand on monte/descend des blocs.
+3. Gestion fluide : suppression, duplication, recherche, marquer comme défaut, aperçu.
+4. UI admin premium.
+5. Contrôle design 100 % : couleurs, typo (Google Fonts), espacements, rayons, ombres, padding global.
+6. **Variantes par bloc** (gallery, description, find-size, CTA, sizes, prix…) sélectionnables au lieu de simples props.
 
 ---
 
-## 2. Système de blocs fonctionnels (Produit)
+## 1. Corriger le bug d'enregistrement après réorganisation
 
-Liste des blocs disponibles (chacun = composant React déjà utilisé dans `ProductDetail`) :
-- `gallery` (images + thumbnails + zoom + flèches)
-- `breadcrumb`
-- `category_tag`, `sku`, `title`, `collab_subtitle`
-- `price`, `stock_status`
-- `model_info` (mannequin porte taille…)
-- `find_size_btn` (IA)
-- `trust_badges` (livraison, garantie, retours)
-- `description`, `material`
-- `sizes_selector`
-- `quantity_selector`
-- `cta_add_to_cart`, `btn_wishlist`, `btn_share`
-- `related_products`
-- `custom_html` (bloc libre)
+**Cause probable** : après `moveBlock` / changement de `col`/`span`, la mutation upsert renvoie une erreur (souvent contrainte `slug` unique conflictuelle lors d'un upsert répété, ou JSONB invalide quand un champ devient `undefined`).
 
-Chaque bloc a : `id`, `type`, `gridPosition` (col-start, col-span, row-start, row-span), `visible`, `props` (styles inline overrides).
+**Fix** :
+- Nettoyer le payload côté `useUpsertTemplate` (purger les `undefined`, garantir `layout.blocks` sérialisable).
+- Afficher l'erreur Supabase exacte dans le toast (déjà fait mais souvent tronquée → log + détail).
+- Ajouter une vérif côté UI : si le slug est vide, le régénérer automatiquement.
+- Vérifier que la RLS / GRANT autorise bien `UPDATE` à l'admin connecté (lecture des policies actuelles).
 
----
+## 2. Presets visuels + import
 
-## 3. Éditeur visuel `/admin/page-templates`
+- Ajouter un champ `previewImage` (déjà présent dans le type) à chaque preset et générer 4 vignettes (via `imagegen`) représentant chaque style (Buggy, Minimal, Classic, Magazine) + 2 nouveaux presets : **Editorial** et **Showroom**.
+- Carte preset = vignette image + nom + type + bouton "Utiliser ce preset".
+- Nouveau bouton **Importer un preset** : upload `.json` validé par un schéma Zod léger → injecté comme nouveau template.
+- Bouton **Exporter** sur chaque template existant (download JSON).
 
-Nouvelle page admin (route + entrée sidebar "Templates Pages") avec :
-- Liste des templates existants (filtre par type)
-- Bouton "Nouveau template" (Produit / Catégorie)
-- **Éditeur drag & drop** :
-  - Canvas central représentant la page (responsive switcher mobile/desktop)
-  - Grille 12 colonnes avec snap
-  - Palette latérale des blocs disponibles (drag-to-add)
-  - Panneau "Inspecteur" : édition des props/styles du bloc sélectionné
-  - Onglet **Thème** : couleurs primaires, accent, fond, typo, radius, ombres → sauvé dans `theme`
-  - Onglet **Presets** : sélection rapide ("Buggy", "Minimal", "Magazine", "Boutique Classique")
-  - Bouton **Aperçu en direct** (ouvre la page produit demo avec ce template)
-  - **Save All** (pattern déjà utilisé pour Home Icons)
+## 3. Gestion fluide des templates
 
-Drag & drop : `@dnd-kit` déjà présent dans le projet.
+- Barre d'actions par carte : Éditer · Dupliquer · Définir par défaut · Exporter · Supprimer (avec `AlertDialog` au lieu de `confirm`).
+- Recherche + filtre par type (Produit / Catégorie).
+- Indicateur visuel "défaut" plus marqué.
+- Toast de succès + invalidation cache.
 
----
+## 4. UI Premium
 
-## 4. Presets fournis (seeds)
+- Layout admin retravaillé : header sticky avec actions principales, grille de cartes avec hover élégant, ombres douces, transitions.
+- Éditeur en plein écran (drawer/sheet large) au lieu d'un dialog cramped.
+- Aperçu **live** à droite pendant l'édition (rend `ProductTemplateRenderer` avec un produit factice).
+- Onglets : Infos · Thème · Typographie · Disposition · Variantes · Aperçu.
 
-Au moins 4 presets insérés via migration :
-- **Buggy** — reproduit fidèlement le HTML fourni (2 colonnes, galerie sticky gauche, panneau droit scrollable, badges trust en grille 3 col, accent rouge `#e63c2f`).
-- **Minimal** — pleine largeur, galerie en haut, infos centrées dessous.
-- **Magazine** — galerie asymétrique + texte éditorial.
-- **Boutique Classique** — l'actuel `ProductDetail`.
+## 5. Contrôle design 100 %
 
----
+Ajouter au type `TemplateTheme` :
+- `spacing` (échelle), `radiusScale` (sm/md/lg), `shadowScale`.
+- `fontHeading`, `fontBody` (sélection parmi ~15 Google Fonts ou import URL).
+- `fontSizes` (xs→3xl).
+- `containerWidth`, `sectionPaddingY`.
 
-## 5. Import de maquette par IA
+Editeur thème :
+- Color pickers + saisie HEX.
+- Sliders pour rayons / espacements / ombres.
+- Sélecteur Google Fonts (pré-chargement dynamique via `<link>` injection lors du preview).
 
-Nouvelle section "Importer une maquette" dans l'éditeur :
-- Upload d'une image (PNG/JPG), d'un PDF, ou collage de HTML.
-- Edge Function `template-from-mockup` (Lovable AI Gateway, `google/gemini-2.5-pro` pour vision multimodale) :
-  - Prompt système : analyse la maquette et retourne un JSON conforme à notre schéma `{ theme, layout: [blocs…] }`.
-  - Tool calling avec schéma strict pour garantir la structure.
-  - Mapping des éléments détectés (titre, prix, bouton panier…) vers nos blocs fonctionnels.
-- L'utilisateur reçoit un **brouillon de template** prérempli, modifiable dans l'éditeur avant sauvegarde.
-- Gestion 429/402 surfacée par toast.
+## 6. Variantes de blocs
 
----
+Étendre `TemplateBlock` avec `variant?: string`. Chaque bloc a son catalogue :
 
-## 6. Rendu côté boutique
+- **gallery** : `classic-thumbs-left`, `grid-2x2`, `carousel-fullbleed`, `masonry`, `slider-dots`.
+- **description** : `plain`, `accordion`, `tabs`, `bullet-features`, `magazine-drop-cap`.
+- **find_size_btn** : `outline`, `pill-icon`, `link-underline`, `modal-cta`.
+- **cta_add_to_cart** : `bold-block`, `outline-minimal`, `gradient`, `sticky-bottom`, `split-buy-now`.
+- **sizes_selector** : `chips`, `dropdown`, `grid-bordered`, `compact-pill`.
+- **price** : `large-bold`, `inline-strike`, `badge-discount`, `subscription-split`.
+- **trust_badges** : `row-3`, `icons-only`, `stacked-list`, `marquee`.
 
-Refactor de `src/pages/ProductDetail.tsx` :
-- Chargement du `template` applicable (override produit > template défaut).
-- Nouveau composant `<ProductTemplateRenderer template={…} product={…} />` qui :
-  - Applique `theme` via CSS variables scoped.
-  - Itère sur `layout.blocks` et instancie chaque bloc fonctionnel à sa position grille.
-- Aucune perte de fonctionnalité : tous les hooks (panier, tailles, IA size, etc.) restent branchés sur les blocs existants.
+Implémentation :
+- `ProductTemplateRenderer` switch sur `b.variant` pour chaque type (fallback = variant actuelle).
+- Dans l'éditeur de bloc : combobox des variantes + mini-preview.
 
-Idem pour les pages Catégorie via `CustomPage` / `BoutiqueRouter`.
+## Schéma base de données
 
----
-
-## 7. Fichiers à créer / modifier
-
-**Nouveaux**
-- `supabase/migrations/<ts>_page_templates.sql`
-- `supabase/functions/template-from-mockup/index.ts`
-- `src/hooks/usePageTemplates.ts`
-- `src/pages/admin/AdminPageTemplates.tsx`
-- `src/components/admin/page-templates/TemplateEditor.tsx`
-- `src/components/admin/page-templates/BlockPalette.tsx`
-- `src/components/admin/page-templates/BlockInspector.tsx`
-- `src/components/admin/page-templates/ThemeEditor.tsx`
-- `src/components/admin/page-templates/MockupImportDialog.tsx`
-- `src/components/product/ProductTemplateRenderer.tsx`
-- `src/components/product/blocks/*` (un fichier par bloc fonctionnel)
-- `src/config/templatePresets.ts` (Buggy + autres)
-
-**Modifiés**
-- `src/pages/admin/Admin.tsx` — ajout route + item sidebar
-- `src/pages/ProductDetail.tsx` — utilisation du renderer
-- `src/integrations/supabase/types.ts` (auto)
-
----
+Aucune migration de schéma nécessaire (les colonnes `theme` et `layout` sont JSONB → toutes les extensions vivent dedans). Vérification : confirmer que les policies `page_templates` autorisent `UPDATE`/`DELETE` aux admins.
 
 ## Détails techniques
 
-```text
-page_templates
-├── theme: { colors:{primary,accent,bg,fg,muted}, font, radius, shadow }
-└── layout: {
-      grid: { cols: 12, gap: 16, breakpoints: {…} },
-      blocks: [
-        { id, type, col, span, row, rowSpan, visible, props }
-      ]
-    }
-```
+- Nouveaux fichiers :
+  - `src/config/blockVariants.ts` (catalogue + métadonnées).
+  - `src/components/admin/templates/PresetGallery.tsx`
+  - `src/components/admin/templates/TemplateCard.tsx`
+  - `src/components/admin/templates/TemplateEditorSheet.tsx` (remplace l'ancien Dialog)
+  - `src/components/admin/templates/ThemeEditor.tsx`
+  - `src/components/admin/templates/LayoutEditor.tsx`
+  - `src/components/admin/templates/BlockVariantPicker.tsx`
+  - `src/components/admin/templates/LivePreview.tsx`
+  - `src/components/admin/templates/ImportExportButtons.tsx`
+- Modifier :
+  - `src/config/templatePresets.ts` (ajouter `previewImage`, 2 presets, `fontHeading/Body`, `spacing`).
+  - `src/hooks/usePageTemplates.ts` (nettoyage payload, gestion erreurs détaillées).
+  - `src/components/product/ProductTemplateRenderer.tsx` (support `variant`).
+  - `src/pages/admin/AdminPageTemplates.tsx` (refonte UI).
+- Assets : 6 images de preview générées dans `src/assets/template-presets/`.
 
-Edge Function `template-from-mockup` retourne ce même JSON via tool calling — garantie de validité.
+## Hors scope (sera fait plus tard si demandé)
+
+- Drag-and-drop visuel sur la grille (on garde flèches + numéros col/span pour stabilité).
+- Templates pour autres types de pages (panier, checkout…).
 
 ---
 
-## Hors scope (pour rester focalisé)
-
-- Versioning / historique des templates (peut être ajouté plus tard).
-- A/B testing entre templates.
-- Marketplace de templates partagés entre utilisateurs.
-
-Confirmez ce plan et je l'implémente.
+Confirme et je passe en build.
