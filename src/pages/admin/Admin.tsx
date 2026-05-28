@@ -32,7 +32,8 @@ import {
   UserCog,
   ShieldAlert,
   Sparkles,
-  BarChart3
+  BarChart3,
+  Store
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
