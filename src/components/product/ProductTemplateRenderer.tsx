@@ -29,6 +29,7 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
     if (template.theme.fontBody) loadGoogleFont(template.theme.fontBody);
   }, [template.theme.fontHeading, template.theme.fontBody]);
 
+
   const images: string[] = useMemo(() => {
     const arr: string[] = [];
     if (product?.image) arr.push(product.image);
