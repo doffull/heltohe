@@ -152,7 +152,7 @@ export function CategoryGrid() {
       <div className="px-6 lg:px-12 mt-4">
         <button
           type="button"
-          onClick={() => navigate('/boutiques')}
+          onClick={() => navigate('/trouver-une-boutique')}
           className="group relative w-full h-40 lg:h-52 overflow-hidden chamfer-hud transition-all duration-500 hover:shadow-hud animate-slide-in-up text-left"
           style={{ animationDelay: `${categories.length * 100}ms` }}
         >

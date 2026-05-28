@@ -42,6 +42,7 @@ const MentionsLegales = lazy(() => import("./pages/legal/MentionsLegales"));
 const SizeGuide = lazy(() => import("./pages/SizeGuide"));
 const Fidelite = lazy(() => import("./pages/Fidelite"));
 const Boutiques = lazy(() => import("./pages/Boutiques"));
+const StoreLocator = lazy(() => import("./pages/StoreLocator"));
 
 const RouteFallback = () => (
   <div className="min-h-[40vh] w-full flex items-center justify-center">
@@ -185,6 +186,7 @@ function AnimatedRoutes() {
           <Route path="/guide-des-tailles" element={<MainLayout><SizeGuide /></MainLayout>} />
           <Route path="/fidelite" element={<MainLayout><Fidelite /></MainLayout>} />
           <Route path="/boutiques" element={<MainLayout><Boutiques /></MainLayout>} />
+          <Route path="/trouver-une-boutique" element={<MainLayout><StoreLocator /></MainLayout>} />
           <Route path="/:categorySlug" element={<MainLayout><CategoryPageRouter /></MainLayout>} />
           <Route path="*" element={<MainLayout><NotFound /></MainLayout>} />
         </Routes>
