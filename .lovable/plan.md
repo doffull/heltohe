@@ -1,115 +1,105 @@
+## Diagnostic
 
-# Plan de stabilisation complète + refonte jeu
+Le problème vient d’une différence entre le preview Lovable et le site publié :
 
-Objectif : zéro régression visuelle entre éditeur et site publié, médias toujours présents (fallback partout), jeu repensé (cartes à gratter par défaut + sélecteur de type de jeu dans l'admin), micro vocal blindé, et tout ce qui est édité dans Lovable persisté côté base et rejoué identiquement sur le site.
+- En preview, tu es souvent connecté comme admin, donc les données passent.
+- Sur le domaine publié, le visiteur est anonyme.
+- Plusieurs requêtes publiques échouent en `401` avec : `permission denied for function has_role`.
+- Résultat : les produits, bannières, chat, boutons flottants, segments du jeu et certaines images ne chargent pas, donc le site paraît vide ou rempli de placeholders.
 
----
+Les requêtes cassées observées sur le domaine publié :
 
-## 1. Logo & header — robustes partout
+- `products`
+- `banners`
+- `newsletter_popups`
+- `home_fab_buttons`
+- `roulette_segments_public`
+- `bot_config_public`
 
-- `src/components/layout/BrandLogo.tsx` : composant unique réutilisé par `MainLayout`, `Header`, `Footer`, `Sidebar`, pages auth. 
-  - Source : `designSettings.logoUrl` → fallback image storage → fallback texte (nom du site) → fallback constant final.
-  - Gère `onError` → bascule sur texte sans casser la mise en page (hauteur réservée).
-  - Cache image en mémoire pour éviter le "flash" entre routes.
-- Suppression de tous les `<img src={logoUrl}>` directs au profit de `<BrandLogo />`.
+Le backend est bien en ligne. Le souci est dans les règles d’accès aux données publiques après les durcissements sécurité précédents.
 
-## 2. Fallback médias externes (images / vidéos)
+## Plan de correction
 
-- Nouveau utilitaire `src/lib/safeMedia.ts` : `<SafeImage>` et `<SafeVideo>` avec `onError` → `/placeholder.svg`, `loading="lazy"`, `decoding="async"`, dimensions réservées (anti-CLS).
-- Adoption dans : `HeroSlider`, `CategoryGrid`, `ProductCard`, `ProductImageGallery`, `RelatedProducts`, `TechwearHero`, `PageRenderer`, `HomeCustomSections`, `LoyaltyBanner`, `PromoBanner`.
-- Détection des URL WordPress cassées → bascule immédiate sur placeholder, log silencieux pour `admin/audit`.
+### 1. Réparer les règles publiques sans exposer les données sensibles
 
-## 3. Persistence garantie des réglages (édition = production)
+Créer une migration qui corrige les règles d’accès :
 
-- Migration : ajouter colonne `settings_json jsonb` sur `design_settings` (catch-all des nouveaux champs) + trigger `updated_at`.
-- `useDesignSettings` : merge `settings_json` avec colonnes typées, cache `localStorage` (`lvtk-design-cache`) servi instantanément au boot, remplacé dès que la requête réseau revient.
-- `AppContext` : `initializedRef` déjà en place — confirmer qu'aucune écriture côté UI n'écrase l'état réseau (effet réciproque uniquement quand l'utilisateur clique "Save").
-- Idem pour `useHomeBlocks`, `useHomeFabButtons`, `useCategories`, `useProducts` : cache local + `placeholderData` pour que l'URL publique ne montre jamais d'écran vide.
+- Les politiques admin qui appellent `has_role(...)` ne doivent plus s’appliquer au rôle public/anonyme.
+- Les tables publiques du site doivent garder une lecture anonyme propre :
+  - produits actifs
+  - catégories
+  - bannières actives
+  - popups actives
+  - boutons flottants actifs
+  - configuration publique du jeu
+  - configuration publique du chatbot sans `system_prompt`
+- Les champs sensibles restent bloqués :
+  - `bot_config.system_prompt`
+  - probabilités et valeurs internes de `roulette_segments`
+  - email admin dans `roulette_config`
+  - configuration privée admin
 
-## 4. Refonte du jeu — remplacement de la roulette
+### 2. Corriger les vues publiques cassées
 
-Le design actuel est rejeté. Nouveau système :
+Revoir les vues :
 
-- **Nouveau composant `GameCardScratch`** (cartes à gratter) — design industriel minimal Helvetica-MP, biseaux 45°, 3 cartes face cachée, le joueur en choisit une et la "gratte" (canvas mask). Animation Motion sobre.
-- **Admin `AdminRoulette` renommé `AdminGames`** avec sélecteur de type de jeu (radio cards) :
-  1. `scratch` — Cartes à gratter (par défaut, nouveau design)
-  2. `wheel` — Roulette classique (conservée pour ceux qui aiment)
-  3. `mystery` — Boîte mystère (1 clic, ouverture animée)
-  4. `flash` — Promo flash (compte à rebours + clic unique)
-- Le choix est stocké dans `roulette_config.game_type` (nouvelle colonne `text default 'scratch'`).
-- Le FAB et la page publique lisent `game_type` et montent le composant correspondant — la logique serveur `spin_roulette` reste identique (segments + cooldown + code promo).
-- Aperçu live dans l'admin de chaque type avant publication.
+- `bot_config_public`
+- `roulette_segments_public`
+- `roulette_config_public`
+- `design_settings_public`
 
-## 5. Micro vocal — fallback durci + validation Edge
+Objectif : elles doivent fonctionner pour les visiteurs anonymes, mais ne jamais exposer les champs privés.
 
-Côté client (`VoiceCommandFab.tsx`) :
-- Limite UI dure : transcript coupé à 240 caractères, compteur visible, bouton "Envoyer" désactivé sous 3 caractères ou au-dessus de la limite.
-- Erreurs SpeechRecognition tracées avec type (`no-speech`, `aborted`, `not-allowed`, `network`, `audio-capture`, `service-not-allowed`) → toast spécifique + log `client_error_logs`.
-- Simulation forcée du 404 / 400 de l'edge function avec message utilisateur clair et retry manuel (pas de boucle).
-- Auto-restart `no-speech` plafonné à 2, ensuite affichage "Aucune voix détectée — clic pour relancer".
+### 3. Marquer/fixer les vrais résultats du scan sécurité
 
-Côté Edge (`supabase/functions/voice-command/index.ts`) :
-- Validation Zod : `transcript: string().min(2).max(240)`, sinon `400 INVALID_TRANSCRIPT` (déjà partiellement en place, durcir).
-- Réponse `404 NO_INTENT` propre quand Gemini ne renvoie rien d'exploitable, au lieu d'un crash.
-- CORS et logs structurés (`level`, `code`, `latency_ms`).
+Traiter les findings actuels :
 
-## 6. Analytics / chat / roulette — chargement différé
+- Fixer `bot_config_no_public_select_restriction` sans casser le widget chatbot public.
+- Fixer `roulette_segments_no_public_read_policy` sans exposer les probabilités ni les codes internes.
+- Fixer définitivement `roulette_config_notify_admin_email` en gardant la vue publique nettoyée.
+- Ignorer uniquement les warnings explicitement faux ou déjà sécurisés, avec mémoire sécurité mise à jour si nécessaire.
 
-- `useVisitorTracking`, `ChatBotWidget`, `RouletteFab` montés via `requestIdleCallback` (fallback `setTimeout(0)`) après LCP — réduit le TTI mobile.
-- Erreurs `Failed to fetch` (visitor-tracking) silencieuses, retry exponentiel borné (max 2).
+### 4. Rendre le frontend plus tolérant aux erreurs backend temporaires
 
-## 7. Performance — pages < 1s
+Mettre à jour les hooks publics pour éviter qu’une erreur réseau fasse disparaître toute la page :
 
-- Lazy-load des routes admin (`React.lazy` + `Suspense`) — déjà partiellement, étendre aux gros pages (`AdminProducts`, `AdminDesign`, `AdminOrders`).
-- Preload du logo + image hero LCP via `<link rel="preload">` injecté par `HeroSlider`.
-- `AnimatePresence mode="wait"` → vérifier qu'il n'y a qu'un seul enfant à la fois (warning console actuel) dans `FadeTransition` et `PageShatterTransition`.
-- Query defaults déjà durcis (étape précédente) — confirmer.
+- `useProducts`
+- `useCategories`
+- `useBanners` / hooks de bannières publiques
+- `useHomeFabButtons`
+- `useRoulette`
+- `useDesignSettings`
 
-## 8. Sécurité (rappel utilisateur)
+Chaque hook public doit :
 
-- Lancer `supabase--linter` après migrations, fixer Security Definer / search_path restants.
-- Vérifier RLS sur `roulette_config` (lecture publique OK, écriture admin only) après ajout `game_type`.
+- garder le dernier cache connu quand la requête échoue ;
+- retourner un tableau vide proprement seulement si aucune donnée n’a jamais existé ;
+- ne pas faire planter le rendu ;
+- éviter les refetchs agressifs inutiles.
 
----
+### 5. Stabiliser les médias visibles
 
-## Détails techniques (référence dev)
+Appliquer les composants médias robustes là où les placeholders apparaissent encore :
 
-```text
-Nouveaux fichiers
-├─ src/components/layout/BrandLogo.tsx
-├─ src/lib/safeMedia.ts           (SafeImage, SafeVideo)
-├─ src/components/games/
-│  ├─ GameCardScratch.tsx         (nouveau, défaut)
-│  ├─ GameWheel.tsx               (refactor de RouletteFab existant)
-│  ├─ GameMysteryBox.tsx
-│  ├─ GameFlashPromo.tsx
-│  └─ GameRouter.tsx              (lit game_type, monte le bon)
-└─ supabase/migrations/<ts>_game_type_and_settings_json.sql
+- hero
+- catégories
+- cartes produits
+- bannières
+- galerie produit
+- sections homepage
 
-Migrations
-- ALTER TABLE roulette_config ADD COLUMN game_type text NOT NULL DEFAULT 'scratch';
-- ALTER TABLE design_settings ADD COLUMN settings_json jsonb DEFAULT '{}'::jsonb;
+But : une image cassée ne doit jamais casser le layout, et les dimensions doivent rester stables.
 
-Fichiers modifiés (principaux)
-- src/components/layout/{MainLayout,Header,Footer,Sidebar}.tsx
-- src/components/home/{HeroSlider,CategoryGrid,TechwearHero,LoyaltyBanner,PromoBanner}.tsx
-- src/components/product/{ProductImageGallery,RelatedProducts}.tsx
-- src/components/products/ProductCard.tsx
-- src/components/layout/FabStack.tsx              (utilise GameRouter)
-- src/components/voice/VoiceCommandFab.tsx       (limite + erreurs)
-- supabase/functions/voice-command/index.ts      (Zod + 404 propre)
-- src/pages/admin/AdminRoulette.tsx              (sélecteur de jeu + aperçu)
-- src/hooks/useRoulette.ts                       (game_type)
-- src/hooks/useDesignSettings.ts                 (cache local + settings_json)
-- src/hooks/useVisitorTracking.ts                (idle + retry borné)
-- src/App.tsx                                    (lazy admin routes)
-```
+### 6. Vérifier sur le vrai domaine publié
 
-## Hors scope (à confirmer si besoin)
-- Pas de changement de stack ni de nouvelle dépendance lourde.
-- Pas de migration de données existantes : `game_type` par défaut `'scratch'` — bascule transparente.
-- Le jeu "wheel" reste disponible si tu veux revenir à l'ancien design depuis l'admin.
+Après migration et code :
 
----
+- ouvrir `https://lvtk2026.helvetica-mp.net` en session anonyme ;
+- vérifier les erreurs console ;
+- vérifier les requêtes réseau ;
+- confirmer que logo, hero, catégories, produits, chat et jeu chargent ;
+- vérifier mobile 390px/414px et desktop.
 
-Confirme et je passe en build pour tout dérouler en une fois.
+## Résultat attendu
+
+Le site publié doit afficher les mêmes données que le preview : logo, hero, images, catégories, produits, chat, jeu et design, même après update/publish, sans écran vide ni disparition massive de contenu.
