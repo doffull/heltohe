@@ -162,7 +162,7 @@ export function HomeBlocksEditor() {
           <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-2">
               {blocks.map((b) => (
-                <Row key={b.id} b={b} onToggle={() => toggle(b.id)} isCustom={b.id.startsWith('custom:')} />
+                <Row key={b.id} b={b} onToggle={() => toggle(b.id)} isCustom={b.id.startsWith('custom:')} onEdit={() => goEdit(b.id)} />
               ))}
             </div>
           </SortableContext>
