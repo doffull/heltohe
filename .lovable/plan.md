@@ -1,53 +1,54 @@
-## 1. Catégories admin — boutons Modifier / Supprimer visibles + confirmation
+# Plan
 
-**Où :** `src/pages/admin/AdminSettings.tsx` (onglet Catégories). Les actions existent déjà mais sont cachées dans un menu "⋯" peu visible, et la confirmation utilise `window.confirm()` (popup système).
+## 1. Boutique IA (admin) — cache, images, filtre, validation
 
-**Changements :**
-- Remplacer le `DropdownMenu` (sur catégories racines, sous-catégories et orphelines) par **deux boutons icônes visibles côte à côte** : ✏️ Modifier (variant `ghost`) + 🗑️ Supprimer (variant `ghost`, texte rouge).
-- Remplacer `window.confirm()` par un **`AlertDialog`** stylé (composant shadcn déjà présent) avec :
-  - Titre : « Supprimer cette catégorie ? »
-  - Description : « Cette action est définitive. Les produits liés ne seront pas supprimés mais perdront cette catégorie. » (mention sous-catégorie adaptée si besoin)
-  - Boutons : « Annuler » + « Supprimer » (rouge)
-- Un seul state `catToDelete: CategoryRecord | null` pilote le dialog.
+**`supabase/functions/boutique-lookup/index.ts`**
+- Ajouter `places.photos` au `X-Goog-FieldMask` (déjà demandé) + récupérer 1ʳᵉ photo via `places/v1/{photoName}/media?maxWidthPx=600&skipHttpRedirect=true` → renvoie `photoUri` qu'on met dans `image`.
+- Ajouter filtre type : passer `includedType: 'shopping_mall'` (ou liste configurable côté admin) — paramètre optionnel `type` dans le body (`mall | store | any`, défaut `any`).
 
-## 2. Boutiques admin — création assistée par IA depuis le nom
+**`src/pages/admin/AdminBoutiques.tsx`**
+- **Cache mémoire** : `Map<query, candidates>` (clé = query+type) pour éviter de re-fetcher les mêmes recherches pendant la session.
+- **Filtre** : petit `<Select>` dans le dialog (Tous / Centre commercial / Boutique) qui pilote `type` envoyé à l'edge function.
+- **Afficher les images** : vignette 48×48 à gauche de chaque candidat dans la liste de suggestions.
+- **Étape de validation** : la sélection d'un candidat n'auto-remplit plus le formulaire principal ; elle ouvre une mini-preview (image + adresse + GPS + bouton "Voir sur la carte" mini-iframe Google Maps) avec deux boutons : **Annuler** / **Utiliser ces informations**. Seul "Utiliser" pousse les valeurs dans `form`.
 
-**Où :** `src/pages/admin/AdminBoutiques.tsx` + nouvelle Edge Function.
+## 2. Catégories admin — mobile
 
-**UX :**
-- Dans le dialog « Nouvelle boutique », à côté du champ **Nom**, ajouter un bouton « ✨ Rechercher avec l'IA ».
-- Au clic (ou auto-déclenché 800 ms après la saisie d'au moins 4 caractères), appel à l'Edge Function. Spinner pendant la recherche.
-- Si plusieurs candidats sont trouvés → petite liste déroulante sous le champ pour choisir (ex : « Galeries Lafayette Haussmann — 40 Bd Haussmann, 75009 Paris »).
-- Au choix : remplissage automatique de **adresse, code postal, ville, pays, latitude, longitude, image** (photo Google si dispo, sinon icône `Store` SVG par défaut). Toast « Boutique trouvée ✨ ».
-- L'utilisateur peut toujours corriger manuellement avant « Enregistrer ».
+**`src/pages/admin/AdminSettings.tsx`**
+- Les boutons Edit/Delete sont actuellement dans une rangée droite qui sort de l'écran à 360px. Solution :
+  - Wrapper le bloc catégorie en `flex-col sm:flex-row` avec les boutons sur une 2ᵉ ligne sur mobile.
+  - Boutons en `flex-shrink-0` avec `w-9 h-9` tactiles.
+  - Ajouter `min-w-0` + `truncate` sur le titre pour éviter l'overflow.
+- Vérifier sous-catégories et orphelines (mêmes patches).
 
-**Edge Function `boutique-lookup` :**
-- Input : `{ query: string }` (nom de boutique/centre commercial, facultativement biaisé sur la France).
-- Appelle **Google Places API (New) `places:searchText`** via le connector gateway (déjà connecté) avec `X-Goog-FieldMask: places.id,places.displayName,places.formattedAddress,places.location,places.addressComponents,places.photos`.
-- Pour la photo (1ʳᵉ disponible) : récupère via `places/v1/{photoName}/media?maxWidthPx=800` et renvoie l'URL Google directement (le navigateur peut l'afficher).
-- Retourne jusqu'à 5 candidats normalisés `{ name, address, postalCode, city, country, lat, lng, image }`.
+## 3. Nouvelle page "Trouver une boutique" avec map + recherche
 
-## 3. Boutiques publiques — popup riche + itinéraire
+**Routing**
+- `/boutiques` → reste la page actuelle (liste éditoriale).
+- **Nouvelle route `/trouver-une-boutique`** → nouvelle page `StoreLocator.tsx`.
+- Lien "Trouver une boutique" dans la sidebar/menu pointera vers `/trouver-une-boutique` (à mettre à jour là où le label apparaît).
 
-**Où :** `src/pages/Boutiques.tsx`.
+**`src/pages/StoreLocator.tsx` (nouveau)**
+- Header avec barre de recherche unique + bouton 📍 "Près de chez moi".
+- Recherche libre filtre `boutiques` côté client sur : nom, ville, code postal (≈ département via 2 premiers chiffres), adresse.
+- Bouton géoloc : `navigator.geolocation.getCurrentPosition` → calcule distance Haversine, trie par proximité, centre la map sur l'utilisateur (marker bleu).
+- Layout : map plein écran (gauche/haut) + liste scrollable (droite/bas) — split-screen desktop, stack mobile.
+- Marqueurs Google Maps (mêmes InfoWindows enrichies que `Boutiques.tsx` : image, adresse, bouton Itinéraire). Clic sur un item de liste → pan+zoom + ouvre l'InfoWindow.
+- Affichage de la distance en km si géoloc activée.
 
-- Au clic d'un marker OU d'une carte de la liste, ouvrir une **InfoWindow enrichie** :
-  - Nom (bold), image (si dispo), adresse complète.
-  - Bouton **« Itinéraire »** → ouvre `https://www.google.com/maps/dir/?api=1&destination=<lat>,<lng>&destination_place_id=...` dans un nouvel onglet (utilise l'appli Google Maps native sur mobile).
-  - Bouton **« Appeler »** masqué (pas de téléphone en base — on l'ajoutera si demandé).
-- Fermeture des autres InfoWindow avant d'ouvrir la nouvelle.
+**`src/App.tsx`** : enregistrer la nouvelle route.
 
 ## Détails techniques
 
-- **Pas de migration DB** nécessaire (colonnes `image`, `latitude`, `longitude` déjà présentes sur `boutiques`).
-- **Connector Google Maps** déjà actif (la page publique l'utilise déjà). L'Edge Function réutilisera `LOVABLE_API_KEY` + `GOOGLE_MAPS_API_KEY` (auto-injectés).
-- **Sécurité** : Edge Function `verify_jwt = false` (lookup public côté admin authentifié uniquement via l'UI, pas de données sensibles renvoyées).
-- **Fallback** : si l'IA ne trouve rien, on garde le bouton « Trouver les coordonnées GPS automatiquement » (Nominatim) existant.
+- Cache IA : simple `Map` au niveau module dans `AdminBoutiques.tsx` (pas de persistance disque, suffit pour la session).
+- Photos Places (New) : l'URL `media` retournée nécessite la clé ; on la résout côté edge function et on renvoie le `photoUri` final dans `image`.
+- Haversine inline (pas de dépendance).
+- Pas de changement de schéma DB.
 
 ## Fichiers touchés
-
-- `src/pages/admin/AdminSettings.tsx` — refactor boutons cat. + AlertDialog
-- `src/pages/admin/AdminBoutiques.tsx` — recherche IA par nom
-- `src/pages/Boutiques.tsx` — InfoWindow + bouton Itinéraire
-- `supabase/functions/boutique-lookup/index.ts` — nouveau
-- `supabase/config.toml` — déclarer la nouvelle fonction (`verify_jwt = false`)
+- `supabase/functions/boutique-lookup/index.ts` (images + filtre type)
+- `src/pages/admin/AdminBoutiques.tsx` (cache, images, filtre, preview validation)
+- `src/pages/admin/AdminSettings.tsx` (responsive mobile catégories)
+- `src/pages/StoreLocator.tsx` (nouveau)
+- `src/App.tsx` (route)
+- Sidebar/menu : mettre à jour le lien "Trouver une boutique"
