@@ -445,6 +445,7 @@ export default function PageRenderer({ sections }: PageRendererProps) {
           case 'products': return <div key={section.id} className="px-6"><ProductsSection content={section.content} /></div>;
           case 'categories': return <CategoriesSection key={section.id} content={section.content} />;
           case 'popup_button': return <PopupButtonSection key={section.id} content={{ ...section.content, _id: section.id }} />;
+          case 'banner': return <BannerSection key={section.id} content={section.content} sectionId={section.id} />;
           default: return null;
         }
       })}
