@@ -309,6 +309,7 @@ export default function Admin() {
             <Route path="home-icons/*" element={<AdminHomeIcons />} />
             <Route path="stock/*" element={<AdminStock />} />
             <Route path="colissimo/*" element={<AdminColissimo />} />
+            <Route path="boutiques/*" element={<AdminBoutiques />} />
             <Route path="notifications/*" element={<AdminNotifications />} />
             <Route path="chatbot/*" element={<AdminChatbot />} />
             <Route path="woocommerce/*" element={<AdminWooCommerce />} />
