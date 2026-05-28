@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { IconPicker, getIcon } from '@/components/admin/IconPicker';
-import { Plus, Trash2, Copy, ChevronUp, ChevronDown, Sparkles, Save, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Copy, ChevronUp, ChevronDown, Sparkles, Save, Loader2, ExternalLink } from 'lucide-react';
 import { UnifiedFabEditor } from '@/components/admin/UnifiedFabEditor';
 import { HomeBlocksEditor } from '@/components/admin/HomeBlocksEditor';
 import { HomeCustomSectionsEditor } from '@/components/admin/HomeCustomSectionsEditor';
