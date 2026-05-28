@@ -108,16 +108,16 @@ export default function AdminSettings() {
                             <img src={cat.image} alt={cat.title} className="w-full h-full object-cover" />
                           </div>
                         )}
-                        <div className="p-4 flex items-center justify-between">
-                          <div>
-                            <p className="font-bold text-sm hud-text">{cat.title}</p>
+                        <div className="p-3 sm:p-4 flex items-center justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-bold text-sm hud-text truncate">{cat.title}</p>
                             <p className="text-xs text-muted-foreground">Position: {cat.sortOrder}</p>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingCat(cat); setCatDialogOpen(true); }} title="Modifier">
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => { setEditingCat(cat); setCatDialogOpen(true); }} title="Modifier" aria-label="Modifier">
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setCatToDelete(cat)} title="Supprimer">
+                            <Button variant="outline" size="icon" className="h-9 w-9 text-destructive hover:text-destructive border-destructive/30" onClick={() => setCatToDelete(cat)} title="Supprimer" aria-label="Supprimer">
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -126,17 +126,17 @@ export default function AdminSettings() {
                       {/* Sub-categories */}
                       {children.map(sub => (
                         <div key={sub.id} className="ml-4 chamfer-hud bg-card/60 border border-border/50 overflow-hidden">
-                          <div className="p-3 flex items-center justify-between">
-                            <div>
+                          <div className="p-3 flex items-center justify-between gap-2">
+                            <div className="min-w-0 flex-1">
                               <p className="text-xs text-muted-foreground">↳</p>
-                              <p className="font-medium text-sm hud-text">{sub.title}</p>
+                              <p className="font-medium text-sm hud-text truncate">{sub.title}</p>
                             </div>
-                            <div className="flex items-center gap-1">
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingCat(sub); setCatDialogOpen(true); }} title="Modifier">
-                                <Pencil className="h-3.5 w-3.5" />
+                            <div className="flex items-center gap-1 shrink-0">
+                              <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => { setEditingCat(sub); setCatDialogOpen(true); }} title="Modifier" aria-label="Modifier">
+                                <Pencil className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setCatToDelete(sub)} title="Supprimer">
-                                <Trash2 className="h-3.5 w-3.5" />
+                              <Button variant="outline" size="icon" className="h-9 w-9 text-destructive hover:text-destructive border-destructive/30" onClick={() => setCatToDelete(sub)} title="Supprimer" aria-label="Supprimer">
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
                           </div>
@@ -148,16 +148,16 @@ export default function AdminSettings() {
                 {/* Orphan sub-categories (parent deleted) */}
                 {categories.filter(c => c.parentId && !categories.find(p => p.id === c.parentId)).map((cat) => (
                   <div key={cat.id} className="chamfer-hud bg-card border border-border overflow-hidden group">
-                    <div className="p-4 flex items-center justify-between">
-                      <div>
-                        <p className="font-bold text-sm hud-text">{cat.title}</p>
+                    <div className="p-3 sm:p-4 flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-sm hud-text truncate">{cat.title}</p>
                         <p className="text-xs text-destructive">Parent manquant</p>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingCat(cat); setCatDialogOpen(true); }} title="Modifier">
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => { setEditingCat(cat); setCatDialogOpen(true); }} title="Modifier" aria-label="Modifier">
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setCatToDelete(cat)} title="Supprimer">
+                        <Button variant="outline" size="icon" className="h-9 w-9 text-destructive hover:text-destructive border-destructive/30" onClick={() => setCatToDelete(cat)} title="Supprimer" aria-label="Supprimer">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
