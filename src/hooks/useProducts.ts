@@ -29,6 +29,7 @@ function dbToAppProduct(db: Record<string, unknown>): Product {
     modelSizeWorn: (db.model_size_worn as string) || undefined,
     modelName: (db.model_name as string) || undefined,
     galleryImages: (db.gallery_images as string[]) || [],
+    templateId: (db.template_id as string) || null,
   };
 }
 
@@ -57,6 +58,7 @@ function appToDbProduct(product: Partial<Product>) {
     model_size_worn: product.modelSizeWorn || null,
     model_name: product.modelName || null,
     gallery_images: product.galleryImages || [],
+    template_id: product.templateId ?? null,
     is_active: true,
   };
 }
