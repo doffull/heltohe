@@ -108,11 +108,19 @@ export function UnifiedFab() {
     else if (id === 'roulette') setRouletteOpen(true);
   };
 
-  const visibleItems = items
+  let visibleItems = items
     .filter((it) => it.visible)
     .filter((it) => it.id !== 'voice' || voiceEnabled)
     .filter((it) => it.id !== 'roulette' || rouletteConfig?.enabled)
     .sort((a, b) => a.order - b.order);
+
+  // Safety net: if admin configuration has hidden everything, fall back to defaults
+  // so the games/voice/chat panel never disappears entirely on the public site.
+  if (visibleItems.length === 0 && visibleCustom.length === 0) {
+    visibleItems = DEFAULT_ITEMS
+      .filter((it) => it.id !== 'voice' || voiceEnabled)
+      .filter((it) => it.id !== 'roulette' || rouletteConfig?.enabled);
+  }
 
   // ── Persistence helpers ──────────────────────────────────────────
   const posKey = isMobile ? 'position_mobile' : 'position_desktop';
