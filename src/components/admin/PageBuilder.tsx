@@ -521,6 +521,7 @@ interface PageBuilderProps {
 
 export default function PageBuilder({ sections, onChange }: PageBuilderProps) {
   const [addType, setAddType] = useState<string>('');
+  const [lastAddedId, setLastAddedId] = useState<string | null>(null);
 
   const addSection = (type: string) => {
     const newSection: PageSection = {
@@ -530,6 +531,7 @@ export default function PageBuilder({ sections, onChange }: PageBuilderProps) {
       order: sections.length,
     };
     onChange([...sections, newSection]);
+    setLastAddedId(newSection.id);
     setAddType('');
   };
 
