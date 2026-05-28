@@ -93,6 +93,7 @@ export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin/boutiques': '#0D9488',
   '/admin/roles': '#DC2626',
   '/admin/security': '#0EA5E9',
+  '/admin/page-templates': '#A855F7',
 };
 
 const SIDEBAR_ITEMS = [
@@ -109,7 +110,8 @@ const SIDEBAR_ITEMS = [
   { icon: Gift, label: 'Roulette', href: '/admin/roulette' },
   { icon: Palette, label: 'Design', href: '/admin/design' },
   { icon: MousePointer, label: 'Icônes Accueil', href: '/admin/home-icons' },
-  { icon: Sparkles, label: 'Transitions', href: '/admin/transitions' },
+    { icon: Sparkles, label: 'Transitions', href: '/admin/transitions' },
+    { icon: LayoutTemplate, label: 'Templates de pages', href: '/admin/page-templates' },
   { icon: BarChart3, label: 'Analytique Bannières', href: '/admin/bannieres-analytics' },
   { icon: Warehouse, label: 'Stock', href: '/admin/stock' },
   { icon: Truck, label: 'Colissimo', href: '/admin/colissimo' },
@@ -323,6 +325,7 @@ export default function Admin() {
             <Route path="security/*" element={<AdminSecurity />} />
             <Route path="parametres/*" element={<AdminSettings />} />
             <Route path="transitions/*" element={<AdminTransitions />} />
+            <Route path="page-templates/*" element={<AdminPageTemplates />} />
             <Route path="bannieres-analytics/*" element={<AdminBannersAnalytics />} />
           </Routes>
         </div>

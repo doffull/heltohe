@@ -33,6 +33,7 @@ export interface Product {
   modelSizeWorn?: string;
   modelName?: string;
   galleryImages?: string[];
+  templateId?: string | null;
 }
 
 export interface OrderItem {
