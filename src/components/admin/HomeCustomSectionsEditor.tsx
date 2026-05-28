@@ -35,8 +35,7 @@ export function HomeCustomSectionsEditor() {
   const persist = async (next: PageSection[]) => {
     try {
       setStatus('saving');
-      updateDesignSettings({ homeCustomSections: next } as any);
-      await flushDesignSettings();
+      await flushDesignSettings({ homeCustomSections: next } as any);
       lastPersistedRef.current = JSON.stringify(next);
       setStatus('saved');
       const now = Date.now();
@@ -50,6 +49,13 @@ export function HomeCustomSectionsEditor() {
       toast.error("Erreur d'enregistrement", { description: e?.message });
     }
   };
+
+  // Global flush event from the page-level "Tout enregistrer"
+  useEffect(() => {
+    const handler = () => { updateDesignSettings({ homeCustomSections: sections } as any); };
+    window.addEventListener('homeicons:collect', handler);
+    return () => window.removeEventListener('homeicons:collect', handler);
+  }, [sections, updateDesignSettings]);
 
   // Auto-save with debounce
   useEffect(() => {

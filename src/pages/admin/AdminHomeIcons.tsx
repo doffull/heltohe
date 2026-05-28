@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useApp } from '@/context/AppContext';
 import { useHomeFabButtons, useHomeFabMutations } from '@/hooks/useHomeFabButtons';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { IconPicker, getIcon } from '@/components/admin/IconPicker';
-import { Plus, Trash2, Copy, ChevronUp, ChevronDown, Sparkles } from 'lucide-react';
+import { Plus, Trash2, Copy, ChevronUp, ChevronDown, Sparkles, Save, Loader2 } from 'lucide-react';
 import { UnifiedFabEditor } from '@/components/admin/UnifiedFabEditor';
 import { HomeBlocksEditor } from '@/components/admin/HomeBlocksEditor';
 import { HomeCustomSectionsEditor } from '@/components/admin/HomeCustomSectionsEditor';
@@ -48,9 +49,11 @@ const newButton = (sortOrder: number): Partial<HomeFabButton> => ({
 });
 
 export default function AdminHomeIcons() {
+  const { flushDesignSettings } = useApp();
   const { data: buttons = [], isLoading } = useHomeFabButtons({ adminAll: true });
   const { upsert, remove } = useHomeFabMutations();
   const [editing, setEditing] = useState<string | null>(null);
+  const [savingAll, setSavingAll] = useState(false);
 
   const editingBtn = buttons.find((b) => b.id === editing) || null;
 
@@ -58,6 +61,23 @@ export default function AdminHomeIcons() {
     const res = await upsert.mutateAsync(newButton(buttons.length));
     setEditing(res.id);
     toast.success('Bouton créé');
+  };
+
+  const handleSaveAll = async () => {
+    try {
+      setSavingAll(true);
+      // 1. Demander à tous les éditeurs (UnifiedFab, HomeBlocks, HomeCustomSections) de pousser leur state local
+      window.dispatchEvent(new CustomEvent('homeicons:collect'));
+      // 2. Laisser React appliquer les setState avant le flush
+      await new Promise(r => setTimeout(r, 50));
+      // 3. Un seul aller-retour DB
+      await flushDesignSettings();
+      toast.success('Tous les changements ont été enregistrés');
+    } catch (e: any) {
+      toast.error("Erreur lors de l'enregistrement global", { description: e?.message });
+    } finally {
+      setSavingAll(false);
+    }
   };
 
   const handleSave = async (patch: Partial<HomeFabButton>) => {
@@ -76,6 +96,17 @@ export default function AdminHomeIcons() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
+      {/* Barre globale sticky : enregistre EN UNE SEULE FOIS toutes les modifs de la page */}
+      <div className="sticky top-0 z-30 -mx-4 md:-mx-6 px-4 md:px-6 py-3 bg-background/95 backdrop-blur border-b flex items-center justify-between gap-3">
+        <div className="text-xs text-muted-foreground">
+          💡 Astuce : <strong>« Tout enregistrer »</strong> sauvegarde en une fois les sections, le bouton flottant unifié et l'ordre de la home.
+        </div>
+        <Button onClick={handleSaveAll} disabled={savingAll} size="sm" className="gap-1.5 shrink-0">
+          {savingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          Tout enregistrer
+        </Button>
+      </div>
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Icônes flottantes (Page d'accueil)</h1>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -24,7 +24,7 @@ const CORNERS = [
 ];
 
 export function UnifiedFabEditor() {
-  const { designSettings, updateDesignSettings } = useApp();
+  const { designSettings, updateDesignSettings, flushDesignSettings } = useApp();
   const initial = (designSettings as any).unifiedFab || {};
   const [enabled, setEnabled] = useState(initial.enabled !== false);
   const [accent, setAccent] = useState(initial.accentColor || '#ffffff');
@@ -50,32 +50,73 @@ export function UnifiedFabEditor() {
   const [rfLabel, setRfLabel] = useState<string>(rouletteFab.label || '');
   const [rfPulse, setRfPulse] = useState<boolean>(rouletteFab.pulse !== false);
   const [rfCorner, setRfCorner] = useState<string>((rouletteFab.position_desktop?.corner) || 'cc');
+  const [status, setStatus] = useState<'idle' | 'dirty' | 'saving' | 'saved'>('idle');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFirstRun = useRef(true);
 
   useEffect(() => {
     const cur = (designSettings as any).unifiedFab || {};
     if (cur.items) setItems(cur.items);
   }, [designSettings]);
 
+  // Build the unifiedFab payload from local state
+  const buildPayload = () => ({
+    ...initial,
+    enabled, accentColor: accent, mode, groupSide, groupOffsetY,
+    clusterDir,
+    dockDir, dockSize, dockBlur,
+    dockShowVoice, dockShowChat, dockShowVisualEditor, dockShowRoulette,
+    rouletteFab: {
+      ...rouletteFab,
+      variant: rfVariant, size: rfSize, shape: rfShape,
+      accentColor: rfAccent, label: rfLabel, pulse: rfPulse,
+      position_desktop: { corner: rfCorner, x: rouletteFab.position_desktop?.x || 0, y: rouletteFab.position_desktop?.y || 0 },
+      position_mobile: rouletteFab.position_mobile || { corner: rfCorner, x: 0, y: 0 },
+    },
+    position_desktop: posD, position_mobile: posM, items,
+  });
+
+  // Auto-save (debounced) — safety net so manual click is no longer mandatory
+  useEffect(() => {
+    if (isFirstRun.current) { isFirstRun.current = false; return; }
+    setStatus('dirty');
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      const payload = buildPayload();
+      updateDesignSettings({ unifiedFab: payload } as any);
+      setStatus('saved');
+      setTimeout(() => setStatus(s => (s === 'saved' ? 'idle' : s)), 1500);
+    }, 800);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, accent, posD, posM, items, mode, groupSide, groupOffsetY, clusterDir,
+    dockDir, dockSize, dockBlur, dockShowVoice, dockShowChat, dockShowVisualEditor, dockShowRoulette,
+    rfVariant, rfSize, rfShape, rfAccent, rfLabel, rfPulse, rfCorner]);
+
+  // Listen to global "flush everything" event from the page
+  useEffect(() => {
+    const handler = () => {
+      const payload = buildPayload();
+      updateDesignSettings({ unifiedFab: payload } as any);
+    };
+    window.addEventListener('homeicons:collect', handler);
+    return () => window.removeEventListener('homeicons:collect', handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  });
+
   const save = async () => {
-    await updateDesignSettings({
-      ...(designSettings as any),
-      unifiedFab: {
-        ...initial,
-        enabled, accentColor: accent, mode, groupSide, groupOffsetY,
-        clusterDir,
-        dockDir, dockSize, dockBlur,
-        dockShowVoice, dockShowChat, dockShowVisualEditor, dockShowRoulette,
-        rouletteFab: {
-          ...rouletteFab,
-          variant: rfVariant, size: rfSize, shape: rfShape,
-          accentColor: rfAccent, label: rfLabel, pulse: rfPulse,
-          position_desktop: { corner: rfCorner, x: rouletteFab.position_desktop?.x || 0, y: rouletteFab.position_desktop?.y || 0 },
-          position_mobile: rouletteFab.position_mobile || { corner: rfCorner, x: 0, y: 0 },
-        },
-        position_desktop: posD, position_mobile: posM, items,
-      },
-    } as any);
-    toast.success('Bouton flottant enregistré');
+    try {
+      setStatus('saving');
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      const payload = buildPayload();
+      await flushDesignSettings({ unifiedFab: payload } as any);
+      setStatus('saved');
+      toast.success('Bouton flottant enregistré');
+      setTimeout(() => setStatus(s => (s === 'saved' ? 'idle' : s)), 2000);
+    } catch (e: any) {
+      setStatus('idle');
+      toast.error("Erreur d'enregistrement", { description: e?.message });
+    }
   };
 
   const toggle = (id: string) => setItems(items.map((it: any) => it.id === id ? { ...it, visible: !it.visible } : it));
@@ -364,8 +405,11 @@ export function UnifiedFabEditor() {
           <p className="text-[10px] text-muted-foreground">Astuce : en mode admin, glissez le bouton Jeu-concours directement sur la home pour ajuster sa position. Le centre est idéal pour maximiser la visibilité. Touche Échap pendant le drag pour annuler.</p>
         </div>
 
-        <div className="flex justify-end">
-          <Button onClick={save} className="gap-2"><Save className="h-4 w-4" /> Enregistrer</Button>
+        <div className="flex justify-end items-center gap-3">
+          {status === 'dirty' && <span className="text-xs text-amber-600">Modifications non enregistrées…</span>}
+          {status === 'saving' && <span className="text-xs text-muted-foreground">Enregistrement…</span>}
+          {status === 'saved' && <span className="text-xs text-emerald-600">Enregistré ✓</span>}
+          <Button onClick={save} className="gap-2" disabled={status === 'saving'}><Save className="h-4 w-4" /> Enregistrer</Button>
         </div>
       </CardContent>
     </Card>
