@@ -138,6 +138,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         modelSizeWorn: product.modelSizeWorn || '',
         modelName: product.modelName || '',
         galleryImages: product.galleryImages || [],
+        templateId: product.templateId ?? null,
       });
     }
   }, [product]);
