@@ -202,7 +202,7 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
           <Share2 className="w-5 h-5" />
         </button>
       );
-      case 'related_products': return <RelatedProducts currentProductId={product?.id} category={product?.category} />;
+      case 'related_products': return <RelatedProducts currentId={product?.id} category={product?.category} />;
       case 'custom_html': return b.props?.html ? <div dangerouslySetInnerHTML={{ __html: String(b.props.html) }} /> : null;
       case 'divider': return <hr style={{ borderColor: t.colors.border, margin: '24px 0' }} />;
       case 'spacer': return <div style={{ height: b.props?.height || 24 }} />;
