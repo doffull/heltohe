@@ -65,23 +65,20 @@ Deno.serve(async (req) => {
 
     const data = await res.json();
     const candidates: Candidate[] = (data.places || []).map((p: any) => {
-      const photoName = p.photos?.[0]?.name;
-      const image = photoName
-        ? `${GATEWAY_URL}/places/v1/${photoName}/media?maxWidthPx=800&skipHttpRedirect=false`
-        : null;
+      const streetNum = extractComponent(p.addressComponents, 'street_number');
+      const route = extractComponent(p.addressComponents, 'route');
+      const street = `${streetNum} ${route}`.trim();
       return {
         placeId: p.id,
         name: p.displayName?.text || query,
-        address: extractComponent(p.addressComponents, 'street_number')
-          ? `${extractComponent(p.addressComponents, 'street_number')} ${extractComponent(p.addressComponents, 'route')}`.trim()
-          : (p.formattedAddress?.split(',')[0] || ''),
+        address: street || (p.formattedAddress?.split(',')[0] || ''),
         postalCode: extractComponent(p.addressComponents, 'postal_code'),
         city: extractComponent(p.addressComponents, 'locality')
           || extractComponent(p.addressComponents, 'postal_town'),
         country: extractComponent(p.addressComponents, 'country') || 'France',
         lat: p.location?.latitude || 0,
         lng: p.location?.longitude || 0,
-        image,
+        image: null,
       };
     });
 
