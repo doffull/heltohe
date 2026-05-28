@@ -167,6 +167,32 @@ function SectionEditor({
                 <SelectItem value="full">Pleine largeur</SelectItem>
               </SelectContent>
             </Select>
+            <div className="space-y-1">
+              <Label className="text-xs">Effet au survol</Label>
+              <Select value={section.content.hoverEffect || 'none'} onValueChange={v => updateContent('hoverEffect', v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {HOVER_EFFECTS.map(h => <SelectItem key={h.value} value={h.value}>{h.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center justify-between rounded border p-2">
+              <Label className="text-xs">Parallax au scroll</Label>
+              <Switch checked={!!section.content.parallax} onCheckedChange={v => updateContent('parallax', v)} />
+            </div>
+            {section.content.parallax && (
+              <div className="space-y-1">
+                <Label className="text-[10px] flex justify-between">
+                  <span>Intensité parallax</span>
+                  <span className="font-mono">{(section.content.parallaxSpeed ?? 0.25).toFixed(2)}</span>
+                </Label>
+                <Slider
+                  value={[section.content.parallaxSpeed ?? 0.25]}
+                  min={0.1} max={0.6} step={0.05}
+                  onValueChange={([v]) => updateContent('parallaxSpeed', v)}
+                />
+              </div>
+            )}
           </div>
         )}
 
