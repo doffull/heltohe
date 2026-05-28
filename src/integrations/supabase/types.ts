@@ -367,6 +367,7 @@ export type Database = {
           seo_keywords: string | null
           slug: string | null
           sort_order: number | null
+          template_id: string | null
           title: string
           updated_at: string
         }
@@ -382,6 +383,7 @@ export type Database = {
           seo_keywords?: string | null
           slug?: string | null
           sort_order?: number | null
+          template_id?: string | null
           title: string
           updated_at?: string
         }
@@ -397,6 +399,7 @@ export type Database = {
           seo_keywords?: string | null
           slug?: string | null
           sort_order?: number | null
+          template_id?: string | null
           title?: string
           updated_at?: string
         }
@@ -406,6 +409,13 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "categories_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "page_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -1617,6 +1627,45 @@ export type Database = {
         }
         Relationships: []
       }
+      page_templates: {
+        Row: {
+          created_at: string
+          id: string
+          is_default: boolean
+          layout: Json
+          name: string
+          preview_image: string | null
+          slug: string
+          theme: Json
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          layout?: Json
+          name: string
+          preview_image?: string | null
+          slug: string
+          theme?: Json
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          layout?: Json
+          name?: string
+          preview_image?: string | null
+          slug?: string
+          theme?: Json
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       page_views: {
         Row: {
           duration_ms: number | null
@@ -1792,6 +1841,7 @@ export type Database = {
           stock: number
           subtitle: string | null
           tags: string[] | null
+          template_id: string | null
           updated_at: string
           video_url: string | null
         }
@@ -1820,6 +1870,7 @@ export type Database = {
           stock?: number
           subtitle?: string | null
           tags?: string[] | null
+          template_id?: string | null
           updated_at?: string
           video_url?: string | null
         }
@@ -1848,10 +1899,19 @@ export type Database = {
           stock?: number
           subtitle?: string | null
           tags?: string[] | null
+          template_id?: string | null
           updated_at?: string
           video_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "page_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       promo_codes: {
         Row: {
