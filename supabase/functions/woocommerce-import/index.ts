@@ -307,7 +307,35 @@ Deno.serve(async (req) => {
     };
   }
 
+  // ─── PING (connection test, 1 lightweight call) ───────────────────
+  if (mode === 'ping') {
+    try {
+      const res = await fetchWithRetry('products', 1, 1);
+      if (!res.ok) {
+        const statusCode = res.status;
+        await res.body?.cancel().catch(() => {});
+        if (statusCode === 401 || statusCode === 403) {
+          throw new WcServiceError(
+            `Authentification refusée (HTTP ${statusCode}).${formatDiag()} Vérifie que la clé API a les permissions "Lecture/Écriture".`,
+            statusCode,
+          );
+        }
+        throw new WcServiceError(
+          `Le serveur WooCommerce ne répond pas (HTTP ${statusCode}) après ${MAX_ATTEMPTS} tentatives.${formatDiag()} Vérifie ton hébergeur ou ton WAF (Cloudflare / Sucuri / Wordfence).`,
+          statusCode,
+        );
+      }
+      await res.json().catch(() => null);
+      return new Response(JSON.stringify({ success: true, diag: lastDiagHeaders }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    } catch (e: any) {
+      return errorResponse(e);
+    }
+  }
+
   // ─── PREVIEW PRODUCTS ─────────────────────────────────────────────
+
   if (mode === 'preview') {
     try {
       const wcProducts = await wcFetchAll('products');
