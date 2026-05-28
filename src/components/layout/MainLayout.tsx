@@ -635,20 +635,6 @@ export function MainLayout({ children }: MainLayoutProps) {
         </MiniNavbar>
       </div>
 
-      {/* Mobile Sidebar Toggle Button - Only on home page */}
-      {showSidebar && (
-        <button
-          onClick={() => {
-            setSidebarOpen(!sidebarOpen);
-            if (sidebarOpen) setMobileSidebarClosedByUser(true);
-          }}
-          className="fixed bottom-6 left-6 z-[60] lg:hidden w-12 h-12 bg-foreground text-background flex items-center justify-center transition-all duration-300 hover:scale-105 bevel-corners-sm"
-          aria-label="Ouvrir le panneau"
-        >
-          <PanelLeft className={`h-5 w-5 transition-transform duration-300 ${sidebarOpen ? 'rotate-180' : ''}`} />
-        </button>
-      )}
-
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && showSidebar && (
         <div 
@@ -657,14 +643,22 @@ export function MainLayout({ children }: MainLayoutProps) {
         />
       )}
 
-      {/* Desktop Sidebar Toggle - Reopen button - Only on home page */}
-      {showSidebar && !desktopSidebarOpen && (
+      {/* Discreet edge handle to reopen the sidebar — left edge, centered, semi-transparent */}
+      {showSidebar && !sidebarOpen && !desktopSidebarOpen && (
         <button
-          onClick={() => setDesktopSidebarOpen(true)}
-          className="fixed bottom-6 left-6 z-[60] hidden lg:flex w-12 h-12 bg-foreground text-background items-center justify-center transition-all duration-300 hover:scale-105 bevel-corners-sm"
+          onClick={() => {
+            if (isMobile) {
+              setSidebarOpen(true);
+              setMobileSidebarClosedByUser(false);
+            } else {
+              setDesktopSidebarOpen(true);
+              setSidebarClosedByUser(false);
+            }
+          }}
           aria-label="Ouvrir le panneau"
+          className="group fixed left-0 top-1/2 -translate-y-1/2 z-[55] flex items-center justify-center w-2 h-16 lg:h-14 bg-foreground/25 hover:bg-foreground/90 hover:w-4 backdrop-blur-sm transition-all duration-300 rounded-r-md"
         >
-          <PanelLeft className="h-5 w-5" />
+          <ChevronRight className="h-3 w-3 text-background opacity-0 group-hover:opacity-100 transition-opacity" />
         </button>
       )}
 
