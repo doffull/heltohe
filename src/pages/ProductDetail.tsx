@@ -12,6 +12,8 @@ import ProductOptions from '@/components/product/ProductOptions';
 import RelatedProducts from '@/components/product/RelatedProducts';
 import { useProductLooks } from '@/hooks/useProductLooks';
 import { useProducts } from '@/hooks/useProducts';
+import { usePageTemplate, useDefaultTemplate } from '@/hooks/usePageTemplates';
+import ProductTemplateRenderer from '@/components/product/ProductTemplateRenderer';
 
 export default function ProductDetail() {
   const { slugOrId, id } = useParams<{ slugOrId?: string; id?: string }>();
@@ -22,6 +24,9 @@ export default function ProductDetail() {
   const colorFromUrl = searchParams.get('color');
   const { toast } = useToast();
   const { data: product, isLoading } = useProduct(productId);
+  const { data: assignedTemplate } = usePageTemplate(product?.templateId || undefined);
+  const { data: defaultTemplate } = useDefaultTemplate('product');
+  const activeTemplate = assignedTemplate || defaultTemplate;
   const { addItem } = useCart();
 
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
