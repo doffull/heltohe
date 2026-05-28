@@ -26,15 +26,16 @@ import {
   ClipboardCheck,
   CreditCard,
   Bell,
-  BarChart3,
-  Store,
-  LayoutTemplate,
-
+  Gift,
+  MousePointer,
+  Activity,
   UserCog,
   ShieldAlert,
   Sparkles,
   BarChart3,
-  Store
+  Store,
+  LayoutTemplate
+
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
