@@ -5,11 +5,12 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Pencil, Trash2, MoreHorizontal, LayoutGrid, Settings, Paintbrush, Scale } from 'lucide-react';
+import { Plus, Pencil, Trash2, LayoutGrid, Settings, Paintbrush, Scale } from 'lucide-react';
 import { CategoryFormDialog } from '@/components/admin/CategoryFormDialog';
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAdminConfig, useSaveAdminConfig } from '@/hooks/useAdminConfig';
 
