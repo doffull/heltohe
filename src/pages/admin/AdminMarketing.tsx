@@ -199,6 +199,14 @@ export default function AdminMarketing() {
   const deleteBanner = useDeleteBanner();
   const [bannerDialogOpen, setBannerDialogOpen] = useState(false);
   const [editingBanner, setEditingBanner] = useState<BannerRecord | null>(null);
+  const location = useLocation();
+  const hashToTab: Record<string, string> = { flash: 'promos', newsletter: 'newsletter', popups: 'popups', styles: 'styles', promos: 'promos' };
+  const [marketingTab, setMarketingTab] = useState<string>(hashToTab[location.hash.replace('#','')] || 'banners');
+  useEffect(() => {
+    const h = location.hash.replace('#','');
+    if (hashToTab[h]) setMarketingTab(hashToTab[h]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.hash]);
 
   // Promos
   const { data: promos = [], isLoading: loadingPromos } = usePromoCodes();
