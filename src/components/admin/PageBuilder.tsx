@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   GripVertical, Plus, Trash2, Image, Video, Type, AlignLeft, Pencil,
-  Heading1, Heading2, LayoutGrid, ChevronUp, ChevronDown, Grid3x3, MousePointerClick,
+  Heading1, Heading2, LayoutGrid, ChevronUp, ChevronDown, Grid3x3, MousePointerClick, Megaphone,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FileDropZone } from '@/components/admin/FileDropZone';
@@ -32,6 +32,7 @@ const HOVER_EFFECTS = [
 
 const SECTION_TYPES = [
   { value: 'hero', label: 'Header / Hero', icon: LayoutGrid },
+  { value: 'banner', label: 'Bannière pub', icon: Megaphone },
   { value: 'image', label: 'Image', icon: Image },
   { value: 'video', label: 'Vidéo', icon: Video },
   { value: 'slider', label: 'Slider Images', icon: Image },
