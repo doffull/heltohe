@@ -1,66 +1,81 @@
-## Problèmes identifiés
+## Diagnostic
 
-**1. Les sections personnalisées (Icônes flottantes → "Sections personnalisées de la page d'accueil") ne se sauvegardent pas**
+### Bug racine (cause des 2 problèmes signalés)
 
-L'éditeur (`HomeCustomSectionsEditor.tsx`) actuel n'enregistre **que lorsque l'on clique manuellement sur "Enregistrer"** en haut à droite. Toute section ajoutée puis l'utilisateur qui change d'onglet/page = perte du travail. C'est ce qui donne l'impression "ça ne se sauve pas / n'apparaît pas sur la home".
+Dans `src/context/AppContext.tsx`, `flushDesignSettings` capture `designSettings` via closure (`useCallback` avec `[..., designSettings]` en deps).
 
-**2. Pas de type de section "bannière publicitaire cliquable" avec image OU vidéo + lien**
+Quand un éditeur fait :
+```ts
+updateDesignSettings({ homePageBlocks: blocks });
+await flushDesignSettings();
+```
+`updateDesignSettings` met à jour le state via `setDesignSettingsLocal(prev => ...)`, mais React n'a pas encore re-rendu → la closure de `flushDesignSettings` détient encore **l'ancien** `designSettings`. Le flush envoie donc l'**ancien** objet à la DB, écrasant les modifs locales pas encore réconciliées. → "j'enregistre, ça ne sauvegarde pas".
 
-Le PageBuilder a `image`, `video`, `slider`, mais aucun ne combine *média (image ou vidéo) + bouton/lien cliquable + redirection* en un seul bloc orienté "bannière pub".
+Cela impacte directement :
+- `HomeBlocksEditor.save()` (ordre des sections home, ex. "section Image remontée")
+- `HomeCustomSectionsEditor.persist()` (sections personnalisées)
+- Tout futur appel update+flush enchaîné
+
+### Bug additionnel UnifiedFabEditor
+
+`UnifiedFabEditor.save()` n'appelle **jamais** `flushDesignSettings()` — il s'appuie uniquement sur le debounce 800 ms. Si l'admin change d'onglet ou refresh dans la fenêtre, la modification est perdue.
+
+### Demande utilisateur
+
+Un seul bouton "Tout enregistrer" en haut de la page `/admin/home-icons` qui flush en une fois toutes les modifs (blocs, sections personnalisées, popup, bouton flottant unifié, FAB list).
 
 ## Plan
 
-### A. Fiabiliser la sauvegarde des sections personnalisées
+### 1. Corriger `flushDesignSettings` (cause racine) — `src/context/AppContext.tsx`
 
-Dans `src/components/admin/HomeCustomSectionsEditor.tsx` :
+Utiliser une ref qui suit toujours le dernier `designSettings` :
+- Ajouter `const latestRef = useRef(designSettings)` mis à jour dans un `useEffect`.
+- `flushDesignSettings` lit `latestRef.current` au lieu de la closure.
+- Variante plus sûre : exposer une signature `flushDesignSettings(override?: DesignSettings)` qui, si un override est fourni, l'utilise (et synchronise le local state + ref) — utile pour les composants qui veulent garantir l'envoi d'un snapshot précis.
 
-- **Auto-save avec debounce 800 ms** dès qu'une section est ajoutée/modifiée/supprimée (via `setSections` → `updateDesignSettings` + `flushDesignSettings`).
-- Indicateur visuel **"Modifications non enregistrées" / "Enregistré ✓"** à côté du bouton.
-- Conserver le bouton "Enregistrer" manuel comme filet de sécurité.
-- Toast unique "Sections enregistrées" après chaque flush réussi (throttlé pour éviter le spam).
-- Garde-fou : si `sections` est strictement égal au dernier état persisté, ne pas re-flush.
+Effet de bord positif : **tous** les `update + flush` existants commencent à fonctionner correctement, sans toucher aux composants appelants.
 
-### B. Nouveau type de section : `banner` (bannière pub cliquable)
+### 2. Fiabiliser `UnifiedFabEditor.save()` — `src/components/admin/UnifiedFabEditor.tsx`
 
-Dans `src/hooks/usePages.ts` :
-- Ajouter `'banner'` à l'union `PageSection['type']`.
+- Construire l'objet `nextUnifiedFab` puis :
+  ```ts
+  updateDesignSettings({ unifiedFab: nextUnifiedFab });
+  await flushDesignSettings(); // bénéficie de la ref corrigée
+  ```
+- Ajouter un badge d'état "Modifications non enregistrées / Enregistrement… / Enregistré ✓" (mêmes patterns que `HomeCustomSectionsEditor`).
+- Sync : quand `designSettings.unifiedFab` change depuis l'extérieur, hydrater les states locaux (actuellement seul `items` est resynchronisé).
 
-Dans `src/components/admin/PageBuilder.tsx` (`SECTION_TYPES` + nouveau `BannerEditor`) :
+### 3. Auto-save bouton flottant unifié (filet de sécurité)
 
-Champs configurables :
-- **Type de média** : `image` ou `video` (radio).
-- **Upload média** via `FileDropZone` (réutilise l'existant) → stocke `mediaUrl`.
-- **URL de redirection** (`link`) — interne (`/boutique`) ou externe (`https://…`).
-- **Ouvrir dans un nouvel onglet** (switch, défaut OFF pour les liens internes).
-- **Titre overlay** + **Sous-titre** (optionnels).
-- **Texte du bouton** (optionnel — si vide, toute la bannière est cliquable).
-- **Position du texte** : haut-gauche, centre, bas-droite, etc. (9 ancres).
-- **Couleur du texte** + **opacité du voile noir** (slider 0-80 %).
-- **Hauteur** : auto / 240 / 360 / 480 / 600 px.
-- **Effet hover** (réutilise `HOVER_EFFECTS` existant).
-- **Parallax** (switch + speed slider, réutilise `useParallax`).
-- **Vidéo** : autoplay / muted / loop / controls (switches, défauts autoplay+muted+loop ON, controls OFF pour effet bannière).
-- **Tracking simple** : un attribut `data-banner-id` sur le lien pour permettre du tracking ultérieur (pas de logique analytics dans ce lot).
+Ajouter un debounce 800 ms qui appelle `updateDesignSettings({ unifiedFab })` à chaque changement local — sans toast — pour qu'un oubli de clic ne perde plus rien. Le bouton "Enregistrer" force le flush + toast.
 
-### C. Rendu public dans `src/components/page/PageRenderer.tsx`
+### 4. Bouton global "Tout enregistrer" — `src/pages/admin/AdminHomeIcons.tsx`
 
-Ajouter un composant `BannerSection` :
-- Wrapper `<a href={link} target={newTab ? '_blank' : '_self'} rel="noopener noreferrer">` (ou `<Link>` interne si `link` commence par `/`).
-- Rendu image via `SafeImage` ou vidéo via `SafeVideo` (existants dans `src/lib/safeMedia.tsx`) — pas de réimplémentation.
-- Overlay absolu avec voile + titre/sous-titre/bouton positionnés selon les 9 ancres.
-- Application des classes hover (`HOVER_CLASSES`) + parallax (`useParallax`) comme pour `ImageSection`.
-- Si pas de `link` → rendu en `<div>` non cliquable (fallback safe).
-- Lazy loading : `loading="lazy"` image / `preload="metadata"` vidéo.
+- Barre sticky en haut de la page avec :
+  - Indicateur global ("Tout est à jour ✓" / "Modifications en attente…").
+  - Bouton **"Tout enregistrer"** qui :
+    1. Émet un événement custom `homeicons:flush` (que `UnifiedFabEditor`, `HomeBlocksEditor`, `HomeCustomSectionsEditor` écoutent pour pousser leur state local dans `updateDesignSettings`).
+    2. Appelle `flushDesignSettings()` une seule fois → un seul aller-retour DB.
+    3. Toast unique "Tous les changements enregistrés".
+- Chaque éditeur ajoute un `useEffect` qui s'abonne à l'événement et `updateDesignSettings(...)` avec son state courant.
+- Les boutons "Enregistrer" individuels existants restent, mais deviennent secondaires.
 
-### D. Hors scope
+### 5. Vérifications après changements
 
-- Pas de nouvelle table DB : les bannières utilisent le JSON `design_settings.home_custom_sections` existant.
-- Pas de tracking / analytics côté serveur (juste l'attribut `data-banner-id` préparé).
-- Pas de toucher aux FABs (icônes flottantes), au système `banners` existant (qui est un autre flux), ni au `PageRenderer` des autres types de section.
+- Tester : modifier l'ordre dans `HomeBlocksEditor` → cliquer Enregistrer → recharger /index → ordre persiste.
+- Tester : changer un paramètre dans `UnifiedFabEditor` → Enregistrer → recharger → conservé.
+- Tester : tout modifier puis "Tout enregistrer" → un seul toast, tout persiste.
 
 ## Fichiers modifiés
 
-- `src/components/admin/HomeCustomSectionsEditor.tsx` — auto-save + indicateur.
-- `src/hooks/usePages.ts` — type union étendu.
-- `src/components/admin/PageBuilder.tsx` — ajout `banner` dans `SECTION_TYPES` + `BannerEditor`.
-- `src/components/page/PageRenderer.tsx` — nouveau `BannerSection`.
+- `src/context/AppContext.tsx` — ref pour `flushDesignSettings` (fix racine).
+- `src/components/admin/UnifiedFabEditor.tsx` — flush au save, badge d'état, debounce, écoute événement global.
+- `src/components/admin/HomeBlocksEditor.tsx` — écoute événement global, badge d'état.
+- `src/components/admin/HomeCustomSectionsEditor.tsx` — écoute événement global (l'auto-save reste).
+- `src/pages/admin/AdminHomeIcons.tsx` — barre sticky + bouton "Tout enregistrer".
+
+## Hors scope
+
+- Pas de refonte du `PageBuilder` ni des sections déjà fonctionnelles.
+- Pas de modification de schéma DB.
+- Pas de changement aux FABs custom (`home_fab_buttons`), qui ont déjà leur propre persistance via React Query.
