@@ -80,23 +80,53 @@ function SectionEditor({
     <Card className="border border-border">
       <CardContent className="p-4">
         <div className="flex items-center gap-2 mb-3">
-          <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-          <Icon className="h-4 w-4 text-primary" />
-          <span className="text-sm font-medium uppercase tracking-wider flex-1">
-            {typeMeta?.label || section.type}
-          </span>
-          <div className="flex gap-1">
+          <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab shrink-0" />
+          <Icon className="h-4 w-4 text-primary shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium uppercase tracking-wider truncate">
+              {typeMeta?.label || section.type}
+            </div>
+            {summary && !open && (
+              <div className="text-xs text-muted-foreground truncate">{summary}</div>
+            )}
+          </div>
+          <div className="flex gap-1 shrink-0">
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onMoveUp} disabled={isFirst}>
               <ChevronUp className="h-3 w-3" />
             </Button>
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onMoveDown} disabled={isLast}>
               <ChevronDown className="h-3 w-3" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={onRemove}>
-              <Trash2 className="h-3 w-3" />
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setOpen(o => !o)} title={open ? 'Replier' : 'Modifier'}>
+              <Pencil className="h-3 w-3" />
             </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive">
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Supprimer cette section&nbsp;?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Cette action est définitive et retirera la section de votre page.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogAction onClick={onRemove} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Supprimer
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
+
+        {open && (
+        <>
+
 
         {/* Hero */}
         {section.type === 'hero' && (
