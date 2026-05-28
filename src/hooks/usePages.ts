@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface PageSection {
   id: string;
-  type: 'hero' | 'image' | 'video' | 'slider' | 'title' | 'subtitle' | 'text' | 'products' | 'categories' | 'popup_button';
+  type: 'hero' | 'image' | 'video' | 'slider' | 'title' | 'subtitle' | 'text' | 'products' | 'categories' | 'popup_button' | 'banner';
   content: Record<string, any>;
   order: number;
 }
