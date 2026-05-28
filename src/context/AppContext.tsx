@@ -39,7 +39,7 @@ interface AppContextType {
   designSettings: DesignSettings;
   setDesignSettings: (settings: DesignSettings) => void;
   updateDesignSettings: (updates: Partial<DesignSettings>) => void;
-  flushDesignSettings: () => Promise<void>;
+  flushDesignSettings: (override?: Partial<DesignSettings>) => Promise<void>;
   
   // Navigation helpers
   navigateToCategory: (category: string) => void;
@@ -115,6 +115,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return translations[language][key] || key;
   };
 
+  // Ref toujours à jour avec la dernière valeur de designSettings.
+  // Evite que flushDesignSettings sauvegarde un état périmé capturé par la closure
+  // après un updateDesignSettings synchrone précédent (cause racine du bug "Enregistrer ne marche pas").
+  const latestDesignRef = useRef(designSettings);
+  useEffect(() => { latestDesignRef.current = designSettings; }, [designSettings]);
+
   // Debounced save to cloud (800ms)
   const debouncedSave = useCallback((settings: DesignSettings) => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -124,6 +130,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [saveDesignSettings]);
 
   const setDesignSettings = useCallback((settings: DesignSettings) => {
+    latestDesignRef.current = settings;
     setDesignSettingsLocal(settings);
     debouncedSave(settings);
   }, [debouncedSave]);
@@ -131,19 +138,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const updateDesignSettings = useCallback((updates: Partial<DesignSettings>) => {
     setDesignSettingsLocal(prev => {
       const next = { ...prev, ...updates };
+      latestDesignRef.current = next; // sync ref immédiatement (avant re-render)
       debouncedSave(next);
       return next;
     });
   }, [debouncedSave]);
 
-  // Flush pending debounced save immediately (used on explicit "Save" button)
-  const flushDesignSettings = useCallback(async () => {
+  // Flush pending debounced save immediately (used on explicit "Save" button).
+  // Lit la dernière valeur via latestDesignRef pour éviter le bug de closure périmée.
+  // Accepte un override optionnel pour garantir l'envoi d'un snapshot précis.
+  const flushDesignSettings = useCallback(async (override?: Partial<DesignSettings>) => {
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current);
       saveTimerRef.current = null;
     }
-    await saveDesignSettings.mutateAsync(designSettings);
-  }, [saveDesignSettings, designSettings]);
+    const merged = override ? { ...latestDesignRef.current, ...override } : latestDesignRef.current;
+    if (override) {
+      latestDesignRef.current = merged;
+      setDesignSettingsLocal(merged);
+    }
+    await saveDesignSettings.mutateAsync(merged);
+  }, [saveDesignSettings]);
 
   const navigate = useNavigate();
   const { data: allCategories = [] } = useCategories();
