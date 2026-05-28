@@ -26,9 +26,10 @@ import {
   ClipboardCheck,
   CreditCard,
   Bell,
-  Gift,
-  MousePointer,
-  Activity,
+  BarChart3,
+  Store,
+  LayoutTemplate
+
   UserCog,
   ShieldAlert,
   Sparkles,
