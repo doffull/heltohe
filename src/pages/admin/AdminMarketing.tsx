@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useBanners, useCreateBanner, useUpdateBanner, useDeleteBanner, BannerRecord } from '@/hooks/useBanners';
 import { usePromoCodes, useCreatePromoCode, useUpdatePromoCode, useDeletePromoCode, PromoCode } from '@/hooks/usePromoCodes';
@@ -198,6 +199,14 @@ export default function AdminMarketing() {
   const deleteBanner = useDeleteBanner();
   const [bannerDialogOpen, setBannerDialogOpen] = useState(false);
   const [editingBanner, setEditingBanner] = useState<BannerRecord | null>(null);
+  const location = useLocation();
+  const hashToTab: Record<string, string> = { flash: 'promos', newsletter: 'newsletter', popups: 'popups', styles: 'styles', promos: 'promos' };
+  const [marketingTab, setMarketingTab] = useState<string>(hashToTab[location.hash.replace('#','')] || 'banners');
+  useEffect(() => {
+    const h = location.hash.replace('#','');
+    if (hashToTab[h]) setMarketingTab(hashToTab[h]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.hash]);
 
   // Promos
   const { data: promos = [], isLoading: loadingPromos } = usePromoCodes();
@@ -259,7 +268,8 @@ export default function AdminMarketing() {
         <p className="text-muted-foreground text-xs sm:text-sm mt-1">Bannières, codes promo et newsletter</p>
       </div>
 
-      <Tabs defaultValue="banners">
+      <Tabs value={marketingTab} onValueChange={setMarketingTab}>
+
         <TabsList className="bg-muted/50 flex flex-wrap h-auto gap-1">
           <TabsTrigger value="banners" className="gap-1.5 text-xs sm:text-sm"><Image className="h-3.5 w-3.5" />Bannières</TabsTrigger>
           <TabsTrigger value="promos" className="gap-1.5 text-xs sm:text-sm"><Tag className="h-3.5 w-3.5" />Promos</TabsTrigger>

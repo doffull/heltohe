@@ -1,14 +1,26 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { GripVertical, Save, Eye, EyeOff, Sparkles } from 'lucide-react';
+import { GripVertical, Save, Eye, EyeOff, Sparkles, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { PageSection } from '@/hooks/usePages';
+
+const EDIT_ROUTE: Record<string, string> = {
+  hero: '/admin/design#techwear-hero',
+  categories: '/admin/categories',
+  featured: '/admin/products',
+  newArrivals: '/admin/products',
+  flash: '/admin/marketing#flash',
+  loyalty: '/admin/marketing#fidelite',
+  newsletter: '/admin/marketing#newsletter',
+  voiceBanner: '/admin/home-icons#unified-fab',
+};
 
 type BuiltinId = 'hero' | 'categories' | 'featured' | 'flash' | 'newArrivals' | 'voiceBanner' | 'loyalty' | 'newsletter';
 interface Block { id: string; visible: boolean; label?: string }
@@ -37,12 +49,12 @@ function sectionLabel(s: PageSection): string {
   );
 }
 
-function Row({ b, onToggle, isCustom }: { b: Block; onToggle: () => void; isCustom: boolean }) {
+function Row({ b, onToggle, isCustom, onEdit }: { b: Block; onToggle: () => void; isCustom: boolean; onEdit?: () => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: b.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   return (
     <div ref={setNodeRef} style={style} className="flex items-center gap-3 p-3 border rounded bg-background">
-      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none p-1">
+      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none p-1" aria-label="Réorganiser">
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </button>
       {isCustom && <Sparkles className="h-4 w-4 text-primary" />}
@@ -50,15 +62,37 @@ function Row({ b, onToggle, isCustom }: { b: Block; onToggle: () => void; isCust
         <div className="text-sm font-medium truncate">{b.label || b.id}</div>
         <div className="text-[10px] text-muted-foreground truncate">{isCustom ? 'Section personnalisée' : b.id}</div>
       </div>
+      {onEdit && (
+        <Button type="button" size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={onEdit} title="Éditer ce bloc">
+          <Pencil className="h-3.5 w-3.5" />
+        </Button>
+      )}
       {b.visible ? <Eye className="h-4 w-4 text-primary" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
-      <Switch checked={b.visible} onCheckedChange={onToggle} />
+      <Switch checked={b.visible} onCheckedChange={onToggle} aria-label="Visible" />
     </div>
   );
 }
 
 export function HomeBlocksEditor() {
   const { designSettings, updateDesignSettings, flushDesignSettings } = useApp();
+  const navigate = useNavigate();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+
+  const goEdit = (id: string) => {
+    if (id.startsWith('custom:')) {
+      document.getElementById('custom-sections')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    const route = EDIT_ROUTE[id];
+    if (!route) { toast.info('Pas d\'éditeur dédié pour ce bloc'); return; }
+    if (route.includes('#')) {
+      const [path, hash] = route.split('#');
+      navigate(path);
+      setTimeout(() => document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 250);
+    } else {
+      navigate(route);
+    }
+  };
 
   const customSections = ((designSettings as any).homeCustomSections || []) as PageSection[];
 
@@ -128,7 +162,7 @@ export function HomeBlocksEditor() {
           <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-2">
               {blocks.map((b) => (
-                <Row key={b.id} b={b} onToggle={() => toggle(b.id)} isCustom={b.id.startsWith('custom:')} />
+                <Row key={b.id} b={b} onToggle={() => toggle(b.id)} isCustom={b.id.startsWith('custom:')} onEdit={() => goEdit(b.id)} />
               ))}
             </div>
           </SortableContext>

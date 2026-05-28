@@ -89,9 +89,31 @@ export function UnifiedFabEditor() {
     }, 800);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, accent, posD, posM, items, mode, groupSide, groupOffsetY, clusterDir,
+  }, [accent, posD, posM, items, groupSide, groupOffsetY, clusterDir,
     dockDir, dockSize, dockBlur, dockShowVoice, dockShowChat, dockShowVisualEditor, dockShowRoulette,
     rfVariant, rfSize, rfShape, rfAccent, rfLabel, rfPulse, rfCorner]);
+
+  // Structural changes (enabled / mode) → flush immédiat pour application instantanée côté user
+  useEffect(() => {
+    if (isFirstRun.current) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const payload = buildPayload();
+    // Init default positions when entering a new mode for the first time
+    if (mode === 'dock' && !payload.dockPos_desktop) {
+      payload.dockPos_desktop = { corner: 'bc', x: 0, y: 24 };
+      payload.dockPos_mobile = { corner: 'bc', x: 0, y: 16 };
+    }
+    if (mode === 'cluster' && !payload.clusterPos_desktop) {
+      payload.clusterPos_desktop = { corner: 'br', x: 24, y: 90 };
+      payload.clusterPos_mobile = { corner: 'br', x: 16, y: 90 };
+    }
+    flushDesignSettings({ unifiedFab: payload } as any).then(() => {
+      setStatus('saved');
+      toast.success(enabled ? `Mode « ${mode} » appliqué` : 'Bouton flottant désactivé', { duration: 1500 });
+      setTimeout(() => setStatus(s => (s === 'saved' ? 'idle' : s)), 1500);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, mode]);
 
   // Listen to global "flush everything" event from the page
   useEffect(() => {
