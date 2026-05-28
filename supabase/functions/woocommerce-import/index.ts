@@ -63,6 +63,7 @@ Deno.serve(async (req) => {
   let normalizedUrl = String(storeUrl).trim().replace(/\/+$/, '');
   if (!/^https?:\/\//i.test(normalizedUrl)) normalizedUrl = `https://${normalizedUrl}`;
   const cleanUrl = normalizedUrl;
+  const basicAuth = 'Basic ' + btoa(`${consumerKey}:${consumerSecret}`);
   const authParam = `consumer_key=${encodeURIComponent(consumerKey)}&consumer_secret=${encodeURIComponent(consumerSecret)}`;
 
   const writeSyncLog = async (
@@ -86,52 +87,121 @@ Deno.serve(async (req) => {
     }
   };
 
-  const RETRY_STATUSES = new Set([408, 429, 502, 503, 504]);
-  const MAX_ATTEMPTS = 4;
-  const REQUEST_TIMEOUT_MS = 25_000;
+  const RETRY_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504, 520, 521, 522, 523, 524]);
+  const MAX_ATTEMPTS = 6;
+  const REQUEST_TIMEOUT_MS = 30_000;
+
+  // Browser-like UAs to bypass WAF/Cloudflare bot challenges
+  const USER_AGENTS = [
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+  ];
 
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-  const fetchWithRetry = async (url: string): Promise<Response> => {
+  let lastDiagHeaders: Record<string, string> = {};
+
+  const captureHeaders = (res: Response) => {
+    const keys = ['server', 'cf-ray', 'cf-mitigated', 'x-sucuri-id', 'x-wp-totalpages', 'retry-after'];
+    const out: Record<string, string> = {};
+    for (const k of keys) {
+      const v = res.headers.get(k);
+      if (v) out[k] = v;
+    }
+    lastDiagHeaders = out;
+  };
+
+  // Build URL according to auth strategy:
+  //   strategy 'header'  -> URL without auth, send Authorization header
+  //   strategy 'query'   -> URL with auth query-string (legacy WP fallback)
+  const buildUrl = (path: string, page: number, perPage: number, strategy: 'header' | 'query') => {
+    const qp = `per_page=${perPage}&page=${page}`;
+    if (strategy === 'query') return `${cleanUrl}/wp-json/wc/v3/${path}?${qp}&${authParam}`;
+    return `${cleanUrl}/wp-json/wc/v3/${path}?${qp}`;
+  };
+
+  const doFetch = async (url: string, strategy: 'header' | 'query', uaIdx: number) => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      const headers: Record<string, string> = {
+        'User-Agent': USER_AGENTS[uaIdx % USER_AGENTS.length],
+        'Accept': 'application/json',
+        'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Cache-Control': 'no-cache',
+      };
+      if (strategy === 'header') headers['Authorization'] = basicAuth;
+      const res = await fetch(url, { signal: ctrl.signal, headers, redirect: 'follow' });
+      clearTimeout(timer);
+      return res;
+    } catch (e) {
+      clearTimeout(timer);
+      throw e;
+    }
+  };
+
+  // Try multiple auth strategies + UA rotation; retry on transient failures.
+  const fetchWithRetry = async (path: string, page = 1, perPage = 50): Promise<Response> => {
+    const strategies: Array<'header' | 'query'> = ['header', 'query'];
     let lastErr: any = null;
+    let lastRes: Response | null = null;
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
+      const strategy = strategies[(attempt - 1) % strategies.length];
+      const uaIdx = attempt - 1;
+      const url = buildUrl(path, page, perPage, strategy);
       try {
-        const res = await fetch(url, {
-          signal: ctrl.signal,
-          headers: { 'User-Agent': 'Lovable-WooSync/1.0', 'Accept': 'application/json' },
-        });
-        clearTimeout(timer);
+        const res = await doFetch(url, strategy, uaIdx);
+        captureHeaders(res);
         if (res.ok) return res;
+        // 401/403 → wrong creds or strategy: try next strategy without long backoff
+        if (res.status === 401 || res.status === 403) {
+          await res.body?.cancel().catch(() => {});
+          if (attempt === MAX_ATTEMPTS) { lastRes = res; break; }
+          console.log(`[wc] ${res.status} on ${strategy}, switching strategy/UA`);
+          await sleep(400);
+          continue;
+        }
         if (!RETRY_STATUSES.has(res.status) || attempt === MAX_ATTEMPTS) return res;
-        // Honor Retry-After when present
         const ra = parseInt(res.headers.get('retry-after') || '0', 10);
         await res.body?.cancel().catch(() => {});
-        const backoff = ra > 0 ? ra * 1000 : Math.pow(2, attempt - 1) * 1000 + Math.floor(Math.random() * 500) - 250;
-        console.log(`[wc-retry] ${res.status} on attempt ${attempt}/${MAX_ATTEMPTS}, waiting ${backoff}ms`);
-        await sleep(Math.max(250, backoff));
+        const backoff = ra > 0
+          ? Math.min(ra * 1000, 15_000)
+          : Math.min(15_000, Math.pow(2, attempt - 1) * 800 + Math.floor(Math.random() * 600));
+        console.log(`[wc-retry] ${res.status} attempt ${attempt}/${MAX_ATTEMPTS} (strategy=${strategy}), waiting ${backoff}ms`);
+        await sleep(backoff);
       } catch (err: any) {
-        clearTimeout(timer);
         lastErr = err;
         if (attempt === MAX_ATTEMPTS) throw err;
-        const backoff = Math.pow(2, attempt - 1) * 1000 + Math.floor(Math.random() * 500) - 250;
-        console.log(`[wc-retry] network error on attempt ${attempt}/${MAX_ATTEMPTS}: ${err?.message}, waiting ${backoff}ms`);
-        await sleep(Math.max(250, backoff));
+        const backoff = Math.min(15_000, Math.pow(2, attempt - 1) * 800 + Math.floor(Math.random() * 600));
+        console.log(`[wc-retry] network err attempt ${attempt}/${MAX_ATTEMPTS}: ${err?.message}, waiting ${backoff}ms`);
+        await sleep(backoff);
       }
     }
+    if (lastRes) return lastRes;
     throw lastErr ?? new Error('fetchWithRetry: exhausted attempts');
   };
 
+  const formatDiag = () => {
+    const parts = Object.entries(lastDiagHeaders).map(([k, v]) => `${k}=${v}`);
+    return parts.length ? ` [${parts.join(' • ')}]` : '';
+  };
+
   const wcFetch = async (path: string, page = 1) => {
-    const url = `${cleanUrl}/wp-json/wc/v3/${path}?per_page=50&page=${page}&${authParam}`;
-    const res = await fetchWithRetry(url);
+    const res = await fetchWithRetry(path, page, 50);
     if (!res.ok) {
       const statusCode = res.status;
       const errorText = await res.text().catch(() => '');
       if (statusCode >= 500 || statusCode === 408 || statusCode === 429) {
         throw new WcServiceError(
-          `Le serveur WooCommerce reste indisponible après ${MAX_ATTEMPTS} tentatives (erreur ${statusCode}). Vérifie l'état de ton hébergement ou réessaie dans quelques minutes.`,
+          `Le serveur WooCommerce ne répond pas (HTTP ${statusCode}) après ${MAX_ATTEMPTS} tentatives en alternant Basic Auth et query-string.${formatDiag()} Vérifie ton hébergeur, ton WAF (Cloudflare / Sucuri / Wordfence) ou réessaie dans quelques minutes.`,
+          statusCode,
+        );
+      }
+      if (statusCode === 401 || statusCode === 403) {
+        throw new WcServiceError(
+          `Authentification refusée (HTTP ${statusCode}).${formatDiag()} Vérifie que la clé API WooCommerce a les permissions "Lecture/Écriture" et qu'elle n'est pas restreinte par IP.`,
           statusCode,
         );
       }
@@ -141,6 +211,7 @@ Deno.serve(async (req) => {
     const data = await res.json();
     return { data, totalPages };
   };
+
 
   const wcFetchAll = async (path: string) => {
     const all: any[] = [];
@@ -236,7 +307,35 @@ Deno.serve(async (req) => {
     };
   }
 
+  // ─── PING (connection test, 1 lightweight call) ───────────────────
+  if (mode === 'ping') {
+    try {
+      const res = await fetchWithRetry('products', 1, 1);
+      if (!res.ok) {
+        const statusCode = res.status;
+        await res.body?.cancel().catch(() => {});
+        if (statusCode === 401 || statusCode === 403) {
+          throw new WcServiceError(
+            `Authentification refusée (HTTP ${statusCode}).${formatDiag()} Vérifie que la clé API a les permissions "Lecture/Écriture".`,
+            statusCode,
+          );
+        }
+        throw new WcServiceError(
+          `Le serveur WooCommerce ne répond pas (HTTP ${statusCode}) après ${MAX_ATTEMPTS} tentatives.${formatDiag()} Vérifie ton hébergeur ou ton WAF (Cloudflare / Sucuri / Wordfence).`,
+          statusCode,
+        );
+      }
+      await res.json().catch(() => null);
+      return new Response(JSON.stringify({ success: true, diag: lastDiagHeaders }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    } catch (e: any) {
+      return errorResponse(e);
+    }
+  }
+
   // ─── PREVIEW PRODUCTS ─────────────────────────────────────────────
+
   if (mode === 'preview') {
     try {
       const wcProducts = await wcFetchAll('products');

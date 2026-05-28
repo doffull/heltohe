@@ -1,75 +1,42 @@
-## Objectif
+## Diagnostic
 
-Rendre la page `/admin/home-icons` 100% fonctionnelle :
-1. le bouton flottant unifié apparaît bien côté user quand il est activé,
-2. les 5 modes (Dock glass / Socle / Groupés / Cluster CTA / Libres) s'appliquent réellement et instantanément,
-3. **tout ce qui est cliquable redirige** vers l'éditeur concerné (sections, héros, blocs, etc.) — création des routes/pages manquantes si besoin.
+L'erreur "503 après 4 tentatives" provient de la edge function `woocommerce-import`. Les logs confirment que **chaque appel** retourne 503 — donc ton hébergeur WordPress (très probablement Cloudflare / WAF / Sucuri / Wordfence devant `helvetica-mp.com`) bloque la requête avant qu'elle n'arrive à WooCommerce.
 
-## Diagnostic (constats du code actuel)
+Causes classiques d'un 503 systématique sur `/wp-json/wc/v3/...` :
+1. **Auth par query-string** (`?consumer_key=...&consumer_secret=...`) refusée par le WAF — la pratique recommandée WooCommerce est Basic Auth.
+2. **User-Agent "Lovable-WooSync/1.0"** identifié comme bot et bloqué.
+3. **Pas de header `Accept-Encoding` / `Accept-Language`** → fingerprint suspect.
+4. Aucun **fallback** ni cache de session : à chaque clic on repart de zéro.
 
-- `src/components/layout/UnifiedFab.tsx` **n'honore pas** `cfg.enabled`. Le toggle "Activé" dans l'éditeur ne fait donc rien → l'utilisateur croit l'avoir activé alors qu'il l'était déjà, et inversement.
-- Les modes (`dock`, `socle`, `grouped`, `cluster`, `free`) sont bien câblés dans `UnifiedFab.tsx`, mais sauvegardés **en debounce 800 ms via `updateDesignSettings`** sans flush DB explicite → après reload ou autre onglet, l'état semble ne pas avoir changé. De plus, plusieurs modes (cluster/dock) lisent `clusterPos_*`/`dockPos_*` qui ne sont jamais initialisés à la 1ère sélection → bouton peut se positionner hors écran et paraître invisible.
-- `cfg.position_desktop/mobile` peut contenir une valeur Y > viewport (slider va jusqu'à 200) → FAB visible mais sous le footer mobile (360 px de large, user vient de scroller).
-- `HomeBlocksEditor` affiche un œil (visible/visible) qui **n'est qu'un indicateur**, pas un lien vers l'éditeur de ce bloc (Hero, Catégories, Flash, etc.). Aucune redirection.
-- `HomeCustomSectionsEditor` (à confirmer) édite les sections sur place, mais aucun lien rapide vers l'admin page concernée.
-- Boutons custom (`home_fab_buttons`) : l'éditeur fonctionne, mais aucun message clair quand `action_type=route` pointe vers une route 404.
+## Plan de correction
 
-## Plan d'action
+### 1. Edge function `woocommerce-import` — connexion robuste
+- Passer en **HTTP Basic Auth** (`Authorization: Basic base64(key:secret)`) au lieu du query-string. Conserver le query-string seulement en fallback si la 1ʳᵉ tentative échoue en 401/403.
+- Remplacer le User-Agent par un **UA navigateur réaliste** (`Mozilla/5.0 ... Chrome/...`) + `Accept-Language: fr-FR`.
+- Augmenter `MAX_ATTEMPTS` à **6** et le backoff plafond à 15 s (au lieu de 4 tentatives).
+- Sur 503/502/504 persistant : tenter une **2ᵉ stratégie** automatiquement (query-string + UA différent) avant d'abandonner.
+- Sur échec final, renvoyer un message **actionnable** (statut HTTP réel, headers `cf-ray` / `server` détectés) au lieu du message générique.
 
-### 1. Faire respecter `enabled` + reset positions invalides
-- `UnifiedFab.tsx` : early return si `cfg.enabled === false`.
-- Si `cfg.position_desktop.y > 600` ou `cfg.position_mobile.y > 400`, clamp + toast admin "Position corrigée".
-- Initialiser `clusterPos_*` / `dockPos_*` à un coin visible (`br` / `bc`) au **premier passage** dans ces modes.
+### 2. Mode "preview" léger pour l'étape 1
+- L'étape "Analyser" appelle aujourd'hui `mode: preview` qui télécharge **toutes les pages** (peut déclencher rate-limit → 503). Ajouter un mode `mode: ping` qui ne fait qu'**un seul appel** à `/wp-json/wc/v3/system_status` avec `per_page=1` pour valider la connexion sans charger le catalogue.
+- L'étape "Analyser" du `WordPressSyncDialog` appellera `ping` d'abord, puis `preview` seulement si la connexion répond OK.
 
-### 2. Sauvegarde immédiate des changements de mode
-- Dans `UnifiedFabEditor.tsx`, supprimer le délai pour les changements **structurants** (`enabled`, `mode`) : flush DB direct + invalidation cache → mode visible sans recharger.
-- Garder le debounce 800 ms uniquement pour les sliders (taille, blur, offset, couleurs).
-- Ajouter un petit badge live « Aperçu mis à jour » qui se ferme tout seul.
+### 3. Connexion persistante côté admin
+- Stocker les credentials chiffrés côté **DB** dans `admin_config` (clé `woocommerce_connection`) au lieu du seul `localStorage`, afin d'être réutilisés par toutes les sessions et toutes les imports automatiques.
+- Ajouter dans `WordPressSyncDialog` un indicateur "✓ Connecté à `helvetica-mp.com`" persistant tant que la connexion fonctionne, qui pré-remplit les champs et saute l'étape 1 au prochain ouverture.
+- Bouton "Reconnecter" pour forcer une revalidation.
 
-### 3. Audit complet "tout est cliquable" (page Icônes Accueil)
-Sur chaque bloc de la page, ajouter un bouton/lien **« Éditer »** qui redirige vers la sous-route admin la plus pertinente :
+### 4. Message d'erreur plus utile
+- Si le 503 persiste après toutes les stratégies : afficher dans le toast les en-têtes diagnostiqués (ex. `server: cloudflare`, `cf-mitigated: challenge`) avec un lien "Voir les logs" pointant vers `/admin/woocommerce?tab=logs`.
+- Bouton "Réessayer maintenant" intégré au toast pour relancer sans rouvrir la dialog.
 
-| Bloc dans `AdminHomeIcons` | Action ajoutée | Route cible (créer si absente) |
-| --- | --- | --- |
-| `HomeBlocksEditor` → ligne « Hero » | bouton ✎ | `/admin/design#techwear-hero` (onglet `TechwearHeroTab`) |
-| ligne « Categories » | bouton ✎ | `/admin/categories` |
-| ligne « Featured / NewArrivals » | bouton ✎ | `/admin/products` |
-| ligne « Flash » | bouton ✎ | `/admin/marketing#flash` |
-| ligne « Loyalty » | bouton ✎ | `/admin/marketing#fidelite` |
-| ligne « Newsletter » | bouton ✎ | `/admin/marketing#newsletter` |
-| ligne « VoiceBanner » | bouton ✎ | scrolle vers `UnifiedFabEditor` (ancre `#unified-fab`) |
-| ligne « custom:... » | bouton ✎ | ouvre directement `HomeCustomSectionsEditor` dépliée sur la section |
-| Œil (👁) | reste un toggle visible/masqué (clarifié par tooltip) |  |
-| `UnifiedFabEditor` → bouton Roulette | lien rapide « Configurer le jeu » | `/admin/roulette` |
-| `UnifiedFabEditor` → toggle Chat | lien « Configurer l'IA » | `/admin/chatbot` |
-| `UnifiedFabEditor` → toggle Voix | lien « Paramètres voix » | `/admin/settings#voice` |
-| Carte d'un bouton custom (liste) | titre cliquable = ouvrir éditeur | déjà OK, ajouter raccourci « Tester l'action » qui exécute `handleAction` |
-| `FabLivePreview` | clic sur un bouton de l'aperçu = scroll vers son éditeur | nouveau |
+## Fichiers concernés
+- `supabase/functions/woocommerce-import/index.ts` — Basic Auth + UA réaliste + mode `ping` + 6 tentatives.
+- `src/components/admin/WordPressSyncDialog.tsx` — appel `ping` d'abord, pré-remplissage depuis DB, badge "Connecté".
+- `src/hooks/useAdminConfig.ts` (ou nouveau hook `useWooConnection`) — lecture/écriture credentials dans `admin_config`.
+- Migration SQL : nouvelle entrée `admin_config.config_key = 'woocommerce_connection'` (déjà sécurisée par RLS admin-only existante).
 
-### 4. Création des ancres manquantes
-- `AdminDesign.tsx` : ajouter `id="techwear-hero"`, scroll-margin pour `scrollIntoView`.
-- `AdminMarketing.tsx` : ajouter ancres `#flash`, `#fidelite`, `#newsletter`.
-- `AdminSettings.tsx` : ancre `#voice`.
-- `AdminHomeIcons.tsx` : ancres `#sections`, `#custom`, `#unified-fab`, `#custom-fabs`.
-
-### 5. Validation + UX
-- Toast d'erreur clair quand `action_value` d'un bouton custom pointe vers une route invalide (vérif via liste blanche des routes connues).
-- Tooltip explicatif sur chaque mode du `UnifiedFabEditor` décrivant en 1 phrase ce qu'il fait.
-- Bouton **« Tester sur la home »** en haut de la page = `window.open('/', '_blank')`.
-
-## Fichiers touchés
-
-- `src/components/layout/UnifiedFab.tsx` (respect `enabled`, clamp positions, init cluster/dock)
-- `src/components/admin/UnifiedFabEditor.tsx` (flush immédiat des changements structurants, tooltips, liens contextuels)
-- `src/components/admin/HomeBlocksEditor.tsx` (bouton ✎ par ligne + navigate)
-- `src/components/admin/HomeCustomSectionsEditor.tsx` (déplier sur ancre)
-- `src/components/admin/FabLivePreview.tsx` (clic = scroll vers éditeur)
-- `src/pages/admin/AdminHomeIcons.tsx` (ancres, bouton "Tester")
-- `src/pages/admin/AdminDesign.tsx`, `AdminMarketing.tsx`, `AdminSettings.tsx` (ancres `id=`)
-
-Aucune migration DB nécessaire — uniquement frontend.
-
-## Hors périmètre
-- Refonte des autres tableaux admin (Produits, Commandes…).
-- Drag-and-drop nouveau (déjà OK).
-- Templates de pages (déjà livré séparément).
+## Ce que tu obtiens
+- Plus de 503 "fantôme" : la fonction trouve la bonne stratégie d'auth toute seule.
+- Tes clés sont mémorisées : tu ouvres la dialog → tu es déjà connecté, tu cliques direct sur "Synchroniser".
+- Si un jour ton serveur est vraiment down, le message t'indique précisément quoi vérifier (Cloudflare, hébergeur, WAF).

@@ -81,6 +81,15 @@ export function WordPressSyncDialog({ open, onOpenChange, syncType = 'products' 
     setLoading(true);
     try {
       localStorage.setItem(LS_KEY, JSON.stringify({ storeUrl, consumerKey, consumerSecret }));
+
+      // 1) Lightweight ping first — validates auth + WAF without loading full catalog
+      const ping = await supabase.functions.invoke('woocommerce-import', {
+        body: { storeUrl, consumerKey, consumerSecret, mode: 'ping' },
+      });
+      if (ping.error) throw ping.error;
+      if (ping.data?.error) throw new Error(ping.data.error);
+
+      // 2) Full preview now that we know the server is reachable
       const { data, error } = await supabase.functions.invoke('woocommerce-import', {
         body: { storeUrl, consumerKey, consumerSecret, mode: config.previewMode },
       });
@@ -90,11 +99,24 @@ export function WordPressSyncDialog({ open, onOpenChange, syncType = 'products' 
       setItems(fetched.map((p: any) => ({ ...p, selected: !p.isDuplicate })));
       setStep(2);
     } catch (err: any) {
-      toast({ title: 'Erreur de connexion', description: err.message, variant: 'destructive' });
+      toast({
+        title: 'Erreur de connexion',
+        description: err.message,
+        variant: 'destructive',
+        action: (
+          <button
+            onClick={() => handleFetchPreview()}
+            className="text-xs underline whitespace-nowrap"
+          >
+            Réessayer
+          </button>
+        ) as any,
+      });
     } finally {
       setLoading(false);
     }
   };
+
 
   const selectedCount = items.filter(p => p.selected).length;
   const duplicateCount = items.filter(p => p.isDuplicate).length;
