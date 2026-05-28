@@ -1,49 +1,99 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Save, Loader2 } from 'lucide-react';
+import { Save, Loader2, Check, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import PageBuilder from '@/components/admin/PageBuilder';
 import type { PageSection } from '@/hooks/usePages';
+
+type SaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
 
 export function HomeCustomSectionsEditor() {
   const { designSettings, updateDesignSettings, flushDesignSettings } = useApp();
   const initial = ((designSettings as any).homeCustomSections || []) as PageSection[];
   const [sections, setSections] = useState<PageSection[]>(initial);
-  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState<SaveStatus>('idle');
+  const lastPersistedRef = useRef<string>(JSON.stringify(initial));
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastToastRef = useRef<number>(0);
 
+  // Sync when external design settings change (e.g. from another tab)
   useEffect(() => {
     const cur = (designSettings as any).homeCustomSections;
-    if (Array.isArray(cur)) setSections(cur);
+    if (Array.isArray(cur)) {
+      const serialized = JSON.stringify(cur);
+      if (serialized !== JSON.stringify(sections)) {
+        setSections(cur);
+        lastPersistedRef.current = serialized;
+        setStatus('idle');
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [(designSettings as any).homeCustomSections]);
 
-  const save = async () => {
+  const persist = async (next: PageSection[]) => {
     try {
-      setSaving(true);
-      updateDesignSettings({ homeCustomSections: sections } as any);
+      setStatus('saving');
+      updateDesignSettings({ homeCustomSections: next } as any);
       await flushDesignSettings();
-      toast.success('Sections enregistrées — elles sont visibles sur la page d\'accueil.');
+      lastPersistedRef.current = JSON.stringify(next);
+      setStatus('saved');
+      const now = Date.now();
+      if (now - lastToastRef.current > 4000) {
+        toast.success('Sections enregistrées', { duration: 1500 });
+        lastToastRef.current = now;
+      }
+      setTimeout(() => setStatus(s => (s === 'saved' ? 'idle' : s)), 2000);
     } catch (e: any) {
-      toast.error('Erreur lors de l\'enregistrement', { description: e?.message });
-    } finally {
-      setSaving(false);
+      setStatus('error');
+      toast.error("Erreur d'enregistrement", { description: e?.message });
     }
+  };
+
+  // Auto-save with debounce
+  useEffect(() => {
+    const serialized = JSON.stringify(sections);
+    if (serialized === lastPersistedRef.current) return;
+    setStatus('dirty');
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      persist(sections);
+    }, 800);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sections]);
+
+  const handleManualSave = () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    persist(sections);
+  };
+
+  const StatusBadge = () => {
+    if (status === 'saving') return <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" /> Enregistrement…</span>;
+    if (status === 'dirty') return <span className="inline-flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400"><AlertCircle className="h-3 w-3" /> Modifications non enregistrées</span>;
+    if (status === 'saved') return <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400"><Check className="h-3 w-3" /> Enregistré</span>;
+    if (status === 'error') return <span className="inline-flex items-center gap-1.5 text-xs text-destructive"><AlertCircle className="h-3 w-3" /> Erreur</span>;
+    return null;
   };
 
   return (
     <Card className="border-2 border-primary/20">
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-row items-center justify-between gap-3">
         <CardTitle>Sections personnalisées de la page d'accueil</CardTitle>
-        <Button onClick={save} size="sm" className="gap-2" disabled={saving}>
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          Enregistrer
-        </Button>
+        <div className="flex items-center gap-3">
+          <StatusBadge />
+          <Button onClick={handleManualSave} size="sm" className="gap-2" disabled={status === 'saving'}>
+            {status === 'saving' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Enregistrer
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-xs text-muted-foreground">
-          Ajoutez librement des sections (images, vidéos, sliders, textes, grilles produits). Glissez-déposez vos médias directement. Après « Enregistrer », les sections apparaissent automatiquement à la suite des blocs principaux de la home.
+          Ajoutez librement des sections (images, vidéos, sliders, bannières pub, textes, grilles produits). Les modifications sont <strong>enregistrées automatiquement</strong> et apparaissent à la suite des blocs principaux de la home.
         </p>
         <PageBuilder sections={sections} onChange={setSections} />
       </CardContent>

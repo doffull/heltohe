@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   GripVertical, Plus, Trash2, Image, Video, Type, AlignLeft, Pencil,
-  Heading1, Heading2, LayoutGrid, ChevronUp, ChevronDown, Grid3x3, MousePointerClick,
+  Heading1, Heading2, LayoutGrid, ChevronUp, ChevronDown, Grid3x3, MousePointerClick, Megaphone,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FileDropZone } from '@/components/admin/FileDropZone';
@@ -32,6 +32,7 @@ const HOVER_EFFECTS = [
 
 const SECTION_TYPES = [
   { value: 'hero', label: 'Header / Hero', icon: LayoutGrid },
+  { value: 'banner', label: 'Bannière pub', icon: Megaphone },
   { value: 'image', label: 'Image', icon: Image },
   { value: 'video', label: 'Vidéo', icon: Video },
   { value: 'slider', label: 'Slider Images', icon: Image },
@@ -293,6 +294,11 @@ function SectionEditor({
         {section.type === 'popup_button' && (
           <PopupButtonEditor section={section} updateContent={updateContent} />
         )}
+
+        {/* Banner */}
+        {section.type === 'banner' && (
+          <BannerEditor section={section} updateContent={updateContent} />
+        )}
         </>
         )}
       </CardContent>
@@ -510,6 +516,146 @@ function PopupButtonEditor({ section, updateContent }: { section: PageSection; u
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function BannerEditor({ section, updateContent }: { section: PageSection; updateContent: (k: string, v: any) => void }) {
+  const c = section.content;
+  const mediaType = c.mediaType || 'image';
+  return (
+    <div className="space-y-3">
+      <div className="space-y-1">
+        <Label className="text-xs">Type de média</Label>
+        <Select value={mediaType} onValueChange={v => updateContent('mediaType', v)}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="image">Image</SelectItem>
+            <SelectItem value="video">Vidéo</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {mediaType === 'image' ? (
+        <FileDropZone
+          accept={['image']}
+          folder="home/banners"
+          currentFile={c.mediaUrl || ''}
+          onUpload={url => updateContent('mediaUrl', url)}
+          label="Glissez une image de bannière (paysage recommandé)"
+        />
+      ) : (
+        <FileDropZone
+          accept={['video']}
+          folder="home/banners"
+          currentFile={c.mediaUrl || ''}
+          onUpload={url => updateContent('mediaUrl', url)}
+          label="Glissez une vidéo MP4/WebM"
+        />
+      )}
+
+      <Input placeholder="URL de redirection (ex: /boutique ou https://…)" value={c.link || ''} onChange={e => updateContent('link', e.target.value)} />
+      <label className="flex items-center gap-2 text-xs">
+        <input type="checkbox" checked={!!c.newTab} onChange={e => updateContent('newTab', e.target.checked)} />
+        Ouvrir dans un nouvel onglet
+      </label>
+
+      <div className="border-t border-border/40 pt-3 space-y-2">
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Texte sur la bannière (optionnel)</div>
+        <Input placeholder="Titre" value={c.title || ''} onChange={e => updateContent('title', e.target.value)} />
+        <Input placeholder="Sous-titre" value={c.subtitle || ''} onChange={e => updateContent('subtitle', e.target.value)} />
+        <Input placeholder="Libellé du bouton (vide = bannière entièrement cliquable)" value={c.buttonLabel || ''} onChange={e => updateContent('buttonLabel', e.target.value)} />
+        <div className="grid grid-cols-2 gap-2">
+          <Select value={c.textPosition || 'center'} onValueChange={v => updateContent('textPosition', v)}>
+            <SelectTrigger><SelectValue placeholder="Position du texte" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="top-left">Haut · Gauche</SelectItem>
+              <SelectItem value="top-center">Haut · Centre</SelectItem>
+              <SelectItem value="top-right">Haut · Droite</SelectItem>
+              <SelectItem value="center-left">Milieu · Gauche</SelectItem>
+              <SelectItem value="center">Milieu · Centre</SelectItem>
+              <SelectItem value="center-right">Milieu · Droite</SelectItem>
+              <SelectItem value="bottom-left">Bas · Gauche</SelectItem>
+              <SelectItem value="bottom-center">Bas · Centre</SelectItem>
+              <SelectItem value="bottom-right">Bas · Droite</SelectItem>
+            </SelectContent>
+          </Select>
+          <div>
+            <Label className="text-[10px]">Couleur du texte</Label>
+            <Input type="color" value={c.textColor || '#ffffff'} onChange={e => updateContent('textColor', e.target.value)} />
+          </div>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-[10px] flex justify-between">
+            <span>Voile sombre (opacité)</span>
+            <span className="font-mono">{Math.round((c.overlayOpacity ?? 0.3) * 100)} %</span>
+          </Label>
+          <Slider
+            value={[c.overlayOpacity ?? 0.3]}
+            min={0} max={0.8} step={0.05}
+            onValueChange={([v]) => updateContent('overlayOpacity', v)}
+          />
+        </div>
+      </div>
+
+      <div className="border-t border-border/40 pt-3 space-y-2">
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Apparence</div>
+        <Select value={c.height || 'md'} onValueChange={v => updateContent('height', v)}>
+          <SelectTrigger><SelectValue placeholder="Hauteur" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="auto">Auto</SelectItem>
+            <SelectItem value="sm">Petite (240 px)</SelectItem>
+            <SelectItem value="md">Moyenne (360 px)</SelectItem>
+            <SelectItem value="lg">Grande (480 px)</SelectItem>
+            <SelectItem value="xl">XL (600 px)</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={c.hoverEffect || 'none'} onValueChange={v => updateContent('hoverEffect', v)}>
+          <SelectTrigger><SelectValue placeholder="Effet au survol" /></SelectTrigger>
+          <SelectContent>
+            {HOVER_EFFECTS.map(h => <SelectItem key={h.value} value={h.value}>{h.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <div className="flex items-center justify-between rounded border p-2">
+          <Label className="text-xs">Parallax au scroll</Label>
+          <Switch checked={!!c.parallax} onCheckedChange={v => updateContent('parallax', v)} />
+        </div>
+        {c.parallax && (
+          <div className="space-y-1">
+            <Label className="text-[10px] flex justify-between">
+              <span>Intensité parallax</span>
+              <span className="font-mono">{(c.parallaxSpeed ?? 0.25).toFixed(2)}</span>
+            </Label>
+            <Slider
+              value={[c.parallaxSpeed ?? 0.25]}
+              min={0.1} max={0.6} step={0.05}
+              onValueChange={([v]) => updateContent('parallaxSpeed', v)}
+            />
+          </div>
+        )}
+      </div>
+
+      {mediaType === 'video' && (
+        <div className="border-t border-border/40 pt-3 space-y-1.5">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Vidéo</div>
+          <label className="flex items-center gap-2 text-xs">
+            <input type="checkbox" checked={c.autoplay ?? true} onChange={e => updateContent('autoplay', e.target.checked)} />
+            Lecture automatique
+          </label>
+          <label className="flex items-center gap-2 text-xs">
+            <input type="checkbox" checked={c.loop ?? true} onChange={e => updateContent('loop', e.target.checked)} />
+            En boucle
+          </label>
+          <label className="flex items-center gap-2 text-xs">
+            <input type="checkbox" checked={c.muted ?? true} onChange={e => updateContent('muted', e.target.checked)} />
+            Sans son
+          </label>
+          <label className="flex items-center gap-2 text-xs">
+            <input type="checkbox" checked={!!c.controls} onChange={e => updateContent('controls', e.target.checked)} />
+            Afficher les contrôles
+          </label>
+        </div>
+      )}
     </div>
   );
 }
