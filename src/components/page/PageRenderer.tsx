@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
 import { Button } from '@/components/ui/button';
@@ -9,15 +9,127 @@ import { toast } from 'sonner';
 import { subscribeToNewsletter } from '@/hooks/useNewsletterPopups';
 import { cn } from '@/lib/utils';
 import { useParallax } from '@/hooks/useParallax';
+import { SafeImage, SafeVideo } from '@/lib/safeMedia';
 import type { PageSection } from '@/hooks/usePages';
 
 const HOVER_CLASSES: Record<string, string> = {
-  zoom: 'hover:scale-110',
-  'zoom-out': 'scale-110 hover:scale-100',
-  tilt: 'hover:rotate-1 hover:scale-105',
-  brightness: 'hover:brightness-110',
-  'grayscale-off': 'grayscale hover:grayscale-0',
+  zoom: 'group-hover:scale-110',
+  'zoom-out': 'scale-110 group-hover:scale-100',
+  tilt: 'group-hover:rotate-1 group-hover:scale-105',
+  brightness: 'group-hover:brightness-110',
+  'grayscale-off': 'grayscale group-hover:grayscale-0',
 };
+
+const HEIGHT_CLASS: Record<string, string> = {
+  auto: 'h-auto min-h-[200px]',
+  sm: 'h-[240px]',
+  md: 'h-[360px]',
+  lg: 'h-[480px]',
+  xl: 'h-[600px]',
+};
+
+const POSITION_CLASS: Record<string, string> = {
+  'top-left': 'items-start justify-start text-left',
+  'top-center': 'items-start justify-center text-center',
+  'top-right': 'items-start justify-end text-right',
+  'center-left': 'items-center justify-start text-left',
+  'center': 'items-center justify-center text-center',
+  'center-right': 'items-center justify-end text-right',
+  'bottom-left': 'items-end justify-start text-left',
+  'bottom-center': 'items-end justify-center text-center',
+  'bottom-right': 'items-end justify-end text-right',
+};
+
+function BannerSection({ content, sectionId }: { content: Record<string, any>; sectionId: string }) {
+  const parallax = useParallax<HTMLDivElement>(content.parallaxSpeed ?? 0.25);
+  const mediaType = content.mediaType || 'image';
+  const link: string = content.link || '';
+  const hoverClass = HOVER_CLASSES[content.hoverEffect as string] || '';
+  const heightClass = HEIGHT_CLASS[content.height || 'md'];
+  const posClass = POSITION_CLASS[content.textPosition || 'center'];
+  const overlay = content.overlayOpacity ?? 0.3;
+  const textColor = content.textColor || '#ffffff';
+
+  if (!content.mediaUrl) return null;
+
+  const mediaInner = (
+    <div
+      ref={content.parallax ? parallax.ref : undefined}
+      style={content.parallax ? parallax.style : undefined}
+      className={cn('absolute inset-0 will-change-transform transition-transform duration-700', hoverClass)}
+    >
+      {mediaType === 'video' ? (
+        <SafeVideo
+          src={content.mediaUrl}
+          className="w-full h-full object-cover"
+          autoPlay={content.autoplay ?? true}
+          loop={content.loop ?? true}
+          muted={content.muted ?? true}
+          controls={!!content.controls}
+          playsInline
+          preload="metadata"
+        />
+      ) : (
+        <SafeImage
+          src={content.mediaUrl}
+          alt={content.title || 'Bannière'}
+          className="w-full h-full object-cover"
+          loading="lazy"
+        />
+      )}
+    </div>
+  );
+
+  const overlayLayer = overlay > 0 ? (
+    <div className="absolute inset-0 pointer-events-none" style={{ backgroundColor: `rgba(0,0,0,${overlay})` }} />
+  ) : null;
+
+  const textLayer = (content.title || content.subtitle || content.buttonLabel) ? (
+    <div className={cn('relative z-10 h-full w-full p-6 md:p-10 flex flex-col gap-3', posClass)} style={{ color: textColor }}>
+      {content.title && <h2 className="text-2xl md:text-4xl font-bold uppercase tracking-tight drop-shadow">{content.title}</h2>}
+      {content.subtitle && <p className="text-sm md:text-lg drop-shadow max-w-2xl">{content.subtitle}</p>}
+      {content.buttonLabel && (
+        <span className="inline-flex items-center px-5 py-2 mt-2 bg-white text-black text-sm font-bold uppercase tracking-wider hover:bg-white/90 transition pointer-events-none">
+          {content.buttonLabel}
+        </span>
+      )}
+    </div>
+  ) : null;
+
+  const inner = (
+    <div className={cn('relative w-full overflow-hidden group', heightClass)}>
+      {mediaInner}
+      {overlayLayer}
+      {textLayer}
+    </div>
+  );
+
+  if (!link) {
+    return <div data-banner-id={sectionId}>{inner}</div>;
+  }
+
+  const isExternal = /^https?:\/\//i.test(link);
+  if (isExternal || content.newTab) {
+    return (
+      <a
+        href={link}
+        target={content.newTab ? '_blank' : '_self'}
+        rel={content.newTab ? 'noopener noreferrer' : undefined}
+        data-banner-id={sectionId}
+        className="block cursor-pointer"
+      >
+        {inner}
+      </a>
+    );
+  }
+  return (
+    <Link to={link} data-banner-id={sectionId} className="block cursor-pointer">
+      {inner}
+    </Link>
+  );
+}
+
+
 
 function HeroSection({ content }: { content: Record<string, any> }) {
   return (
