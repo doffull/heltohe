@@ -6,14 +6,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
 import {
-  GripVertical, Plus, Trash2, Image, Video, Type, AlignLeft,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
+  GripVertical, Plus, Trash2, Image, Video, Type, AlignLeft, Pencil,
   Heading1, Heading2, LayoutGrid, ChevronUp, ChevronDown, Grid3x3, MousePointerClick,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FileDropZone } from '@/components/admin/FileDropZone';
 import { useCategories } from '@/hooks/useCategories';
 import type { PageSection } from '@/hooks/usePages';
+
+const HOVER_EFFECTS = [
+  { value: 'none', label: 'Aucun' },
+  { value: 'zoom', label: 'Zoom avant' },
+  { value: 'zoom-out', label: 'Zoom arrière' },
+  { value: 'tilt', label: 'Inclinaison' },
+  { value: 'brightness', label: 'Luminosité' },
+  { value: 'grayscale-off', label: 'Couleur au survol' },
+] as const;
 
 const SECTION_TYPES = [
   { value: 'hero', label: 'Header / Hero', icon: LayoutGrid },
