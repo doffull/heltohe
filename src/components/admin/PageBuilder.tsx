@@ -299,10 +299,6 @@ function SectionEditor({
     </Card>
   );
 }
-      </CardContent>
-    </Card>
-  );
-}
 
 function CategoriesEditor({ section, updateContent }: { section: PageSection; updateContent: (k: string, v: any) => void }) {
   const { data: categories = [] } = useCategories();
