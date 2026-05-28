@@ -8,7 +8,16 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { subscribeToNewsletter } from '@/hooks/useNewsletterPopups';
 import { cn } from '@/lib/utils';
+import { useParallax } from '@/hooks/useParallax';
 import type { PageSection } from '@/hooks/usePages';
+
+const HOVER_CLASSES: Record<string, string> = {
+  zoom: 'hover:scale-110',
+  'zoom-out': 'scale-110 hover:scale-100',
+  tilt: 'hover:rotate-1 hover:scale-105',
+  brightness: 'hover:brightness-110',
+  'grayscale-off': 'grayscale hover:grayscale-0',
+};
 
 function HeroSection({ content }: { content: Record<string, any> }) {
   return (
