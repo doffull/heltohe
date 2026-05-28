@@ -75,7 +75,24 @@ function Row({ b, onToggle, isCustom, onEdit }: { b: Block; onToggle: () => void
 
 export function HomeBlocksEditor() {
   const { designSettings, updateDesignSettings, flushDesignSettings } = useApp();
+  const navigate = useNavigate();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+
+  const goEdit = (id: string) => {
+    if (id.startsWith('custom:')) {
+      document.getElementById('custom-sections')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    const route = EDIT_ROUTE[id];
+    if (!route) { toast.info('Pas d\'éditeur dédié pour ce bloc'); return; }
+    if (route.includes('#')) {
+      const [path, hash] = route.split('#');
+      navigate(path);
+      setTimeout(() => document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 250);
+    } else {
+      navigate(route);
+    }
+  };
 
   const customSections = ((designSettings as any).homeCustomSections || []) as PageSection[];
 
