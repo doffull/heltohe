@@ -153,24 +153,14 @@ export default function AdminSettings() {
                         <p className="font-bold text-sm hud-text">{cat.title}</p>
                         <p className="text-xs text-destructive">Parent manquant</p>
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => { setEditingCat(cat); setCatDialogOpen(true); }}>
-                            <Pencil className="h-4 w-4 mr-2" />Modifier
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive" onClick={async () => {
-                            if (confirm('Supprimer ?')) {
-                              await deleteCategory.mutateAsync(cat.id);
-                              toast({ title: 'Catégorie supprimée' });
-                            }
-                          }}>
-                            <Trash2 className="h-4 w-4 mr-2" />Supprimer
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingCat(cat); setCatDialogOpen(true); }} title="Modifier">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setCatToDelete(cat)} title="Supprimer">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}
