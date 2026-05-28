@@ -22,6 +22,25 @@ function extractComponent(components: any[], type: string): string {
   return c?.longText || c?.shortText || '';
 }
 
+async function resolvePhoto(photoName: string): Promise<string | null> {
+  try {
+    const r = await fetch(
+      `${GATEWAY_URL}/places/v1/${photoName}/media?maxWidthPx=600&skipHttpRedirect=true`,
+      {
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'X-Connection-Api-Key': GOOGLE_MAPS_API_KEY!,
+        },
+      },
+    );
+    if (!r.ok) return null;
+    const j = await r.json().catch(() => null);
+    return j?.photoUri || null;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -32,12 +51,21 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { query } = await req.json().catch(() => ({}));
+    const { query, type } = await req.json().catch(() => ({}));
     if (!query || typeof query !== 'string' || query.trim().length < 3) {
       return new Response(JSON.stringify({ error: 'query (min 3 chars) required' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    const body: any = {
+      textQuery: query.trim(),
+      languageCode: 'fr',
+      regionCode: 'FR',
+      maxResultCount: 5,
+    };
+    if (type === 'mall') body.includedType = 'shopping_mall';
+    else if (type === 'store') body.includedType = 'store';
 
     const res = await fetch(`${GATEWAY_URL}/places/v1/places:searchText`, {
       method: 'POST',
@@ -47,12 +75,7 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json',
         'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.addressComponents,places.photos',
       },
-      body: JSON.stringify({
-        textQuery: query.trim(),
-        languageCode: 'fr',
-        regionCode: 'FR',
-        maxResultCount: 5,
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) {
@@ -64,10 +87,14 @@ Deno.serve(async (req) => {
     }
 
     const data = await res.json();
-    const candidates: Candidate[] = (data.places || []).map((p: any) => {
+    const places = (data.places || []) as any[];
+
+    const candidates: Candidate[] = await Promise.all(places.map(async (p) => {
       const streetNum = extractComponent(p.addressComponents, 'street_number');
       const route = extractComponent(p.addressComponents, 'route');
       const street = `${streetNum} ${route}`.trim();
+      const firstPhoto = p.photos?.[0]?.name;
+      const image = firstPhoto ? await resolvePhoto(firstPhoto) : null;
       return {
         placeId: p.id,
         name: p.displayName?.text || query,
@@ -78,9 +105,9 @@ Deno.serve(async (req) => {
         country: extractComponent(p.addressComponents, 'country') || 'France',
         lat: p.location?.latitude || 0,
         lng: p.location?.longitude || 0,
-        image: null,
+        image,
       };
-    });
+    }));
 
     return new Response(JSON.stringify({ candidates }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

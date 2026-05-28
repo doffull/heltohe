@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Edit, Trash2, MapPin, Loader2, Search, Sparkles } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, Edit, Trash2, MapPin, Loader2, Search, Sparkles, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -22,10 +23,15 @@ interface AICandidate {
   image: string | null;
 }
 
+type LookupType = 'any' | 'mall' | 'store';
+
 const emptyBoutique: Partial<Boutique> = {
   name: '', address: '', city: '', postalCode: '', country: 'France',
   latitude: 48.8566, longitude: 2.3522, image: '', sortOrder: 0, isActive: true,
 };
+
+// Session-level cache: { "type|query" -> candidates }
+const aiCache = new Map<string, AICandidate[]>();
 
 async function geocode(address: string): Promise<{ lat: number; lng: number } | null> {
   try {
@@ -46,11 +52,14 @@ export default function AdminBoutiques() {
   const [geocoding, setGeocoding] = useState(false);
   const [aiSearching, setAiSearching] = useState(false);
   const [candidates, setCandidates] = useState<AICandidate[]>([]);
+  const [lookupType, setLookupType] = useState<LookupType>('any');
+  const [previewCandidate, setPreviewCandidate] = useState<AICandidate | null>(null);
   const debounceRef = useRef<number | null>(null);
 
   function startNew() {
     setForm({ ...emptyBoutique });
     setCandidates([]);
+    setLookupType('any');
     setOpen(true);
   }
   function startEdit(b: Boutique) {
@@ -59,16 +68,26 @@ export default function AdminBoutiques() {
     setOpen(true);
   }
 
-  async function aiLookup(query: string) {
+  async function aiLookup(query: string, typeOverride?: LookupType) {
+    const t = typeOverride ?? lookupType;
     if (!query || query.trim().length < 3) {
       setCandidates([]);
       return;
     }
+    const cacheKey = `${t}|${query.trim().toLowerCase()}`;
+    const cached = aiCache.get(cacheKey);
+    if (cached) {
+      setCandidates(cached);
+      return;
+    }
     setAiSearching(true);
     try {
-      const { data, error } = await supabase.functions.invoke('boutique-lookup', { body: { query } });
+      const { data, error } = await supabase.functions.invoke('boutique-lookup', {
+        body: { query, type: t === 'any' ? undefined : t },
+      });
       if (error) throw error;
       const list = (data?.candidates || []) as AICandidate[];
+      aiCache.set(cacheKey, list);
       setCandidates(list);
       if (list.length === 0) toast.info('Aucun résultat trouvé');
     } catch (e: any) {
@@ -88,7 +107,7 @@ export default function AdminBoutiques() {
     }
   }
 
-  function pickCandidate(c: AICandidate) {
+  function applyCandidate(c: AICandidate) {
     setForm((f) => ({
       ...f,
       name: c.name,
@@ -101,7 +120,8 @@ export default function AdminBoutiques() {
       image: c.image || f.image,
     }));
     setCandidates([]);
-    toast.success('Boutique trouvée ✨');
+    setPreviewCandidate(null);
+    toast.success('Informations appliquées ✨');
   }
 
   async function doGeocode() {
@@ -187,6 +207,21 @@ export default function AdminBoutiques() {
             <DialogTitle>{form.id ? 'Modifier la boutique' : 'Nouvelle boutique'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
+            {!form.id && (
+              <div className="grid grid-cols-3 gap-2">
+                <div className="col-span-2">
+                  <Label className="text-xs">Type recherché</Label>
+                  <Select value={lookupType} onValueChange={(v) => { setLookupType(v as LookupType); if (form.name && form.name.length >= 4) aiLookup(form.name, v as LookupType); }}>
+                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="any">Tous</SelectItem>
+                      <SelectItem value="mall">Centre commercial</SelectItem>
+                      <SelectItem value="store">Boutique</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
             <div>
               <Label>Nom de la boutique ou centre commercial</Label>
               <div className="flex gap-2">
@@ -202,17 +237,26 @@ export default function AdminBoutiques() {
                 )}
               </div>
               {candidates.length > 0 && (
-                <div className="mt-2 border border-border rounded-md divide-y divide-border bg-card">
+                <div className="mt-2 border border-border rounded-md divide-y divide-border bg-card max-h-72 overflow-y-auto">
                   {candidates.map((c) => (
                     <button
                       key={c.placeId}
                       type="button"
-                      onClick={() => pickCandidate(c)}
-                      className="w-full text-left p-2 hover:bg-accent transition-colors text-sm"
+                      onClick={() => setPreviewCandidate(c)}
+                      className="w-full text-left p-2 hover:bg-accent transition-colors text-sm flex gap-2 items-center"
                     >
-                      <div className="font-medium">{c.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {c.address}{c.address && c.postalCode ? ' — ' : ''}{c.postalCode} {c.city}
+                      {c.image ? (
+                        <img src={c.image} alt="" className="h-12 w-12 object-cover rounded shrink-0" />
+                      ) : (
+                        <div className="h-12 w-12 bg-muted rounded shrink-0 flex items-center justify-center">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium truncate">{c.name}</div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {c.address}{c.address && c.postalCode ? ' — ' : ''}{c.postalCode} {c.city}
+                        </div>
                       </div>
                     </button>
                   ))}
@@ -242,6 +286,44 @@ export default function AdminBoutiques() {
           <DialogFooter>
             <Button variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
             <Button onClick={save} disabled={upsert.isPending}>{upsert.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Enregistrer'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Candidate preview/validation dialog */}
+      <Dialog open={!!previewCandidate} onOpenChange={(v) => !v && setPreviewCandidate(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Vérifier ces informations</DialogTitle>
+          </DialogHeader>
+          {previewCandidate && (
+            <div className="space-y-3">
+              {previewCandidate.image && (
+                <img src={previewCandidate.image} alt={previewCandidate.name} className="w-full h-40 object-cover rounded" />
+              )}
+              <div>
+                <div className="font-bold">{previewCandidate.name}</div>
+                <div className="text-sm text-muted-foreground">
+                  {previewCandidate.address}<br />
+                  {previewCandidate.postalCode} {previewCandidate.city}<br />
+                  {previewCandidate.country}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  GPS : {previewCandidate.lat.toFixed(5)}, {previewCandidate.lng.toFixed(5)}
+                </div>
+              </div>
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${previewCandidate.lat},${previewCandidate.lng}`}
+                target="_blank" rel="noopener"
+                className="text-xs text-primary underline"
+              >
+                Voir sur Google Maps →
+              </a>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setPreviewCandidate(null)} className="gap-2"><X className="h-4 w-4" />Annuler</Button>
+            <Button onClick={() => previewCandidate && applyCandidate(previewCandidate)} className="gap-2"><Check className="h-4 w-4" />Utiliser ces informations</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
