@@ -131,24 +131,14 @@ export default function AdminSettings() {
                               <p className="text-xs text-muted-foreground">↳</p>
                               <p className="font-medium text-sm hud-text">{sub.title}</p>
                             </div>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-3 w-3" /></Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => { setEditingCat(sub); setCatDialogOpen(true); }}>
-                                  <Pencil className="h-4 w-4 mr-2" />Modifier
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="text-destructive" onClick={async () => {
-                                  if (confirm('Supprimer cette sous-catégorie ?')) {
-                                    await deleteCategory.mutateAsync(sub.id);
-                                    toast({ title: 'Sous-catégorie supprimée' });
-                                  }
-                                }}>
-                                  <Trash2 className="h-4 w-4 mr-2" />Supprimer
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <div className="flex items-center gap-1">
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingCat(sub); setCatDialogOpen(true); }} title="Modifier">
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setCatToDelete(sub)} title="Supprimer">
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       ))}
