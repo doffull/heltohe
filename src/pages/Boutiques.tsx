@@ -1,7 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { useBoutiques } from '@/hooks/useBoutiques';
 import { MapPin, Store, AlertCircle } from 'lucide-react';
-import { Helmet } from 'react-helmet-async';
+
+function useDocTitle(title: string, description?: string) {
+  useEffect(() => {
+    const prev = document.title;
+    document.title = title;
+    let meta = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
+    const prevDesc = meta?.content;
+    if (description) {
+      if (!meta) { meta = document.createElement('meta'); meta.name = 'description'; document.head.appendChild(meta); }
+      meta.content = description;
+    }
+    return () => { document.title = prev; if (meta && prevDesc !== undefined) meta.content = prevDesc; };
+  }, [title, description]);
+}
 
 const GMAPS_KEY = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY as string | undefined;
 const GMAPS_CHANNEL = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_TRACKING_ID as string | undefined;
