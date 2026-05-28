@@ -14,6 +14,7 @@ import { AiAttributesButton } from '@/components/admin/AiAttributesButton';
 import { AiProductVideoButton } from '@/components/admin/AiProductVideoButton';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { usePageTemplates } from '@/hooks/usePageTemplates';
 
 interface ProductFormProps {
   product?: Product;
@@ -69,6 +70,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
     modelSizeWorn: '',
     modelName: '',
     galleryImages: [] as string[],
+    templateId: null as string | null,
   });
 
   // Variant stock state (local to form — passed up on submit)
