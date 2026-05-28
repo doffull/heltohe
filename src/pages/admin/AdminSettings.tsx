@@ -542,6 +542,44 @@ export default function AdminSettings() {
         categories={categories}
         onSubmit={handleCatSubmit}
       />
+
+      <AlertDialog open={!!catToDelete} onOpenChange={(v) => { if (!v) setCatToDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Supprimer {catToDelete?.parentId ? 'cette sous-catégorie' : 'cette catégorie'} ?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              <span className="font-semibold text-foreground">« {catToDelete?.title} »</span> sera supprimée définitivement.
+              Les produits liés ne seront pas supprimés mais perdront cette catégorie.
+              {!catToDelete?.parentId && categories.some((c) => c.parentId === catToDelete?.id) && (
+                <span className="block mt-2 text-destructive">
+                  ⚠ Ses sous-catégories deviendront orphelines.
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (!catToDelete) return;
+                try {
+                  await deleteCategory.mutateAsync(catToDelete.id);
+                  toast({ title: catToDelete.parentId ? 'Sous-catégorie supprimée' : 'Catégorie supprimée' });
+                } catch {
+                  toast({ title: 'Erreur lors de la suppression', variant: 'destructive' });
+                } finally {
+                  setCatToDelete(null);
+                }
+              }}
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
