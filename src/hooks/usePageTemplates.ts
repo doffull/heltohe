@@ -15,6 +15,20 @@ function mapRow(row: any): PageTemplate & { id: string } {
   };
 }
 
+// Strip undefineds — JSONB columns reject them and they break upsert payloads.
+function clean<T>(v: T): T {
+  return JSON.parse(JSON.stringify(v ?? null));
+}
+
+function slugify(s: string): string {
+  return (s || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '') || `tpl-${Date.now().toString(36)}`;
+}
+
 export function usePageTemplates(type?: 'product' | 'category') {
   return useQuery({
     queryKey: ['page_templates', type || 'all'],
@@ -57,22 +71,42 @@ export function useUpsertTemplate() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (t: PageTemplate & { id?: string }) => {
-      const payload: any = {
-        name: t.name,
-        slug: t.slug,
+      const slug = slugify(t.slug || t.name);
+      const payload: any = clean({
+        name: t.name?.trim() || 'Template sans nom',
+        slug,
         type: t.type,
-        is_default: t.isDefault ?? false,
-        theme: t.theme,
-        layout: t.layout,
+        is_default: !!t.isDefault,
+        theme: t.theme || {},
+        layout: t.layout || { grid: { cols: 12, gap: 16 }, blocks: [] },
         preview_image: t.previewImage || null,
-      };
+      });
+
+      // If marking as default, clear other defaults of same type to avoid unique conflict.
+      if (payload.is_default) {
+        const { error: e0 } = await supabase
+          .from('page_templates' as any)
+          .update({ is_default: false })
+          .eq('type', payload.type)
+          .neq('id', t.id || '00000000-0000-0000-0000-000000000000');
+        if (e0) throw new Error(`Default cleanup: ${e0.message}`);
+      }
+
       if (t.id) {
         const { error } = await supabase.from('page_templates' as any).update(payload).eq('id', t.id);
-        if (error) throw error;
+        if (error) throw new Error(error.message + (error.details ? ` (${error.details})` : ''));
         return t.id;
       } else {
+        // Ensure slug is unique on insert by suffixing if needed.
+        let finalSlug = slug;
+        for (let i = 0; i < 5; i++) {
+          const { data: exist } = await supabase.from('page_templates' as any).select('id').eq('slug', finalSlug).maybeSingle();
+          if (!exist) break;
+          finalSlug = `${slug}-${Math.random().toString(36).slice(2, 6)}`;
+        }
+        payload.slug = finalSlug;
         const { data, error } = await supabase.from('page_templates' as any).insert(payload).select('id').single();
-        if (error) throw error;
+        if (error) throw new Error(error.message + (error.details ? ` (${error.details})` : ''));
         return (data as any).id as string;
       }
     },
@@ -85,7 +119,7 @@ export function useDeleteTemplate() {
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('page_templates' as any).delete().eq('id', id);
-      if (error) throw error;
+      if (error) throw new Error(error.message);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['page_templates'] }),
   });
