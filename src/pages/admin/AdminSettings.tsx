@@ -29,6 +29,7 @@ export default function AdminSettings() {
   const deleteCategory = useDeleteCategory();
   const [catDialogOpen, setCatDialogOpen] = useState(false);
   const [editingCat, setEditingCat] = useState<CategoryRecord | null>(null);
+  const [catToDelete, setCatToDelete] = useState<CategoryRecord | null>(null);
 
   const handleCatSubmit = async (data: Omit<CategoryRecord, 'id'>) => {
     try {
