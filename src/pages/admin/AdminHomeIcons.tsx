@@ -101,10 +101,15 @@ export default function AdminHomeIcons() {
         <div className="text-xs text-muted-foreground">
           💡 Astuce : <strong>« Tout enregistrer »</strong> sauvegarde en une fois les sections, le bouton flottant unifié et l'ordre de la home.
         </div>
-        <Button onClick={handleSaveAll} disabled={savingAll} size="sm" className="gap-1.5 shrink-0">
-          {savingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          Tout enregistrer
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button asChild size="sm" variant="outline" className="gap-1.5">
+            <a href="/" target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" /> Tester sur la home</a>
+          </Button>
+          <Button onClick={handleSaveAll} disabled={savingAll} size="sm" className="gap-1.5">
+            {savingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Tout enregistrer
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center justify-between">
@@ -115,9 +120,9 @@ export default function AdminHomeIcons() {
         <Button onClick={handleAdd} className="gap-1.5"><Plus className="h-4 w-4" /> Ajouter un bouton</Button>
       </div>
 
-      <HomeBlocksEditor />
-      <HomeCustomSectionsEditor />
-      <UnifiedFabEditor />
+      <section id="sections" style={{ scrollMarginTop: 80 }}><HomeBlocksEditor /></section>
+      <section id="custom-sections" style={{ scrollMarginTop: 80 }}><HomeCustomSectionsEditor /></section>
+      <section id="unified-fab" style={{ scrollMarginTop: 80 }}><UnifiedFabEditor /></section>
       <FabLivePreview />
 
       {isLoading && <p className="text-sm text-muted-foreground">Chargement…</p>}
