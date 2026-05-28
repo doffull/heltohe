@@ -64,6 +64,7 @@ import AdminRoles from './AdminRoles';
 import AdminSecurity from './AdminSecurity';
 import AdminTransitions from './AdminTransitions';
 import AdminBannersAnalytics from './AdminBannersAnalytics';
+import AdminBoutiques from './AdminBoutiques';
 
 export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin': '#6B7280',
