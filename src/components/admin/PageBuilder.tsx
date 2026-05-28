@@ -6,14 +6,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
 import {
-  GripVertical, Plus, Trash2, Image, Video, Type, AlignLeft,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
+  GripVertical, Plus, Trash2, Image, Video, Type, AlignLeft, Pencil,
   Heading1, Heading2, LayoutGrid, ChevronUp, ChevronDown, Grid3x3, MousePointerClick,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FileDropZone } from '@/components/admin/FileDropZone';
 import { useCategories } from '@/hooks/useCategories';
 import type { PageSection } from '@/hooks/usePages';
+
+const HOVER_EFFECTS = [
+  { value: 'none', label: 'Aucun' },
+  { value: 'zoom', label: 'Zoom avant' },
+  { value: 'zoom-out', label: 'Zoom arrière' },
+  { value: 'tilt', label: 'Inclinaison' },
+  { value: 'brightness', label: 'Luminosité' },
+  { value: 'grayscale-off', label: 'Couleur au survol' },
+] as const;
 
 const SECTION_TYPES = [
   { value: 'hero', label: 'Header / Hero', icon: LayoutGrid },
@@ -40,6 +55,7 @@ function SectionEditor({
   onMoveDown,
   isFirst,
   isLast,
+  defaultOpen,
 }: {
   section: PageSection;
   onChange: (s: PageSection) => void;
@@ -48,35 +64,69 @@ function SectionEditor({
   onMoveDown: () => void;
   isFirst: boolean;
   isLast: boolean;
+  defaultOpen?: boolean;
 }) {
   const typeMeta = SECTION_TYPES.find(t => t.value === section.type);
   const Icon = typeMeta?.icon || Type;
+  const [open, setOpen] = useState(!!defaultOpen);
 
   const updateContent = (key: string, value: any) => {
     onChange({ ...section, content: { ...section.content, [key]: value } });
   };
 
+  const summary = section.content.title || section.content.text || section.content.alt || section.content.buttonLabel || '';
+
   return (
     <Card className="border border-border">
       <CardContent className="p-4">
         <div className="flex items-center gap-2 mb-3">
-          <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-          <Icon className="h-4 w-4 text-primary" />
-          <span className="text-sm font-medium uppercase tracking-wider flex-1">
-            {typeMeta?.label || section.type}
-          </span>
-          <div className="flex gap-1">
+          <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab shrink-0" />
+          <Icon className="h-4 w-4 text-primary shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium uppercase tracking-wider truncate">
+              {typeMeta?.label || section.type}
+            </div>
+            {summary && !open && (
+              <div className="text-xs text-muted-foreground truncate">{summary}</div>
+            )}
+          </div>
+          <div className="flex gap-1 shrink-0">
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onMoveUp} disabled={isFirst}>
               <ChevronUp className="h-3 w-3" />
             </Button>
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onMoveDown} disabled={isLast}>
               <ChevronDown className="h-3 w-3" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={onRemove}>
-              <Trash2 className="h-3 w-3" />
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setOpen(o => !o)} title={open ? 'Replier' : 'Modifier'}>
+              <Pencil className="h-3 w-3" />
             </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive">
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Supprimer cette section&nbsp;?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Cette action est définitive et retirera la section de votre page.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogAction onClick={onRemove} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Supprimer
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
+
+        {open && (
+        <>
+
 
         {/* Hero */}
         {section.type === 'hero' && (
@@ -117,6 +167,32 @@ function SectionEditor({
                 <SelectItem value="full">Pleine largeur</SelectItem>
               </SelectContent>
             </Select>
+            <div className="space-y-1">
+              <Label className="text-xs">Effet au survol</Label>
+              <Select value={section.content.hoverEffect || 'none'} onValueChange={v => updateContent('hoverEffect', v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {HOVER_EFFECTS.map(h => <SelectItem key={h.value} value={h.value}>{h.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center justify-between rounded border p-2">
+              <Label className="text-xs">Parallax au scroll</Label>
+              <Switch checked={!!section.content.parallax} onCheckedChange={v => updateContent('parallax', v)} />
+            </div>
+            {section.content.parallax && (
+              <div className="space-y-1">
+                <Label className="text-[10px] flex justify-between">
+                  <span>Intensité parallax</span>
+                  <span className="font-mono">{(section.content.parallaxSpeed ?? 0.25).toFixed(2)}</span>
+                </Label>
+                <Slider
+                  value={[section.content.parallaxSpeed ?? 0.25]}
+                  min={0.1} max={0.6} step={0.05}
+                  onValueChange={([v]) => updateContent('parallaxSpeed', v)}
+                />
+              </div>
+            )}
           </div>
         )}
 
@@ -165,6 +241,15 @@ function SectionEditor({
             >
               <Plus className="h-3 w-3 mr-1" /> Ajouter une image
             </Button>
+            <div className="space-y-1">
+              <Label className="text-xs">Effet au survol</Label>
+              <Select value={section.content.hoverEffect || 'none'} onValueChange={v => updateContent('hoverEffect', v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {HOVER_EFFECTS.map(h => <SelectItem key={h.value} value={h.value}>{h.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         )}
 
@@ -207,6 +292,8 @@ function SectionEditor({
         {/* Popup button */}
         {section.type === 'popup_button' && (
           <PopupButtonEditor section={section} updateContent={updateContent} />
+        )}
+        </>
         )}
       </CardContent>
     </Card>
@@ -434,6 +521,7 @@ interface PageBuilderProps {
 
 export default function PageBuilder({ sections, onChange }: PageBuilderProps) {
   const [addType, setAddType] = useState<string>('');
+  const [lastAddedId, setLastAddedId] = useState<string | null>(null);
 
   const addSection = (type: string) => {
     const newSection: PageSection = {
@@ -443,6 +531,7 @@ export default function PageBuilder({ sections, onChange }: PageBuilderProps) {
       order: sections.length,
     };
     onChange([...sections, newSection]);
+    setLastAddedId(newSection.id);
     setAddType('');
   };
 
@@ -508,6 +597,7 @@ export default function PageBuilder({ sections, onChange }: PageBuilderProps) {
             onMoveDown={() => moveSection(index, 'down')}
             isFirst={index === 0}
             isLast={index === sections.length - 1}
+            defaultOpen={section.id === lastAddedId}
           />
         ))}
       </div>

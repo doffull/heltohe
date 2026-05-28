@@ -8,7 +8,16 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { subscribeToNewsletter } from '@/hooks/useNewsletterPopups';
 import { cn } from '@/lib/utils';
+import { useParallax } from '@/hooks/useParallax';
 import type { PageSection } from '@/hooks/usePages';
+
+const HOVER_CLASSES: Record<string, string> = {
+  zoom: 'hover:scale-110',
+  'zoom-out': 'scale-110 hover:scale-100',
+  tilt: 'hover:rotate-1 hover:scale-105',
+  brightness: 'hover:brightness-110',
+  'grayscale-off': 'grayscale hover:grayscale-0',
+};
 
 function HeroSection({ content }: { content: Record<string, any> }) {
   return (
@@ -32,9 +41,22 @@ function HeroSection({ content }: { content: Record<string, any> }) {
 
 function ImageSection({ content }: { content: Record<string, any> }) {
   const sizeClass = content.size === 'small' ? 'max-w-md' : content.size === 'medium' ? 'max-w-2xl' : 'w-full';
+  const hoverClass = HOVER_CLASSES[content.hoverEffect as string] || '';
+  const parallax = useParallax<HTMLImageElement>(content.parallaxSpeed ?? 0.25);
+  if (!content.url) return null;
+  const img = (
+    <img
+      ref={content.parallax ? parallax.ref : undefined}
+      src={content.url}
+      alt={content.alt || ''}
+      className={cn('w-full h-auto object-cover transition-all duration-500 will-change-transform', hoverClass)}
+      style={content.parallax ? parallax.style : undefined}
+      loading="lazy"
+    />
+  );
   return (
-    <div className={`mx-auto ${sizeClass}`}>
-      <img src={content.url} alt={content.alt || ''} className="w-full h-auto object-cover" loading="lazy" />
+    <div className={cn('mx-auto group overflow-hidden', sizeClass)}>
+      {img}
     </div>
   );
 }
@@ -56,10 +78,13 @@ function VideoSection({ content }: { content: Record<string, any> }) {
 
 function SliderSection({ content }: { content: Record<string, any> }) {
   const images = content.images || [];
+  const hoverClass = HOVER_CLASSES[content.hoverEffect as string] || '';
   return (
     <div className="flex gap-4 overflow-x-auto py-4 snap-x snap-mandatory">
       {images.map((url: string, i: number) => (
-        <img key={i} src={url} alt="" className="h-64 w-auto object-cover snap-center flex-shrink-0 rounded" loading="lazy" />
+        <div key={i} className="group overflow-hidden rounded snap-center flex-shrink-0">
+          <img src={url} alt="" className={cn('h-64 w-auto object-cover transition-all duration-500', hoverClass)} loading="lazy" />
+        </div>
       ))}
     </div>
   );
