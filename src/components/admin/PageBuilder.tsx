@@ -597,6 +597,7 @@ export default function PageBuilder({ sections, onChange }: PageBuilderProps) {
             onMoveDown={() => moveSection(index, 'down')}
             isFirst={index === 0}
             isLast={index === sections.length - 1}
+            defaultOpen={section.id === lastAddedId}
           />
         ))}
       </div>
