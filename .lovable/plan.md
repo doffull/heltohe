@@ -1,28 +1,38 @@
-## Problème identifié
+## 1. Bouton « rouvrir le panneau » (sidebar gauche)
 
-La version publiée charge bien l’app, mais la requête publique vers `design_settings_public` retourne une liste vide (`[]`). Du coup le site tombe sur les valeurs par défaut du code : `Mon Site`, logo absent, image hero en placeholder, etc.
+Aujourd'hui c'est un gros carré noir 48×48 en bas à gauche (`MainLayout.tsx` l.638-669, `z-60`) qui chevauche les FAB (voix, assistant, roulette).
 
-Cause probable : la vue publique `design_settings_public` a été repassée en mode `security_invoker`, donc elle applique les règles privées de la table `design_settings`. Ces règles autorisent l’admin connecté, mais bloquent les visiteurs anonymes du site publié.
+Options proposées — je choisis l'approche **discret + intelligent** :
 
-## Plan de correction
+- Remplacer le carré plein par une **petite poignée fine** ancrée sur le bord gauche de l'écran (≈ 8 px de large, 56 px de haut), centrée verticalement, avec une fine flèche `›`.
+- État au repos : **semi-transparente** (opacité ~35 %, fond `bg-foreground/20`, backdrop-blur). Au survol / tap : opacité 100 %.
+- Apparaît uniquement quand le **header MiniNavbar est visible** (réutiliser le state de scroll qui contrôle déjà l'apparition du header) → quand le header se masque au scroll, la poignée disparaît aussi. Résultat : zéro collision avec les FAB en bas à droite.
+- Sur mobile : même poignée latérale, taille un peu plus haute (72 px) pour rester tactile, toujours sur le bord gauche (loin du FAB en bas à droite).
+- Garder le bouton X de fermeture **dans** le panneau inchangé.
 
-1. **Restaurer la lecture publique sécurisée des réglages visibles**
-   - Recréer/ajuster `design_settings_public` comme vue publique contrôlée, sans exposer les champs sensibles.
-   - Conserver la table source `design_settings` privée/admin-only.
-   - Donner l’accès de lecture à `anon` et `authenticated` uniquement sur la vue publique.
+## 2. Jeu-concours / Roulette / Cartes — n'apparaît plus
 
-2. **Vérifier les médias publics**
-   - Confirmer que le bucket `media` est bien public.
-   - Vérifier que le logo et les vidéos/images de hero présents dans vos réglages sont accessibles publiquement.
+Le rendu côté site est piloté par `UnifiedFab.tsx` qui filtre les items via :
+```ts
+.filter((it) => it.id !== 'roulette' || rouletteConfig?.enabled)
+```
+et selon le `mode` (`socle | free | grouped | cluster | dock`) + `items[].visible` + `customFabs.visible_*` stockés dans `design_settings.unifiedFab` et la table `home_fab_buttons`.
 
-3. **Valider sur le domaine publié**
-   - Recharger `https://lvtk2026.helvetica-mp.net` en visiteur anonyme.
-   - Vérifier que la requête `design_settings_public` retourne la ligne `main`.
-   - Confirmer que le logo, le nom du site et les médias configurés reviennent au lieu des placeholders.
+Plan d'investigation + correctif :
 
-## Détail technique
+1. Lire l'état actuel en base : `design_settings.unifiedFab` (mode, items, dockShow*, freeCustomIds) et `roulette_config.enabled` + `home_fab_buttons`. Identifier laquelle des conditions masque tout (probable : `mode=dock` avec tous les `dockShow*` à false, ou `items[].visible=false` après une sauvegarde admin, ou `rouletteConfig.enabled=false`).
+2. Ajouter un **garde-fou** dans `UnifiedFab` : si après filtres `visibleItems.length === 0 && visibleCustom.length === 0`, retomber sur les `DEFAULT_ITEMS` au lieu d'un écran vide — pour qu'une mauvaise config admin ne fasse jamais disparaître les FAB.
+3. Vérifier la sauvegarde dans `AdminRoulette.tsx`, `UnifiedFabEditor.tsx`, `AdminHomeIcons.tsx` : confirmer qu'ils écrivent bien dans `design_settings` / `roulette_config` / `home_fab_buttons`, et que le cache React Query est invalidé (sinon le site public garde l'ancienne config).
+4. Tester chaque jeu (Roulette, Scratch, etc.) : ouvrir le panneau depuis le site public et reproduire les bugs « rien ne fonctionne ». Corriger au cas par cas (handlers `triggerItem`, `RouletteFab`, `GameScratchFab`, `GameRouter`).
+5. Re-vérifier le site public après chaque correctif (preview navigateur).
 
-La correction sera une migration base de données ciblée :
-- ne pas rendre `design_settings` publique directement ;
-- utiliser `design_settings_public` comme surface publique filtrée ;
-- garder les règles de sécurité admin sur la table complète.
+## Fichiers touchés (prévisionnel)
+
+- `src/components/layout/MainLayout.tsx` — nouveau composant de poignée latérale, retrait des 2 anciens boutons carrés.
+- `src/components/layout/UnifiedFab.tsx` — fallback DEFAULT_ITEMS si tout est masqué + petits fix d'invalidation.
+- `src/pages/admin/AdminRoulette.tsx` / `UnifiedFabEditor.tsx` / `AdminHomeIcons.tsx` — invalidation React Query si manquante.
+- Possibles correctifs ciblés dans `RouletteFab.tsx`, `GameRouter.tsx`, `GameScratchFab.tsx` selon ce que révèle le test.
+
+## Hors-scope
+
+Pas de refonte du système FAB, pas de migration DB sauf si un bug bloquant l'exige.
