@@ -96,6 +96,17 @@ export default function AdminHomeIcons() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
+      {/* Barre globale sticky : enregistre EN UNE SEULE FOIS toutes les modifs de la page */}
+      <div className="sticky top-0 z-30 -mx-4 md:-mx-6 px-4 md:px-6 py-3 bg-background/95 backdrop-blur border-b flex items-center justify-between gap-3">
+        <div className="text-xs text-muted-foreground">
+          💡 Astuce : <strong>« Tout enregistrer »</strong> sauvegarde en une fois les sections, le bouton flottant unifié et l'ordre de la home.
+        </div>
+        <Button onClick={handleSaveAll} disabled={savingAll} size="sm" className="gap-1.5 shrink-0">
+          {savingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          Tout enregistrer
+        </Button>
+      </div>
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Icônes flottantes (Page d'accueil)</h1>
