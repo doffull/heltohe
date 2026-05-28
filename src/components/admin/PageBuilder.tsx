@@ -293,6 +293,12 @@ function SectionEditor({
         {section.type === 'popup_button' && (
           <PopupButtonEditor section={section} updateContent={updateContent} />
         )}
+        </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
       </CardContent>
     </Card>
   );
