@@ -1,14 +1,26 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { GripVertical, Save, Eye, EyeOff, Sparkles } from 'lucide-react';
+import { GripVertical, Save, Eye, EyeOff, Sparkles, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { PageSection } from '@/hooks/usePages';
+
+const EDIT_ROUTE: Record<string, string> = {
+  hero: '/admin/design#techwear-hero',
+  categories: '/admin/categories',
+  featured: '/admin/products',
+  newArrivals: '/admin/products',
+  flash: '/admin/marketing#flash',
+  loyalty: '/admin/marketing#fidelite',
+  newsletter: '/admin/marketing#newsletter',
+  voiceBanner: '/admin/home-icons#unified-fab',
+};
 
 type BuiltinId = 'hero' | 'categories' | 'featured' | 'flash' | 'newArrivals' | 'voiceBanner' | 'loyalty' | 'newsletter';
 interface Block { id: string; visible: boolean; label?: string }
