@@ -47,6 +47,7 @@ export function UnifiedFab() {
   }, []);
 
   const cfg = (designSettings as any).unifiedFab || {};
+  const fabEnabled = cfg.enabled !== false;
   const accent = cfg.accentColor || '#ffffff';
   const mode: 'socle' | 'free' | 'grouped' | 'cluster' | 'dock' =
     cfg.mode === 'free' ? 'free' : cfg.mode === 'grouped' ? 'grouped' : cfg.mode === 'cluster' ? 'cluster' : cfg.mode === 'dock' ? 'dock' : 'socle';
