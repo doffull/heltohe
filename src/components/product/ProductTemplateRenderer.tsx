@@ -1,11 +1,13 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Heart, Share2, Ruler, Truck, Shield, RotateCcw, Minus, Plus, ZoomIn, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { PageTemplate, TemplateBlock } from '@/config/templatePresets';
+import { loadGoogleFont } from '@/config/blockVariants';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import RelatedProducts from '@/components/product/RelatedProducts';
 import { cn } from '@/lib/utils';
+
 
 interface Props {
   template: PageTemplate;
@@ -20,6 +22,12 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [imgIdx, setImgIdx] = useState(0);
+  const [imgIdx, setImgIdx] = useState(0);
+
+  useEffect(() => {
+    if (template.theme.fontHeading) loadGoogleFont(template.theme.fontHeading);
+    if (template.theme.fontBody) loadGoogleFont(template.theme.fontBody);
+  }, [template.theme.fontHeading, template.theme.fontBody]);
 
   const images: string[] = useMemo(() => {
     const arr: string[] = [];
