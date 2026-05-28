@@ -88,6 +88,13 @@ export function HomeBlocksEditor() {
   const [blocks, setBlocks] = useState<Block[]>(merged);
   useEffect(() => { setBlocks(merged); /* eslint-disable-next-line */ }, [JSON.stringify(merged.map(b => b.id))]);
 
+  // Listen to global "collect" event so the page-level "Tout enregistrer" picks up our local state
+  useEffect(() => {
+    const handler = () => { updateDesignSettings({ homePageBlocks: blocks } as any); };
+    window.addEventListener('homeicons:collect', handler);
+    return () => window.removeEventListener('homeicons:collect', handler);
+  }, [blocks, updateDesignSettings]);
+
   const onDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
     if (!over || active.id === over.id) return;
@@ -99,8 +106,7 @@ export function HomeBlocksEditor() {
   const toggle = (id: string) => setBlocks(blocks.map((b) => b.id === id ? { ...b, visible: !b.visible } : b));
 
   const save = async () => {
-    updateDesignSettings({ homePageBlocks: blocks } as any);
-    await flushDesignSettings();
+    await flushDesignSettings({ homePageBlocks: blocks } as any);
     toast.success("Ordre des sections enregistré");
   };
 
