@@ -18,9 +18,31 @@ import { useAdminConfig, useSaveAdminConfig } from '@/hooks/useAdminConfig';
 
 export default function AdminSettings() {
   const { toast } = useToast();
-  const { designSettings, updateDesignSettings } = useApp();
+  const { designSettings, updateDesignSettings, flushDesignSettings } = useApp();
   const { data: adminConfig } = useAdminConfig();
   const saveAdminConfig = useSaveAdminConfig();
+  const [savingCols, setSavingCols] = useState(false);
+
+  const cols = designSettings.categoryColumns ?? 4;
+  const gridColsClass =
+    cols === 2 ? 'grid-cols-1 sm:grid-cols-2' :
+    cols === 3 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' :
+    cols === 4 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' :
+    cols === 5 ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5' :
+    'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6';
+
+  const handleColumnsChange = async (n: number) => {
+    updateDesignSettings({ categoryColumns: n });
+    setSavingCols(true);
+    try {
+      await flushDesignSettings({ categoryColumns: n });
+      toast({ title: 'Disposition enregistrée ✓', description: `${n} colonnes appliquées.` });
+    } catch {
+      toast({ title: 'Erreur', description: 'Impossible d\'enregistrer.', variant: 'destructive' });
+    } finally {
+      setSavingCols(false);
+    }
+  };
 
   // Categories
   const { data: categories = [], isLoading } = useCategories();
