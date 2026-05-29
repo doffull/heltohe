@@ -187,6 +187,19 @@ export const INITIAL_ORDERS: Order[] = [
 ];
 
 export const INITIAL_DESIGN_SETTINGS: DesignSettings = {
+  sidebarNavLinks: [
+    { id: 'home', label: 'ACCUEIL', labelEN: 'HOME', icon: 'Home', view: 'Home', enabled: true },
+    { id: 'shop', label: 'BOUTIQUE', labelEN: 'SHOP', icon: 'ShoppingBag', view: 'Shop', enabled: true },
+    { id: 'about', label: 'À PROPOS', labelEN: 'ABOUT', icon: 'Info', view: 'About', enabled: true },
+  ],
+  megaMenuLinks: [
+    { id: 'accueil', label: 'Accueil', href: '/', enabled: true },
+    { id: 'boutique', label: 'Boutique', href: '/boutique', enabled: true },
+    { id: 'nouveautes', label: 'Nouveautés', href: '/boutique?tag=new', enabled: true },
+    { id: 'a-propos', label: 'À propos', href: '/a-propos', enabled: true },
+    { id: 'contact', label: 'Contact', href: '/contact', enabled: true },
+    { id: 'fidelite', label: 'Fidélité', href: '/fidelite', enabled: true },
+  ],
   sidebarBg: '#0a0a0a',
   accentColor: '#3498db',
   showLogo: true,
