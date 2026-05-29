@@ -51,6 +51,7 @@ const NAV_ITEMS = [
   { key: 'hero',        label: 'Hero Slider',  icon: ImagePlay,       desc: 'Slides & parallaxe' },
   { key: 'techwear',    label: 'Hero Techwear', icon: ImagePlay,       desc: 'Carte produit dynamique' },
   { key: 'header',      label: 'Header',       icon: PanelTop,        desc: 'Barre de navigation' },
+  { key: 'navigation',  label: 'Navigation',   icon: PanelLeft,       desc: 'Liens Sidebar & Mega Menu' },
   { key: 'logo',        label: 'Logo & Marque',icon: Image,           desc: 'Identité visuelle' },
   { key: 'couleurs',    label: 'Couleurs',     icon: Palette,         desc: 'Palette & thème' },
   { key: 'sidebar',     label: 'Sidebar',      icon: PanelLeft,       desc: 'Panneau latéral' },
@@ -2610,11 +2611,126 @@ function PromoParallaxTab() {
   );
 }
 
+// ─── Navigation Tab (Sidebar + Mega Menu links) ───
+function NavigationTab() {
+  const { designSettings, updateDesignSettings } = useApp();
+  const sidebarLinks = designSettings.sidebarNavLinks ?? [];
+  const megaLinks = designSettings.megaMenuLinks ?? [];
+
+  const updateSidebar = (idx: number, patch: Partial<typeof sidebarLinks[number]>) => {
+    const next = sidebarLinks.map((l, i) => i === idx ? { ...l, ...patch } : l);
+    updateDesignSettings({ sidebarNavLinks: next });
+  };
+  const moveSidebar = (idx: number, dir: -1 | 1) => {
+    const j = idx + dir; if (j < 0 || j >= sidebarLinks.length) return;
+    const next = [...sidebarLinks]; [next[idx], next[j]] = [next[j], next[idx]];
+    updateDesignSettings({ sidebarNavLinks: next });
+  };
+  const removeSidebar = (idx: number) => {
+    updateDesignSettings({ sidebarNavLinks: sidebarLinks.filter((_, i) => i !== idx) });
+  };
+
+  const updateMega = (idx: number, patch: Partial<typeof megaLinks[number]>) => {
+    const next = megaLinks.map((l, i) => i === idx ? { ...l, ...patch } : l);
+    updateDesignSettings({ megaMenuLinks: next });
+  };
+  const moveMega = (idx: number, dir: -1 | 1) => {
+    const j = idx + dir; if (j < 0 || j >= megaLinks.length) return;
+    const next = [...megaLinks]; [next[idx], next[j]] = [next[j], next[idx]];
+    updateDesignSettings({ megaMenuLinks: next });
+  };
+  const removeMega = (idx: number) => {
+    updateDesignSettings({ megaMenuLinks: megaLinks.filter((_, i) => i !== idx) });
+  };
+  const addMega = () => {
+    updateDesignSettings({
+      megaMenuLinks: [...megaLinks, { id: generateId(), label: 'Nouveau lien', href: '/', enabled: true }],
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Sidebar gauche</CardTitle>
+          <CardDescription>Active, renomme ou réordonne les liens du menu vertical. N'oublie pas de cliquer sur « Sauvegarder » en haut.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {sidebarLinks.length === 0 && (
+            <p className="text-sm text-muted-foreground">Aucun lien configuré.</p>
+          )}
+          {sidebarLinks.map((link, idx) => (
+            <div key={link.id} className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center p-3 border rounded-lg bg-card">
+              <div className="flex flex-col gap-1">
+                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => moveSidebar(idx, -1)} disabled={idx === 0}><ChevronUp className="h-4 w-4" /></Button>
+                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => moveSidebar(idx, 1)} disabled={idx === sidebarLinks.length - 1}><ChevronDown className="h-4 w-4" /></Button>
+              </div>
+              <Switch checked={link.enabled} onCheckedChange={(v) => updateSidebar(idx, { enabled: v })} />
+              <Input
+                className="flex-1"
+                placeholder="Libellé FR"
+                value={link.label}
+                onChange={(e) => updateSidebar(idx, { label: e.target.value })}
+              />
+              <Input
+                className="flex-1"
+                placeholder="Libellé EN"
+                value={link.labelEN}
+                onChange={(e) => updateSidebar(idx, { labelEN: e.target.value })}
+              />
+              <Button size="icon" variant="ghost" className="text-destructive" onClick={() => removeSidebar(idx)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Mega Menu</CardTitle>
+          <CardDescription>Active, renomme, réordonne ou supprime les liens du menu plein écran.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {megaLinks.map((link, idx) => (
+            <div key={link.id} className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center p-3 border rounded-lg bg-card">
+              <div className="flex flex-col gap-1">
+                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => moveMega(idx, -1)} disabled={idx === 0}><ChevronUp className="h-4 w-4" /></Button>
+                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => moveMega(idx, 1)} disabled={idx === megaLinks.length - 1}><ChevronDown className="h-4 w-4" /></Button>
+              </div>
+              <Switch checked={link.enabled} onCheckedChange={(v) => updateMega(idx, { enabled: v })} />
+              <Input
+                className="flex-1"
+                placeholder="Libellé"
+                value={link.label}
+                onChange={(e) => updateMega(idx, { label: e.target.value })}
+              />
+              <Input
+                className="flex-1"
+                placeholder="/chemin"
+                value={link.href}
+                onChange={(e) => updateMega(idx, { href: e.target.value })}
+              />
+              <Button size="icon" variant="ghost" className="text-destructive" onClick={() => removeMega(idx)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+          <Button variant="outline" size="sm" onClick={addMega} className="gap-2">
+            <Plus className="h-4 w-4" /> Ajouter un lien
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 const TAB_COMPONENTS: Record<string, React.ComponentType> = {
   disposition: DispositionTab,
   hero:        HeroSliderTab,
   techwear:    TechwearHeroTab,
   header:      HeaderDesignTab,
+  navigation:  NavigationTab,
   logo:        LogoTab,
   couleurs:    CouleursTab,
   sidebar:     SidebarTab,

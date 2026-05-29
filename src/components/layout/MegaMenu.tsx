@@ -10,13 +10,13 @@ import { cn } from '@/lib/utils';
 
 const PLACEHOLDER = '/placeholder.svg';
 
-const STATIC_LINKS = [
-  { label: 'Accueil', href: '/' },
-  { label: 'Boutique', href: '/boutique' },
-  { label: 'Nouveautés', href: '/boutique?tag=new' },
-  { label: 'À propos', href: '/a-propos' },
-  { label: 'Contact', href: '/contact' },
-  { label: 'Fidélité', href: '/fidelite' },
+const DEFAULT_STATIC_LINKS = [
+  { id: 'accueil', label: 'Accueil', href: '/', enabled: true },
+  { id: 'boutique', label: 'Boutique', href: '/boutique', enabled: true },
+  { id: 'nouveautes', label: 'Nouveautés', href: '/boutique?tag=new', enabled: true },
+  { id: 'a-propos', label: 'À propos', href: '/a-propos', enabled: true },
+  { id: 'contact', label: 'Contact', href: '/contact', enabled: true },
+  { id: 'fidelite', label: 'Fidélité', href: '/fidelite', enabled: true },
 ];
 
 const overlayV = {
@@ -46,6 +46,7 @@ export function MegaMenu() {
   const [search, setSearch] = useState('');
 
   const rootCats = useMemo(() => dbCategories.filter((c) => !c.parentId), [dbCategories]);
+  const staticLinks = (designSettings.megaMenuLinks ?? DEFAULT_STATIC_LINKS).filter((l) => l.enabled);
 
   // ESC close + lock scroll
   useEffect(() => {
@@ -196,7 +197,7 @@ export function MegaMenu() {
                 <div>
                   <p className="font-mono text-[10px] tracking-[0.3em] text-muted-foreground mb-3">// LIENS</p>
                   <ul className="flex flex-wrap gap-x-6 gap-y-2">
-                    {STATIC_LINKS.map((l) => (
+                    {staticLinks.map((l) => (
                       <motion.li key={l.href} variants={itemV}>
                         <Link
                           to={l.href}

@@ -447,6 +447,10 @@ export interface DesignSettings {
   // Category grid columns
   categoryColumns?: number;
 
+  // Configurable navigation links
+  sidebarNavLinks?: Array<{ id: string; label: string; labelEN: string; icon: string; view: ViewType; enabled: boolean }>;
+  megaMenuLinks?: Array<{ id: string; label: string; href: string; enabled: boolean }>;
+
   // Category layout preset
   categoryLayout?: {
     preset: string;

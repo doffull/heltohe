@@ -1,36 +1,58 @@
-# Problème
+# Liens de navigation configurables (Sidebar + Mega Menu)
 
-Dans `/admin/parametres` → onglet **Catégories**, le sélecteur "Colonnes : 2 / 3 / 4" ne semble rien faire :
+## Objectif
+Dans `/admin/design`, ajouter un panneau permettant de :
+- Masquer / réafficher chaque lien de la **Sidebar gauche** et du **Mega Menu**
+- Réordonner les liens par glisser-déposer
+- Renommer les libellés (FR / EN pour la sidebar)
+- Sauvegarde explicite (cohérent avec la règle "Admin: pas d'auto-save")
 
-1. La grille d'aperçu juste en dessous utilise des classes **codées en dur** (`grid sm:grid-cols-2 lg:grid-cols-3`) → le choix n'a aucun effet visuel immédiat dans l'admin.
-2. La sauvegarde existe (auto-save debounced 800 ms via `AppContext.updateDesignSettings`), mais sans **aucun retour visuel** : l'utilisateur croit que rien n'est enregistré.
-3. Aucun bouton "Enregistrer" explicite, aucun toast de confirmation.
+## Où ça change
 
-Conclusion : la valeur est bien persistée en base (`design_settings.category_columns`), mais l'UI ne le montre pas → impression que "rien ne marche".
+### 1. Modèle de données — `designSettings`
+Ajouter deux champs dans `design_settings` (JSON, pas de migration SQL — `design_settings` est déjà un blob libre) :
 
-# Plan
+```ts
+sidebarNavLinks: Array<{ id: string; label: string; labelEN: string; icon: string; enabled: boolean }>
+megaMenuLinks:   Array<{ id: string; label: string; href: string; enabled: boolean }>
+```
 
-**Fichier : `src/pages/admin/AdminSettings.tsx`** (onglet Catégories uniquement)
+Valeurs par défaut = la liste hardcodée actuelle (`Accueil/Boutique/À propos` pour la sidebar ; `Accueil/Boutique/Nouveautés/À propos/Contact/Fidélité` pour le mega menu).
 
-1. **Rendre la grille d'aperçu dynamique**
-   Remplacer `className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4"` par une grille pilotée par `designSettings.categoryColumns` (2, 3 ou 4 colonnes en desktop, dégradé responsive mobile/tablette).
+Fichiers touchés :
+- `src/types/index.ts` — type `DesignSettings`
+- `src/data/initialData.ts` — defaults
+- `src/hooks/useDesignSettings.ts` — fallback de lecture
 
-2. **Étendre le sélecteur à 2 / 3 / 4 / 5 / 6 colonnes**
-   Pour offrir la même amplitude que `LayoutEditorTab` (slider 2–5) et au-delà.
+### 2. Consommation côté site
+- `src/components/layout/Sidebar.tsx` — remplacer la constante `navItems` par `designSettings.sidebarNavLinks.filter(l => l.enabled)`, avec un map id→icône Lucide (Home, ShoppingBag, Info, etc.) pour conserver les icônes.
+- `src/components/layout/MegaMenu.tsx` — remplacer `STATIC_LINKS` par `designSettings.megaMenuLinks.filter(l => l.enabled)`.
 
-3. **Ajouter un indicateur de sauvegarde explicite**
-   - Petit badge à côté du sélecteur : `Enregistré ✓` (vert) / `Enregistrement…` (spinner) basé sur l'état de `saveDesignSettings` exposé via `useApp`.
-   - Toast `Disposition enregistrée` quand la mutation réussit après un changement de `categoryColumns`.
+### 3. Admin — nouvel onglet "Navigation" dans `/admin/design`
+Dans `src/pages/admin/AdminDesign.tsx`, ajouter une carte "Liens de navigation" avec deux sous-sections :
 
-4. **Ajouter un bouton "Enregistrer maintenant"** (optionnel mais demandé : "save")
-   Bouton compact à côté du sélecteur qui appelle `flushDesignSettings()` immédiatement (court-circuite le debounce 800 ms) et déclenche le toast.
+**Sidebar gauche**
+- Liste des 3 liens avec :
+  - Switch on/off
+  - Champ libellé FR
+  - Champ libellé EN
+  - Poignée de drag pour réordonner
+- Bouton "Ajouter un lien" (optionnel — choix d'icône via IconPicker existant)
 
-# Hors périmètre
+**Mega Menu**
+- Même UI : switch, label, champ href, drag-handle, bouton ajouter.
 
-- Pas de changement DB (la colonne `category_columns` existe déjà et est sauvegardée correctement).
-- Pas de changement à `useDesignSettings` ni à `AppContext` (logique de save déjà OK).
-- Pas de modification de la grille catégories de la home (`src/pages/Home.tsx` honore déjà `categoryColumns`).
+Bouton "Enregistrer" en pied de carte (utilise `useSaveDesignSettings` déjà en place dans le projet, cf. `VisualEditorPanel.tsx`). Toast de confirmation.
 
-# Résultat attendu
+Drag-and-drop : `@dnd-kit/core` + `@dnd-kit/sortable` (déjà utilisés ailleurs dans le projet d'après le pattern Categories — à vérifier rapidement, sinon fallback boutons ↑/↓).
 
-L'utilisateur clique sur `2`, `3`, `4`, `5` ou `6` → la grille d'aperçu admin change immédiatement, un toast `Disposition enregistrée` s'affiche, et au rechargement la valeur est conservée.
+## Hors scope
+- Pas de migration DB.
+- Pas de changement sur Header, FAB, ou autre menu.
+- Pas de gestion multi-langue au-delà du FR/EN déjà supporté.
+- Pas de sous-menus / nesting.
+
+## Détails techniques
+- Sécurité : `designSettings` est public, donc aucun secret n'y transite — OK.
+- Compatibilité : si `sidebarNavLinks`/`megaMenuLinks` absents en DB, on retombe sur les defaults → pas de régression pour les installations existantes.
+- Sauvegarde explicite via bouton (pas d'auto-save) conformément à la convention admin du projet.

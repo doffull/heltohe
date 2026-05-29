@@ -1,23 +1,21 @@
-import { Home, ShoppingBag, Info, Settings, Layers, Sparkles } from 'lucide-react';
+import { Home, ShoppingBag, Info, Settings, Layers, Sparkles, Mail, Phone, Heart, Star, Gift, User, Tag, Package, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
 import { ViewType } from '@/types';
 
-interface NavItem {
-  id: ViewType;
-  label: string;
-  labelEN: string;
-  icon: React.ElementType;
-}
+const ICONS: Record<string, LucideIcon> = {
+  Home, ShoppingBag, Info, Settings, Layers, Sparkles, Mail, Phone, Heart, Star, Gift, User, Tag, Package,
+};
 
-const navItems: NavItem[] = [
-  { id: 'Home', label: 'ACCUEIL', labelEN: 'HOME', icon: Home },
-  { id: 'Shop', label: 'BOUTIQUE', labelEN: 'SHOP', icon: ShoppingBag },
-  { id: 'About', label: 'À PROPOS', labelEN: 'ABOUT', icon: Info },
+const FALLBACK_NAV = [
+  { id: 'home', label: 'ACCUEIL', labelEN: 'HOME', icon: 'Home', view: 'Home' as ViewType, enabled: true },
+  { id: 'shop', label: 'BOUTIQUE', labelEN: 'SHOP', icon: 'ShoppingBag', view: 'Shop' as ViewType, enabled: true },
+  { id: 'about', label: 'À PROPOS', labelEN: 'ABOUT', icon: 'Info', view: 'About' as ViewType, enabled: true },
 ];
 
 export function Sidebar() {
   const { currentView, setCurrentView, language, designSettings } = useApp();
+  const navItems = (designSettings.sidebarNavLinks ?? FALLBACK_NAV).filter(n => n.enabled);
   
   return (
     <aside 
@@ -53,13 +51,13 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 py-6 px-2 lg:px-4 space-y-2">
         {navItems.map((item, index) => {
-          const Icon = item.icon;
-          const isActive = currentView === item.id;
+          const Icon = ICONS[item.icon] ?? Home;
+          const isActive = currentView === item.view;
           
           return (
             <button
               key={item.id}
-              onClick={() => setCurrentView(item.id)}
+              onClick={() => setCurrentView(item.view)}
               className={cn(
                 "w-full flex items-center gap-3 px-3 py-3 lg:py-2.5 transition-all duration-200 group",
                 "hover:bg-primary/10 border border-transparent",
