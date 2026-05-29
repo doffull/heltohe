@@ -322,6 +322,7 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
                  style={{
                    gridColumn: `${b.col || 1} / span ${b.span || 12}`,
                    gridRow: b.row ? `${b.row} / span ${b.rowSpan || 1}` : undefined,
+                   ...blockStyle(b),
                  }}>
               {renderBlock(b)}
             </div>
