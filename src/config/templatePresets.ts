@@ -13,6 +13,20 @@ export type BlockType =
   | 'cta_add_to_cart' | 'btn_wishlist' | 'btn_share' | 'related_products' | 'custom_html'
   | 'divider' | 'spacer';
 
+export interface BlockStyleProps {
+  label?: string;            // custom text override
+  html?: string;             // for custom_html block
+  fontFamily?: string;       // '' = inherit theme
+  fontSize?: number;         // px
+  fontWeight?: number;       // 300..900
+  textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
+  letterSpacing?: number;    // px
+  textAlign?: 'left' | 'center' | 'right';
+  color?: string;            // '' = inherit
+  bgColor?: string;
+  accentColor?: string;
+}
+
 export interface TemplateBlock {
   id: string;
   type: BlockType;
@@ -22,7 +36,7 @@ export interface TemplateBlock {
   row?: number;
   rowSpan?: number;
   visible?: boolean;
-  props?: Record<string, any>;
+  props?: BlockStyleProps & Record<string, any>;
 }
 
 export interface TemplateTheme {

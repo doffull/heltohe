@@ -26,7 +26,27 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
   useEffect(() => {
     if (template.theme.fontHeading) loadGoogleFont(template.theme.fontHeading);
     if (template.theme.fontBody) loadGoogleFont(template.theme.fontBody);
-  }, [template.theme.fontHeading, template.theme.fontBody]);
+    // Load per-block custom fonts
+    template.layout.blocks.forEach(b => {
+      if (b.props?.fontFamily) loadGoogleFont(b.props.fontFamily);
+    });
+  }, [template]);
+
+  const blockStyle = (b: TemplateBlock): React.CSSProperties => {
+    const p = b.props || {};
+    const s: React.CSSProperties = {};
+    if (p.fontFamily) s.fontFamily = p.fontFamily;
+    if (p.fontSize) s.fontSize = `${p.fontSize}px`;
+    if (p.fontWeight) s.fontWeight = p.fontWeight;
+    if (p.textTransform) s.textTransform = p.textTransform;
+    if (typeof p.letterSpacing === 'number') s.letterSpacing = `${p.letterSpacing}px`;
+    if (p.textAlign) s.textAlign = p.textAlign;
+    if (p.color) s.color = p.color;
+    if (p.bgColor) s.backgroundColor = p.bgColor;
+    return s;
+  };
+  const labelOf = (b: TemplateBlock, fallback: string) =>
+    (b.props?.label && String(b.props.label).trim()) || fallback;
 
 
   const images: string[] = useMemo(() => {
@@ -86,8 +106,8 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
       );
       case 'category_tag': return (
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] font-bold uppercase tracking-[2px]" style={{ color: t.colors.accent }}>
-            {product?.category || 'Produit'}
+          <span className="text-[11px] font-bold uppercase tracking-[2px]" style={{ color: b.props?.accentColor || t.colors.accent }}>
+            {labelOf(b, product?.category || 'Produit')}
           </span>
           {product?.sku && <span className="text-[11px]" style={{ color: t.colors.muted }}>SKU: {product.sku}</span>}
         </div>
@@ -95,12 +115,12 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
       case 'sku': return product?.sku ? <div className="text-xs" style={{ color: t.colors.muted }}>SKU: {product.sku}</div> : null;
       case 'title': return (
         <h1 className={cn('font-black leading-none', b.props?.uppercase && 'uppercase')}
-            style={{ fontSize: b.props?.size || 36, letterSpacing: '-1.5px', marginBottom: 8 }}>
-          {product?.name}
+            style={{ fontSize: b.props?.fontSize || b.props?.size || 36, letterSpacing: '-1.5px', marginBottom: 8 }}>
+          {labelOf(b, product?.name || '')}
         </h1>
       );
-      case 'collab_subtitle': return product?.collab ? (
-        <div className="text-sm mb-4" style={{ color: t.colors.muted }}>{product.collab}</div>
+      case 'collab_subtitle': return product?.collab || b.props?.label ? (
+        <div className="text-sm mb-4" style={{ color: t.colors.muted }}>{labelOf(b, product?.collab || '')}</div>
       ) : null;
       case 'price': {
         const v = b.variant || 'large-bold';
@@ -139,9 +159,9 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
       }
 
       case 'stock_status': return (
-        <div className="flex items-center gap-2 text-sm font-semibold mb-4" style={{ color: '#22a05a' }}>
-          <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#22a05a' }} />
-          En stock
+        <div className="flex items-center gap-2 text-sm font-semibold mb-4" style={{ color: b.props?.accentColor || '#22a05a' }}>
+          <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: b.props?.accentColor || '#22a05a' }} />
+          {labelOf(b, 'En stock')}
         </div>
       );
       case 'model_info': return product?.modelInfo ? (
@@ -152,31 +172,36 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
       ) : null;
       case 'find_size_btn': return (
         <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border mb-4"
-                style={{ borderColor: t.colors.fg, color: t.colors.fg }}>
-          <Ruler className="w-4 h-4" /> Trouver ma taille
+                style={{ borderColor: b.props?.accentColor || t.colors.fg, color: 'inherit' }}>
+          <Ruler className="w-4 h-4" /> {labelOf(b, 'Trouver ma taille')}
         </button>
       );
-      case 'trust_badges': return (
-        <div className="grid grid-cols-3 gap-px rounded-xl overflow-hidden mb-6" style={{ background: t.colors.border }}>
-          {[
-            { icon: Truck, text: 'Livraison gratuite dès 200€' },
-            { icon: Shield, text: 'Garantie 1 an' },
-            { icon: RotateCcw, text: 'Retours sous 30 jours' },
-          ].map((it, i) => (
-            <div key={i} className="flex flex-col items-center gap-2 p-4 text-center" style={{ background: t.colors.card }}>
-              <it.icon className="w-5 h-5" />
-              <span className="text-xs font-semibold" style={{ color: t.colors.muted }}>{it.text}</span>
-            </div>
-          ))}
-        </div>
-      );
+      case 'trust_badges': {
+        const items = [
+          { icon: Truck, text: 'Livraison gratuite dès 200€' },
+          { icon: Shield, text: 'Garantie 1 an' },
+          { icon: RotateCcw, text: 'Retours sous 30 jours' },
+        ];
+        const customLabels = b.props?.label ? String(b.props.label).split('|').map(s => s.trim()) : [];
+        return (
+          <div className="grid grid-cols-3 gap-px rounded-xl overflow-hidden mb-6" style={{ background: t.colors.border }}>
+            {items.map((it, i) => (
+              <div key={i} className="flex flex-col items-center gap-2 p-4 text-center" style={{ background: t.colors.card }}>
+                <it.icon className="w-5 h-5" />
+                <span className="text-xs font-semibold" style={{ color: t.colors.muted }}>{customLabels[i] || it.text}</span>
+              </div>
+            ))}
+          </div>
+        );
+      }
       case 'description': {
         const v = b.variant || 'plain';
+        const heading = labelOf(b, 'Description');
         if (v === 'bullet-features') {
           const lines = String(product?.description || '').split(/\n|\.\s/).filter(Boolean).slice(0, 6);
           return (
             <div className="mb-4">
-              <h3 className="text-xs font-bold uppercase tracking-[2px] mb-2">Caractéristiques</h3>
+              <h3 className="text-xs font-bold uppercase tracking-[2px] mb-2">{labelOf(b, 'Caractéristiques')}</h3>
               <ul className="text-sm space-y-1" style={{ color: t.colors.muted }}>
                 {lines.map((l, i) => <li key={i} className="flex gap-2"><span style={{ color: t.colors.accent }}>•</span>{l}</li>)}
               </ul>
@@ -194,7 +219,7 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
         }
         return (
           <div className="mb-4">
-            <h3 className="text-xs font-bold uppercase tracking-[2px] mb-2">Description</h3>
+            <h3 className="text-xs font-bold uppercase tracking-[2px] mb-2">{heading}</h3>
             <p className="text-sm leading-relaxed" style={{ color: t.colors.muted }}>{product?.description}</p>
           </div>
         );
@@ -202,14 +227,14 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
 
       case 'material': return product?.material ? (
         <div className="mb-4">
-          <h3 className="text-xs font-bold uppercase tracking-[2px] mb-2">Matière</h3>
+          <h3 className="text-xs font-bold uppercase tracking-[2px] mb-2">{labelOf(b, 'Matière')}</h3>
           <span className="inline-block px-4 py-1.5 rounded-full text-xs font-semibold"
                 style={{ background: t.colors.border, color: t.colors.fg }}>{product.material}</span>
         </div>
       ) : null;
       case 'sizes_selector': return product?.sizes?.length ? (
         <div className="mb-4">
-          <h3 className="text-xs font-bold uppercase tracking-[2px] mb-3">Taille</h3>
+          <h3 className="text-xs font-bold uppercase tracking-[2px] mb-3">{labelOf(b, 'Taille')}</h3>
           <div className="flex flex-wrap gap-2">
             {product.sizes.map((s: string) => (
               <button key={s} onClick={() => setSelectedSize(s)}
@@ -225,7 +250,7 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
       ) : null;
       case 'quantity_selector': return (
         <div className="mb-4">
-          <h3 className="text-xs font-bold uppercase tracking-[2px] mb-3">Quantité</h3>
+          <h3 className="text-xs font-bold uppercase tracking-[2px] mb-3">{labelOf(b, 'Quantité')}</h3>
           <div className="inline-flex items-center rounded-lg border" style={{ borderColor: t.colors.border }}>
             <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-11 h-11 flex items-center justify-center"><Minus className="w-4 h-4" /></button>
             <span className="w-14 text-center font-bold border-x" style={{ borderColor: t.colors.border }}>{quantity}</span>
@@ -236,16 +261,18 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
       case 'cta_add_to_cart': {
         const v = b.variant || 'bold-block';
         const baseBtn = "flex-1 h-14 font-bold tracking-widest uppercase text-sm flex items-center justify-center gap-2 transition-transform hover:-translate-y-0.5";
+        const primaryColor = b.props?.accentColor || t.colors.primary;
         const style: React.CSSProperties = v === 'outline-minimal'
-          ? { borderRadius: t.radius, border: `2px solid ${t.colors.primary}`, color: t.colors.primary, background: 'transparent' }
+          ? { borderRadius: t.radius, border: `2px solid ${primaryColor}`, color: primaryColor, background: 'transparent' }
           : v === 'gradient'
-          ? { borderRadius: t.radius, background: `linear-gradient(135deg, ${t.colors.primary}, ${t.colors.accent})`, color: t.colors.card }
-          : { borderRadius: t.radius, background: t.colors.primary, color: t.colors.card };
+          ? { borderRadius: t.radius, background: `linear-gradient(135deg, ${primaryColor}, ${t.colors.accent})`, color: t.colors.card }
+          : { borderRadius: t.radius, background: primaryColor, color: t.colors.card };
+        const label = labelOf(b, 'Ajouter au panier');
         if (v === 'sticky-bottom') {
           return (
             <div className="fixed bottom-0 left-0 right-0 p-3 border-t z-40" style={{ background: t.colors.card, borderColor: t.colors.border }}>
               <button onClick={handleAddToCart} className={baseBtn + ' w-full'} style={style}>
-                <ShoppingCart className="w-5 h-5" /> Ajouter au panier
+                <ShoppingCart className="w-5 h-5" /> {label}
               </button>
             </div>
           );
@@ -253,7 +280,7 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
         if (v === 'split-buy-now') {
           return (
             <div className="grid grid-cols-2 gap-2 mt-4">
-              <button onClick={handleAddToCart} className={baseBtn} style={{ ...style, background: t.colors.card, border: `2px solid ${t.colors.primary}`, color: t.colors.primary }}>
+              <button onClick={handleAddToCart} className={baseBtn} style={{ ...style, background: t.colors.card, border: `2px solid ${primaryColor}`, color: primaryColor }}>
                 <ShoppingCart className="w-5 h-5" /> Panier
               </button>
               <button onClick={handleAddToCart} className={baseBtn} style={style}>Acheter</button>
@@ -263,7 +290,7 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
         return (
           <div className="flex gap-3 mt-4">
             <button onClick={handleAddToCart} className={baseBtn} style={style}>
-              <ShoppingCart className="w-5 h-5" /> Ajouter au panier
+              <ShoppingCart className="w-5 h-5" /> {label}
             </button>
             <button className="w-14 h-14 rounded-xl border flex items-center justify-center" style={{ borderColor: t.colors.border, borderRadius: t.radius }}>
               <Heart className="w-5 h-5" />
@@ -302,6 +329,7 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
                  style={{
                    gridColumn: `${b.col || 1} / span ${b.span || 12}`,
                    gridRow: b.row ? `${b.row} / span ${b.rowSpan || 1}` : undefined,
+                   ...blockStyle(b),
                  }}>
               {renderBlock(b)}
             </div>

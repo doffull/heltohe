@@ -1,95 +1,94 @@
-# Corrections — Admin · Icônes flottantes (page d'accueil)
+## Objectif
 
-Quatre problèmes ciblés à corriger sur `/admin/home-icons`. Aucun changement DB.
+Dans **Admin → Templates de pages → Éditer un template → onglet Disposition**, chaque bloc affiche directement (sans clic supplémentaire) des contrôles pour personnaliser son **libellé/texte**, sa **typographie** et ses **couleurs**, en plus des réglages existants (colonne, span, visibilité, variante).
 
----
+## Ce qui change pour l'utilisateur
 
-## 1. Stylo « Grille catégories » qui ne fait rien d'utile
+Pour chaque bloc de la liste Disposition, la carte se déplie en un panneau de réglages toujours visible avec :
 
-**État actuel** : dans `HomeBlocksEditor`, le stylo du bloc `categories` redirige vers `/admin/categories`. C'est une page de gestion des catégories, pas un éditeur pour le bloc « grille » de la home (mise en page, colonnes, style).
+- **Texte** : libellé personnalisé (`label`) — utile pour Title, Collab subtitle, Category tag, CTA add-to-cart, Find size, Description (titre de section), Trust badges, Related products, Material, Stock status, Btn wishlist/share. Pour `custom_html` : zone de texte HTML.
+- **Typographie** :
+  - Police (Google Font, liste existante `GOOGLE_FONTS` + option « Hériter du thème »)
+  - Taille (px)
+  - Graisse (300 → 900)
+  - Casse (normal / UPPER / lower / Capitalize)
+  - Espacement des lettres (px)
+  - Alignement (gauche / centre / droite)
+- **Couleurs** :
+  - Couleur du texte (color picker + champ hex, avec « Hériter »)
+  - Couleur de fond (idem)
+  - Couleur d'accent / bordure (pour CTA, badges, dividers)
 
-**Correction** : ouvrir un éditeur dédié au bloc plutôt que de quitter la page.
+Tous les champs sont stockés dans `block.props` (déjà existant dans `TemplateBlock`), donc **aucune migration DB**.
 
-- Ajouter sous chaque bloc « builtin » du `HomeBlocksEditor` un panneau pliable (Collapsible) qui s'ouvre au clic sur le stylo.
-- Pour `categories`, ce panneau contient les nouveaux réglages visuels (voir point 2). Stockés dans `designSettings.homeBlockSettings.categories`.
-- Pour les autres blocs (`hero`, `featured`, `flash`…), garder le comportement actuel (navigation vers la page dédiée) puisqu'ils ont déjà un éditeur réel.
+## Détails techniques
 
----
+### 1. Types (`src/config/templatePresets.ts`)
 
-## 2. Options visuelles pour la grille des catégories
-
-Ajouter dans le panneau du bloc `categories` :
-
-- **Forme du bloc** : `square` (par défaut, actuel), `rounded`, `circle`, `triangle`, `chamfer` (HUD existant), `pill`.
-- **Orientation** : `vertical` (image au-dessus du titre, grille classique) ou `horizontal` (image à gauche, titre à droite, format bandeau).
-- **Colonnes** : 2 / 3 / 4 (réutilise la valeur existante).
-- **Effet survol** : zoom, brightness, none.
-
-Persistance : `designSettings.homeBlockSettings.categories = { shape, orientation, columns, hoverEffect }`.
-
-`CategoryGrid.tsx` lit ces valeurs et applique des classes Tailwind conditionnelles (avec design tokens, pas de couleurs en dur). La carte « Les Boutiques » garde son look actuel.
-
----
-
-## 3. Image qui « saute » sur les sections personnalisées
-
-**Cause** : dans `HomeCustomSectionsEditor`, l'effet de synchronisation suivant se déclenche à chaque mise à jour de `designSettings` :
+Étendre `TemplateBlock.props` avec une convention typée optionnelle :
 
 ```ts
-useEffect(() => {
-  const cur = (designSettings as any).homeCustomSections;
-  if (Array.isArray(cur) && JSON.stringify(cur) !== JSON.stringify(sections)) {
-    setSections(cur); // ← écrase l'image fraîchement ajoutée
-  }
-}, [(designSettings as any).homeCustomSections]);
+export interface BlockStyleProps {
+  label?: string;            // texte personnalisé
+  html?: string;             // pour custom_html
+  fontFamily?: string;       // '' = hérite
+  fontSize?: number;
+  fontWeight?: number;       // 300..900
+  textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
+  letterSpacing?: number;
+  textAlign?: 'left' | 'center' | 'right';
+  color?: string;            // '' = hérite
+  bgColor?: string;
+  accentColor?: string;
+}
 ```
 
-Quand l'utilisateur ajoute/change une image, le state local évolue ; tant que l'auto-save (débouncé 800 ms) n'a pas terminé son aller-retour, `cur` reste l'ancienne valeur DB ≠ local → l'effet replace `sections` par l'ancienne valeur **et l'image disparaît**.
+Ajouter `props?: BlockStyleProps & Record<string, any>` (rétro-compatible).
 
-**Correction** :
+### 2. UI Disposition (`src/pages/admin/AdminPageTemplates.tsx`, fonction `TemplateEditorDialog`, lignes ~432–476)
 
-- Ajouter un ref `dirtyRef` mis à `true` dès que l'utilisateur modifie `sections`, remis à `false` après que la persistance est confirmée.
-- L'effet de sync n'écrase le state local **que si `dirtyRef.current === false`** (donc uniquement quand la modif vient d'ailleurs : autre onglet, reload).
-- Aligner le même garde-fou dans `HomeBlocksEditor` (même pattern de sync, même risque pour les sections personnalisées réordonnées).
-- Le bouton « Tout enregistrer » global continue à fonctionner via l'event `homeicons:collect`.
-
-Résultat : l'image téléversée reste affichée pendant et après la sauvegarde.
-
----
-
-## 4. Bouton flottant unifié — changements sans effet sur la home
-
-**Symptômes constatés** : modifier mode, taille, blur, position dans `UnifiedFabEditor` ne change rien sur `/`.
-
-**Causes identifiées** :
-
-1. L'auto-save de `UnifiedFabEditor` appelle seulement `updateDesignSettings(...)` (state local du context, **non persisté**), donc un reload de la home perd la modif.
-2. Le « Tout enregistrer » dispatch `homeicons:collect` puis attend 50 ms avant `flushDesignSettings()`. Le handler de `UnifiedFabEditor` est bien enregistré, mais comme le `useEffect` qui l'attache n'a **pas de tableau de dépendances**, il est ré-enregistré à chaque render → plusieurs handlers concurrents, et le `buildPayload()` capturé peut être périmé.
-3. `RouletteFab`, `UnifiedFab`, `FabStack` lisent bien `designSettings.unifiedFab` mais comme rien n'est persisté en DB, après refetch (`invalidateQueries`) la version sauvegardée écrase la version locale.
-
-**Corrections** :
-
-- Dans `UnifiedFabEditor` : l'auto-save (débouncé) doit appeler `flushDesignSettings({ unifiedFab: payload })` au lieu de seulement `updateDesignSettings`. Indicateur de statut (`dirty`/`saving`/`saved`) conservé.
-- Corriger le `useEffect` du handler `homeicons:collect` : passer un tableau de dépendances correct ou utiliser un ref qui pointe vers `buildPayload` à jour, pour garantir un seul handler avec la dernière closure.
-- Augmenter le délai du `setTimeout` dans `AdminHomeIcons.handleSaveAll` de 50 ms à 150 ms (laisser React appliquer les `setState` issus de l'event).
-- Vérifier (lecture seule) que `UnifiedFab.tsx` rebuild quand `designSettings.unifiedFab` change — déjà le cas via `useApp()`.
-
----
-
-## Fichiers modifiés
+Sous la ligne actuelle de chaque bloc (col/span/visible/variant), ajouter **une grille de réglages toujours visible** divisée en 3 sous-sections compactes :
 
 ```
-src/components/admin/HomeBlocksEditor.tsx       (panneau inline pour bloc categories + fix dirty guard)
-src/components/admin/HomeCustomSectionsEditor.tsx (fix dirty guard)
-src/components/admin/UnifiedFabEditor.tsx       (auto-save vrai + handler stable)
-src/pages/admin/AdminHomeIcons.tsx              (délai collect 150 ms)
-src/components/home/CategoryGrid.tsx            (lit shape/orientation/hoverEffect)
-src/types/index.ts                              (type homeBlockSettings)
-src/data/initialData.ts                         (défauts homeBlockSettings)
+┌─────────────────────────────────────────────────────────┐
+│ [▲▼] Block Title (title)  Col [7] Span [6] [✓] [Var ▼] │
+├─────────────────────────────────────────────────────────┤
+│ Texte:      [Libellé personnalisé ____________________] │
+│ Typo:       Police [Inter ▼]  Taille [42] Graisse [700] │
+│             Casse [UPPER ▼] Esp [0] Align [G C D]       │
+│ Couleurs:   Texte [■#000] Fond [■hérite] Accent [■…]    │
+└─────────────────────────────────────────────────────────┘
 ```
 
-## Hors périmètre
+- Helper `updateBlockProps(id, patch)` qui fait un merge sur `props`.
+- Champs `label` / `html` conditionnels selon `b.type` (mapping `BLOCK_HAS_LABEL`, `BLOCK_HAS_HTML`).
+- Color inputs avec bouton « Hériter » qui vide la valeur.
 
-- Pas de migration DB : `homeBlockSettings` sera stocké dans la colonne JSONB déjà existante (réutilisation d'un champ JSON libre de `designSettings`).
-- Pas de refonte du `PageBuilder` ni du `UnifiedFab` côté front utilisateur.
-- Audit complet du système d'auto-save dans d'autres écrans : non traité ici (peut être un suivi séparé si besoin).
+### 3. Rendu côté front (templates produit/catégorie)
+
+Identifier le composant qui rend les templates :
+
+```bash
+rg "TemplateBlock|layout.blocks" src/components src/pages
+```
+
+Dans ce composant de rendu (probablement `TemplateRenderer.tsx` ou similaire), pour chaque bloc :
+- Utiliser `b.props.label` (ou `b.props.html`) à la place du texte par défaut quand fourni.
+- Construire un `style` inline depuis `b.props` (fontFamily, fontSize+'px', fontWeight, textTransform, letterSpacing+'px', textAlign, color, backgroundColor) en n'incluant **que les clés définies** pour que les valeurs vides héritent du thème.
+- Charger la police via `loadGoogleFont(b.props.fontFamily)` (helper déjà existant dans `blockVariants.ts`).
+
+### 4. Presets
+
+Les presets existants continuent de fonctionner (rétro-compat : props vide → hérite du thème). Pas besoin de les modifier.
+
+## Fichiers touchés
+
+- `src/config/templatePresets.ts` — type `BlockStyleProps`
+- `src/pages/admin/AdminPageTemplates.tsx` — panneau de réglages dans Disposition
+- Composant de rendu de template (à identifier en build) — application des `props` au rendu
+
+## Hors scope
+
+- Pas de drag & drop visuel (gardé pour plus tard)
+- Pas de migration DB
+- Pas de modification du thème global ni des autres onglets (Thème / Typo)
