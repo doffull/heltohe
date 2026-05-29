@@ -261,16 +261,18 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
       case 'cta_add_to_cart': {
         const v = b.variant || 'bold-block';
         const baseBtn = "flex-1 h-14 font-bold tracking-widest uppercase text-sm flex items-center justify-center gap-2 transition-transform hover:-translate-y-0.5";
+        const primaryColor = b.props?.accentColor || t.colors.primary;
         const style: React.CSSProperties = v === 'outline-minimal'
-          ? { borderRadius: t.radius, border: `2px solid ${t.colors.primary}`, color: t.colors.primary, background: 'transparent' }
+          ? { borderRadius: t.radius, border: `2px solid ${primaryColor}`, color: primaryColor, background: 'transparent' }
           : v === 'gradient'
-          ? { borderRadius: t.radius, background: `linear-gradient(135deg, ${t.colors.primary}, ${t.colors.accent})`, color: t.colors.card }
-          : { borderRadius: t.radius, background: t.colors.primary, color: t.colors.card };
+          ? { borderRadius: t.radius, background: `linear-gradient(135deg, ${primaryColor}, ${t.colors.accent})`, color: t.colors.card }
+          : { borderRadius: t.radius, background: primaryColor, color: t.colors.card };
+        const label = labelOf(b, 'Ajouter au panier');
         if (v === 'sticky-bottom') {
           return (
             <div className="fixed bottom-0 left-0 right-0 p-3 border-t z-40" style={{ background: t.colors.card, borderColor: t.colors.border }}>
               <button onClick={handleAddToCart} className={baseBtn + ' w-full'} style={style}>
-                <ShoppingCart className="w-5 h-5" /> Ajouter au panier
+                <ShoppingCart className="w-5 h-5" /> {label}
               </button>
             </div>
           );
@@ -278,7 +280,7 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
         if (v === 'split-buy-now') {
           return (
             <div className="grid grid-cols-2 gap-2 mt-4">
-              <button onClick={handleAddToCart} className={baseBtn} style={{ ...style, background: t.colors.card, border: `2px solid ${t.colors.primary}`, color: t.colors.primary }}>
+              <button onClick={handleAddToCart} className={baseBtn} style={{ ...style, background: t.colors.card, border: `2px solid ${primaryColor}`, color: primaryColor }}>
                 <ShoppingCart className="w-5 h-5" /> Panier
               </button>
               <button onClick={handleAddToCart} className={baseBtn} style={style}>Acheter</button>
@@ -288,7 +290,7 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
         return (
           <div className="flex gap-3 mt-4">
             <button onClick={handleAddToCart} className={baseBtn} style={style}>
-              <ShoppingCart className="w-5 h-5" /> Ajouter au panier
+              <ShoppingCart className="w-5 h-5" /> {label}
             </button>
             <button className="w-14 h-14 rounded-xl border flex items-center justify-center" style={{ borderColor: t.colors.border, borderRadius: t.radius }}>
               <Heart className="w-5 h-5" />
