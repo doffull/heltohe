@@ -68,9 +68,9 @@ export default function AdminHomeIcons() {
       setSavingAll(true);
       // 1. Demander à tous les éditeurs (UnifiedFab, HomeBlocks, HomeCustomSections) de pousser leur state local
       window.dispatchEvent(new CustomEvent('homeicons:collect'));
-      // 2. Laisser React appliquer les setState avant le flush
-      await new Promise(r => setTimeout(r, 50));
-      // 3. Un seul aller-retour DB
+      // 2. Laisser React appliquer les setState issus de l'event (multiples updateDesignSettings consécutifs)
+      await new Promise(r => setTimeout(r, 150));
+      // 3. Un seul aller-retour DB avec l'état le plus à jour
       await flushDesignSettings();
       toast.success('Tous les changements ont été enregistrés');
     } catch (e: any) {

@@ -16,13 +16,46 @@ function keepCategoryFallback(event: React.SyntheticEvent<HTMLImageElement>) {
   }
 }
 
+type CategoryShape = 'square' | 'rounded' | 'circle' | 'triangle' | 'chamfer' | 'pill';
+type CategoryOrientation = 'vertical' | 'horizontal';
+type CategoryHover = 'zoom' | 'brightness' | 'none';
+
+function shapeClasses(shape: CategoryShape): string {
+  switch (shape) {
+    case 'rounded': return 'rounded-2xl';
+    case 'circle': return 'rounded-full aspect-square';
+    case 'pill': return 'rounded-full';
+    case 'triangle': return ''; // handled via clipPath inline style
+    case 'chamfer': return 'chamfer-hud';
+    case 'square':
+    default: return '';
+  }
+}
+
+function hoverImageClasses(effect: CategoryHover): string {
+  switch (effect) {
+    case 'brightness': return 'transition-all duration-700 group-hover:brightness-125';
+    case 'none': return '';
+    case 'zoom':
+    default: return 'transition-transform duration-700 group-hover:scale-110';
+  }
+}
+
 export function CategoryGrid() {
-  const { navigateToCategory, language } = useApp();
+  const { navigateToCategory, language, designSettings } = useApp();
   const { data: dbCategories = [] } = useCategories();
   const { data: boutiques = [] } = useBoutiques();
   const updateCategory = useUpdateCategory();
   const { isOpen: isEditorOpen } = useVisualEditor();
   const navigate = useNavigate();
+
+  // Read inline-editor settings stored on the "categories" home block
+  const blocks = ((designSettings as any).homePageBlocks || []) as Array<{ id: string; settings?: any }>;
+  const blockSettings = blocks.find((b) => b.id === 'categories')?.settings || {};
+  const shape: CategoryShape = blockSettings.shape || 'chamfer';
+  const orientation: CategoryOrientation = blockSettings.orientation || 'vertical';
+  const columns: number = blockSettings.columns || 3;
+  const hoverEffect: CategoryHover = blockSettings.hoverEffect || 'zoom';
 
   // Editing state: categoryId → local title value
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -65,19 +98,35 @@ export function CategoryGrid() {
         <div className="h-px bg-gradient-to-r from-primary/50 to-transparent w-32" />
       </div>
 
-      <div className="px-6 lg:px-12 grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div
+        className={cn(
+          'px-6 lg:px-12 grid gap-4',
+          orientation === 'horizontal'
+            ? 'grid-cols-1'
+            : columns === 2
+              ? 'grid-cols-1 md:grid-cols-2'
+              : columns === 4
+                ? 'grid-cols-2 md:grid-cols-4'
+                : 'grid-cols-1 md:grid-cols-3'
+        )}
+      >
         {categories.map((category, index) => {
           const isEditing = isEditorOpen && editingId === category.id;
+          const isHorizontal = orientation === 'horizontal';
+          const shapeCls = shapeClasses(shape);
+          const triangleStyle = shape === 'triangle'
+            ? { clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' } as React.CSSProperties
+            : undefined;
           return (
             <div
               key={category.id}
               className={cn(
-                "group relative h-64 lg:h-80 overflow-hidden",
-                "transition-all duration-500 hover:shadow-hud",
-                "animate-slide-in-up chamfer-hud",
-                isEditorOpen ? "cursor-text" : "cursor-pointer"
+                'group relative overflow-hidden transition-all duration-500 hover:shadow-hud animate-slide-in-up',
+                isHorizontal ? 'h-40 lg:h-48' : 'h-64 lg:h-80',
+                shapeCls,
+                isEditorOpen ? 'cursor-text' : 'cursor-pointer'
               )}
-              style={{ animationDelay: `${index * 100}ms` }}
+              style={{ animationDelay: `${index * 100}ms`, ...triangleStyle }}
               onClick={(e) => {
                 if (isEditorOpen) startEdit(category.id, category.title, e);
                 else navigateToCategory(category.title);
@@ -87,22 +136,32 @@ export function CategoryGrid() {
               <img
                 src={category.image}
                 alt={category.title}
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                className={cn('absolute inset-0 w-full h-full object-cover', hoverImageClasses(hoverEffect))}
                 loading="lazy"
                 decoding="async"
                 onError={keepCategoryFallback}
               />
 
               {/* Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
+              <div
+                className={cn(
+                  'absolute inset-0',
+                  isHorizontal
+                    ? 'bg-gradient-to-r from-background via-background/60 to-transparent'
+                    : 'bg-gradient-to-t from-background via-background/50 to-transparent'
+                )}
+              />
 
               {/* Border effect */}
-              <div className={cn(
-                "absolute inset-0 border-2 transition-colors duration-300 chamfer-hud",
-                isEditorOpen
-                  ? "border-primary/40 ring-1 ring-primary/20"
-                  : "border-transparent group-hover:border-primary/50"
-              )} />
+              {shape !== 'triangle' && (
+                <div className={cn(
+                  'absolute inset-0 border-2 transition-colors duration-300',
+                  shapeCls,
+                  isEditorOpen
+                    ? 'border-primary/40 ring-1 ring-primary/20'
+                    : 'border-transparent group-hover:border-primary/50'
+                )} />
+              )}
 
               {/* Editor badge */}
               {isEditorOpen && (
@@ -112,7 +171,12 @@ export function CategoryGrid() {
               )}
 
               {/* Content */}
-              <div className="absolute bottom-0 left-0 right-0 p-6">
+              <div
+                className={cn(
+                  'absolute p-6',
+                  isHorizontal ? 'top-1/2 -translate-y-1/2 left-0 right-1/2' : 'bottom-0 left-0 right-0'
+                )}
+              >
                 {isEditing ? (
                   <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                     <input
@@ -142,11 +206,14 @@ export function CategoryGrid() {
               </div>
 
               {/* Corner accent */}
-              <div className="absolute top-4 right-4 w-8 h-8 border-t-2 border-r-2 border-primary/0 group-hover:border-primary/50 transition-colors duration-300" />
+              {shape !== 'triangle' && shape !== 'circle' && shape !== 'pill' && (
+                <div className="absolute top-4 right-4 w-8 h-8 border-t-2 border-r-2 border-primary/0 group-hover:border-primary/50 transition-colors duration-300" />
+              )}
             </div>
           );
         })}
       </div>
+
 
       {/* Elongated "Les Boutiques" card */}
       <div className="px-6 lg:px-12 mt-4">

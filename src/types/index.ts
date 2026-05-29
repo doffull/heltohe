@@ -398,7 +398,7 @@ export interface DesignSettings {
   categories: Category[];
   homeSections: HomeSection[];
   homeCustomSections?: any[];
-  homePageBlocks?: Array<{ id: string; visible: boolean }>;
+  homePageBlocks?: Array<{ id: string; visible: boolean; label?: string; settings?: Record<string, any> }>;
   
   // Presets and scheduling
   presets: DesignPreset[];

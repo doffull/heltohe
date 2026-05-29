@@ -76,16 +76,28 @@ export function UnifiedFabEditor() {
     position_desktop: posD, position_mobile: posM, items,
   });
 
-  // Auto-save (debounced) — safety net so manual click is no longer mandatory
+  // Garde une ref vers la dernière fonction buildPayload pour qu'un handler stable
+  // (ex: homeicons:collect) puisse toujours lire le snapshot le plus récent sans
+  // être ré-enregistré à chaque render.
+  const buildPayloadRef = useRef(() => buildPayload());
+  buildPayloadRef.current = () => buildPayload();
+
+  // Auto-save (débouncé) — persiste réellement en DB pour que la home applique les changements.
   useEffect(() => {
     if (isFirstRun.current) { isFirstRun.current = false; return; }
     setStatus('dirty');
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      const payload = buildPayload();
-      updateDesignSettings({ unifiedFab: payload } as any);
-      setStatus('saved');
-      setTimeout(() => setStatus(s => (s === 'saved' ? 'idle' : s)), 1500);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        setStatus('saving');
+        const payload = buildPayloadRef.current();
+        await flushDesignSettings({ unifiedFab: payload } as any);
+        setStatus('saved');
+        setTimeout(() => setStatus(s => (s === 'saved' ? 'idle' : s)), 1500);
+      } catch (e: any) {
+        setStatus('idle');
+        toast.error("Erreur d'enregistrement auto", { description: e?.message });
+      }
     }, 800);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -97,15 +109,15 @@ export function UnifiedFabEditor() {
   useEffect(() => {
     if (isFirstRun.current) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    const payload = buildPayload();
+    const payload = buildPayloadRef.current();
     // Init default positions when entering a new mode for the first time
-    if (mode === 'dock' && !payload.dockPos_desktop) {
-      payload.dockPos_desktop = { corner: 'bc', x: 0, y: 24 };
-      payload.dockPos_mobile = { corner: 'bc', x: 0, y: 16 };
+    if (mode === 'dock' && !(payload as any).dockPos_desktop) {
+      (payload as any).dockPos_desktop = { corner: 'bc', x: 0, y: 24 };
+      (payload as any).dockPos_mobile = { corner: 'bc', x: 0, y: 16 };
     }
-    if (mode === 'cluster' && !payload.clusterPos_desktop) {
-      payload.clusterPos_desktop = { corner: 'br', x: 24, y: 90 };
-      payload.clusterPos_mobile = { corner: 'br', x: 16, y: 90 };
+    if (mode === 'cluster' && !(payload as any).clusterPos_desktop) {
+      (payload as any).clusterPos_desktop = { corner: 'br', x: 24, y: 90 };
+      (payload as any).clusterPos_mobile = { corner: 'br', x: 16, y: 90 };
     }
     flushDesignSettings({ unifiedFab: payload } as any).then(() => {
       setStatus('saved');
@@ -115,16 +127,16 @@ export function UnifiedFabEditor() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, mode]);
 
-  // Listen to global "flush everything" event from the page
+  // Listen to global "flush everything" event from the page — handler stable, lit la
+  // dernière closure via buildPayloadRef pour éviter un état périmé.
   useEffect(() => {
     const handler = () => {
-      const payload = buildPayload();
+      const payload = buildPayloadRef.current();
       updateDesignSettings({ unifiedFab: payload } as any);
     };
     window.addEventListener('homeicons:collect', handler);
     return () => window.removeEventListener('homeicons:collect', handler);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  });
+  }, [updateDesignSettings]);
 
   const save = async () => {
     try {
