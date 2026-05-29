@@ -2,32 +2,20 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sparkles, Copy, Check, X } from 'lucide-react';
+import { Sparkles, Copy, Check, X, Volume2, VolumeX } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
-import {
-  useRouletteConfig,
-  useRouletteSegments,
-  useSpinRoulette,
-  type RouletteSegment,
-  type SpinResult,
-} from '@/hooks/useRoulette';
+import { useRouletteConfig, useRouletteSegments, type RouletteSegment, type SpinResult } from '@/hooks/useRoulette';
+import { useCooldown, fmtCooldown, persistResult, loadStoredResult, isValidEmail, useSpinRoulette } from '@/hooks/useGameSession';
+import { useGameSounds } from '@/hooks/useGameSounds';
 import { cn } from '@/lib/utils';
 
 /**
- * Industrial-Luxury scratch card game — replaces the visual roulette.
- * Uses the same server-side `spin_roulette` RPC so cooldown, codes and
- * segments stay identical. Only the presentation changes.
- *
- * Design: 3 face-down cards, biseaux 45°, Helvetica-MP. The user picks one
- * card, the front reveals with a soft scratch animation, the won segment
- * is highlighted with its label/icon and the promo code is copyable.
+ * Industrial-Luxury scratch card game — picks 1 of 3 cards.
+ * Same server RPC as the wheel; only presentation differs.
  */
 
-const LS_LAST = 'roulette_last_spin';
-const LS_RESULT = 'roulette_last_result';
-const CHAMFER =
-  'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)';
+const CHAMFER = 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)';
 
 interface Props {
   open?: boolean;
@@ -35,30 +23,12 @@ interface Props {
   hideTrigger?: boolean;
 }
 
-function useCooldown(hours: number) {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  const last = Number(localStorage.getItem(LS_LAST) || 0);
-  const next = last + hours * 3600_000;
-  const remaining = Math.max(0, next - now);
-  return { canSpin: remaining === 0, remaining };
-}
-
-function fmt(ms: number) {
-  const s = Math.floor(ms / 1000);
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
-}
-
 export function GameScratchFab({ open: openProp, onOpenChange, hideTrigger }: Props = {}) {
   const { user } = useAuth();
   const { data: config } = useRouletteConfig();
   const { data: segments = [] } = useRouletteSegments();
   const spin = useSpinRoulette();
+  const sounds = useGameSounds();
 
   const [openInternal, setOpenInternal] = useState(false);
   const open = openProp !== undefined ? openProp : openInternal;
@@ -74,16 +44,12 @@ export function GameScratchFab({ open: openProp, onOpenChange, hideTrigger }: Pr
   const [copied, setCopied] = useState(false);
   const cooldownH = config?.cooldown_hours ?? 24;
   const { canSpin, remaining } = useCooldown(cooldownH);
-  const pickedRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem(LS_RESULT);
-    if (saved && !canSpin) {
-      try { setResult(JSON.parse(saved)); } catch { /* ignore */ }
-    }
+    const saved = loadStoredResult();
+    if (saved && !canSpin) setResult(saved);
   }, [canSpin]);
 
-  // Fake card slots — visual only. Real segment is decided server-side.
   const cards = useMemo(() => [0, 1, 2], []);
 
   if (!config?.enabled || segments.length === 0) return null;
@@ -93,39 +59,42 @@ export function GameScratchFab({ open: openProp, onOpenChange, hideTrigger }: Pr
     : undefined;
 
   const handlePick = async (idx: number) => {
-    if (revealing || result) return;
-    if (!user && !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+    if (revealing || result || !canSpin) return;
+    if (!user && !isValidEmail(email)) {
       toast.error('Email valide requis');
       return;
     }
-    pickedRef.current = idx;
     setPicked(idx);
     setRevealing(true);
+    sounds.startScratch();
     try {
       const data = await spin.mutateAsync(user ? undefined : email);
       if (data.error === 'COOLDOWN') {
-        toast.error('Vous avez déjà joué récemment.');
+        toast.error("Tu as déjà joué récemment");
         setRevealing(false);
         setPicked(null);
+        sounds.stopScratch();
         return;
       }
       if (data.error) {
         toast.error('Erreur : ' + data.error);
         setRevealing(false);
         setPicked(null);
+        sounds.stopScratch();
         return;
       }
-      // Small reveal animation delay
       setTimeout(() => {
+        sounds.stopScratch();
         setRevealing(false);
         setResult(data);
-        localStorage.setItem(LS_LAST, String(Date.now()));
-        localStorage.setItem(LS_RESULT, JSON.stringify(data));
-      }, 900);
+        sounds.win();
+        persistResult(data);
+      }, 1100);
     } catch (e: any) {
       toast.error(e?.message || 'Erreur');
       setRevealing(false);
       setPicked(null);
+      sounds.stopScratch();
     }
   };
 
@@ -140,7 +109,6 @@ export function GameScratchFab({ open: openProp, onOpenChange, hideTrigger }: Pr
   const reset = () => {
     setResult(null);
     setPicked(null);
-    pickedRef.current = null;
   };
 
   return (
@@ -156,10 +124,7 @@ export function GameScratchFab({ open: openProp, onOpenChange, hideTrigger }: Pr
             style={{ clipPath: CHAMFER }}
           >
             {canSpin && (
-              <span
-                className="absolute inset-0 animate-ping bg-foreground/20"
-                style={{ clipPath: CHAMFER }}
-              />
+              <span className="absolute inset-0 animate-ping bg-foreground/20" style={{ clipPath: CHAMFER }} />
             )}
             <Sparkles className="h-4 w-4 relative" />
             <span className="text-xs font-bold uppercase tracking-[0.18em] relative">
@@ -169,47 +134,56 @@ export function GameScratchFab({ open: openProp, onOpenChange, hideTrigger }: Pr
         </button>
       )}
 
-      <Dialog open={open} onOpenChange={(v) => { if (!v) { /* keep result */ } setOpen(v); }}>
-        <DialogContent className="max-w-md sm:max-w-lg p-0 bg-background border-2 border-foreground/20">
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="w-[min(94vw,440px)] max-w-none p-0 bg-background border-2 border-foreground/20 gap-0 overflow-hidden">
           <DialogTitle className="sr-only">{config.title}</DialogTitle>
-          <button
-            onClick={() => setOpen(false)}
-            aria-label="Fermer"
-            className="absolute right-2 top-2 z-30 inline-flex h-10 w-10 items-center justify-center bg-background/90 hover:bg-muted border border-foreground/20"
-            style={{ clipPath: CHAMFER }}
-          >
-            <X className="h-4 w-4" />
-          </button>
 
-          <div className="p-5 sm:p-7 text-center">
-            <p className="font-mono text-[10px] tracking-[0.3em] text-muted-foreground uppercase mb-2">
-              // Jeu LVTK6
-            </p>
-            <h2 className="text-xl sm:text-2xl font-bold tracking-[0.18em] uppercase mb-1">
-              {config.title || 'Gratte & Gagne'}
-            </h2>
-            <p className="text-xs text-muted-foreground mb-5">{config.subtitle}</p>
+          <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-foreground/10">
+            <button
+              onClick={sounds.toggle}
+              aria-label={sounds.enabled ? 'Couper le son' : 'Activer le son'}
+              className="h-9 w-9 inline-flex items-center justify-center hover:bg-muted text-muted-foreground"
+              style={{ clipPath: CHAMFER }}
+            >
+              {sounds.enabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+            </button>
+            <div className="flex-1 text-center px-2 min-w-0">
+              <p className="font-mono text-[9px] tracking-[0.3em] text-muted-foreground uppercase">// Jeu LVTK6</p>
+              <h2 className="text-sm sm:text-base font-bold tracking-[0.2em] uppercase truncate">
+                {config.title || 'Gratte & Gagne'}
+              </h2>
+            </div>
+            <button
+              onClick={() => setOpen(false)}
+              aria-label="Fermer"
+              className="h-9 w-9 inline-flex items-center justify-center hover:bg-muted"
+              style={{ clipPath: CHAMFER }}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
 
-            {!user && !result && (
-              <div className="mb-4">
+          <div className="px-4 pt-3 pb-4 text-center">
+            <p className="text-[11px] text-muted-foreground mb-3 line-clamp-2">{config.subtitle}</p>
+
+            {!user && !result && canSpin && (
+              <div className="mb-3">
                 <Input
                   type="email"
-                  placeholder="Votre email"
+                  placeholder="ton@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="rounded-none border-foreground/30 text-center uppercase tracking-wider text-xs"
+                  className="rounded-none border-foreground/30 text-center uppercase tracking-wider text-xs h-10"
                 />
               </div>
             )}
 
             {!canSpin && !result && (
-              <p className="text-xs text-muted-foreground mb-4">
-                Reviens dans {fmt(remaining)}.
-              </p>
+              <p className="text-xs text-muted-foreground mb-3">Reviens dans {fmtCooldown(remaining)}.</p>
             )}
 
             {/* Cards */}
-            <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
               {cards.map((i) => {
                 const isPicked = picked === i;
                 const isReveal = isPicked && !!result;
@@ -222,18 +196,18 @@ export function GameScratchFab({ open: openProp, onOpenChange, hideTrigger }: Pr
                     className={cn(
                       'relative aspect-[2/3] flex items-center justify-center text-background overflow-hidden transition-all',
                       'border border-foreground/40',
-                      isPicked ? 'scale-105' : 'hover:scale-105',
-                      !canSpin || !!result ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+                      isPicked ? 'scale-105' : 'hover:scale-[1.03]',
+                      !canSpin || (!!result && !isPicked) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+                      isReveal && 'ring-2 ring-primary shadow-lg'
                     )}
                     style={{
                       clipPath: CHAMFER,
                       background: isReveal
                         ? seg?.color || 'hsl(var(--foreground))'
-                        : 'linear-gradient(135deg, hsl(var(--foreground)) 0%, hsl(var(--foreground) / 0.7) 100%)',
+                        : 'linear-gradient(135deg, hsl(var(--foreground)) 0%, hsl(var(--foreground) / 0.75) 100%)',
                       color: isReveal ? seg?.text_color : undefined,
                     }}
                   >
-                    {/* Diagonal stripes pattern when face down */}
                     {!isReveal && (
                       <div
                         className="absolute inset-0 opacity-30"
@@ -244,18 +218,27 @@ export function GameScratchFab({ open: openProp, onOpenChange, hideTrigger }: Pr
                       />
                     )}
                     {isPicked && revealing && (
-                      <div className="absolute inset-0 bg-background/40 animate-pulse" />
+                      <>
+                        <div className="absolute inset-0 bg-background/40 animate-pulse" />
+                        <div
+                          className="absolute inset-0 opacity-60 animate-pulse"
+                          style={{
+                            backgroundImage:
+                              'repeating-linear-gradient(90deg, transparent 0 2px, hsl(var(--background) / 0.6) 2px 4px)',
+                          }}
+                        />
+                      </>
                     )}
-                    <div className="relative z-10 flex flex-col items-center gap-1">
+                    <div className="relative z-10 flex flex-col items-center gap-1 px-1 min-w-0 w-full">
                       {isReveal ? (
                         <>
-                          <span className="text-3xl leading-none">{seg?.icon || '✦'}</span>
-                          <span className="text-[10px] font-bold tracking-wider uppercase mt-1">
+                          <span className="text-2xl sm:text-3xl leading-none">{seg?.icon || '✦'}</span>
+                          <span className="text-[9px] sm:text-[10px] font-bold tracking-wider uppercase mt-1 truncate w-full">
                             {seg?.label}
                           </span>
                         </>
                       ) : (
-                        <span className="font-mono text-3xl font-bold opacity-80">0{i + 1}</span>
+                        <span className="font-mono text-2xl sm:text-3xl font-bold opacity-80">0{i + 1}</span>
                       )}
                     </div>
                   </button>
@@ -264,9 +247,7 @@ export function GameScratchFab({ open: openProp, onOpenChange, hideTrigger }: Pr
             </div>
 
             {!result && !revealing && canSpin && (
-              <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
-                Choisis une carte
-              </p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em]">Choisis une carte</p>
             )}
 
             {result && (
@@ -277,18 +258,11 @@ export function GameScratchFab({ open: openProp, onOpenChange, hideTrigger }: Pr
                 )}
                 {result.code && (
                   <div
-                    className="flex items-center justify-center gap-2 p-3 bg-muted border border-foreground/20"
+                    className="flex items-center justify-center gap-2 p-2.5 bg-muted border border-foreground/20"
                     style={{ clipPath: CHAMFER }}
                   >
-                    <code className="text-base font-mono font-bold tracking-wider">
-                      {result.code}
-                    </code>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={copyCode}
-                      aria-label="Copier le code"
-                    >
+                    <code className="text-base font-mono font-bold tracking-wider break-all">{result.code}</code>
+                    <Button variant="ghost" size="icon" onClick={copyCode} className="shrink-0" aria-label="Copier le code">
                       {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                     </Button>
                   </div>

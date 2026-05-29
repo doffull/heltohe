@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Gift, X, Copy, Check } from 'lucide-react';
+import { Gift, X, Copy, Check, Volume2, VolumeX } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
@@ -13,110 +13,19 @@ import { cornerStyle, type FabPos } from '@/lib/fabPosition';
 import { useAdminDrag } from '@/lib/useAdminDrag';
 import { getIcon } from '@/components/admin/IconPicker';
 import { cn } from '@/lib/utils';
+import { useRouletteConfig, useRouletteSegments, type SpinResult } from '@/hooks/useRoulette';
 import {
-  useRouletteConfig,
-  useRouletteSegments,
+  useCooldown,
+  fmtCooldown,
+  persistResult,
+  loadStoredResult,
+  isValidEmail,
   useSpinRoulette,
-  type RouletteSegment,
-  type SpinResult,
-} from '@/hooks/useRoulette';
+} from '@/hooks/useGameSession';
+import { useGameSounds } from '@/hooks/useGameSounds';
+import { RouletteWheel } from '@/components/games/RouletteWheel';
 
-const LS_LAST = 'roulette_last_spin';
-const LS_RESULT = 'roulette_last_result';
-
-function useCooldown(cooldownHours: number) {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  const last = Number(localStorage.getItem(LS_LAST) || 0);
-  const next = last + cooldownHours * 3600_000;
-  const remaining = Math.max(0, next - now);
-  return { canSpin: remaining === 0, remaining };
-}
-
-function fmt(ms: number) {
-  const s = Math.floor(ms / 1000);
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  return `${h}h ${m}m ${sec}s`;
-}
-
-function Wheel({
-  segments,
-  rotation,
-  size = 320,
-}: {
-  segments: RouletteSegment[];
-  rotation: number;
-  size?: number;
-}) {
-  const n = segments.length || 1;
-  const slice = 360 / n;
-  const r = size / 2;
-  return (
-    <div className="relative" style={{ width: size, height: size }}>
-      {/* Pointer */}
-      <div
-        className="absolute left-1/2 -translate-x-1/2 -top-2 z-10"
-        style={{
-          width: 0,
-          height: 0,
-          borderLeft: '14px solid transparent',
-          borderRight: '14px solid transparent',
-          borderTop: '24px solid hsl(var(--primary))',
-        }}
-      />
-      <svg
-        width={size}
-        height={size}
-        viewBox={`0 0 ${size} ${size}`}
-        style={{
-          transform: `rotate(${rotation}deg)`,
-          transition: 'transform 5s cubic-bezier(0.18, 0.89, 0.32, 1.18)',
-          filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.5))',
-        }}
-      >
-        {segments.map((seg, i) => {
-          const a0 = (i * slice - 90) * (Math.PI / 180);
-          const a1 = ((i + 1) * slice - 90) * (Math.PI / 180);
-          const x0 = r + r * Math.cos(a0);
-          const y0 = r + r * Math.sin(a0);
-          const x1 = r + r * Math.cos(a1);
-          const y1 = r + r * Math.sin(a1);
-          const large = slice > 180 ? 1 : 0;
-          const path = `M ${r} ${r} L ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1} Z`;
-          // Label position
-          const am = ((i + 0.5) * slice - 90) * (Math.PI / 180);
-          const lr = r * 0.65;
-          const lx = r + lr * Math.cos(am);
-          const ly = r + lr * Math.sin(am);
-          const rot = i * slice + slice / 2;
-          return (
-            <g key={seg.id}>
-              <path d={path} fill={seg.color} stroke="#fff" strokeWidth="2" />
-              <g transform={`translate(${lx}, ${ly}) rotate(${rot})`}>
-                <text
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  fill={seg.text_color}
-                  fontSize={size * 0.05}
-                  fontWeight="bold"
-                  fontFamily="monospace"
-                >
-                  {seg.icon} {seg.label}
-                </text>
-              </g>
-            </g>
-          );
-        })}
-        <circle cx={r} cy={r} r={r * 0.12} fill="hsl(var(--primary))" stroke="#fff" strokeWidth="3" />
-      </svg>
-    </div>
-  );
-}
+const SPIN_DURATION = 5500;
 
 interface RouletteFabProps {
   open?: boolean;
@@ -125,12 +34,12 @@ interface RouletteFabProps {
 }
 
 export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: RouletteFabProps = {}) {
-  const { user } = useAuth();
-  const { isAdmin } = useAuth() as any;
+  const { user, isAdmin } = useAuth() as any;
   const { designSettings, updateDesignSettings } = useApp();
   const { data: config } = useRouletteConfig();
   const { data: segments = [] } = useRouletteSegments();
   const spin = useSpinRoulette();
+  const sounds = useGameSounds();
 
   const [openInternal, setOpenInternal] = useState(false);
   const open = openProp !== undefined ? openProp : openInternal;
@@ -138,6 +47,7 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
     onOpenChange?.(v);
     if (openProp === undefined) setOpenInternal(v);
   };
+
   const [email, setEmail] = useState('');
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
@@ -145,28 +55,17 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
   const [copied, setCopied] = useState(false);
   const cooldownH = config?.cooldown_hours ?? 24;
   const { canSpin, remaining } = useCooldown(cooldownH);
-  const wheelSize = useMemo(() => {
-    if (typeof window === 'undefined') return 320;
-    const w = window.innerWidth;
-    if (w < 360) return 220;
-    if (w < 480) return 260;
-    return 340;
-  }, [open]);
 
-  // Restore last result if still within cooldown
   useEffect(() => {
-    const saved = localStorage.getItem(LS_RESULT);
-    if (saved && !canSpin) {
-      try { setResult(JSON.parse(saved)); } catch { /* ignore */ }
-    }
+    const saved = loadStoredResult();
+    if (saved && !canSpin) setResult(saved);
   }, [canSpin]);
 
-  // Auto-open on home if user can spin and hasn't been auto-prompted today
+  // External open event
   const location = useLocation();
   const autoOpenedRef = useRef(false);
   const demoMode = (() => { try { return localStorage.getItem('lvtk:demoMode') === '1'; } catch { return false; } })();
   useEffect(() => {
-    // External event to open the roulette (used by intro sequence)
     const onOpen = () => setOpen(true);
     window.addEventListener('lvtk:open-roulette', onOpen);
     return () => window.removeEventListener('lvtk:open-roulette', onOpen);
@@ -189,21 +88,19 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
     return () => clearTimeout(t);
   }, [config?.enabled, segments.length, canSpin, location.pathname, demoMode]);
 
+  // FAB trigger styling (admin drag, position, variants) — preserved.
   const cfg = (designSettings as any).unifiedFab || {};
   const rfab = cfg.rouletteFab || {};
   const { effectiveDevice } = useAdminViewport();
   const isMobile = useIsMobile();
-  const deviceKey = effectiveDevice; // 'mobile' | 'tablet' | 'desktop'
+  const deviceKey = effectiveDevice;
   const posKey = `position_${deviceKey}` as const;
   const sizeKey = `size_${deviceKey}` as const;
-
   const mobileDefaultPos: FabPos = { corner: 'bl', x: 12, y: 48 };
   const desktopDefaultPos: FabPos = { corner: 'bl', x: 24, y: 24 };
   const fabPosCurrent: FabPos =
     rfab[posKey] ||
-    (deviceKey === 'mobile'
-      ? rfab.position_mobile || mobileDefaultPos
-      : rfab.position_desktop || desktopDefaultPos);
+    (deviceKey === 'mobile' ? rfab.position_mobile || mobileDefaultPos : rfab.position_desktop || desktopDefaultPos);
 
   const rouletteDrag = useAdminDrag({
     enabled: !!isAdmin,
@@ -219,7 +116,7 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
   if (!config?.enabled || segments.length === 0) return null;
 
   const handleSpin = async () => {
-    if (!user && !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+    if (!user && !isValidEmail(email)) {
       toast.error('Email valide requis');
       return;
     }
@@ -228,11 +125,7 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
     try {
       const data = await spin.mutateAsync(user ? undefined : email);
       if (data.error === 'COOLDOWN') {
-        toast.error('Vous avez déjà tourné aujourd\'hui');
-        if (data.nextAvailableAt) {
-          const last = new Date(data.nextAvailableAt).getTime() - cooldownH * 3600_000;
-          localStorage.setItem(LS_LAST, String(last));
-        }
+        toast.error("Tu as déjà joué récemment");
         setSpinning(false);
         return;
       }
@@ -244,16 +137,15 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
       const idx = segments.findIndex((s) => s.id === data.segmentId);
       if (idx >= 0) {
         const slice = 360 / segments.length;
-        // Rotate so chosen slice ends at top (pointer)
         const target = 360 * 8 + (360 - (idx * slice + slice / 2));
         setRotation(target);
       }
       setTimeout(() => {
         setSpinning(false);
         setResult(data);
-        localStorage.setItem(LS_LAST, String(Date.now()));
-        localStorage.setItem(LS_RESULT, JSON.stringify(data));
-      }, 5200);
+        sounds.win();
+        persistResult(data);
+      }, SPIN_DURATION + 100);
     } catch (e: any) {
       toast.error(e.message || 'Erreur');
       setSpinning(false);
@@ -261,12 +153,11 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
   };
 
   const copyCode = () => {
-    if (result?.code) {
-      navigator.clipboard.writeText(result.code);
-      setCopied(true);
-      toast.success('Code copié !');
-      setTimeout(() => setCopied(false), 2000);
-    }
+    if (!result?.code) return;
+    navigator.clipboard.writeText(result.code);
+    setCopied(true);
+    toast.success('Code copié !');
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const fabPos: FabPos = fabPosCurrent;
@@ -279,6 +170,8 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
   const sizeClass = size === 'sm' ? 'px-3 py-2 text-[10px]' : size === 'lg' ? 'px-6 py-4 text-sm' : size === 'xl' ? 'px-8 py-5 text-base' : 'px-4 py-3 text-xs';
   const iconSize = size === 'sm' ? 'h-3.5 w-3.5' : size === 'lg' ? 'h-5 w-5' : size === 'xl' ? 'h-6 w-6' : 'h-4 w-4';
   const shapeStyle = shape === 'round' ? { borderRadius: '9999px' } : shape === 'rect-bevel' ? { clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' } : { borderRadius: '9999px' };
+
+  const winningSeg = result?.segmentId ? segments.find((s) => s.id === result.segmentId) : undefined;
 
   return (
     <>
@@ -298,16 +191,12 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
                 <div className="relative flex flex-col items-center gap-1">
                   <div className="relative">
                     {canSpin && rfab.pulse !== false && (
-                      <span
-                        className="absolute inset-0 animate-ping rounded-full"
-                        style={{ background: `${accentColor}33` }}
-                      />
+                      <span className="absolute inset-0 animate-ping rounded-full" style={{ background: `${accentColor}33` }} />
                     )}
                     <div
                       className="relative flex items-center justify-center rounded-full shadow-xl"
                       style={{
-                        width: 48,
-                        height: 48,
+                        width: 48, height: 48,
                         background: 'hsl(var(--background))',
                         color: 'hsl(var(--foreground))',
                         border: '1px solid hsl(var(--foreground) / 0.3)',
@@ -317,10 +206,7 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
                       <Icon className="h-5 w-5" />
                     </div>
                   </div>
-                  <span
-                    className="font-bold tracking-wider uppercase text-[8px] leading-none px-1.5 py-0.5 rounded bg-background/85 border border-foreground/20"
-                    style={{ maxWidth: 64, textAlign: 'center' }}
-                  >
+                  <span className="font-bold tracking-wider uppercase text-[8px] leading-none px-1.5 py-0.5 rounded bg-background/85 border border-foreground/20" style={{ maxWidth: 64, textAlign: 'center' }}>
                     {label}
                   </span>
                 </div>
@@ -347,9 +233,7 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
                     }}
                   >
                     <Icon className={iconSize} />
-                    <span className="font-bold tracking-wider uppercase">
-                      {label}
-                    </span>
+                    <span className="font-bold tracking-wider uppercase">{label}</span>
                   </div>
                 </div>
               )}
@@ -363,10 +247,7 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
                     const reset = { corner: 'cc', x: 0, y: 0 } as FabPos;
                     updateDesignSettings({
                       ...(designSettings as any),
-                      unifiedFab: {
-                        ...cfg,
-                        rouletteFab: { ...rfab, [posKey]: reset },
-                      },
+                      unifiedFab: { ...cfg, rouletteFab: { ...rfab, [posKey]: reset } },
                     } as any);
                     toast.success(`Position ${deviceKey} réinitialisée`);
                   }}
@@ -397,61 +278,84 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md sm:max-w-lg p-0 bg-background border-2 border-primary/20">
+        <DialogContent className="w-[min(94vw,440px)] max-w-none p-0 bg-background border-2 border-primary/20 gap-0 overflow-hidden">
           <DialogTitle className="sr-only">{config.title}</DialogTitle>
-          <button
-            onClick={() => setOpen(false)}
-            aria-label="Fermer"
-            className="absolute right-2 top-2 z-30 inline-flex h-11 w-11 items-center justify-center rounded-full bg-background/90 hover:bg-muted shadow-md border border-border"
-          >
-            <X className="h-5 w-5" />
-          </button>
 
-          <div className="p-4 sm:p-6 text-center">
-            <h2 className="text-xl sm:text-2xl font-bold tracking-wider uppercase mb-1 pr-10">{config.title}</h2>
-            <p className="text-xs sm:text-sm text-muted-foreground mb-4 sm:mb-6">{config.subtitle}</p>
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-foreground/10">
+            <button
+              onClick={sounds.toggle}
+              aria-label={sounds.enabled ? 'Couper le son' : 'Activer le son'}
+              className="h-9 w-9 inline-flex items-center justify-center rounded-full hover:bg-muted text-muted-foreground"
+            >
+              {sounds.enabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+            </button>
+            <div className="flex-1 text-center px-2 min-w-0">
+              <h2 className="text-sm sm:text-base font-bold tracking-[0.2em] uppercase truncate">{config.title}</h2>
+            </div>
+            <button
+              onClick={() => setOpen(false)}
+              aria-label="Fermer"
+              className="h-9 w-9 inline-flex items-center justify-center rounded-full hover:bg-muted"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
 
-            <div className="flex justify-center mb-4 sm:mb-6">
-              <Wheel segments={segments} rotation={rotation} size={wheelSize} />
+          <div className="px-4 pt-3 pb-4 text-center">
+            <p className="text-[11px] text-muted-foreground mb-3 line-clamp-2">{config.subtitle}</p>
+
+            {/* Wheel */}
+            <div className="mb-3 px-2">
+              <RouletteWheel
+                segments={segments}
+                rotation={rotation}
+                spinning={spinning}
+                onTick={sounds.tick}
+                durationMs={SPIN_DURATION}
+              />
             </div>
 
+            {/* Result block */}
             {result ? (
-              <div className="space-y-4 animate-fade-in">
-                <div className="text-3xl">{segments.find(s => s.id === result.segmentId)?.icon}</div>
-                <h3 className="text-xl font-bold uppercase">{result.label}</h3>
-                <p className="text-sm text-muted-foreground">{result.description}</p>
+              <div className="space-y-2 animate-fade-in">
+                <div className="text-2xl leading-none">{winningSeg?.icon}</div>
+                <h3 className="text-lg font-bold uppercase tracking-wider">{result.label}</h3>
+                {result.description && (
+                  <p className="text-xs text-muted-foreground">{result.description}</p>
+                )}
                 {result.code && (
-                  <div className="flex items-center justify-center gap-2 p-3 bg-muted rounded-lg border-2 border-dashed border-primary/40">
-                    <code className="text-lg font-mono font-bold tracking-wider">{result.code}</code>
-                    <Button size="icon" variant="ghost" onClick={copyCode} className="h-8 w-8" aria-label={copied ? 'Code copié' : 'Copier le code'}>
-                      {copied ? <Check className="h-4 w-4 text-green-600" aria-hidden="true" /> : <Copy className="h-4 w-4" aria-hidden="true" />}
+                  <div className="flex items-center justify-center gap-2 p-2.5 bg-muted rounded-md border-2 border-dashed border-primary/40">
+                    <code className="text-base font-mono font-bold tracking-wider break-all">{result.code}</code>
+                    <Button size="icon" variant="ghost" onClick={copyCode} className="h-8 w-8 shrink-0" aria-label={copied ? 'Code copié' : 'Copier le code'}>
+                      {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
                     </Button>
                   </div>
                 )}
                 {result.expiresAt && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-[11px] text-muted-foreground">
                     Valide jusqu'au {new Date(result.expiresAt).toLocaleDateString('fr-FR')}
                   </p>
                 )}
-                <p className="text-xs text-muted-foreground">
-                  Reviens dans {fmt(remaining)} pour rejouer
+                <p className="text-[11px] text-muted-foreground">
+                  Reviens dans {fmtCooldown(remaining)} pour rejouer
                 </p>
               </div>
             ) : !canSpin ? (
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">Tu as déjà joué aujourd'hui</p>
-                <p className="font-mono text-lg font-bold">{fmt(remaining)}</p>
-                <p className="text-xs text-muted-foreground">avant ton prochain tour</p>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Tu as déjà joué aujourd'hui</p>
+                <p className="font-mono text-base font-bold">{fmtCooldown(remaining)}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">avant ton prochain tour</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {!user && (
                   <Input
                     type="email"
                     placeholder="ton@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="text-center"
+                    className="text-center h-10"
                     disabled={spinning}
                   />
                 )}
@@ -461,7 +365,7 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
                   size="lg"
                   className="w-full font-bold uppercase tracking-wider"
                 >
-                  {spinning ? 'La roue tourne...' : config.button_label}
+                  {spinning ? 'La roue tourne…' : config.button_label}
                 </Button>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
                   1 tour par {cooldownH}h
