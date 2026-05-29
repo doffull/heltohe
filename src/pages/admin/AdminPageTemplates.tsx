@@ -479,6 +479,126 @@ function TemplateEditorDialog({ template, onClose, onSaved }:
                         </Select>
                       </div>
                     )}
+
+                    {/* Per-block: text + typography + colors */}
+                    <div className="pl-7 pt-2 border-t space-y-2">
+                      {b.type === 'custom_html' ? (
+                        <div>
+                          <Label className="text-xs text-muted-foreground">HTML</Label>
+                          <Textarea
+                            rows={3}
+                            value={b.props?.html || ''}
+                            onChange={e => updateBlockProps(b.id, { html: e.target.value })}
+                            placeholder="<div>…</div>"
+                            className="text-xs font-mono"
+                          />
+                        </div>
+                      ) : b.type !== 'gallery' && b.type !== 'divider' && b.type !== 'spacer' && b.type !== 'related_products' ? (
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Libellé / texte personnalisé</Label>
+                          <Input
+                            className="h-8 text-xs"
+                            value={b.props?.label || ''}
+                            onChange={e => updateBlockProps(b.id, { label: e.target.value })}
+                            placeholder="(par défaut)"
+                          />
+                        </div>
+                      ) : null}
+
+                      {b.type !== 'gallery' && b.type !== 'divider' && b.type !== 'spacer' && (
+                        <>
+                          <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+                            <div className="col-span-2">
+                              <Label className="text-[10px] text-muted-foreground">Police</Label>
+                              <Select
+                                value={b.props?.fontFamily || '__inherit'}
+                                onValueChange={v => updateBlockProps(b.id, { fontFamily: v === '__inherit' ? '' : v })}
+                              >
+                                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__inherit">— Hériter —</SelectItem>
+                                  {GOOGLE_FONTS.map(f => <SelectItem key={f} value={f} style={{ fontFamily: f }}>{f}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label className="text-[10px] text-muted-foreground">Taille</Label>
+                              <Input type="number" className="h-8 text-xs" placeholder="px"
+                                     value={b.props?.fontSize ?? ''}
+                                     onChange={e => updateBlockProps(b.id, { fontSize: e.target.value === '' ? undefined : Number(e.target.value) })} />
+                            </div>
+                            <div>
+                              <Label className="text-[10px] text-muted-foreground">Graisse</Label>
+                              <Select
+                                value={String(b.props?.fontWeight || '__inherit')}
+                                onValueChange={v => updateBlockProps(b.id, { fontWeight: v === '__inherit' ? undefined : Number(v) })}
+                              >
+                                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__inherit">—</SelectItem>
+                                  {[300, 400, 500, 600, 700, 800, 900].map(w => <SelectItem key={w} value={String(w)}>{w}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label className="text-[10px] text-muted-foreground">Casse</Label>
+                              <Select
+                                value={b.props?.textTransform || '__inherit'}
+                                onValueChange={v => updateBlockProps(b.id, { textTransform: v === '__inherit' ? undefined : v })}
+                              >
+                                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__inherit">—</SelectItem>
+                                  <SelectItem value="none">Normal</SelectItem>
+                                  <SelectItem value="uppercase">UPPER</SelectItem>
+                                  <SelectItem value="lowercase">lower</SelectItem>
+                                  <SelectItem value="capitalize">Capitalize</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label className="text-[10px] text-muted-foreground">Align</Label>
+                              <Select
+                                value={b.props?.textAlign || '__inherit'}
+                                onValueChange={v => updateBlockProps(b.id, { textAlign: v === '__inherit' ? undefined : v })}
+                              >
+                                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__inherit">—</SelectItem>
+                                  <SelectItem value="left">Gauche</SelectItem>
+                                  <SelectItem value="center">Centre</SelectItem>
+                                  <SelectItem value="right">Droite</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-2">
+                            {(['color', 'bgColor', 'accentColor'] as const).map((k) => {
+                              const label = k === 'color' ? 'Texte' : k === 'bgColor' ? 'Fond' : 'Accent';
+                              const val = (b.props?.[k] as string) || '';
+                              return (
+                                <div key={k}>
+                                  <Label className="text-[10px] text-muted-foreground">{label}</Label>
+                                  <div className="flex gap-1">
+                                    <Input type="color" className="w-10 h-8 p-1"
+                                           value={val || '#000000'}
+                                           onChange={e => updateBlockProps(b.id, { [k]: e.target.value })} />
+                                    <Input className="h-8 text-xs flex-1" placeholder="hérite"
+                                           value={val}
+                                           onChange={e => updateBlockProps(b.id, { [k]: e.target.value })} />
+                                    {val && (
+                                      <Button size="sm" variant="ghost" className="h-8 px-2 text-[10px]"
+                                              onClick={() => updateBlockProps(b.id, { [k]: '' })}>×</Button>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </Card>
                 );
               })}
