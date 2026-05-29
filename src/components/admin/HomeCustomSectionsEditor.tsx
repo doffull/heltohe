@@ -41,6 +41,7 @@ export function HomeCustomSectionsEditor() {
       setStatus('saving');
       await flushDesignSettings({ homeCustomSections: next } as any);
       lastPersistedRef.current = JSON.stringify(next);
+      dirtyRef.current = false;
       setStatus('saved');
       const now = Date.now();
       if (now - lastToastRef.current > 4000) {
