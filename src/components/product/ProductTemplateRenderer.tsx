@@ -106,8 +106,8 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
       );
       case 'category_tag': return (
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] font-bold uppercase tracking-[2px]" style={{ color: t.colors.accent }}>
-            {product?.category || 'Produit'}
+          <span className="text-[11px] font-bold uppercase tracking-[2px]" style={{ color: b.props?.accentColor || t.colors.accent }}>
+            {labelOf(b, product?.category || 'Produit')}
           </span>
           {product?.sku && <span className="text-[11px]" style={{ color: t.colors.muted }}>SKU: {product.sku}</span>}
         </div>
@@ -115,12 +115,12 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
       case 'sku': return product?.sku ? <div className="text-xs" style={{ color: t.colors.muted }}>SKU: {product.sku}</div> : null;
       case 'title': return (
         <h1 className={cn('font-black leading-none', b.props?.uppercase && 'uppercase')}
-            style={{ fontSize: b.props?.size || 36, letterSpacing: '-1.5px', marginBottom: 8 }}>
-          {product?.name}
+            style={{ fontSize: b.props?.fontSize || b.props?.size || 36, letterSpacing: '-1.5px', marginBottom: 8 }}>
+          {labelOf(b, product?.name || '')}
         </h1>
       );
-      case 'collab_subtitle': return product?.collab ? (
-        <div className="text-sm mb-4" style={{ color: t.colors.muted }}>{product.collab}</div>
+      case 'collab_subtitle': return product?.collab || b.props?.label ? (
+        <div className="text-sm mb-4" style={{ color: t.colors.muted }}>{labelOf(b, product?.collab || '')}</div>
       ) : null;
       case 'price': {
         const v = b.variant || 'large-bold';
