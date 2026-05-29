@@ -53,6 +53,7 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<SpinResult | null>(null);
   const [copied, setCopied] = useState(false);
+  const pendingResultRef = useRef<SpinResult | null>(null);
   const cooldownH = config?.cooldown_hours ?? 24;
   const { canSpin, remaining } = useCooldown(cooldownH);
 
@@ -134,18 +135,18 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
         setSpinning(false);
         return;
       }
+      pendingResultRef.current = data;
       const idx = segments.findIndex((s) => s.id === data.segmentId);
       if (idx >= 0) {
         const slice = 360 / segments.length;
-        const target = 360 * 8 + (360 - (idx * slice + slice / 2));
+        const target = rotation + 360 * 8 + (360 - (idx * slice + slice / 2)) - (rotation % 360);
         setRotation(target);
-      }
-      setTimeout(() => {
+      } else {
+        // No segment match — settle immediately.
         setSpinning(false);
         setResult(data);
-        sounds.win();
-        persistResult(data);
-      }, SPIN_DURATION + 100);
+        pendingResultRef.current = null;
+      }
     } catch (e: any) {
       toast.error(e.message || 'Erreur');
       setSpinning(false);
@@ -310,8 +311,16 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
               <RouletteWheel
                 segments={segments}
                 rotation={rotation}
-                spinning={spinning}
                 onTick={sounds.tick}
+                onSettled={() => {
+                  const data = pendingResultRef.current;
+                  if (!data) return;
+                  pendingResultRef.current = null;
+                  setSpinning(false);
+                  setResult(data);
+                  sounds.win();
+                  persistResult(data);
+                }}
                 durationMs={SPIN_DURATION}
               />
             </div>

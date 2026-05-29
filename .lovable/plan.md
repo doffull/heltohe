@@ -1,58 +1,86 @@
-# Refonte du jeu-concours (Roulette + Scratch)
+# Refonte RouletteWheel — nettoyage & machine d'états
 
-## Constat de l'audit
+## Problèmes actuels
 
-- **`RouletteFab.tsx`** : labels SVG qui chevauchent au centre quand 4+ segments, icône emoji + label collés sur une même `<text>`, taille de roue calculée une seule fois au montage (cassée au resize), pointeur qui dépasse hors du dialog, dialog `max-w-md` trop étroit pour une roue de 340px sur mobile → contenu rogné.
-- **`GameScratchFab.tsx`** : pas de retour visuel pendant le scratch, cartes non révélées peuvent chevaucher le bouton fermer en SE.
-- **Aucun bruitage** sur le spin ni sur la révélation.
-- Code dupliqué (cooldown, persistence) entre les 2 composants.
+- `fromRef.current = fromRef.current;` ligne morte.
+- `lastRotationRef` utilisée avant déclaration (TDZ-like, fonctionne par chance car ref).
+- Animation JS (tick) et animation CSS (`transition: transform`) tournent en parallèle → désynchronisation possible entre les ticks et la rotation visuelle.
+- Easing JS (`1 - (1-t)^3`) ≠ easing CSS (`cubic-bezier(0.22,0.61,0.36,1)`) → ticks décalés.
+- Géométrie SVG (paths, labels, hub, pointer) noyée dans le composant principal.
+- Pas d'état explicite : `spinning` booléen + `rotation` number, pas de phase "settling" pour gérer la fin propre.
 
-## Refonte proposée
+## Architecture cible
 
-### 1. Nouveau composant `RouletteWheel.tsx` (SVG propre)
-- Roue **responsive** via `ResizeObserver` sur le conteneur (s'adapte 220 → 380 px).
-- Labels segmentés : **icône** et **texte** sur 2 `<text>` séparés, orientés radialement, avec `textLength` + `lengthAdjust="spacingAndGlyphs"` pour éviter tout débordement.
-- Auto-shrink de la police selon nombre de segments (4 = 14px, 6 = 12px, 8 = 10px).
-- Séparateurs blancs entre slices, hub central avec ombre, pointeur **dans** le SVG (plus de débordement).
-- Easing personnalisé `cubic-bezier(0.22, 0.61, 0.36, 1)` sur 5.5s.
+```text
+src/components/games/roulette/
+  RouletteWheel.tsx       ← orchestrateur + machine d'états
+  wheelGeometry.ts        ← maths pures (slice path, label/icon positions, font sizing)
+  WheelSvg.tsx            ← rendu SVG pur (props: segments, size, geometry)
+  WheelPointer.tsx        ← pointeur (hors rotation)
+  useSpinAnimation.ts     ← hook: state machine + tick sync
+```
 
-### 2. Refonte `RouletteFab.tsx`
-- Dialog en `max-w-[min(92vw,440px)]`, padding réduit sur mobile (`p-3`), header compact.
-- Bouton fermer repositionné hors de la zone de la roue.
-- Layout flex vertical strict : titre → roue (centrée, `aspect-square`) → email → bouton → résultat.
-- Email + bouton spin **toujours visibles** sous la roue (pas de scroll caché).
-- État "résultat" affiché en overlay sur la roue (badge + code), pas en dessous → évite saut de hauteur.
+## 1. `wheelGeometry.ts` (pur, testable)
 
-### 3. Refonte `GameScratchFab.tsx`
-- Grille 3 cartes en `gap-2 sm:gap-4`, `min-h-0` pour éviter overflow.
-- Animation de scratch via canvas (effet de grattage réel au pointer) — fallback CSS si pas de canvas.
-- Carte gagnante : pulse + halo coloré.
+```ts
+export interface SliceGeom { path: string; labelX: number; labelY: number; iconX: number; iconY: number; rotDeg: number; }
+export function computeGeometry(size: number, count: number): { r, innerR, slices: SliceGeom[], labelFont, iconFont, maxChord }
+```
+Aucune dépendance React. Calculé une fois par `useMemo(size, count)`.
 
-### 4. Bruitages (nouveau hook `useGameSounds.ts`)
-- Sons WebAudio générés en mémoire (pas de fichier externe) :
-  - **`tick`** : courte impulsion 800Hz, jouée par segment qui passe sous le pointeur pendant la rotation (calculé via `requestAnimationFrame` + rotation interpolée).
-  - **`win`** : arpège ascendant 3 notes sur révélation.
-  - **`scratch`** : bruit blanc filtré pendant le grattage.
-- Toggle silence via icône 🔊 / 🔇 dans le dialog, persistant en `localStorage` (`lvtk:game_sound`).
-- Respect de `prefers-reduced-motion` → désactivé par défaut.
+## 2. `WheelSvg.tsx`
 
-### 5. Hook commun `useGameSession.ts`
-Extrait la logique partagée : cooldown, persistence `LS_LAST` / `LS_RESULT`, validation email, appel `useSpinRoulette`. Utilisé par les 2 composants.
+Reçoit `segments`, `geometry`, `rotation`, `durationMs`. Render SVG + `transition: transform`. Aucune logique.
 
-## Fichiers
+## 3. `useSpinAnimation.ts`
 
-**Créés**
-- `src/components/games/RouletteWheel.tsx`
-- `src/hooks/useGameSounds.ts`
-- `src/hooks/useGameSession.ts`
+Machine d'états explicite :
 
-**Réécrits**
-- `src/components/home/RouletteFab.tsx`
-- `src/components/games/GameScratchFab.tsx`
+```ts
+type Phase = 'idle' | 'spinning' | 'settling';
+useSpinAnimation({ targetRotation, durationMs, segmentCount, onTick, onSettled })
+  → { phase, currentRotation }
+```
 
-**Inchangés** : `GameRouter.tsx`, `useRoulette.ts`, RPC `spin_roulette`, configs admin.
+Logique :
+- `idle` → `spinning` quand `targetRotation` change.
+- Pendant `spinning` : `requestAnimationFrame` calcule la rotation interpolée avec **le même easing que CSS** (bezier sampling helper), détecte le passage de segment sous le pointeur, appelle `onTick`.
+- À `t === 1` → phase `settling` (50 ms tampon) → `idle` + `onSettled`.
+- Rotation visuelle pilotée par CSS `transition` côté `WheelSvg` (perf GPU), tick pilotée par rAF avec easing identique → synchro garantie.
+- Helper `sampleCubicBezier(p1x, p1y, p2x, p2y)` partagé entre CSS et JS.
 
-## QA prévue
-- Test desktop 1280px + mobile 360/390px avec 3, 4, 6, 8 segments.
-- Vérification overflow / chevauchement via DevTools.
-- Test mute toggle + persistance.
+## 4. `RouletteWheel.tsx` (nouveau)
+
+```tsx
+export function RouletteWheel({ segments, rotation, onTick, onSettled, durationMs }) {
+  const geom = useMemo(() => computeGeometry(size, segments.length), [size, segments.length]);
+  const { phase } = useSpinAnimation({ targetRotation: rotation, durationMs, segmentCount: segments.length, onTick, onSettled });
+  return (
+    <Container ref={containerRef}>
+      <WheelSvg segments={segments} geometry={geom} rotation={rotation} durationMs={durationMs} />
+      <WheelPointer size={size} />
+    </Container>
+  );
+}
+```
+
+- `ResizeObserver` conservé pour `size`.
+- Suppression `lastRotationRef`, `fromRef`, `toRef`, lignes mortes.
+- Ajout prop `onSettled` (optionnelle) pour que `RouletteFab` n'utilise plus `setTimeout(SPIN_DURATION + 100)` → fin gérée par la wheel.
+
+## 5. Intégration `RouletteFab.tsx`
+
+Remplacer le `setTimeout` post-spin par `onSettled={() => { setSpinning(false); setResult(data); sounds.win(); persistResult(data); }}`. Tout le reste inchangé (FAB drag, dialog, admin).
+
+## Détails techniques
+
+- **Easing partagé** : constante `SPIN_BEZIER = [0.22, 0.61, 0.36, 1]`, utilisée pour `transition-timing-function` ET pour `sampleCubicBezier()` côté JS.
+- **Tick detection** : index = `floor(((360 - currentRot%360) % 360) / sliceDeg)`. Inchangé mais isolé dans le hook.
+- **Cleanup** : `cancelAnimationFrame` dans le return de l'effect, reset des refs.
+- **Compat** : API publique `<RouletteWheel segments rotation spinning onTick durationMs />` conservée + nouveau `onSettled`. `spinning` prop devient optionnelle (déduite de la machine).
+
+## Hors-scope
+
+- Pas de changement visuel (couleurs, tailles, ombres identiques).
+- Pas de modif des sons, du RPC, ni de `useRoulette`.
+- `GameScratchFab` non touché.
