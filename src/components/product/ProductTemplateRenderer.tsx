@@ -159,9 +159,9 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
       }
 
       case 'stock_status': return (
-        <div className="flex items-center gap-2 text-sm font-semibold mb-4" style={{ color: '#22a05a' }}>
-          <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#22a05a' }} />
-          En stock
+        <div className="flex items-center gap-2 text-sm font-semibold mb-4" style={{ color: b.props?.accentColor || '#22a05a' }}>
+          <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: b.props?.accentColor || '#22a05a' }} />
+          {labelOf(b, 'En stock')}
         </div>
       );
       case 'model_info': return product?.modelInfo ? (
@@ -172,31 +172,36 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
       ) : null;
       case 'find_size_btn': return (
         <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border mb-4"
-                style={{ borderColor: t.colors.fg, color: t.colors.fg }}>
-          <Ruler className="w-4 h-4" /> Trouver ma taille
+                style={{ borderColor: b.props?.accentColor || t.colors.fg, color: 'inherit' }}>
+          <Ruler className="w-4 h-4" /> {labelOf(b, 'Trouver ma taille')}
         </button>
       );
-      case 'trust_badges': return (
-        <div className="grid grid-cols-3 gap-px rounded-xl overflow-hidden mb-6" style={{ background: t.colors.border }}>
-          {[
-            { icon: Truck, text: 'Livraison gratuite dès 200€' },
-            { icon: Shield, text: 'Garantie 1 an' },
-            { icon: RotateCcw, text: 'Retours sous 30 jours' },
-          ].map((it, i) => (
-            <div key={i} className="flex flex-col items-center gap-2 p-4 text-center" style={{ background: t.colors.card }}>
-              <it.icon className="w-5 h-5" />
-              <span className="text-xs font-semibold" style={{ color: t.colors.muted }}>{it.text}</span>
-            </div>
-          ))}
-        </div>
-      );
+      case 'trust_badges': {
+        const items = [
+          { icon: Truck, text: 'Livraison gratuite dès 200€' },
+          { icon: Shield, text: 'Garantie 1 an' },
+          { icon: RotateCcw, text: 'Retours sous 30 jours' },
+        ];
+        const customLabels = b.props?.label ? String(b.props.label).split('|').map(s => s.trim()) : [];
+        return (
+          <div className="grid grid-cols-3 gap-px rounded-xl overflow-hidden mb-6" style={{ background: t.colors.border }}>
+            {items.map((it, i) => (
+              <div key={i} className="flex flex-col items-center gap-2 p-4 text-center" style={{ background: t.colors.card }}>
+                <it.icon className="w-5 h-5" />
+                <span className="text-xs font-semibold" style={{ color: t.colors.muted }}>{customLabels[i] || it.text}</span>
+              </div>
+            ))}
+          </div>
+        );
+      }
       case 'description': {
         const v = b.variant || 'plain';
+        const heading = labelOf(b, 'Description');
         if (v === 'bullet-features') {
           const lines = String(product?.description || '').split(/\n|\.\s/).filter(Boolean).slice(0, 6);
           return (
             <div className="mb-4">
-              <h3 className="text-xs font-bold uppercase tracking-[2px] mb-2">Caractéristiques</h3>
+              <h3 className="text-xs font-bold uppercase tracking-[2px] mb-2">{labelOf(b, 'Caractéristiques')}</h3>
               <ul className="text-sm space-y-1" style={{ color: t.colors.muted }}>
                 {lines.map((l, i) => <li key={i} className="flex gap-2"><span style={{ color: t.colors.accent }}>•</span>{l}</li>)}
               </ul>
@@ -214,7 +219,7 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
         }
         return (
           <div className="mb-4">
-            <h3 className="text-xs font-bold uppercase tracking-[2px] mb-2">Description</h3>
+            <h3 className="text-xs font-bold uppercase tracking-[2px] mb-2">{heading}</h3>
             <p className="text-sm leading-relaxed" style={{ color: t.colors.muted }}>{product?.description}</p>
           </div>
         );
@@ -222,14 +227,14 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
 
       case 'material': return product?.material ? (
         <div className="mb-4">
-          <h3 className="text-xs font-bold uppercase tracking-[2px] mb-2">Matière</h3>
+          <h3 className="text-xs font-bold uppercase tracking-[2px] mb-2">{labelOf(b, 'Matière')}</h3>
           <span className="inline-block px-4 py-1.5 rounded-full text-xs font-semibold"
                 style={{ background: t.colors.border, color: t.colors.fg }}>{product.material}</span>
         </div>
       ) : null;
       case 'sizes_selector': return product?.sizes?.length ? (
         <div className="mb-4">
-          <h3 className="text-xs font-bold uppercase tracking-[2px] mb-3">Taille</h3>
+          <h3 className="text-xs font-bold uppercase tracking-[2px] mb-3">{labelOf(b, 'Taille')}</h3>
           <div className="flex flex-wrap gap-2">
             {product.sizes.map((s: string) => (
               <button key={s} onClick={() => setSelectedSize(s)}
@@ -245,7 +250,7 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
       ) : null;
       case 'quantity_selector': return (
         <div className="mb-4">
-          <h3 className="text-xs font-bold uppercase tracking-[2px] mb-3">Quantité</h3>
+          <h3 className="text-xs font-bold uppercase tracking-[2px] mb-3">{labelOf(b, 'Quantité')}</h3>
           <div className="inline-flex items-center rounded-lg border" style={{ borderColor: t.colors.border }}>
             <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-11 h-11 flex items-center justify-center"><Minus className="w-4 h-4" /></button>
             <span className="w-14 text-center font-bold border-x" style={{ borderColor: t.colors.border }}>{quantity}</span>
