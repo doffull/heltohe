@@ -51,13 +51,13 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 py-6 px-2 lg:px-4 space-y-2">
         {navItems.map((item, index) => {
-          const Icon = item.icon;
-          const isActive = currentView === item.id;
+          const Icon = ICONS[item.icon] ?? Home;
+          const isActive = currentView === item.view;
           
           return (
             <button
               key={item.id}
-              onClick={() => setCurrentView(item.id)}
+              onClick={() => setCurrentView(item.view)}
               className={cn(
                 "w-full flex items-center gap-3 px-3 py-3 lg:py-2.5 transition-all duration-200 group",
                 "hover:bg-primary/10 border border-transparent",
