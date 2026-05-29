@@ -16,13 +16,46 @@ function keepCategoryFallback(event: React.SyntheticEvent<HTMLImageElement>) {
   }
 }
 
+type CategoryShape = 'square' | 'rounded' | 'circle' | 'triangle' | 'chamfer' | 'pill';
+type CategoryOrientation = 'vertical' | 'horizontal';
+type CategoryHover = 'zoom' | 'brightness' | 'none';
+
+function shapeClasses(shape: CategoryShape): string {
+  switch (shape) {
+    case 'rounded': return 'rounded-2xl';
+    case 'circle': return 'rounded-full aspect-square';
+    case 'pill': return 'rounded-full';
+    case 'triangle': return ''; // handled via clipPath inline style
+    case 'chamfer': return 'chamfer-hud';
+    case 'square':
+    default: return '';
+  }
+}
+
+function hoverImageClasses(effect: CategoryHover): string {
+  switch (effect) {
+    case 'brightness': return 'transition-all duration-700 group-hover:brightness-125';
+    case 'none': return '';
+    case 'zoom':
+    default: return 'transition-transform duration-700 group-hover:scale-110';
+  }
+}
+
 export function CategoryGrid() {
-  const { navigateToCategory, language } = useApp();
+  const { navigateToCategory, language, designSettings } = useApp();
   const { data: dbCategories = [] } = useCategories();
   const { data: boutiques = [] } = useBoutiques();
   const updateCategory = useUpdateCategory();
   const { isOpen: isEditorOpen } = useVisualEditor();
   const navigate = useNavigate();
+
+  // Read inline-editor settings stored on the "categories" home block
+  const blocks = ((designSettings as any).homePageBlocks || []) as Array<{ id: string; settings?: any }>;
+  const blockSettings = blocks.find((b) => b.id === 'categories')?.settings || {};
+  const shape: CategoryShape = blockSettings.shape || 'chamfer';
+  const orientation: CategoryOrientation = blockSettings.orientation || 'vertical';
+  const columns: number = blockSettings.columns || 3;
+  const hoverEffect: CategoryHover = blockSettings.hoverEffect || 'zoom';
 
   // Editing state: categoryId → local title value
   const [editingId, setEditingId] = useState<string | null>(null);
