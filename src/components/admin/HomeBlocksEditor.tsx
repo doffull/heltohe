@@ -25,7 +25,10 @@ const EDIT_ROUTE: Record<string, string> = {
 };
 
 type BuiltinId = 'hero' | 'categories' | 'featured' | 'flash' | 'newArrivals' | 'voiceBanner' | 'loyalty' | 'newsletter';
-interface Block { id: string; visible: boolean; label?: string }
+interface Block { id: string; visible: boolean; label?: string; settings?: Record<string, any> }
+
+// Blocs disposant d'un éditeur inline (panneau pliable au lieu de naviguer)
+const INLINE_EDITABLE = new Set<string>(['categories']);
 
 const BUILTIN_LABELS: Record<BuiltinId, string> = {
   hero: 'Hero (slider ou techwear)',
@@ -51,7 +54,82 @@ function sectionLabel(s: PageSection): string {
   );
 }
 
-function Row({ b, onToggle, isCustom, onEdit }: { b: Block; onToggle: () => void; isCustom: boolean; onEdit?: () => void }) {
+// ============== Inline editor for the "categories" block ==============
+const CATEGORY_SHAPES = [
+  { v: 'square', label: 'Carré' },
+  { v: 'rounded', label: 'Arrondi' },
+  { v: 'circle', label: 'Cercle' },
+  { v: 'triangle', label: 'Triangle' },
+  { v: 'chamfer', label: 'Biseauté (HUD)' },
+  { v: 'pill', label: 'Pill' },
+] as const;
+
+const CATEGORY_HOVERS = [
+  { v: 'zoom', label: 'Zoom' },
+  { v: 'brightness', label: 'Luminosité' },
+  { v: 'none', label: 'Aucun' },
+] as const;
+
+function CategoriesBlockInlineEditor({
+  settings,
+  onChange,
+}: {
+  settings: Record<string, any>;
+  onChange: (next: Record<string, any>) => void;
+}) {
+  const shape = settings.shape || 'chamfer';
+  const orientation = settings.orientation || 'vertical';
+  const columns = String(settings.columns || 3);
+  const hoverEffect = settings.hoverEffect || 'zoom';
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 border-t bg-muted/20">
+      <div className="space-y-1">
+        <Label className="text-[10px] uppercase tracking-wider">Forme</Label>
+        <Select value={shape} onValueChange={(v) => onChange({ ...settings, shape: v })}>
+          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {CATEGORY_SHAPES.map((s) => <SelectItem key={s.v} value={s.v}>{s.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1">
+        <Label className="text-[10px] uppercase tracking-wider">Orientation</Label>
+        <Select value={orientation} onValueChange={(v) => onChange({ ...settings, orientation: v })}>
+          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="vertical">Vertical (grille)</SelectItem>
+            <SelectItem value="horizontal">Horizontal (bandeaux)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1">
+        <Label className="text-[10px] uppercase tracking-wider">Colonnes</Label>
+        <Select value={columns} onValueChange={(v) => onChange({ ...settings, columns: parseInt(v, 10) })}>
+          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="2">2 colonnes</SelectItem>
+            <SelectItem value="3">3 colonnes</SelectItem>
+            <SelectItem value="4">4 colonnes</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1">
+        <Label className="text-[10px] uppercase tracking-wider">Effet au survol</Label>
+        <Select value={hoverEffect} onValueChange={(v) => onChange({ ...settings, hoverEffect: v })}>
+          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {CATEGORY_HOVERS.map((h) => <SelectItem key={h.v} value={h.v}>{h.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      <p className="text-[10px] text-muted-foreground md:col-span-2">
+        Astuce : l'orientation horizontale présente chaque catégorie comme un large bandeau (image à gauche, titre à droite).
+      </p>
+    </div>
+  );
+}
+
+function Row({ b, onToggle, isCustom, onEdit, expanded, hasInline }: { b: Block; onToggle: () => void; isCustom: boolean; onEdit?: () => void; expanded?: boolean; hasInline?: boolean }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: b.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   return (
