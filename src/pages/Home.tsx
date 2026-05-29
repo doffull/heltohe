@@ -397,10 +397,8 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <RevealSection>
             <div className={cn("text-center", titleMb)}>
-              <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-2">// NOUVEAUTÉS</p>
-              <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight">
-                Dernières arrivées
-              </h2>
+              <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-2">// hiver 2026</p>
+              <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight">NOUVEAUTÉS</h2>
             </div>
           </RevealSection>
           <StaggerContainer className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6">
