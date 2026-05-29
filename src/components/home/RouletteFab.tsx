@@ -311,8 +311,16 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
               <RouletteWheel
                 segments={segments}
                 rotation={rotation}
-                spinning={spinning}
                 onTick={sounds.tick}
+                onSettled={() => {
+                  const data = pendingResultRef.current;
+                  if (!data) return;
+                  pendingResultRef.current = null;
+                  setSpinning(false);
+                  setResult(data);
+                  sounds.win();
+                  persistResult(data);
+                }}
                 durationMs={SPIN_DURATION}
               />
             </div>
