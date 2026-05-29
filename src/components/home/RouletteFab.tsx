@@ -53,6 +53,7 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<SpinResult | null>(null);
   const [copied, setCopied] = useState(false);
+  const pendingResultRef = useRef<SpinResult | null>(null);
   const cooldownH = config?.cooldown_hours ?? 24;
   const { canSpin, remaining } = useCooldown(cooldownH);
 
