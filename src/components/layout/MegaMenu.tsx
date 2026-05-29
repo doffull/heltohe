@@ -197,7 +197,7 @@ export function MegaMenu() {
                 <div>
                   <p className="font-mono text-[10px] tracking-[0.3em] text-muted-foreground mb-3">// LIENS</p>
                   <ul className="flex flex-wrap gap-x-6 gap-y-2">
-                    {STATIC_LINKS.map((l) => (
+                    {staticLinks.map((l) => (
                       <motion.li key={l.href} variants={itemV}>
                         <Link
                           to={l.href}
