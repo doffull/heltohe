@@ -15,6 +15,7 @@ const FALLBACK_NAV = [
 
 export function Sidebar() {
   const { currentView, setCurrentView, language, designSettings } = useApp();
+  const navItems = (designSettings.sidebarNavLinks ?? FALLBACK_NAV).filter(n => n.enabled);
   
   return (
     <aside 
