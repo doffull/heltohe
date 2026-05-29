@@ -76,7 +76,6 @@ Recommande LA taille la plus adaptée parmi les tailles disponibles (si fournies
                 advice: { type: "string", description: "Conseil court en français (1-2 phrases)" },
               },
               required: ["recommendedSize", "confidence", "advice"],
-              additionalProperties: false,
             },
           },
         }],
