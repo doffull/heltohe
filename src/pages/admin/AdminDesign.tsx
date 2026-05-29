@@ -51,6 +51,7 @@ const NAV_ITEMS = [
   { key: 'hero',        label: 'Hero Slider',  icon: ImagePlay,       desc: 'Slides & parallaxe' },
   { key: 'techwear',    label: 'Hero Techwear', icon: ImagePlay,       desc: 'Carte produit dynamique' },
   { key: 'header',      label: 'Header',       icon: PanelTop,        desc: 'Barre de navigation' },
+  { key: 'navigation',  label: 'Navigation',   icon: PanelLeft,       desc: 'Liens Sidebar & Mega Menu' },
   { key: 'logo',        label: 'Logo & Marque',icon: Image,           desc: 'Identité visuelle' },
   { key: 'couleurs',    label: 'Couleurs',     icon: Palette,         desc: 'Palette & thème' },
   { key: 'sidebar',     label: 'Sidebar',      icon: PanelLeft,       desc: 'Panneau latéral' },
