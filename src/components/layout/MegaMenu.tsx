@@ -46,6 +46,7 @@ export function MegaMenu() {
   const [search, setSearch] = useState('');
 
   const rootCats = useMemo(() => dbCategories.filter((c) => !c.parentId), [dbCategories]);
+  const staticLinks = (designSettings.megaMenuLinks ?? DEFAULT_STATIC_LINKS).filter((l) => l.enabled);
 
   // ESC close + lock scroll
   useEffect(() => {
