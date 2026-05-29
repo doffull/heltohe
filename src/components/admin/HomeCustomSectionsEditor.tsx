@@ -17,9 +17,13 @@ export function HomeCustomSectionsEditor() {
   const lastPersistedRef = useRef<string>(JSON.stringify(initial));
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastToastRef = useRef<number>(0);
+  const dirtyRef = useRef<boolean>(false);
 
-  // Sync when external design settings change (e.g. from another tab)
+  // Sync when external design settings change (e.g. from another tab or reload).
+  // CRITICAL: ne pas écraser le state local si l'utilisateur a des modifs en cours
+  // (sinon une image fraîchement uploadée disparaît avant la fin de la sauvegarde).
   useEffect(() => {
+    if (dirtyRef.current) return;
     const cur = (designSettings as any).homeCustomSections;
     if (Array.isArray(cur)) {
       const serialized = JSON.stringify(cur);
