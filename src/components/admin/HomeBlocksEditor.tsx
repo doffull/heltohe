@@ -157,22 +157,8 @@ export function HomeBlocksEditor() {
   const { designSettings, updateDesignSettings, flushDesignSettings } = useApp();
   const navigate = useNavigate();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
-
-  const goEdit = (id: string) => {
-    if (id.startsWith('custom:')) {
-      document.getElementById('custom-sections')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      return;
-    }
-    const route = EDIT_ROUTE[id];
-    if (!route) { toast.info('Pas d\'éditeur dédié pour ce bloc'); return; }
-    if (route.includes('#')) {
-      const [path, hash] = route.split('#');
-      navigate(path);
-      setTimeout(() => document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 250);
-    } else {
-      navigate(route);
-    }
-  };
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const dirtyRef = useRef(false);
 
   const customSections = ((designSettings as any).homeCustomSections || []) as PageSection[];
 
@@ -200,7 +186,34 @@ export function HomeBlocksEditor() {
   }, [designSettings, customSections]);
 
   const [blocks, setBlocks] = useState<Block[]>(merged);
-  useEffect(() => { setBlocks(merged); /* eslint-disable-next-line */ }, [JSON.stringify(merged.map(b => b.id))]);
+  // Sync only when user has no pending edits — sinon on écraserait un changement local.
+  useEffect(() => {
+    if (dirtyRef.current) return;
+    setBlocks(merged);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(merged)]);
+
+  const goEdit = (id: string) => {
+    if (id.startsWith('custom:')) {
+      document.getElementById('custom-sections')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    if (INLINE_EDITABLE.has(id)) {
+      setExpandedId((cur) => (cur === id ? null : id));
+      return;
+    }
+    const route = EDIT_ROUTE[id];
+    if (!route) { toast.info("Pas d'éditeur dédié pour ce bloc"); return; }
+    if (route.includes('#')) {
+      const [path, hash] = route.split('#');
+      navigate(path);
+      setTimeout(() => document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 250);
+    } else {
+      navigate(route);
+    }
+  };
+
+  const markDirty = () => { dirtyRef.current = true; };
 
   // Listen to global "collect" event so the page-level "Tout enregistrer" picks up our local state
   useEffect(() => {
@@ -214,19 +227,26 @@ export function HomeBlocksEditor() {
     if (!over || active.id === over.id) return;
     const oi = blocks.findIndex((b) => b.id === active.id);
     const ni = blocks.findIndex((b) => b.id === over.id);
+    markDirty();
     setBlocks(arrayMove(blocks, oi, ni));
   };
 
-  const toggle = (id: string) => setBlocks(blocks.map((b) => b.id === id ? { ...b, visible: !b.visible } : b));
+  const toggle = (id: string) => { markDirty(); setBlocks(blocks.map((b) => b.id === id ? { ...b, visible: !b.visible } : b)); };
+
+  const updateSettings = (id: string, settings: Record<string, any>) => {
+    markDirty();
+    setBlocks(blocks.map((b) => b.id === id ? { ...b, settings } : b));
+  };
 
   const save = async () => {
     await flushDesignSettings({ homePageBlocks: blocks } as any);
-    toast.success("Ordre des sections enregistré");
+    dirtyRef.current = false;
+    toast.success('Configuration des sections enregistrée');
   };
 
-  const reset = () => setBlocks(DEFAULT_BUILTIN.concat(customSections.map((s) => ({
+  const reset = () => { markDirty(); setBlocks(DEFAULT_BUILTIN.concat(customSections.map((s) => ({
     id: `custom:${s.id}`, visible: true, label: sectionLabel(s),
-  }))));
+  })))); };
 
   return (
     <Card className="border-2 border-primary/20">
@@ -241,9 +261,30 @@ export function HomeBlocksEditor() {
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-2">
-              {blocks.map((b) => (
-                <Row key={b.id} b={b} onToggle={() => toggle(b.id)} isCustom={b.id.startsWith('custom:')} onEdit={() => goEdit(b.id)} />
-              ))}
+              {blocks.map((b) => {
+                const hasInline = INLINE_EDITABLE.has(b.id);
+                const expanded = expandedId === b.id;
+                return (
+                  <div key={b.id} className="space-y-0">
+                    <Row
+                      b={b}
+                      onToggle={() => toggle(b.id)}
+                      isCustom={b.id.startsWith('custom:')}
+                      onEdit={() => goEdit(b.id)}
+                      hasInline={hasInline}
+                      expanded={expanded}
+                    />
+                    {hasInline && expanded && b.id === 'categories' && (
+                      <div className="rounded border border-t-0 -mt-px">
+                        <CategoriesBlockInlineEditor
+                          settings={b.settings || {}}
+                          onChange={(next) => updateSettings(b.id, next)}
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </SortableContext>
         </DndContext>
