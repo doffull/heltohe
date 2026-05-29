@@ -289,6 +289,15 @@ function TemplateEditorDialog({ template, onClose, onSaved }:
   const updateBlock = (id: string, patch: Partial<TemplateBlock>) => {
     setT({ ...t, layout: { ...t.layout, blocks: t.layout.blocks.map(b => b.id === id ? { ...b, ...patch } : b) } });
   };
+  const updateBlockProps = (id: string, patch: Record<string, any>) => {
+    setT({
+      ...t,
+      layout: {
+        ...t.layout,
+        blocks: t.layout.blocks.map(b => b.id === id ? { ...b, props: { ...(b.props || {}), ...patch } } : b),
+      },
+    });
+  };
   const removeBlock = (id: string) => {
     setT({ ...t, layout: { ...t.layout, blocks: t.layout.blocks.filter(b => b.id !== id) } });
   };
