@@ -1,86 +1,36 @@
-# Refonte RouletteWheel — nettoyage & machine d'états
+# Problème
 
-## Problèmes actuels
+Dans `/admin/parametres` → onglet **Catégories**, le sélecteur "Colonnes : 2 / 3 / 4" ne semble rien faire :
 
-- `fromRef.current = fromRef.current;` ligne morte.
-- `lastRotationRef` utilisée avant déclaration (TDZ-like, fonctionne par chance car ref).
-- Animation JS (tick) et animation CSS (`transition: transform`) tournent en parallèle → désynchronisation possible entre les ticks et la rotation visuelle.
-- Easing JS (`1 - (1-t)^3`) ≠ easing CSS (`cubic-bezier(0.22,0.61,0.36,1)`) → ticks décalés.
-- Géométrie SVG (paths, labels, hub, pointer) noyée dans le composant principal.
-- Pas d'état explicite : `spinning` booléen + `rotation` number, pas de phase "settling" pour gérer la fin propre.
+1. La grille d'aperçu juste en dessous utilise des classes **codées en dur** (`grid sm:grid-cols-2 lg:grid-cols-3`) → le choix n'a aucun effet visuel immédiat dans l'admin.
+2. La sauvegarde existe (auto-save debounced 800 ms via `AppContext.updateDesignSettings`), mais sans **aucun retour visuel** : l'utilisateur croit que rien n'est enregistré.
+3. Aucun bouton "Enregistrer" explicite, aucun toast de confirmation.
 
-## Architecture cible
+Conclusion : la valeur est bien persistée en base (`design_settings.category_columns`), mais l'UI ne le montre pas → impression que "rien ne marche".
 
-```text
-src/components/games/roulette/
-  RouletteWheel.tsx       ← orchestrateur + machine d'états
-  wheelGeometry.ts        ← maths pures (slice path, label/icon positions, font sizing)
-  WheelSvg.tsx            ← rendu SVG pur (props: segments, size, geometry)
-  WheelPointer.tsx        ← pointeur (hors rotation)
-  useSpinAnimation.ts     ← hook: state machine + tick sync
-```
+# Plan
 
-## 1. `wheelGeometry.ts` (pur, testable)
+**Fichier : `src/pages/admin/AdminSettings.tsx`** (onglet Catégories uniquement)
 
-```ts
-export interface SliceGeom { path: string; labelX: number; labelY: number; iconX: number; iconY: number; rotDeg: number; }
-export function computeGeometry(size: number, count: number): { r, innerR, slices: SliceGeom[], labelFont, iconFont, maxChord }
-```
-Aucune dépendance React. Calculé une fois par `useMemo(size, count)`.
+1. **Rendre la grille d'aperçu dynamique**
+   Remplacer `className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4"` par une grille pilotée par `designSettings.categoryColumns` (2, 3 ou 4 colonnes en desktop, dégradé responsive mobile/tablette).
 
-## 2. `WheelSvg.tsx`
+2. **Étendre le sélecteur à 2 / 3 / 4 / 5 / 6 colonnes**
+   Pour offrir la même amplitude que `LayoutEditorTab` (slider 2–5) et au-delà.
 
-Reçoit `segments`, `geometry`, `rotation`, `durationMs`. Render SVG + `transition: transform`. Aucune logique.
+3. **Ajouter un indicateur de sauvegarde explicite**
+   - Petit badge à côté du sélecteur : `Enregistré ✓` (vert) / `Enregistrement…` (spinner) basé sur l'état de `saveDesignSettings` exposé via `useApp`.
+   - Toast `Disposition enregistrée` quand la mutation réussit après un changement de `categoryColumns`.
 
-## 3. `useSpinAnimation.ts`
+4. **Ajouter un bouton "Enregistrer maintenant"** (optionnel mais demandé : "save")
+   Bouton compact à côté du sélecteur qui appelle `flushDesignSettings()` immédiatement (court-circuite le debounce 800 ms) et déclenche le toast.
 
-Machine d'états explicite :
+# Hors périmètre
 
-```ts
-type Phase = 'idle' | 'spinning' | 'settling';
-useSpinAnimation({ targetRotation, durationMs, segmentCount, onTick, onSettled })
-  → { phase, currentRotation }
-```
+- Pas de changement DB (la colonne `category_columns` existe déjà et est sauvegardée correctement).
+- Pas de changement à `useDesignSettings` ni à `AppContext` (logique de save déjà OK).
+- Pas de modification de la grille catégories de la home (`src/pages/Home.tsx` honore déjà `categoryColumns`).
 
-Logique :
-- `idle` → `spinning` quand `targetRotation` change.
-- Pendant `spinning` : `requestAnimationFrame` calcule la rotation interpolée avec **le même easing que CSS** (bezier sampling helper), détecte le passage de segment sous le pointeur, appelle `onTick`.
-- À `t === 1` → phase `settling` (50 ms tampon) → `idle` + `onSettled`.
-- Rotation visuelle pilotée par CSS `transition` côté `WheelSvg` (perf GPU), tick pilotée par rAF avec easing identique → synchro garantie.
-- Helper `sampleCubicBezier(p1x, p1y, p2x, p2y)` partagé entre CSS et JS.
+# Résultat attendu
 
-## 4. `RouletteWheel.tsx` (nouveau)
-
-```tsx
-export function RouletteWheel({ segments, rotation, onTick, onSettled, durationMs }) {
-  const geom = useMemo(() => computeGeometry(size, segments.length), [size, segments.length]);
-  const { phase } = useSpinAnimation({ targetRotation: rotation, durationMs, segmentCount: segments.length, onTick, onSettled });
-  return (
-    <Container ref={containerRef}>
-      <WheelSvg segments={segments} geometry={geom} rotation={rotation} durationMs={durationMs} />
-      <WheelPointer size={size} />
-    </Container>
-  );
-}
-```
-
-- `ResizeObserver` conservé pour `size`.
-- Suppression `lastRotationRef`, `fromRef`, `toRef`, lignes mortes.
-- Ajout prop `onSettled` (optionnelle) pour que `RouletteFab` n'utilise plus `setTimeout(SPIN_DURATION + 100)` → fin gérée par la wheel.
-
-## 5. Intégration `RouletteFab.tsx`
-
-Remplacer le `setTimeout` post-spin par `onSettled={() => { setSpinning(false); setResult(data); sounds.win(); persistResult(data); }}`. Tout le reste inchangé (FAB drag, dialog, admin).
-
-## Détails techniques
-
-- **Easing partagé** : constante `SPIN_BEZIER = [0.22, 0.61, 0.36, 1]`, utilisée pour `transition-timing-function` ET pour `sampleCubicBezier()` côté JS.
-- **Tick detection** : index = `floor(((360 - currentRot%360) % 360) / sliceDeg)`. Inchangé mais isolé dans le hook.
-- **Cleanup** : `cancelAnimationFrame` dans le return de l'effect, reset des refs.
-- **Compat** : API publique `<RouletteWheel segments rotation spinning onTick durationMs />` conservée + nouveau `onSettled`. `spinning` prop devient optionnelle (déduite de la machine).
-
-## Hors-scope
-
-- Pas de changement visuel (couleurs, tailles, ombres identiques).
-- Pas de modif des sons, du RPC, ni de `useRoulette`.
-- `GameScratchFab` non touché.
+L'utilisateur clique sur `2`, `3`, `4`, `5` ou `6` → la grille d'aperçu admin change immédiatement, un toast `Disposition enregistrée` s'affiche, et au rechargement la valeur est conservée.

@@ -18,9 +18,31 @@ import { useAdminConfig, useSaveAdminConfig } from '@/hooks/useAdminConfig';
 
 export default function AdminSettings() {
   const { toast } = useToast();
-  const { designSettings, updateDesignSettings } = useApp();
+  const { designSettings, updateDesignSettings, flushDesignSettings } = useApp();
   const { data: adminConfig } = useAdminConfig();
   const saveAdminConfig = useSaveAdminConfig();
+  const [savingCols, setSavingCols] = useState(false);
+
+  const cols = designSettings.categoryColumns ?? 4;
+  const gridColsClass =
+    cols === 2 ? 'grid-cols-1 sm:grid-cols-2' :
+    cols === 3 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' :
+    cols === 4 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' :
+    cols === 5 ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5' :
+    'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6';
+
+  const handleColumnsChange = async (n: number) => {
+    updateDesignSettings({ categoryColumns: n });
+    setSavingCols(true);
+    try {
+      await flushDesignSettings({ categoryColumns: n });
+      toast({ title: 'Disposition enregistrée ✓', description: `${n} colonnes appliquées.` });
+    } catch {
+      toast({ title: 'Erreur', description: 'Impossible d\'enregistrer.', variant: 'destructive' });
+    } finally {
+      setSavingCols(false);
+    }
+  };
 
   // Categories
   const { data: categories = [], isLoading } = useCategories();
@@ -65,15 +87,16 @@ export default function AdminSettings() {
         <TabsContent value="categories" className="space-y-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             {/* Column selector */}
-            <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
               <Label className="hud-text text-xs whitespace-nowrap">Colonnes :</Label>
               <div className="flex border border-border rounded overflow-hidden">
-                {[2, 3, 4].map(n => (
+                {[2, 3, 4, 5, 6].map(n => (
                   <button
                     key={n}
-                    onClick={() => updateDesignSettings({ categoryColumns: n })}
-                    className={`px-3 py-1.5 text-sm font-medium transition-colors ${
-                      (designSettings.categoryColumns ?? 4) === n
+                    onClick={() => handleColumnsChange(n)}
+                    disabled={savingCols}
+                    className={`px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${
+                      cols === n
                         ? 'bg-foreground text-background'
                         : 'bg-background hover:bg-secondary'
                     }`}
@@ -82,6 +105,9 @@ export default function AdminSettings() {
                   </button>
                 ))}
               </div>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                {savingCols ? 'Enregistrement…' : `Enregistré · ${cols} col.`}
+              </span>
             </div>
             <Button onClick={() => { setEditingCat(null); setCatDialogOpen(true); }} className="chamfer-hud-sm">
               <Plus className="h-4 w-4 mr-2" />Nouvelle catégorie
@@ -96,7 +122,7 @@ export default function AdminSettings() {
                 <p className="text-muted-foreground">Aucune catégorie</p>
               </div>
             ) : (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+              <div className={`grid ${gridColsClass} gap-4 p-4`}>
                 {/* Group: root categories first, then children indented */}
                 {categories.filter(c => !c.parentId).map((cat) => {
                   const children = categories.filter(c => c.parentId === cat.id);
