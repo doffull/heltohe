@@ -1,19 +1,16 @@
-import { Home, ShoppingBag, Info, Settings, Layers, Sparkles } from 'lucide-react';
+import { Home, ShoppingBag, Info, Settings, Layers, Sparkles, Mail, Phone, Heart, Star, Gift, User, Tag, Package, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
 import { ViewType } from '@/types';
 
-interface NavItem {
-  id: ViewType;
-  label: string;
-  labelEN: string;
-  icon: React.ElementType;
-}
+const ICONS: Record<string, LucideIcon> = {
+  Home, ShoppingBag, Info, Settings, Layers, Sparkles, Mail, Phone, Heart, Star, Gift, User, Tag, Package,
+};
 
-const navItems: NavItem[] = [
-  { id: 'Home', label: 'ACCUEIL', labelEN: 'HOME', icon: Home },
-  { id: 'Shop', label: 'BOUTIQUE', labelEN: 'SHOP', icon: ShoppingBag },
-  { id: 'About', label: 'À PROPOS', labelEN: 'ABOUT', icon: Info },
+const FALLBACK_NAV = [
+  { id: 'home', label: 'ACCUEIL', labelEN: 'HOME', icon: 'Home', view: 'Home' as ViewType, enabled: true },
+  { id: 'shop', label: 'BOUTIQUE', labelEN: 'SHOP', icon: 'ShoppingBag', view: 'Shop' as ViewType, enabled: true },
+  { id: 'about', label: 'À PROPOS', labelEN: 'ABOUT', icon: 'Info', view: 'About' as ViewType, enabled: true },
 ];
 
 export function Sidebar() {
