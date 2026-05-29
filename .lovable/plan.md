@@ -1,42 +1,58 @@
-## Diagnostic
+# Refonte du jeu-concours (Roulette + Scratch)
 
-L'erreur "503 après 4 tentatives" provient de la edge function `woocommerce-import`. Les logs confirment que **chaque appel** retourne 503 — donc ton hébergeur WordPress (très probablement Cloudflare / WAF / Sucuri / Wordfence devant `helvetica-mp.com`) bloque la requête avant qu'elle n'arrive à WooCommerce.
+## Constat de l'audit
 
-Causes classiques d'un 503 systématique sur `/wp-json/wc/v3/...` :
-1. **Auth par query-string** (`?consumer_key=...&consumer_secret=...`) refusée par le WAF — la pratique recommandée WooCommerce est Basic Auth.
-2. **User-Agent "Lovable-WooSync/1.0"** identifié comme bot et bloqué.
-3. **Pas de header `Accept-Encoding` / `Accept-Language`** → fingerprint suspect.
-4. Aucun **fallback** ni cache de session : à chaque clic on repart de zéro.
+- **`RouletteFab.tsx`** : labels SVG qui chevauchent au centre quand 4+ segments, icône emoji + label collés sur une même `<text>`, taille de roue calculée une seule fois au montage (cassée au resize), pointeur qui dépasse hors du dialog, dialog `max-w-md` trop étroit pour une roue de 340px sur mobile → contenu rogné.
+- **`GameScratchFab.tsx`** : pas de retour visuel pendant le scratch, cartes non révélées peuvent chevaucher le bouton fermer en SE.
+- **Aucun bruitage** sur le spin ni sur la révélation.
+- Code dupliqué (cooldown, persistence) entre les 2 composants.
 
-## Plan de correction
+## Refonte proposée
 
-### 1. Edge function `woocommerce-import` — connexion robuste
-- Passer en **HTTP Basic Auth** (`Authorization: Basic base64(key:secret)`) au lieu du query-string. Conserver le query-string seulement en fallback si la 1ʳᵉ tentative échoue en 401/403.
-- Remplacer le User-Agent par un **UA navigateur réaliste** (`Mozilla/5.0 ... Chrome/...`) + `Accept-Language: fr-FR`.
-- Augmenter `MAX_ATTEMPTS` à **6** et le backoff plafond à 15 s (au lieu de 4 tentatives).
-- Sur 503/502/504 persistant : tenter une **2ᵉ stratégie** automatiquement (query-string + UA différent) avant d'abandonner.
-- Sur échec final, renvoyer un message **actionnable** (statut HTTP réel, headers `cf-ray` / `server` détectés) au lieu du message générique.
+### 1. Nouveau composant `RouletteWheel.tsx` (SVG propre)
+- Roue **responsive** via `ResizeObserver` sur le conteneur (s'adapte 220 → 380 px).
+- Labels segmentés : **icône** et **texte** sur 2 `<text>` séparés, orientés radialement, avec `textLength` + `lengthAdjust="spacingAndGlyphs"` pour éviter tout débordement.
+- Auto-shrink de la police selon nombre de segments (4 = 14px, 6 = 12px, 8 = 10px).
+- Séparateurs blancs entre slices, hub central avec ombre, pointeur **dans** le SVG (plus de débordement).
+- Easing personnalisé `cubic-bezier(0.22, 0.61, 0.36, 1)` sur 5.5s.
 
-### 2. Mode "preview" léger pour l'étape 1
-- L'étape "Analyser" appelle aujourd'hui `mode: preview` qui télécharge **toutes les pages** (peut déclencher rate-limit → 503). Ajouter un mode `mode: ping` qui ne fait qu'**un seul appel** à `/wp-json/wc/v3/system_status` avec `per_page=1` pour valider la connexion sans charger le catalogue.
-- L'étape "Analyser" du `WordPressSyncDialog` appellera `ping` d'abord, puis `preview` seulement si la connexion répond OK.
+### 2. Refonte `RouletteFab.tsx`
+- Dialog en `max-w-[min(92vw,440px)]`, padding réduit sur mobile (`p-3`), header compact.
+- Bouton fermer repositionné hors de la zone de la roue.
+- Layout flex vertical strict : titre → roue (centrée, `aspect-square`) → email → bouton → résultat.
+- Email + bouton spin **toujours visibles** sous la roue (pas de scroll caché).
+- État "résultat" affiché en overlay sur la roue (badge + code), pas en dessous → évite saut de hauteur.
 
-### 3. Connexion persistante côté admin
-- Stocker les credentials chiffrés côté **DB** dans `admin_config` (clé `woocommerce_connection`) au lieu du seul `localStorage`, afin d'être réutilisés par toutes les sessions et toutes les imports automatiques.
-- Ajouter dans `WordPressSyncDialog` un indicateur "✓ Connecté à `helvetica-mp.com`" persistant tant que la connexion fonctionne, qui pré-remplit les champs et saute l'étape 1 au prochain ouverture.
-- Bouton "Reconnecter" pour forcer une revalidation.
+### 3. Refonte `GameScratchFab.tsx`
+- Grille 3 cartes en `gap-2 sm:gap-4`, `min-h-0` pour éviter overflow.
+- Animation de scratch via canvas (effet de grattage réel au pointer) — fallback CSS si pas de canvas.
+- Carte gagnante : pulse + halo coloré.
 
-### 4. Message d'erreur plus utile
-- Si le 503 persiste après toutes les stratégies : afficher dans le toast les en-têtes diagnostiqués (ex. `server: cloudflare`, `cf-mitigated: challenge`) avec un lien "Voir les logs" pointant vers `/admin/woocommerce?tab=logs`.
-- Bouton "Réessayer maintenant" intégré au toast pour relancer sans rouvrir la dialog.
+### 4. Bruitages (nouveau hook `useGameSounds.ts`)
+- Sons WebAudio générés en mémoire (pas de fichier externe) :
+  - **`tick`** : courte impulsion 800Hz, jouée par segment qui passe sous le pointeur pendant la rotation (calculé via `requestAnimationFrame` + rotation interpolée).
+  - **`win`** : arpège ascendant 3 notes sur révélation.
+  - **`scratch`** : bruit blanc filtré pendant le grattage.
+- Toggle silence via icône 🔊 / 🔇 dans le dialog, persistant en `localStorage` (`lvtk:game_sound`).
+- Respect de `prefers-reduced-motion` → désactivé par défaut.
 
-## Fichiers concernés
-- `supabase/functions/woocommerce-import/index.ts` — Basic Auth + UA réaliste + mode `ping` + 6 tentatives.
-- `src/components/admin/WordPressSyncDialog.tsx` — appel `ping` d'abord, pré-remplissage depuis DB, badge "Connecté".
-- `src/hooks/useAdminConfig.ts` (ou nouveau hook `useWooConnection`) — lecture/écriture credentials dans `admin_config`.
-- Migration SQL : nouvelle entrée `admin_config.config_key = 'woocommerce_connection'` (déjà sécurisée par RLS admin-only existante).
+### 5. Hook commun `useGameSession.ts`
+Extrait la logique partagée : cooldown, persistence `LS_LAST` / `LS_RESULT`, validation email, appel `useSpinRoulette`. Utilisé par les 2 composants.
 
-## Ce que tu obtiens
-- Plus de 503 "fantôme" : la fonction trouve la bonne stratégie d'auth toute seule.
-- Tes clés sont mémorisées : tu ouvres la dialog → tu es déjà connecté, tu cliques direct sur "Synchroniser".
-- Si un jour ton serveur est vraiment down, le message t'indique précisément quoi vérifier (Cloudflare, hébergeur, WAF).
+## Fichiers
+
+**Créés**
+- `src/components/games/RouletteWheel.tsx`
+- `src/hooks/useGameSounds.ts`
+- `src/hooks/useGameSession.ts`
+
+**Réécrits**
+- `src/components/home/RouletteFab.tsx`
+- `src/components/games/GameScratchFab.tsx`
+
+**Inchangés** : `GameRouter.tsx`, `useRoulette.ts`, RPC `spin_roulette`, configs admin.
+
+## QA prévue
+- Test desktop 1280px + mobile 360/390px avec 3, 4, 6, 8 segments.
+- Vérification overflow / chevauchement via DevTools.
+- Test mute toggle + persistance.
