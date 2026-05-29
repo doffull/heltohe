@@ -66,6 +66,7 @@ export function HomeCustomSectionsEditor() {
   useEffect(() => {
     const serialized = JSON.stringify(sections);
     if (serialized === lastPersistedRef.current) return;
+    dirtyRef.current = true;
     setStatus('dirty');
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
