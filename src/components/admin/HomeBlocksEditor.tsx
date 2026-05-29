@@ -143,8 +143,8 @@ function Row({ b, onToggle, isCustom, onEdit, expanded, hasInline }: { b: Block;
         <div className="text-[10px] text-muted-foreground truncate">{isCustom ? 'Section personnalisée' : b.id}</div>
       </div>
       {onEdit && (
-        <Button type="button" size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={onEdit} title="Éditer ce bloc">
-          <Pencil className="h-3.5 w-3.5" />
+        <Button type="button" size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={onEdit} title={hasInline ? (expanded ? 'Replier' : 'Configurer ce bloc') : 'Éditer ce bloc'}>
+          {hasInline ? <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expanded ? 'rotate-180' : ''}`} /> : <Pencil className="h-3.5 w-3.5" />}
         </Button>
       )}
       {b.visible ? <Eye className="h-4 w-4 text-primary" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
