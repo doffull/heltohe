@@ -26,7 +26,27 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
   useEffect(() => {
     if (template.theme.fontHeading) loadGoogleFont(template.theme.fontHeading);
     if (template.theme.fontBody) loadGoogleFont(template.theme.fontBody);
-  }, [template.theme.fontHeading, template.theme.fontBody]);
+    // Load per-block custom fonts
+    template.layout.blocks.forEach(b => {
+      if (b.props?.fontFamily) loadGoogleFont(b.props.fontFamily);
+    });
+  }, [template]);
+
+  const blockStyle = (b: TemplateBlock): React.CSSProperties => {
+    const p = b.props || {};
+    const s: React.CSSProperties = {};
+    if (p.fontFamily) s.fontFamily = p.fontFamily;
+    if (p.fontSize) s.fontSize = `${p.fontSize}px`;
+    if (p.fontWeight) s.fontWeight = p.fontWeight;
+    if (p.textTransform) s.textTransform = p.textTransform;
+    if (typeof p.letterSpacing === 'number') s.letterSpacing = `${p.letterSpacing}px`;
+    if (p.textAlign) s.textAlign = p.textAlign;
+    if (p.color) s.color = p.color;
+    if (p.bgColor) s.backgroundColor = p.bgColor;
+    return s;
+  };
+  const labelOf = (b: TemplateBlock, fallback: string) =>
+    (b.props?.label && String(b.props.label).trim()) || fallback;
 
 
   const images: string[] = useMemo(() => {
