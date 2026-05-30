@@ -20,6 +20,7 @@ import { HeroSlider } from "@/components/home/HeroSlider";
 import { HeroErrorBoundary } from "@/components/home/HeroErrorBoundary";
 import PageRenderer from "@/components/page/PageRenderer";
 import { VoiceAssistantBanner } from "@/components/home/VoiceAssistantBanner";
+import { StoreFinderSection } from "@/components/home/StoreFinderSection";
 import type { PageSection } from "@/hooks/usePages";
 // RouletteFab removed from Home — handled globally by UnifiedFab in MainLayout to avoid duplicate buttons
 
@@ -203,6 +204,7 @@ export default function Home() {
   const DEFAULT_BLOCKS = [
     { id: "hero", visible: true },
     { id: "categories", visible: true },
+    { id: "storeFinder", visible: true },
     { id: "featured", visible: true },
     { id: "flash", visible: true },
     { id: "newArrivals", visible: true },
@@ -214,10 +216,17 @@ export default function Home() {
   const customSections = ((designSettings as any).homeCustomSections || []) as PageSection[];
   const customMap = new Map(customSections.map((s) => [`custom:${s.id}`, s]));
 
-  // Merge: keep order, add missing customs at end
+  // Merge: keep order, add missing customs at end, ensure new builtins are present
   const baseBlocks = savedBlocks?.length ? savedBlocks : DEFAULT_BLOCKS;
   const blocks = (() => {
     const out = [...baseBlocks.filter((b) => !b.id.startsWith("custom:") || customMap.has(b.id))];
+    // Inject newly-introduced builtin "storeFinder" right after "categories" when missing
+    if (!out.find((b) => b.id === "storeFinder")) {
+      const catIdx = out.findIndex((b) => b.id === "categories");
+      const entry = { id: "storeFinder", visible: true };
+      if (catIdx >= 0) out.splice(catIdx + 1, 0, entry);
+      else out.push(entry);
+    }
     customSections.forEach((s) => {
       const id = `custom:${s.id}`;
       if (!out.find((b) => b.id === id)) out.push({ id, visible: true });
@@ -312,6 +321,7 @@ export default function Home() {
         </div>
       </section>
     ),
+    storeFinder: () => <StoreFinderSection />,
     featured: () => (
       <section className={cn(sectionPy, "bg-secondary/30")}>
         <div className="container mx-auto px-4">
