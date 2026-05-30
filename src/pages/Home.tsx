@@ -20,6 +20,7 @@ import { HeroSlider } from "@/components/home/HeroSlider";
 import { HeroErrorBoundary } from "@/components/home/HeroErrorBoundary";
 import PageRenderer from "@/components/page/PageRenderer";
 import { VoiceAssistantBanner } from "@/components/home/VoiceAssistantBanner";
+import { StoreFinderSection } from "@/components/home/StoreFinderSection";
 import type { PageSection } from "@/hooks/usePages";
 // RouletteFab removed from Home — handled globally by UnifiedFab in MainLayout to avoid duplicate buttons
 
