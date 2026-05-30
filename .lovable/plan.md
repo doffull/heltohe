@@ -1,94 +1,50 @@
-## Objectif
+# Section "Nos boutiques" sur la home
 
-Dans **Admin → Templates de pages → Éditer un template → onglet Disposition**, chaque bloc affiche directement (sans clic supplémentaire) des contrôles pour personnaliser son **libellé/texte**, sa **typographie** et ses **couleurs**, en plus des réglages existants (colonne, span, visibilité, variante).
+Ajouter, juste sous la grille des catégories (Homme/Femme/Sportswear/Enfants), une nouvelle section qui permet de trouver une boutique ou un stand : barre de recherche + bouton de géolocalisation. À la validation, une pop-up s'ouvre avec une carte (Google Maps) affichant soit la boutique choisie, soit toutes les boutiques de France.
 
-## Ce qui change pour l'utilisateur
+## Comportement
 
-Pour chaque bloc de la liste Disposition, la carte se déplie en un panneau de réglages toujours visible avec :
+1. Section "Nos boutiques / Nos stands" affichée sous le bloc Catégories.
+   - Petit titre éditorial (style cohérent avec les autres sections : `// BOUTIQUES`, H2 "Où nous trouver").
+   - Sous-titre court : "Trouvez la boutique ou le stand le plus proche."
+   - **Barre de recherche** (ville, code postal, nom) avec autocomplétion sur la liste des boutiques (`useBoutiques`).
+   - **Bouton "Près de chez moi"** → `navigator.geolocation`, trie les boutiques par distance (haversine, déjà utilisé dans `StoreLocator.tsx`).
+   - **Bouton "Voir toutes les boutiques"** → ouvre la pop-up avec toutes les boutiques.
 
-- **Texte** : libellé personnalisé (`label`) — utile pour Title, Collab subtitle, Category tag, CTA add-to-cart, Find size, Description (titre de section), Trust badges, Related products, Material, Stock status, Btn wishlist/share. Pour `custom_html` : zone de texte HTML.
-- **Typographie** :
-  - Police (Google Font, liste existante `GOOGLE_FONTS` + option « Hériter du thème »)
-  - Taille (px)
-  - Graisse (300 → 900)
-  - Casse (normal / UPPER / lower / Capitalize)
-  - Espacement des lettres (px)
-  - Alignement (gauche / centre / droite)
-- **Couleurs** :
-  - Couleur du texte (color picker + champ hex, avec « Hériter »)
-  - Couleur de fond (idem)
-  - Couleur d'accent / bordure (pour CTA, badges, dividers)
+2. Au clic sur un résultat (suggestion ou bouton "voir tout") → ouverture d'un **Dialog** (shadcn) plein écran sur mobile / large sur desktop contenant :
+   - Une carte Google Maps (clé `VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY`, chargement async + callback, comme dans `Boutiques.tsx`/`StoreLocator.tsx`).
+   - Si une boutique est sélectionnée : carte centrée dessus, marker ouvert avec nom/adresse/itinéraire.
+   - Sinon : toutes les boutiques en markers, `fitBounds` sur l'ensemble.
+   - Lien "Voir la page complète des boutiques" → `/boutiques`.
 
-Tous les champs sont stockés dans `block.props` (déjà existant dans `TemplateBlock`), donc **aucune migration DB**.
+3. Le bloc respecte le système d'espacement (`sectionPy`, `titleMb`) et le design "Industrial Luxury" (HUD, chamfer, hud-text, semantic tokens — pas de couleurs en dur).
 
 ## Détails techniques
 
-### 1. Types (`src/config/templatePresets.ts`)
+- Nouveau composant `src/components/home/StoreFinderSection.tsx` :
+  - Utilise `useBoutiques()` pour la liste.
+  - État local : `query`, `userPos`, `selectedId`, `open` (dialog), `viewAll` (toutes vs. une).
+  - Helper `haversineKm` (copié depuis `StoreLocator.tsx`).
+  - Loader Google Maps réutilisé (extrait en util partagé : `src/lib/loadGoogleMaps.ts` pour éviter la duplication entre `Boutiques.tsx`, `StoreLocator.tsx`, et la nouvelle section).
+  - Suggestions affichées sous l'input quand `query` non vide (max 5).
+  - Bouton `Voir toutes les boutiques` ouvre le dialog en mode "toutes".
+  - Bouton sur une suggestion ouvre le dialog centré sur la boutique.
+- Nouvelle entrée dans le système de blocs de la home :
+  - Ajouter `{ id: "storeFinder", visible: true }` au `DEFAULT_BLOCKS` dans `src/pages/Home.tsx`, placé juste après `categories`.
+  - Ajouter un renderer `storeFinder: () => <StoreFinderSection />` dans `blockRenderers`.
+  - Mettre à jour `src/components/admin/HomeBlocksEditor.tsx` pour reconnaître l'ID `storeFinder` (label "Nos boutiques") afin qu'il puisse être réordonné/masqué depuis l'admin.
+  - Export depuis `src/components/home/index.ts`.
 
-Étendre `TemplateBlock.props` avec une convention typée optionnelle :
+## Fichiers modifiés / créés
 
-```ts
-export interface BlockStyleProps {
-  label?: string;            // texte personnalisé
-  html?: string;             // pour custom_html
-  fontFamily?: string;       // '' = hérite
-  fontSize?: number;
-  fontWeight?: number;       // 300..900
-  textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
-  letterSpacing?: number;
-  textAlign?: 'left' | 'center' | 'right';
-  color?: string;            // '' = hérite
-  bgColor?: string;
-  accentColor?: string;
-}
-```
+- `src/lib/loadGoogleMaps.ts` (nouveau, util partagé)
+- `src/components/home/StoreFinderSection.tsx` (nouveau)
+- `src/components/home/index.ts` (export)
+- `src/pages/Home.tsx` (ajout du bloc + renderer)
+- `src/components/admin/HomeBlocksEditor.tsx` (label du nouveau bloc)
 
-Ajouter `props?: BlockStyleProps & Record<string, any>` (rétro-compatible).
+## Hors-scope
 
-### 2. UI Disposition (`src/pages/admin/AdminPageTemplates.tsx`, fonction `TemplateEditorDialog`, lignes ~432–476)
-
-Sous la ligne actuelle de chaque bloc (col/span/visible/variant), ajouter **une grille de réglages toujours visible** divisée en 3 sous-sections compactes :
-
-```
-┌─────────────────────────────────────────────────────────┐
-│ [▲▼] Block Title (title)  Col [7] Span [6] [✓] [Var ▼] │
-├─────────────────────────────────────────────────────────┤
-│ Texte:      [Libellé personnalisé ____________________] │
-│ Typo:       Police [Inter ▼]  Taille [42] Graisse [700] │
-│             Casse [UPPER ▼] Esp [0] Align [G C D]       │
-│ Couleurs:   Texte [■#000] Fond [■hérite] Accent [■…]    │
-└─────────────────────────────────────────────────────────┘
-```
-
-- Helper `updateBlockProps(id, patch)` qui fait un merge sur `props`.
-- Champs `label` / `html` conditionnels selon `b.type` (mapping `BLOCK_HAS_LABEL`, `BLOCK_HAS_HTML`).
-- Color inputs avec bouton « Hériter » qui vide la valeur.
-
-### 3. Rendu côté front (templates produit/catégorie)
-
-Identifier le composant qui rend les templates :
-
-```bash
-rg "TemplateBlock|layout.blocks" src/components src/pages
-```
-
-Dans ce composant de rendu (probablement `TemplateRenderer.tsx` ou similaire), pour chaque bloc :
-- Utiliser `b.props.label` (ou `b.props.html`) à la place du texte par défaut quand fourni.
-- Construire un `style` inline depuis `b.props` (fontFamily, fontSize+'px', fontWeight, textTransform, letterSpacing+'px', textAlign, color, backgroundColor) en n'incluant **que les clés définies** pour que les valeurs vides héritent du thème.
-- Charger la police via `loadGoogleFont(b.props.fontFamily)` (helper déjà existant dans `blockVariants.ts`).
-
-### 4. Presets
-
-Les presets existants continuent de fonctionner (rétro-compat : props vide → hérite du thème). Pas besoin de les modifier.
-
-## Fichiers touchés
-
-- `src/config/templatePresets.ts` — type `BlockStyleProps`
-- `src/pages/admin/AdminPageTemplates.tsx` — panneau de réglages dans Disposition
-- Composant de rendu de template (à identifier en build) — application des `props` au rendu
-
-## Hors scope
-
-- Pas de drag & drop visuel (gardé pour plus tard)
-- Pas de migration DB
-- Pas de modification du thème global ni des autres onglets (Thème / Typo)
+- Pas de modif backend ni du schéma `boutiques`.
+- Pas de changement sur les pages existantes `/boutiques` et `/store-locator`.
+- Pas de logique métier nouvelle (réutilisation de `useBoutiques`, `haversineKm`, et du loader Google Maps).
