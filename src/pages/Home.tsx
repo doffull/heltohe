@@ -216,10 +216,17 @@ export default function Home() {
   const customSections = ((designSettings as any).homeCustomSections || []) as PageSection[];
   const customMap = new Map(customSections.map((s) => [`custom:${s.id}`, s]));
 
-  // Merge: keep order, add missing customs at end
+  // Merge: keep order, add missing customs at end, ensure new builtins are present
   const baseBlocks = savedBlocks?.length ? savedBlocks : DEFAULT_BLOCKS;
   const blocks = (() => {
     const out = [...baseBlocks.filter((b) => !b.id.startsWith("custom:") || customMap.has(b.id))];
+    // Inject newly-introduced builtin "storeFinder" right after "categories" when missing
+    if (!out.find((b) => b.id === "storeFinder")) {
+      const catIdx = out.findIndex((b) => b.id === "categories");
+      const entry = { id: "storeFinder", visible: true };
+      if (catIdx >= 0) out.splice(catIdx + 1, 0, entry);
+      else out.push(entry);
+    }
     customSections.forEach((s) => {
       const id = `custom:${s.id}`;
       if (!out.find((b) => b.id === id)) out.push({ id, visible: true });
