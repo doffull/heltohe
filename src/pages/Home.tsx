@@ -321,6 +321,7 @@ export default function Home() {
         </div>
       </section>
     ),
+    storeFinder: () => <StoreFinderSection />,
     featured: () => (
       <section className={cn(sectionPy, "bg-secondary/30")}>
         <div className="container mx-auto px-4">
