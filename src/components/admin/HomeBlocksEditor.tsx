@@ -24,7 +24,7 @@ const EDIT_ROUTE: Record<string, string> = {
   voiceBanner: '/admin/home-icons#unified-fab',
 };
 
-type BuiltinId = 'hero' | 'categories' | 'featured' | 'flash' | 'newArrivals' | 'voiceBanner' | 'loyalty' | 'newsletter';
+type BuiltinId = 'hero' | 'categories' | 'storeFinder' | 'featured' | 'flash' | 'newArrivals' | 'voiceBanner' | 'loyalty' | 'newsletter';
 interface Block { id: string; visible: boolean; label?: string; settings?: Record<string, any> }
 
 // Blocs disposant d'un éditeur inline (panneau pliable au lieu de naviguer)
@@ -33,6 +33,7 @@ const INLINE_EDITABLE = new Set<string>(['categories']);
 const BUILTIN_LABELS: Record<BuiltinId, string> = {
   hero: 'Hero (slider ou techwear)',
   categories: 'Grille catégories',
+  storeFinder: 'Nos boutiques (recherche + carte)',
   featured: 'Produits en vedette',
   flash: 'Flash promo (compte à rebours)',
   newArrivals: 'Dernières arrivées',
