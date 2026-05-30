@@ -204,6 +204,7 @@ export default function Home() {
   const DEFAULT_BLOCKS = [
     { id: "hero", visible: true },
     { id: "categories", visible: true },
+    { id: "storeFinder", visible: true },
     { id: "featured", visible: true },
     { id: "flash", visible: true },
     { id: "newArrivals", visible: true },
