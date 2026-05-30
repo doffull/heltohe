@@ -16,6 +16,7 @@ import type { PageSection } from '@/hooks/usePages';
 const EDIT_ROUTE: Record<string, string> = {
   hero: '/admin/design#techwear-hero',
   categories: '/admin/categories',
+  storeFinder: '/admin/boutiques',
   featured: '/admin/products',
   newArrivals: '/admin/products',
   flash: '/admin/marketing#flash',
