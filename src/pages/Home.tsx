@@ -21,6 +21,8 @@ import { HeroErrorBoundary } from "@/components/home/HeroErrorBoundary";
 import PageRenderer from "@/components/page/PageRenderer";
 import { VoiceAssistantBanner } from "@/components/home/VoiceAssistantBanner";
 import { StoreFinderSection } from "@/components/home/StoreFinderSection";
+import { SectionControls } from "@/components/visual-editor/SectionControls";
+import { EditableText } from "@/components/visual-editor/EditableText";
 import type { PageSection } from "@/hooks/usePages";
 // RouletteFab removed from Home — handled globally by UnifiedFab in MainLayout to avoid duplicate buttons
 
@@ -252,7 +254,12 @@ export default function Home() {
             <div className={cn("flex items-end justify-between", titleMb)}>
               <div>
                 <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-2">// COLLECTIONS</p>
-                <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight">Catégories</h2>
+                <EditableText
+                  textKey="categoriesTitle"
+                  defaultValue="Catégories"
+                  as="h2"
+                  className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight"
+                />
               </div>
             </div>
           </RevealSection>
@@ -329,7 +336,12 @@ export default function Home() {
             <div className={cn("flex items-end justify-between", titleMb)}>
               <div>
                 <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-2">// SÉLECTION</p>
-                <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight">Top ventes</h2>
+                <EditableText
+                  textKey="featuredTitle"
+                  defaultValue="Top ventes"
+                  as="h2"
+                  className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight"
+                />
               </div>
               <Button
                 variant="outline"
@@ -408,7 +420,12 @@ export default function Home() {
           <RevealSection>
             <div className={cn("text-center", titleMb)}>
               <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-2">// hiver 2026</p>
-              <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight">NOUVEAUTÉS</h2>
+              <EditableText
+                textKey="newArrivalsTitle"
+                defaultValue="NOUVEAUTÉS"
+                as="h2"
+                className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight"
+              />
             </div>
           </RevealSection>
           <StaggerContainer className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6">
