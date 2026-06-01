@@ -125,6 +125,14 @@ export function ChatBotWidget({ open: openProp, onOpenChange, hideTrigger }: Cha
     if (open) setTimeout(() => inputRef.current?.focus(), 300);
   }, [open]);
 
+  // Signal global chat-open state so other floating elements (UnifiedFab) can step aside
+  useEffect(() => {
+    if (open) document.body.dataset.chatOpen = '1';
+    else delete document.body.dataset.chatOpen;
+    window.dispatchEvent(new CustomEvent('lvtk:chat-open', { detail: { open } }));
+    return () => { delete document.body.dataset.chatOpen; };
+  }, [open]);
+
   const sendMessage = async (text?: string) => {
     const content = (text ?? input).trim();
     if (!content || isLoading) return;
@@ -201,7 +209,7 @@ export function ChatBotWidget({ open: openProp, onOpenChange, hideTrigger }: Cha
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 40, scale: 0.95 }}
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-            className="fixed bottom-6 right-6 z-50 w-[360px] max-w-[calc(100vw-1.5rem)] flex flex-col bg-card border border-border shadow-2xl"
+            className="fixed bottom-6 right-6 z-[60] w-[360px] max-w-[calc(100vw-1.5rem)] flex flex-col bg-card border border-border shadow-2xl"
             style={{ height: '520px', clipPath: 'polygon(12px 0%, 100% 0%, calc(100% - 4px) 4px, calc(100% - 4px) calc(100% - 12px), calc(100% - 12px) 100%, 0% 100%, 4px calc(100% - 4px), 4px 12px)' }}
           >
             {/* Header */}

@@ -38,6 +38,13 @@ export function UnifiedFab() {
   const [chatOpen, setChatOpen] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false);
+  const [chatGlobalOpen, setChatGlobalOpen] = useState(false);
+
+  useEffect(() => {
+    const onChat = (e: Event) => setChatGlobalOpen(!!(e as CustomEvent).detail?.open);
+    window.addEventListener('lvtk:chat-open', onChat as EventListener);
+    return () => window.removeEventListener('lvtk:chat-open', onChat as EventListener);
+  }, []);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 767px)');
@@ -168,6 +175,7 @@ export function UnifiedFab() {
 
   return (
     <>
+      <div className={cn('transition-opacity duration-200', chatGlobalOpen && 'opacity-0 pointer-events-none')}>
       {/* Custom DB FABs (skipped in cluster/dock mode unless marked free) */}
       {visibleCustom
         .filter((b) => (mode !== 'cluster' && mode !== 'dock') || freeCustomIds.includes(b.id))
@@ -199,7 +207,7 @@ export function UnifiedFab() {
         </div>
       )}
 
-      <ChatBotWidget open={chatOpen} onOpenChange={setChatOpen} hideTrigger />
+      
 
       {mode === 'dock' ? (
         <Dock
@@ -382,6 +390,9 @@ export function UnifiedFab() {
         />
       )}
 
+      </div>
+
+      <ChatBotWidget open={chatOpen} onOpenChange={setChatOpen} hideTrigger />
       <VoiceCommandFab open={voiceOpen} onOpenChange={setVoiceOpen} hideTrigger />
       <RouletteFab open={rouletteOpen} onOpenChange={setRouletteOpen} hideTrigger />
     </>
