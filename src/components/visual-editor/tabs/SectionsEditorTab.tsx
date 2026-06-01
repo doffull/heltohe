@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
 import { useVisualEditor } from '../VisualEditorProvider';
-import { GripVertical, Eye, EyeOff } from 'lucide-react';
+import { GripVertical, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
