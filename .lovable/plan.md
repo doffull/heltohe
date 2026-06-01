@@ -1,50 +1,59 @@
-# Section "Nos boutiques" sur la home
+## Essai Virtuel par IA
 
-Ajouter, juste sous la grille des catégories (Homme/Femme/Sportswear/Enfants), une nouvelle section qui permet de trouver une boutique ou un stand : barre de recherche + bouton de géolocalisation. À la validation, une pop-up s'ouvre avec une carte (Google Maps) affichant soit la boutique choisie, soit toutes les boutiques de France.
+Ajout d'un système d'essai virtuel sur la page produit. Le client uploade sa photo, indique sa corpulence, et l'IA génère une image de lui portant le produit sélectionné.
 
-## Comportement
+### Flux utilisateur
 
-1. Section "Nos boutiques / Nos stands" affichée sous le bloc Catégories.
-   - Petit titre éditorial (style cohérent avec les autres sections : `// BOUTIQUES`, H2 "Où nous trouver").
-   - Sous-titre court : "Trouvez la boutique ou le stand le plus proche."
-   - **Barre de recherche** (ville, code postal, nom) avec autocomplétion sur la liste des boutiques (`useBoutiques`).
-   - **Bouton "Près de chez moi"** → `navigator.geolocation`, trie les boutiques par distance (haversine, déjà utilisé dans `StoreLocator.tsx`).
-   - **Bouton "Voir toutes les boutiques"** → ouvre la pop-up avec toutes les boutiques.
+1. Sur la page produit (`ProductDetail.tsx` + `ProductTemplateRenderer.tsx`), un bouton **"Essayer virtuellement"** (style Industrial Luxury, chamfer-hud) apparaît à côté/sous le CTA panier.
+2. Clic → ouverture d'un `Dialog` plein écran avec 3 étapes :
+   - **Étape 1** — Upload photo (drag & drop + caméra mobile), conseils (plein pied, fond neutre).
+   - **Étape 2** — Corpulence : taille (cm), poids (kg), morphologie (slim / regular / athletic / curvy), genre. Pré-remplie depuis le profil si connecté.
+   - **Étape 3** — Génération : appel à l'Edge Function, loader animé, puis affichage de l'image générée avec actions (Télécharger, Refaire, Partager, Ajouter au panier).
 
-2. Au clic sur un résultat (suggestion ou bouton "voir tout") → ouverture d'un **Dialog** (shadcn) plein écran sur mobile / large sur desktop contenant :
-   - Une carte Google Maps (clé `VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY`, chargement async + callback, comme dans `Boutiques.tsx`/`StoreLocator.tsx`).
-   - Si une boutique est sélectionnée : carte centrée dessus, marker ouvert avec nom/adresse/itinéraire.
-   - Sinon : toutes les boutiques en markers, `fitBounds` sur l'ensemble.
-   - Lien "Voir la page complète des boutiques" → `/boutiques`.
+### Backend (Lovable AI)
 
-3. Le bloc respecte le système d'espacement (`sectionPy`, `titleMb`) et le design "Industrial Luxury" (HUD, chamfer, hud-text, semantic tokens — pas de couleurs en dur).
+Nouvelle Edge Function `virtual-tryon` :
+- Reçoit : photo utilisateur (base64), image produit (URL), couleur sélectionnée, corpulence, nom/catégorie produit.
+- Récupère l'image produit, la convertit en base64.
+- Appelle Lovable AI Gateway `/v1/images/generations` avec `google/gemini-3.1-flash-image-preview` (Nano Banana 2 — édition multi-image, idéal pour le try-on).
+- Prompt construit côté backend : "Place the [catégorie produit] from image 2 onto the person in image 1, matching their body shape ([morphologie], [taille]cm, [poids]kg). Preserve the person's face, pose, and background. Realistic fit and shadows."
+- Gestion erreurs 429 (rate limit) et 402 (crédits) → toast côté client.
+- Retourne l'image générée (base64 ou URL temporaire).
 
-## Détails techniques
+### Stockage
 
-- Nouveau composant `src/components/home/StoreFinderSection.tsx` :
-  - Utilise `useBoutiques()` pour la liste.
-  - État local : `query`, `userPos`, `selectedId`, `open` (dialog), `viewAll` (toutes vs. une).
-  - Helper `haversineKm` (copié depuis `StoreLocator.tsx`).
-  - Loader Google Maps réutilisé (extrait en util partagé : `src/lib/loadGoogleMaps.ts` pour éviter la duplication entre `Boutiques.tsx`, `StoreLocator.tsx`, et la nouvelle section).
-  - Suggestions affichées sous l'input quand `query` non vide (max 5).
-  - Bouton `Voir toutes les boutiques` ouvre le dialog en mode "toutes".
-  - Bouton sur une suggestion ouvre le dialog centré sur la boutique.
-- Nouvelle entrée dans le système de blocs de la home :
-  - Ajouter `{ id: "storeFinder", visible: true }` au `DEFAULT_BLOCKS` dans `src/pages/Home.tsx`, placé juste après `categories`.
-  - Ajouter un renderer `storeFinder: () => <StoreFinderSection />` dans `blockRenderers`.
-  - Mettre à jour `src/components/admin/HomeBlocksEditor.tsx` pour reconnaître l'ID `storeFinder` (label "Nos boutiques") afin qu'il puisse être réordonné/masqué depuis l'admin.
-  - Export depuis `src/components/home/index.ts`.
+- Bucket `media` existe déjà et est public. Les images générées sont uploadées dans `media/virtual-tryon/{userId|session}/{timestamp}.png` pour permettre téléchargement/partage.
+- Pas de nouvelle table requise (optionnel : `tryon_sessions` pour historique — non inclus dans ce plan, peut être ajouté plus tard).
 
-## Fichiers modifiés / créés
+### Frontend — fichiers
 
-- `src/lib/loadGoogleMaps.ts` (nouveau, util partagé)
-- `src/components/home/StoreFinderSection.tsx` (nouveau)
-- `src/components/home/index.ts` (export)
-- `src/pages/Home.tsx` (ajout du bloc + renderer)
-- `src/components/admin/HomeBlocksEditor.tsx` (label du nouveau bloc)
+**Nouveaux :**
+- `src/components/product/VirtualTryOnButton.tsx` — bouton + ouverture du dialog.
+- `src/components/product/VirtualTryOnDialog.tsx` — dialog multi-étapes (stepper).
+- `src/hooks/useVirtualTryOn.ts` — appel `supabase.functions.invoke('virtual-tryon')`, gestion état/erreurs.
 
-## Hors-scope
+**Modifiés :**
+- `src/pages/ProductDetail.tsx` — insertion du bouton sous `ProductOptions`.
+- `src/components/product/ProductTemplateRenderer.tsx` — nouveau type de bloc `virtual_tryon_btn` rendu dans le template.
+- `src/config/templatePresets.ts` — ajout du bloc dans le catalogue éditable.
 
-- Pas de modif backend ni du schéma `boutiques`.
-- Pas de changement sur les pages existantes `/boutiques` et `/store-locator`.
-- Pas de logique métier nouvelle (réutilisation de `useBoutiques`, `haversineKm`, et du loader Google Maps).
+**Backend :**
+- `supabase/functions/virtual-tryon/index.ts` (nouvelle).
+- `supabase/config.toml` — `[functions.virtual-tryon] verify_jwt = false`.
+
+### Design (Industrial Luxury)
+
+- Bouton : `chamfer-hud` outline, label `ESSAYER VIRTUELLEMENT`, icône `Sparkles` ou `Camera`.
+- Dialog : fond `bg-background/95 backdrop-blur`, stepper minimal avec barres 45°, typo Helvetica-MP existante, accents `--primary`.
+- Loader génération : pulse HUD style, message "L'IA prépare votre essayage…" (~5-15s typique).
+
+### Hors périmètre
+
+- Pas d'historique persistant des essais (peut être ajouté ensuite).
+- Pas de partage social automatique (juste téléchargement + lien copiable).
+- Pas de try-on vidéo / temps réel.
+- Pas de modification du flux panier.
+
+### Coûts & limites à signaler à l'utilisateur
+
+L'essai virtuel utilise Lovable AI (génération d'images) : chaque essai consomme des crédits du workspace. En cas de forte affluence, prévoir une limite par session (ex. 3 essais / heure / IP) — à confirmer si vous le souhaitez.
