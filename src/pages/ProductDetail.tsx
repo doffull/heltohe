@@ -14,6 +14,7 @@ import { useProductLooks } from '@/hooks/useProductLooks';
 import { useProducts } from '@/hooks/useProducts';
 import { usePageTemplate, useDefaultTemplate } from '@/hooks/usePageTemplates';
 import ProductTemplateRenderer from '@/components/product/ProductTemplateRenderer';
+import VirtualTryOnButton from '@/components/product/VirtualTryOnButton';
 
 export default function ProductDetail() {
   const { slugOrId, id } = useParams<{ slugOrId?: string; id?: string }>();
@@ -104,8 +105,14 @@ export default function ProductDetail() {
   }
 
   // If a template is assigned (or a default exists), use the dynamic renderer
+  // If a template is assigned (or a default exists), use the dynamic renderer
   if (activeTemplate) {
-    return <ProductTemplateRenderer template={activeTemplate} product={product} />;
+    return (
+      <>
+        <ProductTemplateRenderer template={activeTemplate} product={product} />
+        <VirtualTryOnButton product={product} selectedColor={selectedColor} />
+      </>
+    );
   }
 
   return (
@@ -201,6 +208,8 @@ export default function ProductDetail() {
           onColorChange={handleColorChange}
         />
       )}
+
+      <VirtualTryOnButton product={product} selectedColor={selectedColor} />
     </div>
   );
 }
