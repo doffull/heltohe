@@ -1,6 +1,6 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Upload, Loader2, Download, RefreshCw, X, Camera, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Sparkles, Upload, Loader2, Download, RefreshCw, X, Camera, ArrowRight, ArrowLeft, ImageIcon } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,19 @@ interface Props {
 
 type Step = 'photo' | 'body' | 'result';
 type Morphology = 'slim' | 'regular' | 'athletic' | 'curvy';
+type Framing = 'full' | 'hips' | 'bust';
+
+const STORAGE_KEY = 'lvtk:vto-state';
+
+interface PersistedState {
+  step: Step;
+  userPhoto: string | null;
+  heightCm: string;
+  weightKg: string;
+  morphology: Morphology;
+  gender: 'femme' | 'homme' | 'autre';
+  framing: Framing;
+}
 
 export default function VirtualTryOnButton({ product, selectedColor, className, variant = 'floating' }: Props) {
   const [open, setOpen] = useState(false);
@@ -27,13 +40,40 @@ export default function VirtualTryOnButton({ product, selectedColor, className, 
   const [weightKg, setWeightKg] = useState('');
   const [morphology, setMorphology] = useState<Morphology>('regular');
   const [gender, setGender] = useState<'femme' | 'homme' | 'autre'>('femme');
+  const [framing, setFraming] = useState<Framing>('full');
   const [loading, setLoading] = useState(false);
   const [resultImage, setResultImage] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  // Restore state on mount (survives mobile camera remount)
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const s = JSON.parse(raw) as PersistedState;
+        setStep(s.step); setUserPhoto(s.userPhoto);
+        setHeightCm(s.heightCm); setWeightKg(s.weightKg);
+        setMorphology(s.morphology); setGender(s.gender); setFraming(s.framing);
+        if (s.userPhoto) setOpen(true);
+      }
+    } catch {}
+  }, []);
+
+  // Persist state
+  useEffect(() => {
+    if (!open) return;
+    try {
+      const s: PersistedState = { step, userPhoto, heightCm, weightKg, morphology, gender, framing };
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    } catch {}
+  }, [open, step, userPhoto, heightCm, weightKg, morphology, gender, framing]);
 
   const reset = () => {
     setStep('photo'); setUserPhoto(null); setResultImage(null); setLoading(false);
+    try { sessionStorage.removeItem(STORAGE_KEY); } catch {}
   };
 
   const handleFile = useCallback((file: File) => {
@@ -66,13 +106,15 @@ export default function VirtualTryOnButton({ product, selectedColor, className, 
           heightCm: heightCm ? Number(heightCm) : undefined,
           weightKg: weightKg ? Number(weightKg) : undefined,
           gender,
+          framing,
         },
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
       setResultImage((data as any).image);
     } catch (e: any) {
-      toast({ title: 'Essai impossible', description: e.message || 'Erreur inconnue', variant: 'destructive' });
+      console.error('[virtual-tryon] generation failed:', e);
+      toast({ title: 'Essai impossible', description: e?.message || 'Erreur inconnue', variant: 'destructive' });
       setStep('body');
     } finally {
       setLoading(false);
@@ -87,10 +129,17 @@ export default function VirtualTryOnButton({ product, selectedColor, className, 
     a.click();
   };
 
+  const handleOpenChange = (o: boolean) => {
+    if (!o && loading) return; // block close while generating
+    setOpen(o);
+    if (!o) reset();
+  };
+
   return (
     <>
       {variant === 'floating' ? (
         <motion.button
+          type="button"
           onClick={() => setOpen(true)}
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -107,6 +156,7 @@ export default function VirtualTryOnButton({ product, selectedColor, className, 
         </motion.button>
       ) : (
         <Button
+          type="button"
           onClick={() => setOpen(true)}
           variant="outline"
           className={cn('w-full chamfer-hud uppercase tracking-widest font-bold gap-2', className)}
@@ -115,7 +165,7 @@ export default function VirtualTryOnButton({ product, selectedColor, className, 
         </Button>
       )}
 
-      <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) reset(); }}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-2xl chamfer-hud-lg bg-background border-border p-0 overflow-hidden">
           <DialogTitle className="sr-only">Essai virtuel</DialogTitle>
 
@@ -145,35 +195,75 @@ export default function VirtualTryOnButton({ product, selectedColor, className, 
                   <h3 className="text-lg font-bold mb-1">1. Votre photo</h3>
                   <p className="text-xs text-muted-foreground mb-4">Photo en pied, fond simple, lumière naturelle pour un meilleur rendu.</p>
 
-                  <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden"
-                    onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
+                  {/* File picker (galerie / ordinateur) */}
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }}
+                  />
+                  {/* Camera picker (mobile uniquement) */}
+                  <input
+                    ref={cameraRef}
+                    type="file"
+                    accept="image/*"
+                    capture="user"
+                    className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }}
+                  />
 
                   {userPhoto ? (
                     <div className="relative chamfer-hud overflow-hidden bg-card/30 aspect-[3/4] max-h-80 mx-auto">
                       <img src={userPhoto} alt="Vous" className="w-full h-full object-contain" />
-                      <button onClick={() => setUserPhoto(null)}
-                        className="absolute top-2 right-2 bg-background/90 p-1.5 chamfer-hud-sm hover:bg-destructive hover:text-destructive-foreground">
+                      <button
+                        type="button"
+                        onClick={() => setUserPhoto(null)}
+                        className="absolute top-2 right-2 bg-background/90 p-1.5 chamfer-hud-sm hover:bg-destructive hover:text-destructive-foreground"
+                      >
                         <X className="h-4 w-4" />
                       </button>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => fileRef.current?.click()}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f); }}
-                      className="w-full chamfer-hud border-2 border-dashed border-border hover:border-primary bg-card/20 hover:bg-card/40 transition-colors p-10 flex flex-col items-center gap-3"
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                      onDragLeave={() => setDragOver(false)}
+                      onDrop={(e) => {
+                        e.preventDefault(); setDragOver(false);
+                        const f = e.dataTransfer.files?.[0]; if (f) handleFile(f);
+                      }}
+                      className={cn(
+                        'w-full chamfer-hud border-2 border-dashed bg-card/20 transition-colors p-8 flex flex-col items-center gap-4',
+                        dragOver ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/60',
+                      )}
                     >
-                      <div className="flex gap-2">
-                        <Upload className="h-6 w-6 text-muted-foreground" />
-                        <Camera className="h-6 w-6 text-muted-foreground" />
+                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                      <p className="text-sm font-bold text-center">Glissez-déposez votre photo ici</p>
+                      <p className="text-xs text-muted-foreground -mt-3">JPG, PNG · max 8 Mo</p>
+
+                      <div className="flex flex-col sm:flex-row gap-2 w-full mt-2">
+                        <Button
+                          type="button"
+                          onClick={() => fileRef.current?.click()}
+                          variant="outline"
+                          className="flex-1 chamfer-hud-sm gap-2"
+                        >
+                          <Upload className="h-4 w-4" /> Choisir un fichier
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => cameraRef.current?.click()}
+                          variant="outline"
+                          className="flex-1 chamfer-hud-sm gap-2 md:hidden"
+                        >
+                          <Camera className="h-4 w-4" /> Prendre une photo
+                        </Button>
                       </div>
-                      <p className="text-sm font-bold">Cliquez pour choisir ou prendre une photo</p>
-                      <p className="text-xs text-muted-foreground">JPG, PNG · max 8 Mo</p>
-                    </button>
+                    </div>
                   )}
 
                   <div className="flex justify-end mt-5">
-                    <Button onClick={() => setStep('body')} disabled={!userPhoto} className="chamfer-hud-sm gap-2">
+                    <Button type="button" onClick={() => setStep('body')} disabled={!userPhoto} className="chamfer-hud-sm gap-2">
                       Suivant <ArrowRight className="h-4 w-4" />
                     </Button>
                   </div>
@@ -182,7 +272,7 @@ export default function VirtualTryOnButton({ product, selectedColor, className, 
 
               {step === 'body' && (
                 <motion.div key="body" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }}>
-                  <h3 className="text-lg font-bold mb-1">2. Votre corpulence</h3>
+                  <h3 className="text-lg font-bold mb-1">2. Corpulence & cadrage</h3>
                   <p className="text-xs text-muted-foreground mb-4">Aide l'IA à ajuster le vêtement à votre silhouette.</p>
 
                   <div className="grid grid-cols-2 gap-3 mb-4">
@@ -200,9 +290,13 @@ export default function VirtualTryOnButton({ product, selectedColor, className, 
                     <Label className="text-xs uppercase tracking-wider mb-2 block">Genre</Label>
                     <div className="grid grid-cols-3 gap-2">
                       {(['femme','homme','autre'] as const).map((g) => (
-                        <button key={g} onClick={() => setGender(g)}
+                        <button
+                          key={g}
+                          type="button"
+                          onClick={() => setGender(g)}
                           className={cn('chamfer-hud-sm py-2 text-sm font-bold uppercase tracking-wider border transition-colors',
-                            gender === g ? 'bg-foreground text-background border-foreground' : 'bg-card/30 border-border hover:border-primary')}>
+                            gender === g ? 'bg-foreground text-background border-foreground' : 'bg-card/30 border-border hover:border-primary')}
+                        >
                           {g}
                         </button>
                       ))}
@@ -218,20 +312,45 @@ export default function VirtualTryOnButton({ product, selectedColor, className, 
                         { v: 'athletic', l: 'Athlétique' },
                         { v: 'curvy', l: 'Pulpeuse' },
                       ] as { v: Morphology; l: string }[]).map((m) => (
-                        <button key={m.v} onClick={() => setMorphology(m.v)}
+                        <button
+                          key={m.v}
+                          type="button"
+                          onClick={() => setMorphology(m.v)}
                           className={cn('chamfer-hud-sm py-2 text-xs font-bold uppercase tracking-wider border transition-colors',
-                            morphology === m.v ? 'bg-foreground text-background border-foreground' : 'bg-card/30 border-border hover:border-primary')}>
+                            morphology === m.v ? 'bg-foreground text-background border-foreground' : 'bg-card/30 border-border hover:border-primary')}
+                        >
                           {m.l}
                         </button>
                       ))}
                     </div>
                   </div>
 
+                  <div className="mb-4">
+                    <Label className="text-xs uppercase tracking-wider mb-2 block">Cadrage</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {([
+                        { v: 'full', l: 'Plein pied' },
+                        { v: 'hips', l: 'Hanches' },
+                        { v: 'bust', l: 'Buste' },
+                      ] as { v: Framing; l: string }[]).map((f) => (
+                        <button
+                          key={f.v}
+                          type="button"
+                          onClick={() => setFraming(f.v)}
+                          className={cn('chamfer-hud-sm py-2 text-xs font-bold uppercase tracking-wider border transition-colors',
+                            framing === f.v ? 'bg-foreground text-background border-foreground' : 'bg-card/30 border-border hover:border-primary')}
+                        >
+                          {f.l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="flex justify-between mt-5">
-                    <Button onClick={() => setStep('photo')} variant="outline" className="chamfer-hud-sm gap-2">
+                    <Button type="button" onClick={() => setStep('photo')} variant="outline" className="chamfer-hud-sm gap-2">
                       <ArrowLeft className="h-4 w-4" /> Retour
                     </Button>
-                    <Button onClick={generate} className="chamfer-hud-sm gap-2">
+                    <Button type="button" onClick={generate} className="chamfer-hud-sm gap-2">
                       <Sparkles className="h-4 w-4" /> Générer l'essai
                     </Button>
                   </div>
@@ -260,13 +379,13 @@ export default function VirtualTryOnButton({ product, selectedColor, className, 
 
                   {!loading && resultImage && (
                     <div className="flex flex-wrap gap-2 justify-center mt-5">
-                      <Button onClick={download} variant="outline" className="chamfer-hud-sm gap-2">
+                      <Button type="button" onClick={download} variant="outline" className="chamfer-hud-sm gap-2">
                         <Download className="h-4 w-4" /> Télécharger
                       </Button>
-                      <Button onClick={() => { setResultImage(null); setStep('body'); generate(); }} variant="outline" className="chamfer-hud-sm gap-2">
+                      <Button type="button" onClick={() => { setResultImage(null); setStep('body'); generate(); }} variant="outline" className="chamfer-hud-sm gap-2">
                         <RefreshCw className="h-4 w-4" /> Refaire
                       </Button>
-                      <Button onClick={() => setOpen(false)} className="chamfer-hud-sm gap-2">
+                      <Button type="button" onClick={() => { setOpen(false); reset(); }} className="chamfer-hud-sm gap-2">
                         Terminer
                       </Button>
                     </div>

@@ -1,26 +1,46 @@
-## Problème
+# Essai virtuel — corrections et améliorations
 
-Sur la capture d'écran, le bouton rond ✨ (UnifiedFab — `src/components/layout/UnifiedFab.tsx`) se superpose au champ « Posez votre question… » du widget chatbot (`src/components/layout/ChatBotWidget.tsx`).
+## Problèmes constatés
 
-Cause : tous les FAB sont positionnés via `cornerStyle()` (`src/lib/fabPosition.ts`) avec `zIndex: 50`, identique au panneau du chatbot (`z-50`). Le bouton Sparkles est ancré bottom‑right comme le panneau (360×520 px, bottom‑6 right‑6), donc il se retrouve visuellement par‑dessus l'input.
+1. **Redirection vers l'accueil** quand le client prend une photo via mobile : l'input `capture="environment"` ouvre l'appareil photo natif, et au retour, l'état React du dialogue est perdu (le composant se démonte/remonte selon le cycle de vie mobile). De plus, les `<button>` internes n'ont pas de `type="button"` — si un parent ajoute un `<form>` plus tard, ils submitent.
+2. **Pas de choix de cadrage** : l'IA génère en aveugle, sans savoir si on veut un plan pied ou hanches.
+3. **Upload pas assez clair** : drag-and-drop existe déjà mais n'est pas mis en avant, et le bouton mélange caméra et fichier.
 
-## Correctif (UI uniquement, pas de logique métier)
+## Plan d'action
 
-1. **`src/components/layout/ChatBotWidget.tsx`**
-   - Faire passer le panneau ouvert à `z-[60]` (au‑dessus des FAB en `z-50`).
-   - Faire de même pour le bouton « ouvrir le chat » trigger pour rester cliquable.
+### 1. Fiabiliser la prise/upload de photo (`src/components/product/VirtualTryOnButton.tsx`)
 
-2. **`src/components/layout/UnifiedFab.tsx`**
-   - Lorsque le chatbot est ouvert (lire un état global via `window` event déjà émis, ou ajouter un petit contexte/observer sur `body[data-chat-open]`), masquer/atténuer le socle Sparkles et le Dock pour libérer le coin bas‑droit et éviter tout chevauchement de zone cliquable.
-   - Solution simple : `ChatBotWidget` ajoute/retire `document.body.dataset.chatOpen = '1'` à l'ouverture/fermeture ; `UnifiedFab` lit cet attribut via un petit hook et applique `opacity-0 pointer-events-none` quand actif.
+- Ajouter `type="button"` sur **tous** les `<button>` du dialogue (défense en profondeur contre un futur `<form>` parent).
+- **Séparer** les deux actions en deux boutons distincts :
+  - **« Choisir un fichier »** → input `type="file" accept="image/*"` (sans `capture`) — ouvre la galerie / explorateur de fichiers, ne quitte pas la page sur desktop.
+  - **« Prendre une photo »** → input séparé avec `capture="environment"` — uniquement visible sur mobile (`md:hidden`).
+- Rendre la **zone de drop** plus visible (label « Glissez-déposez votre photo ici »), avec feedback visuel pendant le drag (`onDragEnter`/`onDragLeave` → bordure accent).
+- **Persister l'état** du dialogue dans `sessionStorage` (étape courante, `userPhoto` en base64, taille/poids/genre/morpho/cadrage) pour survivre à un remount post-caméra mobile. Restaurer à l'ouverture si présent ; nettoyer à la fermeture/succès.
+- Empêcher la fermeture accidentelle du dialogue tant qu'une génération est en cours (`onOpenChange` ignoré si `loading`).
 
-3. **`src/lib/fabPosition.ts`** (facultatif, défensif)
-   - Réduire le `zIndex` par défaut de `cornerStyle` à `40` pour que tout panneau modal/dialogue passe naturellement au‑dessus des FAB. Vérifier les autres consommateurs (UnifiedFab Dock, SocleStack) restent fonctionnels.
+### 2. Choix du cadrage
 
-## Vérification
+- Nouvelle étape **« Cadrage »** intégrée dans l'étape « Corpulence » (pas d'étape supplémentaire pour rester rapide).
+- Trois options en boutons style HUD existant :
+  - **Plan pied (full body)**
+  - **Plan hanches (mi-cuisse)**
+  - **Buste / haut du corps**
+- État `framing: 'full' | 'hips' | 'bust'` envoyé à l'edge function.
 
-- Ouvrir le chatbot sur desktop (1540px) et mobile (375px) via le navigateur de preview : la zone « Posez votre question… » et le bouton « Envoyer » doivent être entièrement libres, aucun bouton FAB ne doit chevaucher.
-- Fermer le chatbot : le bouton Sparkles réapparaît à sa place et reste cliquable.
-- Vérifier qu'aucun autre overlay (Newsletter popup, Mega menu) n'est régressé.
+### 3. Edge function (`supabase/functions/virtual-tryon/index.ts`)
 
-Pas de changement backend, pas de migration, pas de modification de la logique des FAB ou du chatbot — uniquement positionnement/z-index/visibilité conditionnelle.
+- Accepter `framing` dans le body (`'full' | 'hips' | 'bust'`).
+- Adapter le prompt Gemini :
+  - `full` → « Output a single photorealistic **full-body** photograph from head to feet. »
+  - `hips` → « Output a photograph framed **from head to mid-thigh** (hips level). »
+  - `bust` → « Output a photograph framed **from head to waist** (upper body only). »
+- Validation : si `framing` absent, fallback à `full`.
+
+### 4. Robustesse
+
+- Logger en console (`console.error`) l'erreur d'invoke avant de retourner à l'étape « body », pour faciliter le debug si le bug réapparaît.
+- Garder le bouton « Refaire » qui rejoue la génération sans repasser par le picker.
+
+## Hors scope
+
+- Pas de changement de modèle IA, pas de touche au flux d'auth, pas de modification UI ailleurs que le bouton et son dialogue.

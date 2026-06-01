@@ -12,6 +12,7 @@ interface Body {
   heightCm?: number;
   weightKg?: number;
   gender?: string;
+  framing?: 'full' | 'hips' | 'bust';
 }
 
 const stripDataUrl = (s: string) => s.includes(',') ? s.split(',')[1] : s;
@@ -54,6 +55,14 @@ Deno.serve(async (req) => {
       `${morpho} build`,
     ].filter(Boolean).join(', ');
 
+    const framing = body.framing || 'full';
+    const framingInstruction =
+      framing === 'hips'
+        ? 'Output a photograph framed from head to mid-thigh (hips level), centered on the person.'
+        : framing === 'bust'
+        ? 'Output a photograph framed from head to waist (upper body / bust only), centered on the person.'
+        : 'Output a single photorealistic full-body photograph from head to feet.';
+
     const prompt = `Virtual try-on task: Take the person in the FIRST image and realistically dress them in the ${body.productCategory || 'garment'} ("${body.productName || 'item'}"${body.selectedColor ? `, color ${body.selectedColor}` : ''}) shown in the SECOND image.
 
 Person profile: ${sizeInfo}.
@@ -62,7 +71,8 @@ Requirements:
 - Preserve the person's face, hair, skin tone, pose and the original background EXACTLY.
 - Fit the garment naturally to the body proportions, with realistic folds, shadows, and lighting matching the original photo.
 - Keep the garment's color, pattern, logos, and design details faithful to the product image.
-- Output a single photorealistic full-body or upper-body photograph. No text, no watermarks, no collage.`;
+- ${framingInstruction}
+- No text, no watermarks, no collage.`;
 
     const aiResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
