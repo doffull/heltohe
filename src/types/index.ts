@@ -448,7 +448,7 @@ export interface DesignSettings {
   categoryColumns?: number;
 
   // Configurable navigation links
-  sidebarNavLinks?: Array<{ id: string; label: string; labelEN: string; icon: string; view: ViewType; enabled: boolean }>;
+  sidebarNavLinks?: Array<{ id: string; label: string; labelEN: string; icon: string; view?: ViewType; href?: string; enabled: boolean }>;
   megaMenuLinks?: Array<{ id: string; label: string; href: string; enabled: boolean }>;
 
   // Category layout preset
