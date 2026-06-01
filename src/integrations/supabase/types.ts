@@ -724,6 +724,7 @@ export type Database = {
           colissimo_sender_city: string | null
           colissimo_sender_name: string | null
           colissimo_sender_zip: string | null
+          color_display_mode: string
           contact_email: string | null
           contact_phone: string | null
           created_at: string
@@ -838,6 +839,7 @@ export type Database = {
           colissimo_sender_city?: string | null
           colissimo_sender_name?: string | null
           colissimo_sender_zip?: string | null
+          color_display_mode?: string
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
@@ -952,6 +954,7 @@ export type Database = {
           colissimo_sender_city?: string | null
           colissimo_sender_name?: string | null
           colissimo_sender_zip?: string | null
+          color_display_mode?: string
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
