@@ -17,6 +17,8 @@ export function VisualEditorToggle() {
     }
     return () => document.body.classList.remove('visual-editor-active');
   }, [isOpen]);
+  // Gate to admins only — hidden for visitors and customers.
+  if (!isAdmin) return null;
 
   return (
     <motion.button
