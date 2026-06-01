@@ -14,6 +14,7 @@ import { useProductLooks } from '@/hooks/useProductLooks';
 import { useProducts } from '@/hooks/useProducts';
 import { usePageTemplate, useDefaultTemplate } from '@/hooks/usePageTemplates';
 import ProductTemplateRenderer from '@/components/product/ProductTemplateRenderer';
+import VirtualTryOnButton from '@/components/product/VirtualTryOnButton';
 
 export default function ProductDetail() {
   const { slugOrId, id } = useParams<{ slugOrId?: string; id?: string }>();
