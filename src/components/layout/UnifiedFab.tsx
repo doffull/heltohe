@@ -175,6 +175,7 @@ export function UnifiedFab() {
 
   return (
     <>
+      <div className={cn('transition-opacity duration-200', chatGlobalOpen && 'opacity-0 pointer-events-none')}>
       {/* Custom DB FABs (skipped in cluster/dock mode unless marked free) */}
       {visibleCustom
         .filter((b) => (mode !== 'cluster' && mode !== 'dock') || freeCustomIds.includes(b.id))
