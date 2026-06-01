@@ -125,6 +125,14 @@ export function ChatBotWidget({ open: openProp, onOpenChange, hideTrigger }: Cha
     if (open) setTimeout(() => inputRef.current?.focus(), 300);
   }, [open]);
 
+  // Signal global chat-open state so other floating elements (UnifiedFab) can step aside
+  useEffect(() => {
+    if (open) document.body.dataset.chatOpen = '1';
+    else delete document.body.dataset.chatOpen;
+    window.dispatchEvent(new CustomEvent('lvtk:chat-open', { detail: { open } }));
+    return () => { delete document.body.dataset.chatOpen; };
+  }, [open]);
+
   const sendMessage = async (text?: string) => {
     const content = (text ?? input).trim();
     if (!content || isLoading) return;
