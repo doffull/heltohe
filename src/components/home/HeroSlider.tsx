@@ -8,6 +8,10 @@ import { motion, useScroll, useTransform } from 'framer-motion';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { InlineEditable } from '@/components/visual-editor/InlineEditable';
 import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
+import { MediaLibraryDialog } from '@/components/visual-editor/MediaLibraryDialog';
+import { EditableCta } from '@/components/visual-editor/EditableCta';
+import { useAuth } from '@/context/AuthContext';
+import { ImagePlus } from 'lucide-react';
 import { HeroVideo } from './HeroVideo';
 
 const HERO_PLACEHOLDER = '/placeholder.svg';
@@ -33,6 +37,8 @@ export function HeroSlider() {
   const { scrollY } = useScroll();
   const isMobile = useIsMobile();
   const { isOpen, setIsDirty } = useVisualEditor();
+  const { isAdmin } = useAuth();
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
 
   // Parallax transforms for 3 layers
   const bgY = useTransform(scrollY, [0, 600], [0, 120]);
