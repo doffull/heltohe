@@ -2547,7 +2547,14 @@ function PromoParallaxTab() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label className="text-xs">Sur-titre</Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Sur-titre</Label>
+                <AiTextButton
+                  field="subtitle"
+                  context={`Promo parallaxe — titre actuel: ${cfg.title || ''}`}
+                  onGenerated={(v) => update({ subtitle: v })}
+                />
+              </div>
               <Input
                 value={cfg.subtitle || ''}
                 onChange={(e) => update({ subtitle: e.target.value })}
@@ -2555,7 +2562,14 @@ function PromoParallaxTab() {
               />
             </div>
             <div>
-              <Label className="text-xs">Titre</Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Titre</Label>
+                <AiTextButton
+                  field="title"
+                  context={`Promo parallaxe — sur-titre: ${cfg.subtitle || ''}`}
+                  onGenerated={(v) => update({ title: v })}
+                />
+              </div>
               <Input
                 value={cfg.title || ''}
                 onChange={(e) => update({ title: e.target.value })}
@@ -2563,7 +2577,14 @@ function PromoParallaxTab() {
               />
             </div>
             <div>
-              <Label className="text-xs">Texte du bouton</Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Texte du bouton</Label>
+                <AiTextButton
+                  field="cta"
+                  context={`Promo parallaxe — titre: ${cfg.title || ''}`}
+                  onGenerated={(v) => update({ ctaLabel: v })}
+                />
+              </div>
               <Input
                 value={cfg.ctaLabel || ''}
                 onChange={(e) => update({ ctaLabel: e.target.value })}
