@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { useVisualEditor } from '../VisualEditorProvider';
 import { GripVertical, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
@@ -58,7 +58,7 @@ export function SectionsEditorTab() {
   const { setIsDirty } = useVisualEditor();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [synced, setSynced] = (require('react') as typeof import('react')).useState<boolean>(true);
+  const [synced, setSynced] = useState<boolean>(true);
 
   // Single source of truth — same key used by Home.tsx and the desktop admin.
   const saved = ((designSettings as any).homePageBlocks || []) as Block[];
@@ -110,9 +110,13 @@ export function SectionsEditorTab() {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-muted-foreground px-1">
-        Glissez pour réordonner. L'ordre s'applique à la fois sur mobile et sur ordinateur.
-      </p>
+      <div className="flex items-center justify-between px-1">
+        <p className="text-xs text-muted-foreground">Glissez pour réordonner.</p>
+        <span className={`flex items-center gap-1 text-[10px] font-semibold ${synced ? 'text-green-600' : 'text-orange-500'}`}>
+          <CheckCircle2 className="w-3 h-3" />
+          {synced ? 'Synchronisé' : 'Enregistrement…'}
+        </span>
+      </div>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={merged.map((s) => s.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-1.5">
