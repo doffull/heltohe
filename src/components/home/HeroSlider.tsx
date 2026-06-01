@@ -197,32 +197,39 @@ export function HeroSlider() {
           </h1>
 
           {/* CTA */}
-          {currentSlide.ctaText && (
+          {currentSlide.ctaText && (currentSlide as any).ctaVisible !== false && (
             <div className="pt-2 sm:pt-3">
-              <Button
-                onClick={() => { if (!isOpen) setCurrentView('Shop'); }}
-                className={cn(
-                  "px-6 py-5 sm:px-8 sm:py-6 text-xs sm:text-sm tracking-wider uppercase font-bold",
-                  "bg-white text-black hover:bg-white/90 rounded-none",
-                  "transition-all duration-300",
-                  isOpen && "cursor-default"
-                )}
-                style={{
-                  backgroundColor: currentSlide.accentColor || undefined,
-                  color: currentSlide.accentColor ? '#fff' : undefined,
-                }}
+              <EditableCta
+                text={currentSlide.ctaText || ''}
+                url={currentSlide.ctaUrl || '/boutique'}
+                onChange={({ text, url }) => updateCurrentSlide({ ctaText: text, ctaUrl: url } as any)}
               >
-                <InlineEditable
-                  fieldKey={`hero-cta-${currentIndex}`}
-                  value={currentSlide.ctaText || ''}
-                  onChange={(v) => updateCurrentSlide({ ctaText: v })}
-                  as="span"
-                />
-              </Button>
+                <Button
+                  onClick={() => { if (!isOpen) setCurrentView('Shop'); }}
+                  className={cn(
+                    "px-6 py-5 sm:px-8 sm:py-6 text-xs sm:text-sm tracking-wider uppercase font-bold",
+                    "bg-white text-black hover:bg-white/90 rounded-none",
+                    "transition-all duration-300",
+                    isOpen && "cursor-default"
+                  )}
+                  style={{
+                    backgroundColor: currentSlide.accentColor || undefined,
+                    color: currentSlide.accentColor ? '#fff' : undefined,
+                  }}
+                >
+                  <InlineEditable
+                    fieldKey={`hero-cta-${currentIndex}`}
+                    value={currentSlide.ctaText || ''}
+                    onChange={(v) => updateCurrentSlide({ ctaText: v })}
+                    as="span"
+                  />
+                </Button>
+              </EditableCta>
             </div>
           )}
         </div>
       </div>
+
 
       {/* Navigation arrows — discreet */}
       {heroSlides.length > 1 && (
@@ -263,13 +270,35 @@ export function HeroSlider() {
         </div>
       )}
 
-      {/* Visual editor hint overlay */}
-      {isOpen && (
-        <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 bg-primary/90 text-primary-foreground text-[10px] font-bold px-2.5 py-1 rounded-full pointer-events-none">
-          <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-          Cliquez sur un texte pour l'éditer
-        </div>
+      {/* Visual editor hint + change-media button */}
+      {isOpen && isAdmin && (
+        <>
+          <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 bg-primary/90 text-primary-foreground text-[10px] font-bold px-2.5 py-1 rounded-full pointer-events-none">
+            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+            Cliquez sur un texte pour l'éditer
+          </div>
+          <button
+            type="button"
+            onClick={() => setMediaPickerOpen(true)}
+            className="absolute top-12 right-3 z-30 inline-flex items-center gap-1.5 bg-primary text-primary-foreground text-[10px] font-semibold uppercase tracking-widest px-2.5 py-1.5 rounded shadow-lg hover:bg-primary/90"
+          >
+            <ImagePlus className="h-3 w-3" />
+            Changer l'image
+          </button>
+          <MediaLibraryDialog
+            open={mediaPickerOpen}
+            onOpenChange={setMediaPickerOpen}
+            accept="all"
+            title="Image / vidéo du Hero"
+            onSelect={(url) => {
+              const isVideo = /\.(mp4|webm|mov)(\?|$)/i.test(url);
+              updateCurrentSlide({ media: url, backgroundMedia: url, mediaType: isVideo ? 'video' : 'image' } as any);
+              setIsDirty(true);
+            }}
+          />
+        </>
       )}
     </div>
   );
 }
+
