@@ -529,25 +529,30 @@ export default function Home() {
         {(designSettings as any).siteTagline || "Boutique de mode techwear"}
       </h1>
       <PromoBanner />
-      {blocks
-        .filter((b) => b.visible)
-        .map((b) => {
+      {(() => {
+        const visible = blocks.filter((b) => b.visible);
+        return visible.map((b, idx) => {
+          const isFirst = idx === 0;
+          const isLast = idx === visible.length - 1;
           if (b.id.startsWith("custom:")) {
             const section = customMap.get(b.id);
             if (!section) return null;
             return (
-              <section key={b.id} className={sectionPy} data-home-block={b.id}>
+              <section key={b.id} className={cn(sectionPy, "relative group/home-block")} data-home-block={b.id}>
+                <SectionControls blockId={b.id} isFirst={isFirst} isLast={isLast} />
                 <PageRenderer sections={[section]} />
               </section>
             );
           }
           const r = blockRenderers[b.id];
           return r ? (
-            <div key={b.id} data-home-block={b.id}>
+            <div key={b.id} className="relative group/home-block" data-home-block={b.id}>
+              <SectionControls blockId={b.id} isFirst={isFirst} isLast={isLast} />
               {r()}
             </div>
           ) : null;
-        })}
+        });
+      })()}
       <PopupBanner />
     </div>
   );
