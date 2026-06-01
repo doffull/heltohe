@@ -188,6 +188,9 @@ export function HomeBlocksEditor() {
   }, [designSettings, customSections]);
 
   const [blocks, setBlocks] = useState<Block[]>(merged);
+  // Reset dirty state on mount → always pick up the latest server snapshot when
+  // the admin opens this page (e.g. after live-editing on the home).
+  useEffect(() => { dirtyRef.current = false; setBlocks(merged); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
   // Sync only when user has no pending edits — sinon on écraserait un changement local.
   useEffect(() => {
     if (dirtyRef.current) return;

@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { useVisualEditor } from '../VisualEditorProvider';
-import { GripVertical, Eye, EyeOff } from 'lucide-react';
+import { GripVertical, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -54,9 +54,11 @@ function SortableRow({ b, onToggle }: { b: Block; onToggle: () => void }) {
 }
 
 export function SectionsEditorTab() {
-  const { designSettings, updateDesignSettings } = useApp();
+  const { designSettings, updateDesignSettings, flushDesignSettings } = useApp();
   const { setIsDirty } = useVisualEditor();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+  const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [synced, setSynced] = useState<boolean>(true);
 
   // Single source of truth — same key used by Home.tsx and the desktop admin.
   const saved = ((designSettings as any).homePageBlocks || []) as Block[];
@@ -81,10 +83,18 @@ export function SectionsEditorTab() {
     return out;
   })();
 
+  useEffect(() => () => { if (flushTimerRef.current) clearTimeout(flushTimerRef.current); }, []);
+
   const update = (next: Block[]) => {
-    // Persist directly to `homePageBlocks` — strictly identical mobile + desktop.
+    // Persist locally for instant UI feedback
     updateDesignSettings({ homePageBlocks: next } as any);
     setIsDirty(true);
+    setSynced(false);
+    // Debounced flush to DB → keeps admin "Icône Accueil" in sync without manual save.
+    if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
+    flushTimerRef.current = setTimeout(() => {
+      flushDesignSettings({ homePageBlocks: next } as any).then(() => setSynced(true)).catch(() => setSynced(false));
+    }, 500);
   };
 
   const onDragEnd = (e: DragEndEvent) => {
@@ -100,9 +110,13 @@ export function SectionsEditorTab() {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-muted-foreground px-1">
-        Glissez pour réordonner. L'ordre s'applique à la fois sur mobile et sur ordinateur.
-      </p>
+      <div className="flex items-center justify-between px-1">
+        <p className="text-xs text-muted-foreground">Glissez pour réordonner.</p>
+        <span className={`flex items-center gap-1 text-[10px] font-semibold ${synced ? 'text-green-600' : 'text-orange-500'}`}>
+          <CheckCircle2 className="w-3 h-3" />
+          {synced ? 'Synchronisé' : 'Enregistrement…'}
+        </span>
+      </div>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={merged.map((s) => s.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-1.5">
