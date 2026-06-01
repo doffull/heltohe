@@ -9,7 +9,8 @@ const ICONS: Record<string, LucideIcon> = {
   Mic, Megaphone, Bell, Trophy, Ticket, MapPin,
 };
 
-const FALLBACK_NAV = [
+type NavItem = { id: string; label: string; labelEN: string; icon: string; view?: ViewType; href?: string; enabled: boolean };
+const FALLBACK_NAV: NavItem[] = [
   { id: 'home', label: 'ACCUEIL', labelEN: 'HOME', icon: 'Home', view: 'Home' as ViewType, enabled: true },
   { id: 'shop', label: 'BOUTIQUE', labelEN: 'SHOP', icon: 'ShoppingBag', view: 'Shop' as ViewType, enabled: true },
   { id: 'about', label: 'À PROPOS', labelEN: 'ABOUT', icon: 'Info', view: 'About' as ViewType, enabled: true },
