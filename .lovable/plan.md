@@ -1,120 +1,75 @@
-# Refonte de l'Éditeur Live (Elementor-like)
+## Objectif
 
-## Objectifs
-
-1. **Parité mobile/desktop** : l'ordre, la visibilité et le contenu des sections de la page d'accueil sont strictement identiques sur les deux vues.
-2. **Édition en un clic** depuis le site lui-même (mode super-admin), comme Elementor : texte, image, bouton, section.
-3. **Refonte complète** du bouton/éditeur Live actuel — il devient le centre de contrôle inline du site.
+Compléter l'éditeur Live avec 4 fonctions manquantes et garantir la **synchronisation bidirectionnelle** de l'ordre des sections entre la home et `/admin/home-icons`.
 
 ---
 
-## Partie 1 — Parité Mobile / Desktop
+## 1. Sync sections Home ↔ Admin "Icône Accueil"
 
-**Diagnostic** : `Home.tsx` lit déjà un seul `homePageBlocks` partagé. Le problème vient de deux endroits :
-- `HomeBlocksEditor` n'écrit dans `homePageBlocks` qu'au `Save` global (ou via un event `homeicons:collect`). Sur mobile, le panneau Live a son propre tab "Sections" (`SectionsEditorTab`) qui écrit dans une **autre clé** : `homeSections` (jamais lue par `Home.tsx`).
-- Résultat : sur desktop on règle via `/admin` → `homePageBlocks` (utilisé), sur mobile via l'éditeur Live → `homeSections` (ignoré).
+**Problème actuel** : la Live Editor écrit dans `designSettings.homePageBlocks` (en mémoire) et persiste seulement au clic « Sauvegarder » du panneau. Côté admin, `HomeBlocksEditor` utilise un state local avec un `dirtyRef` qui bloque la resynchronisation. Résultat : les ordres peuvent diverger.
 
 **Correctif** :
-- `SectionsEditorTab` (et tous les contrôles de l'éditeur Live) écrivent désormais directement dans `designSettings.homePageBlocks` — la **même clé** que l'admin desktop.
-- Suppression de la clé legacy `homeSections` du flux (migration douce : si présente au load, on la convertit une fois en `homePageBlocks`).
-- Verrouillage : un seul render path dans `Home.tsx` pour mobile et desktop — pas de branchement `isMobile` sur l'ordre ni la visibilité.
+- `SectionsEditorTab` (Live Editor) → appeler `flushDesignSettings({ homePageBlocks })` à chaque drag/toggle (debounce 400 ms) pour persister immédiatement.
+- `HomeBlocksEditor` (admin) → réécouter le store quand on entre/sort de la page (reset `dirtyRef` au mount, et re-sync si la version serveur est plus récente que la version locale).
+- Ajouter un petit indicateur « synchronisé » dans les deux UI.
+
+## 2. Édition d'image inline via la médiathèque
+
+- Nouveau composant `EditableImage.tsx` (visual-editor) : wrapper qui détecte mode édition admin et superpose un bouton « Changer l'image » → ouvre `MediaLibraryDialog`.
+- Nouveau composant `MediaLibraryDialog.tsx` : grille des médias (`useMediaLibrary`), upload (`useUploadMedia`), filtrage image/vidéo, sélection avec callback `onSelect(url)`.
+- Intégration sur : `HeroSlider` (slides), `CategoryGrid` (visuels catégories home), `StoreFinderSection` (illustration), `PromoBanner`, `LoyaltyBanner`.
+- Toute modification écrit dans le bon nœud de `designSettings` (clé typée via `useEditableSetting`).
+
+## 3. Édition des CTA hero
+
+- Nouvel onglet `HeroCtaEditorTab` dans le panneau Live (ou sous-section de `HeroEditorTab`) :
+  - Liste des slides → pour chaque slide : libellé CTA, URL/route, variante visuelle (glossy/glass/neon/outline), visibilité, secondary CTA optionnel.
+  - Réordonnancement par drag, ajout/suppression.
+- Sur la home, wrapper inline `<EditableCta>` autour des boutons hero → clic en mode édition ouvre une popover avec label + lien.
+- Persisté dans `designSettings.heroSlides[i].cta` (déjà existant) — pas de migration DB.
+
+## 4. Panneau latéral refondu — multi-pages
+
+- Nouveau `VisualEditorPanel` refondu avec un **sélecteur de page en haut** : Accueil / Boutique / Pages personnalisées (via `usePages`) / Légal.
+- Le contenu des onglets s'adapte à la page sélectionnée :
+  - Accueil : onglets actuels (Hero, Couleurs, Sections, Layout, Hero CTA).
+  - Boutique : tri, filtres visibles, grille.
+  - Pages custom : liste sections + édition inline via `PageRenderer`.
+- `VisualEditorProvider` : ajouter `currentPageKey` + helper `setCurrentPageKey`.
+- Navigation auto : changer de page dans le sélecteur → `navigate(routeMap[pageKey])` pour que la prévisualisation suive.
+
+## 5. Undo / Redo
+
+- Nouveau hook `useDesignHistory.ts` : pile `past[] / present / future[]` (limite 50 entrées) qui observe les mutations de `designSettings`.
+- Boutons « Annuler » (↶) et « Rétablir » (↷) dans le header du panneau.
+- Raccourcis clavier : `Cmd/Ctrl+Z` et `Cmd/Ctrl+Shift+Z` (actifs uniquement si le panneau est ouvert).
+- Indicateur visuel du nombre d'actions annulables.
 
 ---
 
-## Partie 2 — Éditeur Live "Elementor-like"
+## Détails techniques
 
-### 2.1 Nouveau bouton Live (toggle)
+**Fichiers créés** (7) :
+- `src/components/visual-editor/EditableImage.tsx`
+- `src/components/visual-editor/MediaLibraryDialog.tsx`
+- `src/components/visual-editor/EditableCta.tsx`
+- `src/components/visual-editor/tabs/HeroCtaEditorTab.tsx`
+- `src/components/visual-editor/PageSwitcher.tsx`
+- `src/hooks/useDesignHistory.ts`
+- `src/hooks/useEditableSetting.ts`
 
-Remplace `VisualEditorToggle` actuel. Visible **uniquement** pour les super-admins (vérifié via `useUserRoles`). Trois états :
-- **OFF** : pastille discrète en bas-gauche (icône crayon).
-- **ON / Sélection** : barre flottante latérale fine + overlay sur la page.
-- **ON / Édition** : popover contextuelle attachée à l'élément cliqué.
+**Fichiers modifiés** (8) :
+- `src/components/visual-editor/VisualEditorPanel.tsx` (multi-pages + undo/redo header)
+- `src/components/visual-editor/VisualEditorProvider.tsx` (currentPageKey, history)
+- `src/components/visual-editor/tabs/SectionsEditorTab.tsx` (flush immédiat debounce)
+- `src/components/admin/HomeBlocksEditor.tsx` (resync à chaque mount, indicateur sync)
+- `src/components/home/HeroSlider.tsx` (wrap images + CTAs)
+- `src/components/home/CategoryGrid.tsx` (wrap images)
+- `src/components/home/StoreFinderSection.tsx` (wrap image)
+- `src/pages/Home.tsx` (ajout EditableImage/Cta autour de PromoBanner/LoyaltyBanner si visible)
 
-### 2.2 Sélection au clic
-
-Wrapper `<EditableZone kind="..." targetId="..." />` ajouté autour de chaque élément éditable. Quand l'éditeur est ON :
-- Hover → outline pointillé + label flottant (« Texte », « Image », « Section catégorie », « Bouton CTA »...).
-- Clic → l'élément est sélectionné, une **mini-toolbar contextuelle** apparaît collée à l'élément, avec uniquement les actions pertinentes à son type.
-
-### 2.3 Types d'éléments éditables et actions disponibles
-
-| Type | Cibles | Actions inline |
-|---|---|---|
-| Texte | titres de section, sous-titres, labels (« Catégories », « Top ventes », « Découvrir »...) | Édition directe (contenteditable), gras / italique, taille, couleur (depuis tokens) |
-| Image | hero slides, catégories, bannières | Remplacer (ouvre `MediaLibrary`), recadrer (position cover), alt, lien |
-| Bouton / CTA | boutons des hero slides, CTA promo | Libellé, URL, variante (default/outline/ghost), icône |
-| Section (bloc home) | tous les blocs de `homePageBlocks` | Monter / Descendre / Masquer / Dupliquer / Supprimer — au survol de la section, 4 boutons flottants apparaissent en haut-droite |
-
-### 2.4 Réordonnancement des sections in-situ
-
-- Au survol d'une section, une barre flottante apparaît : ↑ ↓ 👁 🗑 ⚙.
-- ↑ et ↓ déplacent la section dans `homePageBlocks` immédiatement (animation framer-motion).
-- ⚙ ouvre les réglages spécifiques au bloc (réutilise les composants existants : `CategoriesBlockInlineEditor`, `TechwearHeroTab`, etc.).
-- Tout est répercuté sur mobile **et** desktop puisqu'on écrit dans la même clé.
-
-### 2.5 Édition de texte inline
-
-- Utilise et étend `InlineEditable` (déjà présent) pour devenir le mécanisme par défaut.
-- Cible : `data-edit-key` automatique sur tout texte rendu via le wrapper.
-- Sauvegarde dans `designSettings` (clés dédiées par bloc, ex. `categoriesTitle`, `featuredTitle`...) — ces clés sont lues côté rendu avec fallback aux valeurs actuelles.
-
-### 2.6 Édition d'image inline
-
-- Composant `EditableImage` qui, en mode éditeur, affiche un overlay « Changer l'image » au hover.
-- Clic → ouverture d'un Dialog avec `MediaLibrary` existante (`useMediaLibrary`) + onglet Upload.
-- Sauvegarde dans la bonne clé du bloc concerné (catégorie, slide hero, etc.).
-
-### 2.7 Panneau latéral repensé
-
-Le panneau gauche (`VisualEditorPanel`) devient secondaire — il ne s'ouvre **que** quand on veut un réglage global qui ne s'attache pas à un élément :
-- **Pages** : sélecteur de page éditée (Home, Boutique, etc.).
-- **Thème** : couleurs (tokens HSL), typo, espacement, rayons (importé depuis `AdminDesign`).
-- **Header / Footer** : édition rapide (réutilise `HeaderDesignTab`).
-- **Historique** : undo/redo des modifs locales avant Save.
-- **Bouton Sauvegarder** persistant en haut, badge orange si dirty.
-
-### 2.8 Sauvegarde
-
-- Modifs en local (debounce 400ms) → preview live immédiate.
-- Bouton **Sauvegarder** explicite déclenche `flushDesignSettings` (existant).
-- Toast de confirmation + invalidation queries.
-
----
-
-## Hors-scope
-
-- Pas de drag-n-drop libre type "déposer un widget n'importe où" — on garde une liste ordonnée de blocs (cohérent avec l'architecture actuelle).
-- Pas de nouveaux blocs créés à la volée depuis l'éditeur Live (ça reste dans `/admin` via `HomeCustomSectionsEditor`). L'éditeur Live se contente d'ordonner / masquer / configurer.
-- Pages autres que la Home : seules les pages déjà gérées par `homePageBlocks` sont éditables au cycle 1. Les pages produit/checkout n'auront que l'édition de texte/image, pas de réordonnancement.
-- Pas de gestion multi-utilisateurs simultanés.
-
----
-
-## Fichiers principaux touchés
-
-**Nouveaux**
-- `src/components/visual-editor/EditableZone.tsx` — wrapper de sélection.
-- `src/components/visual-editor/EditableImage.tsx` — image éditable + Dialog MediaLibrary.
-- `src/components/visual-editor/InlineToolbar.tsx` — toolbar contextuelle (texte/image/bouton).
-- `src/components/visual-editor/SectionControls.tsx` — boutons flottants ↑ ↓ 👁 🗑 ⚙ par section.
-- `src/components/visual-editor/EditorBlockSettings.tsx` — popover de réglages bloc (réutilise composants admin existants).
-- `src/hooks/useEditableSetting.ts` — get/set typé pour clés `designSettings`.
-
-**Modifiés**
-- `src/components/visual-editor/VisualEditorProvider.tsx` — ajoute selectedKey, history, kind, role-gating.
-- `src/components/visual-editor/VisualEditorToggle.tsx` — refonte UI, gating super-admin.
-- `src/components/visual-editor/VisualEditorPanel.tsx` — recentré sur réglages globaux + onglet Pages.
-- `src/components/visual-editor/tabs/SectionsEditorTab.tsx` — écrit dans `homePageBlocks` (parité mobile/desktop), supprime `homeSections`.
-- `src/pages/Home.tsx` — enrobe titres/images/boutons/blocs dans `EditableZone` + `InlineEditable` + `EditableImage`. Aucun branchement `isMobile` sur l'ordre des blocs.
-- `src/components/home/CategoryGrid.tsx`, `HeroSlider.tsx`, `LoyaltyBanner.tsx`, `StoreFinderSection.tsx` — passes textes/images via les wrappers.
-
----
-
-## Critères d'acceptation
-
-1. Sur mobile 360px et desktop 1440px, l'ordre des blocs et leur visibilité sont **strictement identiques** après toute modification.
-2. En mode super-admin éditeur ON, je peux cliquer sur le titre « Catégories » et le modifier en ligne sans naviguer vers /admin.
-3. Je peux cliquer sur une image de catégorie et la remplacer via la médiathèque.
-4. Je peux survoler une section et la monter/descendre/masquer en un clic ; le rendu se met à jour sur les deux viewports.
-5. Le bouton Live n'apparaît pas pour les visiteurs non super-admin.
-6. Un bouton Sauvegarder explicite persiste tous les changements.
+**Hors scope** :
+- Pas de modification du schéma DB.
+- Pas de drag-n-drop entre pages.
+- Pas d'édition multi-utilisateur temps réel.
+- Pas de nouveaux types de blocs.
