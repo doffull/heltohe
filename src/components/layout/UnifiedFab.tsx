@@ -390,6 +390,8 @@ export function UnifiedFab() {
         />
       )}
 
+      </div>
+
       <VoiceCommandFab open={voiceOpen} onOpenChange={setVoiceOpen} hideTrigger />
       <RouletteFab open={rouletteOpen} onOpenChange={setRouletteOpen} hideTrigger />
     </>
