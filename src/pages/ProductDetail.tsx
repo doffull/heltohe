@@ -105,8 +105,14 @@ export default function ProductDetail() {
   }
 
   // If a template is assigned (or a default exists), use the dynamic renderer
+  // If a template is assigned (or a default exists), use the dynamic renderer
   if (activeTemplate) {
-    return <ProductTemplateRenderer template={activeTemplate} product={product} />;
+    return (
+      <>
+        <ProductTemplateRenderer template={activeTemplate} product={product} />
+        <VirtualTryOnButton product={product} selectedColor={selectedColor} />
+      </>
+    );
   }
 
   return (
