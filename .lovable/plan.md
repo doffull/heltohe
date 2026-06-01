@@ -1,59 +1,120 @@
-## Essai Virtuel par IA
+# Refonte de l'Éditeur Live (Elementor-like)
 
-Ajout d'un système d'essai virtuel sur la page produit. Le client uploade sa photo, indique sa corpulence, et l'IA génère une image de lui portant le produit sélectionné.
+## Objectifs
 
-### Flux utilisateur
+1. **Parité mobile/desktop** : l'ordre, la visibilité et le contenu des sections de la page d'accueil sont strictement identiques sur les deux vues.
+2. **Édition en un clic** depuis le site lui-même (mode super-admin), comme Elementor : texte, image, bouton, section.
+3. **Refonte complète** du bouton/éditeur Live actuel — il devient le centre de contrôle inline du site.
 
-1. Sur la page produit (`ProductDetail.tsx` + `ProductTemplateRenderer.tsx`), un bouton **"Essayer virtuellement"** (style Industrial Luxury, chamfer-hud) apparaît à côté/sous le CTA panier.
-2. Clic → ouverture d'un `Dialog` plein écran avec 3 étapes :
-   - **Étape 1** — Upload photo (drag & drop + caméra mobile), conseils (plein pied, fond neutre).
-   - **Étape 2** — Corpulence : taille (cm), poids (kg), morphologie (slim / regular / athletic / curvy), genre. Pré-remplie depuis le profil si connecté.
-   - **Étape 3** — Génération : appel à l'Edge Function, loader animé, puis affichage de l'image générée avec actions (Télécharger, Refaire, Partager, Ajouter au panier).
+---
 
-### Backend (Lovable AI)
+## Partie 1 — Parité Mobile / Desktop
 
-Nouvelle Edge Function `virtual-tryon` :
-- Reçoit : photo utilisateur (base64), image produit (URL), couleur sélectionnée, corpulence, nom/catégorie produit.
-- Récupère l'image produit, la convertit en base64.
-- Appelle Lovable AI Gateway `/v1/images/generations` avec `google/gemini-3.1-flash-image-preview` (Nano Banana 2 — édition multi-image, idéal pour le try-on).
-- Prompt construit côté backend : "Place the [catégorie produit] from image 2 onto the person in image 1, matching their body shape ([morphologie], [taille]cm, [poids]kg). Preserve the person's face, pose, and background. Realistic fit and shadows."
-- Gestion erreurs 429 (rate limit) et 402 (crédits) → toast côté client.
-- Retourne l'image générée (base64 ou URL temporaire).
+**Diagnostic** : `Home.tsx` lit déjà un seul `homePageBlocks` partagé. Le problème vient de deux endroits :
+- `HomeBlocksEditor` n'écrit dans `homePageBlocks` qu'au `Save` global (ou via un event `homeicons:collect`). Sur mobile, le panneau Live a son propre tab "Sections" (`SectionsEditorTab`) qui écrit dans une **autre clé** : `homeSections` (jamais lue par `Home.tsx`).
+- Résultat : sur desktop on règle via `/admin` → `homePageBlocks` (utilisé), sur mobile via l'éditeur Live → `homeSections` (ignoré).
 
-### Stockage
+**Correctif** :
+- `SectionsEditorTab` (et tous les contrôles de l'éditeur Live) écrivent désormais directement dans `designSettings.homePageBlocks` — la **même clé** que l'admin desktop.
+- Suppression de la clé legacy `homeSections` du flux (migration douce : si présente au load, on la convertit une fois en `homePageBlocks`).
+- Verrouillage : un seul render path dans `Home.tsx` pour mobile et desktop — pas de branchement `isMobile` sur l'ordre ni la visibilité.
 
-- Bucket `media` existe déjà et est public. Les images générées sont uploadées dans `media/virtual-tryon/{userId|session}/{timestamp}.png` pour permettre téléchargement/partage.
-- Pas de nouvelle table requise (optionnel : `tryon_sessions` pour historique — non inclus dans ce plan, peut être ajouté plus tard).
+---
 
-### Frontend — fichiers
+## Partie 2 — Éditeur Live "Elementor-like"
 
-**Nouveaux :**
-- `src/components/product/VirtualTryOnButton.tsx` — bouton + ouverture du dialog.
-- `src/components/product/VirtualTryOnDialog.tsx` — dialog multi-étapes (stepper).
-- `src/hooks/useVirtualTryOn.ts` — appel `supabase.functions.invoke('virtual-tryon')`, gestion état/erreurs.
+### 2.1 Nouveau bouton Live (toggle)
 
-**Modifiés :**
-- `src/pages/ProductDetail.tsx` — insertion du bouton sous `ProductOptions`.
-- `src/components/product/ProductTemplateRenderer.tsx` — nouveau type de bloc `virtual_tryon_btn` rendu dans le template.
-- `src/config/templatePresets.ts` — ajout du bloc dans le catalogue éditable.
+Remplace `VisualEditorToggle` actuel. Visible **uniquement** pour les super-admins (vérifié via `useUserRoles`). Trois états :
+- **OFF** : pastille discrète en bas-gauche (icône crayon).
+- **ON / Sélection** : barre flottante latérale fine + overlay sur la page.
+- **ON / Édition** : popover contextuelle attachée à l'élément cliqué.
 
-**Backend :**
-- `supabase/functions/virtual-tryon/index.ts` (nouvelle).
-- `supabase/config.toml` — `[functions.virtual-tryon] verify_jwt = false`.
+### 2.2 Sélection au clic
 
-### Design (Industrial Luxury)
+Wrapper `<EditableZone kind="..." targetId="..." />` ajouté autour de chaque élément éditable. Quand l'éditeur est ON :
+- Hover → outline pointillé + label flottant (« Texte », « Image », « Section catégorie », « Bouton CTA »...).
+- Clic → l'élément est sélectionné, une **mini-toolbar contextuelle** apparaît collée à l'élément, avec uniquement les actions pertinentes à son type.
 
-- Bouton : `chamfer-hud` outline, label `ESSAYER VIRTUELLEMENT`, icône `Sparkles` ou `Camera`.
-- Dialog : fond `bg-background/95 backdrop-blur`, stepper minimal avec barres 45°, typo Helvetica-MP existante, accents `--primary`.
-- Loader génération : pulse HUD style, message "L'IA prépare votre essayage…" (~5-15s typique).
+### 2.3 Types d'éléments éditables et actions disponibles
 
-### Hors périmètre
+| Type | Cibles | Actions inline |
+|---|---|---|
+| Texte | titres de section, sous-titres, labels (« Catégories », « Top ventes », « Découvrir »...) | Édition directe (contenteditable), gras / italique, taille, couleur (depuis tokens) |
+| Image | hero slides, catégories, bannières | Remplacer (ouvre `MediaLibrary`), recadrer (position cover), alt, lien |
+| Bouton / CTA | boutons des hero slides, CTA promo | Libellé, URL, variante (default/outline/ghost), icône |
+| Section (bloc home) | tous les blocs de `homePageBlocks` | Monter / Descendre / Masquer / Dupliquer / Supprimer — au survol de la section, 4 boutons flottants apparaissent en haut-droite |
 
-- Pas d'historique persistant des essais (peut être ajouté ensuite).
-- Pas de partage social automatique (juste téléchargement + lien copiable).
-- Pas de try-on vidéo / temps réel.
-- Pas de modification du flux panier.
+### 2.4 Réordonnancement des sections in-situ
 
-### Coûts & limites à signaler à l'utilisateur
+- Au survol d'une section, une barre flottante apparaît : ↑ ↓ 👁 🗑 ⚙.
+- ↑ et ↓ déplacent la section dans `homePageBlocks` immédiatement (animation framer-motion).
+- ⚙ ouvre les réglages spécifiques au bloc (réutilise les composants existants : `CategoriesBlockInlineEditor`, `TechwearHeroTab`, etc.).
+- Tout est répercuté sur mobile **et** desktop puisqu'on écrit dans la même clé.
 
-L'essai virtuel utilise Lovable AI (génération d'images) : chaque essai consomme des crédits du workspace. En cas de forte affluence, prévoir une limite par session (ex. 3 essais / heure / IP) — à confirmer si vous le souhaitez.
+### 2.5 Édition de texte inline
+
+- Utilise et étend `InlineEditable` (déjà présent) pour devenir le mécanisme par défaut.
+- Cible : `data-edit-key` automatique sur tout texte rendu via le wrapper.
+- Sauvegarde dans `designSettings` (clés dédiées par bloc, ex. `categoriesTitle`, `featuredTitle`...) — ces clés sont lues côté rendu avec fallback aux valeurs actuelles.
+
+### 2.6 Édition d'image inline
+
+- Composant `EditableImage` qui, en mode éditeur, affiche un overlay « Changer l'image » au hover.
+- Clic → ouverture d'un Dialog avec `MediaLibrary` existante (`useMediaLibrary`) + onglet Upload.
+- Sauvegarde dans la bonne clé du bloc concerné (catégorie, slide hero, etc.).
+
+### 2.7 Panneau latéral repensé
+
+Le panneau gauche (`VisualEditorPanel`) devient secondaire — il ne s'ouvre **que** quand on veut un réglage global qui ne s'attache pas à un élément :
+- **Pages** : sélecteur de page éditée (Home, Boutique, etc.).
+- **Thème** : couleurs (tokens HSL), typo, espacement, rayons (importé depuis `AdminDesign`).
+- **Header / Footer** : édition rapide (réutilise `HeaderDesignTab`).
+- **Historique** : undo/redo des modifs locales avant Save.
+- **Bouton Sauvegarder** persistant en haut, badge orange si dirty.
+
+### 2.8 Sauvegarde
+
+- Modifs en local (debounce 400ms) → preview live immédiate.
+- Bouton **Sauvegarder** explicite déclenche `flushDesignSettings` (existant).
+- Toast de confirmation + invalidation queries.
+
+---
+
+## Hors-scope
+
+- Pas de drag-n-drop libre type "déposer un widget n'importe où" — on garde une liste ordonnée de blocs (cohérent avec l'architecture actuelle).
+- Pas de nouveaux blocs créés à la volée depuis l'éditeur Live (ça reste dans `/admin` via `HomeCustomSectionsEditor`). L'éditeur Live se contente d'ordonner / masquer / configurer.
+- Pages autres que la Home : seules les pages déjà gérées par `homePageBlocks` sont éditables au cycle 1. Les pages produit/checkout n'auront que l'édition de texte/image, pas de réordonnancement.
+- Pas de gestion multi-utilisateurs simultanés.
+
+---
+
+## Fichiers principaux touchés
+
+**Nouveaux**
+- `src/components/visual-editor/EditableZone.tsx` — wrapper de sélection.
+- `src/components/visual-editor/EditableImage.tsx` — image éditable + Dialog MediaLibrary.
+- `src/components/visual-editor/InlineToolbar.tsx` — toolbar contextuelle (texte/image/bouton).
+- `src/components/visual-editor/SectionControls.tsx` — boutons flottants ↑ ↓ 👁 🗑 ⚙ par section.
+- `src/components/visual-editor/EditorBlockSettings.tsx` — popover de réglages bloc (réutilise composants admin existants).
+- `src/hooks/useEditableSetting.ts` — get/set typé pour clés `designSettings`.
+
+**Modifiés**
+- `src/components/visual-editor/VisualEditorProvider.tsx` — ajoute selectedKey, history, kind, role-gating.
+- `src/components/visual-editor/VisualEditorToggle.tsx` — refonte UI, gating super-admin.
+- `src/components/visual-editor/VisualEditorPanel.tsx` — recentré sur réglages globaux + onglet Pages.
+- `src/components/visual-editor/tabs/SectionsEditorTab.tsx` — écrit dans `homePageBlocks` (parité mobile/desktop), supprime `homeSections`.
+- `src/pages/Home.tsx` — enrobe titres/images/boutons/blocs dans `EditableZone` + `InlineEditable` + `EditableImage`. Aucun branchement `isMobile` sur l'ordre des blocs.
+- `src/components/home/CategoryGrid.tsx`, `HeroSlider.tsx`, `LoyaltyBanner.tsx`, `StoreFinderSection.tsx` — passes textes/images via les wrappers.
+
+---
+
+## Critères d'acceptation
+
+1. Sur mobile 360px et desktop 1440px, l'ordre des blocs et leur visibilité sont **strictement identiques** après toute modification.
+2. En mode super-admin éditeur ON, je peux cliquer sur le titre « Catégories » et le modifier en ligne sans naviguer vers /admin.
+3. Je peux cliquer sur une image de catégorie et la remplacer via la médiathèque.
+4. Je peux survoler une section et la monter/descendre/masquer en un clic ; le rendu se met à jour sur les deux viewports.
+5. Le bouton Live n'apparaît pas pour les visiteurs non super-admin.
+6. Un bouton Sauvegarder explicite persiste tous les changements.
