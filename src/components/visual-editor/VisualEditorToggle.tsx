@@ -2,9 +2,11 @@ import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Pencil, X } from 'lucide-react';
 import { useVisualEditor } from './VisualEditorProvider';
+import { useAuth } from '@/context/AuthContext';
 
 export function VisualEditorToggle() {
   const { isOpen, setIsOpen, isDirty } = useVisualEditor();
+  const { isAdmin } = useAuth();
 
   // Add/remove body class for global cursor hints
   useEffect(() => {
