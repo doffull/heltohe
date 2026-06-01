@@ -18,13 +18,29 @@ interface Body {
 const stripDataUrl = (s: string) => s.includes(',') ? s.split(',')[1] : s;
 
 async function urlToBase64(url: string): Promise<{ b64: string; mime: string }> {
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(`Failed to fetch product image: ${r.status}`);
-  const mime = r.headers.get('content-type') || 'image/jpeg';
-  const buf = new Uint8Array(await r.arrayBuffer());
-  let bin = '';
-  for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
-  return { b64: btoa(bin), mime };
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (compatible; LovableBot/1.0)',
+    'Accept': 'image/*,*/*;q=0.8',
+  };
+  let lastErr = 0;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const r = await fetch(url, { headers, redirect: 'follow' });
+      if (r.ok) {
+        const mime = r.headers.get('content-type') || 'image/jpeg';
+        const buf = new Uint8Array(await r.arrayBuffer());
+        let bin = '';
+        for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+        return { b64: btoa(bin), mime };
+      }
+      lastErr = r.status;
+      if (r.status < 500 && r.status !== 429) break;
+    } catch (e) {
+      console.warn('fetch attempt failed:', e);
+    }
+    await new Promise((res) => setTimeout(res, 400 * (attempt + 1)));
+  }
+  throw new Error(`Failed to fetch product image: ${lastErr || 'network'}`);
 }
 
 Deno.serve(async (req) => {
