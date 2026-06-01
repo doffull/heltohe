@@ -208,6 +208,8 @@ export default function ProductDetail() {
           onColorChange={handleColorChange}
         />
       )}
+
+      <VirtualTryOnButton product={product} selectedColor={selectedColor} />
     </div>
   );
 }
