@@ -2651,21 +2651,38 @@ function NavigationTab() {
     updateDesignSettings({ sidebarNavLinks: sidebarLinks.filter((_, i) => i !== idx) });
   };
 
-  const updateMega = (idx: number, patch: Partial<typeof megaLinks[number]>) => {
-    const next = megaLinks.map((l, i) => i === idx ? { ...l, ...patch } : l);
-    updateDesignSettings({ megaMenuLinks: next });
-  };
-  const moveMega = (idx: number, dir: -1 | 1) => {
-    const j = idx + dir; if (j < 0 || j >= megaLinks.length) return;
-    const next = [...megaLinks]; [next[idx], next[j]] = [next[j], next[idx]];
-    updateDesignSettings({ megaMenuLinks: next });
-  };
-  const removeMega = (idx: number) => {
-    updateDesignSettings({ megaMenuLinks: megaLinks.filter((_, i) => i !== idx) });
-  };
-  const addMega = () => {
+  const SIDEBAR_PRESETS: Array<{ label: string; labelEN: string; icon: string; href?: string; view?: any }> = [
+    { label: 'NEWSLETTER', labelEN: 'NEWSLETTER', icon: 'Mail', href: '/?newsletter=1' },
+    { label: 'ROULETTE', labelEN: 'WHEEL', icon: 'Trophy', href: '/?roulette=1' },
+    { label: 'COMMANDE VOCALE', labelEN: 'VOICE', icon: 'Mic', href: '/?voice=1' },
+    { label: 'MARKETING', labelEN: 'MARKETING', icon: 'Megaphone', href: '/admin/marketing' },
+    { label: 'NOTIFICATIONS', labelEN: 'ALERTS', icon: 'Bell', href: '/admin/notifications' },
+    { label: 'FIDÉLITÉ', labelEN: 'LOYALTY', icon: 'Gift', href: '/fidelite' },
+    { label: 'BOUTIQUES', labelEN: 'STORES', icon: 'MapPin', href: '/boutiques' },
+    { label: 'PROMO', labelEN: 'OFFERS', icon: 'Ticket', href: '/?promo=1' },
+  ];
+  const addSidebarPreset = (preset: typeof SIDEBAR_PRESETS[number]) => {
     updateDesignSettings({
-      megaMenuLinks: [...megaLinks, { id: generateId(), label: 'Nouveau lien', href: '/', enabled: true }],
+      sidebarNavLinks: [...sidebarLinks, {
+        id: generateId(),
+        label: preset.label,
+        labelEN: preset.labelEN,
+        icon: preset.icon,
+        href: preset.href,
+        enabled: true,
+      } as any],
+    });
+  };
+  const addSidebarCustom = () => {
+    updateDesignSettings({
+      sidebarNavLinks: [...sidebarLinks, {
+        id: generateId(),
+        label: 'NOUVEAU',
+        labelEN: 'NEW',
+        icon: 'Sparkles',
+        href: '/',
+        enabled: true,
+      } as any],
     });
   };
 
@@ -2674,7 +2691,7 @@ function NavigationTab() {
       <Card>
         <CardHeader>
           <CardTitle>Sidebar gauche</CardTitle>
-          <CardDescription>Active, renomme ou réordonne les liens du menu vertical. N'oublie pas de cliquer sur « Sauvegarder » en haut.</CardDescription>
+          <CardDescription>Active, renomme, réordonne ou ajoute des éléments. Tu peux ajouter des raccourcis vers la newsletter, la roulette, la commande vocale, le marketing, etc.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {sidebarLinks.length === 0 && (
@@ -2688,22 +2705,48 @@ function NavigationTab() {
               </div>
               <Switch checked={link.enabled} onCheckedChange={(v) => updateSidebar(idx, { enabled: v })} />
               <Input
-                className="flex-1"
+                className="flex-1 min-w-[120px]"
                 placeholder="Libellé FR"
                 value={link.label}
                 onChange={(e) => updateSidebar(idx, { label: e.target.value })}
               />
               <Input
-                className="flex-1"
+                className="flex-1 min-w-[120px]"
                 placeholder="Libellé EN"
                 value={link.labelEN}
                 onChange={(e) => updateSidebar(idx, { labelEN: e.target.value })}
+              />
+              <Input
+                className="flex-1 min-w-[140px]"
+                placeholder="Icône (ex: Mail)"
+                value={link.icon}
+                onChange={(e) => updateSidebar(idx, { icon: e.target.value })}
+              />
+              <Input
+                className="flex-1 min-w-[140px]"
+                placeholder="URL (ex: /fidelite)"
+                value={(link as any).href || ''}
+                onChange={(e) => updateSidebar(idx, { href: e.target.value, view: undefined } as any)}
               />
               <Button size="icon" variant="ghost" className="text-destructive" onClick={() => removeSidebar(idx)}>
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           ))}
+          <div className="pt-2 border-t space-y-2">
+            <p className="text-xs text-muted-foreground">Ajouter un raccourci :</p>
+            <div className="flex flex-wrap gap-2">
+              {SIDEBAR_PRESETS.map((p) => (
+                <Button key={p.label} variant="outline" size="sm" onClick={() => addSidebarPreset(p)} className="gap-1.5">
+                  <Plus className="h-3.5 w-3.5" /> {p.label}
+                </Button>
+              ))}
+              <Button variant="secondary" size="sm" onClick={addSidebarCustom} className="gap-1.5">
+                <Plus className="h-3.5 w-3.5" /> Personnalisé
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">Icônes disponibles : Home, ShoppingBag, Info, Mail, Phone, Heart, Star, Gift, User, Tag, Package, Mic, Megaphone, Bell, Trophy, Ticket, MapPin, Sparkles, Settings.</p>
+          </div>
         </CardContent>
       </Card>
 
