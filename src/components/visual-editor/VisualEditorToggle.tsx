@@ -2,9 +2,11 @@ import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Pencil, X } from 'lucide-react';
 import { useVisualEditor } from './VisualEditorProvider';
+import { useAuth } from '@/context/AuthContext';
 
 export function VisualEditorToggle() {
   const { isOpen, setIsOpen, isDirty } = useVisualEditor();
+  const { isAdmin } = useAuth();
 
   // Add/remove body class for global cursor hints
   useEffect(() => {
@@ -15,6 +17,8 @@ export function VisualEditorToggle() {
     }
     return () => document.body.classList.remove('visual-editor-active');
   }, [isOpen]);
+  // Gate to admins only — hidden for visitors and customers.
+  if (!isAdmin) return null;
 
   return (
     <motion.button

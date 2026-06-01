@@ -1,36 +1,53 @@
 import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { useVisualEditor } from '../VisualEditorProvider';
-import { HomeSection } from '@/types';
-import { Plus, GripVertical, Eye, EyeOff } from 'lucide-react';
+import { GripVertical, Eye, EyeOff } from 'lucide-react';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import type { PageSection } from '@/hooks/usePages';
 
-function SortableRow({ section, onToggle, onTitle }: { section: HomeSection; onToggle: () => void; onTitle: (v: string) => void }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: section.id });
+interface Block { id: string; visible: boolean; label?: string; settings?: Record<string, any> }
+type BuiltinId = 'hero' | 'categories' | 'storeFinder' | 'featured' | 'flash' | 'newArrivals' | 'voiceBanner' | 'loyalty' | 'newsletter';
+
+const BUILTIN_LABELS: Record<BuiltinId, string> = {
+  hero: 'Hero',
+  categories: 'Catégories',
+  storeFinder: 'Nos boutiques',
+  featured: 'Top ventes',
+  flash: 'Flash promo',
+  newArrivals: 'Nouveautés',
+  voiceBanner: 'Bannière vocale',
+  loyalty: 'Fidélité',
+  newsletter: 'Newsletter',
+};
+
+function sectionLabel(s: PageSection): string {
+  const c = s.content || {};
+  return (c.name as string) || (c.title as string) || (c.subtitle as string) || `Section ${s.type}`;
+}
+
+function SortableRow({ b, onToggle }: { b: Block; onToggle: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: b.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-2 px-3 py-2.5 rounded border transition-colors ${section.isVisible ? 'border-border bg-background' : 'border-border/50 bg-muted/30'}`}
+      className={`flex items-center gap-2 px-3 py-2.5 rounded border transition-colors ${b.visible ? 'border-border bg-background' : 'border-border/50 bg-muted/30'}`}
     >
       <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none p-1">
         <GripVertical className="w-3.5 h-3.5 text-muted-foreground/60" />
       </button>
-      <input
-        type="text"
-        value={section.title}
-        onChange={(e) => onTitle(e.target.value)}
-        className={`flex-1 text-xs bg-transparent focus:outline-none min-w-0 ${section.isVisible ? 'text-foreground' : 'text-muted-foreground line-through'}`}
-      />
+      <span className={`flex-1 text-xs min-w-0 truncate ${b.visible ? 'text-foreground' : 'text-muted-foreground line-through'}`}>
+        {b.label || b.id}
+      </span>
       <button
         onClick={onToggle}
-        className={`flex-shrink-0 p-1 rounded transition-colors ${section.isVisible ? 'text-primary hover:text-primary/70' : 'text-muted-foreground hover:text-foreground'}`}
-        title={section.isVisible ? 'Masquer' : 'Afficher'}
+        className={`flex-shrink-0 p-1 rounded transition-colors ${b.visible ? 'text-primary hover:text-primary/70' : 'text-muted-foreground hover:text-foreground'}`}
+        title={b.visible ? 'Masquer' : 'Afficher'}
       >
-        {section.isVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+        {b.visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
       </button>
     </div>
   );
@@ -39,82 +56,62 @@ function SortableRow({ section, onToggle, onTitle }: { section: HomeSection; onT
 export function SectionsEditorTab() {
   const { designSettings, updateDesignSettings } = useApp();
   const { setIsDirty } = useVisualEditor();
-  const [newTitle, setNewTitle] = useState('');
-  const [showAdd, setShowAdd] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
-  const sections: HomeSection[] = designSettings.homeSections || [];
+  // Single source of truth — same key used by Home.tsx and the desktop admin.
+  const saved = ((designSettings as any).homePageBlocks || []) as Block[];
+  const customSections = ((designSettings as any).homeCustomSections || []) as PageSection[];
 
-  const update = (next: HomeSection[]) => {
-    updateDesignSettings({ homeSections: next });
+  // Merge defaults so every known block is visible in the list.
+  const allIds = Object.keys(BUILTIN_LABELS) as BuiltinId[];
+  const customMap = new Map(customSections.map((s) => [`custom:${s.id}`, sectionLabel(s)]));
+  const merged: Block[] = (() => {
+    const present = new Set(saved.map((b) => b.id));
+    const out: Block[] = saved
+      .filter((b) => b.id.startsWith('custom:') ? customMap.has(b.id) : (b.id in BUILTIN_LABELS))
+      .map((b) => ({
+        ...b,
+        label: b.id.startsWith('custom:') ? customMap.get(b.id) : BUILTIN_LABELS[b.id as BuiltinId],
+      }));
+    allIds.forEach((id) => { if (!present.has(id)) out.push({ id, visible: true, label: BUILTIN_LABELS[id] }); });
+    customSections.forEach((s) => {
+      const id = `custom:${s.id}`;
+      if (!present.has(id)) out.push({ id, visible: true, label: sectionLabel(s) });
+    });
+    return out;
+  })();
+
+  const update = (next: Block[]) => {
+    // Persist directly to `homePageBlocks` — strictly identical mobile + desktop.
+    updateDesignSettings({ homePageBlocks: next } as any);
     setIsDirty(true);
   };
 
   const onDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
     if (!over || active.id === over.id) return;
-    const oldIndex = sections.findIndex((s) => s.id === active.id);
-    const newIndex = sections.findIndex((s) => s.id === over.id);
-    update(arrayMove(sections, oldIndex, newIndex));
+    const oi = merged.findIndex((s) => s.id === active.id);
+    const ni = merged.findIndex((s) => s.id === over.id);
+    update(arrayMove(merged, oi, ni));
   };
 
-  function toggleSection(id: string) {
-    update(sections.map((s) => (s.id === id ? { ...s, isVisible: !s.isVisible } : s)));
-  }
-
-  function updateTitle(id: string, title: string) {
-    update(sections.map((s) => (s.id === id ? { ...s, title } : s)));
-  }
-
-  function addSection() {
-    if (!newTitle.trim()) return;
-    update([...sections, { id: `section-${Date.now()}`, title: newTitle.trim(), isVisible: true }]);
-    setNewTitle('');
-    setShowAdd(false);
-  }
+  const toggle = (id: string) =>
+    update(merged.map((b) => (b.id === id ? { ...b, visible: !b.visible } : b)));
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-muted-foreground px-1">Glissez pour réordonner. Activez/désactivez chaque section.</p>
-
+      <p className="text-xs text-muted-foreground px-1">
+        Glissez pour réordonner. L'ordre s'applique à la fois sur mobile et sur ordinateur.
+      </p>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-        <SortableContext items={sections.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={merged.map((s) => s.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-1.5">
-            {sections.map((section) => (
-              <SortableRow
-                key={section.id}
-                section={section}
-                onToggle={() => toggleSection(section.id)}
-                onTitle={(v) => updateTitle(section.id, v)}
-              />
+            {merged.map((b) => (
+              <SortableRow key={b.id} b={b} onToggle={() => toggle(b.id)} />
             ))}
           </div>
         </SortableContext>
       </DndContext>
-
-      {showAdd ? (
-        <div className="flex gap-1.5">
-          <input
-            type="text"
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addSection()}
-            autoFocus
-            placeholder="Nom de la section..."
-            className="flex-1 text-xs px-2.5 py-1.5 rounded bg-muted border border-border focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-          <button onClick={addSection} className="px-2.5 py-1.5 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors font-medium">OK</button>
-          <button onClick={() => setShowAdd(false)} className="px-2.5 py-1.5 text-xs bg-muted text-muted-foreground rounded hover:bg-muted/80 transition-colors">✕</button>
-        </div>
-      ) : (
-        <button
-          onClick={() => setShowAdd(true)}
-          className="w-full flex items-center justify-center gap-1.5 py-2 rounded border border-dashed border-border text-xs text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          Ajouter une section
-        </button>
-      )}
     </div>
   );
 }
