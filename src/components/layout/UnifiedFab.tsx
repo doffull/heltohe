@@ -38,6 +38,13 @@ export function UnifiedFab() {
   const [chatOpen, setChatOpen] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false);
+  const [chatGlobalOpen, setChatGlobalOpen] = useState(false);
+
+  useEffect(() => {
+    const onChat = (e: Event) => setChatGlobalOpen(!!(e as CustomEvent).detail?.open);
+    window.addEventListener('lvtk:chat-open', onChat as EventListener);
+    return () => window.removeEventListener('lvtk:chat-open', onChat as EventListener);
+  }, []);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 767px)');
