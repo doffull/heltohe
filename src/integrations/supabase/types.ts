@@ -724,6 +724,7 @@ export type Database = {
           colissimo_sender_city: string | null
           colissimo_sender_name: string | null
           colissimo_sender_zip: string | null
+          color_display_mode: string
           contact_email: string | null
           contact_phone: string | null
           created_at: string
@@ -838,6 +839,7 @@ export type Database = {
           colissimo_sender_city?: string | null
           colissimo_sender_name?: string | null
           colissimo_sender_zip?: string | null
+          color_display_mode?: string
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
@@ -952,6 +954,7 @@ export type Database = {
           colissimo_sender_city?: string | null
           colissimo_sender_name?: string | null
           colissimo_sender_zip?: string | null
+          color_display_mode?: string
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
@@ -2516,6 +2519,7 @@ export type Database = {
           category_columns: number | null
           category_layout: Json | null
           click_scale: number | null
+          color_display_mode: string | null
           created_at: string | null
           custom_unit_id: string | null
           favicon_url: string | null
@@ -2616,6 +2620,7 @@ export type Database = {
           category_columns?: number | null
           category_layout?: Json | null
           click_scale?: number | null
+          color_display_mode?: string | null
           created_at?: string | null
           custom_unit_id?: string | null
           favicon_url?: string | null
@@ -2716,6 +2721,7 @@ export type Database = {
           category_columns?: number | null
           category_layout?: Json | null
           click_scale?: number | null
+          color_display_mode?: string | null
           created_at?: string | null
           custom_unit_id?: string | null
           favicon_url?: string | null

@@ -1,0 +1,1 @@
+ALTER TABLE public.design_settings ADD COLUMN IF NOT EXISTS color_display_mode TEXT NOT NULL DEFAULT 'swatches';

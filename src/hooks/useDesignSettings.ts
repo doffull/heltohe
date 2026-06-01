@@ -135,6 +135,7 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     sidebarNewsletterCta: (db.sidebar_newsletter_cta as string) ?? "Je m'inscris",
     voiceCommandEnabled: db.voice_command_enabled !== null && db.voice_command_enabled !== undefined ? (db.voice_command_enabled as boolean) : true,
     voiceOnboardingHint: db.voice_onboarding_hint !== null && db.voice_onboarding_hint !== undefined ? (db.voice_onboarding_hint as boolean) : true,
+    colorDisplayMode: ((db.color_display_mode as string) || base.colorDisplayMode || 'swatches') as 'swatches' | 'images',
   };
 }
 
@@ -253,6 +254,7 @@ function settingsToDb(s: DesignSettings) {
     sidebar_newsletter_cta: (s as any).sidebarNewsletterCta ?? "Je m'inscris",
     voice_command_enabled: (s as any).voiceCommandEnabled ?? true,
     voice_onboarding_hint: (s as any).voiceOnboardingHint ?? true,
+    color_display_mode: s.colorDisplayMode ?? 'swatches',
   };
 }
 

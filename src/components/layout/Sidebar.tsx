@@ -1,13 +1,16 @@
-import { Home, ShoppingBag, Info, Settings, Layers, Sparkles, Mail, Phone, Heart, Star, Gift, User, Tag, Package, type LucideIcon } from 'lucide-react';
+import { Home, ShoppingBag, Info, Settings, Layers, Sparkles, Mail, Phone, Heart, Star, Gift, User, Tag, Package, Mic, Megaphone, Bell, Trophy, Ticket, MapPin, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
 import { ViewType } from '@/types';
+import { useNavigate } from 'react-router-dom';
 
 const ICONS: Record<string, LucideIcon> = {
   Home, ShoppingBag, Info, Settings, Layers, Sparkles, Mail, Phone, Heart, Star, Gift, User, Tag, Package,
+  Mic, Megaphone, Bell, Trophy, Ticket, MapPin,
 };
 
-const FALLBACK_NAV = [
+type NavItem = { id: string; label: string; labelEN: string; icon: string; view?: ViewType; href?: string; enabled: boolean };
+const FALLBACK_NAV: NavItem[] = [
   { id: 'home', label: 'ACCUEIL', labelEN: 'HOME', icon: 'Home', view: 'Home' as ViewType, enabled: true },
   { id: 'shop', label: 'BOUTIQUE', labelEN: 'SHOP', icon: 'ShoppingBag', view: 'Shop' as ViewType, enabled: true },
   { id: 'about', label: 'À PROPOS', labelEN: 'ABOUT', icon: 'Info', view: 'About' as ViewType, enabled: true },
@@ -15,7 +18,9 @@ const FALLBACK_NAV = [
 
 export function Sidebar() {
   const { currentView, setCurrentView, language, designSettings } = useApp();
+  const navigate = useNavigate();
   const navItems = (designSettings.sidebarNavLinks ?? FALLBACK_NAV).filter(n => n.enabled);
+  
   
   return (
     <aside 
@@ -52,12 +57,22 @@ export function Sidebar() {
       <nav className="flex-1 py-6 px-2 lg:px-4 space-y-2">
         {navItems.map((item, index) => {
           const Icon = ICONS[item.icon] ?? Home;
-          const isActive = currentView === item.view;
-          
+          const isActive = item.view ? currentView === item.view : false;
+          const handleClick = () => {
+            if (item.href) {
+              if (/^https?:\/\//i.test(item.href)) {
+                window.open(item.href, '_blank', 'noopener');
+              } else {
+                navigate(item.href);
+              }
+            } else if (item.view) {
+              setCurrentView(item.view);
+            }
+          };
           return (
             <button
               key={item.id}
-              onClick={() => setCurrentView(item.view)}
+              onClick={handleClick}
               className={cn(
                 "w-full flex items-center gap-3 px-3 py-3 lg:py-2.5 transition-all duration-200 group",
                 "hover:bg-primary/10 border border-transparent",
