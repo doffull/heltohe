@@ -1,10 +1,12 @@
-import { Home, ShoppingBag, Info, Settings, Layers, Sparkles, Mail, Phone, Heart, Star, Gift, User, Tag, Package, type LucideIcon } from 'lucide-react';
+import { Home, ShoppingBag, Info, Settings, Layers, Sparkles, Mail, Phone, Heart, Star, Gift, User, Tag, Package, Mic, Megaphone, Bell, Trophy, Ticket, MapPin, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
 import { ViewType } from '@/types';
+import { useNavigate } from 'react-router-dom';
 
 const ICONS: Record<string, LucideIcon> = {
   Home, ShoppingBag, Info, Settings, Layers, Sparkles, Mail, Phone, Heart, Star, Gift, User, Tag, Package,
+  Mic, Megaphone, Bell, Trophy, Ticket, MapPin,
 };
 
 const FALLBACK_NAV = [
@@ -15,7 +17,9 @@ const FALLBACK_NAV = [
 
 export function Sidebar() {
   const { currentView, setCurrentView, language, designSettings } = useApp();
+  const navigate = useNavigate();
   const navItems = (designSettings.sidebarNavLinks ?? FALLBACK_NAV).filter(n => n.enabled);
+  
   
   return (
     <aside 
