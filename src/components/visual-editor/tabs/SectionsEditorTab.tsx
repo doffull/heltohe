@@ -54,9 +54,11 @@ function SortableRow({ b, onToggle }: { b: Block; onToggle: () => void }) {
 }
 
 export function SectionsEditorTab() {
-  const { designSettings, updateDesignSettings } = useApp();
+  const { designSettings, updateDesignSettings, flushDesignSettings } = useApp();
   const { setIsDirty } = useVisualEditor();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+  const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [synced, setSynced] = (require('react') as typeof import('react')).useState<boolean>(true);
 
   // Single source of truth — same key used by Home.tsx and the desktop admin.
   const saved = ((designSettings as any).homePageBlocks || []) as Block[];
@@ -81,10 +83,18 @@ export function SectionsEditorTab() {
     return out;
   })();
 
+  useEffect(() => () => { if (flushTimerRef.current) clearTimeout(flushTimerRef.current); }, []);
+
   const update = (next: Block[]) => {
-    // Persist directly to `homePageBlocks` — strictly identical mobile + desktop.
+    // Persist locally for instant UI feedback
     updateDesignSettings({ homePageBlocks: next } as any);
     setIsDirty(true);
+    setSynced(false);
+    // Debounced flush to DB → keeps admin "Icône Accueil" in sync without manual save.
+    if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
+    flushTimerRef.current = setTimeout(() => {
+      flushDesignSettings({ homePageBlocks: next } as any).then(() => setSynced(true)).catch(() => setSynced(false));
+    }, 500);
   };
 
   const onDragEnd = (e: DragEndEvent) => {
