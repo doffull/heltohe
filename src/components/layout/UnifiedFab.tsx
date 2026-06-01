@@ -207,7 +207,7 @@ export function UnifiedFab() {
         </div>
       )}
 
-      <ChatBotWidget open={chatOpen} onOpenChange={setChatOpen} hideTrigger />
+      
 
       {mode === 'dock' ? (
         <Dock
