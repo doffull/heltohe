@@ -2519,6 +2519,7 @@ export type Database = {
           category_columns: number | null
           category_layout: Json | null
           click_scale: number | null
+          color_display_mode: string | null
           created_at: string | null
           custom_unit_id: string | null
           favicon_url: string | null
@@ -2619,6 +2620,7 @@ export type Database = {
           category_columns?: number | null
           category_layout?: Json | null
           click_scale?: number | null
+          color_display_mode?: string | null
           created_at?: string | null
           custom_unit_id?: string | null
           favicon_url?: string | null
@@ -2719,6 +2721,7 @@ export type Database = {
           category_columns?: number | null
           category_layout?: Json | null
           click_scale?: number | null
+          color_display_mode?: string | null
           created_at?: string | null
           custom_unit_id?: string | null
           favicon_url?: string | null
