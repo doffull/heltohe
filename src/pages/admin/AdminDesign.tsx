@@ -2651,6 +2651,25 @@ function NavigationTab() {
     updateDesignSettings({ sidebarNavLinks: sidebarLinks.filter((_, i) => i !== idx) });
   };
 
+  const updateMega = (idx: number, patch: Partial<typeof megaLinks[number]>) => {
+    const next = megaLinks.map((l, i) => i === idx ? { ...l, ...patch } : l);
+    updateDesignSettings({ megaMenuLinks: next });
+  };
+  const moveMega = (idx: number, dir: -1 | 1) => {
+    const j = idx + dir; if (j < 0 || j >= megaLinks.length) return;
+    const next = [...megaLinks]; [next[idx], next[j]] = [next[j], next[idx]];
+    updateDesignSettings({ megaMenuLinks: next });
+  };
+  const removeMega = (idx: number) => {
+    updateDesignSettings({ megaMenuLinks: megaLinks.filter((_, i) => i !== idx) });
+  };
+  const addMega = () => {
+    updateDesignSettings({
+      megaMenuLinks: [...megaLinks, { id: generateId(), label: 'Nouveau lien', href: '/', enabled: true }],
+    });
+  };
+
+
   const SIDEBAR_PRESETS: Array<{ label: string; labelEN: string; icon: string; href?: string; view?: any }> = [
     { label: 'NEWSLETTER', labelEN: 'NEWSLETTER', icon: 'Mail', href: '/?newsletter=1' },
     { label: 'ROULETTE', labelEN: 'WHEEL', icon: 'Trophy', href: '/?roulette=1' },
