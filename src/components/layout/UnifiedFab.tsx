@@ -392,6 +392,7 @@ export function UnifiedFab() {
 
       </div>
 
+      <ChatBotWidget open={chatOpen} onOpenChange={setChatOpen} hideTrigger />
       <VoiceCommandFab open={voiceOpen} onOpenChange={setVoiceOpen} hideTrigger />
       <RouletteFab open={rouletteOpen} onOpenChange={setRouletteOpen} hideTrigger />
     </>
