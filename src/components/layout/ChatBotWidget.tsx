@@ -209,7 +209,7 @@ export function ChatBotWidget({ open: openProp, onOpenChange, hideTrigger }: Cha
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 40, scale: 0.95 }}
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-            className="fixed bottom-6 right-6 z-50 w-[360px] max-w-[calc(100vw-1.5rem)] flex flex-col bg-card border border-border shadow-2xl"
+            className="fixed bottom-6 right-6 z-[60] w-[360px] max-w-[calc(100vw-1.5rem)] flex flex-col bg-card border border-border shadow-2xl"
             style={{ height: '520px', clipPath: 'polygon(12px 0%, 100% 0%, calc(100% - 4px) 4px, calc(100% - 4px) calc(100% - 12px), calc(100% - 12px) 100%, 0% 100%, 4px calc(100% - 4px), 4px 12px)' }}
           >
             {/* Header */}
