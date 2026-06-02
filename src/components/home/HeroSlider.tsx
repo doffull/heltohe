@@ -113,7 +113,7 @@ export function HeroSlider() {
       </motion.div>
 
       {/* Midground Layer */}
-      {!useMobileMedia && currentSlide.midgroundMedia && (
+      {currentSlide.midgroundMedia && (
         <motion.div
           className="absolute inset-0 z-[1]"
           style={{ y: mgY }}
@@ -128,7 +128,7 @@ export function HeroSlider() {
       )}
 
       {/* Foreground Layer (fastest parallax) */}
-      {!useMobileMedia && currentSlide.foregroundMedia && (
+      {currentSlide.foregroundMedia && (
         <motion.div
           className="absolute inset-0 z-[2]"
           style={{ y: fgY }}
