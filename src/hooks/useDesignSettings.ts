@@ -109,6 +109,7 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     homeSections: (db.home_sections as typeof base.homeSections) || base.homeSections,
     homeCustomSections: ((db.home_custom_sections as any) ?? []) as any,
     homePageBlocks: ((db.home_page_blocks as any) ?? []) as any,
+    homeTexts: ((db.home_texts as any) ?? {}) as any,
     presets: (db.presets as typeof base.presets) || base.presets,
     schedules: (db.schedules as typeof base.schedules) || base.schedules,
     pages: (db.pages as typeof base.pages) || base.pages,
@@ -229,6 +230,7 @@ function settingsToDb(s: DesignSettings) {
     home_sections: s.homeSections as unknown as Json,
     home_custom_sections: ((s as any).homeCustomSections ?? []) as unknown as Json,
     home_page_blocks: ((s as any).homePageBlocks ?? []) as unknown as Json,
+    home_texts: ((s as any).homeTexts ?? {}) as unknown as Json,
     presets: s.presets as unknown as Json,
     schedules: s.schedules as unknown as Json,
     pages: s.pages as unknown as Json,
@@ -305,6 +307,9 @@ export function useSaveDesignSettings() {
         .from('design_settings')
         .upsert(payload, { onConflict: 'settings_key' });
       if (error) throw error;
+      // Update local cache immediately so any other tab/device picks up
+      // the latest state on next mount without a stale flash.
+      writeDesignCache(settings);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['design_settings'] });

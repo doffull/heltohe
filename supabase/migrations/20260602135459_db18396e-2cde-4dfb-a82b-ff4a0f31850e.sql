@@ -1,0 +1,1 @@
+ALTER TABLE public.design_settings ADD COLUMN IF NOT EXISTS home_texts jsonb NOT NULL DEFAULT '{}'::jsonb;

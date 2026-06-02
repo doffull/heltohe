@@ -744,6 +744,7 @@ export type Database = {
           home_custom_sections: Json
           home_page_blocks: Json
           home_sections: Json | null
+          home_texts: Json
           hud_buttons: Json | null
           hud_logo: string | null
           id: string
@@ -859,6 +860,7 @@ export type Database = {
           home_custom_sections?: Json
           home_page_blocks?: Json
           home_sections?: Json | null
+          home_texts?: Json
           hud_buttons?: Json | null
           hud_logo?: string | null
           id?: string
@@ -974,6 +976,7 @@ export type Database = {
           home_custom_sections?: Json
           home_page_blocks?: Json
           home_sections?: Json | null
+          home_texts?: Json
           hud_buttons?: Json | null
           hud_logo?: string | null
           id?: string
@@ -2537,6 +2540,7 @@ export type Database = {
           home_custom_sections: Json | null
           home_page_blocks: Json | null
           home_sections: Json | null
+          home_texts: Json | null
           hud_buttons: Json | null
           hud_logo: string | null
           id: string | null
@@ -2638,6 +2642,7 @@ export type Database = {
           home_custom_sections?: Json | null
           home_page_blocks?: Json | null
           home_sections?: Json | null
+          home_texts?: Json | null
           hud_buttons?: Json | null
           hud_logo?: string | null
           id?: string | null
@@ -2739,6 +2744,7 @@ export type Database = {
           home_custom_sections?: Json | null
           home_page_blocks?: Json | null
           home_sections?: Json | null
+          home_texts?: Json | null
           hud_buttons?: Json | null
           hud_logo?: string | null
           id?: string | null
