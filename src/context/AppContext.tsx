@@ -81,10 +81,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const saveDesignSettings = useSaveDesignSettings();
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Ref toujours à jour avec la dernière valeur de designSettings.
+  const latestDesignRef = useRef(designSettings);
+  useEffect(() => { latestDesignRef.current = designSettings; }, [designSettings]);
+
   // Sync cloud → local on every fresh DB snapshot, UNLESS we have a local
-  // save pending (debounced) — otherwise we'd overwrite the user's in-flight
-  // edits. This ensures a change saved on mobile shows up on desktop/tablet
-  // the next time the design_settings query refetches (mount, invalidate, …).
+  // save pending/in-flight — otherwise we'd overwrite the user's in-flight
+  // edits. This guarantees a change saved on mobile shows up identically on
+  // desktop/tablet the next time the design_settings query refetches.
   const pendingSaveRef = useRef(false);
   useEffect(() => {
     if (!dbSettings) return;
@@ -99,7 +103,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (name) document.title = name;
   }, [(designSettings as any).siteName]);
 
-  // Persist orders to localStorage (orders don't have a full Supabase hook in AppContext yet)
+  // Persist orders to localStorage
   useEffect(() => {
     localStorage.setItem('app_orders', JSON.stringify(orders));
   }, [orders]);
@@ -117,17 +121,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return translations[language][key] || key;
   };
 
-  // Ref toujours à jour avec la dernière valeur de designSettings.
-  // Evite que flushDesignSettings sauvegarde un état périmé capturé par la closure
-  // après un updateDesignSettings synchrone précédent (cause racine du bug "Enregistrer ne marche pas").
-  const latestDesignRef = useRef(designSettings);
-  useEffect(() => { latestDesignRef.current = designSettings; }, [designSettings]);
-
   // Debounced save to cloud (800ms)
   const debouncedSave = useCallback((settings: DesignSettings) => {
+    pendingSaveRef.current = true;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
-      saveDesignSettings.mutate(settings);
+      saveDesignSettings.mutate(settings, {
+        onSettled: () => { pendingSaveRef.current = false; },
+      });
     }, 800);
   }, [saveDesignSettings]);
 
@@ -140,15 +141,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const updateDesignSettings = useCallback((updates: Partial<DesignSettings>) => {
     setDesignSettingsLocal(prev => {
       const next = { ...prev, ...updates };
-      latestDesignRef.current = next; // sync ref immédiatement (avant re-render)
+      latestDesignRef.current = next;
       debouncedSave(next);
       return next;
     });
   }, [debouncedSave]);
 
   // Flush pending debounced save immediately (used on explicit "Save" button).
-  // Lit la dernière valeur via latestDesignRef pour éviter le bug de closure périmée.
-  // Accepte un override optionnel pour garantir l'envoi d'un snapshot précis.
   const flushDesignSettings = useCallback(async (override?: Partial<DesignSettings>) => {
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current);
@@ -159,7 +158,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       latestDesignRef.current = merged;
       setDesignSettingsLocal(merged);
     }
-    await saveDesignSettings.mutateAsync(merged);
+    pendingSaveRef.current = true;
+    try {
+      await saveDesignSettings.mutateAsync(merged);
+    } finally {
+      pendingSaveRef.current = false;
+    }
   }, [saveDesignSettings]);
 
   const navigate = useNavigate();
