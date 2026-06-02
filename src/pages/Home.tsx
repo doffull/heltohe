@@ -137,25 +137,21 @@ export default function Home() {
   // Build unified slide array
   const heroSlides = hasAdminSlides
     ? adminSlides.map((s) => {
-        const desktopImage = s.backgroundMedia || s.media;
-        const useMobile = isMobile && s.mobileImage;
+        // Use the same image on all devices so mobile, tablet and desktop
+        // render an identical hero — fixes the "le contenu n'est pas le même"
+        // complaint between devices.
+        const image = s.backgroundMedia || s.media;
         return {
-          image: useMobile ? s.mobileImage : desktopImage,
+          image,
           midgroundMedia: s.midgroundMedia,
           foregroundMedia: s.foregroundMedia,
           title: s.title || "",
           subtitle: s.subtitle || "",
           cta: s.ctaText || "Découvrir",
           accentColor: s.accentColor,
-          mediaType: (useMobile ? s.mobileMediaType || "image" : s.mediaType || "image") as "image" | "video",
-          objectFit: (useMobile ? s.mobileObjectFit || s.objectFit || "cover" : s.objectFit || "cover") as
-            | "cover"
-            | "contain"
-            | "fill"
-            | "none",
-          objectPosition: useMobile
-            ? s.mobileObjectPosition || s.objectPosition || "center"
-            : s.objectPosition || "center",
+          mediaType: (s.mediaType || "image") as "image" | "video",
+          objectFit: (s.objectFit || "cover") as "cover" | "contain" | "fill" | "none",
+          objectPosition: s.objectPosition || "center",
         };
       })
     : DEFAULT_HERO_SLIDES;
