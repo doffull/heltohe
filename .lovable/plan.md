@@ -1,46 +1,37 @@
-# Essai virtuel — corrections et améliorations
+Objectif : garder exactement le même contenu, le même ordre de sections et les mêmes médias sur mobile, tablette et ordinateur, en préservant ce que tu as déjà fait sur mobile comme travail prioritaire.
 
-## Problèmes constatés
+Plan d’intervention :
 
-1. **Redirection vers l'accueil** quand le client prend une photo via mobile : l'input `capture="environment"` ouvre l'appareil photo natif, et au retour, l'état React du dialogue est perdu (le composant se démonte/remonte selon le cycle de vie mobile). De plus, les `<button>` internes n'ont pas de `type="button"` — si un parent ajoute un `<form>` plus tard, ils submitent.
-2. **Pas de choix de cadrage** : l'IA génère en aveugle, sans savoir si on veut un plan pied ou hanches.
-3. **Upload pas assez clair** : drag-and-drop existe déjà mais n'est pas mis en avant, et le bouton mélange caméra et fichier.
+1. Sécuriser la sauvegarde globale du design
+- Faire passer le bouton “Sauver” de l’éditeur live par le même mécanisme de sauvegarde immédiate que le reste de l’app, pour éviter les états périmés.
+- Ajouter/forcer la persistance des champs édités en live, notamment `homeTexts`, car le texte modifié est actuellement utilisé côté interface mais n’est pas envoyé dans la sauvegarde base de données.
+- Mettre à jour le cache local après sauvegarde réussie pour éviter qu’un autre appareil ou un changement de vue reparte sur une ancienne version.
 
-## Plan d'action
+2. Unifier l’ordre et la visibilité des sections
+- Conserver `homePageBlocks` comme source unique pour l’ordre des sections : catégories, top ventes, nouveautés, sections personnalisées, etc.
+- Corriger les chemins où l’éditeur mobile peut modifier localement l’ordre mais où le desktop relit une version différente.
+- Quand une section est montée/descendue depuis le téléphone, la même liste sera sauvegardée et relue par ordinateur/tablette.
 
-### 1. Fiabiliser la prise/upload de photo (`src/components/product/VirtualTryOnButton.tsx`)
+3. Protéger le travail déjà fait sur mobile
+- Ne pas réinitialiser les blocs avec les valeurs desktop par défaut si des blocs sauvegardés existent déjà.
+- Si des blocs personnalisés ou images existent, les fusionner sans écraser l’ordre existant.
+- Éviter les resynchronisations automatiques qui remplacent les changements locaux récents par un snapshot plus ancien.
 
-- Ajouter `type="button"` sur **tous** les `<button>` du dialogue (défense en profondeur contre un futur `<form>` parent).
-- **Séparer** les deux actions en deux boutons distincts :
-  - **« Choisir un fichier »** → input `type="file" accept="image/*"` (sans `capture`) — ouvre la galerie / explorateur de fichiers, ne quitte pas la page sur desktop.
-  - **« Prendre une photo »** → input séparé avec `capture="environment"` — uniquement visible sur mobile (`md:hidden`).
-- Rendre la **zone de drop** plus visible (label « Glissez-déposez votre photo ici »), avec feedback visuel pendant le drag (`onDragEnter`/`onDragLeave` → bordure accent).
-- **Persister l'état** du dialogue dans `sessionStorage` (étape courante, `userPhoto` en base64, taille/poids/genre/morpho/cadrage) pour survivre à un remount post-caméra mobile. Restaurer à l'ouverture si présent ; nettoyer à la fermeture/succès.
-- Empêcher la fermeture accidentelle du dialogue tant qu'une génération est en cours (`onOpenChange` ignoré si `loading`).
+4. Supprimer les différences inutiles mobile/desktop pour les contenus édités
+- Garder les images, textes, CTAs et sections édités comme valeurs communes à tous les appareils.
+- Pour le Hero, vérifier les champs `mobileImage` existants : si le but est “même rendu partout”, le rendu mobile ne doit plus afficher une image différente uniquement parce qu’une image mobile existe, sauf réglage dédié volontaire.
+- Les différences purement responsives resteront seulement de la mise en page CSS normale pour que le site reste lisible, mais pas des contenus ou ordres différents.
 
-### 2. Choix du cadrage
+5. Vérifier le résultat
+- Contrôler que la page d’accueil utilise bien le même `homePageBlocks` en mobile, tablette et desktop.
+- Vérifier que “Top ventes” reste à la même position après sauvegarde et changement de viewport.
+- Vérifier que les textes/images modifiés via l’éditeur live sont inclus dans la sauvegarde.
 
-- Nouvelle étape **« Cadrage »** intégrée dans l'étape « Corpulence » (pas d'étape supplémentaire pour rester rapide).
-- Trois options en boutons style HUD existant :
-  - **Plan pied (full body)**
-  - **Plan hanches (mi-cuisse)**
-  - **Buste / haut du corps**
-- État `framing: 'full' | 'hips' | 'bust'` envoyé à l'edge function.
-
-### 3. Edge function (`supabase/functions/virtual-tryon/index.ts`)
-
-- Accepter `framing` dans le body (`'full' | 'hips' | 'bust'`).
-- Adapter le prompt Gemini :
-  - `full` → « Output a single photorealistic **full-body** photograph from head to feet. »
-  - `hips` → « Output a photograph framed **from head to mid-thigh** (hips level). »
-  - `bust` → « Output a photograph framed **from head to waist** (upper body only). »
-- Validation : si `framing` absent, fallback à `full`.
-
-### 4. Robustesse
-
-- Logger en console (`console.error`) l'erreur d'invoke avant de retourner à l'étape « body », pour faciliter le debug si le bug réapparaît.
-- Garder le bouton « Refaire » qui rejoue la génération sans repasser par le picker.
-
-## Hors scope
-
-- Pas de changement de modèle IA, pas de touche au flux d'auth, pas de modification UI ailleurs que le bouton et son dialogue.
+Fichiers principalement concernés :
+- `src/context/AppContext.tsx`
+- `src/hooks/useDesignSettings.ts`
+- `src/hooks/useHomeBlocks.ts`
+- `src/components/visual-editor/VisualEditorPanel.tsx`
+- `src/components/visual-editor/tabs/SectionsEditorTab.tsx`
+- `src/pages/Home.tsx`
+- éventuellement les composants Hero si une image mobile différente force encore un contenu différent.
