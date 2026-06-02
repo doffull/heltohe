@@ -81,14 +81,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const saveDesignSettings = useSaveDesignSettings();
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Sync cloud → local ONLY on first load (avoid overwriting user edits).
-  // Never reset to INITIAL_DESIGN_SETTINGS when DB returns null/loading — keep last known design.
-  const initializedRef = useRef(false);
+  // Sync cloud → local on every fresh DB snapshot, UNLESS we have a local
+  // save pending (debounced) — otherwise we'd overwrite the user's in-flight
+  // edits. This ensures a change saved on mobile shows up on desktop/tablet
+  // the next time the design_settings query refetches (mount, invalidate, …).
+  const pendingSaveRef = useRef(false);
   useEffect(() => {
-    if (dbSettings && !initializedRef.current) {
-      initializedRef.current = true;
-      setDesignSettingsLocal(dbSettings);
-    }
+    if (!dbSettings) return;
+    if (pendingSaveRef.current) return;
+    setDesignSettingsLocal(dbSettings);
+    latestDesignRef.current = dbSettings;
   }, [dbSettings]);
 
   // Update document title when siteName changes
