@@ -76,25 +76,13 @@ export function HeroSlider() {
     setIsDirty(true);
   }
 
-  // Determine which media to show based on mobile
-  const useMobileMedia = isMobile && currentSlide.mobileImage;
-  const bgMedia = useMobileMedia
-    ? currentSlide.mobileImage!
-    : (currentSlide.backgroundMedia || currentSlide.media || HERO_PLACEHOLDER);
-
-  // Determine media type for mobile
-  const mobileIsVideo = currentSlide.mobileMediaType === 'video';
-  const effectiveMediaType = useMobileMedia
-    ? (mobileIsVideo ? 'video' : 'image')
-    : currentSlide.mediaType;
-
-  // Determine objectFit/objectPosition
-  const objectFit = useMobileMedia
-    ? (currentSlide.mobileObjectFit || 'cover')
-    : (currentSlide.objectFit || 'cover');
-  const objectPosition = useMobileMedia
-    ? (currentSlide.mobileObjectPosition || 'center')
-    : (currentSlide.objectPosition || 'center');
+  // Same hero rendered on mobile, tablet and desktop. The dedicated
+  // `mobileImage` field is ignored on purpose so the visual is identical
+  // across devices (user requested "exactement pareil").
+  const bgMedia = currentSlide.backgroundMedia || currentSlide.media || HERO_PLACEHOLDER;
+  const effectiveMediaType = currentSlide.mediaType;
+  const objectFit = currentSlide.objectFit || 'cover';
+  const objectPosition = currentSlide.objectPosition || 'center';
 
   return (
     <div className="relative -mx-3 lg:-mx-5 -mt-3 lg:-mt-5 h-[100svh] sm:h-[92vh] lg:h-[94vh] overflow-hidden bg-black">
