@@ -51,16 +51,28 @@ export function useUploadMedia() {
       if (file.size > maxSize) {
         throw new Error(`Fichier trop volumineux (max ${isVideo ? '100' : '50'}MB)`);
       }
-      const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
+      const safeName = file.name
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9._-]+/g, '_')
+        .replace(/^_+|_+$/g, '');
+      const fileName = `${Date.now()}-${safeName || 'media'}`;
       const { error } = await supabase.storage.from(BUCKET).upload(fileName, file, {
-        cacheControl: '3600',
+        cacheControl: '31536000',
         upsert: false,
         contentType: file.type || undefined,
       });
       if (error) throw error;
-      return fileName;
+      const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(fileName);
+      return { fileName, url: urlData.publicUrl, type: file.type || 'application/octet-stream', size: file.size };
     },
-    onSuccess: () => {
+    onSuccess: (uploaded) => {
+      qc.setQueryData<MediaFile[]>(['media-library'], (prev) => {
+        if (!prev) return prev;
+        return prev.some((f) => f.name === uploaded.fileName)
+          ? prev
+          : [{ id: uploaded.fileName, name: uploaded.fileName, url: uploaded.url, size: uploaded.size, type: uploaded.type, createdAt: new Date().toISOString() }, ...prev];
+      });
       qc.invalidateQueries({ queryKey: ['media-library'] });
       toast({ title: 'Fichier uploadé' });
     },

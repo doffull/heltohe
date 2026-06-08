@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCategories } from '@/hooks/useCategories';
 import { useProducts } from '@/hooks/useProducts';
 import { useDesignSettings, useSaveDesignSettings } from '@/hooks/useDesignSettings';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   DesignSettings, 
   Product, 
@@ -77,7 +78,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   
   // Design settings: source from Supabase cloud
   const [designSettings, setDesignSettingsLocal] = useState<DesignSettings>(INITIAL_DESIGN_SETTINGS);
-  const { data: dbSettings } = useDesignSettings();
+  const { data: dbSettings, refetch: refetchDesignSettings } = useDesignSettings();
   const saveDesignSettings = useSaveDesignSettings();
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -96,6 +97,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setDesignSettingsLocal(dbSettings);
     latestDesignRef.current = dbSettings;
   }, [dbSettings]);
+
+  // Published visitors and admins must see content changes without waiting for
+  // a full app redeploy/cache cycle. Listen to backend updates and refetch when
+  // the tab becomes visible again.
+  useEffect(() => {
+    const channel = supabase
+      .channel('design-settings-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'design_settings' }, () => {
+        if (!pendingSaveRef.current) refetchDesignSettings();
+      })
+      .subscribe();
+
+    const refresh = () => {
+      if (!pendingSaveRef.current) refetchDesignSettings();
+    };
+    const onVisibility = () => { if (document.visibilityState === 'visible') refresh(); };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('focus', refresh);
+    window.addEventListener('pageshow', refresh);
+
+    return () => {
+      supabase.removeChannel(channel);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', refresh);
+      window.removeEventListener('pageshow', refresh);
+    };
+  }, [refetchDesignSettings]);
 
   // Update document title when siteName changes
   useEffect(() => {

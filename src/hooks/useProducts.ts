@@ -75,9 +75,12 @@ export function useProducts() {
       if (error) throw error;
       return (data || []).map(dbToAppProduct);
     },
-    staleTime: 2 * 60_000,
+    staleTime: 0,
     gcTime: 10 * 60_000,
-    refetchOnWindowFocus: false,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: 'always',
+    refetchOnReconnect: 'always',
+    refetchInterval: 30_000,
     placeholderData: (prev) => prev,
   });
 }

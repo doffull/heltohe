@@ -260,18 +260,26 @@ function settingsToDb(s: DesignSettings) {
   };
 }
 
-const LS_DESIGN_CACHE = 'lvtk-design-cache-v1';
+const LS_DESIGN_CACHE = 'lvtk-design-cache-v2';
+const LEGACY_LS_DESIGN_CACHE = 'lvtk-design-cache-v1';
+
+type CachedDesignSettings = { settings: DesignSettings; savedAt: number };
 
 function readDesignCache(): DesignSettings | null {
   try {
     const raw = localStorage.getItem(LS_DESIGN_CACHE);
-    if (!raw) return null;
-    return JSON.parse(raw) as DesignSettings;
+    if (raw) {
+      const parsed = JSON.parse(raw) as CachedDesignSettings | DesignSettings;
+      return 'settings' in parsed ? parsed.settings : parsed;
+    }
+    const legacy = localStorage.getItem(LEGACY_LS_DESIGN_CACHE);
+    if (!legacy) return null;
+    return JSON.parse(legacy) as DesignSettings;
   } catch { return null; }
 }
 
 function writeDesignCache(s: DesignSettings) {
-  try { localStorage.setItem(LS_DESIGN_CACHE, JSON.stringify(s)); } catch { /* ignore quota */ }
+  try { localStorage.setItem(LS_DESIGN_CACHE, JSON.stringify({ settings: s, savedAt: Date.now() })); } catch { /* ignore quota */ }
 }
 
 export function useDesignSettings() {
@@ -289,11 +297,16 @@ export function useDesignSettings() {
       writeDesignCache(mapped);
       return mapped;
     },
-    // Serve last-known settings instantly on mount → no flash, no missing logo.
+    // Serve last-known settings instantly, but always re-check the backend.
+    // The public site must not keep an old mobile/admin snapshot for minutes.
     initialData: () => readDesignCache() ?? undefined,
-    staleTime: 5 * 60_000,
+    initialDataUpdatedAt: 0,
+    staleTime: 0,
     gcTime: 30 * 60_000,
-    refetchOnWindowFocus: false,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: 'always',
+    refetchOnReconnect: 'always',
+    refetchInterval: 15_000,
     retry: 2,
   });
 }
@@ -303,6 +316,7 @@ export function useSaveDesignSettings() {
   return useMutation({
     mutationFn: async (settings: DesignSettings) => {
       const payload = settingsToDb(settings);
+      (payload as any).updated_at = new Date().toISOString();
       const { error } = await supabase
         .from('design_settings')
         .upsert(payload, { onConflict: 'settings_key' });
@@ -311,7 +325,8 @@ export function useSaveDesignSettings() {
       // the latest state on next mount without a stale flash.
       writeDesignCache(settings);
     },
-    onSuccess: () => {
+    onSuccess: (_data, settings) => {
+      queryClient.setQueryData(['design_settings'], settings);
       queryClient.invalidateQueries({ queryKey: ['design_settings'] });
     },
   });

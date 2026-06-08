@@ -42,9 +42,12 @@ export function useCategories() {
       if (error) throw error;
       return (data || []).map((d) => dbToCat(d as Record<string, unknown>));
     },
-    staleTime: 5 * 60_000,
+    staleTime: 0,
     gcTime: 30 * 60_000,
-    refetchOnWindowFocus: false,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: 'always',
+    refetchOnReconnect: 'always',
+    refetchInterval: 30_000,
     placeholderData: (prev) => prev,
   });
 }
