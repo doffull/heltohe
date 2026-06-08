@@ -1,0 +1,1 @@
+ALTER PUBLICATION supabase_realtime DROP TABLE public.design_settings;
