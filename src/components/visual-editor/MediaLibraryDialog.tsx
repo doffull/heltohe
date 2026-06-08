@@ -29,7 +29,8 @@ export function MediaLibraryDialog({ open, onOpenChange, onSelect, accept = 'ima
   });
 
   const handleUpload = async (file: File) => {
-    await upload.mutateAsync(file);
+    const uploaded = await upload.mutateAsync(file);
+    if (uploaded?.url) setSelected(uploaded.url);
   };
 
   const confirmSelection = () => {

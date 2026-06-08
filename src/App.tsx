@@ -1,7 +1,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
@@ -20,6 +20,7 @@ import { AdminDragBar } from "@/components/admin/AdminDragBar";
 import { MegaMenuProvider } from "@/context/MegaMenuContext";
 import { MegaMenu } from "@/components/layout/MegaMenu";
 import { getTransition } from "@/components/transitions/transitionRegistry";
+import { supabase } from "@/integrations/supabase/client";
 
 // Pages — Home eager (LCP), the rest lazy for faster initial paint
 import Home from "./pages/Home";
@@ -228,6 +229,25 @@ function DemoModeBadge() {
   );
 }
 
+function LiveContentSync() {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const channel = supabase
+      .channel('public-content-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['products'] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
+  return null;
+}
+
 function AppShell() {
   const [showSplash, setShowSplash] = useState(() => {
     try { return sessionStorage.getItem('lvtk:splashShown') !== '1'; } catch { return true; }
@@ -243,6 +263,7 @@ function AppShell() {
         <MegaMenuProvider>
         <TooltipProvider>
           <FaviconManager />
+          <LiveContentSync />
           <ImageProtection />
           <Toaster />
           <Sonner />
