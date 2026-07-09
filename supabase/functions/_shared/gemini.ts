@@ -3,7 +3,7 @@
 // This lets all edge functions migrate from Lovable AI Gateway to the user's
 // own Gemini API key without changing their request/response handling logic.
 
-const FALLBACK_MODEL = "gemini-3.5-pro";
+const FALLBACK_MODEL = "gemini-2.5-flash";
 
 // In-memory cache of the latest detected Gemini Pro model.
 // Refreshed every 5 minutes so when Google releases a new version
