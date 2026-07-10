@@ -8,9 +8,12 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// 60 MB base64 (~45 MB raw file). The PDF is parsed locally to text — the AI
-// no longer receives the binary, so we can accept much larger catalogs.
-const MAX_FILE_SIZE = 60 * 1024 * 1024;
+// 20 MB base64 (~15 MB raw file). Edge functions cap memory ~150 MB and
+// unpdf + base64 decode easily double the payload footprint.
+const MAX_FILE_SIZE = 20 * 1024 * 1024;
+// Multimodal fallback (sends the raw PDF to the AI) is memory-heavy: only
+// allow it for small PDFs, otherwise we hit WORKER_RESOURCE_LIMIT.
+const MAX_MULTIMODAL_SIZE = 6 * 1024 * 1024;
 const CHUNK_CHARS = 12000;
 const MAX_CHUNKS = 20;
 const AI_MODEL = "google/gemini-2.5-flash";
