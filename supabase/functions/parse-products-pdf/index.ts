@@ -138,7 +138,7 @@ serve(async (req) => {
       });
     }
     if (fileBase64.length > MAX_FILE_SIZE) {
-      return new Response(JSON.stringify({ error: "Fichier trop volumineux (>45 Mo). Divisez-le en plusieurs PDF." }), {
+      return new Response(JSON.stringify({ error: "Fichier trop volumineux (>15 Mo). Divisez-le en plusieurs PDF plus légers." }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
