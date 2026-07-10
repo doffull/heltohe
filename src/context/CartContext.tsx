@@ -121,10 +121,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return sum + price * item.quantity;
   }, 0);
   
-  const shippingCost = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
-  const subtotalAfterPromo = subtotal - promoDiscount;
-  const tax = subtotalAfterPromo * TAX_RATE;
-  const total = subtotalAfterPromo + tax + shippingCost;
+  // Align with Checkout: default to home-delivery pricing (Cart doesn't know
+  // the delivery mode yet). Prices are TTC, so tax is derived from the total.
+  const freeShippingThreshold = checkoutConfig?.freeShippingThreshold ?? 200;
+  const homeShipping = checkoutConfig?.shippingHomePrice ?? 6.5;
+  const shippingCost = subtotal >= freeShippingThreshold ? 0 : homeShipping;
+  const subtotalAfterPromo = Math.max(0, subtotal - promoDiscount);
+  const total = Math.max(0, subtotalAfterPromo + shippingCost);
+  const tax = total * TAX_RATE / (1 + TAX_RATE);
 
   const addItem = useCallback(async (newItem: Omit<CartItem, 'id'>) => {
     const existingItem = items.find(
