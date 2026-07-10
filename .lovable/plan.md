@@ -1,37 +1,63 @@
-Objectif : garder exactement le même contenu, le même ordre de sections et les mêmes médias sur mobile, tablette et ordinateur, en préservant ce que tu as déjà fait sur mobile comme travail prioritaire.
+## Objectif
 
-Plan d’intervention :
+Extraire des produits depuis des PDF (maquettes / catalogues) de manière fiable pour importer des centaines de produits, sans dépendre de la clé Gemini directe (qui plante avec les gros fichiers et les modèles obsolètes).
 
-1. Sécuriser la sauvegarde globale du design
-- Faire passer le bouton “Sauver” de l’éditeur live par le même mécanisme de sauvegarde immédiate que le reste de l’app, pour éviter les états périmés.
-- Ajouter/forcer la persistance des champs édités en live, notamment `homeTexts`, car le texte modifié est actuellement utilisé côté interface mais n’est pas envoyé dans la sauvegarde base de données.
-- Mettre à jour le cache local après sauvegarde réussie pour éviter qu’un autre appareil ou un changement de vue reparte sur une ancienne version.
+## Diagnostic actuel
 
-2. Unifier l’ordre et la visibilité des sections
-- Conserver `homePageBlocks` comme source unique pour l’ordre des sections : catégories, top ventes, nouveautés, sections personnalisées, etc.
-- Corriger les chemins où l’éditeur mobile peut modifier localement l’ordre mais où le desktop relit une version différente.
-- Quand une section est montée/descendue depuis le téléphone, la même liste sera sauvegardée et relue par ordinateur/tablette.
+Aujourd'hui `parse-products-pdf` :
+- envoie tout le PDF en base64 au shim `callGemini` (API Google directe via `GEMINI_API_KEY`),
+- plafonne à ~18 Mo,
+- traite tout le PDF d'un coup → timeout / 400 / 404 dès qu'un catalogue est un peu gros ou que le modèle change.
 
-3. Protéger le travail déjà fait sur mobile
-- Ne pas réinitialiser les blocs avec les valeurs desktop par défaut si des blocs sauvegardés existent déjà.
-- Si des blocs personnalisés ou images existent, les fusionner sans écraser l’ordre existant.
-- Éviter les resynchronisations automatiques qui remplacent les changements locaux récents par un snapshot plus ancien.
+C'est fragile et cher en tokens.
 
-4. Supprimer les différences inutiles mobile/desktop pour les contenus édités
-- Garder les images, textes, CTAs et sections édités comme valeurs communes à tous les appareils.
-- Pour le Hero, vérifier les champs `mobileImage` existants : si le but est “même rendu partout”, le rendu mobile ne doit plus afficher une image différente uniquement parce qu’une image mobile existe, sauf réglage dédié volontaire.
-- Les différences purement responsives resteront seulement de la mise en page CSS normale pour que le site reste lisible, mais pas des contenus ou ordres différents.
+## Solution proposée (3 couches)
 
-5. Vérifier le résultat
-- Contrôler que la page d’accueil utilise bien le même `homePageBlocks` en mobile, tablette et desktop.
-- Vérifier que “Top ventes” reste à la même position après sauvegarde et changement de viewport.
-- Vérifier que les textes/images modifiés via l’éditeur live sont inclus dans la sauvegarde.
+### 1. Basculer vers Lovable AI Gateway (plus de clé Gemini à gérer)
 
-Fichiers principalement concernés :
-- `src/context/AppContext.tsx`
-- `src/hooks/useDesignSettings.ts`
-- `src/hooks/useHomeBlocks.ts`
-- `src/components/visual-editor/VisualEditorPanel.tsx`
-- `src/components/visual-editor/tabs/SectionsEditorTab.tsx`
-- `src/pages/Home.tsx`
-- éventuellement les composants Hero si une image mobile différente force encore un contenu différent.
+- Remplacer `callGeminiText` / `callGemini` par un appel direct à `https://ai.gateway.lovable.dev/v1/chat/completions` avec le header `Lovable-API-Key: ${LOVABLE_API_KEY}` (déjà présent dans les secrets).
+- Modèle par défaut : `google/gemini-2.5-flash` (rapide, multimodal, économique) avec fallback `google/gemini-2.5-pro` pour les PDF complexes.
+- Avantages : pas de 404 modèle, quotas gérés côté Lovable, gestion 402/429 standardisée, même provider mais stable.
+
+### 2. Extraire le texte du PDF avant d'appeler l'IA
+
+Au lieu d'envoyer le binaire base64 (lourd, cher, limité) :
+
+- Utiliser `unpdf` (`https://esm.sh/unpdf`) côté edge function pour extraire le texte du PDF.
+- Découper en pages/chunks (~15–20k caractères par appel IA).
+- L'IA ne reçoit que du texte structuré → beaucoup plus fiable pour lister des SKU/prix/tailles, et on peut traiter des PDF de 50–100+ Mo.
+- Fallback multimodal (image) uniquement si l'extraction texte est vide (PDF scanné).
+
+### 3. Import par lots avec progression dans le dialog
+
+Modifier `ImportMockupDialog` / `parse-products-pdf` pour supporter les gros catalogues :
+
+- L'edge function retourne les produits page par page (ou chunk par chunk) via un paramètre `chunkIndex` / `totalChunks`.
+- Le front boucle sur les chunks, affiche une barre de progression (`X / N pages traitées, Y produits détectés`).
+- Résultats agrégés puis dédoublonnés par SKU avant affichage de la table de validation.
+- Bouton "Importer tout" qui crée les produits par batch de 20 dans Supabase avec retry par ligne.
+
+## Fichiers touchés
+
+```text
+supabase/functions/parse-products-pdf/index.ts   (refonte : unpdf + Lovable AI + chunking)
+supabase/functions/_shared/ai-extraction.ts       (nouvelle fonction callLovableAI + extractPdfText)
+src/components/admin/ImportMockupDialog.tsx      (progression multi-chunk, batch create)
+```
+
+`supabase/functions/_shared/gemini.ts` reste en place pour les autres fonctions ; on ne casse rien.
+
+## Détails techniques
+
+- Limite base64 relevée à 60 Mo côté edge (le PDF n'est plus renvoyé à l'IA, seulement au parser texte).
+- Chunk IA : max 15 000 caractères, `response_format: { type: "json_object" }` + prompt strict.
+- Dédoublonnage front par `sku` normalisé (trim + upper).
+- Erreurs 402 (crédits IA épuisés) et 429 (rate limit) remontées avec un toast clair.
+
+## Ce que ça change côté utilisateur
+
+- Plus d'erreur "Gemini API error" / "File data too large".
+- Un catalogue de 200+ produits sur 30+ pages passe en une seule opération, avec progression visible.
+- Aucune clé à saisir : Lovable AI utilise `LOVABLE_API_KEY` déjà configurée.
+
+Confirme-moi et je passe en build.
