@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Upload, Loader2, Download, RefreshCw, X, Camera, ArrowRight, ArrowLeft, ImageIcon } from 'lucide-react';
+import { Sparkles, Upload, Loader2, RefreshCw, X, Camera, ArrowRight, ArrowLeft, ImageIcon } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
