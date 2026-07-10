@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
+import { useCheckoutConfig } from '@/hooks/useCheckoutConfig';
 
 export interface CartItem {
   id: string;
@@ -33,12 +34,14 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+// NOTE: product prices are stored TTC (VAT included). Tax is derived from the
+// final TTC total to stay consistent with checkout and the server-side
+// validate_and_create_order RPC (see src/pages/Checkout.tsx).
 const TAX_RATE = 0.20; // 20% TVA
-const FREE_SHIPPING_THRESHOLD = 100;
-const SHIPPING_COST = 9.99;
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const { data: checkoutConfig } = useCheckoutConfig();
   const [items, setItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [promoDiscount, setPromoDiscount] = useState(0);
@@ -118,10 +121,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return sum + price * item.quantity;
   }, 0);
   
-  const shippingCost = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
-  const subtotalAfterPromo = subtotal - promoDiscount;
-  const tax = subtotalAfterPromo * TAX_RATE;
-  const total = subtotalAfterPromo + tax + shippingCost;
+  // Align with Checkout: default to home-delivery pricing (Cart doesn't know
+  // the delivery mode yet). Prices are TTC, so tax is derived from the total.
+  const freeShippingThreshold = checkoutConfig?.freeShippingThreshold ?? 200;
+  const homeShipping = checkoutConfig?.shippingHomePrice ?? 6.5;
+  const shippingCost = subtotal >= freeShippingThreshold ? 0 : homeShipping;
+  const subtotalAfterPromo = Math.max(0, subtotal - promoDiscount);
+  const total = Math.max(0, subtotalAfterPromo + shippingCost);
+  const tax = total * TAX_RATE / (1 + TAX_RATE);
 
   const addItem = useCallback(async (newItem: Omit<CartItem, 'id'>) => {
     const existingItem = items.find(
