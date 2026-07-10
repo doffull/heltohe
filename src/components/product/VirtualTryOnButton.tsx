@@ -374,9 +374,6 @@ export default function VirtualTryOnButton({ product, selectedColor, className, 
 
                   {!loading && resultImage && (
                     <div className="flex flex-wrap gap-2 justify-center mt-5">
-                      <Button type="button" onClick={download} variant="outline" className="chamfer-hud-sm gap-2">
-                        <Download className="h-4 w-4" /> Télécharger
-                      </Button>
                       <Button type="button" onClick={() => { setResultImage(null); setStep('body'); generate(); }} variant="outline" className="chamfer-hud-sm gap-2">
                         <RefreshCw className="h-4 w-4" /> Refaire
                       </Button>
