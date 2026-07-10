@@ -279,11 +279,17 @@ export default function AdminProducts() {
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
-      const { data, error } = await supabase.functions.invoke('parse-products-pdf', { body: { pdfBase64: base64 } });
-      if (error) throw error;
-      if (data?.products && Array.isArray(data.products)) {
+      const { data, error } = await supabase.functions.invoke('parse-products-pdf', { body: { fileBase64: base64, fileType: 'pdf' } });
+      if (error) {
+        const ctx = (error as { context?: Response }).context;
+        const payload = ctx ? await ctx.json().catch(() => null) : null;
+        throw new Error(payload?.error || error.message);
+      }
+      if (data?.error) throw new Error(data.error);
+      if (data?.products && Array.isArray(data.products) && data.products.length > 0) {
         setExtractedProducts(data.products.map((p: any) => ({ ...p, selected: true })));
-        toast({ title: `${data.products.length} produits extraits` });
+        const chunks = data.chunksProcessed ? ` · ${data.chunksProcessed} sections analysées` : '';
+        toast({ title: `${data.products.length} produits extraits${chunks}` });
       } else {
         toast({ title: 'Aucun produit trouvé', variant: 'destructive' });
       }

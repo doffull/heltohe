@@ -1,27 +1,99 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { extractText } from "https://esm.sh/unpdf@0.12.1";
 
-import { callGeminiText, extractJson } from "../_shared/ai-extraction.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const MAX_FILE_SIZE = 25 * 1024 * 1024; // ~25MB base64 (~18MB file)
+// 60 MB base64 (~45 MB raw file). The PDF is parsed locally to text — the AI
+// no longer receives the binary, so we can accept much larger catalogs.
+const MAX_FILE_SIZE = 60 * 1024 * 1024;
+const CHUNK_CHARS = 12000;
+const MAX_CHUNKS = 20;
+const AI_MODEL = "google/gemini-2.5-flash";
+const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+
+const SYSTEM_PROMPT = `Tu es un extracteur de catalogues produits. À partir d'un extrait texte de PDF/tableur, retourne UNIQUEMENT un JSON valide de la forme:
+{"products":[{...}]}
+
+Champs par produit:
+- name (string, requis)
+- subtitle (string, optionnel)
+- price (number en EUR, requis)
+- salePrice (number|null)
+- category (string) — ex: "Homme", "Femme", "Accessoires"
+- sizes (string[]) — ex: ["S","M","L","XL"]
+- colors (string[])
+- description (string)
+- material (string)
+- sku (string, requis — invente au format PREFIX-XXXX si absent)
+- stock (number, défaut 50)
+
+Aucun texte hors du JSON. Pas de markdown. Si aucun produit détecté: {"products":[]}.`;
+
+function base64ToBytes(b64: string): Uint8Array {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+function chunkText(text: string, size: number): string[] {
+  const chunks: string[] = [];
+  const clean = text.replace(/\s+\n/g, "\n").trim();
+  for (let i = 0; i < clean.length; i += size) {
+    chunks.push(clean.slice(i, i + size));
+    if (chunks.length >= MAX_CHUNKS) break;
+  }
+  return chunks;
+}
+
+function extractJson(text: string): any {
+  if (!text) return null;
+  const cleaned = text.replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+  try { return JSON.parse(cleaned); } catch {}
+  const obj = cleaned.match(/\{[\s\S]*\}/);
+  if (obj) { try { return JSON.parse(obj[0]); } catch {} }
+  const arr = cleaned.match(/\[[\s\S]*\]/);
+  if (arr) { try { return JSON.parse(arr[0]); } catch {} }
+  return null;
+}
+
+async function callLovableAI(messages: any[], apiKey: string): Promise<{ ok: true; text: string } | { ok: false; status: number; message: string }> {
+  const resp = await fetch(AI_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: AI_MODEL,
+      messages,
+      response_format: { type: "json_object" },
+    }),
+  });
+  if (!resp.ok) {
+    const detail = await resp.text().catch(() => "");
+    if (resp.status === 429) return { ok: false, status: 429, message: "IA saturée — réessayez dans quelques instants." };
+    if (resp.status === 402) return { ok: false, status: 402, message: "Crédits IA Lovable épuisés." };
+    console.error("Lovable AI error", resp.status, detail);
+    return { ok: false, status: resp.status, message: "Erreur IA (" + resp.status + ")" };
+  }
+  const data = await resp.json();
+  return { ok: true, text: data?.choices?.[0]?.message?.content ?? "" };
+}
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    // Auth check
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -35,137 +107,136 @@ serve(async (req) => {
     const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
     if (claimsError || !claimsData?.claims) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userId = claimsData.claims.sub;
+    const { data: roleCheck } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+    if (!roleCheck) {
+      return new Response(JSON.stringify({ error: "Forbidden: admin role required" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const userId = claimsData.claims.sub;
-
-    // Admin role check
-    const { data: roleCheck } = await supabase.rpc("has_role", {
-      _user_id: userId,
-      _role: "admin",
-    });
-
-    if (!roleCheck) {
-      return new Response(JSON.stringify({ error: "Forbidden: admin role required" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!apiKey) {
+      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY missing" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const body = await req.json();
-    // Support both old pdfBase64 field and new fileBase64+fileType fields
-    const fileBase64 = body.fileBase64 || body.pdfBase64;
-    const fileType = body.fileType || "pdf";
+    const fileBase64: string = body.fileBase64 || body.pdfBase64;
+    const fileType: string = (body.fileType || "pdf").toLowerCase();
 
-    if (!fileBase64) {
+    if (!fileBase64 || typeof fileBase64 !== "string") {
       return new Response(JSON.stringify({ error: "No file data provided" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (fileBase64.length > MAX_FILE_SIZE) {
+      return new Response(JSON.stringify({ error: "Fichier trop volumineux (>45 Mo). Divisez-le en plusieurs PDF." }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    if (typeof fileBase64 !== "string" || fileBase64.length > MAX_FILE_SIZE) {
-      return new Response(JSON.stringify({ error: "File data too large or invalid" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Gemini API key checked inside callGemini()
-
-
-    const systemPrompt = `You are a product data extraction assistant. You receive the content of a product catalog file and must extract ALL products found in it.
-
-For each product, return a JSON object with these fields:
-- name (string, required): Product name
-- subtitle (string): Short description or tagline
-- price (number, required): Regular price in EUR
-- salePrice (number or null): Sale price if applicable
-- category (string): Product category (Homme, Femme, Enfant, Accessoires, etc.)
-- sizes (string[]): Available sizes like ["S","M","L","XL"]
-- colors (string[]): Available colors like ["Noir","Blanc","Rouge"]
-- description (string): Full product description
-- material (string): Material composition
-- sku (string, required): Product SKU/reference code. Generate one if not found (format: PREFIX-XXXX)
-- stock (number): Stock quantity, default to 50 if not specified
-
-Return ONLY a valid JSON array of products. No markdown, no explanation, just the JSON array.
-If you cannot extract any products, return an empty array [].`;
-
-    let messages: any[];
-
+    // 1. Extract text locally (no AI cost, no size explosion)
+    let rawText = "";
     if (fileType === "pdf") {
-      // PDF: send as image_url with base64
-      messages = [
-        { role: "system", content: systemPrompt },
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: "Extract all products from this PDF catalog. Return a JSON array.",
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:application/pdf;base64,${fileBase64}`,
-              },
-            },
-          ],
-        },
-      ];
-    } else {
-      // CSV/XLS/XLSX: decode base64 to text and send as text content
-      let textContent: string;
       try {
-        const binaryString = atob(fileBase64);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        textContent = new TextDecoder("utf-8").decode(bytes);
-      } catch {
-        textContent = atob(fileBase64);
+        const bytes = base64ToBytes(fileBase64);
+        const { text } = await extractText(bytes, { mergePages: true });
+        rawText = Array.isArray(text) ? text.join("\n") : (text ?? "");
+      } catch (e) {
+        console.error("PDF text extraction failed", e);
       }
-
-      messages = [
-        { role: "system", content: systemPrompt },
-        {
-          role: "user",
-          content: `Extract all products from this ${fileType.toUpperCase()} file content. Return a JSON array.\n\n--- FILE CONTENT ---\n${textContent.slice(0, 100000)}`,
-        },
-      ];
+    } else {
+      // CSV / Excel: decode as text
+      try {
+        rawText = new TextDecoder("utf-8").decode(base64ToBytes(fileBase64));
+      } catch {
+        rawText = "";
+      }
     }
 
-    const aiRes = await callGeminiText({ messages }, "parse-products-pdf");
+    rawText = rawText.trim();
 
-    if (!aiRes.ok) {
-      return new Response(
-        JSON.stringify({ error: aiRes.message }),
-        { status: aiRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // 2. If text extraction failed (scanned PDF), fallback to multimodal
+    if (rawText.length < 200 && fileType === "pdf") {
+      console.log("Falling back to multimodal PDF (scanned document detected)");
+      const aiRes = await callLovableAI([
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: [
+          { type: "text", text: "Extrait tous les produits de ce catalogue PDF. Retourne l'objet JSON {\"products\":[...]}." },
+          { type: "file", file: { filename: "catalog.pdf", file_data: `data:application/pdf;base64,${fileBase64}` } },
+        ] },
+      ], apiKey);
+      if (!aiRes.ok) {
+        return new Response(JSON.stringify({ error: aiRes.message }), {
+          status: aiRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const parsed = extractJson(aiRes.text) || {};
+      const products = Array.isArray(parsed) ? parsed : (parsed.products || []);
+      return new Response(JSON.stringify({ products, mode: "multimodal", chunksProcessed: 1 }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const products = extractJson<unknown[]>(aiRes.text) ?? [];
-    if (!Array.isArray(products)) {
-      return new Response(
-        JSON.stringify({ error: "Failed to parse product data from file" }),
-        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // 3. Chunk text and extract per chunk in parallel (bounded)
+    const chunks = chunkText(rawText, CHUNK_CHARS);
+    if (chunks.length === 0) {
+      return new Response(JSON.stringify({ products: [] }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    return new Response(JSON.stringify({ products }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    const seen = new Set<string>();
+    const allProducts: any[] = [];
+    const errors: string[] = [];
+
+    // Sequential to stay well under memory/rate limits for very large PDFs
+    for (let i = 0; i < chunks.length; i++) {
+      const aiRes = await callLovableAI([
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: `Extrait tous les produits de cet extrait (partie ${i + 1}/${chunks.length}). Retourne {"products":[...]}.\n\n--- EXTRAIT ---\n${chunks[i]}` },
+      ], apiKey);
+      if (!aiRes.ok) {
+        errors.push(`Chunk ${i + 1}: ${aiRes.message}`);
+        // Bail out on hard-stop errors (402/429)
+        if (aiRes.status === 402 || aiRes.status === 429) {
+          if (allProducts.length === 0) {
+            return new Response(JSON.stringify({ error: aiRes.message }), {
+              status: aiRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          break;
+        }
+        continue;
+      }
+      const parsed = extractJson(aiRes.text) || {};
+      const list = Array.isArray(parsed) ? parsed : (parsed.products || []);
+      for (const p of list) {
+        if (!p || typeof p !== "object") continue;
+        const skuKey = String(p.sku || `${p.name}-${p.price}`).trim().toUpperCase();
+        if (!skuKey || seen.has(skuKey)) continue;
+        seen.add(skuKey);
+        allProducts.push(p);
+      }
+    }
+
+    return new Response(JSON.stringify({
+      products: allProducts,
+      mode: "text",
+      chunksProcessed: chunks.length,
+      textLength: rawText.length,
+      errors: errors.length ? errors : undefined,
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (e) {
     console.error("parse-products-pdf error:", e);
-    return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Internal error" }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
