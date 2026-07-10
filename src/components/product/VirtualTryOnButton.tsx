@@ -121,13 +121,8 @@ export default function VirtualTryOnButton({ product, selectedColor, className, 
     }
   };
 
-  const download = () => {
-    if (!resultImage) return;
-    const a = document.createElement('a');
-    a.href = resultImage;
-    a.download = `essai-virtuel-${product.name?.replace(/\s+/g, '-').toLowerCase() || 'produit'}.png`;
-    a.click();
-  };
+
+
 
   const handleOpenChange = (o: boolean) => {
     if (!o && loading) return; // block close while generating
