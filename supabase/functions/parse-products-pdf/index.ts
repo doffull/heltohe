@@ -16,7 +16,7 @@ const MAX_FILE_SIZE = 20 * 1024 * 1024;
 const MAX_MULTIMODAL_SIZE = 6 * 1024 * 1024;
 const CHUNK_CHARS = 12000;
 const MAX_CHUNKS = 20;
-const AI_MODEL = "google/gemini-2.5-flash";
+const AI_MODEL = "openai/gpt-5-mini";
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 const SYSTEM_PROMPT = `Tu es un extracteur de catalogues produits. À partir d'un extrait texte de PDF/tableur, retourne UNIQUEMENT un JSON valide de la forme:

@@ -17,7 +17,7 @@ Choisis des combinaisons audacieuses mais lisibles. Réponds uniquement via l'ou
     const user = `Brief: ${context || "slide hero techwear"}. Propose un preset visuel.`;
 
     const resp = await callGemini({
-        model: "google/gemini-3.5-flash",
+        model: "openai/gpt-5-mini",
         messages: [{ role: "system", content: sys }, { role: "user", content: user }],
         tools: [{
           type: "function",

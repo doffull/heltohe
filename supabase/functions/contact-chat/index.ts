@@ -116,7 +116,7 @@ serve(async (req) => {
     }
 
     const response = await callGemini({
-      model: "google/gemini-2.5-pro",
+      model: "openai/gpt-5-mini",
       messages: [
         { role: "system", content: systemPrompt },
         ...safeMessages,
