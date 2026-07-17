@@ -69,7 +69,7 @@ Vérifie :
 5. L'adresse semble-t-elle complète et cohérente`;
 
     const response = await callGemini({
-        model: "google/gemini-3.5-flash",
+        model: "openai/gpt-5-mini",
         messages: [
           { role: "system", content: "Tu es un expert en vérification d'identité client pour un e-commerce. Tu analyses les informations et détectes les incohérences." },
           { role: "user", content: prompt },

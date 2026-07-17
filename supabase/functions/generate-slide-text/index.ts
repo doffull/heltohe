@@ -38,7 +38,7 @@ Réponds uniquement via l'outil "return_text".`;
     const user = `Contexte/brief: ${context || "Slide hero du site e-commerce mode."}\nGénère le ${field}.`;
 
     const resp = await callGemini({
-        model: "google/gemini-3.5-flash",
+        model: "openai/gpt-5-mini",
         messages: [{ role: "system", content: sys }, { role: "user", content: user }],
         tools: [{
           type: "function",

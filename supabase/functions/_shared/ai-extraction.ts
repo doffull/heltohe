@@ -52,10 +52,10 @@ export async function callGeminiText(
         message = j?.error || message;
       } catch { /* ignore */ }
       if (resp.status === 402) {
-        return { ok: false, status: 402, message: "Quota Google Gemini épuisé. Vérifiez votre plafond de dépense dans Google AI Studio." };
+        return { ok: false, status: 402, message: "Crédits IA épuisés. Rechargez votre workspace Lovable." };
       }
       if (resp.status === 429) {
-        return { ok: false, status: 429, message: "Gemini est temporairement saturé. Réessayez dans quelques instants." };
+        return { ok: false, status: 429, message: "L'IA est temporairement saturée. Réessayez dans quelques instants." };
       }
       return { ok: false, status: resp.status, message };
     }

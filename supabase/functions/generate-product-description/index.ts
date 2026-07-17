@@ -57,7 +57,7 @@ serve(async (req) => {
 La description doit être vendeuse, concise et professionnelle. Ne mets pas de guillemets autour.`;
 
     const response = await callGemini({
-        model: "google/gemini-3.5-flash",
+        model: "openai/gpt-5-mini",
         messages: [
           { role: "system", content: "Tu es un copywriter expert en mode et textile." },
           { role: "user", content: prompt },

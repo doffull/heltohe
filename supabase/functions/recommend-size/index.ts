@@ -57,7 +57,7 @@ ${sizeTable}
 Recommande LA taille la plus adaptée parmi les tailles disponibles (si fournies). Si une mensuration est entre deux tailles, prends en compte la coupe préférée. Donne une alternative si pertinente. Sois bref et précis en français.`;
 
     const response = await callGemini({
-        model: "google/gemini-3.5-flash",
+        model: "openai/gpt-5-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userInfo },
