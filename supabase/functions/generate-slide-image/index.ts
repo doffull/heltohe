@@ -24,16 +24,14 @@ Deno.serve(async (req) => {
       throw new Error("Missing env");
     }
 
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
-        messages: [{
-          role: "user",
-          content: `High-quality cinematic fashion photography for a hero banner. Style: industrial luxury, minimalist, editorial. ${prompt}`,
-        }],
-        modalities: ["image", "text"],
+        model: "openai/gpt-image-2",
+        prompt: `High-quality cinematic fashion photography for a hero banner. Style: industrial luxury, minimalist, editorial. ${prompt}`,
+        quality: "low",
+        size: "1024x1024",
       }),
     });
 
@@ -48,8 +46,15 @@ Deno.serve(async (req) => {
     }
 
     const data = await resp.json();
-    const dataUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url as string | undefined;
-    if (!dataUrl?.startsWith("data:")) {
+    const first = data?.data?.[0];
+    let b64: string | undefined = first?.b64_json;
+    let contentType = "image/png";
+    if (!b64 && typeof first?.url === "string" && first.url.startsWith("data:")) {
+      const [meta, payload] = first.url.split(",");
+      contentType = /data:([^;]+);/.exec(meta)?.[1] || "image/png";
+      b64 = payload;
+    }
+    if (!b64) {
       return new Response(JSON.stringify({ error: "Aucune image générée" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
