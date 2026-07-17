@@ -61,8 +61,6 @@ Deno.serve(async (req) => {
     }
 
     // Decode base64
-    const [meta, b64] = dataUrl.split(",");
-    const contentType = /data:([^;]+);/.exec(meta)?.[1] || "image/png";
     const ext = contentType.split("/")[1] || "png";
     const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 
