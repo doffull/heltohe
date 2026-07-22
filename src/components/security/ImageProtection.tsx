@@ -42,11 +42,37 @@ export function ImageProtection() {
       }
     };
 
+    // Anti-screenshot dissuasion : floute la page dès qu'elle perd le focus
+    // (multitâche mobile, screenshot iOS/Android, alt-tab desktop).
+    const applyBlur = () => document.body.classList.add('screenshot-blur');
+    const removeBlur = () => document.body.classList.remove('screenshot-blur');
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') applyBlur();
+      else setTimeout(removeBlur, 100);
+    };
+    const onBlur = () => applyBlur();
+    const onFocus = () => removeBlur();
+
+    // Détection PrintScreen (desktop) : vide le presse-papier
+    const onScreenshotKey = (e: KeyboardEvent) => {
+      if (!e.key) return;
+      const k = e.key.toLowerCase();
+      if (e.key === 'PrintScreen' || (e.metaKey && e.shiftKey && ['3', '4', '5'].includes(k))) {
+        try { navigator.clipboard?.writeText(''); } catch { /* noop */ }
+        applyBlur();
+        setTimeout(removeBlur, 800);
+      }
+    };
+
     document.addEventListener('contextmenu', onContextMenu);
     document.addEventListener('dragstart', onDragStart);
     document.addEventListener('copy', onCopy);
     document.addEventListener('selectstart', onSelectStart);
     document.addEventListener('keydown', onKey);
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('blur', onBlur);
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('keyup', onScreenshotKey);
 
     return () => {
       document.removeEventListener('contextmenu', onContextMenu);
@@ -54,8 +80,14 @@ export function ImageProtection() {
       document.removeEventListener('copy', onCopy);
       document.removeEventListener('selectstart', onSelectStart);
       document.removeEventListener('keydown', onKey);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('blur', onBlur);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('keyup', onScreenshotKey);
+      removeBlur();
     };
   }, []);
 
   return null;
 }
+

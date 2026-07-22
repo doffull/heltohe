@@ -15,6 +15,8 @@ import { VisualEditorProvider } from "@/components/visual-editor/VisualEditorPro
 import { VisualEditorToggle } from "@/components/visual-editor/VisualEditorToggle";
 import { VisualEditorPanel } from "@/components/visual-editor/VisualEditorPanel";
 import { ImageProtection } from "@/components/security/ImageProtection";
+import { ScreenshotWatermark } from "@/components/security/ScreenshotWatermark";
+
 import { AdminViewportProvider } from "@/context/AdminViewportContext";
 import { AdminDragBar } from "@/components/admin/AdminDragBar";
 import { MegaMenuProvider } from "@/context/MegaMenuContext";
@@ -265,6 +267,8 @@ function AppShell() {
           <FaviconManager />
           <LiveContentSync />
           <ImageProtection />
+          <ScreenshotWatermark />
+
           <Toaster />
           <Sonner />
           <ScrollToTop />

@@ -784,3 +784,23 @@ img {
   50%      { transform: scale(1.015); filter: brightness(1.06); }
 }
 
+
+/* ===== Anti-screenshot dissuasion ===== */
+.screenshot-blur,
+.screenshot-blur * {
+  filter: blur(40px) !important;
+  transition: filter 0.15s ease-out;
+}
+
+/* Renforcement du non-select sur mobile */
+@media (max-width: 768px) {
+  body {
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    user-select: none;
+  }
+  input, textarea, [contenteditable="true"], [data-allow-interact] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}

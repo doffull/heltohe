@@ -1,48 +1,38 @@
-# Plan : remplacer Gemini par GPT (OpenAI) partout
+## Empêcher les captures d'écran — limites & plan de mitigation
 
-## Objectif
-Supprimer toute dépendance à `GEMINI_API_KEY` et aux modèles `google/gemini-*` et basculer sur `openai/gpt-5-mini` via la passerelle native Lovable AI (`LOVABLE_API_KEY`, déjà provisionnée — pas de clé à saisir).
+### Réalité technique (important)
+Sur le web (navigateur mobile ou desktop), **il est impossible de bloquer réellement les captures d'écran**. Contrairement aux apps natives (Android `FLAG_SECURE`, iOS via SwiftUI), les navigateurs n'exposent aucune API permettant de détecter ou empêcher un screenshot système. Aucun site (Netflix, banques, etc.) n'y arrive côté web — ils ne font que dissuader.
 
-## Ce qui change
+Je te propose donc un ensemble de **mesures dissuasives** cumulées, cohérentes avec la protection déjà en place (`ImageProtection.tsx`).
 
-### 1. Helper partagé `supabase/functions/_shared/gemini.ts`
-Réécriture complète en helper OpenAI :
-- Renommer en interne la fonction `callGemini` → conserver le nom exporté (`callGemini`, `callGeminiText`) pour éviter de toucher 8 fonctions, mais l'implémentation appelle `https://ai.gateway.lovable.dev/v1/chat/completions` avec `Authorization: Bearer ${LOVABLE_API_KEY}` et modèle par défaut `openai/gpt-5-mini`.
-- Supprimer toute la logique d'auto-détection de modèle Gemini, le fallback `gemini-2.5-flash`, et l'appel direct à l'API Google.
-- Retourner une réponse au format OpenAI standard (déjà attendu par les appelants).
+### Mesures ajoutées
 
-### 2. Fonctions edge (modèle → `openai/gpt-5-mini`)
-Texte pur (remplacement 1-pour-1 du modèle) :
-- `contact-chat` (chatbot support)
-- `product-ai-helpers` (attributs, nom couleur)
-- `recommend-size` (guide des tailles IA)
-- `verify-customer-info` (validation commandes)
-- `generate-product-description`
-- `generate-slide-text`
-- `generate-cta-style`
-- `voice-command`
-- `analyze-product-image` (multimodal texte+image, GPT-5-mini supporte)
-- `parse-products-pdf` (extraction texte)
-- `parse-stock-pdf`
+1. **Masquage à la perte de focus / changement d'onglet**
+   Sur mobile, ouvrir le sélecteur de captures ou passer en multitâche déclenche souvent `visibilitychange` ou `blur`. On floute alors tout le contenu (`filter: blur(40px)`) jusqu'au retour sur la page.
 
-### 3. Fonctions de génération d'image
-Ces fonctions utilisaient `google/gemini-2.5-flash-image` pour produire une image en sortie. GPT ne fait pas d'image via `/v1/chat/completions` — il faut passer par `/v1/images/generations` avec `openai/gpt-image-2` (endpoint et payload différents) :
-- `generate-slide-image` : migration vers `openai/gpt-image-2` (text→image, quality "low").
-- `virtual-tryon` : migration vers `openai/gpt-image-2` en mode édition multi-images (photo utilisateur + produit) via `/v1/images/edits`.
-- `template-from-mockup` : reste sur `/v1/chat/completions` mais bascule sur `openai/gpt-5-mini` (analyse d'une maquette pour renvoyer du JSON, pas de génération d'image).
+2. **Overlay anti-capture sur images sensibles**
+   Ajout d'un calque invisible (watermark diagonal semi-transparent avec email/IP de l'utilisateur connecté si dispo, sinon timestamp) sur les images produits. Rend toute capture identifiable/traçable.
 
-### 4. Secret `GEMINI_API_KEY`
-Ne plus lire cette variable. Le secret peut être supprimé côté projet une fois la migration validée (à faire par l'utilisateur dans les paramètres — non détruit automatiquement).
+3. **Détection PrintScreen (desktop)**
+   Écoute des touches `PrintScreen`, `Ctrl+P`, `Ctrl+Shift+S` → vide le presse-papier + affiche un avertissement.
 
-### 5. UI
-Aucun changement côté frontend : les composants (`AiAttributesButton`, `SizeGuideAIModal`, `VirtualTryOnButton`, `ImportMockupDialog`, chatbot, etc.) appellent toujours les mêmes edge functions.
+4. **Meta / headers dissuasifs**
+   - `<meta name="robots" content="noimageindex">` pour empêcher indexation des images
+   - CSS `-webkit-user-select: none`, `-webkit-touch-callout: none` renforcés sur mobile
 
-## Points d'attention
-- **Essayage virtuel** : `gpt-image-2` en mode édition accepte plusieurs images d'entrée mais le rendu photoréaliste "person + garment" peut être moins fidèle que Gemini Nano Banana sur ce cas précis. À valider après migration ; on pourra affiner le prompt si besoin.
-- **Coûts** : `openai/gpt-5-mini` est en mode "priority" possible (`service_tier: "priority"`) si tu veux plus de vitesse — non activé par défaut dans ce plan.
-- **Compatibilité** : puisqu'on garde les noms `callGemini`/`callGeminiText` dans le helper, aucun appelant n'a besoin d'être réécrit hors changement de la chaîne `model`.
+5. **Message utilisateur clair**
+   Petit toast la première fois : « Les captures d'écran de ce site sont interdites et traçables. »
 
-## Résultat
-- Plus aucune référence à `GEMINI_API_KEY` ni à `google/*` dans le code.
-- Toutes les fonctions IA utilisent `LOVABLE_API_KEY` + `openai/gpt-5-mini` (ou `openai/gpt-image-2` pour la génération d'images).
-- Fin des erreurs "invalid Gemini API key".
+### Fichiers modifiés
+- `src/components/security/ImageProtection.tsx` — ajout des listeners `visibilitychange`, `blur`, PrintScreen + injection du blur global
+- `src/index.css` — classe `.screenshot-blur` (blur global temporaire) + renforcement `user-select` mobile
+- `src/components/security/ScreenshotWatermark.tsx` *(nouveau)* — overlay watermark diagonal traçable
+- `src/App.tsx` — monte `<ScreenshotWatermark />` global
+- `index.html` — meta `noimageindex`
+
+### Ce que ça NE fera PAS
+- Bloquer une capture système iOS/Android → **impossible en web**
+- Empêcher une photo de l'écran avec un autre appareil → **impossible**
+- Bloquer les outils de capture pro (OBS, etc.) → **impossible**
+
+Pour un vrai blocage, il faudrait passer par une **app native** (React Native / Capacitor avec `FLAG_SECURE`). Je peux le préparer si tu veux aller jusque-là.
