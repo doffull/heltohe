@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
+import { useDesignSettings } from '@/hooks/useDesignSettings';
 import { useCart } from '@/context/CartContext';
 import { useSidebarOptional } from '@/context/SidebarContext';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,30 @@ import {
 import { cn } from '@/lib/utils';
 
 import { ProductCard } from '@/components/products/ProductCard';
+
+type LayoutId = 'classic' | 'compact' | 'editorial' | 'gallery' | 'masonry' | 'minimal';
+
+function getLayoutClasses(layout: LayoutId): { wrapper: string; item?: (i: number) => string } {
+  switch (layout) {
+    case 'compact':
+      return { wrapper: 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 lg:gap-3' };
+    case 'editorial':
+      return {
+        wrapper: 'grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6',
+        item: (i) => (i === 0 ? 'col-span-2 md:row-span-2' : ''),
+      };
+    case 'gallery':
+      return { wrapper: 'grid grid-cols-1 sm:grid-cols-2 gap-6 lg:gap-10' };
+    case 'masonry':
+      return { wrapper: 'columns-2 md:columns-3 gap-4 lg:gap-6 [&>*]:mb-4 lg:[&>*]:mb-6 [&>*]:break-inside-avoid' };
+    case 'minimal':
+      return { wrapper: 'grid grid-cols-1 md:grid-cols-2 gap-3 lg:gap-4' };
+    case 'classic':
+    default:
+      return { wrapper: 'grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6' };
+  }
+}
+
 
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Nouveautés' },
@@ -266,23 +291,29 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
             </div>
           </div>
         ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6">
-            {filteredProducts.map((product, index) => (
-              <div
-                key={product.id}
-                className="animate-fade-in"
-                style={{ animationDelay: `${index * 50}ms` }}
-                onMouseEnter={() => handleProductHover(product)}
-                onMouseLeave={handleProductLeave}
-              >
-                <ProductCard
-                  product={product}
-                  onNavigate={(id, color) => navigate(`/boutique/${id}${color ? `?color=${encodeURIComponent(color)}` : ''}`)}
-                  onAddToCart={() => handleAddToCart(product)}
-                />
+          (() => {
+            const layoutId = ((designSettings as any)?.productGridLayout ?? 'classic') as LayoutId;
+            const { wrapper, item } = getLayoutClasses(layoutId);
+            return (
+              <div className={wrapper}>
+                {filteredProducts.map((product, index) => (
+                  <div
+                    key={product.id}
+                    className={cn('animate-fade-in', item?.(index))}
+                    style={{ animationDelay: `${index * 50}ms` }}
+                    onMouseEnter={() => handleProductHover(product)}
+                    onMouseLeave={handleProductLeave}
+                  >
+                    <ProductCard
+                      product={product}
+                      onNavigate={(id, color) => navigate(`/boutique/${id}${color ? `?color=${encodeURIComponent(color)}` : ''}`)}
+                      onAddToCart={() => handleAddToCart(product)}
+                    />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            );
+          })()
         ) : (
           <div className="space-y-4">
             {filteredProducts.map((product, index) => (

@@ -915,6 +915,7 @@ export default function AdminProducts() {
 
       <WordPressSyncDialog open={isSyncDialogOpen} onOpenChange={setIsSyncDialogOpen} />
       <CsvImportDialog open={isCsvDialogOpen} onOpenChange={setIsCsvDialogOpen} />
+      <BulkProductImagesDialog open={isBulkImagesOpen} onOpenChange={setIsBulkImagesOpen} products={products} />
     </div>
   );
 }
