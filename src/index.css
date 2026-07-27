@@ -792,15 +792,5 @@ img {
   transition: filter 0.15s ease-out;
 }
 
-/* Renforcement du non-select sur mobile */
-@media (max-width: 768px) {
-  body {
-    -webkit-user-select: none;
-    -webkit-touch-callout: none;
-    user-select: none;
-  }
-  input, textarea, [contenteditable="true"], [data-allow-interact] {
-    -webkit-user-select: text;
-    user-select: text;
-  }
-}
+
+
