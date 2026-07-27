@@ -14,11 +14,12 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Plus, Search, Pencil, Trash2, MoreHorizontal, Package, Upload, FileText, X, Check, Filter, Wand2, Copy, Tag, DollarSign, Archive, Layers2, Boxes, RefreshCw
+  Plus, Search, Pencil, Trash2, MoreHorizontal, Package, Upload, FileText, X, Check, Filter, Wand2, Copy, Tag, DollarSign, Archive, Layers2, Boxes, RefreshCw, Images, LayoutGrid
 } from 'lucide-react';
 import { ImportMockupDialog } from '@/components/admin/ImportMockupDialog';
 import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
 import { CsvImportDialog } from '@/components/admin/CsvImportDialog';
+import { BulkProductImagesDialog } from '@/components/admin/BulkProductImagesDialog';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -33,6 +34,7 @@ import { InventoryProductDialog } from '@/components/admin/InventoryProductDialo
 import { GlobalSizesEditor } from '@/components/admin/GlobalSizesEditor';
 import { Textarea } from '@/components/ui/textarea';
 import { importProductsFromPdf } from '@/lib/productPdfImport';
+import { useDesignSettings, useSaveDesignSettings } from '@/hooks/useDesignSettings';
 
 interface ExtractedProduct {
   name: string;
@@ -78,12 +80,19 @@ export default function AdminProducts() {
   const [isMockupDialogOpen, setIsMockupDialogOpen] = useState(false);
   const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
   const [isCsvDialogOpen, setIsCsvDialogOpen] = useState(false);
+  const [isBulkImagesOpen, setIsBulkImagesOpen] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [extractedProducts, setExtractedProducts] = useState<ExtractedProduct[]>([]);
   const [isImporting, setIsImporting] = useState(false);
   // Inline stock edit
   const [editingStockId, setEditingStockId] = useState<string | null>(null);
   const [editingStockValue, setEditingStockValue] = useState<number>(0);
+  // Inline field edit (price / sku / category)
+  const [editingCell, setEditingCell] = useState<{ id: string; field: 'price' | 'sku' | 'category' } | null>(null);
+  const [editingCellValue, setEditingCellValue] = useState<string>('');
+  const { data: designSettings } = useDesignSettings();
+  const saveDesign = useSaveDesignSettings();
+  const currentLayout = (designSettings as any)?.productGridLayout ?? 'classic';
 
   // Inventory/stock dialog from product row
   const [stockDialogOpen, setStockDialogOpen] = useState(false);
@@ -171,6 +180,41 @@ export default function AdminProducts() {
     } finally {
       setEditingStockId(null);
     }
+  };
+
+  const startEditCell = (id: string, field: 'price' | 'sku' | 'category', currentValue: string | number) => {
+    setEditingCell({ id, field });
+    setEditingCellValue(String(currentValue ?? ''));
+  };
+
+  const commitEditCell = async () => {
+    if (!editingCell) return;
+    const { id, field } = editingCell;
+    try {
+      if (field === 'price') {
+        const n = parseFloat(editingCellValue);
+        if (!Number.isFinite(n) || n < 0) throw new Error('Prix invalide');
+        await updateProduct.mutateAsync({ id, price: n });
+      } else if (field === 'sku') {
+        if (!editingCellValue.trim()) throw new Error('SKU vide');
+        await updateProduct.mutateAsync({ id, sku: editingCellValue.trim() });
+      } else if (field === 'category') {
+        await updateProduct.mutateAsync({ id, category: editingCellValue.trim() });
+      }
+      toast({ title: 'Modifié' });
+    } catch (e: any) {
+      toast({ title: 'Erreur', description: e?.message, variant: 'destructive' });
+    } finally {
+      setEditingCell(null);
+    }
+  };
+
+  const setLayout = async (layout: string) => {
+    if (!designSettings) return;
+    try {
+      await saveDesign.mutateAsync({ ...(designSettings as any), productGridLayout: layout });
+      toast({ title: 'Disposition mise à jour' });
+    } catch { toast({ title: 'Erreur', variant: 'destructive' }); }
   };
 
   const handleCreate = async (data: Omit<Product, 'id'>, variantStock?: VariantStockData) => {
@@ -331,6 +375,9 @@ export default function AdminProducts() {
           <Button variant="outline" size="sm" onClick={() => setIsMockupDialogOpen(true)} className="chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10 text-xs">
             <Wand2 className="h-3.5 w-3.5 mr-1.5" />Maquette IA
           </Button>
+          <Button variant="outline" size="sm" onClick={() => setIsBulkImagesOpen(true)} className="chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10 text-xs">
+            <Images className="h-3.5 w-3.5 mr-1.5" />Images produits
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setIsPdfDialogOpen(true)} className="chamfer-hud-sm text-xs">
             <Upload className="h-3.5 w-3.5 mr-1.5" />PDF
           </Button>
@@ -348,11 +395,55 @@ export default function AdminProducts() {
           <TabsTrigger value="products" className="gap-2"><Package className="h-4 w-4" />Produits</TabsTrigger>
           <TabsTrigger value="looks" className="gap-2"><Layers2 className="h-4 w-4" />Looks</TabsTrigger>
           <TabsTrigger value="sizes" className="gap-2"><Tag className="h-4 w-4" />Tailles</TabsTrigger>
+          <TabsTrigger value="layout" className="gap-2"><LayoutGrid className="h-4 w-4" />Affichage</TabsTrigger>
         </TabsList>
 
         <TabsContent value="sizes" className="space-y-4 mt-4">
           <GlobalSizesEditor />
         </TabsContent>
+
+        <TabsContent value="layout" className="space-y-4 mt-4">
+          <div className="space-y-2">
+            <h2 className="font-bold text-lg">Disposition de la boutique</h2>
+            <p className="text-xs text-muted-foreground">Choisissez comment vos produits s'affichent aux clients sur la page /boutique et les catégories.</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { id: 'classic', label: 'Classique', desc: '3 colonnes équilibrées — polyvalent', preview: 'grid-cols-3 gap-1' },
+              { id: 'compact', label: 'Compact', desc: '4 colonnes serrées — dense, moderne', preview: 'grid-cols-4 gap-0.5' },
+              { id: 'editorial', label: 'Éditorial', desc: '1 produit vedette + grille', preview: 'grid-cols-3 gap-1' },
+              { id: 'gallery', label: 'Galerie', desc: '2 colonnes grandes — premium', preview: 'grid-cols-2 gap-1' },
+              { id: 'masonry', label: 'Mosaïque', desc: 'Hauteurs variables — magazine', preview: 'grid-cols-3 gap-1' },
+              { id: 'minimal', label: 'Minimal', desc: 'Liste épurée pleine largeur', preview: 'grid-cols-1 gap-1' },
+            ].map(opt => {
+              const isActive = currentLayout === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => setLayout(opt.id)}
+                  className={`text-left border rounded-lg p-3 space-y-2 transition ${isActive ? 'border-primary ring-2 ring-primary/30 bg-primary/5' : 'hover:border-primary/50'}`}
+                >
+                  <div className={`grid ${opt.preview} h-16 bg-muted rounded overflow-hidden p-1`}>
+                    {Array.from({ length: opt.id === 'editorial' ? 5 : opt.id === 'minimal' ? 3 : 6 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className={`bg-foreground/40 rounded-sm ${
+                          opt.id === 'editorial' && i === 0 ? 'col-span-2 row-span-2' : ''
+                        } ${opt.id === 'masonry' ? (i % 2 ? 'h-6' : 'h-10') : ''}`}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-bold">{opt.label}</p>
+                    {isActive && <Check className="h-4 w-4 text-primary" />}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">{opt.desc}</p>
+                </button>
+              );
+            })}
+          </div>
+        </TabsContent>
+
 
         <TabsContent value="products" className="space-y-4 mt-4">
       <div className="chamfer-hud bg-card/50 p-3 lg:p-4 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 lg:gap-3">
@@ -472,16 +563,73 @@ export default function AdminProducts() {
                         </div>
                       </div>
                     </td>
-                    <td className="p-4"><code className="text-xs bg-muted px-2 py-1 rounded">{product.sku}</code></td>
-                    <td className="p-4 text-sm">{product.category}</td>
+                    <td className="p-4">
+                      {editingCell?.id === product.id && editingCell.field === 'sku' ? (
+                        <input
+                          autoFocus
+                          value={editingCellValue}
+                          onChange={e => setEditingCellValue(e.target.value)}
+                          onBlur={commitEditCell}
+                          onKeyDown={e => { if (e.key === 'Enter') commitEditCell(); if (e.key === 'Escape') setEditingCell(null); }}
+                          className="text-xs bg-background border border-primary rounded px-2 py-1 w-32"
+                        />
+                      ) : (
+                        <code
+                          className="text-xs bg-muted px-2 py-1 rounded cursor-pointer hover:bg-primary/10"
+                          title="Cliquer pour modifier"
+                          onClick={() => startEditCell(product.id, 'sku', product.sku)}
+                        >{product.sku}</code>
+                      )}
+                    </td>
+                    <td className="p-4 text-sm">
+                      {editingCell?.id === product.id && editingCell.field === 'category' ? (
+                        <select
+                          autoFocus
+                          value={editingCellValue}
+                          onChange={e => { setEditingCellValue(e.target.value); }}
+                          onBlur={commitEditCell}
+                          onKeyDown={e => { if (e.key === 'Enter') commitEditCell(); if (e.key === 'Escape') setEditingCell(null); }}
+                          className="text-xs bg-background border border-primary rounded px-2 py-1"
+                        >
+                          <option value={editingCellValue}>{editingCellValue}</option>
+                          {categories.filter(c => c !== editingCellValue).map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      ) : (
+                        <span
+                          className="cursor-pointer hover:underline decoration-dotted"
+                          title="Cliquer pour modifier"
+                          onClick={() => startEditCell(product.id, 'category', product.category)}
+                        >{product.category}</span>
+                      )}
+                    </td>
                     <td className="p-4 text-right">
-                      {product.salePrice ? (
-                        <div>
+                      {editingCell?.id === product.id && editingCell.field === 'price' ? (
+                        <input
+                          autoFocus
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          value={editingCellValue}
+                          onChange={e => setEditingCellValue(e.target.value)}
+                          onBlur={commitEditCell}
+                          onKeyDown={e => { if (e.key === 'Enter') commitEditCell(); if (e.key === 'Escape') setEditingCell(null); }}
+                          className="w-20 h-7 text-xs text-right border border-primary rounded px-1 bg-background"
+                        />
+                      ) : product.salePrice ? (
+                        <div
+                          className="cursor-pointer hover:underline decoration-dotted"
+                          title="Cliquer pour modifier le prix"
+                          onClick={() => startEditCell(product.id, 'price', product.price)}
+                        >
                           <span className="text-sm font-bold text-primary">{product.salePrice}€</span>
                           <span className="text-xs line-through text-muted-foreground ml-2">{product.price}€</span>
                         </div>
                       ) : (
-                        <span className="text-sm font-bold">{product.price}€</span>
+                        <span
+                          className="text-sm font-bold cursor-pointer hover:underline decoration-dotted"
+                          title="Cliquer pour modifier"
+                          onClick={() => startEditCell(product.id, 'price', product.price)}
+                        >{product.price}€</span>
                       )}
                     </td>
                     <td className="p-4 text-right">

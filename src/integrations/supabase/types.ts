@@ -771,7 +771,9 @@ export type Database = {
           mobile_sidebar_media_type: string | null
           pages: Json | null
           presets: Json | null
+          product_grid_layout: string
           schedules: Json | null
+          security_overlay: Json
           settings_json: Json
           settings_key: string
           show_logo: boolean | null
@@ -887,7 +889,9 @@ export type Database = {
           mobile_sidebar_media_type?: string | null
           pages?: Json | null
           presets?: Json | null
+          product_grid_layout?: string
           schedules?: Json | null
+          security_overlay?: Json
           settings_json?: Json
           settings_key?: string
           show_logo?: boolean | null
@@ -1003,7 +1007,9 @@ export type Database = {
           mobile_sidebar_media_type?: string | null
           pages?: Json | null
           presets?: Json | null
+          product_grid_layout?: string
           schedules?: Json | null
+          security_overlay?: Json
           settings_json?: Json
           settings_key?: string
           show_logo?: boolean | null

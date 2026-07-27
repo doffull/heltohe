@@ -1,9 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ShieldCheck, ShieldAlert, RefreshCw, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
+import { useDesignSettings, useSaveDesignSettings } from '@/hooks/useDesignSettings';
+import { useToast } from '@/hooks/use-toast';
+import { ShieldCheck, ShieldAlert, RefreshCw, AlertTriangle, CheckCircle2, XCircle, Save, Eye } from 'lucide-react';
 
 type Snapshot = {
   score: number;
@@ -13,6 +20,18 @@ type Snapshot = {
   failedLogins24h: number;
   criticalRpcs: Record<string, boolean>;
   generatedAt: string;
+};
+
+const DEFAULT_OVERLAY = {
+  enabled: true,
+  text: '',
+  showEmail: true,
+  opacity: 0.05,
+  angle: -30,
+  density: 60,
+  color: 'currentColor',
+  blockPrintScreen: true,
+  disableRightClick: true,
 };
 
 export default function AdminSecurity() {
@@ -26,6 +45,26 @@ export default function AdminSecurity() {
     refetchOnWindowFocus: false,
   });
 
+  const { data: settings } = useDesignSettings();
+  const save = useSaveDesignSettings();
+  const { toast } = useToast();
+  const [overlay, setOverlay] = useState<any>(DEFAULT_OVERLAY);
+  const [preview, setPreview] = useState(false);
+
+  useEffect(() => {
+    if (settings) setOverlay({ ...DEFAULT_OVERLAY, ...((settings as any).securityOverlay ?? {}) });
+  }, [settings]);
+
+  const saveOverlay = async () => {
+    if (!settings) return;
+    try {
+      await save.mutateAsync({ ...(settings as any), securityOverlay: overlay });
+      toast({ title: 'Protection mise à jour' });
+    } catch (e: any) {
+      toast({ title: 'Erreur', description: e?.message, variant: 'destructive' });
+    }
+  };
+
   const score = data?.score ?? 0;
   const scoreColor =
     score >= 80 ? 'text-green-500' : score >= 50 ? 'text-amber-500' : 'text-red-500';
@@ -37,7 +76,7 @@ export default function AdminSecurity() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold hud-text">SÉCURITÉ</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Vue d'ensemble continue de l'état de sécurité du backend.
+            Audit backend et personnalisation de la protection anti-copie.
           </p>
         </div>
         <Button onClick={() => refetch()} disabled={isFetching} variant="outline" className="gap-2">
@@ -46,6 +85,145 @@ export default function AdminSecurity() {
         </Button>
       </div>
 
+      {/* ── Protection anti-copie ── */}
+      <Card className="p-4 sm:p-6 space-y-4">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h2 className="font-bold text-lg">Protection & filigrane</h2>
+            <p className="text-xs text-muted-foreground mt-1">
+              Configuration du filigrane traçable et des blocages de copie. Désactivé automatiquement pour les super-admins connectés.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPreview(v => !v)} className="gap-1.5">
+              <Eye className="h-3.5 w-3.5" />
+              {preview ? 'Masquer aperçu' : 'Aperçu'}
+            </Button>
+            <Button size="sm" onClick={saveOverlay} disabled={save.isPending} className="gap-1.5">
+              <Save className="h-3.5 w-3.5" />
+              Enregistrer
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="flex items-center justify-between rounded border p-3">
+            <div>
+              <Label className="text-sm">Filigrane visible</Label>
+              <p className="text-[11px] text-muted-foreground">Overlay diagonal traçable sur tout le site public.</p>
+            </div>
+            <Switch checked={!!overlay.enabled} onCheckedChange={v => setOverlay((o: any) => ({ ...o, enabled: v }))} />
+          </div>
+          <div className="flex items-center justify-between rounded border p-3">
+            <div>
+              <Label className="text-sm">Inclure l'email visiteur</Label>
+              <p className="text-[11px] text-muted-foreground">Marque le filigrane avec l'email connecté (traçabilité).</p>
+            </div>
+            <Switch checked={overlay.showEmail !== false} onCheckedChange={v => setOverlay((o: any) => ({ ...o, showEmail: v }))} />
+          </div>
+          <div className="flex items-center justify-between rounded border p-3">
+            <div>
+              <Label className="text-sm">Bloquer PrintScreen</Label>
+              <p className="text-[11px] text-muted-foreground">Floute la page et vide le presse-papier à l'appui.</p>
+            </div>
+            <Switch checked={overlay.blockPrintScreen !== false} onCheckedChange={v => setOverlay((o: any) => ({ ...o, blockPrintScreen: v }))} />
+          </div>
+          <div className="flex items-center justify-between rounded border p-3">
+            <div>
+              <Label className="text-sm">Désactiver clic droit / sélection</Label>
+              <p className="text-[11px] text-muted-foreground">Empêche la copie d'images et texte hors champs.</p>
+            </div>
+            <Switch checked={overlay.disableRightClick !== false} onCheckedChange={v => setOverlay((o: any) => ({ ...o, disableRightClick: v }))} />
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Texte personnalisé du filigrane</Label>
+            <Input
+              value={overlay.text ?? ''}
+              onChange={e => setOverlay((o: any) => ({ ...o, text: e.target.value }))}
+              placeholder="Ex : © LVTK6 — Propriété — Ne pas diffuser"
+            />
+            <p className="text-[11px] text-muted-foreground">Laissez vide pour n'afficher que l'email et le timestamp.</p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="space-y-2">
+              <Label className="text-xs">Opacité ({(overlay.opacity ?? 0.05).toFixed(2)})</Label>
+              <Slider
+                value={[Math.round((overlay.opacity ?? 0.05) * 100)]}
+                min={1}
+                max={30}
+                step={1}
+                onValueChange={([v]) => setOverlay((o: any) => ({ ...o, opacity: v / 100 }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Angle ({overlay.angle ?? -30}°)</Label>
+              <Slider
+                value={[overlay.angle ?? -30]}
+                min={-90}
+                max={90}
+                step={5}
+                onValueChange={([v]) => setOverlay((o: any) => ({ ...o, angle: v }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Densité ({overlay.density ?? 60})</Label>
+              <Slider
+                value={[overlay.density ?? 60]}
+                min={20}
+                max={150}
+                step={5}
+                onValueChange={([v]) => setOverlay((o: any) => ({ ...o, density: v }))}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">Couleur du filigrane</Label>
+            <div className="flex gap-2 items-center">
+              <Input
+                type="text"
+                value={overlay.color ?? 'currentColor'}
+                onChange={e => setOverlay((o: any) => ({ ...o, color: e.target.value }))}
+                placeholder="currentColor, #ff0000, rgba(0,0,0,0.3)…"
+                className="flex-1"
+              />
+              <input
+                type="color"
+                value={/^#[0-9a-f]{6}$/i.test(overlay.color ?? '') ? overlay.color : '#000000'}
+                onChange={e => setOverlay((o: any) => ({ ...o, color: e.target.value }))}
+                className="h-9 w-12 rounded border cursor-pointer"
+              />
+            </div>
+          </div>
+        </div>
+
+        {preview && (
+          <div className="relative h-40 rounded border overflow-hidden bg-background">
+            <div
+              className="absolute inset-0 flex flex-wrap gap-8 p-4 text-[10px] uppercase tracking-widest font-mono"
+              style={{
+                transform: `rotate(${overlay.angle ?? -30}deg) scale(1.4)`,
+                transformOrigin: 'center',
+                opacity: overlay.opacity ?? 0.05,
+                color: overlay.color || 'currentColor',
+              }}
+            >
+              {Array.from({ length: overlay.density ?? 60 }).map((_, i) => (
+                <span key={i} className="whitespace-nowrap">
+                  {[overlay.text, overlay.showEmail ? 'user@example.com' : '', '2026-07-27 10:00'].filter(Boolean).join(' • ') || 'protégé'}
+                </span>
+              ))}
+            </div>
+            <span className="absolute bottom-1 right-2 text-[10px] text-muted-foreground">Aperçu</span>
+          </div>
+        )}
+      </Card>
+
+      {/* ── Audit ── */}
       {error && (
         <Card className="p-4 border-destructive">
           <p className="text-sm text-destructive">
