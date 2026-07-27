@@ -11,9 +11,9 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// 20 MB base64 (~15 MB raw file). Edge functions cap memory ~150 MB and
-// unpdf + base64 decode easily double the payload footprint.
-const MAX_FILE_SIZE = 20 * 1024 * 1024;
+// 60 MB base64 (~45 MB raw file). Rasterization+recompression keeps memory
+// bounded even for large catalogs.
+const MAX_FILE_SIZE = 60 * 1024 * 1024;
 // Raw-PDF multimodal fallback: kept only as a last resort when we cannot
 // rasterize+recompress pages ourselves.
 const MAX_MULTIMODAL_SIZE = 18 * 1024 * 1024;
