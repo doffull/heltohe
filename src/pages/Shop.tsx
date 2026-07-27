@@ -61,6 +61,7 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
   const { addItem } = useCart();
   const sidebarContext = useSidebarOptional();
   const { data: dbCategories = [] } = useCategories();
+  const { data: designSettings } = useDesignSettings();
 
   // Build category list from DB
   const rootCategories = dbCategories.filter(c => !c.parentId);
