@@ -13,17 +13,20 @@ const corsHeaders = {
 
 // 60 MB base64 (~45 MB raw file). Rasterization+recompression keeps memory
 // bounded even for large catalogs.
-const MAX_FILE_SIZE = 60 * 1024 * 1024;
+// Edge functions have ~150 MB RAM. Base64-decoding a 20 MB PDF already uses
+// ~40 MB, and pdf.js rendering can spike further, so we cap the upload well
+// below the raw file-size limit to avoid WORKER_RESOURCE_LIMIT (546).
+const MAX_FILE_SIZE = 18 * 1024 * 1024; // base64 chars (~13 MB raw)
 // Raw-PDF multimodal fallback: kept only as a last resort when we cannot
 // rasterize+recompress pages ourselves.
-const MAX_MULTIMODAL_SIZE = 18 * 1024 * 1024;
+const MAX_MULTIMODAL_SIZE = 12 * 1024 * 1024;
 // Image-page recompression targets: keep each page well under provider
 // limits (~5 MB per image) and small enough to batch several per call.
-const PAGE_RENDER_SCALE = 1.5;      // pdf.js viewport scale before downscale
-const PAGE_MAX_DIM = 1400;          // px, longest edge after downscale
-const PAGE_JPEG_QUALITY = 72;       // 0-100 (ImageScript scale)
-const PAGE_BATCH_SIZE = 3;          // pages per AI call
-const MAX_RENDER_PAGES = 30;        // hard cap to bound cost/memory
+const PAGE_RENDER_SCALE = 1.0;      // pdf.js viewport scale before downscale
+const PAGE_MAX_DIM = 1100;          // px, longest edge after downscale
+const PAGE_JPEG_QUALITY = 65;       // 0-100 (ImageScript scale)
+const PAGE_BATCH_SIZE = 2;          // pages per AI call
+const MAX_RENDER_PAGES = 15;        // hard cap to bound cost/memory
 const CHUNK_CHARS = 12000;
 const MAX_CHUNKS = 20;
 const AI_MODEL = "openai/gpt-5-mini";
@@ -226,54 +229,63 @@ serve(async (req) => {
         console.warn("getDocumentProxy failed:", (e as Error).message);
       }
 
-      const compressed: { base64: string; mime: string }[] = [];
       const pagesToRender = Math.min(pageCount, MAX_RENDER_PAGES);
-      let rasterAvailable = true;
-      for (let p = 1; p <= pagesToRender; p++) {
-        const img = await renderCompressedPage(pdfBytes, p);
-        if (!img) { rasterAvailable = false; break; }
-        compressed.push(img);
+      let rasterAvailable = pagesToRender > 0;
+      const seen = new Set<string>();
+      const allProducts: any[] = [];
+      const errors: string[] = [];
+      let processedPages = 0;
+
+      // Stream pages in small batches to keep memory bounded.
+      for (let start = 1; start <= pagesToRender && rasterAvailable; start += PAGE_BATCH_SIZE) {
+        const batch: { base64: string; mime: string }[] = [];
+        for (let p = start; p < start + PAGE_BATCH_SIZE && p <= pagesToRender; p++) {
+          const img = await renderCompressedPage(pdfBytes, p);
+          if (!img) { rasterAvailable = false; break; }
+          batch.push(img);
+        }
+        if (!rasterAvailable || batch.length === 0) break;
+        processedPages += batch.length;
+
+        const content: any[] = [
+          { type: "text", text: `Extrait tous les produits de ces pages (${start}-${start + batch.length - 1}/${pagesToRender}). Retourne {"products":[...]}.` },
+          ...batch.map((im) => ({
+            type: "image_url",
+            image_url: { url: `data:${im.mime};base64,${im.base64}` },
+          })),
+        ];
+        const aiRes = await callLovableAI([
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content },
+        ], apiKey);
+        // Free batch memory before continuing
+        batch.length = 0;
+
+        if (!aiRes.ok) {
+          errors.push(`Batch ${Math.ceil(start / PAGE_BATCH_SIZE)}: ${aiRes.message}`);
+          if (aiRes.status === 402 || aiRes.status === 429) break;
+          continue;
+        }
+        const parsed = extractJson(aiRes.text) || {};
+        const list = Array.isArray(parsed) ? parsed : (parsed.products || []);
+        for (const p of list) {
+          if (!p || typeof p !== "object") continue;
+          const skuKey = String(p.sku || `${p.name}-${p.price}`).trim().toUpperCase();
+          if (!skuKey || seen.has(skuKey)) continue;
+          seen.add(skuKey);
+          allProducts.push(p);
+        }
       }
 
-      if (rasterAvailable && compressed.length > 0) {
-        const seen = new Set<string>();
-        const allProducts: any[] = [];
-        const errors: string[] = [];
-        for (let i = 0; i < compressed.length; i += PAGE_BATCH_SIZE) {
-          const batch = compressed.slice(i, i + PAGE_BATCH_SIZE);
-          const content: any[] = [
-            { type: "text", text: `Extrait tous les produits de ces pages (${i + 1}-${i + batch.length}/${compressed.length}). Retourne {"products":[...]}.` },
-            ...batch.map((im) => ({
-              type: "image_url",
-              image_url: { url: `data:${im.mime};base64,${im.base64}` },
-            })),
-          ];
-          const aiRes = await callLovableAI([
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content },
-          ], apiKey);
-          if (!aiRes.ok) {
-            errors.push(`Batch ${i / PAGE_BATCH_SIZE + 1}: ${aiRes.message}`);
-            if (aiRes.status === 402 || aiRes.status === 429) break;
-            continue;
-          }
-          const parsed = extractJson(aiRes.text) || {};
-          const list = Array.isArray(parsed) ? parsed : (parsed.products || []);
-          for (const p of list) {
-            if (!p || typeof p !== "object") continue;
-            const skuKey = String(p.sku || `${p.name}-${p.price}`).trim().toUpperCase();
-            if (!skuKey || seen.has(skuKey)) continue;
-            seen.add(skuKey);
-            allProducts.push(p);
-          }
-        }
+      if (rasterAvailable && processedPages > 0) {
         return new Response(JSON.stringify({
           products: allProducts,
           mode: "raster-compressed",
-          pagesProcessed: compressed.length,
+          pagesProcessed: processedPages,
           errors: errors.length ? errors : undefined,
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+
 
       // Fallback: raw-PDF multimodal (only when small enough)
       if (fileBase64.length > MAX_MULTIMODAL_SIZE) {
