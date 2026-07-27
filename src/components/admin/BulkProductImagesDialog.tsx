@@ -260,7 +260,9 @@ export function BulkProductImagesDialog({ open, onOpenChange, products }: Props)
                 <div key={i} className="flex items-center gap-2 text-xs">
                   <img src={m.previewUrl} alt="" className="w-10 h-10 rounded object-cover" />
                   <div className="flex-1 min-w-0">
-                    <p className="truncate font-mono">{m.file.name}</p>
+                    <p className="truncate font-mono">
+                      {m.folder && <span className="text-primary">{m.folder}/</span>}{m.file.name}
+                    </p>
                     {m.product ? (
                       <p className="text-green-500 truncate flex items-center gap-1">
                         <Check className="h-3 w-3" /> {m.product.name} <span className="text-muted-foreground">({m.matchedBy})</span>
