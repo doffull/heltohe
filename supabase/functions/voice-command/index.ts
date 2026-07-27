@@ -96,7 +96,7 @@ Réponds via la fonction search_results.`;
       let searchResp: Response;
       try {
         searchResp = await callGemini({
-            model: "openai/gpt-5-mini",
+            model: "google/gemini-2.5-flash",
             messages: [
               { role: "system", content: searchPrompt },
               { role: "user", content: q },
@@ -215,7 +215,7 @@ Règles: search_products pour rechercher, recommend pour conseiller, select_resu
     let resp: Response;
     try {
       resp = await callGemini({
-          model: "openai/gpt-5-mini",
+          model: "google/gemini-2.5-flash",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: transcript },
