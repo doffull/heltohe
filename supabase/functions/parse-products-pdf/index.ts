@@ -211,14 +211,77 @@ serve(async (req) => {
 
     rawText = rawText.trim();
 
-    // 2. If text extraction failed (scanned PDF), fallback to multimodal — only for small files
+    // 2. If text extraction failed (scanned PDF), rasterize pages, downscale
+    //    and re-encode as JPEG before sending. Falls back to the raw-PDF
+    //    multimodal call only if the canvas backend is unavailable.
     if (rawText.length < 200 && fileType === "pdf") {
+      console.log("Scanned PDF detected — attempting page rasterization + recompression");
+      const pdfBytes = base64ToBytes(fileBase64);
+      let pageCount = 0;
+      try {
+        const doc = await getDocumentProxy(pdfBytes);
+        // deno-lint-ignore no-explicit-any
+        pageCount = (doc as any).numPages ?? 0;
+      } catch (e) {
+        console.warn("getDocumentProxy failed:", (e as Error).message);
+      }
+
+      const compressed: { base64: string; mime: string }[] = [];
+      const pagesToRender = Math.min(pageCount, MAX_RENDER_PAGES);
+      let rasterAvailable = true;
+      for (let p = 1; p <= pagesToRender; p++) {
+        const img = await renderCompressedPage(pdfBytes, p);
+        if (!img) { rasterAvailable = false; break; }
+        compressed.push(img);
+      }
+
+      if (rasterAvailable && compressed.length > 0) {
+        const seen = new Set<string>();
+        const allProducts: any[] = [];
+        const errors: string[] = [];
+        for (let i = 0; i < compressed.length; i += PAGE_BATCH_SIZE) {
+          const batch = compressed.slice(i, i + PAGE_BATCH_SIZE);
+          const content: any[] = [
+            { type: "text", text: `Extrait tous les produits de ces pages (${i + 1}-${i + batch.length}/${compressed.length}). Retourne {"products":[...]}.` },
+            ...batch.map((im) => ({
+              type: "image_url",
+              image_url: { url: `data:${im.mime};base64,${im.base64}` },
+            })),
+          ];
+          const aiRes = await callLovableAI([
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content },
+          ], apiKey);
+          if (!aiRes.ok) {
+            errors.push(`Batch ${i / PAGE_BATCH_SIZE + 1}: ${aiRes.message}`);
+            if (aiRes.status === 402 || aiRes.status === 429) break;
+            continue;
+          }
+          const parsed = extractJson(aiRes.text) || {};
+          const list = Array.isArray(parsed) ? parsed : (parsed.products || []);
+          for (const p of list) {
+            if (!p || typeof p !== "object") continue;
+            const skuKey = String(p.sku || `${p.name}-${p.price}`).trim().toUpperCase();
+            if (!skuKey || seen.has(skuKey)) continue;
+            seen.add(skuKey);
+            allProducts.push(p);
+          }
+        }
+        return new Response(JSON.stringify({
+          products: allProducts,
+          mode: "raster-compressed",
+          pagesProcessed: compressed.length,
+          errors: errors.length ? errors : undefined,
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Fallback: raw-PDF multimodal (only when small enough)
       if (fileBase64.length > MAX_MULTIMODAL_SIZE) {
         return new Response(JSON.stringify({
-          error: "PDF scanné trop volumineux pour l'analyse image (>13 Mo). Exportez un PDF texte (pas une image scannée) ou réduisez-le.",
+          error: "PDF scanné trop volumineux et rasterisation indisponible. Exportez un PDF texte ou réduisez-le.",
         }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      console.log("Falling back to multimodal PDF (scanned document detected)");
+      console.log("Falling back to raw multimodal PDF call");
       const aiRes = await callLovableAI([
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: [
