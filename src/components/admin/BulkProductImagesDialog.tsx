@@ -21,8 +21,9 @@ type Match = {
   file: File;
   previewUrl: string;
   product: Product | null;
-  matchedBy: 'sku' | 'name' | 'none';
-  index: number; // index in filename e.g. product-2.jpg → 2 (for gallery ordering)
+  matchedBy: 'folder' | 'sku' | 'name' | 'none';
+  index: number; // ordering within the product's gallery
+  folder: string | null;
 };
 
 const IMG_EXT = /\.(jpe?g|png|webp|gif|avif|heic)$/i;
@@ -36,6 +37,15 @@ function parseFileName(name: string): { base: string; index: number } {
   const m = stripped.match(/^(.*?)-(\d+)$/);
   if (m) return { base: m[1], index: parseInt(m[2], 10) };
   return { base: stripped, index: 0 };
+}
+
+function getFolderName(file: File): string | null {
+  const rel = (file as any).webkitRelativePath as string | undefined;
+  if (!rel) return null;
+  const parts = rel.split('/').filter(Boolean);
+  if (parts.length < 2) return null;
+  // Use the deepest folder (closest to the file) — this is the product folder
+  return parts[parts.length - 2];
 }
 
 async function uploadToStorage(file: File): Promise<string | null> {
