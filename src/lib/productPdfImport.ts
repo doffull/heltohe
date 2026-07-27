@@ -77,11 +77,16 @@ async function readFunctionError(error: unknown): Promise<string> {
   return error instanceof Error ? error.message : 'Erreur inconnue';
 }
 
-export async function importProductsFromPdf(file: File): Promise<CatalogImportResult> {
+export async function importProductsFromPdf(
+  file: File,
+  onProgress?: (progress: ImportProgress) => void,
+): Promise<CatalogImportResult> {
   const pdfParts = await splitPdf(file);
   const products: ParsedCatalogProduct[] = [];
   const errors: string[] = [];
   const seen = new Set<string>();
+
+  onProgress?.({ batchIndex: 0, totalBatches: pdfParts.length, productsSoFar: 0 });
 
   for (let index = 0; index < pdfParts.length; index += 1) {
     const fileBase64 = bytesToBase64(pdfParts[index]);
