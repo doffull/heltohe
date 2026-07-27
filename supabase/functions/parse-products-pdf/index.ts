@@ -54,6 +54,43 @@ function base64ToBytes(b64: string): Uint8Array {
   return bytes;
 }
 
+function bytesToBase64(bytes: Uint8Array): string {
+  let bin = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(bin);
+}
+
+// Rasterize a single PDF page then downscale + re-encode as JPEG.
+// Returns null when the canvas backend is unavailable in this runtime.
+async function renderCompressedPage(
+  pdfBytes: Uint8Array,
+  pageNumber: number,
+): Promise<{ base64: string; mime: string } | null> {
+  try {
+    const pngBuf = await renderPageAsImage(pdfBytes, pageNumber, {
+      scale: PAGE_RENDER_SCALE,
+      // Lazy import of a Node-compatible canvas. Available on the Supabase
+      // edge Deno runtime via npm compat; if it fails we bail cleanly.
+      // deno-lint-ignore no-explicit-any
+      canvas: (async () => await import("npm:@napi-rs/canvas@0.1.53")) as any,
+    });
+    const img = await Image.decode(new Uint8Array(pngBuf));
+    const longest = Math.max(img.width, img.height);
+    if (longest > PAGE_MAX_DIM) {
+      const ratio = PAGE_MAX_DIM / longest;
+      img.resize(Math.round(img.width * ratio), Math.round(img.height * ratio));
+    }
+    const jpeg = await img.encodeJPEG(PAGE_JPEG_QUALITY);
+    return { base64: bytesToBase64(jpeg), mime: "image/jpeg" };
+  } catch (e) {
+    console.warn(`renderCompressedPage failed page ${pageNumber}:`, (e as Error).message);
+    return null;
+  }
+}
+
 function chunkText(text: string, size: number): string[] {
   const chunks: string[] = [];
   const clean = text.replace(/\s+\n/g, "\n").trim();
