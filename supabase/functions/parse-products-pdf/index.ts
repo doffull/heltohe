@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { extractText } from "https://esm.sh/unpdf@0.12.1";
+import { extractText, getDocumentProxy, renderPageAsImage } from "https://esm.sh/unpdf@0.12.1";
+// Pure-JS image codec (no native deps) used to downscale & re-encode
+// rendered PDF pages as JPEG before shipping them to the AI.
+import { Image } from "https://deno.land/x/imagescript@1.2.17/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,9 +14,16 @@ const corsHeaders = {
 // 20 MB base64 (~15 MB raw file). Edge functions cap memory ~150 MB and
 // unpdf + base64 decode easily double the payload footprint.
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
-// Multimodal fallback (sends the raw PDF to the AI) is memory-heavy: only
-// allow it for small PDFs, otherwise we hit WORKER_RESOURCE_LIMIT.
+// Raw-PDF multimodal fallback: kept only as a last resort when we cannot
+// rasterize+recompress pages ourselves.
 const MAX_MULTIMODAL_SIZE = 18 * 1024 * 1024;
+// Image-page recompression targets: keep each page well under provider
+// limits (~5 MB per image) and small enough to batch several per call.
+const PAGE_RENDER_SCALE = 1.5;      // pdf.js viewport scale before downscale
+const PAGE_MAX_DIM = 1400;          // px, longest edge after downscale
+const PAGE_JPEG_QUALITY = 72;       // 0-100 (ImageScript scale)
+const PAGE_BATCH_SIZE = 3;          // pages per AI call
+const MAX_RENDER_PAGES = 30;        // hard cap to bound cost/memory
 const CHUNK_CHARS = 12000;
 const MAX_CHUNKS = 20;
 const AI_MODEL = "openai/gpt-5-mini";
@@ -42,6 +52,43 @@ function base64ToBytes(b64: string): Uint8Array {
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return bytes;
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let bin = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(bin);
+}
+
+// Rasterize a single PDF page then downscale + re-encode as JPEG.
+// Returns null when the canvas backend is unavailable in this runtime.
+async function renderCompressedPage(
+  pdfBytes: Uint8Array,
+  pageNumber: number,
+): Promise<{ base64: string; mime: string } | null> {
+  try {
+    const pngBuf = await renderPageAsImage(pdfBytes, pageNumber, {
+      scale: PAGE_RENDER_SCALE,
+      // Lazy import of a Node-compatible canvas. Available on the Supabase
+      // edge Deno runtime via npm compat; if it fails we bail cleanly.
+      // deno-lint-ignore no-explicit-any
+      canvas: (async () => await import("npm:@napi-rs/canvas@0.1.53")) as any,
+    });
+    const img = await Image.decode(new Uint8Array(pngBuf));
+    const longest = Math.max(img.width, img.height);
+    if (longest > PAGE_MAX_DIM) {
+      const ratio = PAGE_MAX_DIM / longest;
+      img.resize(Math.round(img.width * ratio), Math.round(img.height * ratio));
+    }
+    const jpeg = await img.encodeJPEG(PAGE_JPEG_QUALITY);
+    return { base64: bytesToBase64(jpeg), mime: "image/jpeg" };
+  } catch (e) {
+    console.warn(`renderCompressedPage failed page ${pageNumber}:`, (e as Error).message);
+    return null;
+  }
 }
 
 function chunkText(text: string, size: number): string[] {
@@ -164,14 +211,77 @@ serve(async (req) => {
 
     rawText = rawText.trim();
 
-    // 2. If text extraction failed (scanned PDF), fallback to multimodal — only for small files
+    // 2. If text extraction failed (scanned PDF), rasterize pages, downscale
+    //    and re-encode as JPEG before sending. Falls back to the raw-PDF
+    //    multimodal call only if the canvas backend is unavailable.
     if (rawText.length < 200 && fileType === "pdf") {
+      console.log("Scanned PDF detected — attempting page rasterization + recompression");
+      const pdfBytes = base64ToBytes(fileBase64);
+      let pageCount = 0;
+      try {
+        const doc = await getDocumentProxy(pdfBytes);
+        // deno-lint-ignore no-explicit-any
+        pageCount = (doc as any).numPages ?? 0;
+      } catch (e) {
+        console.warn("getDocumentProxy failed:", (e as Error).message);
+      }
+
+      const compressed: { base64: string; mime: string }[] = [];
+      const pagesToRender = Math.min(pageCount, MAX_RENDER_PAGES);
+      let rasterAvailable = true;
+      for (let p = 1; p <= pagesToRender; p++) {
+        const img = await renderCompressedPage(pdfBytes, p);
+        if (!img) { rasterAvailable = false; break; }
+        compressed.push(img);
+      }
+
+      if (rasterAvailable && compressed.length > 0) {
+        const seen = new Set<string>();
+        const allProducts: any[] = [];
+        const errors: string[] = [];
+        for (let i = 0; i < compressed.length; i += PAGE_BATCH_SIZE) {
+          const batch = compressed.slice(i, i + PAGE_BATCH_SIZE);
+          const content: any[] = [
+            { type: "text", text: `Extrait tous les produits de ces pages (${i + 1}-${i + batch.length}/${compressed.length}). Retourne {"products":[...]}.` },
+            ...batch.map((im) => ({
+              type: "image_url",
+              image_url: { url: `data:${im.mime};base64,${im.base64}` },
+            })),
+          ];
+          const aiRes = await callLovableAI([
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content },
+          ], apiKey);
+          if (!aiRes.ok) {
+            errors.push(`Batch ${i / PAGE_BATCH_SIZE + 1}: ${aiRes.message}`);
+            if (aiRes.status === 402 || aiRes.status === 429) break;
+            continue;
+          }
+          const parsed = extractJson(aiRes.text) || {};
+          const list = Array.isArray(parsed) ? parsed : (parsed.products || []);
+          for (const p of list) {
+            if (!p || typeof p !== "object") continue;
+            const skuKey = String(p.sku || `${p.name}-${p.price}`).trim().toUpperCase();
+            if (!skuKey || seen.has(skuKey)) continue;
+            seen.add(skuKey);
+            allProducts.push(p);
+          }
+        }
+        return new Response(JSON.stringify({
+          products: allProducts,
+          mode: "raster-compressed",
+          pagesProcessed: compressed.length,
+          errors: errors.length ? errors : undefined,
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Fallback: raw-PDF multimodal (only when small enough)
       if (fileBase64.length > MAX_MULTIMODAL_SIZE) {
         return new Response(JSON.stringify({
-          error: "PDF scanné trop volumineux pour l'analyse image (>13 Mo). Exportez un PDF texte (pas une image scannée) ou réduisez-le.",
+          error: "PDF scanné trop volumineux et rasterisation indisponible. Exportez un PDF texte ou réduisez-le.",
         }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      console.log("Falling back to multimodal PDF (scanned document detected)");
+      console.log("Falling back to raw multimodal PDF call");
       const aiRes = await callLovableAI([
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: [
