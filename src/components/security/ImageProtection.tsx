@@ -42,16 +42,11 @@ export function ImageProtection() {
       }
     };
 
-    // Anti-screenshot dissuasion : floute la page dès qu'elle perd le focus
-    // (multitâche mobile, screenshot iOS/Android, alt-tab desktop).
+    // Anti-screenshot dissuasion : uniquement sur PrintScreen desktop
+    // (le floutage sur perte de focus a été retiré : il gênait les vidéos,
+    // le password manager, l'autofill et les iframes.)
     const applyBlur = () => document.body.classList.add('screenshot-blur');
     const removeBlur = () => document.body.classList.remove('screenshot-blur');
-    const onVisibility = () => {
-      if (document.visibilityState === 'hidden') applyBlur();
-      else setTimeout(removeBlur, 100);
-    };
-    const onBlur = () => applyBlur();
-    const onFocus = () => removeBlur();
 
     // Détection PrintScreen (desktop) : vide le presse-papier
     const onScreenshotKey = (e: KeyboardEvent) => {
@@ -69,9 +64,6 @@ export function ImageProtection() {
     document.addEventListener('copy', onCopy);
     document.addEventListener('selectstart', onSelectStart);
     document.addEventListener('keydown', onKey);
-    document.addEventListener('visibilitychange', onVisibility);
-    window.addEventListener('blur', onBlur);
-    window.addEventListener('focus', onFocus);
     document.addEventListener('keyup', onScreenshotKey);
 
     return () => {
@@ -80,9 +72,6 @@ export function ImageProtection() {
       document.removeEventListener('copy', onCopy);
       document.removeEventListener('selectstart', onSelectStart);
       document.removeEventListener('keydown', onKey);
-      document.removeEventListener('visibilitychange', onVisibility);
-      window.removeEventListener('blur', onBlur);
-      window.removeEventListener('focus', onFocus);
       document.removeEventListener('keyup', onScreenshotKey);
       removeBlur();
     };
