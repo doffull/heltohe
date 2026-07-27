@@ -274,7 +274,13 @@ export default function AdminProducts() {
     }
     setIsParsing(true);
     try {
-      const result = await importProductsFromPdf(file);
+      const result = await importProductsFromPdf(file, ({ batchIndex, totalBatches, productsSoFar }) => {
+        if (batchIndex === 0) {
+          toast({ title: `PDF découpé en ${totalBatches} lot(s)`, description: 'Analyse en cours…' });
+        } else {
+          toast({ title: `Lot ${batchIndex}/${totalBatches} analysé`, description: `${productsSoFar} produits extraits pour l'instant` });
+        }
+      });
       if (result.products.length > 0) {
         setExtractedProducts(result.products.map((product) => ({ ...product, selected: true })) as ExtractedProduct[]);
         const warning = result.errors.length > 0 ? ` · ${result.errors.length} lot(s) en erreur` : '';

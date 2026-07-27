@@ -854,7 +854,13 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
 
     try {
       if (ext === 'pdf') {
-        const result = await importProductsFromPdf(file);
+        const result = await importProductsFromPdf(file, ({ batchIndex, totalBatches, productsSoFar }) => {
+          if (batchIndex === 0) {
+            toast({ title: `PDF découpé en ${totalBatches} lot(s)`, description: 'Analyse en cours…' });
+          } else {
+            toast({ title: `Lot ${batchIndex}/${totalBatches} analysé`, description: `${productsSoFar} produits extraits` });
+          }
+        });
         if (result.products.length > 0) {
           setExtractedProducts(result.products);
           setSelectedIds(new Set(result.products.map((_, index) => index)));

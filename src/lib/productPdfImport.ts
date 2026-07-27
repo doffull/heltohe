@@ -1,8 +1,14 @@
 import { PDFDocument } from 'pdf-lib';
 import { supabase } from '@/integrations/supabase/client';
 
-const MAX_PAGES_PER_BATCH = 6;
-const MAX_BATCH_BYTES = 7 * 1024 * 1024;
+const MAX_PAGES_PER_BATCH = 4;
+const MAX_BATCH_BYTES = 6 * 1024 * 1024;
+
+export interface ImportProgress {
+  batchIndex: number;
+  totalBatches: number;
+  productsSoFar: number;
+}
 
 export interface ParsedCatalogProduct {
   name?: string;
@@ -71,11 +77,16 @@ async function readFunctionError(error: unknown): Promise<string> {
   return error instanceof Error ? error.message : 'Erreur inconnue';
 }
 
-export async function importProductsFromPdf(file: File): Promise<CatalogImportResult> {
+export async function importProductsFromPdf(
+  file: File,
+  onProgress?: (progress: ImportProgress) => void,
+): Promise<CatalogImportResult> {
   const pdfParts = await splitPdf(file);
   const products: ParsedCatalogProduct[] = [];
   const errors: string[] = [];
   const seen = new Set<string>();
+
+  onProgress?.({ batchIndex: 0, totalBatches: pdfParts.length, productsSoFar: 0 });
 
   for (let index = 0; index < pdfParts.length; index += 1) {
     const fileBase64 = bytesToBase64(pdfParts[index]);
@@ -99,6 +110,7 @@ export async function importProductsFromPdf(file: File): Promise<CatalogImportRe
       seen.add(key);
       products.push(product);
     }
+    onProgress?.({ batchIndex: index + 1, totalBatches: pdfParts.length, productsSoFar: products.length });
   }
 
   if (products.length === 0 && errors.length > 0) {
