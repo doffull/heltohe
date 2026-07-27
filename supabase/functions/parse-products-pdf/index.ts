@@ -11,11 +11,9 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// 60 MB base64 (~45 MB raw file). Rasterization+recompression keeps memory
-// bounded even for large catalogs.
-// Edge functions have ~150 MB RAM. Base64-decoding a 20 MB PDF already uses
-// ~40 MB, and pdf.js rendering can spike further, so we cap the upload well
-// below the raw file-size limit to avoid WORKER_RESOURCE_LIMIT (546).
+// About 13 MB raw after base64 decoding. Larger catalogs are split into
+// smaller PDFs by the admin client before being sent to this function.
+// Keeping this defensive cap prevents WORKER_RESOURCE_LIMIT (546).
 const MAX_FILE_SIZE = 18 * 1024 * 1024; // base64 chars (~13 MB raw)
 // Raw-PDF multimodal fallback: kept only as a last resort when we cannot
 // rasterize+recompress pages ourselves.
@@ -188,7 +186,7 @@ serve(async (req) => {
       });
     }
     if (fileBase64.length > MAX_FILE_SIZE) {
-      return new Response(JSON.stringify({ error: "Fichier trop volumineux (>45 Mo). Divisez-le en plusieurs PDF plus légers." }), {
+      return new Response(JSON.stringify({ error: "Lot PDF trop volumineux (>13 Mo). L'import doit le découper en lots plus légers." }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
