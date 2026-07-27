@@ -229,54 +229,63 @@ serve(async (req) => {
         console.warn("getDocumentProxy failed:", (e as Error).message);
       }
 
-      const compressed: { base64: string; mime: string }[] = [];
       const pagesToRender = Math.min(pageCount, MAX_RENDER_PAGES);
-      let rasterAvailable = true;
-      for (let p = 1; p <= pagesToRender; p++) {
-        const img = await renderCompressedPage(pdfBytes, p);
-        if (!img) { rasterAvailable = false; break; }
-        compressed.push(img);
+      let rasterAvailable = pagesToRender > 0;
+      const seen = new Set<string>();
+      const allProducts: any[] = [];
+      const errors: string[] = [];
+      let processedPages = 0;
+
+      // Stream pages in small batches to keep memory bounded.
+      for (let start = 1; start <= pagesToRender && rasterAvailable; start += PAGE_BATCH_SIZE) {
+        const batch: { base64: string; mime: string }[] = [];
+        for (let p = start; p < start + PAGE_BATCH_SIZE && p <= pagesToRender; p++) {
+          const img = await renderCompressedPage(pdfBytes, p);
+          if (!img) { rasterAvailable = false; break; }
+          batch.push(img);
+        }
+        if (!rasterAvailable || batch.length === 0) break;
+        processedPages += batch.length;
+
+        const content: any[] = [
+          { type: "text", text: `Extrait tous les produits de ces pages (${start}-${start + batch.length - 1}/${pagesToRender}). Retourne {"products":[...]}.` },
+          ...batch.map((im) => ({
+            type: "image_url",
+            image_url: { url: `data:${im.mime};base64,${im.base64}` },
+          })),
+        ];
+        const aiRes = await callLovableAI([
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content },
+        ], apiKey);
+        // Free batch memory before continuing
+        batch.length = 0;
+
+        if (!aiRes.ok) {
+          errors.push(`Batch ${Math.ceil(start / PAGE_BATCH_SIZE)}: ${aiRes.message}`);
+          if (aiRes.status === 402 || aiRes.status === 429) break;
+          continue;
+        }
+        const parsed = extractJson(aiRes.text) || {};
+        const list = Array.isArray(parsed) ? parsed : (parsed.products || []);
+        for (const p of list) {
+          if (!p || typeof p !== "object") continue;
+          const skuKey = String(p.sku || `${p.name}-${p.price}`).trim().toUpperCase();
+          if (!skuKey || seen.has(skuKey)) continue;
+          seen.add(skuKey);
+          allProducts.push(p);
+        }
       }
 
-      if (rasterAvailable && compressed.length > 0) {
-        const seen = new Set<string>();
-        const allProducts: any[] = [];
-        const errors: string[] = [];
-        for (let i = 0; i < compressed.length; i += PAGE_BATCH_SIZE) {
-          const batch = compressed.slice(i, i + PAGE_BATCH_SIZE);
-          const content: any[] = [
-            { type: "text", text: `Extrait tous les produits de ces pages (${i + 1}-${i + batch.length}/${compressed.length}). Retourne {"products":[...]}.` },
-            ...batch.map((im) => ({
-              type: "image_url",
-              image_url: { url: `data:${im.mime};base64,${im.base64}` },
-            })),
-          ];
-          const aiRes = await callLovableAI([
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content },
-          ], apiKey);
-          if (!aiRes.ok) {
-            errors.push(`Batch ${i / PAGE_BATCH_SIZE + 1}: ${aiRes.message}`);
-            if (aiRes.status === 402 || aiRes.status === 429) break;
-            continue;
-          }
-          const parsed = extractJson(aiRes.text) || {};
-          const list = Array.isArray(parsed) ? parsed : (parsed.products || []);
-          for (const p of list) {
-            if (!p || typeof p !== "object") continue;
-            const skuKey = String(p.sku || `${p.name}-${p.price}`).trim().toUpperCase();
-            if (!skuKey || seen.has(skuKey)) continue;
-            seen.add(skuKey);
-            allProducts.push(p);
-          }
-        }
+      if (rasterAvailable && processedPages > 0) {
         return new Response(JSON.stringify({
           products: allProducts,
           mode: "raster-compressed",
-          pagesProcessed: compressed.length,
+          pagesProcessed: processedPages,
           errors: errors.length ? errors : undefined,
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+
 
       // Fallback: raw-PDF multimodal (only when small enough)
       if (fileBase64.length > MAX_MULTIMODAL_SIZE) {
