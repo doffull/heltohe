@@ -91,7 +91,6 @@ Return ONLY the JSON object, no markdown, no explanation.`;
           ],
         },
       ],
-      temperature: 0.1,
       response_format: { type: "json_object" },
     }, "analyze-product-image");
 
