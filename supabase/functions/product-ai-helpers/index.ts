@@ -1,4 +1,3 @@
-import { callGemini } from "../_shared/gemini.ts";
 // Unified AI helpers for the product form (subtitle, description, material,
 // care, attributes, color-name) — uses Lovable AI Gateway.
 const corsHeaders = {
