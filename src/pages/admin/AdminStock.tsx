@@ -36,6 +36,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { importProductsFromPdf } from '@/lib/productPdfImport';
 
 type Location = {
   id: string; name: string; type: string; city: string | null; address: string | null; is_active: boolean;
@@ -842,7 +843,7 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
+    if (ext !== 'pdf' && file.size > 10 * 1024 * 1024) {
       toast({ title: 'Fichier trop volumineux', description: 'Maximum 10 Mo', variant: 'destructive' });
       return;
     }
@@ -852,6 +853,19 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
     setSelectedIds(new Set());
 
     try {
+      if (ext === 'pdf') {
+        const result = await importProductsFromPdf(file);
+        if (result.products.length > 0) {
+          setExtractedProducts(result.products);
+          setSelectedIds(new Set(result.products.map((_, index) => index)));
+          const warning = result.errors.length > 0 ? ` · ${result.errors.length} lot(s) en erreur` : '';
+          toast({ title: `${result.products.length} produits extraits · ${result.batchesProcessed} lot(s)${warning}` });
+        } else {
+          toast({ title: 'Aucun produit trouvé', description: 'Le PDF ne contient pas de produits exploitables', variant: 'destructive' });
+        }
+        return;
+      }
+
       const buffer = await file.arrayBuffer();
       const bytes = new Uint8Array(buffer);
       let binary = '';

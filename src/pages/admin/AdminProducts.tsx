@@ -32,6 +32,7 @@ import { ProductForm, VariantStockData } from '@/components/admin/ProductForm';
 import { InventoryProductDialog } from '@/components/admin/InventoryProductDialog';
 import { GlobalSizesEditor } from '@/components/admin/GlobalSizesEditor';
 import { Textarea } from '@/components/ui/textarea';
+import { importProductsFromPdf } from '@/lib/productPdfImport';
 
 interface ExtractedProduct {
   name: string;
@@ -273,23 +274,11 @@ export default function AdminProducts() {
     }
     setIsParsing(true);
     try {
-      const reader = new FileReader();
-      const base64 = await new Promise<string>((resolve, reject) => {
-        reader.onload = () => resolve((reader.result as string).split(',')[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-      const { data, error } = await supabase.functions.invoke('parse-products-pdf', { body: { fileBase64: base64, fileType: 'pdf' } });
-      if (error) {
-        const ctx = (error as { context?: Response }).context;
-        const payload = ctx ? await ctx.json().catch(() => null) : null;
-        throw new Error(payload?.error || error.message);
-      }
-      if (data?.error) throw new Error(data.error);
-      if (data?.products && Array.isArray(data.products) && data.products.length > 0) {
-        setExtractedProducts(data.products.map((p: any) => ({ ...p, selected: true })));
-        const chunks = data.chunksProcessed ? ` · ${data.chunksProcessed} sections analysées` : '';
-        toast({ title: `${data.products.length} produits extraits${chunks}` });
+      const result = await importProductsFromPdf(file);
+      if (result.products.length > 0) {
+        setExtractedProducts(result.products.map((product) => ({ ...product, selected: true })) as ExtractedProduct[]);
+        const warning = result.errors.length > 0 ? ` · ${result.errors.length} lot(s) en erreur` : '';
+        toast({ title: `${result.products.length} produits extraits · ${result.batchesProcessed} lot(s) analysé(s)${warning}` });
       } else {
         toast({ title: 'Aucun produit trouvé', variant: 'destructive' });
       }
