@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Sparkles, Loader2 } from 'lucide-react';
+import { X, Plus, Trash2, Sparkles, Loader2, Images } from 'lucide-react';
+import { MediaLibraryDialog } from '@/components/visual-editor/MediaLibraryDialog';
 import { Product, ColorOption } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -83,6 +84,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
   const [newColor, setNewColor] = useState('#000000');
   const [newColorLabel, setNewColorLabel] = useState('');
   const [aiBusy, setAiBusy] = useState<string | null>(null);
+  const [showGalleryPicker, setShowGalleryPicker] = useState(false);
 
   // Generic helper for product-ai-helpers edge function
   const runProductAi = async (action: string, extra: Record<string, any> = {}) => {
@@ -337,16 +339,40 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
           )}
 
           {formData.galleryImages.length < 10 && (
-            <FileDropZone
-              accept={['image']}
-              folder="products/gallery"
-              onUpload={(url) => {
-                if (!url) return;
-                setFormData(prev => ({ ...prev, galleryImages: [...prev.galleryImages, url] }));
-              }}
-              label={`+ Ajouter une image (${formData.galleryImages.length}/10)`}
-            />
+            <div className="space-y-2">
+              <FileDropZone
+                accept={['image']}
+                folder="products/gallery"
+                onUpload={(url) => {
+                  if (!url) return;
+                  setFormData(prev => ({ ...prev, galleryImages: [...prev.galleryImages, url] }));
+                }}
+                label={`+ Ajouter une image (${formData.galleryImages.length}/10)`}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowGalleryPicker(true)}
+                className="w-full h-8 text-xs"
+              >
+                <Images className="h-3.5 w-3.5 mr-1.5" />
+                Choisir plusieurs depuis la médiathèque
+              </Button>
+            </div>
           )}
+          <MediaLibraryDialog
+            open={showGalleryPicker}
+            onOpenChange={setShowGalleryPicker}
+            multi
+            title="Sélectionner plusieurs images pour la galerie"
+            onSelectMulti={(urls) => {
+              setFormData(prev => ({
+                ...prev,
+                galleryImages: Array.from(new Set([...prev.galleryImages, ...urls])).slice(0, 10),
+              }));
+            }}
+          />
         </div>
 
         <div className="space-y-2">

@@ -1,13 +1,21 @@
 import { useEffect } from 'react';
+import { useDesignSettings } from '@/hooks/useDesignSettings';
+import { useAuth } from '@/context/AuthContext';
 
 /**
  * Site-wide image and content protection.
- * - Disables right-click, drag, selection, copy on images
- * - Blocks DevTools shortcuts (dissuasive only)
- * - Combines with global CSS rules in index.css
+ * Configurable via design_settings.securityOverlay (blockPrintScreen, disableRightClick).
+ * Disabled entirely for super-admins.
  */
 export function ImageProtection() {
+  const { data: settings } = useDesignSettings();
+  const { isAdmin } = useAuth();
+  const cfg = (settings as any)?.securityOverlay ?? {};
+  const disableRightClick = cfg.disableRightClick !== false;
+  const blockPrintScreen = cfg.blockPrintScreen !== false;
+
   useEffect(() => {
+    if (isAdmin) return;
     const isInteractive = (el: EventTarget | null): boolean => {
       if (!(el instanceof HTMLElement)) return false;
       return !!el.closest('input, textarea, [contenteditable="true"], [data-allow-interact]');
@@ -59,12 +67,16 @@ export function ImageProtection() {
       }
     };
 
-    document.addEventListener('contextmenu', onContextMenu);
-    document.addEventListener('dragstart', onDragStart);
-    document.addEventListener('copy', onCopy);
-    document.addEventListener('selectstart', onSelectStart);
-    document.addEventListener('keydown', onKey);
-    document.addEventListener('keyup', onScreenshotKey);
+    if (disableRightClick) {
+      document.addEventListener('contextmenu', onContextMenu);
+      document.addEventListener('dragstart', onDragStart);
+      document.addEventListener('copy', onCopy);
+      document.addEventListener('selectstart', onSelectStart);
+      document.addEventListener('keydown', onKey);
+    }
+    if (blockPrintScreen) {
+      document.addEventListener('keyup', onScreenshotKey);
+    }
 
     return () => {
       document.removeEventListener('contextmenu', onContextMenu);
@@ -75,7 +87,7 @@ export function ImageProtection() {
       document.removeEventListener('keyup', onScreenshotKey);
       removeBlur();
     };
-  }, []);
+  }, [isAdmin, disableRightClick, blockPrintScreen]);
 
   return null;
 }

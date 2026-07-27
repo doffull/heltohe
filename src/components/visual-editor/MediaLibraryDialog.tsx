@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,17 +9,24 @@ import { Loader2, Upload, Check, Search } from 'lucide-react';
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelect: (url: string) => void;
+  onSelect?: (url: string) => void;
+  onSelectMulti?: (urls: string[]) => void;
   accept?: 'image' | 'video' | 'all';
   title?: string;
+  multi?: boolean;
 }
 
-export function MediaLibraryDialog({ open, onOpenChange, onSelect, accept = 'image', title = 'Médiathèque' }: Props) {
+export function MediaLibraryDialog({ open, onOpenChange, onSelect, onSelectMulti, accept = 'image', title = 'Médiathèque', multi = false }: Props) {
   const { data: media = [], isLoading } = useMediaLibrary();
   const upload = useUploadMedia();
   const inputRef = useRef<HTMLInputElement>(null);
   const [q, setQ] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
+  const [selectedMany, setSelectedMany] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!open) { setSelected(null); setSelectedMany([]); }
+  }, [open]);
 
   const filtered = media.filter((f) => {
     if (accept === 'image' && !f.type.startsWith('image/')) return false;
@@ -28,16 +35,30 @@ export function MediaLibraryDialog({ open, onOpenChange, onSelect, accept = 'ima
     return true;
   });
 
-  const handleUpload = async (file: File) => {
-    const uploaded = await upload.mutateAsync(file);
-    if (uploaded?.url) setSelected(uploaded.url);
+  const handleUpload = async (files: FileList | null) => {
+    if (!files) return;
+    for (const file of Array.from(files)) {
+      const uploaded = await upload.mutateAsync(file);
+      if (uploaded?.url) {
+        if (multi) setSelectedMany(prev => Array.from(new Set([...prev, uploaded.url])));
+        else setSelected(uploaded.url);
+      }
+    }
+  };
+
+  const toggleMany = (url: string) => {
+    setSelectedMany(prev => prev.includes(url) ? prev.filter(u => u !== url) : [...prev, url]);
   };
 
   const confirmSelection = () => {
-    if (!selected) return;
-    onSelect(selected);
+    if (multi) {
+      if (!selectedMany.length) return;
+      onSelectMulti?.(selectedMany);
+    } else {
+      if (!selected) return;
+      onSelect?.(selected);
+    }
     onOpenChange(false);
-    setSelected(null);
   };
 
   return (
@@ -45,7 +66,9 @@ export function MediaLibraryDialog({ open, onOpenChange, onSelect, accept = 'ima
       <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>Choisissez un fichier existant ou téléversez-en un nouveau.</DialogDescription>
+          <DialogDescription>
+            {multi ? 'Sélectionnez plusieurs fichiers ou téléversez-en de nouveaux.' : 'Choisissez un fichier existant ou téléversez-en un nouveau.'}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex items-center gap-2 pb-2 border-b">
@@ -56,9 +79,10 @@ export function MediaLibraryDialog({ open, onOpenChange, onSelect, accept = 'ima
           <input
             ref={inputRef}
             type="file"
+            multiple={multi}
             accept={accept === 'video' ? 'video/*' : accept === 'image' ? 'image/*' : 'image/*,video/*'}
             className="hidden"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f); e.currentTarget.value = ''; }}
+            onChange={(e) => { handleUpload(e.target.files); e.currentTarget.value = ''; }}
           />
           <Button size="sm" variant="outline" onClick={() => inputRef.current?.click()} disabled={upload.isPending}>
             {upload.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Upload className="h-3.5 w-3.5 mr-1.5" />}
@@ -74,13 +98,16 @@ export function MediaLibraryDialog({ open, onOpenChange, onSelect, accept = 'ima
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
             {filtered.map((f) => {
               const isVideo = f.type.startsWith('video/');
-              const isSelected = selected === f.url;
+              const isSelected = multi ? selectedMany.includes(f.url) : selected === f.url;
               return (
                 <button
                   key={f.id}
                   type="button"
-                  onClick={() => setSelected(f.url)}
-                  onDoubleClick={() => { onSelect(f.url); onOpenChange(false); setSelected(null); }}
+                  onClick={() => multi ? toggleMany(f.url) : setSelected(f.url)}
+                  onDoubleClick={() => {
+                    if (multi) { toggleMany(f.url); }
+                    else { onSelect?.(f.url); onOpenChange(false); }
+                  }}
                   className={`relative aspect-square rounded overflow-hidden border-2 transition ${isSelected ? 'border-primary ring-2 ring-primary/30' : 'border-border hover:border-primary/50'}`}
                   title={f.name}
                 >
@@ -101,9 +128,16 @@ export function MediaLibraryDialog({ open, onOpenChange, onSelect, accept = 'ima
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 pt-3 border-t">
-          <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>Annuler</Button>
-          <Button size="sm" onClick={confirmSelection} disabled={!selected}>Sélectionner</Button>
+        <div className="flex justify-between items-center gap-2 pt-3 border-t">
+          <span className="text-xs text-muted-foreground">
+            {multi ? `${selectedMany.length} sélectionné(s)` : ''}
+          </span>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>Annuler</Button>
+            <Button size="sm" onClick={confirmSelection} disabled={multi ? selectedMany.length === 0 : !selected}>
+              {multi ? `Ajouter (${selectedMany.length})` : 'Sélectionner'}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

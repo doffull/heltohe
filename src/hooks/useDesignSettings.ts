@@ -137,7 +137,13 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     voiceCommandEnabled: db.voice_command_enabled !== null && db.voice_command_enabled !== undefined ? (db.voice_command_enabled as boolean) : true,
     voiceOnboardingHint: db.voice_onboarding_hint !== null && db.voice_onboarding_hint !== undefined ? (db.voice_onboarding_hint as boolean) : true,
     colorDisplayMode: ((db.color_display_mode as string) || base.colorDisplayMode || 'swatches') as 'swatches' | 'images',
-  };
+    // Piggyback fields on settings_json
+    securityOverlay: ((db.settings_json as any)?.securityOverlay) ?? {
+      enabled: true, text: '', showEmail: true, opacity: 0.05, angle: -30, density: 60,
+      color: 'currentColor', blockPrintScreen: true, disableRightClick: true,
+    },
+    productGridLayout: ((db.settings_json as any)?.productGridLayout) ?? 'classic',
+  } as DesignSettings;
 }
 
 // Map DesignSettings → DB row (only columns that exist in the table)
@@ -257,6 +263,10 @@ function settingsToDb(s: DesignSettings) {
     voice_command_enabled: (s as any).voiceCommandEnabled ?? true,
     voice_onboarding_hint: (s as any).voiceOnboardingHint ?? true,
     color_display_mode: s.colorDisplayMode ?? 'swatches',
+    settings_json: {
+      securityOverlay: (s as any).securityOverlay ?? null,
+      productGridLayout: (s as any).productGridLayout ?? 'classic',
+    } as unknown as Json,
   };
 }
 
