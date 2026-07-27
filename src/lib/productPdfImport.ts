@@ -1,8 +1,14 @@
 import { PDFDocument } from 'pdf-lib';
 import { supabase } from '@/integrations/supabase/client';
 
-const MAX_PAGES_PER_BATCH = 6;
-const MAX_BATCH_BYTES = 7 * 1024 * 1024;
+const MAX_PAGES_PER_BATCH = 4;
+const MAX_BATCH_BYTES = 6 * 1024 * 1024;
+
+export interface ImportProgress {
+  batchIndex: number;
+  totalBatches: number;
+  productsSoFar: number;
+}
 
 export interface ParsedCatalogProduct {
   name?: string;
