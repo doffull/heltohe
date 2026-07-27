@@ -41,8 +41,7 @@ function jsonResponse(status: number, body: any, extraHeaders: Record<string, st
 /** Normalize legacy `google/gemini-*` model ids to the current OpenAI default. */
 function normalizeModel(m?: string): string {
   if (!m) return DEFAULT_MODEL;
-  if (m.startsWith("openai/")) return m;
-  // Any google/* or bare gemini-* → route to OpenAI GPT.
+  if (m.startsWith("openai/") || m.startsWith("google/")) return m;
   return DEFAULT_MODEL;
 }
 
