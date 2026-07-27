@@ -13,7 +13,7 @@ const corsHeaders = {
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
 // Multimodal fallback (sends the raw PDF to the AI) is memory-heavy: only
 // allow it for small PDFs, otherwise we hit WORKER_RESOURCE_LIMIT.
-const MAX_MULTIMODAL_SIZE = 6 * 1024 * 1024;
+const MAX_MULTIMODAL_SIZE = 18 * 1024 * 1024;
 const CHUNK_CHARS = 12000;
 const MAX_CHUNKS = 20;
 const AI_MODEL = "openai/gpt-5-mini";
@@ -168,7 +168,7 @@ serve(async (req) => {
     if (rawText.length < 200 && fileType === "pdf") {
       if (fileBase64.length > MAX_MULTIMODAL_SIZE) {
         return new Response(JSON.stringify({
-          error: "PDF scanné trop volumineux pour l'analyse image (>4 Mo). Exportez un PDF texte (pas une image scannée) ou réduisez-le.",
+          error: "PDF scanné trop volumineux pour l'analyse image (>13 Mo). Exportez un PDF texte (pas une image scannée) ou réduisez-le.",
         }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       console.log("Falling back to multimodal PDF (scanned document detected)");
