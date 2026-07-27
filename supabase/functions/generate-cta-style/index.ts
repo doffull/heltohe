@@ -1,3 +1,4 @@
+import { callGemini } from "../_shared/gemini.ts";
 // Generate a CTA style preset (variant + colors + size + position) using Lovable AI
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

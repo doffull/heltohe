@@ -1,3 +1,4 @@
+import { callGemini } from "../_shared/gemini.ts";
 // Generate hero slide text (title/subtitle/description/CTA) using Lovable AI
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
