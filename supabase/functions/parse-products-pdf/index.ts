@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { extractText } from "https://esm.sh/unpdf@0.12.1";
+import { extractText, getDocumentProxy, renderPageAsImage } from "https://esm.sh/unpdf@0.12.1";
+// Pure-JS image codec (no native deps) used to downscale & re-encode
+// rendered PDF pages as JPEG before shipping them to the AI.
+import { Image } from "https://deno.land/x/imagescript@1.2.17/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,9 +14,16 @@ const corsHeaders = {
 // 20 MB base64 (~15 MB raw file). Edge functions cap memory ~150 MB and
 // unpdf + base64 decode easily double the payload footprint.
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
-// Multimodal fallback (sends the raw PDF to the AI) is memory-heavy: only
-// allow it for small PDFs, otherwise we hit WORKER_RESOURCE_LIMIT.
+// Raw-PDF multimodal fallback: kept only as a last resort when we cannot
+// rasterize+recompress pages ourselves.
 const MAX_MULTIMODAL_SIZE = 18 * 1024 * 1024;
+// Image-page recompression targets: keep each page well under provider
+// limits (~5 MB per image) and small enough to batch several per call.
+const PAGE_RENDER_SCALE = 1.5;      // pdf.js viewport scale before downscale
+const PAGE_MAX_DIM = 1400;          // px, longest edge after downscale
+const PAGE_JPEG_QUALITY = 72;       // 0-100 (ImageScript scale)
+const PAGE_BATCH_SIZE = 3;          // pages per AI call
+const MAX_RENDER_PAGES = 30;        // hard cap to bound cost/memory
 const CHUNK_CHARS = 12000;
 const MAX_CHUNKS = 20;
 const AI_MODEL = "openai/gpt-5-mini";
