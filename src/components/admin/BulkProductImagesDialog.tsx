@@ -21,8 +21,9 @@ type Match = {
   file: File;
   previewUrl: string;
   product: Product | null;
-  matchedBy: 'sku' | 'name' | 'none';
-  index: number; // index in filename e.g. product-2.jpg → 2 (for gallery ordering)
+  matchedBy: 'folder' | 'sku' | 'name' | 'none';
+  index: number; // ordering within the product's gallery
+  folder: string | null;
 };
 
 const IMG_EXT = /\.(jpe?g|png|webp|gif|avif|heic)$/i;
@@ -36,6 +37,15 @@ function parseFileName(name: string): { base: string; index: number } {
   const m = stripped.match(/^(.*?)-(\d+)$/);
   if (m) return { base: m[1], index: parseInt(m[2], 10) };
   return { base: stripped, index: 0 };
+}
+
+function getFolderName(file: File): string | null {
+  const rel = (file as any).webkitRelativePath as string | undefined;
+  if (!rel) return null;
+  const parts = rel.split('/').filter(Boolean);
+  if (parts.length < 2) return null;
+  // Use the deepest folder (closest to the file) — this is the product folder
+  return parts[parts.length - 2];
 }
 
 async function uploadToStorage(file: File): Promise<string | null> {
@@ -70,23 +80,28 @@ export function BulkProductImagesDialog({ open, onOpenChange, products }: Props)
     if (!files) return;
     const arr: Match[] = Array.from(files)
       .filter(f => IMG_EXT.test(f.name))
-      .map(f => {
+      .map((f, i) => {
+        const folder = getFolderName(f);
         const { base, index } = parseFileName(f.name);
-        const key = slugify(base);
-        let product: Product | null = productIndex.bySku.get(key) ?? null;
-        let matchedBy: Match['matchedBy'] = product ? 'sku' : 'none';
+        // If a folder is present, its name drives matching and file order drives gallery order
+        const matchKey = folder ? slugify(folder) : slugify(base);
+        let product: Product | null = productIndex.bySku.get(matchKey) ?? null;
+        let matchedBy: Match['matchedBy'] = product ? (folder ? 'folder' : 'sku') : 'none';
         if (!product) {
-          // Try name variants: full slug or substring match
-          product = productIndex.byName.get(key) ?? null;
-          if (product) matchedBy = 'name';
+          product = productIndex.byName.get(matchKey) ?? null;
+          if (product) matchedBy = folder ? 'folder' : 'name';
           else {
-            // fallback substring
             for (const [nSlug, p] of productIndex.byName.entries()) {
-              if (key.includes(nSlug) || nSlug.includes(key)) { product = p; matchedBy = 'name'; break; }
+              if (matchKey.includes(nSlug) || nSlug.includes(matchKey)) {
+                product = p;
+                matchedBy = folder ? 'folder' : 'name';
+                break;
+              }
             }
           }
         }
-        return { file: f, previewUrl: URL.createObjectURL(f), product, matchedBy, index };
+        const ordering = folder ? i : index;
+        return { file: f, previewUrl: URL.createObjectURL(f), product, matchedBy, index: ordering, folder };
       });
     setMatches(arr);
   };
@@ -173,24 +188,41 @@ export function BulkProductImagesDialog({ open, onOpenChange, products }: Props)
         <DialogHeader>
           <DialogTitle>Importer des images produits en masse</DialogTitle>
           <DialogDescription>
-            Nommez vos fichiers avec le SKU ou le nom du produit (ex : <code>IMPERIAL.jpg</code>, <code>doudoune-hiver-2.jpg</code>).
-            La correspondance est automatique. Ajoutez <code>-2</code>, <code>-3</code>… pour ordonner la galerie.
+            <strong>Méthode simple :</strong> importez un ou plusieurs <em>dossiers</em> nommés d'après le produit (ex : <code>IMPERIAL/</code>). Toutes les images qu'ils contiennent seront attribuées au produit correspondant, dans l'ordre du dossier.
+            <br />
+            <strong>Ou :</strong> importez des images nommées avec le SKU/nom du produit (ex : <code>IMPERIAL.jpg</code>, <code>imperial-2.jpg</code>).
           </DialogDescription>
         </DialogHeader>
 
         {matches.length === 0 ? (
-          <label className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-10 cursor-pointer hover:bg-muted/30 transition">
-            <Upload className="h-10 w-10 text-muted-foreground mb-3" />
-            <p className="text-sm font-medium">Cliquez ou glissez plusieurs images ici</p>
-            <p className="text-xs text-muted-foreground mt-1">JPG, PNG, WEBP · aucune limite pratique de nombre</p>
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => handleFiles(e.target.files)}
-            />
-          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-8 cursor-pointer hover:bg-muted/30 transition">
+              <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+              <p className="text-sm font-medium">Importer des dossiers</p>
+              <p className="text-[11px] text-muted-foreground mt-1 text-center">Un dossier = un produit.<br/>Ex : <code>IMPERIAL/</code> → produit Imperial</p>
+              <input
+                type="file"
+                multiple
+                // @ts-expect-error non-standard but widely supported
+                webkitdirectory=""
+                directory=""
+                className="hidden"
+                onChange={(e) => handleFiles(e.target.files)}
+              />
+            </label>
+            <label className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-8 cursor-pointer hover:bg-muted/30 transition">
+              <ImageIcon className="h-8 w-8 text-muted-foreground mb-2" />
+              <p className="text-sm font-medium">Importer des images</p>
+              <p className="text-[11px] text-muted-foreground mt-1 text-center">Fichiers nommés d'après le SKU/produit.<br/>JPG, PNG, WEBP</p>
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handleFiles(e.target.files)}
+              />
+            </label>
+          </div>
         ) : (
           <>
             <div className="grid gap-3 sm:grid-cols-3">
@@ -228,7 +260,9 @@ export function BulkProductImagesDialog({ open, onOpenChange, products }: Props)
                 <div key={i} className="flex items-center gap-2 text-xs">
                   <img src={m.previewUrl} alt="" className="w-10 h-10 rounded object-cover" />
                   <div className="flex-1 min-w-0">
-                    <p className="truncate font-mono">{m.file.name}</p>
+                    <p className="truncate font-mono">
+                      {m.folder && <span className="text-primary">{m.folder}/</span>}{m.file.name}
+                    </p>
                     {m.product ? (
                       <p className="text-green-500 truncate flex items-center gap-1">
                         <Check className="h-3 w-3" /> {m.product.name} <span className="text-muted-foreground">({m.matchedBy})</span>
