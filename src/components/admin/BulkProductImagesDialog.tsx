@@ -80,23 +80,28 @@ export function BulkProductImagesDialog({ open, onOpenChange, products }: Props)
     if (!files) return;
     const arr: Match[] = Array.from(files)
       .filter(f => IMG_EXT.test(f.name))
-      .map(f => {
+      .map((f, i) => {
+        const folder = getFolderName(f);
         const { base, index } = parseFileName(f.name);
-        const key = slugify(base);
-        let product: Product | null = productIndex.bySku.get(key) ?? null;
-        let matchedBy: Match['matchedBy'] = product ? 'sku' : 'none';
+        // If a folder is present, its name drives matching and file order drives gallery order
+        const matchKey = folder ? slugify(folder) : slugify(base);
+        let product: Product | null = productIndex.bySku.get(matchKey) ?? null;
+        let matchedBy: Match['matchedBy'] = product ? (folder ? 'folder' : 'sku') : 'none';
         if (!product) {
-          // Try name variants: full slug or substring match
-          product = productIndex.byName.get(key) ?? null;
-          if (product) matchedBy = 'name';
+          product = productIndex.byName.get(matchKey) ?? null;
+          if (product) matchedBy = folder ? 'folder' : 'name';
           else {
-            // fallback substring
             for (const [nSlug, p] of productIndex.byName.entries()) {
-              if (key.includes(nSlug) || nSlug.includes(key)) { product = p; matchedBy = 'name'; break; }
+              if (matchKey.includes(nSlug) || nSlug.includes(matchKey)) {
+                product = p;
+                matchedBy = folder ? 'folder' : 'name';
+                break;
+              }
             }
           }
         }
-        return { file: f, previewUrl: URL.createObjectURL(f), product, matchedBy, index };
+        const ordering = folder ? i : index;
+        return { file: f, previewUrl: URL.createObjectURL(f), product, matchedBy, index: ordering, folder };
       });
     setMatches(arr);
   };
