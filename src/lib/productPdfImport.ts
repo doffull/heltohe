@@ -110,6 +110,7 @@ export async function importProductsFromPdf(
       seen.add(key);
       products.push(product);
     }
+    onProgress?.({ batchIndex: index + 1, totalBatches: pdfParts.length, productsSoFar: products.length });
   }
 
   if (products.length === 0 && errors.length > 0) {
