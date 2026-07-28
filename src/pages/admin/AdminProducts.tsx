@@ -420,6 +420,12 @@ export default function AdminProducts() {
           <Button variant="outline" size="sm" onClick={() => setIsCsvDialogOpen(true)} className="chamfer-hud-sm text-xs">
             <Upload className="h-3.5 w-3.5 mr-1.5" />CSV
           </Button>
+          <Button variant="outline" size="sm" onClick={() => setIsQuickCsvOpen(true)} className="chamfer-hud-sm text-xs">
+            <FileText className="h-3.5 w-3.5 mr-1.5" />Prix/Stock CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportSelectedCsv} className="chamfer-hud-sm text-xs">
+            <Download className="h-3.5 w-3.5 mr-1.5" />Exporter
+          </Button>
           <Button size="sm" onClick={() => { setEditingProduct(null); setIsFormOpen(true); }} className="chamfer-hud-sm text-xs">
             <Plus className="h-3.5 w-3.5 mr-1.5" />Ajouter
           </Button>
