@@ -95,7 +95,7 @@ export default function Auth() {
       if (err instanceof z.ZodError) {
         toast({
           title: 'Erreur de validation',
-          description: err.errors[0].message,
+          description: err.issues[0].message,
           variant: 'destructive',
         });
         setIsLoading(false);
@@ -140,7 +140,7 @@ export default function Auth() {
       if (err instanceof z.ZodError) {
         toast({
           title: 'Erreur de validation',
-          description: err.errors[0].message,
+          description: err.issues[0].message,
           variant: 'destructive',
         });
         setIsLoading(false);
