@@ -6,7 +6,10 @@ export type Language = 'FR' | 'EN';
 export interface ColorOption {
   color: string;
   label: string;
+  /** Legacy single image — kept in sync with images[0] for backward compat. */
   image?: string;
+  /** All images for this variant (main = first). */
+  images?: string[];
 }
 
 export interface Product {
