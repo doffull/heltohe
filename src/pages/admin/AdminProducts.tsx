@@ -186,9 +186,9 @@ export default function AdminProducts() {
     }
   };
 
-  const startEditCell = (id: string, field: 'price' | 'sku' | 'category', currentValue: string | number) => {
+  const startEditCell = (id: string, field: 'price' | 'salePrice' | 'sku' | 'category', currentValue: string | number | null | undefined) => {
     setEditingCell({ id, field });
-    setEditingCellValue(String(currentValue ?? ''));
+    setEditingCellValue(currentValue === null || currentValue === undefined ? '' : String(currentValue));
   };
 
   const commitEditCell = async () => {
@@ -199,6 +199,14 @@ export default function AdminProducts() {
         const n = parseFloat(editingCellValue);
         if (!Number.isFinite(n) || n < 0) throw new Error('Prix invalide');
         await updateProduct.mutateAsync({ id, price: n });
+      } else if (field === 'salePrice') {
+        if (editingCellValue.trim() === '') {
+          await updateProduct.mutateAsync({ id, salePrice: undefined });
+        } else {
+          const n = parseFloat(editingCellValue);
+          if (!Number.isFinite(n) || n < 0) throw new Error('Prix promo invalide');
+          await updateProduct.mutateAsync({ id, salePrice: n });
+        }
       } else if (field === 'sku') {
         if (!editingCellValue.trim()) throw new Error('SKU vide');
         await updateProduct.mutateAsync({ id, sku: editingCellValue.trim() });
@@ -212,6 +220,30 @@ export default function AdminProducts() {
       setEditingCell(null);
     }
   };
+
+  const toggleActive = async (product: Product) => {
+    try {
+      await updateProduct.mutateAsync({ id: product.id, isActive: !((product as any).isActive ?? true) } as any);
+      toast({ title: 'Statut mis à jour' });
+    } catch { toast({ title: 'Erreur', variant: 'destructive' }); }
+  };
+
+  const exportSelectedCsv = () => {
+    const source = count > 0 ? filteredProducts.filter(p => selectedIds.has(p.id)) : filteredProducts;
+    if (source.length === 0) { toast({ title: 'Aucun produit à exporter', variant: 'destructive' }); return; }
+    const esc = (s: any) => `"${String(s ?? '').replace(/"/g, '""')}"`;
+    const header = 'sku,name,price,sale_price,stock,category,is_active\n';
+    const body = source.map(p => [
+      esc(p.sku), esc(p.name), p.price, p.salePrice ?? '', p.stock, esc(p.category), ((p as any).isActive ?? true) ? 1 : 0,
+    ].join(',')).join('\n');
+    const blob = new Blob([header + body], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `produits-${Date.now()}.csv`; a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: `${source.length} produit(s) exporté(s)` });
+  };
+
 
   const setLayout = async (layout: string) => {
     if (!designSettings) return;
