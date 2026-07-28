@@ -326,10 +326,17 @@ export function useSaveDesignSettings() {
   return useMutation({
     mutationFn: async (settings: DesignSettings) => {
       const payload = settingsToDb(settings);
-      (payload as any).updated_at = new Date().toISOString();
+      // Strip any temporary browser-only URLs (blob:/data:/file:) that would
+      // otherwise silently break the site after publish.
+      const stripped = JSON.parse(
+        JSON.stringify(payload, (_k, v) =>
+          typeof v === 'string' && /^(blob:|data:|file:)/i.test(v) ? null : v,
+        ),
+      );
+      stripped.updated_at = new Date().toISOString();
       const { error } = await supabase
         .from('design_settings')
-        .upsert(payload, { onConflict: 'settings_key' });
+        .upsert(stripped, { onConflict: 'settings_key' });
       if (error) throw error;
       // Update local cache immediately so any other tab/device picks up
       // the latest state on next mount without a stale flash.
