@@ -1761,6 +1761,38 @@ export type Database = {
           },
         ]
       }
+      product_category_order: {
+        Row: {
+          category_slug: string
+          created_at: string
+          position: number
+          product_id: string
+          updated_at: string
+        }
+        Insert: {
+          category_slug: string
+          created_at?: string
+          position?: number
+          product_id: string
+          updated_at?: string
+        }
+        Update: {
+          category_slug?: string
+          created_at?: string
+          position?: number
+          product_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_category_order_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_looks: {
         Row: {
           cover_image: string | null
