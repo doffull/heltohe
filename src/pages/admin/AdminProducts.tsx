@@ -556,7 +556,7 @@ export default function AdminProducts() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[700px]">
+            <table className="w-full min-w-[820px]">
               <thead className="bg-muted/50 border-b border-border">
                 <tr>
                   <th className="p-4 w-10"><Checkbox checked={allSelected} onCheckedChange={toggleAll} /></th>
@@ -564,7 +564,9 @@ export default function AdminProducts() {
                   <th className="text-left p-4 text-xs font-bold hud-text">SKU</th>
                   <th className="text-left p-4 text-xs font-bold hud-text">CATÉGORIE</th>
                   <th className="text-right p-4 text-xs font-bold hud-text">PRIX</th>
+                  <th className="text-right p-4 text-xs font-bold hud-text">PROMO</th>
                   <th className="text-right p-4 text-xs font-bold hud-text">STOCK</th>
+                  <th className="text-center p-4 text-xs font-bold hud-text">ACTIF</th>
                   <th className="text-right p-4 text-xs font-bold hud-text">ACTIONS</th>
                 </tr>
               </thead>
