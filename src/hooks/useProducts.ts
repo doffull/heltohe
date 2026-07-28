@@ -210,3 +210,25 @@ export function useBulkUpdateProducts() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['products'] }),
   });
 }
+
+// Apply row-specific updates (each row gets its own patch — needed for
+// percentage/relative adjustments where the resulting value depends on the
+// current row). Runs sequentially to keep RLS + audit predictable.
+export function useBulkUpdatePerRow() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (rows: { id: string; updates: Partial<Product> & { isActive?: boolean } }[]) => {
+      let success = 0;
+      const errors: string[] = [];
+      for (const r of rows) {
+        const payload = appToDbProduct(r.updates);
+        if (Object.keys(payload).length === 0) continue;
+        const { error } = await supabase.from('products').update(payload as any).eq('id', r.id);
+        if (error) errors.push(`${r.id}: ${error.message}`);
+        else success++;
+      }
+      return { success, errors };
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['products'] }),
+  });
+}

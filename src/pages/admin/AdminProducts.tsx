@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, useBulkDeleteProducts, useBulkUpdateProducts } from '@/hooks/useProducts';
+import { BulkEditDialog } from '@/components/admin/BulkEditDialog';
+import { QuickPriceStockImportDialog } from '@/components/admin/QuickPriceStockImportDialog';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
 import { useProductLooks, useCreateProductLook, useUpdateProductLook, useDeleteProductLook, ProductLook } from '@/hooks/useProductLooks';
 import { Product } from '@/types';
@@ -14,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Plus, Search, Pencil, Trash2, MoreHorizontal, Package, Upload, FileText, X, Check, Filter, Wand2, Copy, Tag, DollarSign, Archive, Layers2, Boxes, RefreshCw, Images, LayoutGrid
+  Plus, Search, Pencil, Trash2, MoreHorizontal, Package, Upload, Download, FileText, X, Check, Filter, Wand2, Copy, Tag, DollarSign, Archive, Layers2, Boxes, RefreshCw, Images, LayoutGrid
 } from 'lucide-react';
 import { ImportMockupDialog } from '@/components/admin/ImportMockupDialog';
 import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
@@ -81,14 +83,16 @@ export default function AdminProducts() {
   const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
   const [isCsvDialogOpen, setIsCsvDialogOpen] = useState(false);
   const [isBulkImagesOpen, setIsBulkImagesOpen] = useState(false);
+  const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
+  const [isQuickCsvOpen, setIsQuickCsvOpen] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [extractedProducts, setExtractedProducts] = useState<ExtractedProduct[]>([]);
   const [isImporting, setIsImporting] = useState(false);
   // Inline stock edit
   const [editingStockId, setEditingStockId] = useState<string | null>(null);
   const [editingStockValue, setEditingStockValue] = useState<number>(0);
-  // Inline field edit (price / sku / category)
-  const [editingCell, setEditingCell] = useState<{ id: string; field: 'price' | 'sku' | 'category' } | null>(null);
+  // Inline field edit (price / salePrice / sku / category)
+  const [editingCell, setEditingCell] = useState<{ id: string; field: 'price' | 'salePrice' | 'sku' | 'category' } | null>(null);
   const [editingCellValue, setEditingCellValue] = useState<string>('');
   const { data: designSettings } = useDesignSettings();
   const saveDesign = useSaveDesignSettings();
@@ -182,9 +186,9 @@ export default function AdminProducts() {
     }
   };
 
-  const startEditCell = (id: string, field: 'price' | 'sku' | 'category', currentValue: string | number) => {
+  const startEditCell = (id: string, field: 'price' | 'salePrice' | 'sku' | 'category', currentValue: string | number | null | undefined) => {
     setEditingCell({ id, field });
-    setEditingCellValue(String(currentValue ?? ''));
+    setEditingCellValue(currentValue === null || currentValue === undefined ? '' : String(currentValue));
   };
 
   const commitEditCell = async () => {
@@ -195,6 +199,14 @@ export default function AdminProducts() {
         const n = parseFloat(editingCellValue);
         if (!Number.isFinite(n) || n < 0) throw new Error('Prix invalide');
         await updateProduct.mutateAsync({ id, price: n });
+      } else if (field === 'salePrice') {
+        if (editingCellValue.trim() === '') {
+          await updateProduct.mutateAsync({ id, salePrice: undefined });
+        } else {
+          const n = parseFloat(editingCellValue);
+          if (!Number.isFinite(n) || n < 0) throw new Error('Prix promo invalide');
+          await updateProduct.mutateAsync({ id, salePrice: n });
+        }
       } else if (field === 'sku') {
         if (!editingCellValue.trim()) throw new Error('SKU vide');
         await updateProduct.mutateAsync({ id, sku: editingCellValue.trim() });
@@ -208,6 +220,30 @@ export default function AdminProducts() {
       setEditingCell(null);
     }
   };
+
+  const toggleActive = async (product: Product) => {
+    try {
+      await updateProduct.mutateAsync({ id: product.id, isActive: !((product as any).isActive ?? true) } as any);
+      toast({ title: 'Statut mis à jour' });
+    } catch { toast({ title: 'Erreur', variant: 'destructive' }); }
+  };
+
+  const exportSelectedCsv = () => {
+    const source = count > 0 ? filteredProducts.filter(p => selectedIds.has(p.id)) : filteredProducts;
+    if (source.length === 0) { toast({ title: 'Aucun produit à exporter', variant: 'destructive' }); return; }
+    const esc = (s: any) => `"${String(s ?? '').replace(/"/g, '""')}"`;
+    const header = 'sku,name,price,sale_price,stock,category,is_active\n';
+    const body = source.map(p => [
+      esc(p.sku), esc(p.name), p.price, p.salePrice ?? '', p.stock, esc(p.category), ((p as any).isActive ?? true) ? 1 : 0,
+    ].join(',')).join('\n');
+    const blob = new Blob([header + body], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `produits-${Date.now()}.csv`; a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: `${source.length} produit(s) exporté(s)` });
+  };
+
 
   const setLayout = async (layout: string) => {
     if (!designSettings) return;
@@ -384,6 +420,12 @@ export default function AdminProducts() {
           <Button variant="outline" size="sm" onClick={() => setIsCsvDialogOpen(true)} className="chamfer-hud-sm text-xs">
             <Upload className="h-3.5 w-3.5 mr-1.5" />CSV
           </Button>
+          <Button variant="outline" size="sm" onClick={() => setIsQuickCsvOpen(true)} className="chamfer-hud-sm text-xs">
+            <FileText className="h-3.5 w-3.5 mr-1.5" />Prix/Stock CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportSelectedCsv} className="chamfer-hud-sm text-xs">
+            <Download className="h-3.5 w-3.5 mr-1.5" />Exporter
+          </Button>
           <Button size="sm" onClick={() => { setEditingProduct(null); setIsFormOpen(true); }} className="chamfer-hud-sm text-xs">
             <Plus className="h-3.5 w-3.5 mr-1.5" />Ajouter
           </Button>
@@ -483,40 +525,17 @@ export default function AdminProducts() {
 
       {/* Bulk Actions */}
       {someSelected && (
-        <div className="chamfer-hud bg-primary/10 border border-primary/30 p-4 space-y-3">
-          <div className="flex items-center justify-between">
+        <div className="chamfer-hud bg-primary/10 border border-primary/30 p-3 flex flex-wrap items-center gap-2 justify-between">
+          <div className="flex items-center gap-3">
             <span className="text-sm font-bold hud-text">{count} PRODUIT(S) SÉLECTIONNÉ(S)</span>
             <Button variant="ghost" size="sm" onClick={clear} className="h-7 text-xs"><X className="h-3 w-3 mr-1" />Désélectionner</Button>
           </div>
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="flex-1 min-w-[140px]">
-              <label className="text-[10px] text-muted-foreground hud-text block mb-1">CATÉGORIE</label>
-              <Select value={bulkCategory} onValueChange={setBulkCategory}>
-                <SelectTrigger className="h-8 text-xs bg-background/60">
-                  <Tag className="h-3 w-3 mr-1" /><SelectValue placeholder="Inchangée" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__unchanged__">Inchangée</SelectItem>
-                  {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex-1 min-w-[110px]">
-              <label className="text-[10px] text-muted-foreground hud-text block mb-1">PRIX (€)</label>
-              <div className="relative">
-                <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                <Input value={bulkPrice} onChange={e => setBulkPrice(e.target.value)} type="number" min="0" step="0.01" placeholder="Inchangé" className="h-8 text-xs pl-7 bg-background/60" />
-              </div>
-            </div>
-            <div className="flex-1 min-w-[110px]">
-              <label className="text-[10px] text-muted-foreground hud-text block mb-1">STOCK</label>
-              <div className="relative">
-                <Archive className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                <Input value={bulkStock} onChange={e => setBulkStock(e.target.value)} type="number" min="0" placeholder="Inchangé" className="h-8 text-xs pl-7 bg-background/60" />
-              </div>
-            </div>
-            <Button size="sm" onClick={handleBulkApply} disabled={bulkUpdate.isPending} className="h-8 text-xs chamfer-hud-sm">
-              <Check className="h-3 w-3 mr-1" />Appliquer
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" onClick={() => setIsBulkEditOpen(true)} className="h-8 text-xs chamfer-hud-sm">
+              <Wand2 className="h-3 w-3 mr-1" />Édition en masse
+            </Button>
+            <Button size="sm" variant="outline" onClick={exportSelectedCsv} className="h-8 text-xs chamfer-hud-sm">
+              <Download className="h-3 w-3 mr-1" />Exporter sélection
             </Button>
             <Button variant="destructive" size="sm" onClick={handleBulkDelete} disabled={bulkDelete.isPending} className="h-8 text-xs chamfer-hud-sm">
               <Trash2 className="h-3 w-3 mr-1" />Supprimer
@@ -524,6 +543,7 @@ export default function AdminProducts() {
           </div>
         </div>
       )}
+
 
       {/* Table */}
       <div className="chamfer-hud bg-card/50 overflow-hidden">
@@ -536,7 +556,7 @@ export default function AdminProducts() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[700px]">
+            <table className="w-full min-w-[820px]">
               <thead className="bg-muted/50 border-b border-border">
                 <tr>
                   <th className="p-4 w-10"><Checkbox checked={allSelected} onCheckedChange={toggleAll} /></th>
@@ -544,7 +564,9 @@ export default function AdminProducts() {
                   <th className="text-left p-4 text-xs font-bold hud-text">SKU</th>
                   <th className="text-left p-4 text-xs font-bold hud-text">CATÉGORIE</th>
                   <th className="text-right p-4 text-xs font-bold hud-text">PRIX</th>
+                  <th className="text-right p-4 text-xs font-bold hud-text">PROMO</th>
                   <th className="text-right p-4 text-xs font-bold hud-text">STOCK</th>
+                  <th className="text-center p-4 text-xs font-bold hud-text">ACTIF</th>
                   <th className="text-right p-4 text-xs font-bold hud-text">ACTIONS</th>
                 </tr>
               </thead>
@@ -615,21 +637,34 @@ export default function AdminProducts() {
                           onKeyDown={e => { if (e.key === 'Enter') commitEditCell(); if (e.key === 'Escape') setEditingCell(null); }}
                           className="w-20 h-7 text-xs text-right border border-primary rounded px-1 bg-background"
                         />
-                      ) : product.salePrice ? (
-                        <div
-                          className="cursor-pointer hover:underline decoration-dotted"
-                          title="Cliquer pour modifier le prix"
-                          onClick={() => startEditCell(product.id, 'price', product.price)}
-                        >
-                          <span className="text-sm font-bold text-primary">{product.salePrice}€</span>
-                          <span className="text-xs line-through text-muted-foreground ml-2">{product.price}€</span>
-                        </div>
                       ) : (
                         <span
                           className="text-sm font-bold cursor-pointer hover:underline decoration-dotted"
                           title="Cliquer pour modifier"
                           onClick={() => startEditCell(product.id, 'price', product.price)}
                         >{product.price}€</span>
+                      )}
+                    </td>
+                    <td className="p-4 text-right">
+                      {editingCell?.id === product.id && editingCell.field === 'salePrice' ? (
+                        <input
+                          autoFocus
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          value={editingCellValue}
+                          onChange={e => setEditingCellValue(e.target.value)}
+                          onBlur={commitEditCell}
+                          onKeyDown={e => { if (e.key === 'Enter') commitEditCell(); if (e.key === 'Escape') setEditingCell(null); }}
+                          placeholder="—"
+                          className="w-20 h-7 text-xs text-right border border-primary rounded px-1 bg-background"
+                        />
+                      ) : (
+                        <span
+                          className={`text-sm cursor-pointer hover:underline decoration-dotted ${product.salePrice ? 'font-bold text-primary' : 'text-muted-foreground'}`}
+                          title="Cliquer pour modifier le prix promo (vider = pas de promo)"
+                          onClick={() => startEditCell(product.id, 'salePrice', product.salePrice ?? '')}
+                        >{product.salePrice ? `${product.salePrice}€` : '—'}</span>
                       )}
                     </td>
                     <td className="p-4 text-right">
@@ -656,6 +691,15 @@ export default function AdminProducts() {
                           {product.stock}
                         </span>
                       )}
+                    </td>
+                    <td className="p-4 text-center">
+                      <button
+                        onClick={() => toggleActive(product)}
+                        title="Cliquer pour activer/désactiver"
+                        className={`text-[10px] px-2 py-1 rounded font-bold ${((product as any).isActive ?? true) ? 'bg-green-500/20 text-green-500' : 'bg-muted text-muted-foreground'}`}
+                      >
+                        {((product as any).isActive ?? true) ? 'ACTIF' : 'INACTIF'}
+                      </button>
                     </td>
                     <td className="p-4 text-right">
                       <DropdownMenu>
@@ -916,6 +960,18 @@ export default function AdminProducts() {
       <WordPressSyncDialog open={isSyncDialogOpen} onOpenChange={setIsSyncDialogOpen} />
       <CsvImportDialog open={isCsvDialogOpen} onOpenChange={setIsCsvDialogOpen} />
       <BulkProductImagesDialog open={isBulkImagesOpen} onOpenChange={setIsBulkImagesOpen} products={products} />
+      <BulkEditDialog
+        open={isBulkEditOpen}
+        onOpenChange={setIsBulkEditOpen}
+        products={filteredProducts.filter(p => selectedIds.has(p.id))}
+        categories={categories}
+        onDone={clear}
+      />
+      <QuickPriceStockImportDialog
+        open={isQuickCsvOpen}
+        onOpenChange={setIsQuickCsvOpen}
+        products={products}
+      />
     </div>
   );
 }
