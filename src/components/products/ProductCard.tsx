@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Product } from '@/types';
 import { Badge } from '@/components/ui/badge';
+import { Star } from 'lucide-react';
+import { useReviewStats } from '@/hooks/useProductReviews';
 
 interface ProductCardProps {
   product: Product;
@@ -13,6 +15,7 @@ interface ProductCardProps {
 
 export function ProductCard({ product, onClick, onAddToCart, onNavigate, swatchStyle = 'round' }: ProductCardProps) {
   const [selectedColorIndex, setSelectedColorIndex] = useState<number | null>(null);
+  const { data: reviewStats } = useReviewStats(product.id);
   const hasDiscount = product.salePrice && product.salePrice < product.price;
   const isLowStock = product.stock <= 5 && product.stock > 0;
   const isOutOfStock = product.stock === 0;
@@ -137,6 +140,15 @@ export function ProductCard({ product, onClick, onAddToCart, onNavigate, swatchS
           <p className="text-[10px] text-muted-foreground truncate">
             {product.subtitle}
           </p>
+        )}
+
+        {/* Rating */}
+        {reviewStats && reviewStats.count > 0 && (
+          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+            <span className="font-medium text-foreground">{reviewStats.average.toFixed(1)}</span>
+            <span>({reviewStats.count})</span>
+          </div>
         )}
 
         {/* Price */}
