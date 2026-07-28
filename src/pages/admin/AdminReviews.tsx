@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Check, X, Trash2, MessageSquare, Star, BadgeCheck } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useDesignSettings } from '@/hooks/useDesignSettings';
+import { useDesignSettings, useSaveDesignSettings } from '@/hooks/useDesignSettings';
 
 type Row = {
   id: string;
@@ -32,7 +32,13 @@ type Row = {
 
 export default function AdminReviews() {
   const { toast } = useToast();
-  const { settings, updateSettings, saving } = useDesignSettings() as any;
+  const { data: settings } = useDesignSettings();
+  const saveSettings = useSaveDesignSettings();
+  const updateSettings = (patch: any) => {
+    if (!settings) return;
+    saveSettings.mutate({ ...settings, ...patch } as any);
+  };
+  const saving = saveSettings.isPending;
   const [tab, setTab] = useState<'pending' | 'approved' | 'rejected' | 'config'>('pending');
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
