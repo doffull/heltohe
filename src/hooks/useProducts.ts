@@ -156,7 +156,7 @@ export function useUpdateProduct() {
       const dbProduct = appToDbProduct(product);
       const { data, error } = await supabase
         .from('products')
-        .update(dbProduct)
+        .update(dbProduct as any)
         .eq('id', id)
         .select()
         .single();
