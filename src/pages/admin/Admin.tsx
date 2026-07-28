@@ -36,7 +36,8 @@ import {
   Store,
   LayoutTemplate,
   AlertTriangle,
-  Star
+  Star,
+  Plug
 
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
