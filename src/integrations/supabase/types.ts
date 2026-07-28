@@ -1794,6 +1794,104 @@ export type Database = {
         }
         Relationships: []
       }
+      product_review_votes: {
+        Row: {
+          created_at: string
+          id: string
+          review_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          review_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          review_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_review_votes_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "product_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_reviews: {
+        Row: {
+          admin_reply: string | null
+          admin_reply_at: string | null
+          comment: string
+          created_at: string
+          helpful_count: number
+          id: string
+          is_verified_purchase: boolean
+          order_id: string | null
+          product_id: string
+          rating: number
+          size_purchased: string | null
+          status: string
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_reply?: string | null
+          admin_reply_at?: string | null
+          comment: string
+          created_at?: string
+          helpful_count?: number
+          id?: string
+          is_verified_purchase?: boolean
+          order_id?: string | null
+          product_id: string
+          rating: number
+          size_purchased?: string | null
+          status?: string
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_reply?: string | null
+          admin_reply_at?: string | null
+          comment?: string
+          created_at?: string
+          helpful_count?: number
+          id?: string
+          is_verified_purchase?: boolean
+          order_id?: string | null
+          product_id?: string
+          rating?: number
+          size_purchased?: string | null
+          status?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_reviews_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_reviews_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_styles: {
         Row: {
           created_at: string
@@ -2930,6 +3028,7 @@ export type Database = {
     }
     Functions: {
       award_loyalty_points: { Args: { p_order_id: string }; Returns: Json }
+      can_user_review_product: { Args: { p_product_id: string }; Returns: Json }
       consume_order_stock: { Args: { p_order_id: string }; Returns: Json }
       find_user_by_email: {
         Args: { p_email: string }
@@ -2940,6 +3039,10 @@ export type Database = {
         }[]
       }
       get_newsletter_stats: { Args: never; Returns: Json }
+      get_product_review_stats: {
+        Args: { p_product_id: string }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2957,6 +3060,10 @@ export type Database = {
       mark_popup_converted: {
         Args: { p_popup_id: string; p_session_id: string }
         Returns: undefined
+      }
+      moderate_review: {
+        Args: { p_action: string; p_reply?: string; p_review_id: string }
+        Returns: Json
       }
       preview_promo_code: {
         Args: { p_code: string; p_subtotal: number }
@@ -2979,6 +3086,15 @@ export type Database = {
       spin_roulette:
         | { Args: { p_email?: string }; Returns: Json }
         | { Args: { p_email?: string; p_ip_hash?: string }; Returns: Json }
+      submit_product_review: {
+        Args: {
+          p_comment: string
+          p_product_id: string
+          p_rating: number
+          p_title: string
+        }
+        Returns: Json
+      }
       track_session_heartbeat: {
         Args: { p_session_id: string }
         Returns: undefined
@@ -2992,6 +3108,7 @@ export type Database = {
         }
         Returns: Json
       }
+      vote_review_helpful: { Args: { p_review_id: string }; Returns: Json }
     }
     Enums: {
       app_role:
