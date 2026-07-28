@@ -85,6 +85,19 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
   const [newColorLabel, setNewColorLabel] = useState('');
   const [aiBusy, setAiBusy] = useState<string | null>(null);
   const [showGalleryPicker, setShowGalleryPicker] = useState(false);
+  const [showMainPicker, setShowMainPicker] = useState(false);
+
+  const setAsMainImage = (url: string, index: number) => {
+    setFormData(prev => {
+      const previousMain = prev.image;
+      const newGallery = prev.galleryImages.filter((_, i) => i !== index);
+      if (previousMain && !newGallery.includes(previousMain)) {
+        newGallery.unshift(previousMain);
+      }
+      return { ...prev, image: url, galleryImages: newGallery.slice(0, 10) };
+    });
+    toast.success('Image principale mise à jour');
+  };
 
   // Generic helper for product-ai-helpers edge function
   const runProductAi = async (action: string, extra: Record<string, any> = {}) => {
