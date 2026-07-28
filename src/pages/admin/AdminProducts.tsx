@@ -50,6 +50,7 @@ interface ExtractedProduct {
   material?: string;
   sku: string;
   stock: number;
+  pageImages?: string[];
   selected: boolean;
 }
 
