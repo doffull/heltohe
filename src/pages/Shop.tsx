@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
+import { useOrderedProducts } from '@/hooks/useCategoryOrder';
 import { useCategories } from '@/hooks/useCategories';
 import { useDesignSettings } from '@/hooks/useDesignSettings';
 import { useCart } from '@/context/CartContext';
