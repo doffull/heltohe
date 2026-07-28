@@ -1,75 +1,54 @@
 ## Objectif
 
-Étendre l'édition en masse existante dans `/admin/produits` (actuellement limitée à catégorie + prix + stock uniformes) pour couvrir tous les champs demandés, avec ajustements avancés, édition inline directe dans le tableau, modale dédiée et import/export CSV rapide prix/stock.
+Lors de l'import PDF produits (`/admin/produits` → Importer PDF), extraire aussi les **images** de chaque page (jusqu'à 5 par produit) et les rattacher automatiquement au produit créé : la 1ʳᵉ comme image principale, les suivantes dans la galerie. Aujourd'hui les produits sont créés avec `/placeholder.svg`.
 
-## Ce qui existe déjà (à conserver)
+## Ce qui change
 
-- Sélection multiple via `useBulkSelection` + barre d'actions groupées.
-- Hooks `useBulkUpdateProducts` / `useBulkDeleteProducts`.
-- `CsvImportDialog` complet (import produits WooCommerce).
-- Édition inline stock via `InlineStockEditor` (sur AdminStock, pas sur AdminProducts).
+### 1. Edge Function `parse-products-pdf`
 
-## Ce qui sera ajouté
+Actuellement elle rasterise déjà chaque page en JPEG (mode `raster-compressed`) pour envoyer au modèle. On enrichit la réponse :
 
-### 1. Édition inline dans le tableau produits (`AdminProducts.tsx`)
+- Pour chaque page rasterisée on **conserve le JPEG** (déjà produit) au lieu de le jeter.
+- On demande au modèle, dans le prompt système, d'inclure pour chaque produit détecté le **numéro de page source** (`_pageIndex`) où il apparaît, en plus des champs actuels.
+- On upload chaque JPEG de page dans le bucket Storage `media` (déjà utilisé partout ailleurs) sous `pdf-import/<timestamp>/page-<n>.jpg`, service-role.
+- Réponse enrichie : chaque produit reçoit un champ `pageImages: string[]` = les URLs publiques des pages où il apparaît (déduit du `_pageIndex` — un produit peut apparaître sur 1 à N pages consécutives, on regroupe et on garde max 5 URLs).
+- Pour le mode texte (PDF vectoriel sans rastérisation), on rasterise quand même les pages en arrière-plan pour disposer d'images de secours, avec le même mapping page → produit basé sur `_pageIndex` retourné par le modèle.
 
-Rendre directement modifiables au clic les cellules :
-- **Prix** et **prix promo** (double champ dans la cellule PRIX)
-- **Stock**
-- **SKU**
-- **Catégorie** (select)
-- **Actif/inactif** (toggle badge)
+Le mode "multimodal fallback" (envoi du PDF brut) reste sans images — cas rare, on garde le placeholder.
 
-Comportement : click → champ input, Enter/blur → mutation `updateProduct` (partielle, sans écraser la galerie grâce au patch `appToDbProduct` déjà en place). Feedback discret (spinner + toast). Un état local évite le flicker pendant la mutation.
+### 2. Client `src/lib/productPdfImport.ts`
 
-Ajout des colonnes manquantes dans l'en-tête : `PRIX PROMO`, `ACTIF`.
+- Propage le nouveau champ `pageImages` dans `ParsedCatalogProduct`.
+- Lors du merge des lots (dédup par SKU), fusionne les `pageImages` des lots (union, max 5).
 
-### 2. Modale d'édition en masse dédiée (`BulkEditDialog.tsx`)
+### 3. UI `AdminProducts.tsx` — aperçu et import
 
-Nouveau composant remplaçant la barre inline actuelle (bouton "Édition en masse" dans la barre d'actions). Contient pour chaque champ un sélecteur d'opération :
+- Dans le tableau d'aperçu des produits extraits, afficher une miniature (première `pageImages[0]`) et un compteur "N images".
+- Dans `handleImportSelected`, remplacer `image: '/placeholder.svg'` par :
+  - `image: p.pageImages?.[0] || '/placeholder.svg'`
+  - `galleryImages: p.pageImages?.slice(1, 5) || []`
 
-```text
-Prix        [ Inchangé | Fixer à X€ | +X€ | −X€ | +X% | −X% | Arrondir ]
-Prix promo  [ Inchangé | Fixer | +/−€ | +/−% | Supprimer ]
-Stock       [ Inchangé | Fixer | +X | −X | Mettre à 0 ]
-SKU         [ Inchangé | Préfixer | Suffixer | Remplacer texte ]
-Catégorie   [ Inchangée | Sélectionner ]
-Tags        [ Inchangés | Ajouter | Retirer | Remplacer ]
-Actif       [ Inchangé | Activer | Désactiver ]
-```
+### 4. Découpage local `productPdfImport.ts`
 
-Aperçu "Avant → Après" sur les 5 premiers produits sélectionnés avant validation. Application via `bulkUpdate.mutateAsync` en batch (calcul côté client, envoi ligne par ligne car les ajustements dépendent de la valeur actuelle).
-
-### 3. Import/Export CSV prix/stock rapide
-
-Deux boutons dans la barre d'outils AdminProducts :
-
-- **Exporter CSV (sélection ou tout)** : télécharge `sku,name,price,sale_price,stock,is_active` pour les produits filtrés/sélectionnés.
-- **Importer CSV rapide** : nouvelle modale `QuickPriceStockImportDialog.tsx` qui accepte un CSV avec colonnes `sku` + une ou plusieurs de `price,sale_price,stock,is_active`. Aperçu diff avant/après par ligne, puis upsert par SKU via `useBulkUpdateProducts` étendu (matching SKU → id).
-
-Cet outil est distinct de `CsvImportDialog` : il ne crée pas de produits, il met à jour uniquement les champs prix/stock/actif sur les SKU existants.
-
-### 4. Extension mineure du hook `useBulkUpdateProducts`
-
-Aujourd'hui il applique `updates` identiques à tous les IDs. On ajoute une variante `bulkUpdatePerRow(rows: {id, updates}[])` pour l'édition en masse avec ajustements (chaque produit ayant ses valeurs calculées).
+Chaque lot PDF est déjà découpé côté client (4 pages max). Le mapping `_pageIndex` sera **relatif au lot** côté Edge Function ; on convertit en URL absolue de page (l'upload donne une URL publique unique par page) donc pas de collision entre lots.
 
 ## Détails techniques
 
-- `appToDbProduct` (déjà partiel) garantit que la galerie et autres champs ne sont pas écrasés.
-- L'édition inline utilise `useUpdateProduct` existant.
-- Le CSV rapide réutilise `papaparse` déjà présent (`CsvImportDialog`).
-- Aucun changement de schéma DB nécessaire — colonnes visées existent déjà (`price`, `sale_price`, `stock`, `sku`, `category`, `is_active`, `tags`).
-- Sécurité : les mises à jour passent par les policies RLS existantes sur `products` (admin required).
-
-## Fichiers touchés
-
-- **Nouveau** `src/components/admin/BulkEditDialog.tsx`
-- **Nouveau** `src/components/admin/QuickPriceStockImportDialog.tsx`
-- **Modifié** `src/pages/admin/AdminProducts.tsx` : cellules inline, boutons export/import rapide, remplacement barre bulk par bouton ouvrant `BulkEditDialog`.
-- **Modifié** `src/hooks/useProducts.ts` : ajout `useBulkUpdatePerRow`.
+- Bucket : `media` (public, déjà utilisé — voir `BulkProductImagesDialog`, `InventoryProductDialog`).
+- Chemin : `pdf-import/<isoDate>/<batchId>/page-<n>.jpg`.
+- Taille : JPEG déjà compressé (~1100px, qualité 65, quelques centaines de Ko/page).
+- Cap : max 5 URLs par produit dans `pageImages` (1 image principale + 4 galerie).
+- Fallback : si upload storage échoue, on continue sans images (log warning), le produit sera importé avec placeholder.
+- Sécurité : upload via service-role dans l'Edge Function (déjà admin-gated).
 
 ## Hors périmètre
 
-- Pas de changement DB.
-- Pas d'ajout de webhooks/edge functions.
-- L'existant `CsvImportDialog` (import produits complets) reste inchangé.
+- Extraction fine des images individuelles **intégrées** dans le PDF (via parsing XObject) — trop fragile, on garde la stratégie "1 image = 1 page rendue", qui donne un rendu propre et cohérent des maquettes.
+- Détecter automatiquement les visuels multiples d'un même produit sur une même page (crop) — pas demandé.
+- Modification du mode CSV/Excel (pas d'images à extraire).
+
+## Fichiers touchés
+
+- **Modifié** `supabase/functions/parse-products-pdf/index.ts` : conserve les JPEGs, upload storage, mapping `_pageIndex → pageImages[]`, prompt système enrichi.
+- **Modifié** `src/lib/productPdfImport.ts` : propage/fusionne `pageImages`.
+- **Modifié** `src/pages/admin/AdminProducts.tsx` : miniature dans l'aperçu, affectation `image` + `galleryImages` à l'import.

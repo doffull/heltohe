@@ -50,6 +50,7 @@ interface ExtractedProduct {
   material?: string;
   sku: string;
   stock: number;
+  pageImages?: string[];
   selected: boolean;
 }
 
@@ -382,9 +383,12 @@ export default function AdminProducts() {
     let success = 0;
     for (const p of selected) {
       try {
+        const imgs = Array.isArray(p.pageImages) ? p.pageImages.filter(Boolean) : [];
         await createProduct.mutateAsync({
           name: p.name, subtitle: p.subtitle, price: p.price, salePrice: p.salePrice || undefined,
-          image: '/placeholder.svg', category: p.category || 'Autre', stock: p.stock || 50,
+          image: imgs[0] || '/placeholder.svg',
+          galleryImages: imgs.slice(1, 5),
+          category: p.category || 'Autre', stock: p.stock || 50,
           sku: p.sku, description: p.description, material: p.material,
           sizes: p.sizes || [], colors: p.colors || [], colorOptions: [], attributes: {},
         });
@@ -916,9 +920,17 @@ export default function AdminProducts() {
                     <button onClick={() => setExtractedProducts(ps => ps.map((pp, j) => j === i ? { ...pp, selected: !pp.selected } : pp))}>
                       {p.selected ? <Check className="h-5 w-5 text-primary" /> : <X className="h-5 w-5 text-muted-foreground" />}
                     </button>
+                    {p.pageImages && p.pageImages[0] ? (
+                      <img src={p.pageImages[0]} alt="" className="h-12 w-12 object-cover rounded border border-border shrink-0" loading="lazy" />
+                    ) : (
+                      <div className="h-12 w-12 rounded border border-dashed border-border shrink-0 flex items-center justify-center text-[9px] text-muted-foreground">Pas d'img</div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{p.name}</p>
-                      <p className="text-xs text-muted-foreground">{p.category} · SKU: {p.sku}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {p.category} · SKU: {p.sku}
+                        {p.pageImages && p.pageImages.length > 0 && ` · ${p.pageImages.length} image${p.pageImages.length > 1 ? 's' : ''}`}
+                      </p>
                     </div>
                     <div className="text-right">
                       <p className="font-bold text-sm">{p.price}€</p>
