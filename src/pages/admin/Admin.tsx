@@ -338,6 +338,7 @@ export default function Admin() {
             <Route path="page-templates/*" element={<AdminPageTemplates />} />
             <Route path="bannieres-analytics/*" element={<AdminBannersAnalytics />} />
             <Route path="avis/*" element={<AdminReviews />} />
+            <Route path="agent-integrations/*" element={<AdminAgentIntegrations />} />
           </Routes>
         </div>
       </main>
