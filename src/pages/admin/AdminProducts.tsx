@@ -91,8 +91,8 @@ export default function AdminProducts() {
   // Inline stock edit
   const [editingStockId, setEditingStockId] = useState<string | null>(null);
   const [editingStockValue, setEditingStockValue] = useState<number>(0);
-  // Inline field edit (price / sku / category)
-  const [editingCell, setEditingCell] = useState<{ id: string; field: 'price' | 'sku' | 'category' } | null>(null);
+  // Inline field edit (price / salePrice / sku / category)
+  const [editingCell, setEditingCell] = useState<{ id: string; field: 'price' | 'salePrice' | 'sku' | 'category' } | null>(null);
   const [editingCellValue, setEditingCellValue] = useState<string>('');
   const { data: designSettings } = useDesignSettings();
   const saveDesign = useSaveDesignSettings();
