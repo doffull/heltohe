@@ -85,6 +85,19 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
   const [newColorLabel, setNewColorLabel] = useState('');
   const [aiBusy, setAiBusy] = useState<string | null>(null);
   const [showGalleryPicker, setShowGalleryPicker] = useState(false);
+  const [showMainPicker, setShowMainPicker] = useState(false);
+
+  const setAsMainImage = (url: string, index: number) => {
+    setFormData(prev => {
+      const previousMain = prev.image;
+      const newGallery = prev.galleryImages.filter((_, i) => i !== index);
+      if (previousMain && !newGallery.includes(previousMain)) {
+        newGallery.unshift(previousMain);
+      }
+      return { ...prev, image: url, galleryImages: newGallery.slice(0, 10) };
+    });
+    toast.success('Image principale mise à jour');
+  };
 
   // Generic helper for product-ai-helpers edge function
   const runProductAi = async (action: string, extra: Record<string, any> = {}) => {
@@ -287,6 +300,22 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
             className="bg-secondary/50 border-border/30"
             placeholder="Ou collez une URL..."
           />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowMainPicker(true)}
+            className="w-full h-8 text-xs"
+          >
+            <Images className="h-3.5 w-3.5 mr-1.5" />
+            Choisir depuis la médiathèque
+          </Button>
+          <MediaLibraryDialog
+            open={showMainPicker}
+            onOpenChange={setShowMainPicker}
+            title="Sélectionner l'image principale"
+            onSelect={(url) => setFormData(prev => ({ ...prev, image: url }))}
+          />
         </div>
 
         {/* Gallery (additional images) */}
@@ -301,6 +330,14 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
               {formData.galleryImages.map((img, i) => (
                 <div key={`${img}-${i}`} className="relative group border border-border/30 bg-secondary/40 aspect-square overflow-hidden">
                   <img src={img} alt={`Galerie ${i + 1}`} className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setAsMainImage(img, i)}
+                    className="absolute top-1 left-1 right-1 text-[9px] px-1 py-0.5 bg-primary/90 text-primary-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary"
+                    title="Définir comme image principale"
+                  >
+                    ★ Image principale
+                  </button>
                   <div className="absolute inset-x-0 bottom-0 flex justify-between items-center px-1 py-0.5 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity">
                     <div className="flex gap-0.5">
                       <button
