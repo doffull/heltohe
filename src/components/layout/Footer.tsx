@@ -2,6 +2,7 @@ import { Instagram, Twitter, Youtube, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
 import { BrandLogo } from '@/components/layout/BrandLogo';
+import TrustpilotWidget from '@/components/TrustpilotWidget';
 
 const socialIcons: Record<string, React.ElementType> = {
   INSTAGRAM: Instagram,
@@ -83,6 +84,13 @@ export function Footer() {
         </div>
       </div>
       
+      {/* Trustpilot */}
+      {(designSettings as any)?.trustpilot?.enabled && (designSettings as any)?.trustpilot?.showInFooter !== false && (
+        <div className="px-6 lg:px-12 pb-6">
+          <TrustpilotWidget variant="micro" />
+        </div>
+      )}
+
       {/* Decorative line */}
       <div className="h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
     </footer>
