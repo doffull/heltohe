@@ -212,7 +212,6 @@ function AdminVisualEditor() {
     <>
       <VisualEditorToggle />
       <VisualEditorPanel />
-      <AdminDragBar />
     </>
   );
 }
