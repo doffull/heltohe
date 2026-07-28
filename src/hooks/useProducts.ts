@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Product, ColorOption } from '@/types';
 import { Json } from '@/integrations/supabase/types';
+import { sanitizePersistableUrl, sanitizePersistableUrls } from '@/lib/mediaUrl';
 
 // Transform DB product to app product
 function dbToAppProduct(db: Record<string, unknown>): Product {
@@ -40,7 +41,7 @@ function appToDbProduct(product: Partial<Product>) {
     subtitle: product.subtitle || null,
     price: product.price,
     sale_price: product.salePrice || null,
-    image: product.image,
+    image: sanitizePersistableUrl(product.image) ?? '',
     category: product.category,
     stock: product.stock,
     sku: product.sku,
@@ -51,13 +52,13 @@ function appToDbProduct(product: Partial<Product>) {
     colors: product.colors || [],
     color_options: (product.colorOptions || []) as unknown as Json,
     attributes: (product.attributes || {}) as unknown as Json,
-    video_url: product.videoUrl || null,
+    video_url: sanitizePersistableUrl(product.videoUrl),
     tags: product.tags || [],
     promo_ends_at: product.promoEndsAt || null,
     model_height: product.modelHeight || null,
     model_size_worn: product.modelSizeWorn || null,
     model_name: product.modelName || null,
-    gallery_images: product.galleryImages || [],
+    gallery_images: sanitizePersistableUrls(product.galleryImages),
     template_id: product.templateId ?? null,
     is_active: true,
   };
