@@ -74,6 +74,7 @@ import AdminBannersAnalytics from './AdminBannersAnalytics';
 import AdminBoutiques from './AdminBoutiques';
 import AdminPageTemplates from './AdminPageTemplates';
 import AdminReviews from './AdminReviews';
+import AdminAgentIntegrations from './AdminAgentIntegrations';
 
 
 export const DEFAULT_SECTION_COLORS: Record<string, string> = {
