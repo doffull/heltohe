@@ -35,7 +35,8 @@ import {
   BarChart3,
   Store,
   LayoutTemplate,
-  AlertTriangle
+  AlertTriangle,
+  Star
 
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -71,6 +72,7 @@ import AdminTransitions from './AdminTransitions';
 import AdminBannersAnalytics from './AdminBannersAnalytics';
 import AdminBoutiques from './AdminBoutiques';
 import AdminPageTemplates from './AdminPageTemplates';
+import AdminReviews from './AdminReviews';
 
 
 export const DEFAULT_SECTION_COLORS: Record<string, string> = {
@@ -120,6 +122,7 @@ const SIDEBAR_ITEMS = [
   { icon: Store, label: 'Boutiques', href: '/admin/boutiques' },
   { icon: Bell, label: 'Notifications', href: '/admin/notifications' },
   { icon: Bot, label: 'Chatbot', href: '/admin/chatbot' },
+  { icon: Star, label: 'Avis clients', href: '/admin/avis' },
   { icon: ShoppingBag, label: 'WooCommerce', href: '/admin/woocommerce' },
   { icon: ClipboardCheck, label: 'Audit', href: '/admin/audit' },
   { icon: AlertTriangle, label: 'Audit médias', href: '/admin/media-audit' },
@@ -331,6 +334,7 @@ export default function Admin() {
             <Route path="transitions/*" element={<AdminTransitions />} />
             <Route path="page-templates/*" element={<AdminPageTemplates />} />
             <Route path="bannieres-analytics/*" element={<AdminBannersAnalytics />} />
+            <Route path="avis/*" element={<AdminReviews />} />
           </Routes>
         </div>
       </main>

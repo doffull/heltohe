@@ -15,6 +15,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { usePageTemplate, useDefaultTemplate } from '@/hooks/usePageTemplates';
 import ProductTemplateRenderer from '@/components/product/ProductTemplateRenderer';
 import VirtualTryOnButton from '@/components/product/VirtualTryOnButton';
+import ProductReviews from '@/components/product/ProductReviews';
 
 export default function ProductDetail() {
   const { slugOrId, id } = useParams<{ slugOrId?: string; id?: string }>();
@@ -192,6 +193,9 @@ export default function ProductDetail() {
             </div>
           </div>
         </div>
+
+        {/* Customer reviews */}
+        <ProductReviews productId={product.id} productName={product.name} />
 
         {/* Related products */}
         <RelatedProducts category={product.category} currentId={product.id} />

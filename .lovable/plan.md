@@ -1,39 +1,101 @@
-## Diagnostic
 
-J'ai inspecté la base et voici l'état réel :
+## Objectif
 
-- **Hero** : 1 slide sauvegardé avec une vidéo `media/hero/background/…mp4` — normalement OK.
-- **Home** : 2 sections, 3 sections custom, 12 blocs de page — normalement OK.
-- **Produits** : **20 produits sur 63 n'ont pas d'image** (`image` NULL ou vide). Ils tombent donc sur le placeholder gris — c'est la source principale de vos "images manquantes".
-- **Bucket `media`** : public ✅ (les URLs sont donc accessibles aux visiteurs).
-- Aucune URL `blob:` ou `data:` en base (pas de fuite de références temporaires).
+Ajouter un système d'avis clients **vérifiés** (uniquement pour les acheteurs) sur chaque fiche produit, et intégrer les widgets **Trustpilot** sur le site.
 
-Le problème dominant n'est donc pas la publication elle-même, mais des **médias qui n'ont jamais été enregistrés en base** (produits sans image + potentiellement quelques URLs de sections/blocs pointant vers des fichiers supprimés du bucket).
+---
 
-## Plan d'action
+## 1. Base de données
 
-### 1. Nouveau tableau de bord "Audit médias" (`/admin/media-audit`)
-Une page qui **scanne tout le site en un clic** et liste :
-- Produits sans image principale + galerie vide (les 20 identifiés).
-- Slides Hero, sections home, blocs de page, bannières, catégories, looks, presets — toute URL qui pointe vers `media/...` puis fait un HEAD pour détecter les 404.
-- URLs `blob:` / `data:` / `file:` (jamais publiables) si elles réapparaissent.
-- Nombre total de médias cassés par zone, avec bouton "Aller corriger" qui ouvre directement l'admin correspondant.
+Nouvelle table `product_reviews` :
+- `product_id`, `user_id`, `order_id` (traçabilité de l'achat)
+- `rating` 1-5, `title`, `comment`
+- `status` : `pending` / `approved` / `rejected` (modération)
+- `is_verified_purchase` (badge « Achat vérifié »)
+- `admin_reply` + `admin_reply_at` (droit de réponse boutique)
+- `helpful_count`
 
-### 2. Garde-fou anti-URL temporaire à la sauvegarde
-Dans les hooks de sauvegarde (`useDesignSettings`, `useProducts`, blocs home, page builder) : rejeter avec un toast d'erreur toute URL commençant par `blob:`, `data:`, ou `file:` avant écriture en base. Cela empêche définitivement le cas "ça marche en preview, cassé en prod" pour les nouveaux médias.
+Table `product_review_votes` : un utilisateur vote « utile » 1x par avis.
 
-### 3. Fallback plus propre côté rendu
-`SafeImage` / `SafeVideo` sont déjà en place, mais je vérifie que **tous** les rendus critiques (Hero, ProductCard, galerie, bannières, sections custom, blocs de page) les utilisent, et j'ajoute un log discret (via `clientErrorLogger`) quand un média échoue en prod — pour tracer les futurs cas.
+Fonctions SQL :
+- `can_user_review_product(product_id)` : renvoie l'`order_id` livré éligible, ou null.
+- `submit_product_review(...)` (SECURITY DEFINER) : vérifie l'achat, empêche les doublons, insère en statut `pending` (ou `approved` selon config admin).
+- `get_product_review_stats(product_id)` : moyenne + distribution 1-5 étoiles + total.
 
-### 4. Rapport immédiat
-Après la première exécution du scan, je vous fournis la liste précise des 20 produits sans image et de toute autre URL cassée, pour que vous puissiez les corriger en masse via l'outil d'import d'images produits déjà en place (dossier → produit).
+RLS :
+- Lecture publique des avis `approved` uniquement.
+- L'auteur voit ses propres avis (tous statuts).
+- Admin/moderator : accès complet + modération.
+
+## 2. Frontend — fiche produit
+
+Nouveau composant `ProductReviews.tsx` sous la description produit :
+- Résumé : note moyenne (étoiles), nombre d'avis, barres de distribution 1-5.
+- Liste paginée avec badges « Achat vérifié », date, taille achetée, bouton « Utile ».
+- Bouton **« Laisser un avis »** :
+  - Non connecté → invite à se connecter.
+  - Connecté mais pas d'achat livré → message « Réservé aux acheteurs ».
+  - Éligible → modale avec étoiles + titre + commentaire (validation zod, max 2000 caractères).
+- Tri : plus récents / mieux notés / moins bien notés.
+- Filtre par nombre d'étoiles.
+
+Mise à jour de la carte produit (`ProductCard`) : afficher étoiles + nombre d'avis sous le prix.
+
+JSON-LD `AggregateRating` + `Review` injecté sur la fiche produit pour le SEO (étoiles Google).
+
+## 3. Admin — modération
+
+Nouvelle page `/admin/reviews` (`AdminReviews.tsx`) :
+- Tableau filtrable (en attente / approuvés / rejetés / tous produits).
+- Actions : approuver, rejeter, supprimer, répondre publiquement.
+- Réglage global : auto-approbation ON/OFF (stocké dans `design_settings.settings_json.reviews`).
+- Ajout d'une entrée « Avis clients » dans la sidebar admin avec compteur d'avis en attente.
+
+## 4. Notifications
+
+- À la livraison d'une commande (`orders.status = 'delivered'`) : email Resend « Donnez votre avis » avec lien direct vers la fiche produit + section avis (template éditable dans Notification Management).
+- À l'approbation d'un avis : email de remerciement au client.
+- À l'admin : notification en cas de nouvel avis à modérer (si auto-approbation OFF).
+
+## 5. Trustpilot
+
+Nouveau composant `TrustpilotWidget.tsx` chargeant `https://widget.trustpilot.com/bootstrap/v5/tp.widget.bootstrap.min.js` (asynchrone, une seule fois).
+
+Réglages admin (dans Design Settings → nouvel onglet **« Avis & Trustpilot »**) :
+- `trustpilot.businessUnitId` (à saisir)
+- `trustpilot.domain` (ex. `lvtk2026.lovable.app`)
+- `trustpilot.locale` (`fr-FR` par défaut)
+- Toggles d'affichage : Micro TrustBox (header/footer), Carousel homepage, Grand widget page « Avis ».
+
+Emplacements :
+- **Footer** : micro TrustBox (étoiles + note globale).
+- **Homepage** : carousel des derniers avis Trustpilot (bloc positionnable dans l'éditeur live comme les autres sections).
+- Fiche produit : possibilité optionnelle d'ajouter le TrustBox à côté des avis internes.
+
+Aucun secret nécessaire : les widgets Trustpilot fonctionnent avec juste le Business Unit ID public.
+
+---
 
 ## Détails techniques
 
-- Le scan HEAD est fait côté client avec `fetch(url, { method: 'HEAD' })` et une limite de concurrence (10 requêtes parallèles) pour ne pas saturer.
-- Ajout de la validation d'URL dans `useDesignSettings.ts::settingsToDb`, `useProducts.ts` (upsert), `useHomeBlocks.ts` — pas de changement de schéma.
-- Aucune modification du bucket, des policies RLS ou des données existantes : cette étape est purement diagnostique + préventive. Les corrections des 20 produits se feront ensuite via les outils d'import déjà présents.
+- **Éligibilité d'achat** : `orders` où `user_id = auth.uid()`, `status = 'delivered'`, et le `product_id` figure dans `items` (jsonb).
+- **Anti-doublon** : contrainte unique `(user_id, product_id)` — un avis par produit par client, éditable pendant 30 jours.
+- **Modération auto** : par défaut ON pour ne pas bloquer, avec filtrage anti-spam basique (longueur mini, mots interdits configurables).
+- **Performance** : les stats (moyenne + count) sont calculées via la fonction SQL, mises en cache 60s côté client (React Query).
+- **Sécurité** : validation zod côté client + serveur, RLS + `SECURITY DEFINER` avec `search_path = public`, honeypot pas nécessaire car auth obligatoire.
+- **SEO** : JSON-LD `Product` enrichi avec `aggregateRating` uniquement s'il y a ≥ 1 avis approuvé.
 
-## Ce que ce plan ne fait PAS
-- Ne re-uploade pas automatiquement des images (impossible sans savoir lesquelles).
-- Ne modifie pas le pipeline de publication Lovable (rien à corriger de ce côté-là, la publication reflète bien la base).
+---
+
+## Livrables
+
+1. Migration DB (table, fonctions, RLS, GRANT).
+2. `src/components/product/ProductReviews.tsx` + sous-composants (`ReviewStars`, `ReviewCard`, `ReviewForm`, `ReviewsSummary`).
+3. Injection dans `ProductPage` + JSON-LD.
+4. Étoiles sur `ProductCard`.
+5. `src/pages/admin/AdminReviews.tsx` + route + entrée sidebar.
+6. Réglages Trustpilot dans Design Settings + onglet dédié.
+7. `src/components/TrustpilotWidget.tsx` intégré footer + homepage (via éditeur live).
+8. Templates d'emails « demande d'avis » et « avis approuvé » dans Notification Management.
+
+Après ton feu vert, je te demanderai ton **Business Unit ID Trustpilot** au moment de l'intégration (ou tu peux le coller dès maintenant).
