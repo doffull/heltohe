@@ -14,6 +14,7 @@ export interface ParsedCatalogProduct {
   name?: string;
   price?: number;
   sku?: string;
+  pageImages?: string[];
   [key: string]: unknown;
 }
 
