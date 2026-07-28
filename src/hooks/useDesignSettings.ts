@@ -143,6 +143,18 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
       color: 'currentColor', blockPrintScreen: true, disableRightClick: true,
     },
     productGridLayout: ((db.settings_json as any)?.productGridLayout) ?? 'classic',
+    trustpilot: ((db.settings_json as any)?.trustpilot) ?? {
+      enabled: false,
+      businessUnitId: '',
+      domain: '',
+      locale: 'fr-FR',
+      showInFooter: true,
+    },
+    reviewsSettings: ((db.settings_json as any)?.reviewsSettings) ?? {
+      autoApprove: false,
+      requireVerifiedPurchase: true,
+      showOnProductCards: true,
+    },
   } as DesignSettings;
 }
 
@@ -266,6 +278,8 @@ function settingsToDb(s: DesignSettings) {
     settings_json: {
       securityOverlay: (s as any).securityOverlay ?? null,
       productGridLayout: (s as any).productGridLayout ?? 'classic',
+      trustpilot: (s as any).trustpilot ?? null,
+      reviewsSettings: (s as any).reviewsSettings ?? null,
     } as unknown as Json,
   };
 }
