@@ -108,21 +108,37 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
     return upd;
   };
 
-  const preview = useMemo(() => products.slice(0, 5).map(p => ({ p, upd: computeUpdates(p) })), [
-    products, priceOp, priceArg, saleOp, saleArg, stockOp, stockArg,
-    skuOp, skuArg, skuFind, category, tagsOp, tagsArg, activeOp,
-  ]);
+  const [step, setStep] = useState<'configure' | 'review'>('configure');
 
-  const hasChanges = preview.some(({ upd }) => Object.keys(upd).length > 0);
+  const allDiff = useMemo(
+    () => products.map(p => ({ p, upd: computeUpdates(p) })).filter(x => Object.keys(x.upd).length > 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [products, priceOp, priceArg, saleOp, saleArg, stockOp, stockArg, skuOp, skuArg, skuFind, category, tagsOp, tagsArg, activeOp],
+  );
+
+  const warnings = useMemo(() => {
+    const w: string[] = [];
+    const negPrice = allDiff.filter(({ upd }) => upd.price !== undefined && upd.price < 0).length;
+    if (negPrice) w.push(`${negPrice} prix négatif(s)`);
+    const badSale = allDiff.filter(({ p, upd }) => {
+      const sale = 'salePrice' in upd ? upd.salePrice : p.salePrice;
+      const price = upd.price !== undefined ? upd.price : p.price;
+      return sale !== undefined && sale !== null && sale >= price;
+    }).length;
+    if (badSale) w.push(`${badSale} promo ≥ prix normal`);
+    const skus = allDiff.map(({ p, upd }) => upd.sku ?? p.sku);
+    const dup = skus.filter((s, i) => skus.indexOf(s) !== i);
+    if (dup.length) w.push(`${new Set(dup).size} SKU en doublon`);
+    return w;
+  }, [allDiff]);
+
+  const preview = allDiff.slice(0, 5);
+  const hasChanges = allDiff.length > 0;
 
   const handleApply = async () => {
-    if (!hasChanges) { toast.error('Aucune modification'); return; }
-    const rows = products
-      .map(p => ({ id: p.id, updates: computeUpdates(p) }))
-      .filter(r => Object.keys(r.updates).length > 0);
-    if (rows.length === 0) { toast.error('Aucun changement calculé'); return; }
+    if (allDiff.length === 0) { toast.error('Aucun changement calculé'); return; }
     try {
-      const { success, errors } = await bulk.mutateAsync(rows);
+      const { success, errors } = await bulk.mutateAsync(allDiff.map(({ p, upd }) => ({ id: p.id, updates: upd })));
       if (errors.length > 0) {
         toast.error(`${success} mis à jour, ${errors.length} erreurs`, { description: errors.slice(0, 3).join(' • ') });
       } else {
@@ -130,164 +146,220 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
       }
       onDone?.();
       onOpenChange(false);
+      setStep('configure');
     } catch (e: any) {
       toast.error('Erreur', { description: e?.message });
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={(o) => { if (!o) setStep('configure'); onOpenChange(o); }}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Wand2 className="h-5 w-5" /> Édition en masse — {products.length} produit(s)
+            <Wand2 className="h-5 w-5" />
+            {step === 'configure' ? `Édition en masse — ${products.length} produit(s)` : `Aperçu des changements — ${allDiff.length} produit(s) impacté(s)`}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5">
-          {/* Prix */}
-          <FieldRow label="Prix (€)">
-            <Select value={priceOp} onValueChange={(v) => setPriceOp(v as NumOp)}>
-              <SelectTrigger className="w-[220px] h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="unchanged">Inchangé</SelectItem>
-                <SelectItem value="set">Fixer à…</SelectItem>
-                <SelectItem value="add">Augmenter de X €</SelectItem>
-                <SelectItem value="sub">Diminuer de X €</SelectItem>
-                <SelectItem value="pctAdd">Augmenter de X %</SelectItem>
-                <SelectItem value="pctSub">Diminuer de X %</SelectItem>
-                <SelectItem value="round">Arrondir au multiple de…</SelectItem>
-              </SelectContent>
-            </Select>
-            {priceOp !== 'unchanged' && (
-              <Input type="number" step="0.01" placeholder="valeur" value={priceArg} onChange={e => setPriceArg(e.target.value)} className="w-32 h-8 text-xs" />
-            )}
-          </FieldRow>
+        {step === 'configure' ? (
+          <div className="space-y-5">
+            {/* Prix */}
+            <FieldRow label="Prix (€)">
+              <Select value={priceOp} onValueChange={(v) => setPriceOp(v as NumOp)}>
+                <SelectTrigger className="w-[220px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unchanged">Inchangé</SelectItem>
+                  <SelectItem value="set">Fixer à…</SelectItem>
+                  <SelectItem value="add">Augmenter de X €</SelectItem>
+                  <SelectItem value="sub">Diminuer de X €</SelectItem>
+                  <SelectItem value="pctAdd">Augmenter de X %</SelectItem>
+                  <SelectItem value="pctSub">Diminuer de X %</SelectItem>
+                  <SelectItem value="round">Arrondir au multiple de…</SelectItem>
+                </SelectContent>
+              </Select>
+              {priceOp !== 'unchanged' && (
+                <Input type="number" step="0.01" placeholder="valeur" value={priceArg} onChange={e => setPriceArg(e.target.value)} className="w-32 h-8 text-xs" />
+              )}
+            </FieldRow>
 
-          {/* Sale price */}
-          <FieldRow label="Prix promo (€)">
-            <Select value={saleOp} onValueChange={(v) => setSaleOp(v as SaleOp)}>
-              <SelectTrigger className="w-[220px] h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="unchanged">Inchangé</SelectItem>
-                <SelectItem value="set">Fixer à…</SelectItem>
-                <SelectItem value="add">+ X €</SelectItem>
-                <SelectItem value="sub">− X €</SelectItem>
-                <SelectItem value="pctAdd">+ X %</SelectItem>
-                <SelectItem value="pctSub">− X %</SelectItem>
-                <SelectItem value="clear">Supprimer promo</SelectItem>
-              </SelectContent>
-            </Select>
-            {saleOp !== 'unchanged' && saleOp !== 'clear' && (
-              <Input type="number" step="0.01" placeholder="valeur" value={saleArg} onChange={e => setSaleArg(e.target.value)} className="w-32 h-8 text-xs" />
-            )}
-          </FieldRow>
+            {/* Sale price */}
+            <FieldRow label="Prix promo (€)">
+              <Select value={saleOp} onValueChange={(v) => setSaleOp(v as SaleOp)}>
+                <SelectTrigger className="w-[220px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unchanged">Inchangé</SelectItem>
+                  <SelectItem value="set">Fixer à…</SelectItem>
+                  <SelectItem value="add">+ X €</SelectItem>
+                  <SelectItem value="sub">− X €</SelectItem>
+                  <SelectItem value="pctAdd">+ X %</SelectItem>
+                  <SelectItem value="pctSub">− X %</SelectItem>
+                  <SelectItem value="clear">Supprimer promo</SelectItem>
+                </SelectContent>
+              </Select>
+              {saleOp !== 'unchanged' && saleOp !== 'clear' && (
+                <Input type="number" step="0.01" placeholder="valeur" value={saleArg} onChange={e => setSaleArg(e.target.value)} className="w-32 h-8 text-xs" />
+              )}
+            </FieldRow>
 
-          {/* Stock */}
-          <FieldRow label="Stock">
-            <Select value={stockOp} onValueChange={(v) => setStockOp(v as StockOp)}>
-              <SelectTrigger className="w-[220px] h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="unchanged">Inchangé</SelectItem>
-                <SelectItem value="set">Fixer à…</SelectItem>
-                <SelectItem value="add">+ X unités</SelectItem>
-                <SelectItem value="sub">− X unités</SelectItem>
-                <SelectItem value="zero">Mettre à 0 (rupture)</SelectItem>
-              </SelectContent>
-            </Select>
-            {stockOp !== 'unchanged' && stockOp !== 'zero' && (
-              <Input type="number" placeholder="quantité" value={stockArg} onChange={e => setStockArg(e.target.value)} className="w-32 h-8 text-xs" />
-            )}
-          </FieldRow>
+            {/* Stock */}
+            <FieldRow label="Stock">
+              <Select value={stockOp} onValueChange={(v) => setStockOp(v as StockOp)}>
+                <SelectTrigger className="w-[220px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unchanged">Inchangé</SelectItem>
+                  <SelectItem value="set">Fixer à…</SelectItem>
+                  <SelectItem value="add">+ X unités</SelectItem>
+                  <SelectItem value="sub">− X unités</SelectItem>
+                  <SelectItem value="zero">Mettre à 0 (rupture)</SelectItem>
+                </SelectContent>
+              </Select>
+              {stockOp !== 'unchanged' && stockOp !== 'zero' && (
+                <Input type="number" placeholder="quantité" value={stockArg} onChange={e => setStockArg(e.target.value)} className="w-32 h-8 text-xs" />
+              )}
+            </FieldRow>
 
-          {/* SKU */}
-          <FieldRow label="SKU">
-            <Select value={skuOp} onValueChange={(v) => setSkuOp(v as SkuOp)}>
-              <SelectTrigger className="w-[220px] h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="unchanged">Inchangé</SelectItem>
-                <SelectItem value="prefix">Préfixer</SelectItem>
-                <SelectItem value="suffix">Suffixer</SelectItem>
-                <SelectItem value="replace">Remplacer texte</SelectItem>
-              </SelectContent>
-            </Select>
-            {skuOp === 'replace' && (
-              <Input placeholder="chercher" value={skuFind} onChange={e => setSkuFind(e.target.value)} className="w-32 h-8 text-xs" />
-            )}
-            {skuOp !== 'unchanged' && (
-              <Input placeholder={skuOp === 'replace' ? 'remplacer par' : 'texte'} value={skuArg} onChange={e => setSkuArg(e.target.value)} className="w-32 h-8 text-xs" />
-            )}
-          </FieldRow>
+            {/* SKU */}
+            <FieldRow label="SKU">
+              <Select value={skuOp} onValueChange={(v) => setSkuOp(v as SkuOp)}>
+                <SelectTrigger className="w-[220px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unchanged">Inchangé</SelectItem>
+                  <SelectItem value="prefix">Préfixer</SelectItem>
+                  <SelectItem value="suffix">Suffixer</SelectItem>
+                  <SelectItem value="replace">Remplacer texte</SelectItem>
+                </SelectContent>
+              </Select>
+              {skuOp === 'replace' && (
+                <Input placeholder="chercher" value={skuFind} onChange={e => setSkuFind(e.target.value)} className="w-32 h-8 text-xs" />
+              )}
+              {skuOp !== 'unchanged' && (
+                <Input placeholder={skuOp === 'replace' ? 'remplacer par' : 'texte'} value={skuArg} onChange={e => setSkuArg(e.target.value)} className="w-32 h-8 text-xs" />
+              )}
+            </FieldRow>
 
-          {/* Category */}
-          <FieldRow label="Catégorie">
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="w-[220px] h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__unchanged__">Inchangée</SelectItem>
-                {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </FieldRow>
+            {/* Category */}
+            <FieldRow label="Catégorie">
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger className="w-[220px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__unchanged__">Inchangée</SelectItem>
+                  {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </FieldRow>
 
-          {/* Tags */}
-          <FieldRow label="Tags">
-            <Select value={tagsOp} onValueChange={(v) => setTagsOp(v as TagsOp)}>
-              <SelectTrigger className="w-[220px] h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="unchanged">Inchangés</SelectItem>
-                <SelectItem value="add">Ajouter</SelectItem>
-                <SelectItem value="remove">Retirer</SelectItem>
-                <SelectItem value="replace">Remplacer</SelectItem>
-              </SelectContent>
-            </Select>
-            {tagsOp !== 'unchanged' && (
-              <Input placeholder="tag1, tag2, tag3" value={tagsArg} onChange={e => setTagsArg(e.target.value)} className="flex-1 h-8 text-xs" />
-            )}
-          </FieldRow>
+            {/* Tags */}
+            <FieldRow label="Tags">
+              <Select value={tagsOp} onValueChange={(v) => setTagsOp(v as TagsOp)}>
+                <SelectTrigger className="w-[220px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unchanged">Inchangés</SelectItem>
+                  <SelectItem value="add">Ajouter</SelectItem>
+                  <SelectItem value="remove">Retirer</SelectItem>
+                  <SelectItem value="replace">Remplacer</SelectItem>
+                </SelectContent>
+              </Select>
+              {tagsOp !== 'unchanged' && (
+                <Input placeholder="tag1, tag2, tag3" value={tagsArg} onChange={e => setTagsArg(e.target.value)} className="flex-1 h-8 text-xs" />
+              )}
+            </FieldRow>
 
-          {/* Actif */}
-          <FieldRow label="Publication">
-            <Select value={activeOp} onValueChange={(v) => setActiveOp(v as BoolOp)}>
-              <SelectTrigger className="w-[220px] h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="unchanged">Inchangé</SelectItem>
-                <SelectItem value="true">Activer</SelectItem>
-                <SelectItem value="false">Désactiver</SelectItem>
-              </SelectContent>
-            </Select>
-          </FieldRow>
+            {/* Actif */}
+            <FieldRow label="Publication">
+              <Select value={activeOp} onValueChange={(v) => setActiveOp(v as BoolOp)}>
+                <SelectTrigger className="w-[220px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unchanged">Inchangé</SelectItem>
+                  <SelectItem value="true">Activer</SelectItem>
+                  <SelectItem value="false">Désactiver</SelectItem>
+                </SelectContent>
+              </Select>
+            </FieldRow>
 
-          {/* Preview */}
-          <div className="border rounded-lg p-3 bg-muted/30">
-            <p className="text-xs font-semibold mb-2">Aperçu ({Math.min(products.length, 5)} premier(s) produit(s))</p>
-            {!hasChanges ? (
-              <p className="text-xs text-muted-foreground">Aucune modification configurée.</p>
-            ) : (
-              <div className="space-y-1 text-xs">
-                {preview.map(({ p, upd }) => (
-                  <div key={p.id} className="flex flex-wrap gap-2 items-center border-t pt-1 first:border-0 first:pt-0">
-                    <span className="font-medium truncate max-w-[180px]">{p.name}</span>
-                    {upd.price !== undefined && <Diff before={`${p.price}€`} after={`${upd.price}€`} label="prix" />}
-                    {'salePrice' in upd && <Diff before={p.salePrice ? `${p.salePrice}€` : '—'} after={upd.salePrice ? `${upd.salePrice}€` : '—'} label="promo" />}
-                    {upd.stock !== undefined && <Diff before={String(p.stock)} after={String(upd.stock)} label="stock" />}
-                    {upd.sku !== undefined && <Diff before={p.sku} after={upd.sku} label="sku" />}
-                    {upd.category !== undefined && <Diff before={p.category} after={upd.category} label="cat" />}
-                    {upd.tags !== undefined && <Diff before={(p.tags || []).join(',') || '—'} after={upd.tags.join(',') || '—'} label="tags" />}
-                    {upd.isActive !== undefined && <Diff before="—" after={upd.isActive ? 'Actif' : 'Inactif'} label="statut" />}
-                  </div>
-                ))}
+            {/* Quick preview */}
+            <div className="border rounded-lg p-3 bg-muted/30">
+              <p className="text-xs font-semibold mb-2">Aperçu rapide — {allDiff.length} produit(s) sur {products.length} seront modifiés</p>
+              {!hasChanges ? (
+                <p className="text-xs text-muted-foreground">Aucune modification configurée.</p>
+              ) : (
+                <div className="space-y-1 text-xs">
+                  {preview.map(({ p, upd }) => (
+                    <div key={p.id} className="flex flex-wrap gap-2 items-center border-t pt-1 first:border-0 first:pt-0">
+                      <span className="font-medium truncate max-w-[180px]">{p.name}</span>
+                      {upd.price !== undefined && <Diff before={`${p.price}€`} after={`${upd.price}€`} label="prix" />}
+                      {'salePrice' in upd && <Diff before={p.salePrice ? `${p.salePrice}€` : '—'} after={upd.salePrice ? `${upd.salePrice}€` : '—'} label="promo" />}
+                      {upd.stock !== undefined && <Diff before={String(p.stock)} after={String(upd.stock)} label="stock" />}
+                      {upd.sku !== undefined && <Diff before={p.sku} after={upd.sku} label="sku" />}
+                      {upd.category !== undefined && <Diff before={p.category} after={upd.category} label="cat" />}
+                      {upd.tags !== undefined && <Diff before={(p.tags || []).join(',') || '—'} after={upd.tags.join(',') || '—'} label="tags" />}
+                      {upd.isActive !== undefined && <Diff before="—" after={upd.isActive ? 'Actif' : 'Inactif'} label="statut" />}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {warnings.length > 0 && (
+                <div className="mt-2 text-[11px] text-amber-600 dark:text-amber-400">⚠ {warnings.join(' · ')}</div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {warnings.length > 0 && (
+              <div className="rounded border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-300">
+                ⚠ {warnings.join(' · ')}. Vérifiez avant d'appliquer.
               </div>
             )}
+            <div className="border rounded-lg overflow-auto max-h-[55vh]">
+              <table className="w-full text-xs">
+                <thead className="bg-muted/50 sticky top-0">
+                  <tr>
+                    <th className="p-2 text-left">Produit</th>
+                    <th className="p-2 text-left">SKU</th>
+                    <th className="p-2 text-left">Changements</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {allDiff.map(({ p, upd }) => (
+                    <tr key={p.id} className="border-t">
+                      <td className="p-2 truncate max-w-[220px]">{p.name}</td>
+                      <td className="p-2 font-mono">{upd.sku ?? p.sku}</td>
+                      <td className="p-2">
+                        <div className="flex flex-wrap gap-1">
+                          {upd.price !== undefined && <Diff before={`${p.price}€`} after={`${upd.price}€`} label="prix" />}
+                          {'salePrice' in upd && <Diff before={p.salePrice ? `${p.salePrice}€` : '—'} after={upd.salePrice ? `${upd.salePrice}€` : '—'} label="promo" />}
+                          {upd.stock !== undefined && <Diff before={String(p.stock)} after={String(upd.stock)} label="stock" />}
+                          {upd.sku !== undefined && <Diff before={p.sku} after={upd.sku} label="sku" />}
+                          {upd.category !== undefined && <Diff before={p.category} after={upd.category} label="cat" />}
+                          {upd.tags !== undefined && <Diff before={(p.tags || []).join(',') || '—'} after={upd.tags.join(',') || '—'} label="tags" />}
+                          {upd.isActive !== undefined && <Diff before="—" after={upd.isActive ? 'Actif' : 'Inactif'} label="statut" />}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={bulk.isPending}>Annuler</Button>
-          <Button onClick={handleApply} disabled={!hasChanges || bulk.isPending}>
-            {bulk.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wand2 className="h-4 w-4 mr-2" />}
-            Appliquer à {products.length}
-          </Button>
+          {step === 'configure' ? (
+            <>
+              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={bulk.isPending}>Annuler</Button>
+              <Button onClick={() => setStep('review')} disabled={!hasChanges}>
+                Aperçu des changements ({allDiff.length})
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => setStep('configure')} disabled={bulk.isPending}>Retour</Button>
+              <Button onClick={handleApply} disabled={!hasChanges || bulk.isPending}>
+                {bulk.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wand2 className="h-4 w-4 mr-2" />}
+                Confirmer et appliquer ({allDiff.length})
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
