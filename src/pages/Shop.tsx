@@ -124,7 +124,7 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
     sidebarContext?.setHoveredProduct(null);
   };
 
-  const filteredProducts = useMemo(() => {
+  const baseFiltered = useMemo(() => {
     let filtered = [...products];
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -137,21 +137,19 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
     if (selectedCategory !== 'Tout') {
       filtered = filtered.filter(p => p.category === selectedCategory);
     }
-    switch (sortBy) {
-      case 'price-asc':
-        filtered.sort((a, b) => (a.salePrice || a.price) - (b.salePrice || b.price));
-        break;
-      case 'price-desc':
-        filtered.sort((a, b) => (b.salePrice || b.price) - (a.salePrice || a.price));
-        break;
-      case 'name':
-        filtered.sort((a, b) => a.name.localeCompare(b.name));
-        break;
-      default:
-        break;
-    }
     return filtered;
-  }, [products, searchQuery, selectedCategory, sortBy]);
+  }, [products, searchQuery, selectedCategory]);
+
+  const orderedBase = useOrderedProducts(baseFiltered, selectedCategory);
+
+  const filteredProducts = useMemo(() => {
+    // Manual/shuffle order applies when sorting is "newest" (default). Explicit
+    // sort options override the shuffle so users can still price-sort etc.
+    if (sortBy === 'price-asc') return [...orderedBase].sort((a, b) => (a.salePrice || a.price) - (b.salePrice || b.price));
+    if (sortBy === 'price-desc') return [...orderedBase].sort((a, b) => (b.salePrice || b.price) - (a.salePrice || a.price));
+    if (sortBy === 'name') return [...orderedBase].sort((a, b) => a.name.localeCompare(b.name));
+    return orderedBase;
+  }, [orderedBase, sortBy]);
 
   const handleAddToCart = async (product: typeof products[0]) => {
     await addItem({
