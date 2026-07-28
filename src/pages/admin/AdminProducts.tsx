@@ -443,7 +443,12 @@ export default function AdminProducts() {
           <TabsTrigger value="looks" className="gap-2"><Layers2 className="h-4 w-4" />Looks</TabsTrigger>
           <TabsTrigger value="sizes" className="gap-2"><Tag className="h-4 w-4" />Tailles</TabsTrigger>
           <TabsTrigger value="layout" className="gap-2"><LayoutGrid className="h-4 w-4" />Affichage</TabsTrigger>
+          <TabsTrigger value="ordering" className="gap-2"><ArrowUpDown className="h-4 w-4" />Rangement</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="ordering" className="space-y-4 mt-4">
+          <AdminCategoryOrdering />
+        </TabsContent>
 
         <TabsContent value="sizes" className="space-y-4 mt-4">
           <GlobalSizesEditor />
