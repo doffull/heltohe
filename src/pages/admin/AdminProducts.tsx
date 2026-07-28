@@ -936,6 +936,18 @@ export default function AdminProducts() {
       <WordPressSyncDialog open={isSyncDialogOpen} onOpenChange={setIsSyncDialogOpen} />
       <CsvImportDialog open={isCsvDialogOpen} onOpenChange={setIsCsvDialogOpen} />
       <BulkProductImagesDialog open={isBulkImagesOpen} onOpenChange={setIsBulkImagesOpen} products={products} />
+      <BulkEditDialog
+        open={isBulkEditOpen}
+        onOpenChange={setIsBulkEditOpen}
+        products={filteredProducts.filter(p => selectedIds.has(p.id))}
+        categories={categories}
+        onDone={clear}
+      />
+      <QuickPriceStockImportDialog
+        open={isQuickCsvOpen}
+        onOpenChange={setIsQuickCsvOpen}
+        products={products}
+      />
     </div>
   );
 }
