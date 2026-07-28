@@ -16,8 +16,9 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Plus, Search, Pencil, Trash2, MoreHorizontal, Package, Upload, Download, FileText, X, Check, Filter, Wand2, Copy, Tag, DollarSign, Archive, Layers2, Boxes, RefreshCw, Images, LayoutGrid
+  Plus, Search, Pencil, Trash2, MoreHorizontal, Package, Upload, Download, FileText, X, Check, Filter, Wand2, Copy, Tag, DollarSign, Archive, Layers2, Boxes, RefreshCw, Images, LayoutGrid, ArrowUpDown
 } from 'lucide-react';
+import { AdminCategoryOrdering } from '@/components/admin/AdminCategoryOrdering';
 import { ImportMockupDialog } from '@/components/admin/ImportMockupDialog';
 import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
 import { CsvImportDialog } from '@/components/admin/CsvImportDialog';
