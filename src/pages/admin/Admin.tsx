@@ -125,6 +125,7 @@ const SIDEBAR_ITEMS = [
   { icon: Bell, label: 'Notifications', href: '/admin/notifications' },
   { icon: Bot, label: 'Chatbot', href: '/admin/chatbot' },
   { icon: Star, label: 'Avis clients', href: '/admin/avis' },
+  { icon: Plug, label: 'Agent integrations', href: '/admin/agent-integrations' },
   { icon: ShoppingBag, label: 'WooCommerce', href: '/admin/woocommerce' },
   { icon: ClipboardCheck, label: 'Audit', href: '/admin/audit' },
   { icon: AlertTriangle, label: 'Audit médias', href: '/admin/media-audit' },
