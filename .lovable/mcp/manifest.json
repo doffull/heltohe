@@ -1,0 +1,246 @@
+{
+  "version": 1,
+  "sdk_version": "0.24.0",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://bumfyrfmormisyjletpb.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "lvtk6-mcp",
+      "version": "0.1.0",
+      "title": "LVTK6 Store MCP"
+    },
+    "tools": [
+      {
+        "name": "list_products",
+        "title": "Lister les produits",
+        "description": "Liste les produits actifs du catalogue LVTK6 avec filtres facultatifs (catégorie, recherche texte).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "category": {
+              "description": "Filtrer par nom de catégorie (ex: Homme, Femme, Sportwear).",
+              "type": "string"
+            },
+            "search": {
+              "description": "Recherche texte dans le nom du produit.",
+              "type": "string"
+            },
+            "limit": {
+              "default": 20,
+              "description": "Nombre max de produits à retourner.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_product",
+        "title": "Détail d'un produit",
+        "description": "Retourne toutes les informations d'un produit LVTK6 par son identifiant ou SKU.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "idOrSku": {
+              "type": "string",
+              "minLength": 1,
+              "description": "UUID ou SKU du produit."
+            }
+          },
+          "required": [
+            "idOrSku"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_boutiques",
+        "title": "Boutiques physiques",
+        "description": "Liste les boutiques physiques LVTK6 actives (nom, adresse, ville, coordonnées).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_my_orders",
+        "title": "Mes commandes",
+        "description": "Liste les commandes de l'utilisateur connecté (les plus récentes d'abord).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "limit": {
+              "default": 10,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            },
+            "status": {
+              "description": "Filtrer par statut (pending, shipped, delivered, cancelled…).",
+              "type": "string"
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_my_order",
+        "title": "Détail d'une commande",
+        "description": "Retourne le détail complet d'une commande de l'utilisateur connecté (articles, suivi, montants).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "orderNumber": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Le numéro de commande (order_number)."
+            }
+          },
+          "required": [
+            "orderNumber"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "my_loyalty",
+        "title": "Mon programme de fidélité",
+        "description": "Retourne le solde de points de fidélité, le palier (bronze/silver/gold/platinum) et le total dépensé de l'utilisateur connecté.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_wishlist",
+        "title": "Ma liste de souhaits",
+        "description": "Retourne les produits actuellement en liste de souhaits de l'utilisateur connecté.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_to_wishlist",
+        "title": "Ajouter aux favoris",
+        "description": "Ajoute un produit à la liste de souhaits de l'utilisateur connecté.",
+        "annotations": {
+          "readOnlyHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "productId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "UUID du produit à ajouter."
+            }
+          },
+          "required": [
+            "productId"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "remove_from_wishlist",
+        "title": "Retirer des favoris",
+        "description": "Retire un produit de la liste de souhaits de l'utilisateur connecté.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "productId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "required": [
+            "productId"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_my_addresses",
+        "title": "Mes adresses",
+        "description": "Retourne les adresses de livraison enregistrées de l'utilisateur connecté.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
