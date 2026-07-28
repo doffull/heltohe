@@ -34,7 +34,8 @@ import {
   Sparkles,
   BarChart3,
   Store,
-  LayoutTemplate
+  LayoutTemplate,
+  AlertTriangle
 
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
