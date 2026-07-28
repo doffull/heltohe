@@ -16,8 +16,9 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Plus, Search, Pencil, Trash2, MoreHorizontal, Package, Upload, Download, FileText, X, Check, Filter, Wand2, Copy, Tag, DollarSign, Archive, Layers2, Boxes, RefreshCw, Images, LayoutGrid
+  Plus, Search, Pencil, Trash2, MoreHorizontal, Package, Upload, Download, FileText, X, Check, Filter, Wand2, Copy, Tag, DollarSign, Archive, Layers2, Boxes, RefreshCw, Images, LayoutGrid, ArrowUpDown
 } from 'lucide-react';
+import { AdminCategoryOrdering } from '@/components/admin/AdminCategoryOrdering';
 import { ImportMockupDialog } from '@/components/admin/ImportMockupDialog';
 import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
 import { CsvImportDialog } from '@/components/admin/CsvImportDialog';
@@ -442,7 +443,12 @@ export default function AdminProducts() {
           <TabsTrigger value="looks" className="gap-2"><Layers2 className="h-4 w-4" />Looks</TabsTrigger>
           <TabsTrigger value="sizes" className="gap-2"><Tag className="h-4 w-4" />Tailles</TabsTrigger>
           <TabsTrigger value="layout" className="gap-2"><LayoutGrid className="h-4 w-4" />Affichage</TabsTrigger>
+          <TabsTrigger value="ordering" className="gap-2"><ArrowUpDown className="h-4 w-4" />Rangement</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="ordering" className="space-y-4 mt-4">
+          <AdminCategoryOrdering />
+        </TabsContent>
 
         <TabsContent value="sizes" className="space-y-4 mt-4">
           <GlobalSizesEditor />

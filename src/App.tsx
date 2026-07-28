@@ -18,7 +18,7 @@ import { ImageProtection } from "@/components/security/ImageProtection";
 import { ScreenshotWatermark } from "@/components/security/ScreenshotWatermark";
 
 import { AdminViewportProvider } from "@/context/AdminViewportContext";
-import { AdminDragBar } from "@/components/admin/AdminDragBar";
+
 import { MegaMenuProvider } from "@/context/MegaMenuContext";
 import { MegaMenu } from "@/components/layout/MegaMenu";
 import { getTransition } from "@/components/transitions/transitionRegistry";
@@ -212,7 +212,6 @@ function AdminVisualEditor() {
     <>
       <VisualEditorToggle />
       <VisualEditorPanel />
-      <AdminDragBar />
     </>
   );
 }
