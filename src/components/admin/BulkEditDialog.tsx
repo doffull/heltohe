@@ -108,21 +108,37 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
     return upd;
   };
 
-  const preview = useMemo(() => products.slice(0, 5).map(p => ({ p, upd: computeUpdates(p) })), [
-    products, priceOp, priceArg, saleOp, saleArg, stockOp, stockArg,
-    skuOp, skuArg, skuFind, category, tagsOp, tagsArg, activeOp,
-  ]);
+  const [step, setStep] = useState<'configure' | 'review'>('configure');
 
-  const hasChanges = preview.some(({ upd }) => Object.keys(upd).length > 0);
+  const allDiff = useMemo(
+    () => products.map(p => ({ p, upd: computeUpdates(p) })).filter(x => Object.keys(x.upd).length > 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [products, priceOp, priceArg, saleOp, saleArg, stockOp, stockArg, skuOp, skuArg, skuFind, category, tagsOp, tagsArg, activeOp],
+  );
+
+  const warnings = useMemo(() => {
+    const w: string[] = [];
+    const negPrice = allDiff.filter(({ upd }) => upd.price !== undefined && upd.price < 0).length;
+    if (negPrice) w.push(`${negPrice} prix négatif(s)`);
+    const badSale = allDiff.filter(({ p, upd }) => {
+      const sale = 'salePrice' in upd ? upd.salePrice : p.salePrice;
+      const price = upd.price !== undefined ? upd.price : p.price;
+      return sale !== undefined && sale !== null && sale >= price;
+    }).length;
+    if (badSale) w.push(`${badSale} promo ≥ prix normal`);
+    const skus = allDiff.map(({ p, upd }) => upd.sku ?? p.sku);
+    const dup = skus.filter((s, i) => skus.indexOf(s) !== i);
+    if (dup.length) w.push(`${new Set(dup).size} SKU en doublon`);
+    return w;
+  }, [allDiff]);
+
+  const preview = allDiff.slice(0, 5);
+  const hasChanges = allDiff.length > 0;
 
   const handleApply = async () => {
-    if (!hasChanges) { toast.error('Aucune modification'); return; }
-    const rows = products
-      .map(p => ({ id: p.id, updates: computeUpdates(p) }))
-      .filter(r => Object.keys(r.updates).length > 0);
-    if (rows.length === 0) { toast.error('Aucun changement calculé'); return; }
+    if (allDiff.length === 0) { toast.error('Aucun changement calculé'); return; }
     try {
-      const { success, errors } = await bulk.mutateAsync(rows);
+      const { success, errors } = await bulk.mutateAsync(allDiff.map(({ p, upd }) => ({ id: p.id, updates: upd })));
       if (errors.length > 0) {
         toast.error(`${success} mis à jour, ${errors.length} erreurs`, { description: errors.slice(0, 3).join(' • ') });
       } else {
@@ -130,6 +146,7 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
       }
       onDone?.();
       onOpenChange(false);
+      setStep('configure');
     } catch (e: any) {
       toast.error('Erreur', { description: e?.message });
     }
