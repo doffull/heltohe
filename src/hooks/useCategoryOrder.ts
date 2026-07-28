@@ -18,7 +18,7 @@ export function useCategoryOrders() {
         .select('category_slug, product_id, position')
         .order('position', { ascending: true });
       if (error) throw error;
-      return (data || []) as CategoryOrderRow[];
+      return (data || []) as unknown as CategoryOrderRow[];
     },
     staleTime: 60_000,
   });
