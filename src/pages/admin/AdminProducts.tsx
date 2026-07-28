@@ -383,9 +383,12 @@ export default function AdminProducts() {
     let success = 0;
     for (const p of selected) {
       try {
+        const imgs = Array.isArray(p.pageImages) ? p.pageImages.filter(Boolean) : [];
         await createProduct.mutateAsync({
           name: p.name, subtitle: p.subtitle, price: p.price, salePrice: p.salePrice || undefined,
-          image: '/placeholder.svg', category: p.category || 'Autre', stock: p.stock || 50,
+          image: imgs[0] || '/placeholder.svg',
+          galleryImages: imgs.slice(1, 5),
+          category: p.category || 'Autre', stock: p.stock || 50,
           sku: p.sku, description: p.description, material: p.material,
           sizes: p.sizes || [], colors: p.colors || [], colorOptions: [], attributes: {},
         });
