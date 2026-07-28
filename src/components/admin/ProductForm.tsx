@@ -603,62 +603,61 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
                   </button>
                 </div>
 
-                {/* Image upload for this color */}
-                <div className="flex items-start gap-3">
-                  {/* Thumbnail preview */}
-                  <div className="flex-shrink-0 w-16 h-16 border border-border/30 bg-secondary/40 overflow-hidden relative">
-                    {option.image ? (
-                      <>
-                        <img
-                          src={option.image}
-                          alt={option.label}
-                          className="w-full h-full object-cover"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newOptions = [...formData.colorOptions];
-                            newOptions[index] = { ...newOptions[index], image: undefined };
-                            setFormData(prev => ({ ...prev, colorOptions: newOptions }));
-                          }}
-                          className="absolute top-0.5 right-0.5 bg-background/80 rounded-full p-0.5"
-                        >
-                          <X className="w-2.5 h-2.5" />
-                        </button>
-                      </>
-                    ) : (
-                      <div
-                        className="w-full h-full opacity-20"
-                        style={{ backgroundColor: option.color }}
+                {/* Images multiples pour cette couleur */}
+                {(() => {
+                  const imgs: string[] = option.images && option.images.length
+                    ? option.images
+                    : (option.image ? [option.image] : []);
+                  const updateImages = (next: string[]) => {
+                    const newOptions = [...formData.colorOptions];
+                    newOptions[index] = { ...newOptions[index], images: next, image: next[0] };
+                    setFormData(prev => ({ ...prev, colorOptions: newOptions }));
+                  };
+                  return (
+                    <div className="space-y-2">
+                      {imgs.length > 0 && (
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {imgs.map((url, i) => (
+                            <div key={`${url}-${i}`} className="relative group border border-border/30 bg-secondary/40 aspect-square overflow-hidden">
+                              <img src={url} alt={`${option.label} ${i + 1}`} className="w-full h-full object-cover" />
+                              {i === 0 && (
+                                <span className="absolute top-0.5 left-0.5 text-[8px] px-1 bg-primary/90 text-primary-foreground">PRINCIPALE</span>
+                              )}
+                              <div className="absolute inset-x-0 bottom-0 flex justify-between items-center px-1 py-0.5 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="flex gap-0.5">
+                                  <button type="button" disabled={i === 0}
+                                    onClick={() => { const a = [...imgs]; [a[i-1], a[i]] = [a[i], a[i-1]]; updateImages(a); }}
+                                    className="text-[10px] px-1 disabled:opacity-30">←</button>
+                                  <button type="button" disabled={i === imgs.length - 1}
+                                    onClick={() => { const a = [...imgs]; [a[i+1], a[i]] = [a[i], a[i+1]]; updateImages(a); }}
+                                    className="text-[10px] px-1 disabled:opacity-30">→</button>
+                                </div>
+                                <button type="button"
+                                  onClick={() => updateImages(imgs.filter((_, idx) => idx !== i))}
+                                  className="text-[10px] text-destructive px-1" aria-label="Supprimer">
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <FileDropZone
+                        accept={['image']}
+                        folder="products/colors"
+                        onUpload={(url) => { if (url) updateImages([...imgs, url]); }}
+                        label={imgs.length ? `+ Ajouter une image (${imgs.length})` : `Image pour "${option.label}"`}
                       />
-                    )}
-                  </div>
-
-                  {/* Drop zone */}
-                  <div className="flex-1 min-w-0">
-                    <FileDropZone
-                      accept={['image']}
-                      folder="products/colors"
-                      currentFile={option.image}
-                      onUpload={(url) => {
-                        const newOptions = [...formData.colorOptions];
-                        newOptions[index] = { ...newOptions[index], image: url };
-                        setFormData(prev => ({ ...prev, colorOptions: newOptions }));
-                      }}
-                      label={option.image ? `Remplacer l'image` : `Image pour "${option.label}"`}
-                    />
-                    <Input
-                      value={option.image || ''}
-                      onChange={(e) => {
-                        const newOptions = [...formData.colorOptions];
-                        newOptions[index] = { ...newOptions[index], image: e.target.value || undefined };
-                        setFormData(prev => ({ ...prev, colorOptions: newOptions }));
-                      }}
-                      className="mt-1 bg-secondary/50 border-border/30 text-xs h-7"
-                      placeholder="Ou collez une URL d'image..."
-                    />
-                  </div>
-                </div>
+                      <Input
+                        value=""
+                        onChange={(e) => { const v = e.target.value.trim(); if (v) updateImages([...imgs, v]); e.currentTarget.value = ''; }}
+                        onBlur={(e) => { e.currentTarget.value = ''; }}
+                        className="bg-secondary/50 border-border/30 text-xs h-7"
+                        placeholder="Ou collez une URL et Entrée pour ajouter..."
+                      />
+                    </div>
+                  );
+                })()}
               </div>
             ))}
           </div>
