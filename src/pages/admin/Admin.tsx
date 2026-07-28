@@ -44,6 +44,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 // Admin Pages
 import AdminDashboard from './AdminDashboard';
 import AdminAudit from './AdminAudit';
+import AdminMediaAudit from './AdminMediaAudit';
 import AdminErrorLogs from './AdminErrorLogs';
 import AdminProducts from './AdminProducts';
 import AdminOrders from './AdminOrders';
@@ -120,6 +121,7 @@ const SIDEBAR_ITEMS = [
   { icon: Bot, label: 'Chatbot', href: '/admin/chatbot' },
   { icon: ShoppingBag, label: 'WooCommerce', href: '/admin/woocommerce' },
   { icon: ClipboardCheck, label: 'Audit', href: '/admin/audit' },
+  { icon: AlertTriangle, label: 'Audit médias', href: '/admin/media-audit' },
   { icon: Activity, label: 'Erreurs Client', href: '/admin/errors' },
   { icon: ShieldAlert, label: 'Sécurité', href: '/admin/security' },
   { icon: UserCog, label: 'Rôles', href: '/admin/roles' },
@@ -320,6 +322,7 @@ export default function Admin() {
             <Route path="chatbot/*" element={<AdminChatbot />} />
             <Route path="woocommerce/*" element={<AdminWooCommerce />} />
             <Route path="audit/*" element={<AdminAudit />} />
+            <Route path="media-audit/*" element={<AdminMediaAudit />} />
             <Route path="errors/*" element={<AdminErrorLogs />} />
             <Route path="roles/*" element={<AdminRoles />} />
             <Route path="security/*" element={<AdminSecurity />} />
