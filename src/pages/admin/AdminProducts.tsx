@@ -637,21 +637,34 @@ export default function AdminProducts() {
                           onKeyDown={e => { if (e.key === 'Enter') commitEditCell(); if (e.key === 'Escape') setEditingCell(null); }}
                           className="w-20 h-7 text-xs text-right border border-primary rounded px-1 bg-background"
                         />
-                      ) : product.salePrice ? (
-                        <div
-                          className="cursor-pointer hover:underline decoration-dotted"
-                          title="Cliquer pour modifier le prix"
-                          onClick={() => startEditCell(product.id, 'price', product.price)}
-                        >
-                          <span className="text-sm font-bold text-primary">{product.salePrice}€</span>
-                          <span className="text-xs line-through text-muted-foreground ml-2">{product.price}€</span>
-                        </div>
                       ) : (
                         <span
                           className="text-sm font-bold cursor-pointer hover:underline decoration-dotted"
                           title="Cliquer pour modifier"
                           onClick={() => startEditCell(product.id, 'price', product.price)}
                         >{product.price}€</span>
+                      )}
+                    </td>
+                    <td className="p-4 text-right">
+                      {editingCell?.id === product.id && editingCell.field === 'salePrice' ? (
+                        <input
+                          autoFocus
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          value={editingCellValue}
+                          onChange={e => setEditingCellValue(e.target.value)}
+                          onBlur={commitEditCell}
+                          onKeyDown={e => { if (e.key === 'Enter') commitEditCell(); if (e.key === 'Escape') setEditingCell(null); }}
+                          placeholder="—"
+                          className="w-20 h-7 text-xs text-right border border-primary rounded px-1 bg-background"
+                        />
+                      ) : (
+                        <span
+                          className={`text-sm cursor-pointer hover:underline decoration-dotted ${product.salePrice ? 'font-bold text-primary' : 'text-muted-foreground'}`}
+                          title="Cliquer pour modifier le prix promo (vider = pas de promo)"
+                          onClick={() => startEditCell(product.id, 'salePrice', product.salePrice ?? '')}
+                        >{product.salePrice ? `${product.salePrice}€` : '—'}</span>
                       )}
                     </td>
                     <td className="p-4 text-right">
@@ -678,6 +691,15 @@ export default function AdminProducts() {
                           {product.stock}
                         </span>
                       )}
+                    </td>
+                    <td className="p-4 text-center">
+                      <button
+                        onClick={() => toggleActive(product)}
+                        title="Cliquer pour activer/désactiver"
+                        className={`text-[10px] px-2 py-1 rounded font-bold ${((product as any).isActive ?? true) ? 'bg-green-500/20 text-green-500' : 'bg-muted text-muted-foreground'}`}
+                      >
+                        {((product as any).isActive ?? true) ? 'ACTIF' : 'INACTIF'}
+                      </button>
                     </td>
                     <td className="p-4 text-right">
                       <DropdownMenu>
