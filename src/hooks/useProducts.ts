@@ -132,10 +132,10 @@ export function useCreateProduct() {
   
   return useMutation({
     mutationFn: async (product: Omit<Product, 'id'>) => {
-      const dbProduct = appToDbProduct(product);
+      const dbProduct = appToDbProductFull(product);
       const { data, error } = await supabase
         .from('products')
-        .insert(dbProduct)
+        .insert(dbProduct as any)
         .select()
         .single();
       
