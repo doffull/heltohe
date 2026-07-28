@@ -1,48 +1,75 @@
-## Problème
+## Objectif
 
-Dans `src/hooks/useProducts.ts`, `useUpdateProduct` appelle `appToDbProduct(product)` sur toutes les mutations, y compris les mises à jour partielles comme `updateProduct.mutateAsync({ id, price: n })` (édition inline du prix, SKU, catégorie, stock dans `AdminProducts.tsx`).
+Étendre l'édition en masse existante dans `/admin/produits` (actuellement limitée à catégorie + prix + stock uniformes) pour couvrir tous les champs demandés, avec ajustements avancés, édition inline directe dans le tableau, modale dédiée et import/export CSV rapide prix/stock.
 
-`appToDbProduct` construit **un enregistrement complet** avec des valeurs par défaut : `gallery_images: sanitizePersistableUrls(product.galleryImages)` → tableau vide, `image: '' `, `sizes: []`, `colors: []`, `color_options: []`, `tags: []`, `is_active: true`, etc. Résultat : dès qu'on modifie le prix inline, la galerie, l'image principale, les tailles, couleurs et tags sont **écrasés**.
+## Ce qui existe déjà (à conserver)
 
-## Correctif
+- Sélection multiple via `useBulkSelection` + barre d'actions groupées.
+- Hooks `useBulkUpdateProducts` / `useBulkDeleteProducts`.
+- `CsvImportDialog` complet (import produits WooCommerce).
+- Édition inline stock via `InlineStockEditor` (sur AdminStock, pas sur AdminProducts).
 
-Rendre la conversion strictement partielle : ne renvoyer que les colonnes correspondant aux champs présents dans l'entrée. Deux ajustements dans `src/hooks/useProducts.ts` :
+## Ce qui sera ajouté
 
-1. Réécrire `appToDbProduct` pour qu'il utilise une table de correspondance clé App → clé DB + transformer, et n'inclue une colonne que si la clé existe (`in`) dans l'objet reçu. Ne plus forcer `is_active: true` (à gérer explicitement par le formulaire de création).
-2. `useCreateProduct` : passer par un helper `appToDbProductFull` (ou compléter côté appelant) pour garantir les champs obligatoires (`image`, `sizes: []`, `colors: []`, `gallery_images: []`, `is_active: true`, etc.) uniquement à la création.
+### 1. Édition inline dans le tableau produits (`AdminProducts.tsx`)
 
-Après ce fix :
-- L'édition inline (prix, SKU, catégorie, stock) n'envoie plus que la colonne modifiée → la galerie et les autres champs restent intacts.
-- `ProductForm` (édition complète) continue de fonctionner : il fournit toujours l'objet complet, donc toutes les colonnes seront présentes dans le payload.
+Rendre directement modifiables au clic les cellules :
+- **Prix** et **prix promo** (double champ dans la cellule PRIX)
+- **Stock**
+- **SKU**
+- **Catégorie** (select)
+- **Actif/inactif** (toggle badge)
+
+Comportement : click → champ input, Enter/blur → mutation `updateProduct` (partielle, sans écraser la galerie grâce au patch `appToDbProduct` déjà en place). Feedback discret (spinner + toast). Un état local évite le flicker pendant la mutation.
+
+Ajout des colonnes manquantes dans l'en-tête : `PRIX PROMO`, `ACTIF`.
+
+### 2. Modale d'édition en masse dédiée (`BulkEditDialog.tsx`)
+
+Nouveau composant remplaçant la barre inline actuelle (bouton "Édition en masse" dans la barre d'actions). Contient pour chaque champ un sélecteur d'opération :
+
+```text
+Prix        [ Inchangé | Fixer à X€ | +X€ | −X€ | +X% | −X% | Arrondir ]
+Prix promo  [ Inchangé | Fixer | +/−€ | +/−% | Supprimer ]
+Stock       [ Inchangé | Fixer | +X | −X | Mettre à 0 ]
+SKU         [ Inchangé | Préfixer | Suffixer | Remplacer texte ]
+Catégorie   [ Inchangée | Sélectionner ]
+Tags        [ Inchangés | Ajouter | Retirer | Remplacer ]
+Actif       [ Inchangé | Activer | Désactiver ]
+```
+
+Aperçu "Avant → Après" sur les 5 premiers produits sélectionnés avant validation. Application via `bulkUpdate.mutateAsync` en batch (calcul côté client, envoi ligne par ligne car les ajustements dépendent de la valeur actuelle).
+
+### 3. Import/Export CSV prix/stock rapide
+
+Deux boutons dans la barre d'outils AdminProducts :
+
+- **Exporter CSV (sélection ou tout)** : télécharge `sku,name,price,sale_price,stock,is_active` pour les produits filtrés/sélectionnés.
+- **Importer CSV rapide** : nouvelle modale `QuickPriceStockImportDialog.tsx` qui accepte un CSV avec colonnes `sku` + une ou plusieurs de `price,sale_price,stock,is_active`. Aperçu diff avant/après par ligne, puis upsert par SKU via `useBulkUpdateProducts` étendu (matching SKU → id).
+
+Cet outil est distinct de `CsvImportDialog` : il ne crée pas de produits, il met à jour uniquement les champs prix/stock/actif sur les SKU existants.
+
+### 4. Extension mineure du hook `useBulkUpdateProducts`
+
+Aujourd'hui il applique `updates` identiques à tous les IDs. On ajoute une variante `bulkUpdatePerRow(rows: {id, updates}[])` pour l'édition en masse avec ajustements (chaque produit ayant ses valeurs calculées).
 
 ## Détails techniques
 
-```ts
-const FIELD_MAP: Record<string, (v: any) => any> = {
-  name: v => v,
-  subtitle: v => v || null,
-  price: v => v,
-  salePrice: v => v || null,           // → sale_price
-  image: v => sanitizePersistableUrl(v) ?? '',
-  category: v => v,
-  stock: v => v,
-  sku: v => v,
-  description: v => v || null,
-  material: v => v || null,
-  careInstructions: v => v || null,    // → care_instructions
-  sizes: v => v || [],
-  colors: v => v || [],
-  colorOptions: v => (v || []),        // → color_options
-  attributes: v => (v || {}),
-  videoUrl: v => sanitizePersistableUrl(v), // → video_url
-  tags: v => v || [],
-  promoEndsAt: v => v || null,
-  modelHeight / modelSizeWorn / modelName,
-  galleryImages: v => sanitizePersistableUrls(v), // → gallery_images
-  templateId: v => v ?? null,
-};
-```
+- `appToDbProduct` (déjà partiel) garantit que la galerie et autres champs ne sont pas écrasés.
+- L'édition inline utilise `useUpdateProduct` existant.
+- Le CSV rapide réutilise `papaparse` déjà présent (`CsvImportDialog`).
+- Aucun changement de schéma DB nécessaire — colonnes visées existent déjà (`price`, `sale_price`, `stock`, `sku`, `category`, `is_active`, `tags`).
+- Sécurité : les mises à jour passent par les policies RLS existantes sur `products` (admin required).
 
-Construire l'objet en itérant uniquement sur `Object.keys(product)` présents. `useCreateProduct` remplit les champs manquants requis (`image: ''`, `sizes: []`, `gallery_images: []`, `is_active: true`, etc.) avant l'insert.
+## Fichiers touchés
 
-Aucun changement côté composants, aucune migration DB.
+- **Nouveau** `src/components/admin/BulkEditDialog.tsx`
+- **Nouveau** `src/components/admin/QuickPriceStockImportDialog.tsx`
+- **Modifié** `src/pages/admin/AdminProducts.tsx` : cellules inline, boutons export/import rapide, remplacement barre bulk par bouton ouvrant `BulkEditDialog`.
+- **Modifié** `src/hooks/useProducts.ts` : ajout `useBulkUpdatePerRow`.
+
+## Hors périmètre
+
+- Pas de changement DB.
+- Pas d'ajout de webhooks/edge functions.
+- L'existant `CsvImportDialog` (import produits complets) reste inchangé.
