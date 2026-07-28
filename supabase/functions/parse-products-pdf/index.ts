@@ -11,22 +11,17 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// About 13 MB raw after base64 decoding. Larger catalogs are split into
-// smaller PDFs by the admin client before being sent to this function.
-// Keeping this defensive cap prevents WORKER_RESOURCE_LIMIT (546).
-const MAX_FILE_SIZE = 18 * 1024 * 1024; // base64 chars (~13 MB raw)
-// Raw-PDF multimodal fallback: kept only as a last resort when we cannot
-// rasterize+recompress pages ourselves.
+const MAX_FILE_SIZE = 18 * 1024 * 1024;
 const MAX_MULTIMODAL_SIZE = 12 * 1024 * 1024;
-// Image-page recompression targets: keep each page well under provider
-// limits (~5 MB per image) and small enough to batch several per call.
-const PAGE_RENDER_SCALE = 1.0;      // pdf.js viewport scale before downscale
-const PAGE_MAX_DIM = 1100;          // px, longest edge after downscale
-const PAGE_JPEG_QUALITY = 65;       // 0-100 (ImageScript scale)
-const PAGE_BATCH_SIZE = 2;          // pages per AI call
-const MAX_RENDER_PAGES = 15;        // hard cap to bound cost/memory
+const PAGE_RENDER_SCALE = 1.0;
+const PAGE_MAX_DIM = 1100;
+const PAGE_JPEG_QUALITY = 65;
+const PAGE_BATCH_SIZE = 2;
+const MAX_RENDER_PAGES = 15;
 const CHUNK_CHARS = 12000;
 const MAX_CHUNKS = 20;
+const MAX_IMAGES_PER_PRODUCT = 5;
+const STORAGE_BUCKET = "media";
 const AI_MODEL = "openai/gpt-5-mini";
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
@@ -45,6 +40,7 @@ Champs par produit:
 - material (string)
 - sku (string, requis — invente au format PREFIX-XXXX si absent)
 - stock (number, défaut 50)
+- _pageIndex (number|number[]) — numéro(s) de page (1-indexé, tels que fournis dans le prompt) où ce produit apparaît. OBLIGATOIRE quand les pages sont fournies en images.
 
 Aucun texte hors du JSON. Pas de markdown. Si aucun produit détecté: {"products":[]}.`;
 
@@ -64,17 +60,13 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(bin);
 }
 
-// Rasterize a single PDF page then downscale + re-encode as JPEG.
-// Returns null when the canvas backend is unavailable in this runtime.
 async function renderCompressedPage(
   pdfBytes: Uint8Array,
   pageNumber: number,
-): Promise<{ base64: string; mime: string } | null> {
+): Promise<{ base64: string; mime: string; bytes: Uint8Array } | null> {
   try {
     const pngBuf = await renderPageAsImage(pdfBytes, pageNumber, {
       scale: PAGE_RENDER_SCALE,
-      // Lazy import of a Node-compatible canvas. Available on the Supabase
-      // edge Deno runtime via npm compat; if it fails we bail cleanly.
       // deno-lint-ignore no-explicit-any
       canvas: (async () => await import("npm:@napi-rs/canvas@0.1.53")) as any,
     });
@@ -85,7 +77,8 @@ async function renderCompressedPage(
       img.resize(Math.round(img.width * ratio), Math.round(img.height * ratio));
     }
     const jpeg = await img.encodeJPEG(PAGE_JPEG_QUALITY);
-    return { base64: bytesToBase64(jpeg), mime: "image/jpeg" };
+    const bytes = new Uint8Array(jpeg);
+    return { base64: bytesToBase64(bytes), mime: "image/jpeg", bytes };
   } catch (e) {
     console.warn(`renderCompressedPage failed page ${pageNumber}:`, (e as Error).message);
     return null;
@@ -137,6 +130,16 @@ async function callLovableAI(messages: any[], apiKey: string): Promise<{ ok: tru
   return { ok: true, text: data?.choices?.[0]?.message?.content ?? "" };
 }
 
+function normalizePageIndex(v: unknown): number[] {
+  if (typeof v === "number" && Number.isFinite(v)) return [Math.round(v)];
+  if (Array.isArray(v)) return v.map(n => typeof n === "number" ? Math.round(n) : Number(n)).filter(n => Number.isFinite(n));
+  if (typeof v === "string") {
+    const n = Number(v);
+    if (Number.isFinite(n)) return [Math.round(n)];
+  }
+  return [];
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -169,6 +172,12 @@ serve(async (req) => {
       });
     }
 
+    // Service-role client for storage uploads (admin already validated above).
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const storageClient = serviceKey
+      ? createClient(Deno.env.get("SUPABASE_URL")!, serviceKey)
+      : null;
+
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) {
       return new Response(JSON.stringify({ error: "LOVABLE_API_KEY missing" }), {
@@ -191,7 +200,30 @@ serve(async (req) => {
       });
     }
 
-    // 1. Extract text locally (no AI cost, no size explosion)
+    const batchId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const dayFolder = new Date().toISOString().slice(0, 10);
+
+    async function uploadPageJpeg(pageNumber: number, bytes: Uint8Array): Promise<string | null> {
+      if (!storageClient) return null;
+      const path = `pdf-import/${dayFolder}/${batchId}/page-${pageNumber}.jpg`;
+      try {
+        const { error } = await storageClient.storage.from(STORAGE_BUCKET).upload(path, bytes, {
+          contentType: "image/jpeg",
+          upsert: true,
+        });
+        if (error) {
+          console.warn("storage upload failed:", error.message);
+          return null;
+        }
+        const { data } = storageClient.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+        return data?.publicUrl ?? null;
+      } catch (e) {
+        console.warn("storage upload threw:", (e as Error).message);
+        return null;
+      }
+    }
+
+    // 1. Extract text locally
     let rawText = "";
     if (fileType === "pdf") {
       try {
@@ -202,7 +234,6 @@ serve(async (req) => {
         console.error("PDF text extraction failed", e);
       }
     } else {
-      // CSV / Excel: decode as text
       try {
         rawText = new TextDecoder("utf-8").decode(base64ToBytes(fileBase64));
       } catch {
@@ -212,11 +243,9 @@ serve(async (req) => {
 
     rawText = rawText.trim();
 
-    // 2. If text extraction failed (scanned PDF), rasterize pages, downscale
-    //    and re-encode as JPEG before sending. Falls back to the raw-PDF
-    //    multimodal call only if the canvas backend is unavailable.
+    // 2. Scanned/image-heavy PDF path: rasterize + AI vision + storage upload
     if (rawText.length < 200 && fileType === "pdf") {
-      console.log("Scanned PDF detected — attempting page rasterization + recompression");
+      console.log("Scanned PDF detected — rasterization + recompression path");
       const pdfBytes = base64ToBytes(fileBase64);
       let pageCount = 0;
       try {
@@ -229,24 +258,30 @@ serve(async (req) => {
 
       const pagesToRender = Math.min(pageCount, MAX_RENDER_PAGES);
       let rasterAvailable = pagesToRender > 0;
-      const seen = new Set<string>();
-      const allProducts: any[] = [];
+      const seen = new Map<string, any>();
       const errors: string[] = [];
       let processedPages = 0;
+      // Map global page number -> public URL
+      const pageUrls: Record<number, string> = {};
 
-      // Stream pages in small batches to keep memory bounded.
       for (let start = 1; start <= pagesToRender && rasterAvailable; start += PAGE_BATCH_SIZE) {
-        const batch: { base64: string; mime: string }[] = [];
+        const batch: { page: number; base64: string; mime: string; bytes: Uint8Array }[] = [];
         for (let p = start; p < start + PAGE_BATCH_SIZE && p <= pagesToRender; p++) {
           const img = await renderCompressedPage(pdfBytes, p);
           if (!img) { rasterAvailable = false; break; }
-          batch.push(img);
+          batch.push({ page: p, ...img });
         }
         if (!rasterAvailable || batch.length === 0) break;
         processedPages += batch.length;
 
+        // Upload page JPEGs in parallel to storage
+        await Promise.all(batch.map(async (im) => {
+          const url = await uploadPageJpeg(im.page, im.bytes);
+          if (url) pageUrls[im.page] = url;
+        }));
+
         const content: any[] = [
-          { type: "text", text: `Extrait tous les produits de ces pages (${start}-${start + batch.length - 1}/${pagesToRender}). Retourne {"products":[...]}.` },
+          { type: "text", text: `Extrait tous les produits de ces pages. Numéros de page fournis: ${batch.map(b => b.page).join(", ")}. Pour chaque produit, renseigne "_pageIndex" avec le(s) numéro(s) exact(s) de page où il figure. Retourne {"products":[...]}.` },
           ...batch.map((im) => ({
             type: "image_url",
             image_url: { url: `data:${im.mime};base64,${im.base64}` },
@@ -256,8 +291,8 @@ serve(async (req) => {
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content },
         ], apiKey);
-        // Free batch memory before continuing
-        batch.length = 0;
+        // Free base64 memory but keep page numbers for URL mapping below
+        for (const im of batch) { (im as any).base64 = ""; (im as any).bytes = null; }
 
         if (!aiRes.ok) {
           errors.push(`Batch ${Math.ceil(start / PAGE_BATCH_SIZE)}: ${aiRes.message}`);
@@ -269,23 +304,48 @@ serve(async (req) => {
         for (const p of list) {
           if (!p || typeof p !== "object") continue;
           const skuKey = String(p.sku || `${p.name}-${p.price}`).trim().toUpperCase();
-          if (!skuKey || seen.has(skuKey)) continue;
-          seen.add(skuKey);
-          allProducts.push(p);
+          if (!skuKey) continue;
+          const pages = normalizePageIndex((p as any)._pageIndex);
+          // Default: attribute to all pages of the batch if model omitted _pageIndex
+          const effectivePages = pages.length > 0 ? pages : batch.map(b => b.page);
+          const existing = seen.get(skuKey);
+          if (existing) {
+            const merged = new Set<number>([...(existing._pages || []), ...effectivePages]);
+            existing._pages = Array.from(merged);
+          } else {
+            const clean = { ...p };
+            delete (clean as any)._pageIndex;
+            (clean as any)._pages = effectivePages;
+            seen.set(skuKey, clean);
+          }
         }
       }
+
+      // Resolve pageImages[] from _pages using pageUrls map
+      const allProducts = Array.from(seen.values()).map((p) => {
+        const pages: number[] = Array.isArray((p as any)._pages) ? (p as any)._pages : [];
+        const urls: string[] = [];
+        for (const n of pages) {
+          const u = pageUrls[n];
+          if (u && !urls.includes(u)) urls.push(u);
+          if (urls.length >= MAX_IMAGES_PER_PRODUCT) break;
+        }
+        const out = { ...p, pageImages: urls };
+        delete (out as any)._pages;
+        return out;
+      });
 
       if (rasterAvailable && processedPages > 0) {
         return new Response(JSON.stringify({
           products: allProducts,
           mode: "raster-compressed",
           pagesProcessed: processedPages,
+          pagesUploaded: Object.keys(pageUrls).length,
           errors: errors.length ? errors : undefined,
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-
-      // Fallback: raw-PDF multimodal (only when small enough)
+      // Fallback: raw-PDF multimodal (no images extracted)
       if (fileBase64.length > MAX_MULTIMODAL_SIZE) {
         return new Response(JSON.stringify({
           error: "PDF scanné trop volumineux et rasterisation indisponible. Exportez un PDF texte ou réduisez-le.",
@@ -305,13 +365,33 @@ serve(async (req) => {
         });
       }
       const parsed = extractJson(aiRes.text) || {};
-      const products = Array.isArray(parsed) ? parsed : (parsed.products || []);
+      const products = (Array.isArray(parsed) ? parsed : (parsed.products || [])).map((p: any) => ({ ...p, pageImages: [] }));
       return new Response(JSON.stringify({ products, mode: "multimodal", chunksProcessed: 1 }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // 3. Chunk text and extract per chunk in parallel (bounded)
+    // 3. Text-only mode: also rasterize pages in the background to attach images
+    const pdfBytesForImages = fileType === "pdf" ? base64ToBytes(fileBase64) : null;
+    let backgroundPageCount = 0;
+    if (pdfBytesForImages) {
+      try {
+        const doc = await getDocumentProxy(pdfBytesForImages);
+        // deno-lint-ignore no-explicit-any
+        backgroundPageCount = Math.min(((doc as any).numPages ?? 0), MAX_RENDER_PAGES);
+      } catch (e) {
+        console.warn("bg getDocumentProxy failed:", (e as Error).message);
+      }
+    }
+    const pageUrls: Record<number, string> = {};
+    // Render + upload pages sequentially to bound memory (fire-and-await before AI to keep flow simple)
+    for (let p = 1; p <= backgroundPageCount; p++) {
+      const img = await renderCompressedPage(pdfBytesForImages!, p);
+      if (!img) break;
+      const url = await uploadPageJpeg(p, img.bytes);
+      if (url) pageUrls[p] = url;
+    }
+
     const chunks = chunkText(rawText, CHUNK_CHARS);
     if (chunks.length === 0) {
       return new Response(JSON.stringify({ products: [] }), {
@@ -319,21 +399,18 @@ serve(async (req) => {
       });
     }
 
-    const seen = new Set<string>();
-    const allProducts: any[] = [];
+    const seen = new Map<string, any>();
     const errors: string[] = [];
 
-    // Sequential to stay well under memory/rate limits for very large PDFs
     for (let i = 0; i < chunks.length; i++) {
       const aiRes = await callLovableAI([
         { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: `Extrait tous les produits de cet extrait (partie ${i + 1}/${chunks.length}). Retourne {"products":[...]}.\n\n--- EXTRAIT ---\n${chunks[i]}` },
+        { role: "user", content: `Extrait tous les produits de cet extrait (partie ${i + 1}/${chunks.length}). Retourne {"products":[...]}. Si tu identifies un numéro de page dans le texte pour un produit, remplis "_pageIndex".\n\n--- EXTRAIT ---\n${chunks[i]}` },
       ], apiKey);
       if (!aiRes.ok) {
         errors.push(`Chunk ${i + 1}: ${aiRes.message}`);
-        // Bail out on hard-stop errors (402/429)
         if (aiRes.status === 402 || aiRes.status === 429) {
-          if (allProducts.length === 0) {
+          if (seen.size === 0) {
             return new Response(JSON.stringify({ error: aiRes.message }), {
               status: aiRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
@@ -347,17 +424,44 @@ serve(async (req) => {
       for (const p of list) {
         if (!p || typeof p !== "object") continue;
         const skuKey = String(p.sku || `${p.name}-${p.price}`).trim().toUpperCase();
-        if (!skuKey || seen.has(skuKey)) continue;
-        seen.add(skuKey);
-        allProducts.push(p);
+        if (!skuKey) continue;
+        const pages = normalizePageIndex((p as any)._pageIndex);
+        const existing = seen.get(skuKey);
+        if (existing) {
+          const merged = new Set<number>([...(existing._pages || []), ...pages]);
+          existing._pages = Array.from(merged);
+        } else {
+          const clean = { ...p };
+          delete (clean as any)._pageIndex;
+          (clean as any)._pages = pages;
+          seen.set(skuKey, clean);
+        }
       }
     }
 
+    // Attach pageImages from uploaded pages. If the model didn't provide any
+    // _pageIndex (common for text mode), we don't know which pages belong to
+    // which product — leave pageImages empty for those and let the client fall
+    // back to placeholder. When we do have _pages, resolve URLs.
+    const productsWithImages = Array.from(seen.values()).map((p) => {
+      const pages: number[] = Array.isArray((p as any)._pages) ? (p as any)._pages : [];
+      const urls: string[] = [];
+      for (const n of pages) {
+        const u = pageUrls[n];
+        if (u && !urls.includes(u)) urls.push(u);
+        if (urls.length >= MAX_IMAGES_PER_PRODUCT) break;
+      }
+      const out = { ...p, pageImages: urls };
+      delete (out as any)._pages;
+      return out;
+    });
+
     return new Response(JSON.stringify({
-      products: allProducts,
+      products: productsWithImages,
       mode: "text",
       chunksProcessed: chunks.length,
       textLength: rawText.length,
+      pagesUploaded: Object.keys(pageUrls).length,
       errors: errors.length ? errors : undefined,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
