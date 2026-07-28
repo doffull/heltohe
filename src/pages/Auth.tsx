@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,17 +16,24 @@ const passwordSchema = z.string().min(6, 'Le mot de passe doit contenir au moins
 
 export default function Auth() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, signIn, signUp } = useAuth();
   const { toast } = useToast();
-  
+
+  // Preserve a same-origin `next` path (used by the OAuth consent route so the
+  // user comes back to /.lovable/oauth/consent after signing in).
+  const rawNext = searchParams.get('next') || '';
+  const nextPath = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/';
+  const redirectOrigin = window.location.origin + nextPath;
+
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  
+
   // Login form
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
-  
+
   // Signup form
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
@@ -37,15 +44,15 @@ export default function Auth() {
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      navigate('/');
+      navigate(nextPath);
     }
-  }, [user, navigate]);
+  }, [user, navigate, nextPath]);
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        redirect_uri: redirectOrigin,
       });
 
       if (result.error) {
@@ -66,7 +73,7 @@ export default function Auth() {
         title: 'Connexion réussie',
         description: 'Bienvenue !',
       });
-      navigate('/');
+      navigate(nextPath);
     } catch {
       toast({
         title: 'Erreur',
@@ -88,7 +95,7 @@ export default function Auth() {
       if (err instanceof z.ZodError) {
         toast({
           title: 'Erreur de validation',
-          description: err.errors[0].message,
+          description: err.issues[0].message,
           variant: 'destructive',
         });
         setIsLoading(false);
@@ -116,7 +123,7 @@ export default function Auth() {
         title: 'Connexion réussie',
         description: 'Bienvenue sur LVTK6',
       });
-      navigate('/');
+      navigate(nextPath);
     }
     
     setIsLoading(false);
@@ -133,7 +140,7 @@ export default function Auth() {
       if (err instanceof z.ZodError) {
         toast({
           title: 'Erreur de validation',
-          description: err.errors[0].message,
+          description: err.issues[0].message,
           variant: 'destructive',
         });
         setIsLoading(false);

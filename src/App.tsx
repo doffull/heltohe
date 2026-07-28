@@ -46,6 +46,7 @@ const SizeGuide = lazy(() => import("./pages/SizeGuide"));
 const Fidelite = lazy(() => import("./pages/Fidelite"));
 const Boutiques = lazy(() => import("./pages/Boutiques"));
 const StoreLocator = lazy(() => import("./pages/StoreLocator"));
+const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
 
 const RouteFallback = () => (
   <div className="min-h-[40vh] w-full flex items-center justify-center">
@@ -178,6 +179,7 @@ function AnimatedRoutes() {
           <Route path="/a-propos" element={<MainLayout><About /></MainLayout>} />
           <Route path="/contact" element={<MainLayout><Contact /></MainLayout>} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
           <Route path="/compte/*" element={<MainLayout><Account /></MainLayout>} />
           <Route path="/admin/*" element={<Admin />} />
           {/* Legal pages */}
