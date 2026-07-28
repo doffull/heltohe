@@ -34,32 +34,56 @@ function dbToAppProduct(db: Record<string, unknown>): Product {
   };
 }
 
-// Transform app product to DB product for insert/update
-function appToDbProduct(product: Partial<Product>) {
+// Field-by-field mapping App → DB. Each entry is only included in the payload
+// if the key is actually present in the input, so partial updates never wipe
+// unrelated columns (e.g. editing price inline must not clear gallery_images).
+const FIELD_MAP: Record<string, { col: string; transform: (v: any) => any }> = {
+  name: { col: 'name', transform: (v) => v },
+  subtitle: { col: 'subtitle', transform: (v) => v || null },
+  price: { col: 'price', transform: (v) => v },
+  salePrice: { col: 'sale_price', transform: (v) => v || null },
+  image: { col: 'image', transform: (v) => sanitizePersistableUrl(v) ?? '' },
+  category: { col: 'category', transform: (v) => v },
+  stock: { col: 'stock', transform: (v) => v },
+  sku: { col: 'sku', transform: (v) => v },
+  description: { col: 'description', transform: (v) => v || null },
+  material: { col: 'material', transform: (v) => v || null },
+  careInstructions: { col: 'care_instructions', transform: (v) => v || null },
+  sizes: { col: 'sizes', transform: (v) => v || [] },
+  colors: { col: 'colors', transform: (v) => v || [] },
+  colorOptions: { col: 'color_options', transform: (v) => (v || []) as unknown as Json },
+  attributes: { col: 'attributes', transform: (v) => (v || {}) as unknown as Json },
+  videoUrl: { col: 'video_url', transform: (v) => sanitizePersistableUrl(v) },
+  tags: { col: 'tags', transform: (v) => v || [] },
+  promoEndsAt: { col: 'promo_ends_at', transform: (v) => v || null },
+  modelHeight: { col: 'model_height', transform: (v) => v || null },
+  modelSizeWorn: { col: 'model_size_worn', transform: (v) => v || null },
+  modelName: { col: 'model_name', transform: (v) => v || null },
+  galleryImages: { col: 'gallery_images', transform: (v) => sanitizePersistableUrls(v) },
+  templateId: { col: 'template_id', transform: (v) => v ?? null },
+  isActive: { col: 'is_active', transform: (v) => v },
+};
+
+function appToDbProduct(product: Partial<Product> & { isActive?: boolean }): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of Object.keys(product)) {
+    const map = FIELD_MAP[key];
+    if (!map) continue;
+    out[map.col] = map.transform((product as any)[key]);
+  }
+  return out;
+}
+
+function appToDbProductFull(product: Omit<Product, 'id'>): Record<string, unknown> {
   return {
-    name: product.name,
-    subtitle: product.subtitle || null,
-    price: product.price,
-    sale_price: product.salePrice || null,
+    ...appToDbProduct(product),
     image: sanitizePersistableUrl(product.image) ?? '',
-    category: product.category,
-    stock: product.stock,
-    sku: product.sku,
-    description: product.description || null,
-    material: product.material || null,
-    care_instructions: product.careInstructions || null,
     sizes: product.sizes || [],
     colors: product.colors || [],
     color_options: (product.colorOptions || []) as unknown as Json,
     attributes: (product.attributes || {}) as unknown as Json,
-    video_url: sanitizePersistableUrl(product.videoUrl),
     tags: product.tags || [],
-    promo_ends_at: product.promoEndsAt || null,
-    model_height: product.modelHeight || null,
-    model_size_worn: product.modelSizeWorn || null,
-    model_name: product.modelName || null,
     gallery_images: sanitizePersistableUrls(product.galleryImages),
-    template_id: product.templateId ?? null,
     is_active: true,
   };
 }
