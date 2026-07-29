@@ -164,6 +164,7 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
       </motion.div>
 
       {/* Model info — always editable in admin editor mode */}
+      {(hasModel || editing) && (
       <motion.div className="flex items-center gap-2 rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-xs" {...fadeUp} transition={{ delay: 0.27 }}>
         <User className="h-3.5 w-3.5 text-primary shrink-0" />
         <span className="text-muted-foreground">
@@ -174,6 +175,7 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
           <EditableProductField product={product} field="modelSizeWorn" as="span" className="font-semibold text-foreground" placeholder="—" />
         </span>
       </motion.div>
+      )}
 
 
       {/* Size guide AI button */}
