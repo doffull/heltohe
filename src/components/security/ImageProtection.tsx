@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useDesignSettings } from '@/hooks/useDesignSettings';
 import { useAuth } from '@/context/AuthContext';
 
@@ -10,12 +11,18 @@ import { useAuth } from '@/context/AuthContext';
 export function ImageProtection() {
   const { data: settings } = useDesignSettings();
   const { isAdmin } = useAuth();
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
   const cfg = (settings as any)?.securityOverlay ?? {};
   const disableRightClick = cfg.disableRightClick !== false;
   const blockPrintScreen = cfg.blockPrintScreen !== false;
 
   useEffect(() => {
-    if (isAdmin) return;
+    document.body.classList.toggle('admin-route', isAdminRoute);
+    if (isAdmin || isAdminRoute) {
+      document.body.classList.remove('screenshot-blur');
+      return () => document.body.classList.remove('admin-route');
+    }
     const isInteractive = (el: EventTarget | null): boolean => {
       if (!(el instanceof HTMLElement)) return false;
       return !!el.closest('input, textarea, [contenteditable="true"], [data-allow-interact]');
@@ -87,7 +94,7 @@ export function ImageProtection() {
       document.removeEventListener('keyup', onScreenshotKey);
       removeBlur();
     };
-  }, [isAdmin, disableRightClick, blockPrintScreen]);
+  }, [isAdmin, isAdminRoute, disableRightClick, blockPrintScreen]);
 
   return null;
 }

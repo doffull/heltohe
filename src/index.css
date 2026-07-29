@@ -705,6 +705,20 @@ img {
   pointer-events: auto;
 }
 
+body.admin-route img,
+body.admin-route .protected-image-wrap,
+body.admin-route .protected-image-wrap > img,
+body.admin-route .protected-image-wrap > video {
+  -webkit-user-drag: auto;
+  user-select: auto;
+  pointer-events: auto;
+}
+
+body.admin-route .protected-image-wrap::after {
+  content: none;
+  pointer-events: none;
+}
+
 /* ===== Animated title effects ===== */
 .animated-title-glitch {
   position: relative;

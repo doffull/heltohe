@@ -138,18 +138,18 @@ export function HeaderDesignTab() {
 
   const toggleNavItem = (label: string, href: string) => {
     if (isNavItemSelected(href)) {
-      updateDesignSettings({ headerNavItems: headerNavItems.filter((item: any) => item.href !== href) } as any);
+      updateDesignSettings({ headerNavItems: headerNavItems.filter((item: any) => item.href !== href) } as any, { immediate: true });
     } else {
-      updateDesignSettings({ headerNavItems: [...headerNavItems, { label, href }] } as any);
+      updateDesignSettings({ headerNavItems: [...headerNavItems, { label, href }] } as any, { immediate: true });
     }
   };
 
   const removeNavItem = (href: string) => {
-    updateDesignSettings({ headerNavItems: headerNavItems.filter((item: any) => item.href !== href) } as any);
+    updateDesignSettings({ headerNavItems: headerNavItems.filter((item: any) => item.href !== href) } as any, { immediate: true });
   };
 
   const addCustomNavItem = () => {
-    updateDesignSettings({ headerNavItems: [...headerNavItems, { label: 'Nouveau', href: '/boutique' }] } as any);
+    updateDesignSettings({ headerNavItems: [...headerNavItems, { label: 'Nouveau', href: '/boutique' }] } as any, { immediate: true });
   };
 
   const updateNavItem = (index: number, updates: Partial<{ label: string; href: string }>) => {
@@ -159,7 +159,7 @@ export function HeaderDesignTab() {
   };
 
   const updateTopBanner = (updates: Record<string, any>) => {
-    updateDesignSettings({ topBanner: { ...topBanner, ...updates } } as any);
+    updateDesignSettings({ topBanner: { ...topBanner, ...updates } } as any, typeof updates.enabled === 'boolean' ? { immediate: true } : undefined);
   };
 
   // Determine what nav items to preview
@@ -279,6 +279,7 @@ export function HeaderDesignTab() {
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
             {PRESETS.map((preset) => (
               <button
+                type="button"
                 key={preset.id}
                 onClick={() => applyPreset(preset.id)}
                 className={cn(
@@ -319,16 +320,21 @@ export function HeaderDesignTab() {
           <div>
             <Label className="text-xs font-semibold uppercase tracking-wider mb-2 block text-muted-foreground">Pages système</Label>
             <div className="space-y-2">
-              {SYSTEM_LINKS.map((link) => (
-                <label key={link.href} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded-lg px-2 py-1.5 transition-colors">
+              {SYSTEM_LINKS.map((link) => {
+                const inputId = `header-nav-system-${link.href.replace(/[^a-z0-9]/gi, '-') || 'home'}`;
+                return (
+                <div key={link.href} className="flex items-center gap-2 hover:bg-muted/50 rounded-lg px-2 py-1.5 transition-colors">
                   <Checkbox
+                    id={inputId}
                     checked={isNavItemSelected(link.href)}
-                    onCheckedChange={() => toggleNavItem(link.label, link.href)}
+                    onCheckedChange={(checked) => {
+                      if (checked !== isNavItemSelected(link.href)) toggleNavItem(link.label, link.href);
+                    }}
                   />
-                  <span className="text-sm font-medium">{link.label}</span>
+                  <Label htmlFor={inputId} className="text-sm font-medium cursor-pointer flex-1">{link.label}</Label>
                   <span className="text-xs text-muted-foreground ml-auto font-mono">{link.href}</span>
-                </label>
-              ))}
+                </div>
+              );})}
             </div>
           </div>
 
@@ -337,15 +343,21 @@ export function HeaderDesignTab() {
             <div>
               <Label className="text-xs font-semibold uppercase tracking-wider mb-2 block text-muted-foreground">Catégories</Label>
               <div className="space-y-2">
-                {categories.filter(c => !c.parentId).map((cat) => (
-                  <label key={cat.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded-lg px-2 py-1.5 transition-colors">
+                {categories.filter(c => !c.parentId).map((cat) => {
+                  const href = `/boutique?category=${cat.title}`;
+                  const inputId = `header-nav-category-${cat.id}`;
+                  return (
+                  <div key={cat.id} className="flex items-center gap-2 hover:bg-muted/50 rounded-lg px-2 py-1.5 transition-colors">
                     <Checkbox
-                      checked={isNavItemSelected(`/boutique?category=${cat.title}`)}
-                      onCheckedChange={() => toggleNavItem(cat.title, `/boutique?category=${cat.title}`)}
+                      id={inputId}
+                      checked={isNavItemSelected(href)}
+                      onCheckedChange={(checked) => {
+                        if (checked !== isNavItemSelected(href)) toggleNavItem(cat.title, href);
+                      }}
                     />
-                    <span className="text-sm font-medium">{cat.title}</span>
-                  </label>
-                ))}
+                    <Label htmlFor={inputId} className="text-sm font-medium cursor-pointer flex-1">{cat.title}</Label>
+                  </div>
+                );})}
               </div>
             </div>
           )}
@@ -397,6 +409,7 @@ export function HeaderDesignTab() {
           <div className="flex items-center justify-between py-1">
             <Label className="text-sm">Activer le bandeau</Label>
             <Switch
+              id="top-banner-enabled"
               checked={topBanner.enabled}
               onCheckedChange={(v) => updateTopBanner({ enabled: v })}
             />
@@ -422,6 +435,7 @@ export function HeaderDesignTab() {
                     { id: 'elegant', name: 'Élégant', bg: '#000000', text: '#d4a843' },
                   ].map((p) => (
                     <button
+                      type="button"
                       key={p.id}
                       onClick={() => {
                         updateTopBanner({ bgColor: p.bg, textColor: p.text });
@@ -535,8 +549,9 @@ export function HeaderDesignTab() {
               <p className="text-xs text-muted-foreground">Reste visible lors du scroll</p>
             </div>
             <Switch
+              id="header-fixed"
               checked={headerFixed}
-              onCheckedChange={(v) => updateDesignSettings({ headerFixed: v } as any)}
+              onCheckedChange={(v) => updateDesignSettings({ headerFixed: v } as any, { immediate: true })}
             />
           </div>
           <div className="flex items-center justify-between py-1 border-t border-border/30">
@@ -545,8 +560,9 @@ export function HeaderDesignTab() {
               <p className="text-xs text-muted-foreground">Masquer pour un look minimal</p>
             </div>
             <Switch
+              id="header-show-logo"
               checked={designSettings.showLogo !== false}
-              onCheckedChange={(v) => updateDesignSettings({ showLogo: v })}
+              onCheckedChange={(v) => updateDesignSettings({ showLogo: v }, { immediate: true })}
             />
           </div>
         </CardContent>
@@ -591,8 +607,8 @@ export function HeaderDesignTab() {
                 };
                 return (
                   <button
-                    key={shape}
                     type="button"
+                    key={shape}
                     onClick={() => updateDesignSettings({ logoBackgroundShape: shape } as any)}
                     className={cn(
                       'rounded-lg border-2 p-2 text-[10px] font-medium transition',

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useDesignSettings } from '@/hooks/useDesignSettings';
 import { useAuth } from '@/context/AuthContext';
@@ -12,6 +13,8 @@ export function ScreenshotWatermark() {
   const [email, setEmail] = useState<string>('');
   const { data: settings } = useDesignSettings();
   const { isAdmin } = useAuth();
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
   const cfg = (settings as any)?.securityOverlay ?? {};
 
   useEffect(() => {
@@ -24,7 +27,7 @@ export function ScreenshotWatermark() {
   }, []);
 
   if (isAdmin) return null;
-  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) return null;
+  if (isAdminRoute) return null;
   if (cfg.enabled === false) return null;
 
   const stamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
@@ -44,6 +47,7 @@ export function ScreenshotWatermark() {
       className="fixed inset-0 pointer-events-none z-[70] overflow-hidden select-none"
       style={{
         backgroundImage: `repeating-linear-gradient(${angle}deg, transparent 0 120px, rgba(0,0,0,0.02) 120px 121px)`,
+        pointerEvents: 'none',
       }}
     >
       <div
