@@ -75,6 +75,8 @@ import AdminBoutiques from './AdminBoutiques';
 import AdminPageTemplates from './AdminPageTemplates';
 import AdminReviews from './AdminReviews';
 import AdminAgentIntegrations from './AdminAgentIntegrations';
+import AdminProductBadges from './AdminProductBadges';
+
 
 
 export const DEFAULT_SECTION_COLORS: Record<string, string> = {
