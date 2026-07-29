@@ -135,29 +135,35 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
 
       {/* Stock */}
       <motion.div className="flex items-center gap-2" {...fadeUp} transition={{ delay: 0.25 }}>
-        {product.stock > 0 ? (
-          <>
-            <Check className="h-5 w-5 text-primary" />
-            <span className="text-sm">
-              {product.stock > 10 ? 'En stock' : `Plus que ${product.stock} en stock`}
-            </span>
-          </>
-        ) : (
-          <span className="text-destructive font-bold">Rupture de stock</span>
-        )}
+        {product.stock > 0 ? <Check className="h-5 w-5 text-primary" /> : null}
+        <span className="text-sm inline-flex items-center gap-1">
+          {product.stock > 0 ? (product.stock > 10 ? 'En stock (' : 'Plus que ') : <span className="text-destructive font-bold mr-1">Rupture — </span>}
+          <EditableProductField
+            product={product}
+            field="stock"
+            as="span"
+            className="font-semibold"
+            parse={(v) => Math.max(0, parseInt(v) || 0)}
+            format={(v) => String(v ?? 0)}
+          >
+            {product.stock}
+          </EditableProductField>
+          {product.stock > 0 ? (product.stock > 10 ? ' unités)' : ' en stock') : ' unités'}
+        </span>
       </motion.div>
 
-      {/* Model info */}
-      {(product.modelHeight || product.modelSizeWorn) && (
-        <motion.div className="flex items-center gap-2 rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-xs" {...fadeUp} transition={{ delay: 0.27 }}>
-          <User className="h-3.5 w-3.5 text-primary shrink-0" />
-          <span className="text-muted-foreground">
-            {product.modelName ? `${product.modelName} mesure ` : 'Le mannequin mesure '}
-            <span className="font-semibold text-foreground">{product.modelHeight || '—'}</span>
-            {product.modelSizeWorn && <> et porte la taille <span className="font-semibold text-foreground">{product.modelSizeWorn}</span></>}
-          </span>
-        </motion.div>
-      )}
+      {/* Model info — always editable in admin editor mode */}
+      <motion.div className="flex items-center gap-2 rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-xs" {...fadeUp} transition={{ delay: 0.27 }}>
+        <User className="h-3.5 w-3.5 text-primary shrink-0" />
+        <span className="text-muted-foreground">
+          <EditableProductField product={product} field="modelName" as="span" className="font-semibold text-foreground" placeholder="Mannequin" />
+          {' mesure '}
+          <EditableProductField product={product} field="modelHeight" as="span" className="font-semibold text-foreground" placeholder="—" />
+          {' et porte la taille '}
+          <EditableProductField product={product} field="modelSizeWorn" as="span" className="font-semibold text-foreground" placeholder="—" />
+        </span>
+      </motion.div>
+
 
       {/* Size guide AI button */}
       {product.sizes && product.sizes.length > 0 && (
