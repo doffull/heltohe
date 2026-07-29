@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingCart, Heart, Share2, Ruler, Truck, Shield, RotateCcw, Minus, Plus, ZoomIn, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ShoppingCart, Heart, Share2, Ruler, Truck, Shield, RotateCcw, Minus, Plus, ZoomIn, ChevronLeft, ChevronRight, CreditCard } from 'lucide-react';
 import type { PageTemplate, TemplateBlock } from '@/config/templatePresets';
 import { loadGoogleFont } from '@/config/blockVariants';
 import { useCart } from '@/context/CartContext';
