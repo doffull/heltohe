@@ -395,20 +395,33 @@ export default function ProductImageGallery({
         ) : (
           <>
             {/* One thumbnail per image (cover + gallery) */}
-            {imageList.map((img, i) => (
-              <button
-                key={`${img}-${i}`}
-                onClick={() => { switchToImage(); setActiveImageIndex(i); }}
-                className={`w-20 h-20 chamfer-hud-sm overflow-hidden border-2 bg-card/30 relative transition-colors ${activeMedia === 'image' && activeImageIndex === i ? 'border-primary' : 'border-border/30 opacity-60 hover:opacity-100'}`}
-              >
-                <img src={img} alt={`${name} ${i + 1}`} className="w-full h-full object-cover" />
-                {i === 0 && videoUrl && (
-                  <div className="absolute bottom-1 left-1">
-                    <ImageIcon className="h-3 w-3 text-foreground drop-shadow-md" />
-                  </div>
-                )}
-              </button>
-            ))}
+            {imageList.map((img, i) => {
+              const thumb = (
+                <button
+                  key={`${img}-${i}`}
+                  onClick={() => { switchToImage(); setActiveImageIndex(i); }}
+                  className={`w-20 h-20 chamfer-hud-sm overflow-hidden border-2 bg-card/30 relative transition-colors ${activeMedia === 'image' && activeImageIndex === i ? 'border-primary' : 'border-border/30 opacity-60 hover:opacity-100'}`}
+                >
+                  <img src={img} alt={`${name} ${i + 1}`} className="w-full h-full object-cover" />
+                  {i === 0 && videoUrl && (
+                    <div className="absolute bottom-1 left-1">
+                      <ImageIcon className="h-3 w-3 text-foreground drop-shadow-md" />
+                    </div>
+                  )}
+                </button>
+              );
+              if (!product) return thumb;
+              return (
+                <EditableProductImage
+                  key={`edit-${img}-${i}`}
+                  product={product}
+                  target={i === 0 ? 'cover' : { galleryIndex: i - 1 }}
+                >
+                  {thumb}
+                </EditableProductImage>
+              );
+            })}
+
           </>
         )}
 
