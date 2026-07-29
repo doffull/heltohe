@@ -62,6 +62,27 @@ export default function ProductOptions({
 }: ProductOptionsProps) {
   const { designSettings } = useApp();
   const displayMode = designSettings.colorDisplayMode || 'swatches';
+  const { isOpen: editorOpen } = useVisualEditor();
+  const { isAdmin } = useAuth();
+  const updateProduct = useUpdateProduct();
+  const editMode = editorOpen && isAdmin;
+
+  async function addSize() {
+    const label = window.prompt('Nouvelle taille (ex: M, XL, 42)…');
+    if (!label) return;
+    const next = [...(product.sizes || []), label.trim()];
+    try {
+      await updateProduct.mutateAsync({ id: product.id, sizes: next } as any);
+      toast.success('✓ Taille ajoutée');
+    } catch (e: any) { toast.error(`Erreur: ${e?.message || 'échec'}`); }
+  }
+  async function renameColor(index: number, newLabel: string) {
+    const list = [...(product.colorOptions || [])];
+    if (!list[index]) return;
+    list[index] = { ...list[index], label: newLabel };
+    await updateProduct.mutateAsync({ id: product.id, colorOptions: list } as any);
+  }
+
 
   // Build color items from colorOptions or colors
   const colorItems = product.colorOptions?.length
