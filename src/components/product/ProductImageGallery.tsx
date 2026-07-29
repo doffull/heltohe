@@ -1,8 +1,9 @@
 import { useState, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ZoomIn, ZoomOut, Play, Image as ImageIcon, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { ColorOption } from '@/types';
+import { ColorOption, Product } from '@/types';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { EditableProductImage } from '@/components/visual-editor/EditableProductImage';
 
 interface ProductImageGalleryProps {
   image: string;
@@ -14,7 +15,10 @@ interface ProductImageGalleryProps {
   onColorChange?: (color: string) => void;
   modelHeight?: string;
   modelSizeWorn?: string;
+  /** Provided by ProductDetail to enable per-thumbnail inline editing. */
+  product?: Product;
 }
+
 
 function isEmbedVideo(url: string) {
   return /youtube|youtu\.be|vimeo/i.test(url);
