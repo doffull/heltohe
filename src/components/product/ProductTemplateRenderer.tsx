@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingCart, Heart, Share2, Ruler, Truck, Shield, RotateCcw, Minus, Plus, ZoomIn, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ShoppingCart, Heart, Share2, Ruler, Truck, Shield, RotateCcw, Minus, Plus, ZoomIn, ChevronLeft, ChevronRight, CreditCard } from 'lucide-react';
 import type { PageTemplate, TemplateBlock } from '@/config/templatePresets';
 import { loadGoogleFont } from '@/config/blockVariants';
 import { useCart } from '@/context/CartContext';
@@ -178,8 +178,8 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
       );
       case 'trust_badges': {
         const items = [
-          { icon: Truck, text: 'Livraison gratuite dès 200€' },
-          { icon: Shield, text: 'Garantie 1 an' },
+          { icon: Truck, text: 'Livraison gratuite en point relais' },
+          { icon: CreditCard, text: 'Paiement CB 3D secure et 3 fois sans frais via PayPal' },
           { icon: RotateCcw, text: 'Retours sous 30 jours' },
         ];
         const customLabels = b.props?.label ? String(b.props.label).split('|').map(s => s.trim()) : [];
