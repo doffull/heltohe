@@ -8,6 +8,7 @@ import type { SizeCategory } from '@/lib/sizeCharts';
 import { useApp } from '@/context/AppContext';
 import { getProductTrustBadges, TRUST_BADGE_ICONS } from '@/lib/productTrustBadges';
 import { EditableProductField } from '@/components/visual-editor/EditableProductField';
+import { EditableBadgeLabel } from '@/components/visual-editor/EditableBadgeLabel';
 
 
 interface ProductInfoProps {
