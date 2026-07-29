@@ -1,23 +1,28 @@
-Plan de correction ciblé pour que les éléments admin visibles sur ta capture soient vraiment modifiables.
+## Plan de correction
 
-1. Sécuriser les interactions des liens de navigation
-   - Remplacer les lignes cliquables actuelles par de vrais contrôles accessibles avec `id` + `htmlFor`.
-   - Ajouter un clic sur toute la ligne sans double-déclenchement, pour que cocher “Accueil”, “Boutique”, “Homme”, “Femme”, etc. marche même en cliquant le texte ou la ligne.
-   - Corriger l’édition des liens actifs/personnalisés pour que changer le label ou l’URL ne soit pas perdu pendant la saisie.
+1. **Corriger la sauvegarde des badges de confiance produit**
+   - Ajouter `productTrustBadges` dans le mapping `design_settings` ↔ réglages applicatifs.
+   - Le stocker dans `settings_json` comme les autres réglages sans colonne dédiée.
+   - Ainsi les changements dans `/admin/product-badges` ne disparaîtront plus au refetch/rechargement.
 
-2. Sécuriser les switches admin
-   - Rendre “Activer le bandeau”, “Header fixe” et “Afficher le logo” cliquables aussi via leur libellé.
-   - Ajouter un retour visuel/état stable pour éviter que le switch revienne immédiatement à l’état précédent pendant la sauvegarde.
+2. **Éviter que les réglages admin récents soient écrasés**
+   - Renforcer `useDesignSettings` / `AppContext` pour que les réglages locaux en cours de modification ne soient pas remplacés trop tôt par une ancienne réponse backend.
+   - Conserver un cache optimiste cohérent après chaque sauvegarde.
+   - Ne réappliquer les données backend que lorsqu’il n’y a pas d’édition/sauvegarde en cours.
 
-3. Corriger la sauvegarde des réglages header
-   - Ajouter une sauvegarde immédiate ciblée quand on coche/décoche un lien ou un switch important, au lieu de dépendre seulement du délai de 800 ms.
-   - Conserver la sauvegarde différée pour les champs texte afin de ne pas envoyer une requête à chaque lettre.
-   - Afficher une erreur claire si la base refuse l’écriture, plutôt que donner l’impression que le bouton ne marche pas.
+3. **Rendre la sauvegarde plus robuste pour les futures sections admin**
+   - Étendre le bloc `settings_json` pour inclure les champs récents qui n’ont pas de colonne dédiée, au lieu de les perdre à chaque sauvegarde.
+   - Préserver les valeurs existantes des sous-objets JSON quand une section admin ne modifie qu’une partie des réglages.
 
-4. Empêcher les protections du site de bloquer l’admin
-   - Adapter la protection anti-copie/sélection pour qu’elle soit complètement inactive sur toutes les routes `/admin`, même si le rôle admin n’est pas encore chargé.
-   - Élargir les éléments autorisés à interagir (`button`, `label`, éléments Radix, switches, checkboxes), afin que les composants admin ne soient jamais bloqués par l’overlay sécurité.
+4. **Stabiliser l’interface Badges produit**
+   - Garder l’onglet actif et la catégorie active pendant l’édition.
+   - Ajouter des boutons explicitement non-submit si nécessaire pour éviter toute réinitialisation involontaire.
+   - Utiliser les mises à jour immédiates sur les actions critiques comme activation/désactivation, ajout/suppression et édition des badges.
 
-5. Vérifier le résultat
-   - Tester dans l’admin : cocher/décocher les liens de navigation, activer/désactiver le bandeau, modifier un lien personnalisé, rafraîchir la page et vérifier que les changements restent.
-   - Vérifier qu’aucun élément de la zone montrée sur ta capture ne se chevauche ou ne devient impossible à sélectionner.
+5. **Vérifier le problème sur l’admin global**
+   - Contrôler les composants admin qui utilisent `updateDesignSettings` pour les liens de navigation, switches, textes et badges.
+   - Harmoniser leur comportement de sauvegarde pour que les clics, champs texte et cases à cocher restent modifiables.
+
+6. **Validation finale**
+   - Tester visuellement dans l’admin : modifier un badge, désactiver/activer un badge, changer un label, ajouter une catégorie, puis vérifier que la page ne revient pas à l’état initial.
+   - Vérifier un autre espace admin de réglages avec switch/texte/lien navigation pour confirmer que le problème ne se reproduit pas.
