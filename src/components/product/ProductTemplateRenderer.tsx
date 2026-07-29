@@ -19,6 +19,7 @@ interface Props {
 export default function ProductTemplateRenderer({ template, product }: Props) {
   const { addItem } = useCart();
   const { toast } = useToast();
+  const { designSettings } = useApp();
 
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
