@@ -126,7 +126,10 @@ export function EditableProductArrayField({
           value={local}
           onChange={(e) => setLocal(e.target.value)}
           onKeyDown={onKeyDown}
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
           placeholder={placeholder}
+
           className={cn(
             'bg-background border border-primary outline-none px-2 py-1 rounded text-inherit font-inherit min-w-[60px]',
             className,
