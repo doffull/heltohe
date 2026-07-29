@@ -609,7 +609,6 @@ export function HeaderDesignTab() {
                   <button
                     type="button"
                     key={shape}
-                    type="button"
                     onClick={() => updateDesignSettings({ logoBackgroundShape: shape } as any)}
                     className={cn(
                       'rounded-lg border-2 p-2 text-[10px] font-medium transition',
