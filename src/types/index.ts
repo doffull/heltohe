@@ -10,6 +10,16 @@ export interface ColorOption {
   image?: string;
   /** All images for this variant (main = first). */
   images?: string[];
+  /** Optional second color → rendered as a diagonal bicolor split. */
+  color2?: string | null;
+  /** Optional swatch image / texture (PNG/JPG). Takes priority over color(s) when rendering the chip. */
+  swatchImage?: string | null;
+}
+
+export interface ProductDefaults {
+  material?: string;
+  careInstructions?: string;
+  childSizes?: string[];
 }
 
 export interface Product {
@@ -428,6 +438,8 @@ export interface DesignSettings {
   sidebarSizes: string[];
   // Global product size catalogue (admin-managed, used everywhere)
   globalProductSizes?: string[];
+  // Global product defaults auto-applied on new product creation
+  productDefaults?: ProductDefaults;
   
   // Stat bar colors
   statBarFilledColor: string;

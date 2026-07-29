@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Product } from '@/types';
 import { useApp } from '@/context/AppContext';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { getSwatchStyle } from '@/lib/swatch';
 
 interface ProductOptionsProps {
   product: Product;
@@ -61,12 +62,16 @@ export default function ProductOptions({
     ? product.colorOptions.map(co => ({
         key: co.color,
         hex: co.color,
+        hex2: co.color2 || null,
+        swatchImage: co.swatchImage || null,
         label: co.label,
         image: co.image,
       }))
     : product.colors?.map(c => ({
         key: c,
         hex: resolveColorHex(c),
+        hex2: null as string | null,
+        swatchImage: null as string | null,
         label: c,
         image: undefined,
       })) || [];
@@ -134,7 +139,7 @@ export default function ProductOptions({
                     style={
                       displayMode === 'images' && item.image
                         ? undefined
-                        : { backgroundColor: item.hex }
+                        : getSwatchStyle({ color: item.hex, color2: item.hex2, swatchImage: item.swatchImage })
                     }
                   >
                     {displayMode === 'images' && item.image ? (

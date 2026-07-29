@@ -4,6 +4,7 @@ import { Product } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Star } from 'lucide-react';
 import { useReviewStats } from '@/hooks/useProductReviews';
+import { getSwatchStyle } from '@/lib/swatch';
 
 interface ProductCardProps {
   product: Product;
@@ -171,12 +172,12 @@ export function ProductCard({ product, onClick, onAddToCart, onNavigate, swatchS
                 key={index}
                 className={cn(
                   swatchClasses[swatchStyle],
-                  "border border-border/60 transition-all duration-200 hover:scale-110 flex-shrink-0",
+                  "border border-border/60 transition-all duration-200 hover:scale-110 flex-shrink-0 overflow-hidden",
                   selectedColorIndex === index
                     ? "ring-2 ring-offset-1 ring-foreground scale-110"
                     : "hover:ring-1 hover:ring-foreground/50"
                 )}
-                style={{ backgroundColor: opt.color }}
+                style={getSwatchStyle(opt)}
                 title={opt.label}
                 onClick={(e) => handleSwatchClick(e, index)}
                 aria-label={`Couleur: ${opt.label}`}
