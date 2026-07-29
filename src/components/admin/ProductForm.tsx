@@ -1119,8 +1119,29 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         <div className="space-y-2">
           {Object.entries(formData.attributes).map(([key, value]) => (
             <div key={key} className="flex items-center gap-2 px-3 py-2 bg-secondary/30 border border-border/30">
-              <span className="hud-text text-xs text-muted-foreground">{key}:</span>
-              <span className="hud-text text-xs">{value}</span>
+              <Input
+                value={key}
+                onChange={(e) => {
+                  const newKey = e.target.value;
+                  setFormData(prev => {
+                    const entries = Object.entries(prev.attributes);
+                    const updated = Object.fromEntries(
+                      entries.map(([k, v]) => (k === key ? [newKey, v] : [k, v]))
+                    );
+                    return { ...prev, attributes: updated };
+                  });
+                }}
+                className="hud-text text-xs h-7 bg-transparent border-0 border-b border-transparent hover:border-border/50 focus:border-primary rounded-none px-1 w-40 uppercase"
+              />
+              <span className="hud-text text-xs text-muted-foreground">:</span>
+              <Input
+                value={value}
+                onChange={(e) => {
+                  const newValue = e.target.value;
+                  setFormData(prev => ({ ...prev, attributes: { ...prev.attributes, [key]: newValue } }));
+                }}
+                className="hud-text text-xs h-7 bg-transparent border-0 border-b border-transparent hover:border-border/50 focus:border-primary rounded-none px-1 flex-1"
+              />
               <button type="button" onClick={() => removeAttribute(key)} className="ml-auto">
                 <Trash2 className="w-3 h-3 text-muted-foreground hover:text-destructive" />
               </button>
