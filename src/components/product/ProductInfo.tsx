@@ -209,12 +209,17 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
 
 
       {/* Description */}
-      {product.description && (
-        <motion.div {...fadeUp} transition={{ delay: 0.7 }}>
-          <h2 className="text-lg font-bold hud-text mb-3 uppercase tracking-wider">Description</h2>
-          <p className="text-muted-foreground leading-relaxed">{product.description}</p>
-        </motion.div>
-      )}
+      <motion.div {...fadeUp} transition={{ delay: 0.7 }}>
+        <h2 className="text-lg font-bold hud-text mb-3 uppercase tracking-wider">Description</h2>
+        <EditableProductField
+          product={product}
+          field="description"
+          as="p"
+          multiline
+          className="text-muted-foreground leading-relaxed"
+          placeholder="Ajouter une description…"
+        />
+      </motion.div>
 
       {/* Attributes */}
       {product.attributes && Object.keys(product.attributes).length > 0 && (
@@ -232,22 +237,31 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
       )}
 
       {/* Material & Care */}
-      {(product.material || product.careInstructions) && (
-        <motion.div className="grid md:grid-cols-2 gap-6" {...fadeUp} transition={{ delay: 0.9 }}>
-          {product.material && (
-            <div>
-              <h3 className="text-sm font-bold hud-text mb-2 uppercase tracking-wider">Matière</h3>
-              <p className="text-sm text-muted-foreground">{product.material}</p>
-            </div>
-          )}
-          {product.careInstructions && (
-            <div>
-              <h3 className="text-sm font-bold hud-text mb-2 uppercase tracking-wider">Entretien</h3>
-              <p className="text-sm text-muted-foreground">{product.careInstructions}</p>
-            </div>
-          )}
-        </motion.div>
-      )}
+      <motion.div className="grid md:grid-cols-2 gap-6" {...fadeUp} transition={{ delay: 0.9 }}>
+        <div>
+          <h3 className="text-sm font-bold hud-text mb-2 uppercase tracking-wider">Matière</h3>
+          <EditableProductField
+            product={product}
+            field="material"
+            as="p"
+            multiline
+            className="text-sm text-muted-foreground"
+            placeholder="Ex: 100% polyester recyclé"
+          />
+        </div>
+        <div>
+          <h3 className="text-sm font-bold hud-text mb-2 uppercase tracking-wider">Entretien</h3>
+          <EditableProductField
+            product={product}
+            field="careInstructions"
+            as="p"
+            multiline
+            className="text-sm text-muted-foreground"
+            placeholder="Ex: Lavage 30°C, séchage à plat"
+          />
+        </div>
+      </motion.div>
+
         </>
       )}
     </>
