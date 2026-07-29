@@ -1296,7 +1296,7 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                       </UITooltip>
                       <UITooltip>
                         <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary hover:text-primary" onClick={() => setVariantStockTarget({ productId: (item as any).product_id, productName: item.name })}>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary hover:text-primary" onClick={() => window.dispatchEvent(new CustomEvent('open-variant-stock', { detail: { productId: (item as any).product_id, productName: item.name } }))}>
                             <Layers className="h-3.5 w-3.5" />
                           </Button>
                         </TooltipTrigger>
