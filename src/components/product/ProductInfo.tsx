@@ -9,6 +9,8 @@ import { useApp } from '@/context/AppContext';
 import { getProductTrustBadges, TRUST_BADGE_ICONS } from '@/lib/productTrustBadges';
 import { EditableProductField } from '@/components/visual-editor/EditableProductField';
 import { EditableBadgeLabel } from '@/components/visual-editor/EditableBadgeLabel';
+import { useAuth } from '@/context/AuthContext';
+import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
 
 
 interface ProductInfoProps {
@@ -28,6 +30,13 @@ const fadeUp = {
 export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }: ProductInfoProps) {
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const { designSettings } = useApp();
+  const { isAdmin } = useAuth();
+  const { isOpen: editorOpen } = useVisualEditor();
+  const editing = isAdmin && editorOpen;
+  const hasModel = Boolean(product.modelHeight || product.modelSizeWorn || product.modelName);
+  const hasDescription = Boolean(product.description && String(product.description).trim());
+  const hasMaterial = Boolean(product.material && String(product.material).trim());
+  const hasCare = Boolean(product.careInstructions && String(product.careInstructions).trim());
   const guessCategory = (): SizeCategory => {
     const c = (product.category || '').toLowerCase();
     if (c.includes('femme')) return 'femme';
@@ -40,6 +49,7 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
   return (
 
     <>
+
       {showHeader && (
         <>
           {/* Category & SKU */}
@@ -154,6 +164,7 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
       </motion.div>
 
       {/* Model info — always editable in admin editor mode */}
+      {(hasModel || editing) && (
       <motion.div className="flex items-center gap-2 rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-xs" {...fadeUp} transition={{ delay: 0.27 }}>
         <User className="h-3.5 w-3.5 text-primary shrink-0" />
         <span className="text-muted-foreground">
@@ -164,6 +175,7 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
           <EditableProductField product={product} field="modelSizeWorn" as="span" className="font-semibold text-foreground" placeholder="—" />
         </span>
       </motion.div>
+      )}
 
 
       {/* Size guide AI button */}
@@ -222,6 +234,7 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
 
 
       {/* Description */}
+      {(hasDescription || editing) && (
       <motion.div {...fadeUp} transition={{ delay: 0.7 }}>
         <h2 className="text-lg font-bold hud-text mb-3 uppercase tracking-wider">Description</h2>
         <EditableProductField
@@ -233,6 +246,7 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
           placeholder="Ajouter une description…"
         />
       </motion.div>
+      )}
 
       {/* Attributes */}
       {product.attributes && Object.keys(product.attributes).length > 0 && (
@@ -250,7 +264,9 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
       )}
 
       {/* Material & Care */}
+      {(hasMaterial || hasCare || editing) && (
       <motion.div className="grid md:grid-cols-2 gap-6" {...fadeUp} transition={{ delay: 0.9 }}>
+        {(hasMaterial || editing) && (
         <div>
           <h3 className="text-sm font-bold hud-text mb-2 uppercase tracking-wider">Matière</h3>
           <EditableProductField
@@ -262,6 +278,8 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
             placeholder="Ex: 100% polyester recyclé"
           />
         </div>
+        )}
+        {(hasCare || editing) && (
         <div>
           <h3 className="text-sm font-bold hud-text mb-2 uppercase tracking-wider">Entretien</h3>
           <EditableProductField
@@ -273,7 +291,9 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
             placeholder="Ex: Lavage 30°C, séchage à plat"
           />
         </div>
+        )}
       </motion.div>
+      )}
 
         </>
       )}
