@@ -5,6 +5,12 @@ import { Product } from '@/types';
 import { useApp } from '@/context/AppContext';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { getSwatchStyle } from '@/lib/swatch';
+import { EditableProductArrayField } from '@/components/visual-editor/EditableProductArrayField';
+import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
+import { useAuth } from '@/context/AuthContext';
+import { useUpdateProduct } from '@/hooks/useProducts';
+import { toast } from 'sonner';
+
 
 interface ProductOptionsProps {
   product: Product;
