@@ -104,7 +104,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const settleEditing = useCallback((seq: number) => {
     if (seq !== saveSeqRef.current) return;
     pendingSaveRef.current = false;
-    dirtySinceRef.current = null;
+    // Keep a short post-save protection window: some backend refetches can
+    // return the previous row just after an upsert and would visually reset
+    // the admin control the user just clicked.
+    dirtySinceRef.current = Date.now();
   }, []);
 
   useEffect(() => {
