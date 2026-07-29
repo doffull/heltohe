@@ -9,6 +9,8 @@ import { useApp } from '@/context/AppContext';
 import { getProductTrustBadges, TRUST_BADGE_ICONS } from '@/lib/productTrustBadges';
 import { EditableProductField } from '@/components/visual-editor/EditableProductField';
 import { EditableBadgeLabel } from '@/components/visual-editor/EditableBadgeLabel';
+import { useAuth } from '@/context/AuthContext';
+import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
 
 
 interface ProductInfoProps {
