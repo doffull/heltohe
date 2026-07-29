@@ -169,16 +169,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return translations[language][key] || key;
   };
 
+  const emitSaved = useCallback((ok: boolean, error?: string) => {
+    try {
+      window.dispatchEvent(new CustomEvent('design-settings:saved', {
+        detail: { ts: Date.now(), ok, error },
+      }));
+    } catch {}
+  }, []);
+
   // Debounced save to cloud (800ms)
   const debouncedSave = useCallback((settings: DesignSettings) => {
     const seq = markEditing();
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
       saveDesignSettings.mutate(settings, {
+        onSuccess: () => emitSaved(true),
+        onError: (e: any) => emitSaved(false, e?.message || 'Erreur inconnue'),
         onSettled: () => { settleEditing(seq); },
       });
     }, 800);
-  }, [markEditing, saveDesignSettings, settleEditing]);
+  }, [emitSaved, markEditing, saveDesignSettings, settleEditing]);
 
   const setDesignSettings = useCallback((settings: DesignSettings) => {
     latestDesignRef.current = settings;
@@ -197,6 +207,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
         const seq = markEditing();
         saveDesignSettings.mutate(next, {
+          onSuccess: () => emitSaved(true),
+          onError: (e: any) => emitSaved(false, e?.message || 'Erreur inconnue'),
           onSettled: () => { settleEditing(seq); },
         });
       } else {
@@ -204,7 +216,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       return next;
     });
-  }, [debouncedSave, markEditing, saveDesignSettings, settleEditing]);
+  }, [debouncedSave, emitSaved, markEditing, saveDesignSettings, settleEditing]);
 
   // Flush pending debounced save immediately (used on explicit "Save" button).
   const flushDesignSettings = useCallback(async (override?: Partial<DesignSettings>) => {
@@ -220,10 +232,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const seq = markEditing();
     try {
       await saveDesignSettings.mutateAsync(merged);
+      emitSaved(true);
+    } catch (e: any) {
+      emitSaved(false, e?.message || 'Erreur inconnue');
+      throw e;
     } finally {
       settleEditing(seq);
     }
-  }, [markEditing, saveDesignSettings, settleEditing]);
+  }, [emitSaved, markEditing, saveDesignSettings, settleEditing]);
 
   const navigate = useNavigate();
   const { data: allCategories = [] } = useCategories();

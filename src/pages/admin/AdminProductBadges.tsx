@@ -12,6 +12,7 @@ import { TRUST_BADGE_ICONS, TRUST_BADGE_ICON_NAMES, DEFAULT_TRUST_BADGES } from 
 import type { ProductTrustBadge, ProductTrustBadgesConfig } from '@/types';
 import { toast } from 'sonner';
 
+
 const uid = () => `b_${Math.random().toString(36).slice(2, 9)}`;
 
 function BadgeRow({
@@ -219,14 +220,6 @@ export default function AdminProductBadges() {
           <p className="text-sm text-muted-foreground mt-1">
             Personnalise les icônes (Livraison, Garantie, Retours…) affichées sur la page produit. Configure un jeu par défaut, puis surcharge pour Homme / Femme / Enfant / Sportwear ou toute autre catégorie.
           </p>
-        </div>
-        <div
-          className="text-xs uppercase tracking-wider px-3 py-1.5 rounded-md border border-border bg-muted/40"
-          aria-live="polite"
-        >
-          {status === 'saving' && <span className="text-muted-foreground">Enregistrement…</span>}
-          {status === 'saved' && <span className="text-primary">✓ Enregistré</span>}
-          {status === 'idle' && <span className="text-muted-foreground">Autosave actif</span>}
         </div>
       </div>
 

@@ -1,28 +1,64 @@
-## Plan de correction
+## Objectif
 
-1. **Corriger la sauvegarde des badges de confiance produit**
-   - Ajouter `productTrustBadges` dans le mapping `design_settings` ↔ réglages applicatifs.
-   - Le stocker dans `settings_json` comme les autres réglages sans colonne dédiée.
-   - Ainsi les changements dans `/admin/product-badges` ne disparaîtront plus au refetch/rechargement.
+Rendre la sauvegarde des réglages admin réellement fiable et visible partout :
+- Un **bouton "Enregistrer maintenant"** présent sur toutes les pages admin utilisant `designSettings`.
+- Un **autosave perpétuel** avec **backup local (localStorage)** pour ne jamais perdre un changement.
+- Un **indicateur de statut clair** (Modifié / Enregistrement… / ✓ Enregistré à HH:MM:SS / Erreur) avec **gestion d'erreur + retry**.
+- Un **historique des derniers enregistrements** consultable.
 
-2. **Éviter que les réglages admin récents soient écrasés**
-   - Renforcer `useDesignSettings` / `AppContext` pour que les réglages locaux en cours de modification ne soient pas remplacés trop tôt par une ancienne réponse backend.
-   - Conserver un cache optimiste cohérent après chaque sauvegarde.
-   - Ne réappliquer les données backend que lorsqu’il n’y a pas d’édition/sauvegarde en cours.
+## Diagnostic (vérifié)
 
-3. **Rendre la sauvegarde plus robuste pour les futures sections admin**
-   - Étendre le bloc `settings_json` pour inclure les champs récents qui n’ont pas de colonne dédiée, au lieu de les perdre à chaque sauvegarde.
-   - Préserver les valeurs existantes des sous-objets JSON quand une section admin ne modifie qu’une partie des réglages.
+Dans `AdminProductBadges.tsx` :
+- `commit()` appelle `updateDesignSettings(...)` en mode **debounced (800 ms)** via `AppContext`. L'UI passe en `saving` puis `saved`, mais si l'utilisateur enchaîne des clics rapides, le timer redémarre et le statut retombe sur "Autosave actif" sans confirmation visible d'un vrai flush réseau.
+- Aucun **bouton "Enregistrer"** manuel, aucun **backup localStorage**, aucun **timestamp** du dernier save, aucune **UI d'erreur**.
+- `AppContext.flushDesignSettings()` existe déjà et flush immédiatement le debounce → c'est la brique idéale pour un bouton manuel.
 
-4. **Stabiliser l’interface Badges produit**
-   - Garder l’onglet actif et la catégorie active pendant l’édition.
-   - Ajouter des boutons explicitement non-submit si nécessaire pour éviter toute réinitialisation involontaire.
-   - Utiliser les mises à jour immédiates sur les actions critiques comme activation/désactivation, ajout/suppression et édition des badges.
+## Plan
 
-5. **Vérifier le problème sur l’admin global**
-   - Contrôler les composants admin qui utilisent `updateDesignSettings` pour les liens de navigation, switches, textes et badges.
-   - Harmoniser leur comportement de sauvegarde pour que les clics, champs texte et cases à cocher restent modifiables.
+### 1. Composant réutilisable `AdminSaveBar`
+Nouveau fichier `src/components/admin/AdminSaveBar.tsx` : barre sticky en haut/bas de page affichant :
+- Statut : `Idle` / `Modifié` (ambré) / `Enregistrement…` (spinner) / `✓ Enregistré à 14:32:07` / `⚠ Erreur — Réessayer`.
+- Bouton **"Enregistrer maintenant"** (appelle `flushDesignSettings()`).
+- Bouton **"Historique"** ouvrant une popover listant les 10 derniers enregistrements (timestamp + taille + statut) lus depuis localStorage.
+- Bouton **"Restaurer le dernier backup local"** si un backup non-synchronisé est détecté au chargement.
 
-6. **Validation finale**
-   - Tester visuellement dans l’admin : modifier un badge, désactiver/activer un badge, changer un label, ajouter une catégorie, puis vérifier que la page ne revient pas à l’état initial.
-   - Vérifier un autre espace admin de réglages avec switch/texte/lien navigation pour confirmer que le problème ne se reproduit pas.
+### 2. Hook `useDesignAutosave`
+Nouveau `src/hooks/useDesignAutosave.ts` qui centralise :
+- Écoute des changements de `designSettings` (via `AppContext`).
+- Écriture d'un **backup dans `localStorage`** sous la clé `design_settings_backup` à chaque modification (throttlé 300 ms).
+- Écriture d'un **journal** `design_settings_save_log` (10 dernières entrées : `{ts, ok, error?, bytes}`).
+- Exposition de `{ status, lastSavedAt, lastError, saveNow, history, hasLocalBackup, restoreBackup }`.
+- Détection d'un backup local plus récent que le cloud au montage → propose la restauration.
+- **Retry automatique** avec backoff (3 tentatives : 2s / 5s / 15s) en cas d'erreur réseau, puis statut "Erreur" persistant tant que non résolu.
+
+### 3. Intégration `AdminProductBadges`
+- Ajouter `<AdminSaveBar />` en haut de la page.
+- Remplacer l'indicateur maison actuel par le statut du hook.
+- Garder le `draft` local et `dirtyRef` pour la protection anti-écrasement pendant l'édition.
+
+### 4. Déploiement sur les autres pages admin
+Ajouter `<AdminSaveBar />` en tête des pages admin qui éditent `designSettings` : `AdminDesign`, `AdminSettings`, `AdminHomeIcons`, `AdminChatbot`, `AdminCheckout`, `AdminNotifications`, `AdminTransitions`, `AdminMarketing`, `AdminRoulette`, `AdminSecurity`, `AdminPages`, `AdminPageTemplates`. Comme le hook lit depuis `AppContext`, le bouton fonctionne pour toutes ces pages sans logique supplémentaire.
+
+### 5. Amélioration de `AppContext.flushDesignSettings`
+- Retourner explicitement le timestamp de succès.
+- Émettre un événement `window.dispatchEvent(new CustomEvent('design-settings:saved', { detail: { ts, ok } }))` que `useDesignAutosave` écoute pour mettre à jour l'historique de manière fiable (même quand le flush est déclenché par le debounce interne).
+- Sur erreur : ne pas silence — propager pour que la SaveBar affiche l'erreur et permette "Réessayer".
+
+### 6. Résilience
+- Si `saveDesignSettings.mutateAsync` throw (offline, 5xx) : garder le backup localStorage, marquer statut "erreur", programmer un retry, ET afficher un toast d'erreur non-bloquant.
+- Au retour en ligne (`window.addEventListener('online')`) : déclencher `saveNow()` automatiquement.
+
+## Détails techniques
+
+Clés localStorage :
+- `design_settings_backup` : `{ ts, payload }` snapshot complet.
+- `design_settings_save_log` : `Array<{ ts, ok, error?, bytes }>` (max 10).
+
+Fichiers modifiés / créés :
+- **Nouveau** `src/components/admin/AdminSaveBar.tsx`
+- **Nouveau** `src/hooks/useDesignAutosave.ts`
+- **Modifié** `src/context/AppContext.tsx` (event `design-settings:saved`, propagation d'erreur, listener `online`)
+- **Modifié** `src/pages/admin/AdminProductBadges.tsx` (SaveBar + statut branché sur le hook)
+- **Modifié** les pages admin listées à l'étape 4 (ajout d'un `<AdminSaveBar />` en tête).
+
+Pas de changement DB, pas de nouvelle table.

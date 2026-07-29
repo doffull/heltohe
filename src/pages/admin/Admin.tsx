@@ -76,6 +76,7 @@ import AdminPageTemplates from './AdminPageTemplates';
 import AdminReviews from './AdminReviews';
 import AdminAgentIntegrations from './AdminAgentIntegrations';
 import AdminProductBadges from './AdminProductBadges';
+import { AdminSaveBar } from '@/components/admin/AdminSaveBar';
 
 
 
@@ -311,6 +312,9 @@ export default function Admin() {
         {/* Colored top border */}
         <div className="h-1 w-full" style={{ backgroundColor: activeColor }} />
         <div className="p-3 lg:p-8">
+          <div className="mb-4">
+            <AdminSaveBar />
+          </div>
           <Routes>
             <Route index element={<AdminDashboard />} />
             <Route path="live/*" element={<AdminLive />} />
