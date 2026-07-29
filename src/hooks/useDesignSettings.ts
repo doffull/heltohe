@@ -113,6 +113,10 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     presets: (db.presets as typeof base.presets) || base.presets,
     schedules: (db.schedules as typeof base.schedules) || base.schedules,
     pages: (db.pages as typeof base.pages) || base.pages,
+    // Real columns previously not mapped
+    headerNavItems: ((db.header_nav_items as any) ?? []) as any,
+    topBanner: ((db.top_banner as any) ?? null) as any,
+    adminSectionColors: ((db.admin_section_colors as any) ?? {}) as any,
     // Mannequin hotspots — persist & restore from DB
     mannequinHotspots: (db.mannequin_hotspots as typeof base.mannequinHotspots) ?? [],
     // Sidebar brand position
@@ -160,6 +164,15 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
       careInstructions: 'Lavable en machine à 30°C · Ne pas repasser sur les impressions',
       childSizes: ['2A', '4A', '6A', '8A', '10A', '12A', '14A'],
     },
+    // Piggyback fields on settings_json (no dedicated DB column)
+    megaMenuLinks: ((db.settings_json as any)?.megaMenuLinks) ?? [],
+    sidebarNavLinks: ((db.settings_json as any)?.sidebarNavLinks) ?? [],
+    unifiedFab: ((db.settings_json as any)?.unifiedFab) ?? null,
+    promoParallax: ((db.settings_json as any)?.promoParallax) ?? null,
+    pageTransition: ((db.settings_json as any)?.pageTransition) ?? 'fade',
+    fontHeading: ((db.settings_json as any)?.fonts?.heading) ?? '',
+    fontBody: ((db.settings_json as any)?.fonts?.body) ?? '',
+    sliderImageOpacity: ((db.settings_json as any)?.sliderImageOpacity) ?? 1,
   } as DesignSettings;
 }
 
@@ -280,12 +293,27 @@ function settingsToDb(s: DesignSettings) {
     voice_command_enabled: (s as any).voiceCommandEnabled ?? true,
     voice_onboarding_hint: (s as any).voiceOnboardingHint ?? true,
     color_display_mode: s.colorDisplayMode ?? 'swatches',
+    // Real columns
+    header_nav_items: ((s as any).headerNavItems ?? []) as unknown as Json,
+    top_banner: ((s as any).topBanner ?? null) as unknown as Json,
+    admin_section_colors: ((s as any).adminSectionColors ?? {}) as unknown as Json,
     settings_json: {
       securityOverlay: (s as any).securityOverlay ?? null,
       productGridLayout: (s as any).productGridLayout ?? 'classic',
       trustpilot: (s as any).trustpilot ?? null,
       reviewsSettings: (s as any).reviewsSettings ?? null,
       productDefaults: (s as any).productDefaults ?? null,
+      // Piggyback fields (no dedicated columns)
+      megaMenuLinks: (s as any).megaMenuLinks ?? [],
+      sidebarNavLinks: (s as any).sidebarNavLinks ?? [],
+      unifiedFab: (s as any).unifiedFab ?? null,
+      promoParallax: (s as any).promoParallax ?? null,
+      pageTransition: (s as any).pageTransition ?? 'fade',
+      fonts: {
+        heading: (s as any).fontHeading ?? '',
+        body: (s as any).fontBody ?? '',
+      },
+      sliderImageOpacity: (s as any).sliderImageOpacity ?? 1,
     } as unknown as Json,
   };
 }
