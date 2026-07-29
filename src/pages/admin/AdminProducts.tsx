@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/select";
 import { ProductForm, VariantStockData } from '@/components/admin/ProductForm';
 import { InventoryProductDialog } from '@/components/admin/InventoryProductDialog';
+import { BulkVariantStockDialog } from '@/components/admin/BulkVariantStockDialog';
 import { GlobalSizesEditor } from '@/components/admin/GlobalSizesEditor';
 import { Textarea } from '@/components/ui/textarea';
 import { importProductsFromPdf } from '@/lib/productPdfImport';
@@ -104,6 +105,7 @@ export default function AdminProducts() {
   const [stockDialogOpen, setStockDialogOpen] = useState(false);
   const [stockDialogEdit, setStockDialogEdit] = useState<{ inventoryId: string; productId: string } | null>(null);
   const [stockDialogLocations, setStockDialogLocations] = useState<{ id: string; type: string }[]>([]);
+  const [variantStockDialog, setVariantStockDialog] = useState<{ productId: string; productName: string } | null>(null);
 
   // Bulk edit state
 
@@ -717,6 +719,7 @@ export default function AdminProducts() {
                          <DropdownMenuContent align="end">
                            <DropdownMenuItem onClick={() => { setEditingProduct(product); setIsFormOpen(true); }}><Pencil className="h-4 w-4 mr-2" />Modifier</DropdownMenuItem>
                            <DropdownMenuItem onClick={() => handleOpenStockDialog(product)}><Boxes className="h-4 w-4 mr-2" />Gérer le stock</DropdownMenuItem>
+                           <DropdownMenuItem onClick={() => setVariantStockDialog({ productId: product.id, productName: product.name })}><Layers2 className="h-4 w-4 mr-2" />Stock par taille/couleur</DropdownMenuItem>
                            <DropdownMenuItem onClick={() => handleDuplicate(product)}><Copy className="h-4 w-4 mr-2" />Dupliquer</DropdownMenuItem>
                            <DropdownMenuItem onClick={() => handleDelete(product.id)} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" />Supprimer</DropdownMenuItem>
                          </DropdownMenuContent>
@@ -990,6 +993,14 @@ export default function AdminProducts() {
         onOpenChange={setIsQuickCsvOpen}
         products={products}
       />
+      {variantStockDialog && (
+        <BulkVariantStockDialog
+          open={!!variantStockDialog}
+          onOpenChange={(o) => { if (!o) setVariantStockDialog(null); }}
+          productId={variantStockDialog.productId}
+          productName={variantStockDialog.productName}
+        />
+      )}
     </div>
   );
 }

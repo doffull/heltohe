@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { InventoryProductDialog } from '@/components/admin/InventoryProductDialog';
+import { BulkVariantStockDialog } from '@/components/admin/BulkVariantStockDialog';
 import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
 import { StockPdfImportDialog } from '@/components/admin/StockPdfImportDialog';
 import { InlineStockEditor } from '@/components/admin/InlineStockEditor';
@@ -10,7 +11,7 @@ import {
   BarChart3, Package, Store, ArrowLeftRight, AlertTriangle,
   RefreshCw, TrendingUp, TrendingDown, Search, Filter,
   Upload, Plus, Pencil, Trash2, FileText, X, Check, FileSpreadsheet,
-  ChevronDown, ChevronRight, Download, Clock
+  ChevronDown, ChevronRight, Download, Clock, Layers
 } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -136,6 +137,12 @@ export default function AdminStock() {
   const [searchTerm, setSearchTerm] = useState('');
   const [lastSync, setLastSync] = useState<Date>(new Date());
   const [syncOpen, setSyncOpen] = useState(false);
+  const [variantStockTarget, setVariantStockTarget] = useState<{ productId: string; productName: string } | null>(null);
+  useEffect(() => {
+    const handler = (e: any) => setVariantStockTarget(e.detail);
+    window.addEventListener('open-variant-stock', handler);
+    return () => window.removeEventListener('open-variant-stock', handler);
+  }, []);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -266,6 +273,15 @@ export default function AdminStock() {
       </div>
 
       <WordPressSyncDialog open={syncOpen} onOpenChange={setSyncOpen} syncType="stock" />
+      {variantStockTarget && (
+        <BulkVariantStockDialog
+          open={!!variantStockTarget}
+          onOpenChange={(o) => { if (!o) setVariantStockTarget(null); }}
+          productId={variantStockTarget.productId}
+          productName={variantStockTarget.productName}
+          onSaved={() => window.dispatchEvent(new Event('refresh-stock'))}
+        />
+      )}
     </div>
   );
 }
@@ -1291,6 +1307,14 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent side="top">{boutiqueLocations.length === 0 ? 'Aucune boutique disponible' : 'Transférer vers une boutique'}</TooltipContent>
+                      </UITooltip>
+                      <UITooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary hover:text-primary" onClick={() => window.dispatchEvent(new CustomEvent('open-variant-stock', { detail: { productId: (item as any).product_id, productName: item.name } }))}>
+                            <Layers className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Stock par taille & couleur</TooltipContent>
                       </UITooltip>
                       <UITooltip>
                         <TooltipTrigger asChild>
