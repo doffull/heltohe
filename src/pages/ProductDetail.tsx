@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import ProductImageGallery from '@/components/product/ProductImageGallery';
 import ProductInfo from '@/components/product/ProductInfo';
+import { EditableProductImage } from '@/components/visual-editor/EditableProductImage';
 import ProductOptions from '@/components/product/ProductOptions';
 import RelatedProducts from '@/components/product/RelatedProducts';
 import { useProductLooks } from '@/hooks/useProductLooks';
