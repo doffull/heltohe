@@ -212,6 +212,7 @@ export default function AdminProductBadges() {
 
   return (
     <div className="space-y-6">
+      <AdminSaveBar label="Badges de confiance" />
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold hud-text uppercase tracking-wider">
@@ -220,14 +221,6 @@ export default function AdminProductBadges() {
           <p className="text-sm text-muted-foreground mt-1">
             Personnalise les icônes (Livraison, Garantie, Retours…) affichées sur la page produit. Configure un jeu par défaut, puis surcharge pour Homme / Femme / Enfant / Sportwear ou toute autre catégorie.
           </p>
-        </div>
-        <div
-          className="text-xs uppercase tracking-wider px-3 py-1.5 rounded-md border border-border bg-muted/40"
-          aria-live="polite"
-        >
-          {status === 'saving' && <span className="text-muted-foreground">Enregistrement…</span>}
-          {status === 'saved' && <span className="text-primary">✓ Enregistré</span>}
-          {status === 'idle' && <span className="text-muted-foreground">Autosave actif</span>}
         </div>
       </div>
 
