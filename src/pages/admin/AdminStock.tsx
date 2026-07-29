@@ -137,6 +137,7 @@ export default function AdminStock() {
   const [searchTerm, setSearchTerm] = useState('');
   const [lastSync, setLastSync] = useState<Date>(new Date());
   const [syncOpen, setSyncOpen] = useState(false);
+  const [variantStockTarget, setVariantStockTarget] = useState<{ productId: string; productName: string } | null>(null);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -1292,6 +1293,14 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent side="top">{boutiqueLocations.length === 0 ? 'Aucune boutique disponible' : 'Transférer vers une boutique'}</TooltipContent>
+                      </UITooltip>
+                      <UITooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary hover:text-primary" onClick={() => setVariantStockTarget({ productId: (item as any).product_id, productName: item.name })}>
+                            <Layers className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Stock par taille & couleur</TooltipContent>
                       </UITooltip>
                       <UITooltip>
                         <TooltipTrigger asChild>
