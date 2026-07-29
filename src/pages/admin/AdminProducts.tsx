@@ -993,6 +993,14 @@ export default function AdminProducts() {
         onOpenChange={setIsQuickCsvOpen}
         products={products}
       />
+      {variantStockDialog && (
+        <BulkVariantStockDialog
+          open={!!variantStockDialog}
+          onOpenChange={(o) => { if (!o) setVariantStockDialog(null); }}
+          productId={variantStockDialog.productId}
+          productName={variantStockDialog.productName}
+        />
+      )}
     </div>
   );
 }
