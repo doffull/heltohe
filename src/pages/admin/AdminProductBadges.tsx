@@ -128,7 +128,7 @@ function BadgeList({
 export default function AdminProductBadges() {
   const { designSettings, updateDesignSettings } = useApp();
 
-  const cfg: ProductTrustBadgesConfig = useMemo(() => {
+  const remoteCfg: ProductTrustBadgesConfig = useMemo(() => {
     return (
       designSettings.productTrustBadges || {
         enabled: true,
@@ -138,9 +138,35 @@ export default function AdminProductBadges() {
     );
   }, [designSettings.productTrustBadges]);
 
+  // Autosave draft — decouples editing from network refetches so clicks never
+  // "reset" while a save is in flight.
+  const [draft, setDraft] = useState<ProductTrustBadgesConfig>(remoteCfg);
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const dirtyRef = useRef(false);
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Pull remote updates only when we don't have local edits pending.
+  useEffect(() => {
+    if (dirtyRef.current) return;
+    setDraft(remoteCfg);
+  }, [remoteCfg]);
+
+  const cfg = draft;
+
   const commit = (next: ProductTrustBadgesConfig) => {
-    updateDesignSettings({ productTrustBadges: next }, { immediate: true });
+    dirtyRef.current = true;
+    setDraft(next);
+    setStatus('saving');
+    updateDesignSettings({ productTrustBadges: next });
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+    savedTimerRef.current = setTimeout(() => {
+      dirtyRef.current = false;
+      setStatus('saved');
+      setTimeout(() => setStatus('idle'), 1500);
+    }, 1000);
   };
+
+  useEffect(() => () => { if (savedTimerRef.current) clearTimeout(savedTimerRef.current); }, []);
 
   const categories = designSettings.categories || [];
   // Suggested category keys even if not in categories array
@@ -181,6 +207,7 @@ export default function AdminProductBadges() {
     setActiveCat(key);
     setNewCatKey('');
   };
+
 
   return (
     <div className="space-y-6">
