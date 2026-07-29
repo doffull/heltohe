@@ -7,6 +7,7 @@ import { SizeGuideAIModal } from './SizeGuideAIModal';
 import type { SizeCategory } from '@/lib/sizeCharts';
 import { useApp } from '@/context/AppContext';
 import { getProductTrustBadges, TRUST_BADGE_ICONS } from '@/lib/productTrustBadges';
+import { EditableProductField } from '@/components/visual-editor/EditableProductField';
 
 
 interface ProductInfoProps {
