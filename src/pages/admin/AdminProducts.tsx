@@ -477,6 +477,7 @@ export default function AdminProducts() {
               return (
                 <button
                   key={opt.id}
+                  type="button"
                   onClick={() => setLayout(opt.id)}
                   className={`text-left border rounded-lg p-3 space-y-2 transition ${isActive ? 'border-primary ring-2 ring-primary/30 bg-primary/5' : 'hover:border-primary/50'}`}
                 >
@@ -694,8 +695,8 @@ export default function AdminProducts() {
                             className="w-16 h-7 text-xs text-right border border-primary rounded px-1 bg-background"
                             autoFocus
                           />
-                          <button onClick={() => handleSaveInlineStock(product.id)} className="text-primary hover:text-primary/80 text-xs">✓</button>
-                          <button onClick={() => setEditingStockId(null)} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
+                          <button type="button" onClick={() => handleSaveInlineStock(product.id)} className="text-primary hover:text-primary/80 text-xs">✓</button>
+                          <button type="button" onClick={() => setEditingStockId(null)} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
                         </div>
                       ) : (
                         <span
@@ -709,6 +710,7 @@ export default function AdminProducts() {
                     </td>
                     <td className="p-4 text-center">
                       <button
+                        type="button"
                         onClick={() => toggleActive(product)}
                         title="Cliquer pour activer/désactiver"
                         className={`text-[10px] px-2 py-1 rounded font-bold ${((product as any).isActive ?? true) ? 'bg-green-500/20 text-green-500' : 'bg-muted text-muted-foreground'}`}
@@ -929,7 +931,7 @@ export default function AdminProducts() {
               <div className="space-y-2 max-h-[50vh] overflow-y-auto">
                 {extractedProducts.map((p, i) => (
                   <div key={i} className={`flex items-center gap-4 p-3 border rounded-lg transition-colors ${p.selected ? 'border-primary bg-primary/5' : 'border-border opacity-60'}`}>
-                    <button onClick={() => setExtractedProducts(ps => ps.map((pp, j) => j === i ? { ...pp, selected: !pp.selected } : pp))}>
+                    <button type="button" onClick={() => setExtractedProducts(ps => ps.map((pp, j) => j === i ? { ...pp, selected: !pp.selected } : pp))}>
                       {p.selected ? <Check className="h-5 w-5 text-primary" /> : <X className="h-5 w-5 text-muted-foreground" />}
                     </button>
                     {p.pageImages && p.pageImages[0] ? (
