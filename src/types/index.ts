@@ -293,6 +293,20 @@ export interface PageSettings {
   heroSlides?: HeroSlide[];
 }
 
+export interface ProductTrustBadge {
+  id: string;
+  icon: string; // lucide icon name (Truck, Shield, RotateCcw, Sparkles, Leaf, Award, Package, Headphones, CreditCard, MapPin)
+  label: string;
+  enabled: boolean;
+}
+
+export interface ProductTrustBadgesConfig {
+  enabled: boolean;
+  default: ProductTrustBadge[];
+  byCategory?: Record<string, ProductTrustBadge[]>;
+}
+
+
 export interface DesignSettings {
   // Newsletter widget + voice command
   showSidebarNewsletter?: boolean;
