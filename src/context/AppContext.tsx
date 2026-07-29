@@ -91,9 +91,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // edits. This guarantees a change saved on mobile shows up identically on
   // desktop/tablet the next time the design_settings query refetches.
   const pendingSaveRef = useRef(false);
+  const dirtySinceRef = useRef<number | null>(null);
+  const saveSeqRef = useRef(0);
+
+  const markEditing = useCallback(() => {
+    pendingSaveRef.current = true;
+    dirtySinceRef.current = Date.now();
+    saveSeqRef.current += 1;
+    return saveSeqRef.current;
+  }, []);
+
+  const settleEditing = useCallback((seq: number) => {
+    if (seq !== saveSeqRef.current) return;
+    pendingSaveRef.current = false;
+    dirtySinceRef.current = null;
+  }, []);
+
   useEffect(() => {
     if (!dbSettings) return;
     if (pendingSaveRef.current) return;
+    if (dirtySinceRef.current && Date.now() - dirtySinceRef.current < 5_000) return;
     setDesignSettingsLocal(dbSettings);
     latestDesignRef.current = dbSettings;
   }, [dbSettings]);
@@ -151,14 +168,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Debounced save to cloud (800ms)
   const debouncedSave = useCallback((settings: DesignSettings) => {
-    pendingSaveRef.current = true;
+    const seq = markEditing();
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
       saveDesignSettings.mutate(settings, {
-        onSettled: () => { pendingSaveRef.current = false; },
+        onSettled: () => { settleEditing(seq); },
       });
     }, 800);
-  }, [saveDesignSettings]);
+  }, [markEditing, saveDesignSettings, settleEditing]);
 
   const setDesignSettings = useCallback((settings: DesignSettings) => {
     latestDesignRef.current = settings;
@@ -175,16 +192,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
           clearTimeout(saveTimerRef.current);
           saveTimerRef.current = null;
         }
-        pendingSaveRef.current = true;
+        const seq = markEditing();
         saveDesignSettings.mutate(next, {
-          onSettled: () => { pendingSaveRef.current = false; },
+          onSettled: () => { settleEditing(seq); },
         });
       } else {
         debouncedSave(next);
       }
       return next;
     });
-  }, [debouncedSave, saveDesignSettings]);
+  }, [debouncedSave, markEditing, saveDesignSettings, settleEditing]);
 
   // Flush pending debounced save immediately (used on explicit "Save" button).
   const flushDesignSettings = useCallback(async (override?: Partial<DesignSettings>) => {
@@ -197,13 +214,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       latestDesignRef.current = merged;
       setDesignSettingsLocal(merged);
     }
-    pendingSaveRef.current = true;
+    const seq = markEditing();
     try {
       await saveDesignSettings.mutateAsync(merged);
     } finally {
-      pendingSaveRef.current = false;
+      settleEditing(seq);
     }
-  }, [saveDesignSettings]);
+  }, [markEditing, saveDesignSettings, settleEditing]);
 
   const navigate = useNavigate();
   const { data: allCategories = [] } = useCategories();
