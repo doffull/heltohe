@@ -166,58 +166,63 @@ export default function ProductOptions({
             Couleur
           </label>
           <div className="flex flex-wrap gap-3">
-            {colorItems.map((item) => (
-              <Tooltip key={item.key}>
-                <TooltipTrigger asChild>
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => onColorChange(item.key)}
-                    className={`relative rounded-full transition-all ${
-                      displayMode === 'images' && item.image
-                        ? 'w-12 h-12 overflow-hidden'
-                        : 'w-10 h-10'
-                    } ${
-                      selectedColor === item.key
-                        ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
-                        : 'ring-1 ring-border hover:ring-foreground/50'
-                    }`}
-                    style={
-                      displayMode === 'images' && item.image
-                        ? undefined
-                        : getSwatchStyle({ color: item.hex, color2: item.hex2, swatchImage: item.swatchImage })
-                    }
-                  >
-                    {displayMode === 'images' && item.image ? (
-                      <img
-                        src={item.image}
-                        alt={item.label}
-                        className="w-full h-full object-cover rounded-full"
-                      />
-                    ) : (
-                      /* Inner check mark for light colors */
-                      selectedColor === item.key && (
-                        <span className="absolute inset-0 flex items-center justify-center">
-                          <span
-                            className="text-xs font-bold"
-                            style={{
-                              color: isLightColor(item.hex) ? '#000' : '#fff',
-                            }}
-                          >
-                            ✓
+            {colorItems.map((item, cIdx) => (
+              <div key={item.key} className="flex flex-col items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => onColorChange(item.key)}
+                      className={`relative rounded-full transition-all ${
+                        displayMode === 'images' && item.image
+                          ? 'w-12 h-12 overflow-hidden'
+                          : 'w-10 h-10'
+                      } ${
+                        selectedColor === item.key
+                          ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+                          : 'ring-1 ring-border hover:ring-foreground/50'
+                      }`}
+                      style={
+                        displayMode === 'images' && item.image
+                          ? undefined
+                          : getSwatchStyle({ color: item.hex, color2: item.hex2, swatchImage: item.swatchImage })
+                      }
+                    >
+                      {displayMode === 'images' && item.image ? (
+                        <img src={item.image} alt={item.label} className="w-full h-full object-cover rounded-full" />
+                      ) : (
+                        selectedColor === item.key && (
+                          <span className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-xs font-bold" style={{ color: isLightColor(item.hex) ? '#000' : '#fff' }}>
+                              ✓
+                            </span>
                           </span>
-                        </span>
-                      )
-                    )}
-                  </motion.button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-xs">
-                  {item.label}
-                </TooltipContent>
-              </Tooltip>
+                        )
+                      )}
+                    </motion.button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">{item.label}</TooltipContent>
+                </Tooltip>
+                {editMode && product.colorOptions && product.colorOptions[cIdx] && (
+                  <EditableProductArrayField
+                    product={product}
+                    field="colorOptions"
+                    index={cIdx}
+                    as="span"
+                    className="text-[10px] text-muted-foreground uppercase tracking-wider"
+                    placeholder="Nom"
+                    allowDelete={false}
+                    onCommit={async (raw) => renameColor(cIdx, raw)}
+                  >
+                    {item.label}
+                  </EditableProductArrayField>
+                )}
+              </div>
             ))}
           </div>
         </motion.div>
+
       )}
 
       {/* Quantity */}
