@@ -22,6 +22,8 @@ const normalizeKey = (s: string): string =>
     .trim();
 
 /** Résout la config de badges pour une catégorie de produit donnée. */
+export const normalizeCategoryKey = normalizeKey;
+
 export function getProductTrustBadges(
   settings: Partial<DesignSettings> | undefined,
   productCategory?: string
@@ -31,17 +33,23 @@ export function getProductTrustBadges(
   if (cfg.enabled === false) return { enabled: false, badges: [] };
   const key = normalizeKey(productCategory || '');
   const byCat = cfg.byCategory || {};
-  // Look up direct or partial category key match
   let override: ProductTrustBadge[] | undefined;
   if (key) {
+    // 1) Exact match takes priority
     for (const [catKey, list] of Object.entries(byCat)) {
-      const nk = normalizeKey(catKey);
-      if (nk && (nk === key || key.includes(nk) || nk.includes(key))) {
-        override = list;
-        break;
+      if (normalizeKey(catKey) === key) { override = list; break; }
+    }
+    // 2) Fall back to fuzzy contains match
+    if (!override) {
+      for (const [catKey, list] of Object.entries(byCat)) {
+        const nk = normalizeKey(catKey);
+        if (nk && (key.includes(nk) || nk.includes(key))) { override = list; break; }
       }
     }
   }
-  const list = override && override.length ? override : (cfg.default && cfg.default.length ? cfg.default : DEFAULT_TRUST_BADGES);
+  // Respect an explicitly-emptied default list. Only fall back to hard defaults
+  // when default is undefined (never configured).
+  const fallback = cfg.default === undefined ? DEFAULT_TRUST_BADGES : cfg.default;
+  const list = override && override.length ? override : fallback;
   return { enabled: true, badges: list.filter(b => b.enabled) };
 }
