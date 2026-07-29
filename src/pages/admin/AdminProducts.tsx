@@ -36,6 +36,7 @@ import { ProductForm, VariantStockData } from '@/components/admin/ProductForm';
 import { InventoryProductDialog } from '@/components/admin/InventoryProductDialog';
 import { BulkVariantStockDialog } from '@/components/admin/BulkVariantStockDialog';
 import { GlobalSizesEditor } from '@/components/admin/GlobalSizesEditor';
+import { ProductDefaultsEditor } from '@/components/admin/ProductDefaultsEditor';
 import { Textarea } from '@/components/ui/textarea';
 import { importProductsFromPdf } from '@/lib/productPdfImport';
 import { useDesignSettings, useSaveDesignSettings } from '@/hooks/useDesignSettings';
@@ -454,7 +455,9 @@ export default function AdminProducts() {
 
         <TabsContent value="sizes" className="space-y-4 mt-4">
           <GlobalSizesEditor />
+          <ProductDefaultsEditor />
         </TabsContent>
+
 
         <TabsContent value="layout" className="space-y-4 mt-4">
           <div className="space-y-2">
