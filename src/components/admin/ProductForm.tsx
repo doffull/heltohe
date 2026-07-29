@@ -464,9 +464,11 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
             <Label className="hud-text text-xs">Vidéo du produit</Label>
             <AiProductVideoButton
               imageUrl={formData.image}
-              durationSec={10}
+              productName={formData.name}
+              durationSec={6}
               onGenerated={(url) => setFormData(prev => ({ ...prev, videoUrl: url }))}
             />
+
           </div>
           <FileDropZone
             accept={['video']}
