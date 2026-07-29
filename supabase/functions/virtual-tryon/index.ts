@@ -132,14 +132,11 @@ Requirements:
     }
 
     const data = await aiResp.json();
-    // OpenAI images API: data[0].b64_json (or .url)
-    const first = data?.data?.[0];
+    // Gemini image preview returns images in message.images[].image_url.url (data URL)
+    const msg = data?.choices?.[0]?.message;
     let imageUrl: string | null = null;
-    if (first?.b64_json) {
-      imageUrl = `data:image/png;base64,${first.b64_json}`;
-    } else if (typeof first?.url === 'string') {
-      imageUrl = first.url;
-    }
+    const img = msg?.images?.[0]?.image_url?.url ?? msg?.images?.[0]?.url;
+    if (typeof img === 'string') imageUrl = img;
 
     if (!imageUrl) {
       console.error('No image returned', JSON.stringify(data).slice(0, 800));
