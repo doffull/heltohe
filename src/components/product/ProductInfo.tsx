@@ -7,6 +7,7 @@ import { SizeGuideAIModal } from './SizeGuideAIModal';
 import type { SizeCategory } from '@/lib/sizeCharts';
 import { useApp } from '@/context/AppContext';
 import { getProductTrustBadges, TRUST_BADGE_ICONS } from '@/lib/productTrustBadges';
+import { EditableProductField } from '@/components/visual-editor/EditableProductField';
 
 
 interface ProductInfoProps {
@@ -57,7 +58,12 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
       {/* Title */}
       <motion.div {...fadeUp} transition={{ delay: 0.15 }}>
         <div className="flex items-center gap-3 flex-wrap">
-          <h1 className="text-2xl md:text-4xl font-bold hud-text uppercase tracking-wider">{product.name}</h1>
+          <EditableProductField
+            product={product}
+            field="name"
+            as="h1"
+            className="text-2xl md:text-4xl font-bold hud-text uppercase tracking-wider"
+          />
           {isNew && (
             <motion.span
               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-primary/40 bg-primary/10 text-xs font-bold hud-text"
@@ -70,17 +76,39 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
             </motion.span>
           )}
         </div>
-        {product.subtitle && (
-          <p className="text-lg text-muted-foreground mt-1">{product.subtitle}</p>
-        )}
+        <EditableProductField
+          product={product}
+          field="subtitle"
+          as="p"
+          className="text-lg text-muted-foreground mt-1"
+          placeholder="Sous-titre du produit…"
+        />
       </motion.div>
 
       {/* Price */}
       <motion.div className="flex items-center gap-4" {...fadeUp} transition={{ delay: 0.2 }}>
         {product.salePrice ? (
           <>
-            <span className="text-2xl md:text-4xl font-bold text-primary">{product.salePrice}€</span>
-            <span className="text-2xl line-through text-muted-foreground">{product.price}€</span>
+            <EditableProductField
+              product={product}
+              field="salePrice"
+              as="span"
+              className="text-2xl md:text-4xl font-bold text-primary"
+              parse={(v) => (v === '' ? null : Number(v))}
+              format={(v) => (v == null ? '' : String(v))}
+            >
+              {product.salePrice}€
+            </EditableProductField>
+            <EditableProductField
+              product={product}
+              field="price"
+              as="span"
+              className="text-2xl line-through text-muted-foreground"
+              parse={(v) => Number(v)}
+              format={(v) => String(v ?? '')}
+            >
+              {product.price}€
+            </EditableProductField>
             <motion.span
               className="bg-destructive text-destructive-foreground px-3 py-1 text-sm font-bold"
               initial={{ scale: 0 }}
@@ -91,9 +119,19 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
             </motion.span>
           </>
         ) : (
-          <span className="text-2xl md:text-4xl font-bold">{product.price}€</span>
+          <EditableProductField
+            product={product}
+            field="price"
+            as="span"
+            className="text-2xl md:text-4xl font-bold"
+            parse={(v) => Number(v)}
+            format={(v) => String(v ?? '')}
+          >
+            {product.price}€
+          </EditableProductField>
         )}
       </motion.div>
+
 
       {/* Stock */}
       <motion.div className="flex items-center gap-2" {...fadeUp} transition={{ delay: 0.25 }}>
@@ -171,12 +209,17 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
 
 
       {/* Description */}
-      {product.description && (
-        <motion.div {...fadeUp} transition={{ delay: 0.7 }}>
-          <h2 className="text-lg font-bold hud-text mb-3 uppercase tracking-wider">Description</h2>
-          <p className="text-muted-foreground leading-relaxed">{product.description}</p>
-        </motion.div>
-      )}
+      <motion.div {...fadeUp} transition={{ delay: 0.7 }}>
+        <h2 className="text-lg font-bold hud-text mb-3 uppercase tracking-wider">Description</h2>
+        <EditableProductField
+          product={product}
+          field="description"
+          as="p"
+          multiline
+          className="text-muted-foreground leading-relaxed"
+          placeholder="Ajouter une description…"
+        />
+      </motion.div>
 
       {/* Attributes */}
       {product.attributes && Object.keys(product.attributes).length > 0 && (
@@ -194,22 +237,31 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
       )}
 
       {/* Material & Care */}
-      {(product.material || product.careInstructions) && (
-        <motion.div className="grid md:grid-cols-2 gap-6" {...fadeUp} transition={{ delay: 0.9 }}>
-          {product.material && (
-            <div>
-              <h3 className="text-sm font-bold hud-text mb-2 uppercase tracking-wider">Matière</h3>
-              <p className="text-sm text-muted-foreground">{product.material}</p>
-            </div>
-          )}
-          {product.careInstructions && (
-            <div>
-              <h3 className="text-sm font-bold hud-text mb-2 uppercase tracking-wider">Entretien</h3>
-              <p className="text-sm text-muted-foreground">{product.careInstructions}</p>
-            </div>
-          )}
-        </motion.div>
-      )}
+      <motion.div className="grid md:grid-cols-2 gap-6" {...fadeUp} transition={{ delay: 0.9 }}>
+        <div>
+          <h3 className="text-sm font-bold hud-text mb-2 uppercase tracking-wider">Matière</h3>
+          <EditableProductField
+            product={product}
+            field="material"
+            as="p"
+            multiline
+            className="text-sm text-muted-foreground"
+            placeholder="Ex: 100% polyester recyclé"
+          />
+        </div>
+        <div>
+          <h3 className="text-sm font-bold hud-text mb-2 uppercase tracking-wider">Entretien</h3>
+          <EditableProductField
+            product={product}
+            field="careInstructions"
+            as="p"
+            multiline
+            className="text-sm text-muted-foreground"
+            placeholder="Ex: Lavage 30°C, séchage à plat"
+          />
+        </div>
+      </motion.div>
+
         </>
       )}
     </>

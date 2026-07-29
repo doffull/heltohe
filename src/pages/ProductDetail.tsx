@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import ProductImageGallery from '@/components/product/ProductImageGallery';
 import ProductInfo from '@/components/product/ProductInfo';
+import { EditableProductImage } from '@/components/visual-editor/EditableProductImage';
 import ProductOptions from '@/components/product/ProductOptions';
 import RelatedProducts from '@/components/product/RelatedProducts';
 import { useProductLooks } from '@/hooks/useProductLooks';
@@ -158,18 +159,21 @@ export default function ProductDetail() {
         <div className="grid lg:grid-cols-2 gap-6 lg:gap-12">
           {/* Left: Image Gallery — ref for scroll target */}
           <div ref={imageRef} style={{ scrollMarginTop: '80px' }}>
-            <ProductImageGallery
-              image={product.image}
-              name={product.name}
-              videoUrl={product.videoUrl}
-              galleryImages={product.galleryImages}
-              colorOptions={product.colorOptions}
-              selectedColor={selectedColor}
-              onColorChange={handleColorChange}
-              modelHeight={(product as any).modelHeight}
-              modelSizeWorn={(product as any).modelSizeWorn}
-            />
+            <EditableProductImage product={product} target="cover">
+              <ProductImageGallery
+                image={product.image}
+                name={product.name}
+                videoUrl={product.videoUrl}
+                galleryImages={product.galleryImages}
+                colorOptions={product.colorOptions}
+                selectedColor={selectedColor}
+                onColorChange={handleColorChange}
+                modelHeight={(product as any).modelHeight}
+                modelSizeWorn={(product as any).modelSizeWorn}
+              />
+            </EditableProductImage>
           </div>
+
 
           {/* Right: Product Details */}
           <div className="flex flex-col gap-6">

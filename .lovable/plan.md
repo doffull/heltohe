@@ -1,46 +1,62 @@
-## Diagnostic
+## Objectif
 
-Après audit du fichier `src/pages/admin/AdminProductBadges.tsx`, du résolveur `src/lib/productTrustBadges.ts` et du rendu `src/components/product/ProductInfo.tsx` :
+Permettre à l'admin (uniquement) de **double-cliquer** sur n'importe quel élément visible du site (texte, prix, badge, taille, image) pour l'éditer en place, avec un petit bouton **✓ Valider** / **✕ Annuler** à côté du champ. Modifications appliquées immédiatement (autosave existant).
 
-- Les modifications SONT bien propagées au contexte (`updateDesignSettings` met à jour l'état optimiste immédiatement) et sauvegardées via l'autosave. Les pages produit lisent bien `designSettings.productTrustBadges`.
-- **Ce qui manque et provoque l'impression que "rien ne change"** :
-  1. Aucun **aperçu en direct** dans la page admin — impossible de voir l'effet sans quitter l'écran, ouvrir une page produit et rafraîchir.
-  2. L'ajout d'une catégorie repose sur une saisie libre (`homme`, `femme`…) alors que les produits utilisent `Homme`, `Femme`, `Enfant`. Le matching flou fonctionne mais rien ne guide l'utilisateur ni ne confirme quel produit reçoit quels badges.
-  3. Aucun indicateur qui montre, pour chaque onglet catégorie, si la surcharge est réellement utilisée par des produits existants.
-  4. Le résolveur `getProductTrustBadges` retombe sur `DEFAULT_TRUST_BADGES` (constante en dur) quand `cfg.default` est vide, au lieu d'utiliser la valeur enregistrée — source de confusion si l'utilisateur vide sa liste par défaut.
+## État actuel
+
+- Un système « Éditeur Live » existe déjà : `VisualEditorProvider`, `InlineEditable`, `EditableText`, `EditableImage`, `EditableCta`.
+- Il fonctionne sur le **Home** (via `designSettings.homeTexts`).
+- Sur la page produit **rien n'est éditable inline** — les données (titre, prix, description, tailles, images) viennent de la table `products`, pas de `designSettings`.
+- L'activation actuelle se fait par **simple clic** dans l'éditeur ouvert ; le user demande **double-clic**.
 
 ## Ce que je vais faire
 
-### 1. Aperçu en direct (colonne latérale sticky)
-Dans `AdminProductBadges.tsx` : ajouter une colonne à droite (empilée sous mobile) qui rend **exactement** la barre de badges telle qu'affichée dans `ProductInfo.tsx` (mêmes classes Tailwind, icônes, grid dynamique). Elle réagit :
-- au brouillon local (avant même l'autosave),
-- à la catégorie de l'onglet actif (Défaut / Homme / Femme / Enfant / Sportwear / custom),
-- au switch "Global activé/désactivé",
-- au switch `enabled` de chaque badge.
+### 1. Cœur — édition inline générique (double-clic + bouton valider)
+- `InlineEditable.tsx` : passer d'un simple clic à un **double-clic** pour entrer en édition ; en mode édition afficher un mini toolbar flottant `✓ Valider` / `✕ Annuler` (au lieu de valider seulement à Enter/blur).
+- Activation globale via un **FAB « Mode édition »** (visible uniquement pour un admin, `has_role admin`) qui bascule `VisualEditorProvider.isOpen`. Actuellement il n'apparaît qu'en ouvrant le panneau — on le rend disponible sur **toutes** les pages.
+- Un léger contour pointillé apparaît au survol des éléments éditables quand le mode est actif, pour signaler ce qui est cliquable.
 
-Un menu déroulant "Prévisualiser comme…" permet de simuler n'importe quelle catégorie existante en base.
+### 2. Nouveau — édition ancrée à un produit
+Créer `src/components/visual-editor/EditableProductField.tsx` :
+- Wrapper qui prend `product`, `field` (`name` | `subtitle` | `price` | `salePrice` | `description` | `material` | etc.), et rend l'enfant en lecture, ou un input/textarea + toolbar Valider/Annuler au double-clic (mode éditeur actif + admin).
+- Persiste via le hook existant `useProducts().updateProduct(id, patch)` (déjà utilisé par l'admin) — patch minimal pour ne pas casser les images/galerie (cf. `appToDbProduct` déjà corrigé).
+- Prix/salePrice : parsing numérique avec validation ; badges/tailles : édition par pastilles (chips) avec ajout/suppression inline.
 
-### 2. Sélecteur de catégories réel
-- Remplacer la saisie libre par un `Select` alimenté par les catégories réellement présentes dans les produits (via `products` du contexte) + les 4 catégories suggérées.
-- Afficher à côté de chaque onglet le **nombre de produits** concernés (compte via `products.filter(p => normalizeKey(p.category) === key)`), pour que l'utilisateur voie l'impact.
-- Badge visuel "Utilise Défaut" / "Personnalisé" par catégorie.
+Créer `EditableProductImage.tsx` : au double-clic sur une image de galerie ou l'image principale, ouvre la `MediaLibraryDialog` existante ou l'upload direct ; sauvegarde `products.image` / `products.gallery_images`.
 
-### 3. Fiabilisation du résolveur
-Dans `src/lib/productTrustBadges.ts` :
-- Respecter `cfg.default` même vide (n'écraser par `DEFAULT_TRUST_BADGES` que si `cfg.default` est `undefined`, jamais si l'utilisateur l'a vidé volontairement).
-- Ajouter un match exact prioritaire avant le match "includes" pour éviter qu'une catégorie courte n'attrape une catégorie longue par erreur.
+Créer `EditableProductSizes.tsx` : chips de tailles cliquables → popover avec add/remove et réordonnancement.
 
-### 4. UX de la page admin
-- Bouton "Voir un produit de cette catégorie" (ouvre le premier produit correspondant dans un nouvel onglet) pour vérifier immédiatement.
-- Message inline "✓ Appliqué en direct sur les pages produit" à chaque commit.
-- Conserver l'autosave + `AdminSaveBar` déjà en place.
+### 3. Intégration dans les pages produit
+- `src/components/product/ProductInfo.tsx` : envelopper titre, sous-titre, prix, prix barré, description, matière, badges (utilise déjà `getProductTrustBadges`) et bouton « Ajouter au panier » (label via `designSettings.homeTexts`).
+- `src/components/product/ProductGallery.tsx` : envelopper images (dblclick → MediaLibrary).
+- Chips tailles → `EditableProductSizes`.
+- Les badges de confiance déjà éditables via `/admin/product-badges` ; on ajoute un **crayon inline** qui ouvre directement cette page dans un nouvel onglet quand on double-clique sur la barre de badges.
 
-### Fichiers touchés
-- `src/pages/admin/AdminProductBadges.tsx` — refonte complète (aperçu, sélecteur, compteurs).
-- `src/lib/productTrustBadges.ts` — correction résolveur + export d'un helper de rendu partagé avec l'aperçu.
-- (aucun changement de schéma DB, aucun changement de types)
+### 4. Extension aux autres pages (catégorie, home)
+- Home : `EditableText` déjà en place ; on migre l'activation vers double-clic (via `InlineEditable`).
+- Header nav / footer : envelopper les libellés déjà stockés dans `designSettings.headerNavItems` etc.
+- Page catégorie : titre + description SEO stockés dans `categories` table — même wrapper que `EditableProductField` mais générique `EditableRowField` réutilisable (produits, catégories, pages).
 
-### Détails techniques
-- L'aperçu importe `TRUST_BADGE_ICONS` et reproduit la grille `grid-cols` dynamique de `ProductInfo`.
-- Le comptage produit utilise la même `normalizeKey` que le résolveur pour garantir la cohérence.
-- Aucun impact sur le rendu réel des pages produit hormis la petite correction du fallback `default` vide.
+### 5. Garde-fous
+- Toute l'édition inline est **strictement conditionnée** à `isOpen && isAdmin` (via `useUserRole`), zéro overhead / zéro affordance pour les visiteurs.
+- Aucune modification de schéma DB : on réutilise les colonnes existantes.
+- L'autosave global `AdminSaveBar` continue de gérer `designSettings` ; les updates produits/catégories passent par les hooks existants qui persistent immédiatement en base.
+
+## Fichiers touchés
+
+- `src/components/visual-editor/InlineEditable.tsx` — double-clic + toolbar Valider/Annuler + outline hover.
+- `src/components/visual-editor/VisualEditorToggle.tsx` — rendre le FAB toujours dispo pour admin.
+- `src/components/visual-editor/EditableProductField.tsx` (nouveau).
+- `src/components/visual-editor/EditableProductImage.tsx` (nouveau).
+- `src/components/visual-editor/EditableProductSizes.tsx` (nouveau).
+- `src/components/visual-editor/EditableRowField.tsx` (nouveau, générique produits/catégories/pages).
+- `src/components/product/ProductInfo.tsx` — enrobage.
+- `src/components/product/ProductGallery.tsx` — enrobage images.
+- (Home / Header / Category : petites migrations de simple-clic → double-clic.)
+
+## Détails techniques
+
+- Le toolbar « Valider/Annuler » est un `<div>` en position absolue rendu juste au-dessus du champ (`top:-2rem right:0`), avec deux `<Button size="icon">` (icônes `Check`, `X`) et raccourcis clavier Enter=valider, Esc=annuler.
+- `EditableProductField` mémorise la valeur locale pendant l'édition puis appelle `updateProduct(id, { [field]: parsed })` sur Valider.
+- Détection admin : hook `useUserRole()` déjà présent (vu dans `AdminProductBadges`). Fallback : ne monter le provider que dans le layout site (déjà fait).
+- Aucun impact sur les visiteurs anonymes ni le SEO (le DOM en lecture reste inchangé).
