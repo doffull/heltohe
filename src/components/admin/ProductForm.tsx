@@ -249,11 +249,26 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
   };
 
   const removeColorOption = (index: number) => {
+    const removed = formData.colorOptions[index];
     setFormData(prev => ({
       ...prev,
       colorOptions: prev.colorOptions.filter((_, i) => i !== index),
       colors: prev.colors.filter((_, i) => i !== index),
     }));
+    if (removed) {
+      setVariantGrid(prev => { const n = { ...prev }; delete n[removed.color]; return n; });
+      setColorStockMap(prev => { const n = { ...prev }; delete n[removed.color]; return n; });
+    }
+  };
+
+  const removeColorByValue = (color: string) => {
+    setFormData(prev => ({
+      ...prev,
+      colorOptions: prev.colorOptions.filter(o => o.color !== color),
+      colors: prev.colors.filter(c => c !== color),
+    }));
+    setVariantGrid(prev => { const n = { ...prev }; delete n[color]; return n; });
+    setColorStockMap(prev => { const n = { ...prev }; delete n[color]; return n; });
   };
 
 
@@ -831,6 +846,15 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
                     <tr key={opt.color} className="border-t border-border/20">
                       <td className="py-1.5 px-3">
                         <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => removeColorByValue(opt.color)}
+                            className="text-muted-foreground hover:text-destructive shrink-0"
+                            title={`Retirer ${opt.label}`}
+                            aria-label={`Retirer ${opt.label}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
                           <span
                             className="w-3 h-3 rounded-full shrink-0 border border-border/50"
                             style={{ backgroundColor: colorSwatch(opt.color) }}
@@ -864,6 +888,15 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
                       <tr key={color} className="border-t border-border/20">
                         <td className="py-1.5 px-3">
                           <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => removeColorByValue(color)}
+                              className="text-muted-foreground hover:text-destructive shrink-0"
+                              title={`Retirer ${color}`}
+                              aria-label={`Retirer ${color}`}
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
                             <span
                               className="w-3 h-3 rounded-full shrink-0 border border-border/50"
                               style={{ backgroundColor: colorSwatch(color) }}
