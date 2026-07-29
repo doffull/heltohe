@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Truck, Shield, RotateCcw, Sparkles, Ruler, User } from 'lucide-react';
+import { Check, Truck, Shield, RotateCcw, Sparkles, Ruler, User, Leaf, Award, Package, Headphones, CreditCard, MapPin, Heart, Zap, Gift, Star } from 'lucide-react';
 import { Product } from '@/types';
 import { Button } from '@/components/ui/button';
 import { SizeGuideAIModal } from './SizeGuideAIModal';
 import type { SizeCategory } from '@/lib/sizeCharts';
+import { useApp } from '@/context/AppContext';
+import { getProductTrustBadges, TRUST_BADGE_ICONS } from '@/lib/productTrustBadges';
+
 
 interface ProductInfoProps {
   product: Product;
