@@ -138,6 +138,11 @@ export default function AdminStock() {
   const [lastSync, setLastSync] = useState<Date>(new Date());
   const [syncOpen, setSyncOpen] = useState(false);
   const [variantStockTarget, setVariantStockTarget] = useState<{ productId: string; productName: string } | null>(null);
+  useEffect(() => {
+    const handler = (e: any) => setVariantStockTarget(e.detail);
+    window.addEventListener('open-variant-stock', handler);
+    return () => window.removeEventListener('open-variant-stock', handler);
+  }, []);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -268,6 +273,15 @@ export default function AdminStock() {
       </div>
 
       <WordPressSyncDialog open={syncOpen} onOpenChange={setSyncOpen} syncType="stock" />
+      {variantStockTarget && (
+        <BulkVariantStockDialog
+          open={!!variantStockTarget}
+          onOpenChange={(o) => { if (!o) setVariantStockTarget(null); }}
+          productId={variantStockTarget.productId}
+          productName={variantStockTarget.productName}
+          onSaved={() => window.dispatchEvent(new Event('refresh-stock'))}
+        />
+      )}
     </div>
   );
 }
