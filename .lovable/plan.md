@@ -1,74 +1,96 @@
 
-## 1. DeepSeek pour toutes les fonctions IA textuelles
+# Plan — Variantes avancées, défauts globaux, tri, et retour à Gemini
 
-DeepSeek est **compatible OpenAI** (`https://api.deepseek.com/v1/chat/completions`). Confirmé : il ne fait **que du texte** (chat, JSON, function-calling, vision limitée sur `deepseek-vl`, pas d'images/vidéos, pas d'audio). Donc :
+## 1. Éditeur de variantes produit enrichi (`ProductForm.tsx`)
 
-**Bascule DeepSeek** (chat completions + JSON) :
-- `product-ai-helpers`, `generate-slide-text`, `generate-product-description`, `generate-cta-style`, `contact-chat` (chatbot), `voice-command`, `recommend-size`, `verify-customer-info`, `boutique-lookup`, `mcp` (AI reasoning côté serveur), `parse-stock-pdf` (texte extrait), et la partie **texte** de `parse-products-pdf` (le texte JSON structuré une fois les pages rasterisées).
+**Tailles**
+- Bloc "Tailles" avec ajout / suppression libre (input + bouton +, croix sur chaque puce).
+- Réordonnancement par glisser-déposer (dnd-kit, déjà utilisé) — l'ordre saisi est celui affiché en boutique.
+- Bouton "Charger un preset" : Homme/Femme (XS→XXXL), Enfant (2A, 4A, 6A, 8A, 10A, 12A, 14A), Chaussures, Numérique.
+- Bouton "Appliquer les tailles par défaut globales" (voir §3).
 
-**Restent sur Lovable AI Gateway** (vision + génération) — la seule voie fiable aujourd'hui :
-- `virtual-tryon` (image edit, Gemini `nano-banana`)
-- `generate-slide-image` (image gen)
-- `analyze-product-image` (vision Gemini)
-- `template-from-mockup` (vision Gemini)
-- La phase **vision** de `parse-products-pdf` (lecture des maquettes)
+**Couleurs & bicolores**
+- Chaque variante couleur peut désormais avoir :
+  - un swatch **uni** (hex),
+  - un swatch **bicolore** (2 hex, split diagonal 45°, cohérent avec la charte),
+  - une **image swatch** (PNG/JPG) ou **texture** uploadée en drag-and-drop → bucket `media`, sous-dossier `swatches/`.
+- Zone de drop dédiée par variante : accepte fichier ou glisser depuis la médiathèque.
+- Suppression individuelle de chaque couleur + réordonnancement dnd-kit.
+- Rendu du swatch dans les cartes produit et fiche : uni / bicolore (CSS `linear-gradient(135deg, #A 50%, #B 50%)`) / image (background-image).
 
-Un bouton IA vidéo si présent : reste sur son provider actuel (DeepSeek ne fait pas de vidéo).
+**Spécifications techniques**
+- Section "Spécifications" éditable : matière, entretien, poids, composition, origine, sous forme de paires clé/valeur libres (déjà dispo via `attributes` — on expose une UI dédiée avec add/remove/reorder).
 
-### Mise en œuvre technique
+## 2. Types & rendu
 
-- Nouveau helper partagé `supabase/functions/_shared/deepseek.ts` : wrapper `callDeepseek({ messages, response_format?, tools?, temperature? })` qui appelle `https://api.deepseek.com/v1/chat/completions`, modèle `deepseek-chat` par défaut (ou `deepseek-reasoner` si l'appelant le demande), gère 402/429, renvoie une `Response` (mode SSE ou JSON) comme l'ancien `callGemini`.
-- Le fichier existant `_shared/gemini.ts` devient un shim qui **appelle `callDeepseek`** pour préserver toutes les Edge Functions text-only sans les toucher une à une (ce fichier centralise déjà 100 % du texte IA).
-- Nouveau secret `DEEPSEEK_API_KEY` demandé via le formulaire sécurisé.
-- Les Edge Functions vision/image (`virtual-tryon`, `analyze-product-image`, `template-from-mockup`, `generate-slide-image`, phase vision de `parse-products-pdf`) continuent d'utiliser directement `ai.gateway.lovable.dev` avec `LOVABLE_API_KEY` — non impactées.
-- Un badge visible dans `AdminAgentIntegrations` ou `AdminChatbot` indique "Texte : DeepSeek · Vision/Images : Lovable AI".
+- Étendre `ColorOption` (`src/types/index.ts`) :
+  ```
+  { name, hex, hex2?, swatchImage?, image?, images? }
+  ```
+- Adapter `ProductCard`, `ProductOptions`, sélecteurs de couleurs pour afficher :
+  - hex uni → pastille couleur,
+  - hex + hex2 → gradient 45°,
+  - swatchImage → image en background.
+- Le champ `sizes` du produit reste `string[]` ; l'ordre du tableau = ordre d'affichage.
 
-Résultat : tes crédits Lovable AI ne sont plus consommés par le texte (chatbot, descriptions, extraction texte, commande vocale, imports produits). Ils restent uniquement sur la partie visuelle qui n'a pas d'équivalent DeepSeek.
+## 3. Défauts globaux (Admin → Réglages produits)
 
-## 2. Shuffle + tri manuel par catégorie
-
-**Comportement** : à chaque affichage de catégorie, l'ordre des produits est **aléatoire** (shuffle). Sauf si un ordre manuel a été défini pour cette catégorie dans l'admin — auquel cas cet ordre est respecté strictement.
-
-### Base de données
-Nouvelle table `product_category_order` :
+Réutiliser `design_settings.settings_json` (déjà en place) sous la clé `productDefaults` :
 ```
-category_slug text, product_id uuid, position int, updated_at timestamptz
-PRIMARY KEY (category_slug, product_id)
+{
+  material: "Polyester",
+  careInstructions: "Lavable en machine à 30°C",
+  sizesByCategory: {
+    homme:  ["XS","S","M","L","XL","XXL","XXXL"],
+    femme:  ["XS","S","M","L","XL","XXL","XXXL"],
+    enfant: ["2A","4A","6A","8A","10A","12A","14A"],
+    sportswear: ["S","M","L","XL"]
+  }
+}
 ```
-RLS : lecture publique, écriture réservée admin. GRANT SELECT anon/authenticated, ALL service_role.
+- Nouvel onglet "Défauts produits" dans `AdminSettings` : édition des 4 listes (add/remove/reorder) + champs matière/entretien.
+- À la création d'un produit : préremplissage automatique selon la catégorie choisie + matière/entretien.
+- Bouton "Réappliquer les défauts" dans `ProductForm` pour un produit existant.
+- Migration douce : script SQL one-shot qui, sur les produits enfant sans tailles cohérentes, injecte `["2A","4A","6A","8A","10A","12A","14A"]` (uniquement si la liste actuelle est vide).
 
-### Frontend catégorie (`Shop.tsx` / `CategoryPageRouter.tsx`)
-- Charger `product_category_order` filtré sur le slug courant.
-- Si des lignes existent → trier par `position` ascendant + append à la fin les produits non listés dans un ordre stable.
-- Sinon → **shuffle déterministe par session** (`Math.random` seeded une fois au montage) pour éviter le re-mélange à chaque re-render mais changer à chaque visite.
+## 4. Tri personnalisé des produits
 
-### Admin — drag-and-drop par catégorie
-Nouvelle page ou onglet `AdminProducts` → sélecteur de catégorie (Homme, Femme, Sportswear, Enfant, + toutes les catégories dynamiques de `useCategories`) → liste `dnd-kit` (déjà installé) des produits de cette catégorie, glisser-déposer pour réorganiser, bouton "Réinitialiser (shuffle)" pour supprimer les lignes de la catégorie. Sauvegarde debounced (upsert batch).
+Le rangement par catégorie existe déjà (`product_category_order` + `AdminCategoryOrdering`). Ce plan ajoute :
+- Un tri **global** (toutes catégories confondues) via `AdminProducts` : nouveau mode "Tri manuel" (drag-and-drop sur la liste filtrée courante) sauvegardé dans la même table avec `category_slug='__global__'`.
+- Boutons rapides : "Trier par nom", "Trier par prix ↑/↓", "Shuffle", "Rétablir manuel".
+- Respecté par `Shop.tsx` en absence d'ordre catégorie spécifique.
 
-Composant : `AdminCategoryOrdering.tsx` intégré comme nouvel onglet "Rangement" dans `AdminProducts`.
+## 5. Retour de l'IA vers Gemini (via Lovable AI Gateway)
 
-## 3. Suppression de la barre "Admin Drag" en bas
+Objectif utilisateur : Gemini pour texte, chatbot, images, vidéos, virtual try-on.
 
-Supprimer complètement :
-- `src/components/admin/AdminDragBar.tsx` (fichier)
-- Toutes ses importations et usages (probablement dans `MainLayout.tsx` ou `Admin.tsx`)
-- Nettoyage : `AdminViewportContext` (`snap`, `locked`, `device override`) est **conservé** car il alimente `useAdminDrag` pour les drags Techwear/FAB. Seule la **UI de contrôle** disparaît ; les défauts (snap=true, locked=false, override=off) restent codés en dur.
-- Vérification `rg AdminDragBar` pour purger toute trace.
+- `supabase/functions/_shared/gemini.ts` : le shim DeepSeek est retiré. Toutes les requêtes (texte + vision) repartent sur `https://ai.gateway.lovable.dev/v1/chat/completions` avec `LOVABLE_API_KEY`.
+  - Défaut texte : `google/gemini-2.5-flash`
+  - Défaut vision : `google/gemini-2.5-flash` (inchangé)
+  - Défaut image gen (déjà utilisé dans `generate-slide-image`, `virtual-tryon`) : `google/gemini-2.5-flash-image-preview`
+- Suppression des références DeepSeek dans le badge admin (`AdminAgentIntegrations` / `AdminChatbot`) — remplacé par "Propulsé par Gemini via Lovable AI".
+- Le secret `DEEPSEEK_API_KEY` n'est plus lu. Aucun secret à demander (LOVABLE_API_KEY déjà configuré).
+- Vidéo : ajouter un bouton "Générer vidéo produit (Gemini Veo via Lovable)" dans `ProductForm` — appelle une nouvelle edge function `generate-product-video` qui utilise le gateway (fallback UX si non disponible : message clair).
 
-## Ordre d'exécution
+## 6. Détails techniques
 
-1. Demander `DEEPSEEK_API_KEY` via le formulaire sécurisé.
-2. Écrire `_shared/deepseek.ts` + réécrire `_shared/gemini.ts` en shim.
-3. Supprimer `AdminDragBar.tsx` et ses imports.
-4. Migration SQL `product_category_order` + GRANT + RLS.
-5. Hook `useCategoryOrder(slug)` + intégration shuffle/tri dans les pages catégorie.
-6. Onglet "Rangement" dans `AdminProducts` avec dnd-kit.
-7. Test : chatbot répond via DeepSeek, catégorie shuffle à froid, ordre respecté après drag admin, barre du bas absente.
+- **Swatch uploads** : `supabase.storage.from('media').upload('swatches/<uuid>.<ext>')` + `getPublicUrl`, taille max 2 Mo, formats PNG/JPG/WEBP.
+- **Bicolore rendering** : util `swatchStyle(color: ColorOption)` centralisé dans `src/lib/swatch.ts` — utilisé par ProductCard, ProductOptions, ProductForm preview.
+- **dnd-kit** : `SortableContext` par bloc (tailles, couleurs, specs). Handle drag visible en mode admin.
+- **Migration BDD** : aucune modification de schéma nécessaire (`sizes text[]`, `color_options jsonb`, `attributes jsonb` couvrent tous les besoins). Un script SQL de fond pour hydrater les défauts enfant (idempotent).
+- **Ordre de sauvegarde produit** : `useUpdateProduct` déjà patché pour n'envoyer que les champs modifiés — pas de régression sur les autres colonnes.
+- **Fallback Gemini** : sur 402/429, message admin explicite avec lien crédits (déjà en place, on garde).
 
-## Détails techniques
+## 7. Ordre d'exécution
 
-- **DeepSeek endpoint** : `POST https://api.deepseek.com/v1/chat/completions` — headers `Authorization: Bearer $DEEPSEEK_API_KEY` + `Content-Type: application/json`. Body OpenAI-compat : `{ model: "deepseek-chat", messages, response_format?, tools?, stream? }`. Erreurs 402/429/5xx propagées.
-- **Modèles** : `deepseek-chat` (rapide/économique, défaut) ; `deepseek-reasoner` seulement pour la logique complexe (import produits massif, chatbot support).
-- **Shuffle stable par session** : `useMemo(() => shuffle(products, seedFromDate), [products])` avec seed = `Date.now() / 3600000 | 0` (change toutes les heures) OU seed = sessionStorage ID (change à chaque nouvel onglet). Je pars sur session ID.
-- **DnD** : `@dnd-kit/core` + `@dnd-kit/sortable` déjà utilisés ailleurs dans le projet (aperçu via imports).
-- **Anti-régression drag Techwear/FAB** : `AdminViewportContext` reste, seul l'UI `AdminDragBar` disparaît — vérification que rien d'autre n'importe le composant.
+1. Créer `src/lib/swatch.ts` + étendre le type `ColorOption`.
+2. Réécrire les sections Tailles / Couleurs / Specs de `ProductForm.tsx` (add/remove/reorder + drop swatch).
+3. Adapter `ProductCard` et `ProductOptions` au nouveau rendu de swatch.
+4. Ajouter onglet "Défauts produits" dans `AdminSettings` (lecture/écriture `design_settings.settings_json.productDefaults`).
+5. Préremplissage à la création de produit + bouton "Réappliquer défauts".
+6. Étendre `AdminCategoryOrdering` avec l'onglet "Tri global" + tris rapides.
+7. Réécrire `_shared/gemini.ts` en client Lovable AI direct (retrait DeepSeek).
+8. Mettre à jour les badges admin ("Propulsé par Gemini").
+9. Nouvelle edge function `generate-product-video` + bouton dans `ProductForm`.
+10. Script SQL idempotent pour tailles enfant par défaut.
+11. Tests manuels : ajout/suppression tailles, drop d'un PNG couleur, bicolore rendu correct sur carte produit, chatbot répond via Gemini, virtual try-on OK, tri global respecté.

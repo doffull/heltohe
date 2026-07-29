@@ -155,6 +155,11 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
       requireVerifiedPurchase: true,
       showOnProductCards: true,
     },
+    productDefaults: ((db.settings_json as any)?.productDefaults) ?? {
+      material: 'Polyester',
+      careInstructions: 'Lavable en machine à 30°C · Ne pas repasser sur les impressions',
+      childSizes: ['2A', '4A', '6A', '8A', '10A', '12A', '14A'],
+    },
   } as DesignSettings;
 }
 
@@ -280,6 +285,7 @@ function settingsToDb(s: DesignSettings) {
       productGridLayout: (s as any).productGridLayout ?? 'classic',
       trustpilot: (s as any).trustpilot ?? null,
       reviewsSettings: (s as any).reviewsSettings ?? null,
+      productDefaults: (s as any).productDefaults ?? null,
     } as unknown as Json,
   };
 }

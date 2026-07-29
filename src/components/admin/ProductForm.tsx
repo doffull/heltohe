@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Sparkles, Loader2, Images } from 'lucide-react';
+import { X, Plus, Trash2, Sparkles, Loader2, Images, GripVertical } from 'lucide-react';
 import { MediaLibraryDialog } from '@/components/visual-editor/MediaLibraryDialog';
 import { Product, ColorOption } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,14 @@ import { AiProductVideoButton } from '@/components/admin/AiProductVideoButton';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { usePageTemplates } from '@/hooks/usePageTemplates';
+import { getSwatchStyle } from '@/lib/swatch';
+import {
+  DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext, useSortable, arrayMove, horizontalListSortingStrategy, sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface ProductFormProps {
   product?: Product;
@@ -49,6 +57,7 @@ function colorSwatch(hex: string) {
 export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductFormProps) {
   const { designSettings } = useApp();
   const DEFAULT_SIZES = designSettings.globalProductSizes?.length ? designSettings.globalProductSizes : DEFAULT_SIZES_FALLBACK;
+  const productDefaults = designSettings.productDefaults;
   const [formData, setFormData] = useState({
     name: '',
     subtitle: '',
@@ -59,8 +68,8 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
     stock: 0,
     sku: '',
     description: '',
-    material: '',
-    careInstructions: '',
+    material: productDefaults?.material || '',
+    careInstructions: productDefaults?.careInstructions || '',
     sizes: [] as string[],
     colors: [] as string[],
     colorOptions: [] as ColorOption[],
@@ -82,7 +91,10 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
   const [newAttrKey, setNewAttrKey] = useState('');
   const [newAttrValue, setNewAttrValue] = useState('');
   const [newColor, setNewColor] = useState('#000000');
+  const [newColor2, setNewColor2] = useState<string>('');
   const [newColorLabel, setNewColorLabel] = useState('');
+  const [newSwatchImage, setNewSwatchImage] = useState<string>('');
+  const [customSizeDraft, setCustomSizeDraft] = useState('');
   const [aiBusy, setAiBusy] = useState<string | null>(null);
   const [showGalleryPicker, setShowGalleryPicker] = useState(false);
   const [showMainPicker, setShowMainPicker] = useState(false);
@@ -190,16 +202,50 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
     }));
   };
 
+  const addCustomSize = () => {
+    const v = customSizeDraft.trim().toUpperCase();
+    if (!v) return;
+    if (formData.sizes.includes(v)) { toast.error('Taille déjà ajoutée'); return; }
+    setFormData(prev => ({ ...prev, sizes: [...prev.sizes, v] }));
+    setCustomSizeDraft('');
+  };
+
+  const removeSize = (size: string) => {
+    setFormData(prev => ({ ...prev, sizes: prev.sizes.filter(s => s !== size) }));
+  };
+
+  const sizeSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const onSizeDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const from = formData.sizes.indexOf(String(active.id));
+    const to = formData.sizes.indexOf(String(over.id));
+    if (from < 0 || to < 0) return;
+    setFormData(prev => ({ ...prev, sizes: arrayMove(prev.sizes, from, to) }));
+  };
+
   const addColorOption = () => {
-    if (newColor && newColorLabel) {
-      setFormData(prev => ({
-        ...prev,
-        colorOptions: [...prev.colorOptions, { color: newColor, label: newColorLabel }],
-        colors: [...prev.colors, newColor],
-      }));
-      setNewColor('#000000');
-      setNewColorLabel('');
-    }
+    if (!newColorLabel) return;
+    if (!newColor && !newSwatchImage) return;
+    const opt: ColorOption = {
+      color: newColor,
+      label: newColorLabel,
+      color2: newColor2 || null,
+      swatchImage: newSwatchImage || null,
+    };
+    setFormData(prev => ({
+      ...prev,
+      colorOptions: [...prev.colorOptions, opt],
+      colors: [...prev.colors, newColor],
+    }));
+    setNewColor('#000000');
+    setNewColor2('');
+    setNewColorLabel('');
+    setNewSwatchImage('');
   };
 
   const removeColorOption = (index: number) => {
@@ -209,6 +255,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
       colors: prev.colors.filter((_, i) => i !== index),
     }));
   };
+
 
   const addAttribute = () => {
     if (newAttrKey && newAttrValue) {
@@ -529,23 +576,68 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
 
       {/* Sizes */}
       <div className="space-y-4">
-        <h4 className="hud-text text-xs text-primary">// TAILLES DISPONIBLES</h4>
-        <div className="flex flex-wrap gap-2">
-          {DEFAULT_SIZES.map(size => (
-            <button
-              key={size}
-              type="button"
-              onClick={() => toggleSize(size)}
-              className={cn(
-                "w-10 h-10 flex items-center justify-center hud-text text-xs border transition-all",
-                formData.sizes.includes(size)
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-secondary/30 text-muted-foreground border-border/30 hover:border-primary/50"
-              )}
-            >
-              {size}
-            </button>
-          ))}
+        <div className="flex items-center justify-between">
+          <h4 className="hud-text text-xs text-primary">// TAILLES DISPONIBLES</h4>
+          <span className="text-[10px] text-muted-foreground">Glissez pour réordonner · cliquez pour retirer</span>
+        </div>
+
+        {/* Selected sizes — sortable */}
+        {formData.sizes.length > 0 && (
+          <DndContext sensors={sizeSensors} collisionDetection={closestCenter} onDragEnd={onSizeDragEnd}>
+            <SortableContext items={formData.sizes} strategy={horizontalListSortingStrategy}>
+              <div className="flex flex-wrap gap-2 p-2 border border-border/30 bg-secondary/20 rounded">
+                {formData.sizes.map((size) => (
+                  <SortableSizeChip key={size} size={size} onRemove={() => removeSize(size)} />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        )}
+
+        {/* Preset picker (from global sizes catalog) */}
+        <div className="space-y-2">
+          <Label className="hud-text text-[10px] text-muted-foreground">Ajouter depuis le catalogue global</Label>
+          <div className="flex flex-wrap gap-2">
+            {DEFAULT_SIZES.filter(s => !formData.sizes.includes(s)).map(size => (
+              <button
+                key={size}
+                type="button"
+                onClick={() => toggleSize(size)}
+                className="w-10 h-10 flex items-center justify-center hud-text text-xs border bg-secondary/30 text-muted-foreground border-border/30 hover:border-primary/50 transition-all"
+              >
+                {size}
+              </button>
+            ))}
+            {productDefaults?.childSizes?.length ? (
+              <>
+                <span className="w-full text-[10px] text-muted-foreground uppercase tracking-wider mt-2">Enfant</span>
+                {productDefaults.childSizes.filter(s => !formData.sizes.includes(s)).map(size => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => toggleSize(size)}
+                    className="min-w-[2.5rem] h-9 px-2 flex items-center justify-center hud-text text-[11px] border bg-secondary/30 text-muted-foreground border-border/30 hover:border-primary/50 transition-all"
+                  >
+                    {size}
+                  </button>
+                ))}
+              </>
+            ) : null}
+          </div>
+        </div>
+
+        {/* Custom size input */}
+        <div className="flex items-center gap-2">
+          <Input
+            value={customSizeDraft}
+            onChange={(e) => setCustomSizeDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomSize(); } }}
+            placeholder="Taille personnalisée (ex. 42, ONE-SIZE, 16A)"
+            className="h-8 text-xs bg-secondary/50 border-border/30 max-w-[240px]"
+          />
+          <Button type="button" size="sm" variant="outline" onClick={addCustomSize} className="h-8 gap-1">
+            <Plus className="h-3 w-3" /> Ajouter
+          </Button>
         </div>
       </div>
 
@@ -553,34 +645,82 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
       <div className="space-y-4">
         <h4 className="hud-text text-xs text-primary">// OPTIONS COULEURS</h4>
 
-        {/* Add new color */}
-        <div className="flex items-end gap-2">
-          <div className="space-y-2">
-            <Label className="hud-text text-xs">Couleur</Label>
-            <Input
-              type="color"
-              value={newColor}
-              onChange={(e) => setNewColor(e.target.value)}
-              className="w-12 h-9 p-1 cursor-pointer"
-            />
-          </div>
-          <div className="flex-1 space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="hud-text text-xs">Nom de la couleur <span className="text-[10px] text-muted-foreground">(auto-IA)</span></Label>
-              <AiColorNameButton hex={newColor} onGenerated={setNewColorLabel} />
+        {/* Add new color — single + bicolor + swatch image */}
+        <div className="space-y-2 p-3 border border-border/30 bg-secondary/20 rounded">
+          <div className="flex items-end gap-2 flex-wrap">
+            <div className="space-y-1">
+              <Label className="hud-text text-[10px]">Couleur 1</Label>
+              <Input
+                type="color"
+                value={newColor}
+                onChange={(e) => setNewColor(e.target.value)}
+                className="w-12 h-9 p-1 cursor-pointer"
+              />
             </div>
-            <Input
-              value={newColorLabel}
-              onChange={(e) => setNewColorLabel(e.target.value)}
-              className="bg-secondary/50 border-border/30"
-              placeholder="Noir Obsidian"
-              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addColorOption())}
-            />
+            <div className="space-y-1">
+              <Label className="hud-text text-[10px]">Couleur 2 (bicolore)</Label>
+              <div className="flex gap-1">
+                <Input
+                  type="color"
+                  value={newColor2 || '#ffffff'}
+                  onChange={(e) => setNewColor2(e.target.value)}
+                  className="w-12 h-9 p-1 cursor-pointer"
+                  disabled={!!newSwatchImage}
+                />
+                {newColor2 && (
+                  <button type="button" onClick={() => setNewColor2('')} className="text-muted-foreground hover:text-destructive px-1" title="Retirer bicolore">
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="flex-1 min-w-[160px] space-y-1">
+              <div className="flex items-center justify-between">
+                <Label className="hud-text text-[10px]">Nom <span className="text-muted-foreground">(auto-IA)</span></Label>
+                <AiColorNameButton hex={newColor} onGenerated={setNewColorLabel} />
+              </div>
+              <Input
+                value={newColorLabel}
+                onChange={(e) => setNewColorLabel(e.target.value)}
+                className="h-9 bg-secondary/50 border-border/30"
+                placeholder="Noir Obsidian"
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addColorOption())}
+              />
+            </div>
+            <Button type="button" variant="outline" size="icon" onClick={addColorOption} title="Ajouter la couleur">
+              <Plus className="w-4 h-4" />
+            </Button>
           </div>
-          <Button type="button" variant="outline" size="icon" onClick={addColorOption}>
-            <Plus className="w-4 h-4" />
-          </Button>
+
+          {/* Swatch preview + optional texture image */}
+          <div className="flex items-center gap-3 pt-2 border-t border-border/20">
+            <div
+              className="w-10 h-10 rounded-sm border border-border/60 shrink-0 overflow-hidden"
+              style={getSwatchStyle({ color: newColor, color2: newColor2 || null, swatchImage: newSwatchImage || null })}
+              title="Aperçu"
+            />
+            <div className="flex-1 space-y-1">
+              <Label className="hud-text text-[10px]">Échantillon / texture (PNG / JPG) — remplace les couleurs</Label>
+              <FileDropZone
+                accept={['image']}
+                folder="products/swatches"
+                currentFile={newSwatchImage}
+                onUpload={(url) => setNewSwatchImage(url || '')}
+                label="Glissez une texture ou cliquez"
+              />
+              {newSwatchImage && (
+                <button
+                  type="button"
+                  onClick={() => setNewSwatchImage('')}
+                  className="text-[10px] text-muted-foreground hover:text-destructive underline"
+                >
+                  Retirer la texture
+                </button>
+              )}
+            </div>
+          </div>
         </div>
+
 
         {/* Color options with inline image upload */}
         {formData.colorOptions.length > 0 && (
@@ -593,8 +733,8 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
                 {/* Header row */}
                 <div className="flex items-center gap-3">
                   <div
-                    className="w-7 h-7 rounded-sm border border-border/50 flex-shrink-0"
-                    style={{ backgroundColor: option.color }}
+                    className="w-7 h-7 rounded-sm border border-border/50 flex-shrink-0 overflow-hidden"
+                    style={getSwatchStyle(option)}
                   />
                   <span className="hud-text text-xs font-medium flex-1">{option.label}</span>
                   <span className="text-[10px] text-muted-foreground font-mono">{option.color}</span>
@@ -1017,4 +1157,40 @@ function TemplateSelector({ value, onChange }: { value: string | null; onChange:
     </div>
   );
 }
+
+function SortableSizeChip({ size, onRemove }: { size: string; onRemove: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: size });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="inline-flex items-center gap-1 border border-primary bg-primary/10 text-primary-foreground rounded px-1"
+    >
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing text-primary/70 hover:text-primary touch-none"
+        aria-label={`Déplacer ${size}`}
+      >
+        <GripVertical className="h-3 w-3" />
+      </button>
+      <span className="hud-text text-xs font-bold text-primary min-w-[1.5rem] text-center py-1">{size}</span>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="text-primary/70 hover:text-destructive"
+        aria-label={`Retirer ${size}`}
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </div>
+  );
+}
+
 
