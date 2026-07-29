@@ -7,6 +7,8 @@ import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import RelatedProducts from '@/components/product/RelatedProducts';
 import { cn } from '@/lib/utils';
+import { useApp } from '@/context/AppContext';
+import { getProductTrustBadges, TRUST_BADGE_ICONS } from '@/lib/productTrustBadges';
 
 
 interface Props {
@@ -17,6 +19,7 @@ interface Props {
 export default function ProductTemplateRenderer({ template, product }: Props) {
   const { addItem } = useCart();
   const { toast } = useToast();
+  const { designSettings } = useApp();
 
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
@@ -177,20 +180,23 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
         </button>
       );
       case 'trust_badges': {
-        const items = [
-          { icon: Truck, text: 'Livraison gratuite en point relais' },
-          { icon: CreditCard, text: 'Paiement CB 3D secure et 3 fois sans frais via PayPal' },
-          { icon: RotateCcw, text: 'Retours sous 30 jours' },
-        ];
+        // Source of truth: admin-configured badges in designSettings (per-category with fallback to defaults).
+        const { enabled, badges } = getProductTrustBadges(designSettings, product?.category);
+        if (!enabled || badges.length === 0) return null;
         const customLabels = b.props?.label ? String(b.props.label).split('|').map(s => s.trim()) : [];
+        const cols = Math.min(Math.max(badges.length, 1), 4);
         return (
-          <div className="grid grid-cols-3 gap-px rounded-xl overflow-hidden mb-6" style={{ background: t.colors.border }}>
-            {items.map((it, i) => (
-              <div key={i} className="flex flex-col items-center gap-2 p-4 text-center" style={{ background: t.colors.card }}>
-                <it.icon className="w-5 h-5" />
-                <span className="text-xs font-semibold" style={{ color: t.colors.muted }}>{customLabels[i] || it.text}</span>
-              </div>
-            ))}
+          <div className="grid gap-px rounded-xl overflow-hidden mb-6"
+               style={{ background: t.colors.border, gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+            {badges.map((it, i) => {
+              const Icon = TRUST_BADGE_ICONS[it.icon] || Truck;
+              return (
+                <div key={it.id || i} className="flex flex-col items-center gap-2 p-4 text-center" style={{ background: t.colors.card }}>
+                  <Icon className="w-5 h-5" />
+                  <span className="text-xs font-semibold" style={{ color: t.colors.muted }}>{customLabels[i] || it.label}</span>
+                </div>
+              );
+            })}
           </div>
         );
       }
