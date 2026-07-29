@@ -106,19 +106,29 @@ export default function ProductOptions({
   return (
     <>
       {/* Size Selection */}
-      {product.sizes && product.sizes.length > 0 && (
+      {((product.sizes && product.sizes.length > 0) || editMode) && (
         <motion.div {...fadeUp} transition={{ delay: 0.3 }}>
           <div className="flex items-center justify-between mb-3">
             <label className="text-sm font-bold hud-text uppercase tracking-[0.15em]">
               Taille
             </label>
+            {editMode && (
+              <button
+                type="button"
+                onClick={addSize}
+                className="text-[10px] font-bold uppercase tracking-wider border border-dashed border-primary/60 text-primary px-2 py-1 rounded hover:bg-primary/10"
+                title="Ajouter une taille"
+              >
+                + Taille
+              </button>
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
-            {product.sizes.map((size) => {
+            {(product.sizes || []).map((size, sIdx) => {
               const isSelected = selectedSize === size;
               return (
                 <motion.button
-                  key={size}
+                  key={`${size}-${sIdx}`}
                   type="button"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -131,7 +141,15 @@ export default function ProductOptions({
                       : 'bg-transparent text-foreground border-border hover:border-foreground')
                   }
                 >
-                  {size}
+                  <EditableProductArrayField
+                    product={product}
+                    field="sizes"
+                    index={sIdx}
+                    as="span"
+                    placeholder="Taille"
+                  >
+                    {size}
+                  </EditableProductArrayField>
                 </motion.button>
               );
             })}
@@ -139,6 +157,7 @@ export default function ProductOptions({
 
         </motion.div>
       )}
+
 
       {/* Color Selection */}
       {colorItems.length > 0 && (
