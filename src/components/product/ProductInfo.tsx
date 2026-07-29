@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Truck, Shield, RotateCcw, Sparkles, Ruler, User } from 'lucide-react';
+import { Check, Truck, Shield, RotateCcw, Sparkles, Ruler, User, Leaf, Award, Package, Headphones, CreditCard, MapPin, Heart, Zap, Gift, Star } from 'lucide-react';
 import { Product } from '@/types';
 import { Button } from '@/components/ui/button';
 import { SizeGuideAIModal } from './SizeGuideAIModal';
 import type { SizeCategory } from '@/lib/sizeCharts';
+import { useApp } from '@/context/AppContext';
+import { getProductTrustBadges, TRUST_BADGE_ICONS } from '@/lib/productTrustBadges';
+
 
 interface ProductInfoProps {
   product: Product;
@@ -22,6 +25,7 @@ const fadeUp = {
 
 export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }: ProductInfoProps) {
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
+  const { designSettings } = useApp();
   const guessCategory = (): SizeCategory => {
     const c = (product.category || '').toLowerCase();
     if (c.includes('femme')) return 'femme';
@@ -30,7 +34,9 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
   };
   const showHeader = !detailsOnly;
   const showDetails = !headerOnly;
+  const { enabled: badgesEnabled, badges: trustBadges } = getProductTrustBadges(designSettings, product.category);
   return (
+
     <>
       {showHeader && (
         <>
@@ -138,28 +144,31 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
       {showDetails && (
         <>
       {/* Features bar */}
-      <motion.div
-        className="grid grid-cols-3 gap-2 py-4 border-y border-border"
-        {...fadeUp}
-        transition={{ delay: 0.5 }}
-      >
-        {[
-          { icon: Truck, label: 'Livraison gratuite dès 200€ en point relais' },
-          { icon: Shield, label: 'Garantie 1 an' },
-          { icon: RotateCcw, label: 'Retours sous 30 jours' },
-        ].map(({ icon: Icon, label }, i) => (
-          <motion.div
-            key={label}
-            className="text-center"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 + i * 0.1 }}
-          >
-            <Icon className="h-5 w-5 sm:h-7 sm:w-7 mx-auto mb-1 sm:mb-2 text-primary" />
-            <p className="text-[9px] sm:text-xs text-muted-foreground leading-tight">{label}</p>
-          </motion.div>
-        ))}
-      </motion.div>
+      {badgesEnabled && trustBadges.length > 0 && (
+        <motion.div
+          className="grid gap-2 py-4 border-y border-border"
+          style={{ gridTemplateColumns: `repeat(${Math.min(trustBadges.length, 4)}, minmax(0, 1fr))` }}
+          {...fadeUp}
+          transition={{ delay: 0.5 }}
+        >
+          {trustBadges.map((badge, i) => {
+            const Icon = TRUST_BADGE_ICONS[badge.icon] || Truck;
+            return (
+              <motion.div
+                key={badge.id}
+                className="text-center"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 + i * 0.1 }}
+              >
+                <Icon className="h-5 w-5 sm:h-7 sm:w-7 mx-auto mb-1 sm:mb-2 text-primary" />
+                <p className="text-[9px] sm:text-xs text-muted-foreground leading-tight">{badge.label}</p>
+              </motion.div>
+            );
+          })}
+        </motion.div>
+      )}
+
 
       {/* Description */}
       {product.description && (

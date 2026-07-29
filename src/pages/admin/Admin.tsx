@@ -75,6 +75,8 @@ import AdminBoutiques from './AdminBoutiques';
 import AdminPageTemplates from './AdminPageTemplates';
 import AdminReviews from './AdminReviews';
 import AdminAgentIntegrations from './AdminAgentIntegrations';
+import AdminProductBadges from './AdminProductBadges';
+
 
 
 export const DEFAULT_SECTION_COLORS: Record<string, string> = {
@@ -106,6 +108,8 @@ const SIDEBAR_ITEMS = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/admin' },
   { icon: Activity, label: 'Live', href: '/admin/live' },
   { icon: Package, label: 'Produits', href: '/admin/produits' },
+  { icon: Shield, label: 'Badges produit', href: '/admin/product-badges' },
+
   { icon: ShoppingCart, label: 'Commandes', href: '/admin/commandes' },
   { icon: ClipboardCheck, label: 'Préparations', href: '/admin/preparations' },
   { icon: CreditCard, label: 'Checkout', href: '/admin/checkout' },
@@ -339,6 +343,8 @@ export default function Admin() {
             <Route path="bannieres-analytics/*" element={<AdminBannersAnalytics />} />
             <Route path="avis/*" element={<AdminReviews />} />
             <Route path="agent-integrations/*" element={<AdminAgentIntegrations />} />
+            <Route path="product-badges/*" element={<AdminProductBadges />} />
+
           </Routes>
         </div>
       </main>
