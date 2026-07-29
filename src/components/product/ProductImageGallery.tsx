@@ -42,6 +42,8 @@ export default function ProductImageGallery({
   onColorChange,
   modelHeight,
   modelSizeWorn,
+  product,
+
 }: ProductImageGalleryProps) {
   const isMobile = useIsMobile();
   const [activeMedia, setActiveMedia] = useState<'image' | 'video'>('image');
