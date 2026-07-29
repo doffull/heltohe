@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/select";
 import { ProductForm, VariantStockData } from '@/components/admin/ProductForm';
 import { InventoryProductDialog } from '@/components/admin/InventoryProductDialog';
+import { BulkVariantStockDialog } from '@/components/admin/BulkVariantStockDialog';
 import { GlobalSizesEditor } from '@/components/admin/GlobalSizesEditor';
 import { Textarea } from '@/components/ui/textarea';
 import { importProductsFromPdf } from '@/lib/productPdfImport';
