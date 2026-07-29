@@ -207,7 +207,13 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
                 transition={{ delay: 0.6 + i * 0.1 }}
               >
                 <Icon className="h-5 w-5 sm:h-7 sm:w-7 mx-auto mb-1 sm:mb-2 text-primary" />
-                <p className="text-[9px] sm:text-xs text-muted-foreground leading-tight">{badge.label}</p>
+                <EditableBadgeLabel
+                  productCategory={product.category}
+                  badgeId={badge.id}
+                  currentLabel={badge.label}
+                  className="text-[9px] sm:text-xs text-muted-foreground leading-tight"
+                />
+
               </motion.div>
             );
           })}
