@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,7 +50,7 @@ function BadgeRow({
         <Switch checked={badge.enabled} onCheckedChange={(v) => onChange({ ...badge, enabled: v })} />
         <span className="text-xs text-muted-foreground">{badge.enabled ? 'Actif' : 'Masqué'}</span>
       </div>
-      <Button variant="ghost" size="icon" onClick={onRemove} className="h-8 w-8 text-destructive">
+      <Button type="button" variant="ghost" size="icon" onClick={onRemove} className="h-8 w-8 text-destructive">
         <Trash2 className="h-4 w-4" />
       </Button>
     </div>
@@ -80,12 +80,12 @@ function BadgeList({
         <h4 className="text-sm font-bold uppercase tracking-wider">{title}</h4>
         <div className="flex gap-2">
           {showCopy && onCopyFromDefault && (
-            <Button size="sm" variant="outline" onClick={onCopyFromDefault}>
+            <Button type="button" size="sm" variant="outline" onClick={onCopyFromDefault}>
               <Copy className="h-3 w-3 mr-1" /> Copier depuis Défaut
             </Button>
           )}
           {canReset && onReset && (
-            <Button size="sm" variant="outline" onClick={onReset}>Réinitialiser</Button>
+            <Button type="button" size="sm" variant="outline" onClick={onReset}>Réinitialiser</Button>
           )}
         </div>
       </div>
@@ -109,6 +109,7 @@ function BadgeList({
         )}
       </div>
       <Button
+        type="button"
         variant="outline"
         size="sm"
         onClick={() =>
@@ -138,7 +139,7 @@ export default function AdminProductBadges() {
   }, [designSettings.productTrustBadges]);
 
   const commit = (next: ProductTrustBadgesConfig) => {
-    updateDesignSettings({ productTrustBadges: next });
+    updateDesignSettings({ productTrustBadges: next }, { immediate: true });
   };
 
   const categories = designSettings.categories || [];
@@ -147,6 +148,11 @@ export default function AdminProductBadges() {
   const existingCatKeys = Object.keys(cfg.byCategory || {});
   const [activeCat, setActiveCat] = useState<string>(existingCatKeys[0] || suggested[0]);
   const [newCatKey, setNewCatKey] = useState('');
+
+  useEffect(() => {
+    if (existingCatKeys.length === 0) return;
+    if (!existingCatKeys.includes(activeCat)) setActiveCat(existingCatKeys[0]);
+  }, [activeCat, existingCatKeys]);
 
   const setDefault = (list: ProductTrustBadge[]) => commit({ ...cfg, default: list });
   const setForCat = (cat: string, list: ProductTrustBadge[]) =>
@@ -252,7 +258,7 @@ export default function AdminProductBadges() {
                       <option key={s} value={s.toLowerCase()} />
                     ))}
                   </datalist>
-                  <Button size="sm" onClick={() => addCat(newCatKey)}>
+                  <Button type="button" size="sm" onClick={() => addCat(newCatKey)}>
                     <Plus className="h-4 w-4 mr-1" /> Ajouter
                   </Button>
                 </div>
@@ -260,6 +266,7 @@ export default function AdminProductBadges() {
                   {suggested.map((s) => (
                     <Button
                       key={s}
+                      type="button"
                       size="sm"
                       variant="outline"
                       className="h-7 text-xs"
@@ -290,7 +297,7 @@ export default function AdminProductBadges() {
                         <span className="text-sm text-muted-foreground">
                           Ces badges remplacent le défaut pour tout produit dont la catégorie contient <strong className="capitalize">{k}</strong>.
                         </span>
-                        <Button size="sm" variant="destructive" onClick={() => removeCat(k)}>
+                        <Button type="button" size="sm" variant="destructive" onClick={() => removeCat(k)}>
                           <Trash2 className="h-4 w-4 mr-1" /> Supprimer cette catégorie
                         </Button>
                       </div>
