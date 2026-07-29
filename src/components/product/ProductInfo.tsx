@@ -25,6 +25,7 @@ const fadeUp = {
 
 export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }: ProductInfoProps) {
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
+  const { designSettings } = useApp();
   const guessCategory = (): SizeCategory => {
     const c = (product.category || '').toLowerCase();
     if (c.includes('femme')) return 'femme';
@@ -33,7 +34,9 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
   };
   const showHeader = !detailsOnly;
   const showDetails = !headerOnly;
+  const { enabled: badgesEnabled, badges: trustBadges } = getProductTrustBadges(designSettings, product.category);
   return (
+
     <>
       {showHeader && (
         <>
