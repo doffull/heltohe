@@ -169,16 +169,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return translations[language][key] || key;
   };
 
+  const emitSaved = useCallback((ok: boolean, error?: string) => {
+    try {
+      window.dispatchEvent(new CustomEvent('design-settings:saved', {
+        detail: { ts: Date.now(), ok, error },
+      }));
+    } catch {}
+  }, []);
+
   // Debounced save to cloud (800ms)
   const debouncedSave = useCallback((settings: DesignSettings) => {
     const seq = markEditing();
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
       saveDesignSettings.mutate(settings, {
+        onSuccess: () => emitSaved(true),
+        onError: (e: any) => emitSaved(false, e?.message || 'Erreur inconnue'),
         onSettled: () => { settleEditing(seq); },
       });
     }, 800);
-  }, [markEditing, saveDesignSettings, settleEditing]);
+  }, [emitSaved, markEditing, saveDesignSettings, settleEditing]);
 
   const setDesignSettings = useCallback((settings: DesignSettings) => {
     latestDesignRef.current = settings;
