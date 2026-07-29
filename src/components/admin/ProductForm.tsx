@@ -249,11 +249,26 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
   };
 
   const removeColorOption = (index: number) => {
+    const removed = formData.colorOptions[index];
     setFormData(prev => ({
       ...prev,
       colorOptions: prev.colorOptions.filter((_, i) => i !== index),
       colors: prev.colors.filter((_, i) => i !== index),
     }));
+    if (removed) {
+      setVariantGrid(prev => { const n = { ...prev }; delete n[removed.color]; return n; });
+      setColorStockMap(prev => { const n = { ...prev }; delete n[removed.color]; return n; });
+    }
+  };
+
+  const removeColorByValue = (color: string) => {
+    setFormData(prev => ({
+      ...prev,
+      colorOptions: prev.colorOptions.filter(o => o.color !== color),
+      colors: prev.colors.filter(c => c !== color),
+    }));
+    setVariantGrid(prev => { const n = { ...prev }; delete n[color]; return n; });
+    setColorStockMap(prev => { const n = { ...prev }; delete n[color]; return n; });
   };
 
 
