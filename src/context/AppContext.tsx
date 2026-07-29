@@ -39,7 +39,7 @@ interface AppContextType {
   // Design
   designSettings: DesignSettings;
   setDesignSettings: (settings: DesignSettings) => void;
-  updateDesignSettings: (updates: Partial<DesignSettings>) => void;
+  updateDesignSettings: (updates: Partial<DesignSettings>, options?: { immediate?: boolean }) => void;
   flushDesignSettings: (override?: Partial<DesignSettings>) => Promise<void>;
   
   // Navigation helpers
@@ -166,14 +166,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     debouncedSave(settings);
   }, [debouncedSave]);
 
-  const updateDesignSettings = useCallback((updates: Partial<DesignSettings>) => {
+  const updateDesignSettings = useCallback((updates: Partial<DesignSettings>, options?: { immediate?: boolean }) => {
     setDesignSettingsLocal(prev => {
       const next = { ...prev, ...updates };
       latestDesignRef.current = next;
-      debouncedSave(next);
+      if (options?.immediate) {
+        if (saveTimerRef.current) {
+          clearTimeout(saveTimerRef.current);
+          saveTimerRef.current = null;
+        }
+        pendingSaveRef.current = true;
+        saveDesignSettings.mutate(next, {
+          onSettled: () => { pendingSaveRef.current = false; },
+        });
+      } else {
+        debouncedSave(next);
+      }
       return next;
     });
-  }, [debouncedSave]);
+  }, [debouncedSave, saveDesignSettings]);
 
   // Flush pending debounced save immediately (used on explicit "Save" button).
   const flushDesignSettings = useCallback(async (override?: Partial<DesignSettings>) => {
