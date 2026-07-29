@@ -1,53 +1,53 @@
 import { useRef, useEffect, useState } from 'react';
+import { Check, X } from 'lucide-react';
 import { useVisualEditor } from './VisualEditorProvider';
+import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 
 interface InlineEditableProps {
-  /** Unique key to track which field is being edited */
   fieldKey: string;
-  /** Current text value */
   value: string;
-  /** Called when value changes */
-  onChange: (val: string) => void;
-  /** The rendered element type: span | h1 | h2 | p | button */
+  /** Called only when the user validates (via ✓ button or Enter). */
+  onCommit?: (val: string) => void;
+  /** Legacy live-update callback (kept for existing EditableText usage). */
+  onChange?: (val: string) => void;
   as?: 'span' | 'h1' | 'h2' | 'h3' | 'p' | 'div';
-  /** Extra classes applied to the wrapper */
   className?: string;
-  /** Style passthrough */
   style?: React.CSSProperties;
-  /** Placeholder shown when empty */
   placeholder?: string;
-  /** If true, uses textarea instead of single-line input */
   multiline?: boolean;
   children?: React.ReactNode;
 }
 
 /**
- * Wraps any text element so that when the Visual Editor is open,
- * clicking on it turns it into an inline input.
+ * Double-click to edit any text element. Shows a floating ✓ / ✕ toolbar.
+ * - Gated to admins + Visual Editor open.
+ * - `onCommit` fires on validate; `onChange` (if provided) still fires live for
+ *   legacy compatibility with `EditableText` which auto-saves via designSettings.
  */
 export function InlineEditable({
   fieldKey,
   value,
+  onCommit,
   onChange,
   as: Tag = 'span',
   className,
   style,
-  placeholder = 'Cliquez pour éditer…',
+  placeholder = 'Double-cliquez pour éditer…',
   multiline = false,
   children,
 }: InlineEditableProps) {
   const { isOpen, editingKey, setEditingKey, setIsDirty } = useVisualEditor();
-  const isEditing = editingKey === fieldKey;
+  const { isAdmin } = useAuth();
+  const isActive = isOpen && isAdmin;
+  const isEditing = isActive && editingKey === fieldKey;
   const inputRef = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
   const [localVal, setLocalVal] = useState(value);
 
-  // Sync external value changes when not editing
   useEffect(() => {
     if (!isEditing) setLocalVal(value);
   }, [value, isEditing]);
 
-  // Focus input when entering edit mode
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
@@ -55,35 +55,42 @@ export function InlineEditable({
     }
   }, [isEditing]);
 
-  function handleClick(e: React.MouseEvent) {
-    if (!isOpen) return;
+  function handleActivate(e: React.MouseEvent) {
+    if (!isActive) return;
     e.stopPropagation();
     e.preventDefault();
     setEditingKey(fieldKey);
   }
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
-    setLocalVal(e.target.value);
-    onChange(e.target.value);
+  function commit() {
+    onCommit?.(localVal);
+    setEditingKey(null);
     setIsDirty(true);
   }
-
-  function handleBlur() {
+  function cancel() {
+    setLocalVal(value);
     setEditingKey(null);
+  }
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
+    setLocalVal(e.target.value);
+    // Legacy: some callers rely on live updates.
+    onChange?.(e.target.value);
+    setIsDirty(true);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Enter' && !multiline) {
       e.preventDefault();
-      setEditingKey(null);
+      commit();
     }
     if (e.key === 'Escape') {
-      setEditingKey(null);
+      e.preventDefault();
+      cancel();
     }
   }
 
-  if (!isOpen) {
-    // Normal rendering, no editing UI
+  if (!isActive) {
     return (
       <Tag className={className} style={style}>
         {children ?? value}
@@ -96,52 +103,74 @@ export function InlineEditable({
       'inline-editable-input bg-transparent border-0 outline-none p-0 m-0 w-full',
       'underline decoration-dashed decoration-primary/60 underline-offset-4',
       'text-inherit font-inherit leading-inherit',
-      className
+      className,
     );
 
-    return multiline ? (
-      <textarea
-        ref={inputRef as React.Ref<HTMLTextAreaElement>}
-        value={localVal}
-        onChange={handleChange}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        className={cn(sharedInputClass, 'resize-none overflow-hidden')}
-        style={{ ...style, caretColor: 'hsl(var(--primary))' }}
-        rows={2}
-      />
-    ) : (
-      <input
-        ref={inputRef as React.Ref<HTMLInputElement>}
-        type="text"
-        value={localVal}
-        onChange={handleChange}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        className={sharedInputClass}
-        style={{ ...style, caretColor: 'hsl(var(--primary))' }}
-        placeholder={placeholder}
-      />
+    return (
+      <span className="relative inline-block w-full">
+        {multiline ? (
+          <textarea
+            ref={inputRef as React.Ref<HTMLTextAreaElement>}
+            value={localVal}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            className={cn(sharedInputClass, 'resize-none overflow-hidden')}
+            style={{ ...style, caretColor: 'hsl(var(--primary))' }}
+            rows={3}
+            placeholder={placeholder}
+          />
+        ) : (
+          <input
+            ref={inputRef as React.Ref<HTMLInputElement>}
+            type="text"
+            value={localVal}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            className={sharedInputClass}
+            style={{ ...style, caretColor: 'hsl(var(--primary))' }}
+            placeholder={placeholder}
+          />
+        )}
+        {/* Validate / Cancel toolbar */}
+        <span
+          className="absolute -top-9 right-0 z-[300] flex items-center gap-1 rounded-md border border-border bg-background/95 backdrop-blur px-1 py-1 shadow-lg"
+          onMouseDown={(e) => e.preventDefault()}
+        >
+          <button
+            type="button"
+            onClick={commit}
+            className="h-6 w-6 inline-flex items-center justify-center rounded bg-primary text-primary-foreground hover:bg-primary/90"
+            title="Valider (Entrée)"
+          >
+            <Check className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={cancel}
+            className="h-6 w-6 inline-flex items-center justify-center rounded bg-muted text-muted-foreground hover:bg-muted/80"
+            title="Annuler (Échap)"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </span>
+      </span>
     );
   }
 
-  // Editor open but not editing this field — show hover hint
   return (
     <Tag
       className={cn(
         className,
         'cursor-text group/editable relative',
-        // Subtle ring on hover indicating it's editable
-        'hover:ring-2 hover:ring-primary/50 hover:ring-offset-1 rounded-sm transition-all duration-150'
+        'hover:ring-2 hover:ring-primary/50 hover:ring-offset-1 rounded-sm transition-all duration-150',
       )}
       style={style}
-      onClick={handleClick}
-      title="Cliquer pour modifier"
+      onDoubleClick={handleActivate}
+      title="Double-clic pour modifier"
     >
       {children ?? value}
-      {/* Floating "Éditer" tooltip on hover */}
       <span className="absolute -top-5 left-0 z-[200] hidden group-hover/editable:flex items-center gap-1 text-[9px] font-bold bg-primary text-primary-foreground px-1.5 py-0.5 rounded whitespace-nowrap pointer-events-none">
-        ✏️ Éditer
+        ✏️ Double-clic
       </span>
     </Tag>
   );
