@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { InventoryProductDialog } from '@/components/admin/InventoryProductDialog';
+import { BulkVariantStockDialog } from '@/components/admin/BulkVariantStockDialog';
 import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
 import { StockPdfImportDialog } from '@/components/admin/StockPdfImportDialog';
 import { InlineStockEditor } from '@/components/admin/InlineStockEditor';
@@ -10,7 +11,7 @@ import {
   BarChart3, Package, Store, ArrowLeftRight, AlertTriangle,
   RefreshCw, TrendingUp, TrendingDown, Search, Filter,
   Upload, Plus, Pencil, Trash2, FileText, X, Check, FileSpreadsheet,
-  ChevronDown, ChevronRight, Download, Clock
+  ChevronDown, ChevronRight, Download, Clock, Layers
 } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
