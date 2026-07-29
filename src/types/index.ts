@@ -454,6 +454,9 @@ export interface DesignSettings {
   globalProductSizes?: string[];
   // Global product defaults auto-applied on new product creation
   productDefaults?: ProductDefaults;
+  // Product page trust badges (delivery, warranty, returns...) with per-category overrides
+  productTrustBadges?: ProductTrustBadgesConfig;
+
   
   // Stat bar colors
   statBarFilledColor: string;
