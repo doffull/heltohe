@@ -1,45 +1,23 @@
-## Diagnostic
+Plan de correction ciblé pour que les éléments admin visibles sur ta capture soient vraiment modifiables.
 
-Le bug vient de `src/hooks/useDesignSettings.ts`. Plusieurs onglets admin appellent `updateDesignSettings({ ... })` avec des clés qui **ne sont jamais écrites en base** ni relues au chargement. React Query réhydrate depuis la base → la valeur locale disparaît → l'UI "ne veut pas changer".
+1. Sécuriser les interactions des liens de navigation
+   - Remplacer les lignes cliquables actuelles par de vrais contrôles accessibles avec `id` + `htmlFor`.
+   - Ajouter un clic sur toute la ligne sans double-déclenchement, pour que cocher “Accueil”, “Boutique”, “Homme”, “Femme”, etc. marche même en cliquant le texte ou la ligne.
+   - Corriger l’édition des liens actifs/personnalisés pour que changer le label ou l’URL ne soit pas perdu pendant la saisie.
 
-Exemple précis rapporté (liens de navigation, `HeaderDesignTab`) :
-- L'onglet écrit `headerNavItems`.
-- La colonne DB `design_settings.header_nav_items` **existe déjà**.
-- Mais ni `dbToSettings` ni `settingsToDb` ne la mappent → toggles/inputs sans effet.
+2. Sécuriser les switches admin
+   - Rendre “Activer le bandeau”, “Header fixe” et “Afficher le logo” cliquables aussi via leur libellé.
+   - Ajouter un retour visuel/état stable pour éviter que le switch revienne immédiatement à l’état précédent pendant la sauvegarde.
 
-### Autres champs orphelins détectés (même symptôme)
+3. Corriger la sauvegarde des réglages header
+   - Ajouter une sauvegarde immédiate ciblée quand on coche/décoche un lien ou un switch important, au lieu de dépendre seulement du délai de 800 ms.
+   - Conserver la sauvegarde différée pour les champs texte afin de ne pas envoyer une requête à chaque lettre.
+   - Afficher une erreur claire si la base refuse l’écriture, plutôt que donner l’impression que le bouton ne marche pas.
 
-| Clé admin              | Colonne DB existante ?          | Correctif           |
-|------------------------|---------------------------------|---------------------|
-| `headerNavItems`       | ✅ `header_nav_items`           | Mapper colonne      |
-| `topBanner`            | ✅ `top_banner`                 | Mapper colonne      |
-| `adminSectionColors`   | ✅ `admin_section_colors`       | Mapper colonne      |
-| `megaMenuLinks`        | ❌                              | Piggyback `settings_json.megaMenuLinks` |
-| `sidebarNavLinks`      | ❌                              | Piggyback `settings_json.sidebarNavLinks` |
-| `unifiedFab`           | ❌                              | Piggyback `settings_json.unifiedFab` |
-| `promoParallax`        | ❌                              | Piggyback `settings_json.promoParallax` |
-| `pageTransition`       | ❌                              | Piggyback `settings_json.pageTransition` |
-| `fontHeading`, `fontBody` | ❌                           | Piggyback `settings_json.fonts` |
-| `sliderImageOpacity`   | ❌                              | Piggyback `settings_json.sliderImageOpacity` |
+4. Empêcher les protections du site de bloquer l’admin
+   - Adapter la protection anti-copie/sélection pour qu’elle soit complètement inactive sur toutes les routes `/admin`, même si le rôle admin n’est pas encore chargé.
+   - Élargir les éléments autorisés à interagir (`button`, `label`, éléments Radix, switches, checkboxes), afin que les composants admin ne soient jamais bloqués par l’overlay sécurité.
 
-## Correctif
-
-1. **`src/hooks/useDesignSettings.ts`** — ajouter les 3 colonnes réelles et 7 champs piggyback dans `dbToSettings` (lecture) **et** `settingsToDb` (écriture).
-2. Vérifier les valeurs par défaut pour éviter l'écrasement à l'upsert :
-   - `headerNavItems` : `[]` par défaut (l'UI fournit déjà les templates).
-   - `topBanner` : `null` par défaut (déjà colonne jsonb).
-   - `adminSectionColors` : `{}` par défaut.
-3. Aucune migration SQL requise — toutes les colonnes ciblées existent déjà.
-4. `settings_json` reste unique (fusionner les nouveaux piggyback avec l'existant pour ne pas perdre `securityOverlay`, `trustpilot`, etc.).
-
-## Vérification
-
-1. Aller dans **Admin > Design > En-tête**, cocher un lien de nav dans la liste "Liens rapides" → refresh la page → le lien reste coché.
-2. Modifier le label d'un lien de nav → refresh → le label est conservé.
-3. Idem sur : liens du méga-menu, FAB unifié, transition de page, bannière du haut, couleurs des sections admin.
-4. Ouvrir le site public → la nouvelle nav apparaît immédiatement (grâce à `refetchInterval: 15_000` déjà en place).
-
-## Hors-scope
-
-- Refonte du composant `HeaderDesignTab` (l'UI marche déjà, seul le pipeline de persistance était cassé).
-- Migration de nouvelles colonnes dédiées pour les piggyback (`settings_json` suffit et évite de multiplier les colonnes rarement lues).
+5. Vérifier le résultat
+   - Tester dans l’admin : cocher/décocher les liens de navigation, activer/désactiver le bandeau, modifier un lien personnalisé, rafraîchir la page et vérifier que les changements restent.
+   - Vérifier qu’aucun élément de la zone montrée sur ta capture ne se chevauche ou ne devient impossible à sélectionner.
