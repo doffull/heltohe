@@ -1,45 +1,45 @@
-## Edge Function `generate-product-video` (IA vidéo runtime)
+## Diagnostic
 
-### Objectif
-Remplacer l'astuce canvas + MediaRecorder de `AiProductVideoButton` par une vraie génération vidéo IA côté serveur, appelable depuis l'admin sur n'importe quelle image produit.
+Le bug vient de `src/hooks/useDesignSettings.ts`. Plusieurs onglets admin appellent `updateDesignSettings({ ... })` avec des clés qui **ne sont jamais écrites en base** ni relues au chargement. React Query réhydrate depuis la base → la valeur locale disparaît → l'UI "ne veut pas changer".
 
-### Provider
-Google **Veo 3** via Lovable AI Gateway (endpoint `/v1/videos/generations`, modèle `google/veo-3.0-generate-preview`), image-to-video, 5–8 s, 720p/1080p, audio muet. Utilise `LOVABLE_API_KEY` déjà présent — aucun secret à demander.
+Exemple précis rapporté (liens de navigation, `HeaderDesignTab`) :
+- L'onglet écrit `headerNavItems`.
+- La colonne DB `design_settings.header_nav_items` **existe déjà**.
+- Mais ni `dbToSettings` ni `settingsToDb` ne la mappent → toggles/inputs sans effet.
 
-### Edge Function `supabase/functions/generate-product-video/index.ts`
-- POST `{ imageUrl, prompt?, durationSec?, aspectRatio? }` (défaut : 6 s, 9:16 pour mobile ou 16:9).
-- Étapes :
-  1. Télécharge l'image (avec User-Agent + retry, comme `virtual-tryon`).
-  2. Encode en base64, prompt par défaut : "Cinematic slow-motion product showcase, subtle camera dolly-in, soft studio lighting, no text, no logo, luxury fashion mood".
-  3. POST `https://ai.gateway.lovable.dev/v1/videos/generations` → renvoie un `operationId`.
-  4. Poll (max ~90 s, backoff 3 s) `/v1/videos/operations/{id}` jusqu'à `done: true`.
-  5. Récupère le binaire vidéo (mp4), uploade dans `storage/media/products/videos/{uuid}.mp4`.
-  6. Renvoie `{ url, durationSec, model }`.
-- CORS, validation Zod du body, propagation propre des 402/429 (crédits IA / rate limit).
-- `verify_jwt = false` puis vérif manuelle du JWT (rôle `admin` requis via `has_role`).
-- Config dans `supabase/config.toml`.
+### Autres champs orphelins détectés (même symptôme)
 
-### Client — refonte de `AiProductVideoButton`
-- Bouton "Générer une vidéo IA" avec :
-  - Popover réglages : prompt libre (pré-rempli avec nom produit), durée (5 / 8 s), ratio (16:9 / 9:16 / 1:1).
-  - Appel `supabase.functions.invoke('generate-product-video', ...)`.
-  - Loader + progression indicative ("Génération vidéo IA en cours… ~60 s").
-  - Toast succès + callback `onGenerated(url)` qui met à jour `video_url` du produit.
-- Fallback conservé : si l'API renvoie 402/429/500 → propose l'ancien canvas-mode ("mode rapide sans IA").
+| Clé admin              | Colonne DB existante ?          | Correctif           |
+|------------------------|---------------------------------|---------------------|
+| `headerNavItems`       | ✅ `header_nav_items`           | Mapper colonne      |
+| `topBanner`            | ✅ `top_banner`                 | Mapper colonne      |
+| `adminSectionColors`   | ✅ `admin_section_colors`       | Mapper colonne      |
+| `megaMenuLinks`        | ❌                              | Piggyback `settings_json.megaMenuLinks` |
+| `sidebarNavLinks`      | ❌                              | Piggyback `settings_json.sidebarNavLinks` |
+| `unifiedFab`           | ❌                              | Piggyback `settings_json.unifiedFab` |
+| `promoParallax`        | ❌                              | Piggyback `settings_json.promoParallax` |
+| `pageTransition`       | ❌                              | Piggyback `settings_json.pageTransition` |
+| `fontHeading`, `fontBody` | ❌                           | Piggyback `settings_json.fonts` |
+| `sliderImageOpacity`   | ❌                              | Piggyback `settings_json.sliderImageOpacity` |
 
-### Intégration `ProductForm`
-- Bouton déjà présent au-dessus du champ vidéo — remplacer son handler pour appeler la nouvelle version.
-- Ajout d'un badge "Veo 3" à côté du bouton.
+## Correctif
 
-### Bonus admin
-- Dans `AdminAgentIntegrations` : ligne "Vidéo IA (Veo 3)" avec statut de la fonction et test rapide (image de démo → vidéo).
+1. **`src/hooks/useDesignSettings.ts`** — ajouter les 3 colonnes réelles et 7 champs piggyback dans `dbToSettings` (lecture) **et** `settingsToDb` (écriture).
+2. Vérifier les valeurs par défaut pour éviter l'écrasement à l'upsert :
+   - `headerNavItems` : `[]` par défaut (l'UI fournit déjà les templates).
+   - `topBanner` : `null` par défaut (déjà colonne jsonb).
+   - `adminSectionColors` : `{}` par défaut.
+3. Aucune migration SQL requise — toutes les colonnes ciblées existent déjà.
+4. `settings_json` reste unique (fusionner les nouveaux piggyback avec l'existant pour ne pas perdre `securityOverlay`, `trustpilot`, etc.).
 
-### Tests
-1. Générer une vidéo depuis un produit existant → fichier .mp4 en Storage, `video_url` mis à jour.
-2. Vérifier que la vidéo s'affiche dans la galerie produit publique.
-3. Erreur 402 propagée avec message clair côté toast.
-4. Non-admin bloqué (401).
+## Vérification
 
-### Hors-scope
-- Génération text-to-video pure (sans image de départ) — pourra être ajoutée plus tard dans les slides marketing.
-- Édition de vidéo existante (trim, texte overlay) — hors-scope.
+1. Aller dans **Admin > Design > En-tête**, cocher un lien de nav dans la liste "Liens rapides" → refresh la page → le lien reste coché.
+2. Modifier le label d'un lien de nav → refresh → le label est conservé.
+3. Idem sur : liens du méga-menu, FAB unifié, transition de page, bannière du haut, couleurs des sections admin.
+4. Ouvrir le site public → la nouvelle nav apparaît immédiatement (grâce à `refetchInterval: 15_000` déjà en place).
+
+## Hors-scope
+
+- Refonte du composant `HeaderDesignTab` (l'UI marche déjà, seul le pipeline de persistance était cassé).
+- Migration de nouvelles colonnes dédiées pour les piggyback (`settings_json` suffit et évite de multiplier les colonnes rarement lues).
