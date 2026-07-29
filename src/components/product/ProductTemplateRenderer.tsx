@@ -178,8 +178,8 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
       );
       case 'trust_badges': {
         const items = [
-          { icon: Truck, text: 'Livraison gratuite dès 200€' },
-          { icon: Shield, text: 'Garantie 1 an' },
+          { icon: Truck, text: 'Livraison gratuite en point relais' },
+          { icon: CreditCard, text: 'Paiement CB 3D secure et 3 fois sans frais via PayPal' },
           { icon: RotateCcw, text: 'Retours sous 30 jours' },
         ];
         const customLabels = b.props?.label ? String(b.props.label).split('|').map(s => s.trim()) : [];

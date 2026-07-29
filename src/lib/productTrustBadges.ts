@@ -10,7 +10,7 @@ export const TRUST_BADGE_ICON_NAMES = Object.keys(TRUST_BADGE_ICONS);
 
 export const DEFAULT_TRUST_BADGES: ProductTrustBadge[] = [
   { id: 'delivery', icon: 'Truck', label: 'Livraison gratuite en point relais', enabled: true },
-  { id: 'warranty', icon: 'Shield', label: 'Garantie 1 an', enabled: true },
+  { id: 'warranty', icon: 'CreditCard', label: 'Paiement CB 3D secure et 3 fois sans frais via PayPal', enabled: true },
   { id: 'returns', icon: 'RotateCcw', label: 'Retours sous 30 jours', enabled: true },
 ];
 
