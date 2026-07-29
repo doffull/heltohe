@@ -1,64 +1,46 @@
-## Objectif
+## Diagnostic
 
-Rendre la sauvegarde des réglages admin réellement fiable et visible partout :
-- Un **bouton "Enregistrer maintenant"** présent sur toutes les pages admin utilisant `designSettings`.
-- Un **autosave perpétuel** avec **backup local (localStorage)** pour ne jamais perdre un changement.
-- Un **indicateur de statut clair** (Modifié / Enregistrement… / ✓ Enregistré à HH:MM:SS / Erreur) avec **gestion d'erreur + retry**.
-- Un **historique des derniers enregistrements** consultable.
+Après audit du fichier `src/pages/admin/AdminProductBadges.tsx`, du résolveur `src/lib/productTrustBadges.ts` et du rendu `src/components/product/ProductInfo.tsx` :
 
-## Diagnostic (vérifié)
+- Les modifications SONT bien propagées au contexte (`updateDesignSettings` met à jour l'état optimiste immédiatement) et sauvegardées via l'autosave. Les pages produit lisent bien `designSettings.productTrustBadges`.
+- **Ce qui manque et provoque l'impression que "rien ne change"** :
+  1. Aucun **aperçu en direct** dans la page admin — impossible de voir l'effet sans quitter l'écran, ouvrir une page produit et rafraîchir.
+  2. L'ajout d'une catégorie repose sur une saisie libre (`homme`, `femme`…) alors que les produits utilisent `Homme`, `Femme`, `Enfant`. Le matching flou fonctionne mais rien ne guide l'utilisateur ni ne confirme quel produit reçoit quels badges.
+  3. Aucun indicateur qui montre, pour chaque onglet catégorie, si la surcharge est réellement utilisée par des produits existants.
+  4. Le résolveur `getProductTrustBadges` retombe sur `DEFAULT_TRUST_BADGES` (constante en dur) quand `cfg.default` est vide, au lieu d'utiliser la valeur enregistrée — source de confusion si l'utilisateur vide sa liste par défaut.
 
-Dans `AdminProductBadges.tsx` :
-- `commit()` appelle `updateDesignSettings(...)` en mode **debounced (800 ms)** via `AppContext`. L'UI passe en `saving` puis `saved`, mais si l'utilisateur enchaîne des clics rapides, le timer redémarre et le statut retombe sur "Autosave actif" sans confirmation visible d'un vrai flush réseau.
-- Aucun **bouton "Enregistrer"** manuel, aucun **backup localStorage**, aucun **timestamp** du dernier save, aucune **UI d'erreur**.
-- `AppContext.flushDesignSettings()` existe déjà et flush immédiatement le debounce → c'est la brique idéale pour un bouton manuel.
+## Ce que je vais faire
 
-## Plan
+### 1. Aperçu en direct (colonne latérale sticky)
+Dans `AdminProductBadges.tsx` : ajouter une colonne à droite (empilée sous mobile) qui rend **exactement** la barre de badges telle qu'affichée dans `ProductInfo.tsx` (mêmes classes Tailwind, icônes, grid dynamique). Elle réagit :
+- au brouillon local (avant même l'autosave),
+- à la catégorie de l'onglet actif (Défaut / Homme / Femme / Enfant / Sportwear / custom),
+- au switch "Global activé/désactivé",
+- au switch `enabled` de chaque badge.
 
-### 1. Composant réutilisable `AdminSaveBar`
-Nouveau fichier `src/components/admin/AdminSaveBar.tsx` : barre sticky en haut/bas de page affichant :
-- Statut : `Idle` / `Modifié` (ambré) / `Enregistrement…` (spinner) / `✓ Enregistré à 14:32:07` / `⚠ Erreur — Réessayer`.
-- Bouton **"Enregistrer maintenant"** (appelle `flushDesignSettings()`).
-- Bouton **"Historique"** ouvrant une popover listant les 10 derniers enregistrements (timestamp + taille + statut) lus depuis localStorage.
-- Bouton **"Restaurer le dernier backup local"** si un backup non-synchronisé est détecté au chargement.
+Un menu déroulant "Prévisualiser comme…" permet de simuler n'importe quelle catégorie existante en base.
 
-### 2. Hook `useDesignAutosave`
-Nouveau `src/hooks/useDesignAutosave.ts` qui centralise :
-- Écoute des changements de `designSettings` (via `AppContext`).
-- Écriture d'un **backup dans `localStorage`** sous la clé `design_settings_backup` à chaque modification (throttlé 300 ms).
-- Écriture d'un **journal** `design_settings_save_log` (10 dernières entrées : `{ts, ok, error?, bytes}`).
-- Exposition de `{ status, lastSavedAt, lastError, saveNow, history, hasLocalBackup, restoreBackup }`.
-- Détection d'un backup local plus récent que le cloud au montage → propose la restauration.
-- **Retry automatique** avec backoff (3 tentatives : 2s / 5s / 15s) en cas d'erreur réseau, puis statut "Erreur" persistant tant que non résolu.
+### 2. Sélecteur de catégories réel
+- Remplacer la saisie libre par un `Select` alimenté par les catégories réellement présentes dans les produits (via `products` du contexte) + les 4 catégories suggérées.
+- Afficher à côté de chaque onglet le **nombre de produits** concernés (compte via `products.filter(p => normalizeKey(p.category) === key)`), pour que l'utilisateur voie l'impact.
+- Badge visuel "Utilise Défaut" / "Personnalisé" par catégorie.
 
-### 3. Intégration `AdminProductBadges`
-- Ajouter `<AdminSaveBar />` en haut de la page.
-- Remplacer l'indicateur maison actuel par le statut du hook.
-- Garder le `draft` local et `dirtyRef` pour la protection anti-écrasement pendant l'édition.
+### 3. Fiabilisation du résolveur
+Dans `src/lib/productTrustBadges.ts` :
+- Respecter `cfg.default` même vide (n'écraser par `DEFAULT_TRUST_BADGES` que si `cfg.default` est `undefined`, jamais si l'utilisateur l'a vidé volontairement).
+- Ajouter un match exact prioritaire avant le match "includes" pour éviter qu'une catégorie courte n'attrape une catégorie longue par erreur.
 
-### 4. Déploiement sur les autres pages admin
-Ajouter `<AdminSaveBar />` en tête des pages admin qui éditent `designSettings` : `AdminDesign`, `AdminSettings`, `AdminHomeIcons`, `AdminChatbot`, `AdminCheckout`, `AdminNotifications`, `AdminTransitions`, `AdminMarketing`, `AdminRoulette`, `AdminSecurity`, `AdminPages`, `AdminPageTemplates`. Comme le hook lit depuis `AppContext`, le bouton fonctionne pour toutes ces pages sans logique supplémentaire.
+### 4. UX de la page admin
+- Bouton "Voir un produit de cette catégorie" (ouvre le premier produit correspondant dans un nouvel onglet) pour vérifier immédiatement.
+- Message inline "✓ Appliqué en direct sur les pages produit" à chaque commit.
+- Conserver l'autosave + `AdminSaveBar` déjà en place.
 
-### 5. Amélioration de `AppContext.flushDesignSettings`
-- Retourner explicitement le timestamp de succès.
-- Émettre un événement `window.dispatchEvent(new CustomEvent('design-settings:saved', { detail: { ts, ok } }))` que `useDesignAutosave` écoute pour mettre à jour l'historique de manière fiable (même quand le flush est déclenché par le debounce interne).
-- Sur erreur : ne pas silence — propager pour que la SaveBar affiche l'erreur et permette "Réessayer".
+### Fichiers touchés
+- `src/pages/admin/AdminProductBadges.tsx` — refonte complète (aperçu, sélecteur, compteurs).
+- `src/lib/productTrustBadges.ts` — correction résolveur + export d'un helper de rendu partagé avec l'aperçu.
+- (aucun changement de schéma DB, aucun changement de types)
 
-### 6. Résilience
-- Si `saveDesignSettings.mutateAsync` throw (offline, 5xx) : garder le backup localStorage, marquer statut "erreur", programmer un retry, ET afficher un toast d'erreur non-bloquant.
-- Au retour en ligne (`window.addEventListener('online')`) : déclencher `saveNow()` automatiquement.
-
-## Détails techniques
-
-Clés localStorage :
-- `design_settings_backup` : `{ ts, payload }` snapshot complet.
-- `design_settings_save_log` : `Array<{ ts, ok, error?, bytes }>` (max 10).
-
-Fichiers modifiés / créés :
-- **Nouveau** `src/components/admin/AdminSaveBar.tsx`
-- **Nouveau** `src/hooks/useDesignAutosave.ts`
-- **Modifié** `src/context/AppContext.tsx` (event `design-settings:saved`, propagation d'erreur, listener `online`)
-- **Modifié** `src/pages/admin/AdminProductBadges.tsx` (SaveBar + statut branché sur le hook)
-- **Modifié** les pages admin listées à l'étape 4 (ajout d'un `<AdminSaveBar />` en tête).
-
-Pas de changement DB, pas de nouvelle table.
+### Détails techniques
+- L'aperçu importe `TRUST_BADGE_ICONS` et reproduit la grille `grid-cols` dynamique de `ProductInfo`.
+- Le comptage produit utilise la même `normalizeKey` que le résolveur pour garantir la cohérence.
+- Aucun impact sur le rendu réel des pages produit hormis la petite correction du fallback `default` vide.
