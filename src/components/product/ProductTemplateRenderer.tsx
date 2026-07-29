@@ -7,6 +7,8 @@ import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import RelatedProducts from '@/components/product/RelatedProducts';
 import { cn } from '@/lib/utils';
+import { useApp } from '@/context/AppContext';
+import { getProductTrustBadges, TRUST_BADGE_ICONS } from '@/lib/productTrustBadges';
 
 
 interface Props {
