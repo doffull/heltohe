@@ -164,6 +164,7 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
       careInstructions: 'Lavable en machine à 30°C · Ne pas repasser sur les impressions',
       childSizes: ['2A', '4A', '6A', '8A', '10A', '12A', '14A'],
     },
+    productTrustBadges: ((db.settings_json as any)?.productTrustBadges) ?? base.productTrustBadges,
     // Piggyback fields on settings_json (no dedicated DB column)
     megaMenuLinks: ((db.settings_json as any)?.megaMenuLinks) ?? [],
     sidebarNavLinks: ((db.settings_json as any)?.sidebarNavLinks) ?? [],
@@ -303,6 +304,7 @@ function settingsToDb(s: DesignSettings) {
       trustpilot: (s as any).trustpilot ?? null,
       reviewsSettings: (s as any).reviewsSettings ?? null,
       productDefaults: (s as any).productDefaults ?? null,
+      productTrustBadges: (s as any).productTrustBadges ?? null,
       // Piggyback fields (no dedicated columns)
       megaMenuLinks: (s as any).megaMenuLinks ?? [],
       sidebarNavLinks: (s as any).sidebarNavLinks ?? [],
