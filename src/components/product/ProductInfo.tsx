@@ -264,7 +264,9 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
       )}
 
       {/* Material & Care */}
+      {(hasMaterial || hasCare || editing) && (
       <motion.div className="grid md:grid-cols-2 gap-6" {...fadeUp} transition={{ delay: 0.9 }}>
+        {(hasMaterial || editing) && (
         <div>
           <h3 className="text-sm font-bold hud-text mb-2 uppercase tracking-wider">Matière</h3>
           <EditableProductField
@@ -276,6 +278,8 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
             placeholder="Ex: 100% polyester recyclé"
           />
         </div>
+        )}
+        {(hasCare || editing) && (
         <div>
           <h3 className="text-sm font-bold hud-text mb-2 uppercase tracking-wider">Entretien</h3>
           <EditableProductField
@@ -287,7 +291,9 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
             placeholder="Ex: Lavage 30°C, séchage à plat"
           />
         </div>
+        )}
       </motion.div>
+      )}
 
         </>
       )}
