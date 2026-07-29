@@ -1,96 +1,45 @@
+## Edge Function `generate-product-video` (IA vidéo runtime)
 
-# Plan — Variantes avancées, défauts globaux, tri, et retour à Gemini
+### Objectif
+Remplacer l'astuce canvas + MediaRecorder de `AiProductVideoButton` par une vraie génération vidéo IA côté serveur, appelable depuis l'admin sur n'importe quelle image produit.
 
-## 1. Éditeur de variantes produit enrichi (`ProductForm.tsx`)
+### Provider
+Google **Veo 3** via Lovable AI Gateway (endpoint `/v1/videos/generations`, modèle `google/veo-3.0-generate-preview`), image-to-video, 5–8 s, 720p/1080p, audio muet. Utilise `LOVABLE_API_KEY` déjà présent — aucun secret à demander.
 
-**Tailles**
-- Bloc "Tailles" avec ajout / suppression libre (input + bouton +, croix sur chaque puce).
-- Réordonnancement par glisser-déposer (dnd-kit, déjà utilisé) — l'ordre saisi est celui affiché en boutique.
-- Bouton "Charger un preset" : Homme/Femme (XS→XXXL), Enfant (2A, 4A, 6A, 8A, 10A, 12A, 14A), Chaussures, Numérique.
-- Bouton "Appliquer les tailles par défaut globales" (voir §3).
+### Edge Function `supabase/functions/generate-product-video/index.ts`
+- POST `{ imageUrl, prompt?, durationSec?, aspectRatio? }` (défaut : 6 s, 9:16 pour mobile ou 16:9).
+- Étapes :
+  1. Télécharge l'image (avec User-Agent + retry, comme `virtual-tryon`).
+  2. Encode en base64, prompt par défaut : "Cinematic slow-motion product showcase, subtle camera dolly-in, soft studio lighting, no text, no logo, luxury fashion mood".
+  3. POST `https://ai.gateway.lovable.dev/v1/videos/generations` → renvoie un `operationId`.
+  4. Poll (max ~90 s, backoff 3 s) `/v1/videos/operations/{id}` jusqu'à `done: true`.
+  5. Récupère le binaire vidéo (mp4), uploade dans `storage/media/products/videos/{uuid}.mp4`.
+  6. Renvoie `{ url, durationSec, model }`.
+- CORS, validation Zod du body, propagation propre des 402/429 (crédits IA / rate limit).
+- `verify_jwt = false` puis vérif manuelle du JWT (rôle `admin` requis via `has_role`).
+- Config dans `supabase/config.toml`.
 
-**Couleurs & bicolores**
-- Chaque variante couleur peut désormais avoir :
-  - un swatch **uni** (hex),
-  - un swatch **bicolore** (2 hex, split diagonal 45°, cohérent avec la charte),
-  - une **image swatch** (PNG/JPG) ou **texture** uploadée en drag-and-drop → bucket `media`, sous-dossier `swatches/`.
-- Zone de drop dédiée par variante : accepte fichier ou glisser depuis la médiathèque.
-- Suppression individuelle de chaque couleur + réordonnancement dnd-kit.
-- Rendu du swatch dans les cartes produit et fiche : uni / bicolore (CSS `linear-gradient(135deg, #A 50%, #B 50%)`) / image (background-image).
+### Client — refonte de `AiProductVideoButton`
+- Bouton "Générer une vidéo IA" avec :
+  - Popover réglages : prompt libre (pré-rempli avec nom produit), durée (5 / 8 s), ratio (16:9 / 9:16 / 1:1).
+  - Appel `supabase.functions.invoke('generate-product-video', ...)`.
+  - Loader + progression indicative ("Génération vidéo IA en cours… ~60 s").
+  - Toast succès + callback `onGenerated(url)` qui met à jour `video_url` du produit.
+- Fallback conservé : si l'API renvoie 402/429/500 → propose l'ancien canvas-mode ("mode rapide sans IA").
 
-**Spécifications techniques**
-- Section "Spécifications" éditable : matière, entretien, poids, composition, origine, sous forme de paires clé/valeur libres (déjà dispo via `attributes` — on expose une UI dédiée avec add/remove/reorder).
+### Intégration `ProductForm`
+- Bouton déjà présent au-dessus du champ vidéo — remplacer son handler pour appeler la nouvelle version.
+- Ajout d'un badge "Veo 3" à côté du bouton.
 
-## 2. Types & rendu
+### Bonus admin
+- Dans `AdminAgentIntegrations` : ligne "Vidéo IA (Veo 3)" avec statut de la fonction et test rapide (image de démo → vidéo).
 
-- Étendre `ColorOption` (`src/types/index.ts`) :
-  ```
-  { name, hex, hex2?, swatchImage?, image?, images? }
-  ```
-- Adapter `ProductCard`, `ProductOptions`, sélecteurs de couleurs pour afficher :
-  - hex uni → pastille couleur,
-  - hex + hex2 → gradient 45°,
-  - swatchImage → image en background.
-- Le champ `sizes` du produit reste `string[]` ; l'ordre du tableau = ordre d'affichage.
+### Tests
+1. Générer une vidéo depuis un produit existant → fichier .mp4 en Storage, `video_url` mis à jour.
+2. Vérifier que la vidéo s'affiche dans la galerie produit publique.
+3. Erreur 402 propagée avec message clair côté toast.
+4. Non-admin bloqué (401).
 
-## 3. Défauts globaux (Admin → Réglages produits)
-
-Réutiliser `design_settings.settings_json` (déjà en place) sous la clé `productDefaults` :
-```
-{
-  material: "Polyester",
-  careInstructions: "Lavable en machine à 30°C",
-  sizesByCategory: {
-    homme:  ["XS","S","M","L","XL","XXL","XXXL"],
-    femme:  ["XS","S","M","L","XL","XXL","XXXL"],
-    enfant: ["2A","4A","6A","8A","10A","12A","14A"],
-    sportswear: ["S","M","L","XL"]
-  }
-}
-```
-- Nouvel onglet "Défauts produits" dans `AdminSettings` : édition des 4 listes (add/remove/reorder) + champs matière/entretien.
-- À la création d'un produit : préremplissage automatique selon la catégorie choisie + matière/entretien.
-- Bouton "Réappliquer les défauts" dans `ProductForm` pour un produit existant.
-- Migration douce : script SQL one-shot qui, sur les produits enfant sans tailles cohérentes, injecte `["2A","4A","6A","8A","10A","12A","14A"]` (uniquement si la liste actuelle est vide).
-
-## 4. Tri personnalisé des produits
-
-Le rangement par catégorie existe déjà (`product_category_order` + `AdminCategoryOrdering`). Ce plan ajoute :
-- Un tri **global** (toutes catégories confondues) via `AdminProducts` : nouveau mode "Tri manuel" (drag-and-drop sur la liste filtrée courante) sauvegardé dans la même table avec `category_slug='__global__'`.
-- Boutons rapides : "Trier par nom", "Trier par prix ↑/↓", "Shuffle", "Rétablir manuel".
-- Respecté par `Shop.tsx` en absence d'ordre catégorie spécifique.
-
-## 5. Retour de l'IA vers Gemini (via Lovable AI Gateway)
-
-Objectif utilisateur : Gemini pour texte, chatbot, images, vidéos, virtual try-on.
-
-- `supabase/functions/_shared/gemini.ts` : le shim DeepSeek est retiré. Toutes les requêtes (texte + vision) repartent sur `https://ai.gateway.lovable.dev/v1/chat/completions` avec `LOVABLE_API_KEY`.
-  - Défaut texte : `google/gemini-2.5-flash`
-  - Défaut vision : `google/gemini-2.5-flash` (inchangé)
-  - Défaut image gen (déjà utilisé dans `generate-slide-image`, `virtual-tryon`) : `google/gemini-2.5-flash-image-preview`
-- Suppression des références DeepSeek dans le badge admin (`AdminAgentIntegrations` / `AdminChatbot`) — remplacé par "Propulsé par Gemini via Lovable AI".
-- Le secret `DEEPSEEK_API_KEY` n'est plus lu. Aucun secret à demander (LOVABLE_API_KEY déjà configuré).
-- Vidéo : ajouter un bouton "Générer vidéo produit (Gemini Veo via Lovable)" dans `ProductForm` — appelle une nouvelle edge function `generate-product-video` qui utilise le gateway (fallback UX si non disponible : message clair).
-
-## 6. Détails techniques
-
-- **Swatch uploads** : `supabase.storage.from('media').upload('swatches/<uuid>.<ext>')` + `getPublicUrl`, taille max 2 Mo, formats PNG/JPG/WEBP.
-- **Bicolore rendering** : util `swatchStyle(color: ColorOption)` centralisé dans `src/lib/swatch.ts` — utilisé par ProductCard, ProductOptions, ProductForm preview.
-- **dnd-kit** : `SortableContext` par bloc (tailles, couleurs, specs). Handle drag visible en mode admin.
-- **Migration BDD** : aucune modification de schéma nécessaire (`sizes text[]`, `color_options jsonb`, `attributes jsonb` couvrent tous les besoins). Un script SQL de fond pour hydrater les défauts enfant (idempotent).
-- **Ordre de sauvegarde produit** : `useUpdateProduct` déjà patché pour n'envoyer que les champs modifiés — pas de régression sur les autres colonnes.
-- **Fallback Gemini** : sur 402/429, message admin explicite avec lien crédits (déjà en place, on garde).
-
-## 7. Ordre d'exécution
-
-1. Créer `src/lib/swatch.ts` + étendre le type `ColorOption`.
-2. Réécrire les sections Tailles / Couleurs / Specs de `ProductForm.tsx` (add/remove/reorder + drop swatch).
-3. Adapter `ProductCard` et `ProductOptions` au nouveau rendu de swatch.
-4. Ajouter onglet "Défauts produits" dans `AdminSettings` (lecture/écriture `design_settings.settings_json.productDefaults`).
-5. Préremplissage à la création de produit + bouton "Réappliquer défauts".
-6. Étendre `AdminCategoryOrdering` avec l'onglet "Tri global" + tris rapides.
-7. Réécrire `_shared/gemini.ts` en client Lovable AI direct (retrait DeepSeek).
-8. Mettre à jour les badges admin ("Propulsé par Gemini").
-9. Nouvelle edge function `generate-product-video` + bouton dans `ProductForm`.
-10. Script SQL idempotent pour tailles enfant par défaut.
-11. Tests manuels : ajout/suppression tailles, drop d'un PNG couleur, bicolore rendu correct sur carte produit, chatbot répond via Gemini, virtual try-on OK, tri global respecté.
+### Hors-scope
+- Génération text-to-video pure (sans image de départ) — pourra être ajoutée plus tard dans les slides marketing.
+- Édition de vidéo existante (trim, texte overlay) — hors-scope.
