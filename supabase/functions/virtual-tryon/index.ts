@@ -90,21 +90,27 @@ Requirements:
 - ${framingInstruction}
 - No text, no watermarks, no collage.`;
 
-    // Use OpenAI gpt-image-2 via /v1/images/edits (multipart, supports multiple input images).
-    const form = new FormData();
-    form.append('model', 'openai/gpt-image-2');
-    form.append('prompt', prompt);
-    form.append('quality', 'low');
-    form.append('size', '1024x1024');
-    const userBin = Uint8Array.from(atob(userB64), (c) => c.charCodeAt(0));
-    const prodBin = Uint8Array.from(atob(product.b64), (c) => c.charCodeAt(0));
-    form.append('image[]', new Blob([userBin], { type: userMime }), 'person.jpg');
-    form.append('image[]', new Blob([prodBin], { type: product.mime }), 'garment.jpg');
-
-    const aiResp = await fetch('https://ai.gateway.lovable.dev/v1/images/edits', {
+    // Use Gemini image preview via chat completions with multimodal input (two images).
+    const aiResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}` },
-      body: form,
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash-image-preview',
+        modalities: ['image', 'text'],
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: prompt },
+              { type: 'image_url', image_url: { url: `data:${userMime};base64,${userB64}` } },
+              { type: 'image_url', image_url: { url: `data:${product.mime};base64,${product.b64}` } },
+            ],
+          },
+        ],
+      }),
     });
 
     if (!aiResp.ok) {
