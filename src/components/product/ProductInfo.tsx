@@ -234,6 +234,7 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
 
 
       {/* Description */}
+      {(hasDescription || editing) && (
       <motion.div {...fadeUp} transition={{ delay: 0.7 }}>
         <h2 className="text-lg font-bold hud-text mb-3 uppercase tracking-wider">Description</h2>
         <EditableProductField
@@ -245,6 +246,7 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
           placeholder="Ajouter une description…"
         />
       </motion.div>
+      )}
 
       {/* Attributes */}
       {product.attributes && Object.keys(product.attributes).length > 0 && (
