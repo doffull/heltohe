@@ -76,6 +76,7 @@ import AdminPageTemplates from './AdminPageTemplates';
 import AdminReviews from './AdminReviews';
 import AdminAgentIntegrations from './AdminAgentIntegrations';
 import AdminProductBadges from './AdminProductBadges';
+import { AdminSaveBar } from '@/components/admin/AdminSaveBar';
 
 
 
