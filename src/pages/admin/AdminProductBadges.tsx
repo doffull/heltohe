@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -128,7 +128,7 @@ function BadgeList({
 export default function AdminProductBadges() {
   const { designSettings, updateDesignSettings } = useApp();
 
-  const cfg: ProductTrustBadgesConfig = useMemo(() => {
+  const remoteCfg: ProductTrustBadgesConfig = useMemo(() => {
     return (
       designSettings.productTrustBadges || {
         enabled: true,
@@ -138,9 +138,35 @@ export default function AdminProductBadges() {
     );
   }, [designSettings.productTrustBadges]);
 
+  // Autosave draft — decouples editing from network refetches so clicks never
+  // "reset" while a save is in flight.
+  const [draft, setDraft] = useState<ProductTrustBadgesConfig>(remoteCfg);
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const dirtyRef = useRef(false);
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Pull remote updates only when we don't have local edits pending.
+  useEffect(() => {
+    if (dirtyRef.current) return;
+    setDraft(remoteCfg);
+  }, [remoteCfg]);
+
+  const cfg = draft;
+
   const commit = (next: ProductTrustBadgesConfig) => {
-    updateDesignSettings({ productTrustBadges: next }, { immediate: true });
+    dirtyRef.current = true;
+    setDraft(next);
+    setStatus('saving');
+    updateDesignSettings({ productTrustBadges: next });
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+    savedTimerRef.current = setTimeout(() => {
+      dirtyRef.current = false;
+      setStatus('saved');
+      setTimeout(() => setStatus('idle'), 1500);
+    }, 1000);
   };
+
+  useEffect(() => () => { if (savedTimerRef.current) clearTimeout(savedTimerRef.current); }, []);
 
   const categories = designSettings.categories || [];
   // Suggested category keys even if not in categories array
@@ -182,16 +208,28 @@ export default function AdminProductBadges() {
     setNewCatKey('');
   };
 
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold hud-text uppercase tracking-wider">
-          Badges de confiance produit
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Personnalise les icônes (Livraison, Garantie, Retours…) affichées sur la page produit. Configure un jeu par défaut, puis surcharge pour Homme / Femme / Enfant / Sportwear ou toute autre catégorie.
-        </p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold hud-text uppercase tracking-wider">
+            Badges de confiance produit
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Personnalise les icônes (Livraison, Garantie, Retours…) affichées sur la page produit. Configure un jeu par défaut, puis surcharge pour Homme / Femme / Enfant / Sportwear ou toute autre catégorie.
+          </p>
+        </div>
+        <div
+          className="text-xs uppercase tracking-wider px-3 py-1.5 rounded-md border border-border bg-muted/40"
+          aria-live="polite"
+        >
+          {status === 'saving' && <span className="text-muted-foreground">Enregistrement…</span>}
+          {status === 'saved' && <span className="text-primary">✓ Enregistré</span>}
+          {status === 'idle' && <span className="text-muted-foreground">Autosave actif</span>}
+        </div>
       </div>
+
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
