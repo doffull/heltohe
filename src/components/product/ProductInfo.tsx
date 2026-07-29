@@ -30,6 +30,13 @@ const fadeUp = {
 export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }: ProductInfoProps) {
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const { designSettings } = useApp();
+  const { isAdmin } = useAuth();
+  const { isOpen: editorOpen } = useVisualEditor();
+  const editing = isAdmin && editorOpen;
+  const hasModel = Boolean(product.modelHeight || product.modelSizeWorn || product.modelName);
+  const hasDescription = Boolean(product.description && String(product.description).trim());
+  const hasMaterial = Boolean(product.material && String(product.material).trim());
+  const hasCare = Boolean(product.careInstructions && String(product.careInstructions).trim());
   const guessCategory = (): SizeCategory => {
     const c = (product.category || '').toLowerCase();
     if (c.includes('femme')) return 'femme';
@@ -42,6 +49,7 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
   return (
 
     <>
+
       {showHeader && (
         <>
           {/* Category & SKU */}
