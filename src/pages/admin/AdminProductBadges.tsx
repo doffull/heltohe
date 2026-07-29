@@ -11,6 +11,7 @@ import { Trash2, Plus, GripVertical, Copy } from 'lucide-react';
 import { TRUST_BADGE_ICONS, TRUST_BADGE_ICON_NAMES, DEFAULT_TRUST_BADGES } from '@/lib/productTrustBadges';
 import type { ProductTrustBadge, ProductTrustBadgesConfig } from '@/types';
 import { toast } from 'sonner';
+import { AdminSaveBar } from '@/components/admin/AdminSaveBar';
 
 const uid = () => `b_${Math.random().toString(36).slice(2, 9)}`;
 
