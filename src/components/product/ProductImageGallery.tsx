@@ -1,8 +1,9 @@
 import { useState, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ZoomIn, ZoomOut, Play, Image as ImageIcon, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { ColorOption } from '@/types';
+import { ColorOption, Product } from '@/types';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { EditableProductImage } from '@/components/visual-editor/EditableProductImage';
 
 interface ProductImageGalleryProps {
   image: string;
@@ -14,7 +15,10 @@ interface ProductImageGalleryProps {
   onColorChange?: (color: string) => void;
   modelHeight?: string;
   modelSizeWorn?: string;
+  /** Provided by ProductDetail to enable per-thumbnail inline editing. */
+  product?: Product;
 }
+
 
 function isEmbedVideo(url: string) {
   return /youtube|youtu\.be|vimeo/i.test(url);
@@ -38,6 +42,8 @@ export default function ProductImageGallery({
   onColorChange,
   modelHeight,
   modelSizeWorn,
+  product,
+
 }: ProductImageGalleryProps) {
   const isMobile = useIsMobile();
   const [activeMedia, setActiveMedia] = useState<'image' | 'video'>('image');
@@ -389,20 +395,33 @@ export default function ProductImageGallery({
         ) : (
           <>
             {/* One thumbnail per image (cover + gallery) */}
-            {imageList.map((img, i) => (
-              <button
-                key={`${img}-${i}`}
-                onClick={() => { switchToImage(); setActiveImageIndex(i); }}
-                className={`w-20 h-20 chamfer-hud-sm overflow-hidden border-2 bg-card/30 relative transition-colors ${activeMedia === 'image' && activeImageIndex === i ? 'border-primary' : 'border-border/30 opacity-60 hover:opacity-100'}`}
-              >
-                <img src={img} alt={`${name} ${i + 1}`} className="w-full h-full object-cover" />
-                {i === 0 && videoUrl && (
-                  <div className="absolute bottom-1 left-1">
-                    <ImageIcon className="h-3 w-3 text-foreground drop-shadow-md" />
-                  </div>
-                )}
-              </button>
-            ))}
+            {imageList.map((img, i) => {
+              const thumb = (
+                <button
+                  key={`${img}-${i}`}
+                  onClick={() => { switchToImage(); setActiveImageIndex(i); }}
+                  className={`w-20 h-20 chamfer-hud-sm overflow-hidden border-2 bg-card/30 relative transition-colors ${activeMedia === 'image' && activeImageIndex === i ? 'border-primary' : 'border-border/30 opacity-60 hover:opacity-100'}`}
+                >
+                  <img src={img} alt={`${name} ${i + 1}`} className="w-full h-full object-cover" />
+                  {i === 0 && videoUrl && (
+                    <div className="absolute bottom-1 left-1">
+                      <ImageIcon className="h-3 w-3 text-foreground drop-shadow-md" />
+                    </div>
+                  )}
+                </button>
+              );
+              if (!product) return thumb;
+              return (
+                <EditableProductImage
+                  key={`edit-${img}-${i}`}
+                  product={product}
+                  target={i === 0 ? 'cover' : { galleryIndex: i - 1 }}
+                >
+                  {thumb}
+                </EditableProductImage>
+              );
+            })}
+
           </>
         )}
 

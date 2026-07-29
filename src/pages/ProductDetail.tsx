@@ -159,20 +159,20 @@ export default function ProductDetail() {
         <div className="grid lg:grid-cols-2 gap-6 lg:gap-12">
           {/* Left: Image Gallery — ref for scroll target */}
           <div ref={imageRef} style={{ scrollMarginTop: '80px' }}>
-            <EditableProductImage product={product} target="cover">
-              <ProductImageGallery
-                image={product.image}
-                name={product.name}
-                videoUrl={product.videoUrl}
-                galleryImages={product.galleryImages}
-                colorOptions={product.colorOptions}
-                selectedColor={selectedColor}
-                onColorChange={handleColorChange}
-                modelHeight={(product as any).modelHeight}
-                modelSizeWorn={(product as any).modelSizeWorn}
-              />
-            </EditableProductImage>
+            <ProductImageGallery
+              image={product.image}
+              name={product.name}
+              videoUrl={product.videoUrl}
+              galleryImages={product.galleryImages}
+              colorOptions={product.colorOptions}
+              selectedColor={selectedColor}
+              onColorChange={handleColorChange}
+              modelHeight={(product as any).modelHeight}
+              modelSizeWorn={(product as any).modelSizeWorn}
+              product={product}
+            />
           </div>
+
 
 
           {/* Right: Product Details */}
