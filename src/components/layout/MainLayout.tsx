@@ -491,6 +491,18 @@ export function MainLayout({ children }: MainLayoutProps) {
                 {language}
               </button>
 
+              {/* Mobile search trigger */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSearchOpen(true)}
+                aria-label="Rechercher"
+                title="Rechercher"
+                className={cn("h-8 w-8", sidebarActive ? "xl:hidden" : "md:hidden")}
+              >
+                <Search className="h-4 w-4" aria-hidden="true" />
+              </Button>
+
               {/* MegaMenu trigger — visible toutes tailles */}
               <MegaMenuTrigger className="border border-foreground/20 hover:border-foreground" />
 
@@ -504,14 +516,15 @@ export function MainLayout({ children }: MainLayoutProps) {
                 <SheetContent side="right" className="w-[320px] bg-background">
                   <div className="flex flex-col gap-6 mt-8">
                     {/* Mobile Search */}
-                    <div className="relative">
-                      <Input 
-                        type="text" 
-                        placeholder="Rechercher..." 
-                        className="w-full h-12 pl-12 bg-secondary border-0"
-                      />
-                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSearchOpen(true)}
+                      className="relative flex h-12 w-full items-center gap-3 bg-secondary px-4 text-left text-sm text-muted-foreground"
+                    >
+                      <Search className="h-5 w-5" aria-hidden="true" />
+                      Rechercher...
+                    </button>
+
 
                     {/* Nav Links */}
                     <Link to="/" className="flex items-center justify-between py-3 text-lg font-medium uppercase tracking-wider border-b border-border text-muted-foreground">
