@@ -96,6 +96,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
   const [newSwatchImage, setNewSwatchImage] = useState<string>('');
   const [customSizeDraft, setCustomSizeDraft] = useState('');
   const [aiBusy, setAiBusy] = useState<string | null>(null);
+  const [aiObservations, setAiObservations] = useState<string[]>([]);
   const [showGalleryPicker, setShowGalleryPicker] = useState(false);
   const [showMainPicker, setShowMainPicker] = useState(false);
 
@@ -115,11 +116,26 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
   const runProductAi = async (action: string, extra: Record<string, any> = {}) => {
     setAiBusy(action);
     try {
+      const imageUrls = [formData.image, ...(formData.galleryImages || [])]
+        .filter((u): u is string => typeof u === 'string' && /^https?:\/\//i.test(u))
+        .slice(0, 4);
       const { data, error } = await supabase.functions.invoke('product-ai-helpers', {
-        body: { action, name: formData.name, category: formData.category, imageUrl: formData.image, ...extra },
+        body: {
+          action,
+          name: formData.name,
+          category: formData.category,
+          imageUrl: formData.image,
+          imageUrls,
+          colors: (formData.colorOptions || []).map((c: any) => c?.label).filter(Boolean),
+          sizes: formData.sizes,
+          ...extra,
+        },
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
+      if (Array.isArray((data as any)?.observations) && (data as any).observations.length) {
+        setAiObservations((data as any).observations);
+      }
       return data as any;
     } catch (e: any) {
       toast.error(e.message || 'Erreur IA');
@@ -1002,14 +1018,14 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
               type="button" size="sm" variant="ghost"
               className="h-6 px-2 gap-1 text-primary hover:bg-primary/10"
               disabled={aiBusy === 'description' || !formData.image}
-              title={!formData.image ? "Ajoutez d'abord une image" : "Générer depuis l'image"}
+              title={!formData.image ? "Ajoutez d'abord une image" : "Générer une description fidèle aux photos"}
               onClick={async () => {
                 const r = await runProductAi('description');
                 if (r?.value) setFormData(prev => ({ ...prev, description: r.value }));
               }}
             >
               {aiBusy === 'description' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-              <span className="text-[10px]">IA depuis l'image</span>
+              <span className="text-[10px]">IA fidèle aux photos</span>
             </Button>
           </div>
           <Textarea
@@ -1017,6 +1033,12 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
             onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
             className="bg-secondary/50 border-border/30 min-h-[80px]"
           />
+          {aiObservations.length > 0 && (
+            <p className="text-[10px] text-muted-foreground leading-snug">
+              <span className="text-primary">Basé sur : </span>
+              {aiObservations.join(' · ')}
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -1111,6 +1133,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
             name={formData.name}
             category={formData.category}
             imageUrl={formData.image}
+            imageUrls={[formData.image, ...(formData.galleryImages || [])].filter((u): u is string => typeof u === 'string' && /^https?:\/\//i.test(u)).slice(0, 4)}
             onGenerated={(items) => setFormData(prev => ({ ...prev, attributes: { ...prev.attributes, ...items } }))}
           />
         </div>

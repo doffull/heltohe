@@ -1,50 +1,37 @@
-# Édition inline double-clic — Couverture complète de la page produit
+# Objectif
 
-## Objectif
-Toute donnée visible sur la page produit devient éditable en double-clic (Admin + Éditeur Live actif), avec la barre flottante ✓ Valider / ✕ Annuler déjà en place.
+Les descriptions générées par l'IA doivent décrire **ce qui est réellement visible sur les photos** du produit, sans inventer de matières, coupes ou fonctionnalités.
 
-## Champs à couvrir (nouveaux)
+## Constat actuel
 
-### 1. `ProductInfo.tsx`
-- **Info mannequin** (`modelName`, `modelHeight`, `modelSizeWorn`) — actuellement affiché comme phrase composée. Chaque valeur devient un `EditableProductField` en ligne dans la même phrase. Si tout est vide et qu'on est en mode éditeur, afficher un placeholder « + Ajouter un mannequin » pour créer.
-- **Stock** (`stock`) — le badge « En stock / Plus que N » devient éditable (nombre). Double-clic sur la ligne → input numérique.
+- `product-ai-helpers` (action `description`) envoie **une seule image** (l'image principale) et un prompt très libre : « Décris ce produit en 3-5 phrases… Mets en avant matières, coupe, usage » → l'IA extrapole (imperméabilité, technologies, usages) sans vérification visuelle.
+- Le modèle utilisé est `openai/gpt-5-mini` pour tous les cas, y compris les appels vision.
+- `generate-product-description` (utilisé dans le dialogue d'inventaire) ne reçoit **aucune image** du tout : description 100 % inventée à partir du nom.
 
-### 2. `ProductOptions.tsx` — Tailles et couleurs
-- **Tailles** (`sizes: string[]`) : chaque pastille de taille éditable en double-clic (renomme la taille dans le tableau). Un bouton `+` visible uniquement en mode éditeur permet d'ajouter une taille ; un bouton `✕` au survol supprime. Sauvegarde via `useUpdateProduct` sur le champ `sizes`.
-- **Couleurs** : label de couleur éditable via double-clic sur le tooltip/pastille (édite `colorOptions[i].label`). Ajout/suppression restent gérés dans l'admin produit existant (hors périmètre).
+## Changements prévus
 
-### 3. Badges de confiance (features bar)
-Les labels des badges viennent de `designSettings.productTrustBadges` (globaux + surcharges par catégorie), **pas** du produit. Deux options que je propose de trancher dans le plan :
-- **Retenu** : double-clic sur un label de badge → édite `designSettings.productTrustBadges.default[i].label` (ou l'override de la catégorie du produit s'il existe) via le mécanisme `useEditableSetting` déjà utilisé ailleurs. Toolbar ✓/✕ identique. Autosave via l'`AdminSaveBar` déjà globale.
-- L'icône et l'ajout/suppression de badges restent gérés dans `/admin/badges-produits`.
+### 1. Envoyer toutes les photos utiles
+- Côté `ProductForm` (et boutons IA associés) : transmettre `imageUrls` = image principale + jusqu'à 3 images de galerie + éventuelles images de variantes, au lieu du seul `imageUrl`.
+- Côté edge function : accepter `imageUrls[]` (rétro-compatible avec `imageUrl`) et construire un message multimodal avec plusieurs blocs `image_url`.
 
-### 4. Image principale et galerie
-- Image principale : déjà couverte via `EditableProductImage target="cover"`.
-- **Ajout** : wrapper `EditableProductImage target={{ galleryIndex: i }}` autour de chaque vignette de galerie dans `ProductImageGallery.tsx` pour permettre le remplacement individuel.
+### 2. Prompt anti-hallucination en 2 temps
+- Étape A (observation) : l'IA liste d'abord, via l'outil structuré, ce qu'elle **voit** (type de vêtement, couleur dominante, matière apparente, détails : capuche, zips, poches, coutures, logo, coupe, longueur).
+- Étape B (rédaction) : la description est rédigée **uniquement** à partir de ces observations + des données saisies (nom, catégorie, matière, couleurs, tailles).
+- Règles injectées dans le system prompt : interdiction d'inventer des performances techniques (imperméabilité, indices, températures) non visibles ou non fournies ; pas de marque/collab non affichée ; ton éditorial mais factuel ; 3-5 phrases, ≤ 600 caractères, français.
 
-## Composants nouveaux
-- `EditableProductArrayField` — même API que `EditableProductField` mais pour éditer une entrée d'un tableau (`field: 'sizes'`, `index: number`) avec support suppression. Utilisé pour les tailles et couleurs.
-- Extension de `EditableProductField` pour accepter `parse`/`format` numériques déjà présents (stock).
+### 3. Modèle vision plus fiable
+- Utiliser `google/gemini-2.5-pro` pour les actions multimodales (`description`, `material`, `attributes`) et garder un modèle rapide pour le texte pur (`subtitle`, `color-name`).
+- Même durcissement pour `material` (répondre « Non identifiable » plutôt que deviner) et `attributes` (uniquement des attributs déductibles de l'image ou des données saisies).
 
-## Composants modifiés
-- `src/components/product/ProductInfo.tsx` — mannequin + stock inline.
-- `src/components/product/ProductOptions.tsx` — tailles et couleurs éditables + bouton `+` admin.
-- `src/components/product/ProductImageGallery.tsx` — wrap galerie avec `EditableProductImage`.
-- `src/components/visual-editor/EditableProductArrayField.tsx` — nouveau.
-- Badges : intégration légère dans `ProductInfo.tsx` avec `useEditableSetting` (aucun changement du modèle de données).
+### 4. Retour visible dans l'admin
+- Renvoyer aussi la liste des observations et l'afficher en petit sous le champ description (« Basé sur : capuche amovible, zip double curseur, tissu matelassé… ») pour que vous voyiez sur quoi l'IA s'est appuyée.
+- Si aucune image n'est disponible : message clair « Ajoutez au moins une photo pour une description fidèle » et génération dégradée signalée.
 
-## Règles conservées
-- Édition gated : admin + Éditeur Live ouvert (via `useVisualEditor`).
-- Toolbar flottante ✓ Valider / ✕ Annuler, Entrée = valider, Échap = annuler.
-- Sauvegarde immédiate côté produit via `useUpdateProduct` ; côté design settings via l'autosave global existant.
-- Aucun changement de logique métier ni de schéma DB.
+### 5. Harmonisation
+- `generate-product-description` (dialogue inventaire) sera redirigé vers `product-ai-helpers` avec les images, pour un comportement identique partout.
 
 ## Détails techniques
-- Type `Product.sizes` reste `string[]`. Modifier une taille = remplacer l'entrée à l'index ; supprimer = filtrer.
-- Pour la couleur, on édite `colorOptions[i].label` (les stocks liés à `colors[i]` restent inchangés — c'est un renommage d'affichage).
-- Stock : `parse={(v) => Math.max(0, parseInt(v) || 0)}`.
-- Badges : la surcharge écrit dans `designSettings.productTrustBadges.overrides[categoryKey]` si le produit a une catégorie, sinon dans `default`.
 
-## Hors périmètre
-- Éditer les icônes de badges (déjà dans `/admin/badges-produits`).
-- Édition inline des avis clients, produits associés, boutons CTA (déjà couverts par le Visual Editor existant).
+- Fichiers : `supabase/functions/product-ai-helpers/index.ts`, `supabase/functions/_shared/gemini.ts` (aucun changement nécessaire, il accepte déjà les blocs image), `src/components/admin/ProductForm.tsx`, `src/components/admin/AiAttributesButton.tsx`, `src/components/admin/InventoryProductDialog.tsx`.
+- Le schéma de l'outil reste simple (`{ observations: string[], value: string }`) sans bornes de longueur, les limites étant énoncées dans le prompt et coupées côté code.
+- Les URLs d'images envoyées doivent être des URLs publiques persistantes (déjà garanti par `sanitizePersistableUrl`).

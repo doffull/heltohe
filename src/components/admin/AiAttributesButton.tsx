@@ -9,17 +9,18 @@ interface Props {
   name?: string;
   category?: string;
   imageUrl?: string;
+  imageUrls?: string[];
   onGenerated: (items: Record<string, string>) => void;
   className?: string;
 }
 
-export function AiAttributesButton({ name, category, imageUrl, onGenerated, className }: Props) {
+export function AiAttributesButton({ name, category, imageUrl, imageUrls, onGenerated, className }: Props) {
   const [loading, setLoading] = useState(false);
   const run = async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('product-ai-helpers', {
-        body: { action: 'attributes', name, category, imageUrl },
+        body: { action: 'attributes', name, category, imageUrl, imageUrls },
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
