@@ -852,6 +852,9 @@ export function MainLayout({ children }: MainLayoutProps) {
       {/* Unified floating action stack (Industrial Luxury) — visible for everyone, including admins for testing */}
       <UnifiedFab />
 
+      {/* Global search */}
+      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+
       {/* Newsletter Popup Host */}
       {!isAdmin && <NewsletterPopupHost />}
     </div>
