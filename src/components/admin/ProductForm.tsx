@@ -73,7 +73,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
     sizes: [] as string[],
     colors: [] as string[],
     colorOptions: [] as ColorOption[],
-    attributes: {} as Record<string, string>,
+    attributes: { Isolation: 'Duvet synthétique' } as Record<string, string>,
     videoUrl: '',
     tags: [] as string[],
     modelHeight: '',
