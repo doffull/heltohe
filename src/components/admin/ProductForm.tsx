@@ -1133,6 +1133,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
             name={formData.name}
             category={formData.category}
             imageUrl={formData.image}
+            imageUrls={[formData.image, ...(formData.galleryImages || [])].filter((u): u is string => typeof u === 'string' && /^https?:\/\//i.test(u)).slice(0, 4)}
             onGenerated={(items) => setFormData(prev => ({ ...prev, attributes: { ...prev.attributes, ...items } }))}
           />
         </div>
