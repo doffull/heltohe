@@ -16,6 +16,7 @@ import { SidebarProductHUD } from './SidebarProductHUD';
 import { UnifiedFab } from './UnifiedFab';
 import { BrandLogo } from './BrandLogo';
 import { MegaMenuTrigger } from './MegaMenuTrigger';
+import { SearchDialog } from './SearchDialog';
 // SidebarNewsletter retiré du panneau latéral
 import { MiniNavbar } from '@/components/ui/mini-navbar';
 import { NewsletterPopupHost } from '@/components/home/NewsletterPopupHost';
@@ -67,6 +68,18 @@ export function MainLayout({ children }: MainLayoutProps) {
   const { designSettings, language, setLanguage, updateDesignSettings } = useApp();
   const isMobile = useIsMobile();
   const [searchOpen, setSearchOpen] = useState(false);
+
+  // Ctrl/Cmd + K opens the global search
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(false);
   const [sidebarClosedByUser, setSidebarClosedByUser] = useState(false);
@@ -281,7 +294,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         )}
       >
         <MiniNavbar
-          expanded={searchOpen}
+          expanded={false}
           transparent={isHomePage || headerPreset === 'transparent'}
           className={cn("pointer-events-auto mx-auto w-[calc(100%-1.5rem)]", isAdmin ? "max-w-[1720px]" : "max-w-7xl")}
           style={{
@@ -338,31 +351,16 @@ export function MainLayout({ children }: MainLayoutProps) {
 
             {/* Actions */}
             <div className={cn("flex items-center ml-auto shrink-0", sidebarActive ? "gap-1 xl:gap-2" : isAdmin ? "gap-0.5 lg:gap-1 xl:gap-2" : "gap-0 lg:gap-3")}>
-              {/* Search - Expandable (hidden when sidebar pushes header) */}
+              {/* Search - opens global search dialog */}
               <div className={cn(
-                "items-center transition-all duration-300",
-                searchOpen ? 'w-48 xl:w-64' : 'w-10',
+                "items-center",
                 sidebarActive ? "hidden xl:flex" : "hidden md:flex"
               )}>
-                {searchOpen ? (
-                  <div className="relative w-full">
-                    <Input 
-                      type="text" 
-                      placeholder="Rechercher..." 
-                      className="w-full h-10 pr-10 bg-secondary border-0 focus-visible:ring-1"
-                      autoFocus
-                      onBlur={() => setSearchOpen(false)}
-                    />
-                    <Button variant="ghost" size="icon" className="absolute right-0 top-0" onClick={() => setSearchOpen(false)} aria-label="Fermer la recherche" title="Fermer la recherche">
-                      <X className="h-4 w-4" aria-hidden="true" />
-                    </Button>
-                  </div>
-                ) : (
-                  <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)} aria-label="Rechercher" title="Rechercher">
-                    <Search className="h-5 w-5" aria-hidden="true" />
-                  </Button>
-                )}
+                <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)} aria-label="Rechercher" title="Rechercher (Ctrl+K)">
+                  <Search className="h-5 w-5" aria-hidden="true" />
+                </Button>
               </div>
+
 
               {/* Chatbot trigger - desktop only */}
               <Button
@@ -506,6 +504,18 @@ export function MainLayout({ children }: MainLayoutProps) {
                 {language}
               </button>
 
+              {/* Mobile search trigger */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSearchOpen(true)}
+                aria-label="Rechercher"
+                title="Rechercher"
+                className={cn("h-8 w-8", sidebarActive ? "xl:hidden" : "md:hidden")}
+              >
+                <Search className="h-4 w-4" aria-hidden="true" />
+              </Button>
+
               {/* MegaMenu trigger — visible toutes tailles */}
               <MegaMenuTrigger className="border border-foreground/20 hover:border-foreground" />
 
@@ -519,14 +529,15 @@ export function MainLayout({ children }: MainLayoutProps) {
                 <SheetContent side="right" className="w-[320px] bg-background">
                   <div className="flex flex-col gap-6 mt-8">
                     {/* Mobile Search */}
-                    <div className="relative">
-                      <Input 
-                        type="text" 
-                        placeholder="Rechercher..." 
-                        className="w-full h-12 pl-12 bg-secondary border-0"
-                      />
-                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSearchOpen(true)}
+                      className="relative flex h-12 w-full items-center gap-3 bg-secondary px-4 text-left text-sm text-muted-foreground"
+                    >
+                      <Search className="h-5 w-5" aria-hidden="true" />
+                      Rechercher...
+                    </button>
+
 
                     {/* Nav Links */}
                     <Link to="/" className="flex items-center justify-between py-3 text-lg font-medium uppercase tracking-wider border-b border-border text-muted-foreground">
@@ -853,6 +864,9 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Unified floating action stack (Industrial Luxury) — visible for everyone, including admins for testing */}
       <UnifiedFab />
+
+      {/* Global search */}
+      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
 
       {/* Newsletter Popup Host */}
       {!isAdmin && <NewsletterPopupHost />}
