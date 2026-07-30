@@ -282,7 +282,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         )}
       >
         <MiniNavbar
-          expanded={searchOpen}
+          expanded={false}
           transparent={isHomePage || headerPreset === 'transparent'}
           className={cn("pointer-events-auto mx-auto w-[calc(100%-1.5rem)]", isAdmin ? "max-w-[1720px]" : "max-w-7xl")}
           style={{
