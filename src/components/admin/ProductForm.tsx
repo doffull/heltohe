@@ -1018,14 +1018,14 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
               type="button" size="sm" variant="ghost"
               className="h-6 px-2 gap-1 text-primary hover:bg-primary/10"
               disabled={aiBusy === 'description' || !formData.image}
-              title={!formData.image ? "Ajoutez d'abord une image" : "Générer depuis l'image"}
+              title={!formData.image ? "Ajoutez d'abord une image" : "Générer une description fidèle aux photos"}
               onClick={async () => {
                 const r = await runProductAi('description');
                 if (r?.value) setFormData(prev => ({ ...prev, description: r.value }));
               }}
             >
               {aiBusy === 'description' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-              <span className="text-[10px]">IA depuis l'image</span>
+              <span className="text-[10px]">IA fidèle aux photos</span>
             </Button>
           </div>
           <Textarea
@@ -1033,6 +1033,12 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
             onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
             className="bg-secondary/50 border-border/30 min-h-[80px]"
           />
+          {aiObservations.length > 0 && (
+            <p className="text-[10px] text-muted-foreground leading-snug">
+              <span className="text-primary">Basé sur : </span>
+              {aiObservations.join(' · ')}
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-4">
