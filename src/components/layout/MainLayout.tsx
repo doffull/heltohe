@@ -338,31 +338,16 @@ export function MainLayout({ children }: MainLayoutProps) {
 
             {/* Actions */}
             <div className={cn("flex items-center ml-auto shrink-0", sidebarActive ? "gap-1 xl:gap-2" : isAdmin ? "gap-0.5 lg:gap-1 xl:gap-2" : "gap-0 lg:gap-3")}>
-              {/* Search - Expandable (hidden when sidebar pushes header) */}
+              {/* Search - opens global search dialog */}
               <div className={cn(
-                "items-center transition-all duration-300",
-                searchOpen ? 'w-48 xl:w-64' : 'w-10',
+                "items-center",
                 sidebarActive ? "hidden xl:flex" : "hidden md:flex"
               )}>
-                {searchOpen ? (
-                  <div className="relative w-full">
-                    <Input 
-                      type="text" 
-                      placeholder="Rechercher..." 
-                      className="w-full h-10 pr-10 bg-secondary border-0 focus-visible:ring-1"
-                      autoFocus
-                      onBlur={() => setSearchOpen(false)}
-                    />
-                    <Button variant="ghost" size="icon" className="absolute right-0 top-0" onClick={() => setSearchOpen(false)} aria-label="Fermer la recherche" title="Fermer la recherche">
-                      <X className="h-4 w-4" aria-hidden="true" />
-                    </Button>
-                  </div>
-                ) : (
-                  <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)} aria-label="Rechercher" title="Rechercher">
-                    <Search className="h-5 w-5" aria-hidden="true" />
-                  </Button>
-                )}
+                <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)} aria-label="Rechercher" title="Rechercher (Ctrl+K)">
+                  <Search className="h-5 w-5" aria-hidden="true" />
+                </Button>
               </div>
+
 
               {/* Chatbot trigger - desktop only */}
               <Button
