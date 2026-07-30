@@ -115,11 +115,26 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
   const runProductAi = async (action: string, extra: Record<string, any> = {}) => {
     setAiBusy(action);
     try {
+      const imageUrls = [formData.image, ...(formData.galleryImages || [])]
+        .filter((u): u is string => typeof u === 'string' && /^https?:\/\//i.test(u))
+        .slice(0, 4);
       const { data, error } = await supabase.functions.invoke('product-ai-helpers', {
-        body: { action, name: formData.name, category: formData.category, imageUrl: formData.image, ...extra },
+        body: {
+          action,
+          name: formData.name,
+          category: formData.category,
+          imageUrl: formData.image,
+          imageUrls,
+          colors: (formData.colorOptions || []).map((c: any) => c?.label).filter(Boolean),
+          sizes: formData.sizes,
+          ...extra,
+        },
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
+      if (Array.isArray((data as any)?.observations) && (data as any).observations.length) {
+        setAiObservations((data as any).observations);
+      }
       return data as any;
     } catch (e: any) {
       toast.error(e.message || 'Erreur IA');
