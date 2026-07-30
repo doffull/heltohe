@@ -160,8 +160,8 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
       showOnProductCards: true,
     },
     productDefaults: ((db.settings_json as any)?.productDefaults) ?? {
-      material: 'Polyester',
-      careInstructions: 'Lavable en machine à 30°C · Ne pas repasser sur les impressions',
+      material: '100% polyester, rembourrage synthétique, doublure polyester.',
+      careInstructions: 'Lavage 30°C, séchage à plat, ne pas repasser.',
       childSizes: ['2A', '4A', '6A', '8A', '10A', '12A', '14A'],
     },
     productTrustBadges: ((db.settings_json as any)?.productTrustBadges) ?? base.productTrustBadges,
