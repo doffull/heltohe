@@ -215,14 +215,28 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
   // AI Description generation
   const generateDescription = async () => {
     if (!form.name) { toast({ title: 'Entrez un nom d\'abord', variant: 'destructive' }); return; }
+    if (!form.image || form.image === '/placeholder.svg') {
+      toast({ title: 'Ajoutez une photo', description: 'La description IA est générée à partir de l\'image du produit.', variant: 'destructive' });
+      return;
+    }
     setGeneratingDesc(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-product-description', {
-        body: { name: form.name, category: form.category, material: form.material, sizes: form.sizes, colors: form.colors },
+      const { data, error } = await supabase.functions.invoke('product-ai-helpers', {
+        body: {
+          action: 'description',
+          name: form.name,
+          category: form.category,
+          material: form.material,
+          sizes: form.sizes,
+          colors: form.colors,
+          imageUrl: form.image,
+          imageUrls: [form.image],
+        },
       });
       if (error) throw error;
-      if (data?.description) {
-        setForm(prev => ({ ...prev, description: data.description }));
+      if ((data as any)?.error) throw new Error((data as any).error);
+      if ((data as any)?.value) {
+        setForm(prev => ({ ...prev, description: (data as any).value }));
         toast({ title: 'Description générée !' });
       }
     } catch (err: any) {
