@@ -96,6 +96,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
   const [newSwatchImage, setNewSwatchImage] = useState<string>('');
   const [customSizeDraft, setCustomSizeDraft] = useState('');
   const [aiBusy, setAiBusy] = useState<string | null>(null);
+  const [aiObservations, setAiObservations] = useState<string[]>([]);
   const [showGalleryPicker, setShowGalleryPicker] = useState(false);
   const [showMainPicker, setShowMainPicker] = useState(false);
 
