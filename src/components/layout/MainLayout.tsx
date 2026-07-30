@@ -68,6 +68,18 @@ export function MainLayout({ children }: MainLayoutProps) {
   const { designSettings, language, setLanguage, updateDesignSettings } = useApp();
   const isMobile = useIsMobile();
   const [searchOpen, setSearchOpen] = useState(false);
+
+  // Ctrl/Cmd + K opens the global search
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(false);
   const [sidebarClosedByUser, setSidebarClosedByUser] = useState(false);
