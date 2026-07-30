@@ -14,8 +14,8 @@ const CHILD_PRESETS = ['2A', '4A', '6A', '8A', '10A', '12A', '14A', '16A'];
 export function ProductDefaultsEditor() {
   const { designSettings, updateDesignSettings, flushDesignSettings } = useApp();
   const initial: ProductDefaults = (designSettings as any).productDefaults || {};
-  const [material, setMaterial] = useState(initial.material || 'Polyester');
-  const [care, setCare] = useState(initial.careInstructions || 'Lavable en machine à 30°C · Ne pas repasser sur les impressions');
+  const [material, setMaterial] = useState(initial.material || '100% polyester, rembourrage synthétique, doublure polyester.');
+  const [care, setCare] = useState(initial.careInstructions || 'Lavage 30°C, séchage à plat, ne pas repasser.');
   const [childSizes, setChildSizes] = useState<string[]>(initial.childSizes || ['2A','4A','6A','8A','10A','12A','14A']);
   const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState(false);
