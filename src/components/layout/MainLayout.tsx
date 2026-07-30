@@ -16,6 +16,7 @@ import { SidebarProductHUD } from './SidebarProductHUD';
 import { UnifiedFab } from './UnifiedFab';
 import { BrandLogo } from './BrandLogo';
 import { MegaMenuTrigger } from './MegaMenuTrigger';
+import { SearchDialog } from './SearchDialog';
 // SidebarNewsletter retiré du panneau latéral
 import { MiniNavbar } from '@/components/ui/mini-navbar';
 import { NewsletterPopupHost } from '@/components/home/NewsletterPopupHost';
