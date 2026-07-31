@@ -85,7 +85,7 @@ function appToDbProductFull(product: Omit<Product, 'id'>): Record<string, unknow
     attributes: (product.attributes || {}) as unknown as Json,
     tags: product.tags || [],
     gallery_images: sanitizePersistableUrls(product.galleryImages),
-    is_active: true,
+    is_active: (product as { isActive?: boolean }).isActive ?? true,
   };
 }
 
