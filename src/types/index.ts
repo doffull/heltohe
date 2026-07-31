@@ -47,6 +47,7 @@ export interface Product {
   modelName?: string;
   galleryImages?: string[];
   templateId?: string | null;
+  isActive?: boolean;
 }
 
 export interface OrderItem {
