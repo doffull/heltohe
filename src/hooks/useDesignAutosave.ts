@@ -48,7 +48,10 @@ function readBackup(): { ts: number; payload: DesignSettings } | null {
 }
 
 export function useDesignAutosave() {
-  const { designSettings, flushDesignSettings, setDesignSettings } = useApp();
+  const app = useAppOptional();
+  const designSettings = app?.designSettings;
+  const flushDesignSettings = app?.flushDesignSettings;
+  const setDesignSettings = app?.setDesignSettings;
   const [status, setStatus] = useState<SaveStatus>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
