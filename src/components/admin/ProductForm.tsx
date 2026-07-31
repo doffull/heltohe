@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, Plus, Trash2, Sparkles, Loader2, Images, GripVertical } from 'lucide-react';
 import { MediaLibraryDialog } from '@/components/visual-editor/MediaLibraryDialog';
 import { Product, ColorOption } from '@/types';
@@ -27,7 +27,11 @@ import { CSS } from '@dnd-kit/utilities';
 
 interface ProductFormProps {
   product?: Product;
-  onSubmit: (product: Omit<Product, 'id'> | Product, variantStock?: VariantStockData) => void;
+  onSubmit: (
+    product: Omit<Product, 'id'> | Product,
+    variantStock?: VariantStockData,
+    opts?: { silent?: boolean },
+  ) => void | Promise<void>;
   onCancel: () => void;
   isLoading?: boolean;
 }
@@ -99,6 +103,10 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
   const [aiObservations, setAiObservations] = useState<string[]>([]);
   const [showGalleryPicker, setShowGalleryPicker] = useState(false);
   const [showMainPicker, setShowMainPicker] = useState(false);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+  const [autoSaveState, setAutoSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const skipAutoSaveRef = useRef(true);
 
   const setAsMainImage = (url: string, index: number) => {
     setFormData(prev => {
@@ -186,28 +194,59 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
     }
   }, [product]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const buildPayload = () => {
     const submitData = {
       ...formData,
       salePrice: formData.salePrice || undefined,
       videoUrl: formData.videoUrl || undefined,
       tags: formData.tags,
     };
-
     const variantStockData: VariantStockData = {
       variantGrid,
       sizeStockMap,
       colorStockMap,
       globalStock: formData.stock,
     };
+    return { submitData, variantStockData };
+  };
 
-    if (product) {
-      onSubmit({ ...submitData, id: product.id }, variantStockData);
-    } else {
-      onSubmit(submitData, variantStockData);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const { submitData, variantStockData } = buildPayload();
+    setAutoSaveState('saving');
+    try {
+      if (product) {
+        await onSubmit({ ...submitData, id: product.id }, variantStockData);
+      } else {
+        await onSubmit(submitData, variantStockData);
+      }
+      skipAutoSaveRef.current = true;
+      setAutoSaveState('saved');
+      setLastSavedAt(Date.now());
+    } catch {
+      setAutoSaveState('error');
     }
   };
+
+  // ---- Autosave (édition uniquement) : la fiche reste ouverte ----
+  useEffect(() => {
+    if (!product || !autoSaveEnabled) return;
+    if (skipAutoSaveRef.current) { skipAutoSaveRef.current = false; return; }
+    const t = setTimeout(async () => {
+      const { submitData, variantStockData } = buildPayload();
+      setAutoSaveState('saving');
+      try {
+        await onSubmit({ ...submitData, id: product.id }, variantStockData, { silent: true });
+        setAutoSaveState('saved');
+        setLastSavedAt(Date.now());
+      } catch {
+        setAutoSaveState('error');
+      }
+    }, 1500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData, variantGrid, sizeStockMap, colorStockMap, autoSaveEnabled, product?.id]);
+
 
   const toggleSize = (size: string) => {
     setFormData(prev => ({
@@ -1218,13 +1257,31 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
       />
 
       {/* Actions */}
-      <div className="flex justify-end gap-3 pt-4 border-t border-border/30">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
-          Annuler
-        </Button>
-        <Button type="submit" disabled={isLoading} className="bg-primary hover:bg-primary/90">
-          {isLoading ? 'Enregistrement...' : product ? 'Mettre à jour' : 'Créer le produit'}
-        </Button>
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-border/30">
+        {product ? (
+          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+            <input
+              type="checkbox"
+              checked={autoSaveEnabled}
+              onChange={(e) => setAutoSaveEnabled(e.target.checked)}
+              className="accent-primary"
+            />
+            Sauvegarde auto
+            <span className="ml-1">
+              {autoSaveState === 'saving' && <span className="inline-flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Enregistrement…</span>}
+              {autoSaveState === 'saved' && lastSavedAt && `· enregistré à ${new Date(lastSavedAt).toLocaleTimeString('fr-FR')}`}
+              {autoSaveState === 'error' && <span className="text-destructive">· échec, réessayez</span>}
+            </span>
+          </label>
+        ) : <span />}
+        <div className="flex gap-3">
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+            {product ? 'Fermer' : 'Annuler'}
+          </Button>
+          <Button type="submit" disabled={isLoading} className="bg-primary hover:bg-primary/90">
+            {isLoading ? 'Enregistrement...' : product ? 'Enregistrer' : 'Créer le produit'}
+          </Button>
+        </div>
       </div>
     </form>
   );
