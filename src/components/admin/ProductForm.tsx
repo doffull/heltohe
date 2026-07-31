@@ -1257,13 +1257,31 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
       />
 
       {/* Actions */}
-      <div className="flex justify-end gap-3 pt-4 border-t border-border/30">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
-          Annuler
-        </Button>
-        <Button type="submit" disabled={isLoading} className="bg-primary hover:bg-primary/90">
-          {isLoading ? 'Enregistrement...' : product ? 'Mettre à jour' : 'Créer le produit'}
-        </Button>
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-border/30">
+        {product ? (
+          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+            <input
+              type="checkbox"
+              checked={autoSaveEnabled}
+              onChange={(e) => setAutoSaveEnabled(e.target.checked)}
+              className="accent-primary"
+            />
+            Sauvegarde auto
+            <span className="ml-1">
+              {autoSaveState === 'saving' && <span className="inline-flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Enregistrement…</span>}
+              {autoSaveState === 'saved' && lastSavedAt && `· enregistré à ${new Date(lastSavedAt).toLocaleTimeString('fr-FR')}`}
+              {autoSaveState === 'error' && <span className="text-destructive">· échec, réessayez</span>}
+            </span>
+          </label>
+        ) : <span />}
+        <div className="flex gap-3">
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+            {product ? 'Fermer' : 'Annuler'}
+          </Button>
+          <Button type="submit" disabled={isLoading} className="bg-primary hover:bg-primary/90">
+            {isLoading ? 'Enregistrement...' : product ? 'Enregistrer' : 'Créer le produit'}
+          </Button>
+        </div>
       </div>
     </form>
   );
