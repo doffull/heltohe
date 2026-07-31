@@ -23,6 +23,7 @@ import { ImportMockupDialog } from '@/components/admin/ImportMockupDialog';
 import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
 import { CsvImportDialog } from '@/components/admin/CsvImportDialog';
 import { BulkProductImagesDialog } from '@/components/admin/BulkProductImagesDialog';
+import { SplitVariantsDialog } from '@/components/admin/SplitVariantsDialog';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -107,6 +108,7 @@ export default function AdminProducts() {
   const [stockDialogEdit, setStockDialogEdit] = useState<{ inventoryId: string; productId: string } | null>(null);
   const [stockDialogLocations, setStockDialogLocations] = useState<{ id: string; type: string }[]>([]);
   const [variantStockDialog, setVariantStockDialog] = useState<{ productId: string; productName: string } | null>(null);
+  const [splitProduct, setSplitProduct] = useState<Product | null>(null);
 
   // Bulk edit state
 
@@ -726,6 +728,12 @@ export default function AdminProducts() {
                            <DropdownMenuItem onClick={() => handleOpenStockDialog(product)}><Boxes className="h-4 w-4 mr-2" />Gérer le stock</DropdownMenuItem>
                            <DropdownMenuItem onClick={() => setVariantStockDialog({ productId: product.id, productName: product.name })}><Layers2 className="h-4 w-4 mr-2" />Stock par taille/couleur</DropdownMenuItem>
                            <DropdownMenuItem onClick={() => handleDuplicate(product)}><Copy className="h-4 w-4 mr-2" />Dupliquer</DropdownMenuItem>
+                           <DropdownMenuItem
+                             onClick={() => setSplitProduct(product)}
+                             disabled={((product.colorOptions?.length || product.colors?.length || 0) < 2)}
+                           >
+                             <Layers2 className="h-4 w-4 mr-2" />Éclater par couleur
+                           </DropdownMenuItem>
                            <DropdownMenuItem onClick={() => handleDelete(product.id)} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" />Supprimer</DropdownMenuItem>
                          </DropdownMenuContent>
                       </DropdownMenu>
@@ -986,6 +994,12 @@ export default function AdminProducts() {
       <WordPressSyncDialog open={isSyncDialogOpen} onOpenChange={setIsSyncDialogOpen} />
       <CsvImportDialog open={isCsvDialogOpen} onOpenChange={setIsCsvDialogOpen} />
       <BulkProductImagesDialog open={isBulkImagesOpen} onOpenChange={setIsBulkImagesOpen} products={products} />
+      <SplitVariantsDialog
+        open={!!splitProduct}
+        onOpenChange={(v) => { if (!v) setSplitProduct(null); }}
+        product={splitProduct}
+        existingSkus={products.map(p => p.sku)}
+      />
       <BulkEditDialog
         open={isBulkEditOpen}
         onOpenChange={setIsBulkEditOpen}
