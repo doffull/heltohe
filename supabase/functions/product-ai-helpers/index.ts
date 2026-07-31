@@ -198,8 +198,8 @@ Deno.serve(async (req) => {
 
     if (typeof parsed.value === "string") {
       parsed.value = parsed.value.trim().replace(/^["«\s]+|["»\s]+$/g, "");
-      if (body.action === "description" && parsed.value.length > 900) {
-        parsed.value = parsed.value.slice(0, 900).replace(/\s+\S*$/, "") + "…";
+      if (body.action === "description" && parsed.value.length > 320) {
+        parsed.value = parsed.value.slice(0, 320).replace(/\s+\S*$/, "") + "…";
       }
     }
     if (Array.isArray(parsed.observations)) {
