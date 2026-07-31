@@ -110,6 +110,7 @@ Reste générique : aucun produit ni traitement spécifique inventé.`,
         user: `Propose 5 à 7 attributs techniques DÉDUCTIBLES des photos ou des données saisies. Clé de 1-2 mots, valeur de 1-4 mots, toutes deux précises et vérifiables.
 Clés à privilégier quand elles sont observables : Coupe, Col, Capuche, Fermeture, Poches, Manches, Bas, Doublure visible, Finition, Marquage.
 Exemples : "Fermeture"→"Zip double curseur", "Bas"→"Élastiqué par cordon", "Poches"→"2 latérales zippées".
+INTERDICTION : ne propose jamais "Matelassage" → "À canaux horizontaux" ni aucun attribut "canaux"/"horizontal"/"channels" à moins que ce motif ne soit explicitement visible et dominant sur la photo. Si le matelassage n'est pas clair, ne le mentionne pas.
 N'invente aucun indice de performance (imperméabilité, températures, grammage) ni composition chiffrée. Remplis aussi "observations" avec ce que tu vois.${ctx(b)}`,
         multimodal: true,
         tool: {
