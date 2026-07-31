@@ -103,6 +103,10 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
   const [aiObservations, setAiObservations] = useState<string[]>([]);
   const [showGalleryPicker, setShowGalleryPicker] = useState(false);
   const [showMainPicker, setShowMainPicker] = useState(false);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+  const [autoSaveState, setAutoSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const skipAutoSaveRef = useRef(true);
 
   const setAsMainImage = (url: string, index: number) => {
     setFormData(prev => {
