@@ -6,16 +6,17 @@ const corsHeaders = {
 };
 
 const FIELD_GUIDES: Record<string, string> = {
-  title: "Un titre court, percutant, en MAJUSCULES, max 5 mots. Style mode/luxe minimaliste.",
-  subtitle: "Un sous-titre court (5–10 mots), en MAJUSCULES, qui complète le titre.",
-  description: "Une description marketing de 1–2 phrases (max 180 caractères).",
-  cta: "Un libellé de bouton très court (1–3 mots) en MAJUSCULES, ex: DÉCOUVRIR, EXPLORER, ACHETER.",
-  slide_name: "Un nom interne court (2–4 mots) pour identifier la slide en back-office. Style descriptif, ex: 'Capsule Hiver Noir'.",
-  badge_line1: "Un mot très court en MAJUSCULES pour un badge produit (ex: MODEL, EDITION, SERIE).",
-  badge_line2: "Un code/numéro court (3–6 caractères) en MAJUSCULES, ex: 0.1.2, FW25, A-07.",
-  cta_primary: "Un libellé de bouton d'action principal très court (1–3 mots) en MAJUSCULES, ex: ACQUÉRIR, SHOP NOW, COMMANDER.",
-  cta_secondary: "Un libellé de bouton secondaire très court (1–3 mots) en MAJUSCULES, ex: EXPLORER, DÉTAILS, COLLECTION.",
+  title: "Un titre de 2 à 4 mots, en MAJUSCULES, sans ponctuation finale. Concret : nomme le produit, la matière ou la saison réelle (ex: DOUDOUNE ARCTIC, HIVER RIPSTOP). Interdit : mots creux (ULTIME, RÉVOLUTION), anglicismes gratuits, emojis.",
+  subtitle: "Un sous-titre de 5 à 9 mots, en MAJUSCULES, qui apporte une information NOUVELLE par rapport au titre (matière, coupe, usage). Pas de répétition du titre, pas de point final.",
+  description: "Une description de 1 à 2 phrases, 120 à 180 caractères, français. Une seule idée par phrase, un fait concret (matière, construction, usage). Aucune performance chiffrée inventée, aucun superlatif creux.",
+  cta: "Un libellé de bouton de 1 à 2 mots en MAJUSCULES, verbe d'action à l'infinitif (ex: DÉCOUVRIR, EXPLORER, COMMANDER). Jamais de phrase.",
+  slide_name: "Un nom interne de 2 à 4 mots, style descriptif back-office, pour repérer la slide (ex: 'Capsule Hiver Noir', 'Hero Doudoune Homme'). Pas de MAJUSCULES intégrales.",
+  badge_line1: "Un seul mot en MAJUSCULES, 4 à 8 caractères, vocabulaire industriel (ex: MODEL, EDITION, SERIE, TYPE).",
+  badge_line2: "Un code court de 3 à 6 caractères en MAJUSCULES/chiffres (ex: 0.1.2, FW25, A-07). Rien d'autre.",
+  cta_primary: "Un libellé d'action principal de 1 à 2 mots en MAJUSCULES, orienté achat (ex: ACQUÉRIR, COMMANDER, ACHETER).",
+  cta_secondary: "Un libellé secondaire de 1 à 2 mots en MAJUSCULES, orienté exploration (ex: EXPLORER, DÉTAILS, COLLECTION). Doit différer du CTA principal.",
 };
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -30,16 +31,17 @@ Deno.serve(async (req) => {
 
     // Gemini API key checked inside callGemini()
 
-    const sys = `Tu es un copywriter pour une marque de mode/streetwear "Industrial Luxury" (LVTK6).
-Style: minimaliste, mode, premium, français.
-${FIELD_GUIDES[field]}
+    const sys = `Tu es directeur de la rédaction pour LVTK6 / HELVETICA-MP : mode & outerwear technique, positionnement "Industrial Luxury", français, minimaliste et factuel.
+Règles générales : phrases courtes, vocabulaire concret et précis (matière, coupe, construction, usage). Aucune performance technique inventée (imperméabilité, températures, certifications), aucun superlatif creux, aucun emoji, aucun hashtag, aucun guillemet autour de la réponse, aucun préfixe du type "Voici".
+Consigne du champ demandé — respecte-la à la lettre : ${FIELD_GUIDES[field]}
 ${tone ? `Ton: ${tone}.` : ""}
-Réponds uniquement via l'outil "return_text".`;
+Réponds uniquement via l'outil "return_text", avec le texte final seul.`;
 
-    const user = `Contexte/brief: ${context || "Slide hero du site e-commerce mode."}\nGénère le ${field}.`;
+    const user = `Contexte/brief: ${context || "Slide hero du site e-commerce mode."}\nGénère uniquement le champ "${field}" en respectant strictement le format imposé.`;
 
     const resp = await callGemini({
-        model: "openai/gpt-5-mini",
+        model: "google/gemini-3.6-flash",
+
         messages: [{ role: "system", content: sys }, { role: "user", content: user }],
         tools: [{
           type: "function",
