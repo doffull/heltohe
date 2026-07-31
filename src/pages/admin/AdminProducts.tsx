@@ -728,6 +728,12 @@ export default function AdminProducts() {
                            <DropdownMenuItem onClick={() => handleOpenStockDialog(product)}><Boxes className="h-4 w-4 mr-2" />Gérer le stock</DropdownMenuItem>
                            <DropdownMenuItem onClick={() => setVariantStockDialog({ productId: product.id, productName: product.name })}><Layers2 className="h-4 w-4 mr-2" />Stock par taille/couleur</DropdownMenuItem>
                            <DropdownMenuItem onClick={() => handleDuplicate(product)}><Copy className="h-4 w-4 mr-2" />Dupliquer</DropdownMenuItem>
+                           <DropdownMenuItem
+                             onClick={() => setSplitProduct(product)}
+                             disabled={((product.colorOptions?.length || product.colors?.length || 0) < 2)}
+                           >
+                             <Layers2 className="h-4 w-4 mr-2" />Éclater par couleur
+                           </DropdownMenuItem>
                            <DropdownMenuItem onClick={() => handleDelete(product.id)} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" />Supprimer</DropdownMenuItem>
                          </DropdownMenuContent>
                       </DropdownMenu>
