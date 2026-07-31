@@ -73,6 +73,14 @@ export interface BuildPayloadOptions {
   includeSourceGallery?: boolean;
   /** Stock to assign to the child product. */
   stock?: number;
+  /** Copy price / sale price from the source product (default true). */
+  inheritPrice?: boolean;
+  /** Copy the source images (main image + gallery). When false only the variant images are kept. */
+  inheritImages?: boolean;
+  /** Copy the published/draft status of the source product (default true). */
+  inheritStatus?: boolean;
+  /** Published status of the source product, used when `inheritStatus` is true. */
+  sourceIsActive?: boolean;
 }
 
 /** Build the create payload for one child product. */
@@ -81,7 +89,14 @@ export function buildChildProduct(
   row: SplitRow,
   opts: BuildPayloadOptions = {},
 ): Omit<Product, 'id'> {
-  const { includeSourceGallery = true, stock } = opts;
+  const {
+    includeSourceGallery = true,
+    stock,
+    inheritPrice = true,
+    inheritImages = true,
+    inheritStatus = true,
+    sourceIsActive,
+  } = opts;
   const variantImages = (row.option.images && row.option.images.length > 0
     ? row.option.images
     : row.option.image
@@ -89,7 +104,7 @@ export function buildChildProduct(
       : []
   ).filter(Boolean);
 
-  const gallery = includeSourceGallery
+  const gallery = inheritImages && includeSourceGallery
     ? row.galleryImages
     : Array.from(new Set(variantImages));
 
@@ -103,9 +118,9 @@ export function buildChildProduct(
   return {
     name: row.name.trim() || `${product.name} - ${row.label}`,
     subtitle: product.subtitle,
-    price: product.price,
-    salePrice: product.salePrice,
-    image: row.image || product.image,
+    price: inheritPrice ? product.price : 0,
+    salePrice: inheritPrice ? product.salePrice : undefined,
+    image: inheritImages ? (row.image || product.image) : (variantImages[0] || ''),
     category: product.category,
     stock: typeof stock === 'number' ? stock : product.stock,
     sku: row.sku.trim(),
@@ -124,5 +139,6 @@ export function buildChildProduct(
     modelName: product.modelName,
     galleryImages: gallery,
     templateId: product.templateId ?? null,
+    isActive: inheritStatus ? (sourceIsActive ?? product.isActive ?? true) : false,
   };
 }
