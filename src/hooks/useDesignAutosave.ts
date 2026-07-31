@@ -65,6 +65,7 @@ export function useDesignAutosave() {
 
   // Track dirty state + backup to localStorage on each change.
   useEffect(() => {
+    if (!designSettings) return;
     const serialized = JSON.stringify(designSettings);
     if (!lastSerializedRef.current) {
       lastSerializedRef.current = serialized;
