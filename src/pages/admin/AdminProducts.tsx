@@ -306,15 +306,15 @@ export default function AdminProducts() {
     }
   };
 
-  const handleUpdate = async (data: Omit<Product, 'id'>) => {
+  const handleUpdate = async (data: Omit<Product, 'id'>, _variantStock?: any, opts?: { silent?: boolean }) => {
     if (!editingProduct) return;
     try {
       await updateProduct.mutateAsync({ id: editingProduct.id, ...data });
-      toast({ title: 'Produit mis à jour' });
-      setEditingProduct(null);
-      setIsFormOpen(false);
-    } catch {
+      if (!opts?.silent) toast({ title: 'Produit mis à jour' });
+      // La fiche reste ouverte : pas de fermeture du dialog ici.
+    } catch (e) {
       toast({ title: 'Erreur', variant: 'destructive' });
+      throw e;
     }
   };
 
