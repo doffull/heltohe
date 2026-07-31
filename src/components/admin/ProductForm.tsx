@@ -190,28 +190,59 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
     }
   }, [product]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const buildPayload = () => {
     const submitData = {
       ...formData,
       salePrice: formData.salePrice || undefined,
       videoUrl: formData.videoUrl || undefined,
       tags: formData.tags,
     };
-
     const variantStockData: VariantStockData = {
       variantGrid,
       sizeStockMap,
       colorStockMap,
       globalStock: formData.stock,
     };
+    return { submitData, variantStockData };
+  };
 
-    if (product) {
-      onSubmit({ ...submitData, id: product.id }, variantStockData);
-    } else {
-      onSubmit(submitData, variantStockData);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const { submitData, variantStockData } = buildPayload();
+    setAutoSaveState('saving');
+    try {
+      if (product) {
+        await onSubmit({ ...submitData, id: product.id }, variantStockData);
+      } else {
+        await onSubmit(submitData, variantStockData);
+      }
+      skipAutoSaveRef.current = true;
+      setAutoSaveState('saved');
+      setLastSavedAt(Date.now());
+    } catch {
+      setAutoSaveState('error');
     }
   };
+
+  // ---- Autosave (édition uniquement) : la fiche reste ouverte ----
+  useEffect(() => {
+    if (!product || !autoSaveEnabled) return;
+    if (skipAutoSaveRef.current) { skipAutoSaveRef.current = false; return; }
+    const t = setTimeout(async () => {
+      const { submitData, variantStockData } = buildPayload();
+      setAutoSaveState('saving');
+      try {
+        await onSubmit({ ...submitData, id: product.id }, variantStockData, { silent: true });
+        setAutoSaveState('saved');
+        setLastSavedAt(Date.now());
+      } catch {
+        setAutoSaveState('error');
+      }
+    }, 1500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData, variantGrid, sizeStockMap, colorStockMap, autoSaveEnabled, product?.id]);
+
 
   const toggleSize = (size: string) => {
     setFormData(prev => ({
