@@ -318,7 +318,21 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label className="hud-text text-xs">Nom du produit *</Label>
+            <div className="flex items-center justify-between">
+              <Label className="hud-text text-xs">Nom du produit *</Label>
+              <Button
+                type="button" size="sm" variant="ghost"
+                className="h-6 px-2 gap-1 text-primary hover:bg-primary/10"
+                disabled={aiBusy === 'name'}
+                onClick={async () => {
+                  const r = await runProductAi('name');
+                  if (r?.value) setFormData(prev => ({ ...prev, name: r.value }));
+                }}
+              >
+                {aiBusy === 'name' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                <span className="text-[10px]">IA</span>
+              </Button>
+            </div>
             <Input
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
@@ -326,6 +340,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
               required
             />
           </div>
+
           
           <div className="space-y-2">
             <Label className="hud-text text-xs">SKU *</Label>
