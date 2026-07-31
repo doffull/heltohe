@@ -312,3 +312,8 @@ export function useApp() {
   }
   return context;
 }
+
+/** Same as useApp but returns undefined instead of throwing when no provider is mounted. */
+export function useAppOptional() {
+  return useContext(AppContext);
+}

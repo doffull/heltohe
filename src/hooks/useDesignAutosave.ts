@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useApp } from '@/context/AppContext';
+import { useAppOptional } from '@/context/AppContext';
 import type { DesignSettings } from '@/types';
 
 export type SaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
@@ -48,7 +48,10 @@ function readBackup(): { ts: number; payload: DesignSettings } | null {
 }
 
 export function useDesignAutosave() {
-  const { designSettings, flushDesignSettings, setDesignSettings } = useApp();
+  const app = useAppOptional();
+  const designSettings = app?.designSettings;
+  const flushDesignSettings = app?.flushDesignSettings;
+  const setDesignSettings = app?.setDesignSettings;
   const [status, setStatus] = useState<SaveStatus>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
@@ -62,6 +65,7 @@ export function useDesignAutosave() {
 
   // Track dirty state + backup to localStorage on each change.
   useEffect(() => {
+    if (!designSettings) return;
     const serialized = JSON.stringify(designSettings);
     if (!lastSerializedRef.current) {
       lastSerializedRef.current = serialized;
@@ -114,6 +118,7 @@ export function useDesignAutosave() {
   }, [designSettings]);
 
   const saveNow = useCallback(async () => {
+    if (!flushDesignSettings) return;
     setStatus('saving');
     try {
       await flushDesignSettings();
@@ -145,7 +150,7 @@ export function useDesignAutosave() {
 
   const restoreBackup = useCallback(() => {
     const b = readBackup();
-    if (!b) return false;
+    if (!b || !setDesignSettings) return false;
     setDesignSettings(b.payload);
     return true;
   }, [setDesignSettings]);
