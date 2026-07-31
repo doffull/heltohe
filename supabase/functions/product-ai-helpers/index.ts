@@ -7,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-type Action = "subtitle" | "description" | "material" | "care" | "attributes" | "color-name";
+type Action = "name" | "subtitle" | "description" | "material" | "care" | "attributes" | "color-name";
 
 interface Body {
   action: Action;
@@ -21,14 +21,20 @@ interface Body {
   hex?: string;
 }
 
-const SYS = `Tu es un copywriter mode/streetwear premium pour la marque LVTK6 (Industrial Luxury, minimaliste, français).
+const SYS = `Tu es directeur de la rédaction produit pour LVTK6 / HELVETICA-MP : mode & outerwear technique, positionnement "Industrial Luxury", français, minimaliste et factuel.
 
-RÈGLES DE FIDÉLITÉ (absolues) :
-- Tu décris UNIQUEMENT ce qui est visible sur les photos fournies et les données saisies par l'admin.
-- INTERDIT d'inventer des performances techniques (imperméabilité, indice thermique, membrane, températures, certifications) si elles ne sont ni visibles ni fournies.
-- INTERDIT d'inventer une marque, une collaboration, une origine de fabrication ou une matière non visible.
-- Si un détail n'est pas identifiable, ne le mentionne pas (ne devine jamais).
-- Français, ton éditorial premium mais factuel.
+MÉTHODE (obligatoire) :
+1. OBSERVER : n'utilise que ce qui est visible sur les photos fournies + les données saisies par l'admin.
+2. NOMMER PRÉCISÉMENT : privilégie le vocabulaire technique exact du vêtement (col montant, capuche amovible, zip double curseur, matelassage à canaux, empiècement ripstop, bas élastiqué, poches kangourou, coutures thermosoudées, finition mate/brillante).
+3. RÉDIGER : phrases courtes, concrètes, zéro remplissage.
+
+INTERDITS ABSOLUS :
+- Inventer une performance technique (imperméabilité, indice thermique, membrane, plage de températures, certification, grammage) non fournie.
+- Inventer une marque, une collaboration, un pays de fabrication ou une matière non visible.
+- Superlatifs creux ("incroyable", "révolutionnaire", "ultime"), clichés IA, emojis, hashtags.
+- Guillemets autour de la réponse, préfixes ("Voici…"), listes à puces sauf demande explicite.
+- Si un détail n'est pas identifiable : ne le mentionne pas (ne devine jamais).
+
 Réponds toujours via l'outil fourni, jamais en texte libre.`;
 
 const TEXT_TOOL = {
@@ -36,7 +42,7 @@ const TEXT_TOOL = {
   params: {
     type: "object",
     properties: {
-      observations: { type: "array", items: { type: "string" }, description: "Ce qui est réellement visible sur les photos" },
+      observations: { type: "array", items: { type: "string" }, description: "Détails réellement visibles sur les photos (type, couleur, matière apparente, coupe, détails de construction)" },
       value: { type: "string" },
     },
     required: ["value"],
@@ -51,39 +57,60 @@ function ctx(b: Body): string {
     b.colors?.length ? `Couleurs: ${b.colors.join(", ")}` : null,
     b.sizes?.length ? `Tailles: ${b.sizes.join(", ")}` : null,
   ].filter(Boolean);
-  return lines.length ? `\nDonnées saisies par l'admin (fiables) :\n- ${lines.join("\n- ")}` : "";
+  return lines.length ? `\nDonnées saisies par l'admin (fiables, à respecter) :\n- ${lines.join("\n- ")}` : "";
 }
 
 function buildPrompt(b: Body): { user: string; tool: any; multimodal: boolean } {
   switch (b.action) {
+    case "name":
+      return {
+        user: `Propose un NOM COMMERCIAL de produit, fidèle à la photo.
+Format strict : 2 à 4 mots, en MAJUSCULES, structure "[TYPE DE VÊTEMENT] + [SIGNE DISTINCTIF]" (ex: "DOUDOUNE MATELASSÉE ARCTIC", "VESTE RIPSTOP OMBRE", "HOODIE MOLLETON GRAPHITE").
+Règles : le type de vêtement doit être exact et visible ; le qualificatif peut décrire la matière, la coupe ou la teinte réellement observée. Pas de nom de marque, pas de chiffres inventés, pas de ponctuation.${ctx(b)}`,
+        multimodal: true,
+        tool: TEXT_TOOL,
+      };
     case "subtitle":
       return {
-        user: `Génère un sous-titre court (5-10 mots, MAJUSCULES) pour ce produit, fidèle à ce que montrent les photos. Exemple de style: "PROTECTION THERMIQUE EXTRÊME".${ctx(b)}`,
+        user: `Génère un SOUS-TITRE d'accroche, en MAJUSCULES, 4 à 8 mots, sans point final.
+Il doit exprimer un bénéfice ou un caractère RÉELLEMENT observable (construction, matière, usage évident), pas une performance chiffrée. Exemples de style : "MATELASSAGE À CANAUX, VOLUME MAÎTRISÉ", "COUPE DROITE, FINITION MATE".${ctx(b)}`,
         multimodal: true,
         tool: TEXT_TOOL,
       };
     case "description":
       return {
-        user: `Étape 1 — OBSERVE les photos et remplis "observations" avec ce que tu vois RÉELLEMENT et uniquement cela : type de vêtement, couleur(s) dominante(s), aspect de la matière, coupe et longueur, détails (capuche, col, zips, poches, cordons, matelassage, coutures, empiècements, logo/marquage visible).
-Étape 2 — RÉDIGE dans "value" une description de 3 à 5 phrases (max 600 caractères, français) construite EXCLUSIVEMENT à partir de ces observations et des données saisies. Aucune caractéristique technique inventée.${ctx(b)}`,
+        user: `Étape 1 — OBSERVE les photos et remplis "observations" avec 5 à 10 constats factuels et uniquement ceux-là : type de vêtement, couleur(s), aspect de la matière, coupe et longueur, détails de construction (capuche, col, zips, poches, cordons, matelassage, coutures, empiècements, marquage visible).
+
+Étape 2 — RÉDIGE dans "value" une description structurée en 3 paragraphes courts séparés par un retour à la ligne, 500 à 700 caractères au total, français :
+1) Une phrase d'ouverture qui pose le produit (type + silhouette + teinte).
+2) Deux à trois phrases sur la construction et les détails observés (vocabulaire technique exact).
+3) Une phrase sur le porté / l'usage concret (association, saison plausible d'après l'épaisseur visible).
+
+Chaque affirmation doit être traçable à une observation de l'étape 1 ou aux données admin. Aucune donnée technique inventée, aucun superlatif creux.${ctx(b)}`,
         multimodal: true,
         tool: TEXT_TOOL,
       };
     case "material":
       return {
-        user: `Identifie la matière principale APPARENTE sur les photos (ex: "Coton molletonné", "Nylon ripstop matelassé", "Cuir grainé"). Réponse: 2-6 mots. Si la matière n'est pas identifiable avec certitude, réponds exactement "Non identifiable".${ctx(b)}`,
+        user: `Identifie la matière principale APPARENTE sur les photos, en 2 à 6 mots, avec le terme textile le plus précis possible (ex: "Nylon ripstop matelassé", "Coton molletonné gratté", "Twill polyester déperlant d'aspect", "Cuir grainé").
+N'annonce jamais une composition chiffrée (%) ni un traitement certifié. Si la matière n'est pas identifiable avec certitude, réponds exactement "Non identifiable".${ctx(b)}`,
         multimodal: true,
         tool: TEXT_TOOL,
       };
     case "care":
       return {
-        user: `Donne les instructions d'entretien standard pour ${b.material ? `un vêtement en ${b.material}` : "ce produit tel qu'il apparaît sur les photos"} en une ligne très courte (ex: "Lavage 30°C, séchage à plat, ne pas repasser"). Reste générique et sûr, sans inventer de traitement spécifique.`,
+        user: `Donne les instructions d'entretien standard et sûres pour ${b.material ? `un vêtement en ${b.material}` : "ce produit tel qu'il apparaît sur les photos"}.
+Format strict : une seule ligne, 3 à 5 consignes séparées par des virgules, dans cet ordre : lavage, séchage, repassage, interdits (ex: "Lavage 30°C cycle délicat, séchage à plat, ne pas repasser, ne pas sécher en machine").
+Reste générique : aucun produit ni traitement spécifique inventé.`,
         multimodal: !b.material,
         tool: TEXT_TOOL,
       };
     case "attributes":
       return {
-        user: `Propose 4 à 6 attributs techniques DÉDUCTIBLES des photos ou des données saisies (clé courte + valeur courte, ex: "Coupe"→"Droite", "Col"→"Montant", "Fermeture"→"Zip double curseur", "Poches"→"2 latérales zippées"). N'invente aucun indice de performance (imperméabilité, températures) non visible. Remplis aussi "observations" avec ce que tu vois.${ctx(b)}`,
+        user: `Propose 5 à 7 attributs techniques DÉDUCTIBLES des photos ou des données saisies. Clé de 1-2 mots, valeur de 1-4 mots, toutes deux précises et vérifiables.
+Clés à privilégier quand elles sont observables : Coupe, Col, Capuche, Fermeture, Poches, Manches, Bas, Doublure visible, Finition, Marquage.
+Exemples : "Fermeture"→"Zip double curseur", "Bas"→"Élastiqué par cordon", "Poches"→"2 latérales zippées".
+N'invente aucun indice de performance (imperméabilité, températures, grammage) ni composition chiffrée. Remplis aussi "observations" avec ce que tu vois.${ctx(b)}`,
         multimodal: true,
         tool: {
           name: "return_attributes",
@@ -102,12 +129,14 @@ function buildPrompt(b: Body): { user: string; tool: any; multimodal: boolean } 
       };
     case "color-name":
       return {
-        user: `Donne un nom poétique et mode (2-3 mots, français) pour la couleur de code hex ${b.hex}. Exemples: "Noir Obsidian", "Vert Forêt", "Beige Sable". Réponse: nom seul.`,
+        user: `Donne un nom de couleur mode en 2 mots (français) pour le code hex ${b.hex} : "[Teinte] [Référence matière ou minérale]".
+La teinte doit correspondre exactement au hex fourni (ne change pas la famille de couleur). Exemples : "Noir Obsidienne", "Vert Sapin", "Beige Sable", "Gris Béton". Réponse : le nom seul, sans guillemets.`,
         multimodal: false,
         tool: TEXT_TOOL,
       };
   }
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
