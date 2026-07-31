@@ -27,7 +27,11 @@ import { CSS } from '@dnd-kit/utilities';
 
 interface ProductFormProps {
   product?: Product;
-  onSubmit: (product: Omit<Product, 'id'> | Product, variantStock?: VariantStockData) => void;
+  onSubmit: (
+    product: Omit<Product, 'id'> | Product,
+    variantStock?: VariantStockData,
+    opts?: { silent?: boolean },
+  ) => void | Promise<void>;
   onCancel: () => void;
   isLoading?: boolean;
 }
