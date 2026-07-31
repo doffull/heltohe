@@ -411,8 +411,8 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
           </div>
           <Input
             value={formData.subtitle}
-            onChange={(e) => setFormData(prev => ({ ...prev, subtitle: e.target.value }))}
-            className="bg-secondary/50 border-border/30"
+            onChange={(e) => setFormData(prev => ({ ...prev, subtitle: e.target.value.toUpperCase() }))}
+            className="bg-secondary/50 border-border/30 uppercase"
             placeholder="PROTECTION THERMIQUE EXTRÊME"
           />
         </div>

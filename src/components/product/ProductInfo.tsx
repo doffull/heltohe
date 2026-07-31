@@ -91,7 +91,7 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
           product={product}
           field="subtitle"
           as="p"
-          className="text-lg text-muted-foreground mt-1"
+          className="text-lg uppercase text-muted-foreground mt-1"
           placeholder="Sous-titre du produit…"
         />
       </motion.div>
