@@ -134,6 +134,12 @@ La teinte doit correspondre exactement au hex fourni (ne change pas la famille d
         multimodal: false,
         tool: TEXT_TOOL,
       };
+    default:
+      return {
+        user: `Génère le contenu demandé ("${String((b as any).action)}") pour ce produit, en français, factuel et fidèle aux photos.${ctx(b)}`,
+        multimodal: true,
+        tool: TEXT_TOOL,
+      };
   }
 }
 
