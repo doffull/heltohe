@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useApp } from '@/context/AppContext';
+import { useAppOptional } from '@/context/AppContext';
 import type { DesignSettings } from '@/types';
 
 export type SaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
