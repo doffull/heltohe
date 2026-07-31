@@ -108,6 +108,7 @@ export default function AdminProducts() {
   const [stockDialogEdit, setStockDialogEdit] = useState<{ inventoryId: string; productId: string } | null>(null);
   const [stockDialogLocations, setStockDialogLocations] = useState<{ id: string; type: string }[]>([]);
   const [variantStockDialog, setVariantStockDialog] = useState<{ productId: string; productName: string } | null>(null);
+  const [splitProduct, setSplitProduct] = useState<Product | null>(null);
 
   // Bulk edit state
 
