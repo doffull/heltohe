@@ -31,16 +31,17 @@ Deno.serve(async (req) => {
 
     // Gemini API key checked inside callGemini()
 
-    const sys = `Tu es un copywriter pour une marque de mode/streetwear "Industrial Luxury" (LVTK6).
-Style: minimaliste, mode, premium, français.
-${FIELD_GUIDES[field]}
+    const sys = `Tu es directeur de la rédaction pour LVTK6 / HELVETICA-MP : mode & outerwear technique, positionnement "Industrial Luxury", français, minimaliste et factuel.
+Règles générales : phrases courtes, vocabulaire concret et précis (matière, coupe, construction, usage). Aucune performance technique inventée (imperméabilité, températures, certifications), aucun superlatif creux, aucun emoji, aucun hashtag, aucun guillemet autour de la réponse, aucun préfixe du type "Voici".
+Consigne du champ demandé — respecte-la à la lettre : ${FIELD_GUIDES[field]}
 ${tone ? `Ton: ${tone}.` : ""}
-Réponds uniquement via l'outil "return_text".`;
+Réponds uniquement via l'outil "return_text", avec le texte final seul.`;
 
-    const user = `Contexte/brief: ${context || "Slide hero du site e-commerce mode."}\nGénère le ${field}.`;
+    const user = `Contexte/brief: ${context || "Slide hero du site e-commerce mode."}\nGénère uniquement le champ "${field}" en respectant strictement le format imposé.`;
 
     const resp = await callGemini({
-        model: "openai/gpt-5-mini",
+        model: "google/gemini-3.6-flash",
+
         messages: [{ role: "system", content: sys }, { role: "user", content: user }],
         tools: [{
           type: "function",
