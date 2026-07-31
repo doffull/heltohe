@@ -34,6 +34,9 @@ export function SplitVariantsDialog({ open, onOpenChange, product, existingSkus 
 
   const [rows, setRows] = useState<SplitRow[]>([]);
   const [includeSourceGallery, setIncludeSourceGallery] = useState(true);
+  const [inheritPrice, setInheritPrice] = useState(true);
+  const [inheritImages, setInheritImages] = useState(true);
+  const [inheritStatus, setInheritStatus] = useState(true);
   const [sourceFate, setSourceFate] = useState<SourceFate>('deactivate');
   const [stockMap, setStockMap] = useState<StockMap>({});
   const [running, setRunning] = useState(false);
@@ -44,6 +47,9 @@ export function SplitVariantsDialog({ open, onOpenChange, product, existingSkus 
     if (!open || !product) return;
     setRows(buildSplitRows(product, existingSkus));
     setIncludeSourceGallery(true);
+    setInheritPrice(true);
+    setInheritImages(true);
+    setInheritStatus(true);
     setSourceFate('deactivate');
     setDone(0);
     setReport(null);
@@ -127,6 +133,10 @@ export function SplitVariantsDialog({ open, onOpenChange, product, existingSkus 
         const payload = buildChildProduct(product, row, {
           includeSourceGallery,
           stock: total > 0 ? total : product.stock,
+          inheritPrice,
+          inheritImages,
+          inheritStatus,
+          sourceIsActive: product.isActive ?? true,
         });
         const child = await createProduct.mutateAsync(payload);
         created += 1;
@@ -177,7 +187,7 @@ export function SplitVariantsDialog({ open, onOpenChange, product, existingSkus 
         ) : (
           <div className="space-y-4">
             <p className="text-xs text-muted-foreground uppercase tracking-wider">
-              {selectedRows.length} produit(s) seront créés · tailles, prix, description et attributs sont copiés
+              {selectedRows.length} produit(s) seront créés · tailles, description et attributs sont copiés
             </p>
 
             <div className="space-y-2">
@@ -221,16 +231,41 @@ export function SplitVariantsDialog({ open, onOpenChange, product, existingSkus 
               })}
             </div>
 
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="split-gallery"
-                checked={includeSourceGallery}
-                onCheckedChange={(v) => setIncludeSourceGallery(!!v)}
-                disabled={running}
-              />
-              <Label htmlFor="split-gallery" className="text-xs uppercase tracking-wider cursor-pointer">
-                Inclure aussi la galerie du produit d'origine
-              </Label>
+            <div className="space-y-2 border-t border-border pt-4">
+              <Label className="text-xs uppercase tracking-wider">Héritage du produit d'origine</Label>
+              {([
+                ['price', 'Hériter du prix (et du prix promo)', inheritPrice, setInheritPrice],
+                ['images', 'Hériter des images (image principale + galerie)', inheritImages, setInheritImages],
+                ['status', 'Hériter du statut (publié / brouillon)', inheritStatus, setInheritStatus],
+              ] as [string, string, boolean, (v: boolean) => void][]).map(([key, label, value, set]) => (
+                <div key={key} className="flex items-center gap-2">
+                  <Checkbox
+                    id={`inherit-${key}`}
+                    checked={value}
+                    onCheckedChange={(v) => set(!!v)}
+                    disabled={running}
+                  />
+                  <Label htmlFor={`inherit-${key}`} className="text-xs uppercase tracking-wider cursor-pointer">
+                    {label}
+                  </Label>
+                </div>
+              ))}
+              {inheritImages && (
+                <div className="flex items-center gap-2 pl-6">
+                  <Checkbox
+                    id="split-gallery"
+                    checked={includeSourceGallery}
+                    onCheckedChange={(v) => setIncludeSourceGallery(!!v)}
+                    disabled={running}
+                  />
+                  <Label htmlFor="split-gallery" className="text-xs uppercase tracking-wider cursor-pointer">
+                    Inclure aussi la galerie du produit d'origine
+                  </Label>
+                </div>
+              )}
+              <p className="text-[11px] text-muted-foreground">
+                Décoché : prix remis à 0, images limitées à la variante, produit créé en brouillon.
+              </p>
             </div>
 
             <div className="space-y-2 border-t border-border pt-4">
