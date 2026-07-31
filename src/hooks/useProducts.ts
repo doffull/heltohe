@@ -40,7 +40,7 @@ function dbToAppProduct(db: Record<string, unknown>): Product {
 // unrelated columns (e.g. editing price inline must not clear gallery_images).
 const FIELD_MAP: Record<string, { col: string; transform: (v: any) => any }> = {
   name: { col: 'name', transform: (v) => v },
-  subtitle: { col: 'subtitle', transform: (v) => v || null },
+  subtitle: { col: 'subtitle', transform: (v) => (v ? String(v).trim().toUpperCase() : null) },
   price: { col: 'price', transform: (v) => v },
   salePrice: { col: 'sale_price', transform: (v) => v || null },
   image: { col: 'image', transform: (v) => sanitizePersistableUrl(v) ?? '' },
