@@ -138,7 +138,7 @@ export function ProductCard({ product, onClick, onAddToCart, onNavigate, swatchS
         </h3>
 
         {product.subtitle && (
-          <p className="text-[10px] text-muted-foreground truncate">
+          <p className="text-[10px] uppercase text-muted-foreground truncate">
             {product.subtitle}
           </p>
         )}
