@@ -79,14 +79,14 @@ Il doit exprimer un bénéfice ou un caractère RÉELLEMENT observable (construc
       };
     case "description":
       return {
-        user: `Étape 1 — OBSERVE les photos et remplis "observations" avec 5 à 10 constats factuels et uniquement ceux-là : type de vêtement, couleur(s), aspect de la matière, coupe et longueur, détails de construction (capuche, col, zips, poches, cordons, matelassage, coutures, empiècements, marquage visible).
+        user: `Étape 1 — OBSERVE les photos et remplis "observations" avec 4 à 8 constats factuels : type de vêtement, couleur(s), aspect de la matière, coupe, détails de construction visibles.
 
-Étape 2 — RÉDIGE dans "value" une description structurée en 3 paragraphes courts séparés par un retour à la ligne, 500 à 700 caractères au total, français :
-1) Une phrase d'ouverture qui pose le produit (type + silhouette + teinte).
-2) Deux à trois phrases sur la construction et les détails observés (vocabulaire technique exact).
-3) Une phrase sur le porté / l'usage concret (association, saison plausible d'après l'épaisseur visible).
+Étape 2 — RÉDIGE dans "value" une description COURTE et EFFICACE, en français : 2 à 3 phrases maximum, 180 à 280 caractères au total, un seul paragraphe, sans retour à la ligne.
+1) Phrase 1 : type + silhouette + teinte.
+2) Phrase 2 : les 2 détails de construction les plus marquants (vocabulaire technique exact).
+3) Phrase 3 (optionnelle, très courte) : le porté / usage concret.
 
-Chaque affirmation doit être traçable à une observation de l'étape 1 ou aux données admin. Aucune donnée technique inventée, aucun superlatif creux.${ctx(b)}`,
+Style : direct, factuel, zéro remplissage. Chaque affirmation traçable aux observations ou aux données admin. Aucune donnée technique inventée, aucun superlatif creux.${ctx(b)}`,
         multimodal: true,
         tool: TEXT_TOOL,
       };
