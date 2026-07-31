@@ -149,7 +149,7 @@ export function useDesignAutosave() {
 
   const restoreBackup = useCallback(() => {
     const b = readBackup();
-    if (!b) return false;
+    if (!b || !setDesignSettings) return false;
     setDesignSettings(b.payload);
     return true;
   }, [setDesignSettings]);
