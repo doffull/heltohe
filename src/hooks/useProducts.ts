@@ -31,6 +31,7 @@ function dbToAppProduct(db: Record<string, unknown>): Product {
     modelName: (db.model_name as string) || undefined,
     galleryImages: (db.gallery_images as string[]) || [],
     templateId: (db.template_id as string) || null,
+    isActive: db.is_active === undefined || db.is_active === null ? true : Boolean(db.is_active),
   };
 }
 
@@ -84,7 +85,7 @@ function appToDbProductFull(product: Omit<Product, 'id'>): Record<string, unknow
     attributes: (product.attributes || {}) as unknown as Json,
     tags: product.tags || [],
     gallery_images: sanitizePersistableUrls(product.galleryImages),
-    is_active: true,
+    is_active: (product as { isActive?: boolean }).isActive ?? true,
   };
 }
 
