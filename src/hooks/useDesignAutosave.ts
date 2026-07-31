@@ -117,6 +117,7 @@ export function useDesignAutosave() {
   }, [designSettings]);
 
   const saveNow = useCallback(async () => {
+    if (!flushDesignSettings) return;
     setStatus('saving');
     try {
       await flushDesignSettings();
