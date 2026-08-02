@@ -9,6 +9,8 @@ import RelatedProducts from '@/components/product/RelatedProducts';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
 import { getProductTrustBadges, TRUST_BADGE_ICONS } from '@/lib/productTrustBadges';
+import { isKidsProduct } from '@/lib/productFamily';
+import KidsNoReturnNotice from '@/components/product/KidsNoReturnNotice';
 
 
 interface Props {
@@ -117,10 +119,13 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
       );
       case 'sku': return product?.sku ? <div className="text-xs" style={{ color: t.colors.muted }}>SKU: {product.sku}</div> : null;
       case 'title': return (
-        <h1 className={cn('font-black leading-none', b.props?.uppercase && 'uppercase')}
-            style={{ fontSize: b.props?.fontSize || b.props?.size || 36, letterSpacing: '-1.5px', marginBottom: 8 }}>
-          {labelOf(b, product?.name || '')}
-        </h1>
+        <>
+          <h1 className={cn('font-black leading-none', b.props?.uppercase && 'uppercase')}
+              style={{ fontSize: b.props?.fontSize || b.props?.size || 36, letterSpacing: '-1.5px', marginBottom: 8 }}>
+            {labelOf(b, product?.name || '')}
+          </h1>
+          {isKidsProduct(product) && <KidsNoReturnNotice className="mb-3" />}
+        </>
       );
       case 'collab_subtitle': return product?.collab || b.props?.label ? (
         <div className="text-sm mb-4" style={{ color: t.colors.muted }}>{labelOf(b, product?.collab || '')}</div>
