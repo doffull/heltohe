@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Star } from 'lucide-react';
 import { useReviewStats } from '@/hooks/useProductReviews';
 import { getSwatchStyle } from '@/lib/swatch';
+import { isKidsProduct } from '@/lib/productFamily';
 
 interface ProductCardProps {
   product: Product;
@@ -103,6 +104,11 @@ export function ProductCard({ product, onClick, onAddToCart, onNavigate, swatchS
               Promo
             </Badge>
           )}
+          {isKidsProduct(product) && (
+            <Badge className="bg-destructive text-destructive-foreground uppercase text-[10px] px-2 py-1 rounded-none">
+              Ni repris ni échangé
+            </Badge>
+          )}
           {isLowStock && (
             <Badge className="bg-destructive text-destructive-foreground uppercase text-[10px] px-2 py-1 rounded-none">
               Stock limité
@@ -114,6 +120,7 @@ export function ProductCard({ product, onClick, onAddToCart, onNavigate, swatchS
             </Badge>
           )}
         </div>
+
 
         {/* Selected color badge (bottom-left of image) */}
         {activeColorLabel && (

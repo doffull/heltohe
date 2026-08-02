@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
+import { groupFamiliesAdjacent } from '@/lib/productFamily';
 import { useOrderedProducts } from '@/hooks/useCategoryOrder';
 import { useCategories } from '@/hooks/useCategories';
 import { useDesignSettings } from '@/hooks/useDesignSettings';
@@ -145,10 +146,11 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
   const filteredProducts = useMemo(() => {
     // Manual/shuffle order applies when sorting is "newest" (default). Explicit
     // sort options override the shuffle so users can still price-sort etc.
-    if (sortBy === 'price-asc') return [...orderedBase].sort((a, b) => (a.salePrice || a.price) - (b.salePrice || b.price));
-    if (sortBy === 'price-desc') return [...orderedBase].sort((a, b) => (b.salePrice || b.price) - (a.salePrice || a.price));
-    if (sortBy === 'name') return [...orderedBase].sort((a, b) => a.name.localeCompare(b.name));
-    return orderedBase;
+    // Dans tous les cas, les coloris d'un même modèle restent côte à côte.
+    if (sortBy === 'price-asc') return groupFamiliesAdjacent([...orderedBase].sort((a, b) => (a.salePrice || a.price) - (b.salePrice || b.price)));
+    if (sortBy === 'price-desc') return groupFamiliesAdjacent([...orderedBase].sort((a, b) => (b.salePrice || b.price) - (a.salePrice || a.price)));
+    if (sortBy === 'name') return groupFamiliesAdjacent([...orderedBase].sort((a, b) => a.name.localeCompare(b.name)));
+    return groupFamiliesAdjacent(orderedBase);
   }, [orderedBase, sortBy]);
 
   const handleAddToCart = async (product: typeof products[0]) => {
