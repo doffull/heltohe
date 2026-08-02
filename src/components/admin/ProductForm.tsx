@@ -928,6 +928,23 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
                   </button>
                 </div>
 
+                <label className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={!!option.filterOnly}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setFormData(prev => {
+                        const next = [...prev.colorOptions];
+                        next[index] = { ...next[index], filterOnly: checked };
+                        return { ...prev, colorOptions: next };
+                      });
+                    }}
+                  />
+                  Utiliser uniquement dans les filtres boutique (masquée sur la page produit)
+                </label>
+
+
                 {/* Images multiples pour cette couleur */}
                 {(() => {
                   const imgs: string[] = option.images && option.images.length
