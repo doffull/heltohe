@@ -263,13 +263,13 @@ export default function ProductOptions({
 
       {/* Add to Cart */}
       <motion.div
-        className="flex flex-col sm:flex-row gap-4"
+        className="flex flex-wrap items-stretch gap-3"
         {...fadeUp}
         transition={{ delay: 0.45 }}
       >
-        <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+        <motion.div className="flex-1 min-w-[190px]" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
           <Button
-            className="w-full h-14 text-lg chamfer-hud-sm uppercase tracking-wider font-bold"
+            className="w-full h-14 text-base sm:text-lg chamfer-hud-sm uppercase tracking-wider font-bold"
             onClick={onAddToCart}
             disabled={product.stock === 0}
           >
@@ -277,19 +277,20 @@ export default function ProductOptions({
             Ajouter au panier
           </Button>
         </motion.div>
-        <div className="flex gap-4 sm:gap-4">
+        <div className="flex gap-3">
           <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-            <Button variant="outline" size="icon" className="h-14 w-14">
-              <Heart className="h-5 w-5" />
+            <Button variant="outline" size="icon" className="h-14 w-14 chamfer-hud-sm" aria-label="Ajouter aux favoris">
+              <Heart className="h-5 w-5 text-primary" />
             </Button>
           </motion.div>
           <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-            <Button variant="outline" size="icon" className="h-14 w-14">
-              <Share2 className="h-5 w-5" />
+            <Button variant="outline" size="icon" className="h-14 w-14 chamfer-hud-sm" aria-label="Partager">
+              <Share2 className="h-5 w-5 text-primary" />
             </Button>
           </motion.div>
         </div>
       </motion.div>
+
     </>
   );
 }
