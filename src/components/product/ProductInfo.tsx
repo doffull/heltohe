@@ -11,6 +11,8 @@ import { EditableProductField } from '@/components/visual-editor/EditableProduct
 import { EditableBadgeLabel } from '@/components/visual-editor/EditableBadgeLabel';
 import { useAuth } from '@/context/AuthContext';
 import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
+import { isKidsProduct } from '@/lib/productFamily';
+import KidsNoReturnNotice from './KidsNoReturnNotice';
 
 
 interface ProductInfoProps {
@@ -143,6 +145,12 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
         )}
       </motion.div>
 
+      {/* Kids: no return / no exchange */}
+      {isKidsProduct(product) && (
+        <motion.div {...fadeUp} transition={{ delay: 0.22 }}>
+          <KidsNoReturnNotice />
+        </motion.div>
+      )}
 
       {/* Stock */}
       <motion.div className="flex items-center gap-2" {...fadeUp} transition={{ delay: 0.25 }}>
