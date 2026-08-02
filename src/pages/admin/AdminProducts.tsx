@@ -5,6 +5,7 @@ import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, useB
 import { BulkEditDialog } from '@/components/admin/BulkEditDialog';
 import { QuickPriceStockImportDialog } from '@/components/admin/QuickPriceStockImportDialog';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
+import { generateSwatchForProduct } from '@/lib/generateSwatch';
 import { useProductLooks, useCreateProductLook, useUpdateProductLook, useDeleteProductLook, ProductLook } from '@/hooks/useProductLooks';
 import { Product } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -88,6 +89,7 @@ export default function AdminProducts() {
   const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
   const [isCsvDialogOpen, setIsCsvDialogOpen] = useState(false);
   const [isBulkImagesOpen, setIsBulkImagesOpen] = useState(false);
+  const [swatchProgress, setSwatchProgress] = useState<{ done: number; total: number } | null>(null);
   const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
   const [isQuickCsvOpen, setIsQuickCsvOpen] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
@@ -147,6 +149,39 @@ export default function AdminProducts() {
       toast({ title: 'Erreur', variant: 'destructive' });
     }
   };
+
+  const handleBulkSwatches = async () => {
+    const targets = filteredProducts.filter(p => selectedIds.has(p.id) && !(p.colorOptions || []).length);
+    if (targets.length === 0) {
+      toast({ title: 'Rien à générer', description: 'Les produits sélectionnés ont déjà des pastilles.' });
+      return;
+    }
+    setSwatchProgress({ done: 0, total: targets.length });
+    let ok = 0;
+    let failed = 0;
+    for (let i = 0; i < targets.length; i++) {
+      const p = targets[i];
+      try {
+        const opt = await generateSwatchForProduct(p);
+        await updateProduct.mutateAsync({
+          id: p.id,
+          colorOptions: [opt],
+          colors: [opt.color],
+        } as Parameters<typeof updateProduct.mutateAsync>[0]);
+        ok++;
+      } catch {
+        failed++;
+      }
+      setSwatchProgress({ done: i + 1, total: targets.length });
+    }
+    setSwatchProgress(null);
+    toast({
+      title: `${ok} pastille(s) générée(s)`,
+      description: failed ? `${failed} échec(s)` : undefined,
+      variant: failed && !ok ? 'destructive' : undefined,
+    });
+  };
+
 
   const handleBulkApply = async () => {
     const updates: Record<string, unknown> = {};
@@ -552,6 +587,19 @@ export default function AdminProducts() {
             <Button size="sm" onClick={() => setIsBulkEditOpen(true)} className="h-8 text-xs chamfer-hud-sm">
               <Wand2 className="h-3 w-3 mr-1" />Édition en masse
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleBulkSwatches}
+              disabled={!!swatchProgress}
+              className="h-8 text-xs chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10"
+            >
+              <Wand2 className="h-3 w-3 mr-1" />
+              {swatchProgress
+                ? `Pastilles ${swatchProgress.done}/${swatchProgress.total}`
+                : 'Générer les pastilles manquantes'}
+            </Button>
+
             <Button size="sm" variant="outline" onClick={exportSelectedCsv} className="h-8 text-xs chamfer-hud-sm">
               <Download className="h-3 w-3 mr-1" />Exporter sélection
             </Button>

@@ -17,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { usePageTemplates } from '@/hooks/usePageTemplates';
 import { getSwatchStyle } from '@/lib/swatch';
+import { generateSwatchFromImages, swatchToColorOption } from '@/lib/generateSwatch';
 import {
   DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent,
 } from '@dnd-kit/core';
@@ -106,7 +107,44 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [autoSaveState, setAutoSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const [swatchBusy, setSwatchBusy] = useState(false);
+  const [swatchDraft, setSwatchDraft] = useState<ColorOption | null>(null);
   const skipAutoSaveRef = useRef(true);
+
+  const generateSwatch = async () => {
+    setSwatchBusy(true);
+    try {
+      const res = await generateSwatchFromImages({
+        image: formData.image,
+        galleryImages: formData.galleryImages,
+        name: formData.name,
+        category: formData.category,
+      });
+      if (res.observations?.length) setAiObservations(res.observations);
+      setSwatchDraft(swatchToColorOption(res, { filterOnly: formData.colorOptions.length === 0 }));
+      toast.success('Pastille générée — vérifiez puis ajoutez');
+    } catch (e: any) {
+      toast.error(e?.message || 'Erreur lors de la génération de la pastille');
+    } finally {
+      setSwatchBusy(false);
+    }
+  };
+
+  const confirmSwatch = () => {
+    if (!swatchDraft) return;
+    const opt = { ...swatchDraft, label: (swatchDraft.label || '').trim() || 'Couleur produit' };
+    if (formData.colorOptions.some(o => (o.label || '').toLowerCase() === opt.label.toLowerCase())) {
+      toast.error('Cette pastille existe déjà');
+      return;
+    }
+    setFormData(prev => ({
+      ...prev,
+      colorOptions: [...prev.colorOptions, opt],
+      colors: [...prev.colors, opt.color],
+    }));
+    setSwatchDraft(null);
+    toast.success('Pastille ajoutée');
+  };
 
   const setAsMainImage = (url: string, index: number) => {
     setFormData(prev => {
@@ -448,7 +486,67 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
             title="Sélectionner l'image principale"
             onSelect={(url) => setFormData(prev => ({ ...prev, image: url }))}
           />
+
+          {/* Pastille de couleur automatique (depuis les images) */}
+          <div className="space-y-2 border border-primary/30 bg-primary/5 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <Label className="hud-text text-[11px] text-primary">// PASTILLE COULEUR AUTO</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={generateSwatch}
+                disabled={swatchBusy}
+                className="h-7 text-[11px] gap-1"
+              >
+                {swatchBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                Générer la pastille
+              </Button>
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              Analyse les photos et crée la pastille utilisée par les filtres Couleurs de la boutique.
+            </p>
+            {swatchDraft && (
+              <div className="space-y-2 pt-2 border-t border-border/30">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-9 h-9 rounded-sm border border-border/60 shrink-0"
+                    style={getSwatchStyle({ color: swatchDraft.color, color2: swatchDraft.color2 || null })}
+                  />
+                  <Input
+                    type="color"
+                    value={swatchDraft.color}
+                    onChange={(e) => setSwatchDraft(d => (d ? { ...d, color: e.target.value } : d))}
+                    className="w-12 h-9 p-1 cursor-pointer"
+                  />
+                  <Input
+                    value={swatchDraft.label}
+                    onChange={(e) => setSwatchDraft(d => (d ? { ...d, label: e.target.value } : d))}
+                    className="h-9 flex-1 bg-secondary/50 border-border/30 text-xs"
+                    placeholder="Nom de la couleur"
+                  />
+                </div>
+                <label className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={swatchDraft.filterOnly !== false}
+                    onChange={(e) => setSwatchDraft(d => (d ? { ...d, filterOnly: e.target.checked } : d))}
+                  />
+                  Utiliser uniquement dans les filtres boutique (masquée sur la page produit)
+                </label>
+                <div className="flex gap-2">
+                  <Button type="button" size="sm" className="h-7 text-[11px]" onClick={confirmSwatch}>
+                    <Plus className="h-3 w-3 mr-1" />Ajouter la pastille
+                  </Button>
+                  <Button type="button" size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => setSwatchDraft(null)}>
+                    Annuler
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
+
 
         {/* Gallery (additional images) */}
         <div className="space-y-2">
@@ -829,6 +927,23 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
                     <X className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
                   </button>
                 </div>
+
+                <label className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={!!option.filterOnly}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setFormData(prev => {
+                        const next = [...prev.colorOptions];
+                        next[index] = { ...next[index], filterOnly: checked };
+                        return { ...prev, colorOptions: next };
+                      });
+                    }}
+                  />
+                  Utiliser uniquement dans les filtres boutique (masquée sur la page produit)
+                </label>
+
 
                 {/* Images multiples pour cette couleur */}
                 {(() => {

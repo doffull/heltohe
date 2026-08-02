@@ -102,16 +102,23 @@ export default function ProductOptions({
   }
 
 
-  // Build color items from colorOptions or colors
-  const colorItems = product.colorOptions?.length
-    ? product.colorOptions.map(co => ({
+  // Build color items from colorOptions or colors.
+  // Les pastilles `filterOnly` servent uniquement aux filtres boutique → masquées ici.
+  const selectableColorOptions = (product.colorOptions || [])
+    .map((co, i) => ({ co, i }))
+    .filter(({ co }) => !co.filterOnly);
+  const colorItems = selectableColorOptions.length
+    ? selectableColorOptions.map(({ co, i }) => ({
         key: co.color,
         hex: co.color,
         hex2: co.color2 || null,
         swatchImage: co.swatchImage || null,
         label: co.label,
         image: co.image,
+        origIndex: i,
       }))
+    : product.colorOptions?.length
+    ? []
     : product.colors?.map(c => ({
         key: c,
         hex: resolveColorHex(c),
@@ -119,7 +126,9 @@ export default function ProductOptions({
         swatchImage: null as string | null,
         label: c,
         image: undefined,
+        origIndex: -1,
       })) || [];
+
 
   return (
     <>
@@ -253,16 +262,16 @@ export default function ProductOptions({
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="text-xs">{item.label}</TooltipContent>
                 </Tooltip>
-                {editMode && product.colorOptions && product.colorOptions[cIdx] && (
+                {editMode && item.origIndex >= 0 && product.colorOptions?.[item.origIndex] && (
                   <EditableProductArrayField
                     product={product}
                     field="colorOptions"
-                    index={cIdx}
+                    index={item.origIndex}
                     as="span"
                     className="text-[10px] text-muted-foreground uppercase tracking-wider"
                     placeholder="Nom"
                     allowDelete={false}
-                    onCommit={async (raw) => renameColor(cIdx, raw)}
+                    onCommit={async (raw) => renameColor(item.origIndex, raw)}
                   >
                     {item.label}
                   </EditableProductArrayField>

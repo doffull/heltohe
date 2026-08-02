@@ -29,12 +29,15 @@ export function ProductCard({ product, onClick, onAddToCart, onNavigate, swatchS
     geometric: 'w-5 h-5 rotate-45',
   };
 
-  const hasColorOptions = product.colorOptions && product.colorOptions.length > 0;
+  // Les pastilles marquées `filterOnly` ne servent qu'aux filtres boutique → non affichées.
+  const visibleColorOptions = (product.colorOptions || []).filter(o => !o.filterOnly);
+  const hasColorOptions = visibleColorOptions.length > 0;
 
   // Determine which image to show: clicked color image > default image
   const activeColorOpt = hasColorOptions && selectedColorIndex !== null
-    ? product.colorOptions![selectedColorIndex]
+    ? visibleColorOptions[selectedColorIndex]
     : null;
+
 
   const displayImage = activeColorOpt?.image
     ? activeColorOpt.image
@@ -174,7 +177,7 @@ export function ProductCard({ product, onClick, onAddToCart, onNavigate, swatchS
         {/* Color swatches — clickable */}
         {hasColorOptions ? (
           <div className="flex items-center gap-1.5 pt-1 flex-wrap">
-            {product.colorOptions!.slice(0, 6).map((opt, index) => (
+            {visibleColorOptions.slice(0, 6).map((opt, index) => (
               <button
                 key={index}
                 className={cn(
@@ -191,11 +194,12 @@ export function ProductCard({ product, onClick, onAddToCart, onNavigate, swatchS
                 aria-pressed={selectedColorIndex === index}
               />
             ))}
-            {product.colorOptions!.length > 6 && (
+            {visibleColorOptions.length > 6 && (
               <span className="text-[10px] text-muted-foreground ml-1">
-                +{product.colorOptions!.length - 6}
+                +{visibleColorOptions.length - 6}
               </span>
             )}
+
           </div>
         ) : product.colors && product.colors.length > 0 ? (
           <div className="flex items-center gap-1.5 pt-1">

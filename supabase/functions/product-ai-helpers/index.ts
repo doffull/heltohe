@@ -7,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-type Action = "name" | "subtitle" | "description" | "material" | "care" | "attributes" | "color-name";
+type Action = "name" | "subtitle" | "description" | "material" | "care" | "attributes" | "color-name" | "swatch";
 
 interface Body {
   action: Action;
@@ -135,6 +135,32 @@ La teinte doit correspondre exactement au hex fourni (ne change pas la famille d
         multimodal: false,
         tool: TEXT_TOOL,
       };
+    case "swatch":
+      return {
+        user: `Analyse les photos et détermine la COULEUR DOMINANTE DU VÊTEMENT lui-même (pas le fond, pas la peau ou les cheveux du mannequin, pas les accessoires, pas les ombres).
+
+Renseigne :
+- "observations" : 2 à 4 constats visuels (type de vêtement, zone de couleur retenue, nuance perçue).
+- "hex" : le code hexadécimal exact au format #RRGGBB de cette couleur, mesuré sur une zone bien éclairée et représentative du tissu (évite les zones brûlées par la lumière ou dans l'ombre).
+- "label" : un nom de couleur mode en français, 1 à 3 mots, cohérent avec le hex (ex: "Rose Poudré", "Noir Obsidienne", "Beige Sable", "Vert Sapin").
+- "hex2" : uniquement si le vêtement est réellement bicolore de façon franche et équilibrée, le hex de la seconde couleur. Sinon, laisse vide.
+
+N'invente aucune matière ni performance. Si plusieurs coloris de produits différents apparaissent, retiens celui du vêtement principal porté au premier plan.${ctx(b)}`,
+        multimodal: true,
+        tool: {
+          name: "return_swatch",
+          params: {
+            type: "object",
+            properties: {
+              observations: { type: "array", items: { type: "string" } },
+              hex: { type: "string", description: "Format #RRGGBB" },
+              hex2: { type: "string", description: "Format #RRGGBB, vide si non bicolore" },
+              label: { type: "string" },
+            },
+            required: ["hex", "label"],
+          },
+        },
+      };
     default:
       return {
         user: `Génère le contenu demandé ("${String((b as any).action)}") pour ce produit, en français, factuel et fidèle aux photos.${ctx(b)}`,
@@ -163,7 +189,7 @@ Deno.serve(async (req) => {
     const { user, tool, multimodal } = buildPrompt(body);
     const useVision = multimodal && images.length > 0;
 
-    if (multimodal && images.length === 0 && (body.action === "description" || body.action === "material" || body.action === "attributes")) {
+    if (multimodal && images.length === 0 && (body.action === "description" || body.action === "material" || body.action === "attributes" || body.action === "swatch")) {
       return new Response(
         JSON.stringify({ error: "Ajoutez au moins une photo pour une génération fidèle au produit." }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -205,6 +231,25 @@ Deno.serve(async (req) => {
     }
     if (Array.isArray(parsed.observations)) {
       parsed.observations = parsed.observations.map((o: unknown) => String(o)).filter(Boolean).slice(0, 12);
+    }
+    if (body.action === "swatch") {
+      const norm = (v: unknown): string | null => {
+        const s = String(v || "").trim();
+        const m = /^#?([0-9a-f]{6})$/i.exec(s) || /^#?([0-9a-f]{3})$/i.exec(s);
+        if (!m) return null;
+        const h = m[1];
+        return "#" + (h.length === 3 ? h.split("").map((c) => c + c).join("") : h).toLowerCase();
+      };
+      const hex = norm(parsed.hex);
+      if (!hex) {
+        return new Response(
+          JSON.stringify({ error: "Couleur non identifiable sur les photos." }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      parsed.hex = hex;
+      parsed.hex2 = norm(parsed.hex2);
+      parsed.label = String(parsed.label || "").trim().replace(/^["«\s]+|["»\s]+$/g, "").slice(0, 40) || "Couleur produit";
     }
     parsed.imagesUsed = images.length;
 
