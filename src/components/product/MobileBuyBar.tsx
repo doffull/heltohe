@@ -33,7 +33,7 @@ export default function MobileBuyBar({ product, selectedSize, onAddToCart, ancho
     <AnimatePresence>
       {visible && (
         <motion.div
-          className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-md px-3 py-2.5"
+          className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-md px-3 py-2.5"
           initial={{ y: 80, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 80, opacity: 0 }}
