@@ -5,6 +5,7 @@ import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, useB
 import { BulkEditDialog } from '@/components/admin/BulkEditDialog';
 import { QuickPriceStockImportDialog } from '@/components/admin/QuickPriceStockImportDialog';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
+import { generateSwatchForProduct } from '@/lib/generateSwatch';
 import { useProductLooks, useCreateProductLook, useUpdateProductLook, useDeleteProductLook, ProductLook } from '@/hooks/useProductLooks';
 import { Product } from '@/types';
 import { Button } from '@/components/ui/button';
