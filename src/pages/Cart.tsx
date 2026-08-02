@@ -15,6 +15,9 @@ import {
   Truck,
   Shield
 } from 'lucide-react';
+import { useProducts } from '@/hooks/useProducts';
+import { isKidsProduct } from '@/lib/productFamily';
+import KidsNoReturnNotice from '@/components/product/KidsNoReturnNotice';
 
 export default function Cart() {
   const navigate = useNavigate();
