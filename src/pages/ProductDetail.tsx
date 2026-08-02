@@ -17,6 +17,9 @@ import { usePageTemplate, useDefaultTemplate } from '@/hooks/usePageTemplates';
 import ProductTemplateRenderer from '@/components/product/ProductTemplateRenderer';
 import VirtualTryOnButton from '@/components/product/VirtualTryOnButton';
 import ProductReviews from '@/components/product/ProductReviews';
+import ColorVariantsStrip from '@/components/product/ColorVariantsStrip';
+import ProductStrip from '@/components/product/ProductStrip';
+import { useTrackProductView, useRecommendedProducts } from '@/hooks/useRecentlyViewed';
 
 export default function ProductDetail() {
   const { slugOrId, id } = useParams<{ slugOrId?: string; id?: string }>();
@@ -35,6 +38,11 @@ export default function ProductDetail() {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(colorFromUrl);
   const [quantity, setQuantity] = useState(1);
+
+  // Historique de consultation → recommandations personnalisées
+  useTrackProductView(product?.id);
+  const { data: allProducts = [] } = useProducts();
+  const recommended = useRecommendedProducts(allProducts, product?.id);
 
   // Ref to scroll to image when color changes
   const imageRef = useRef<HTMLDivElement>(null);
@@ -112,6 +120,10 @@ export default function ProductDetail() {
     return (
       <>
         <ProductTemplateRenderer template={activeTemplate} product={product} />
+        <div className="container mx-auto px-4 pb-10">
+          <ColorVariantsStrip product={product} className="mb-6" />
+          <ProductStrip eyebrow="RECOMMANDÉ POUR VOUS" title="Sélection basée sur vos visites" products={recommended} />
+        </div>
         <VirtualTryOnButton product={product} selectedColor={selectedColor} />
       </>
     );
