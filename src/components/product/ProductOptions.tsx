@@ -1,15 +1,18 @@
-import { motion } from 'framer-motion';
-import { ShoppingCart, Heart, Share2, Plus, Minus } from 'lucide-react';
+import { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ShoppingCart, Heart, Share2, Plus, Minus, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Product } from '@/types';
 import { useApp } from '@/context/AppContext';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { getSwatchStyle } from '@/lib/swatch';
+import { SparkleBurst } from '@/components/ui/sparkle-burst';
 import { EditableProductArrayField } from '@/components/visual-editor/EditableProductArrayField';
 import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
 import { useAuth } from '@/context/AuthContext';
 import { useUpdateProduct } from '@/hooks/useProducts';
 import { toast } from 'sonner';
+
 
 
 interface ProductOptionsProps {
@@ -66,6 +69,21 @@ export default function ProductOptions({
   const { isAdmin } = useAuth();
   const updateProduct = useUpdateProduct();
   const editMode = editorOpen && isAdmin;
+
+  // Compteurs pour déclencher les bursts de paillettes
+  const [sizeBurst, setSizeBurst] = useState(0);
+  const [cartBurst, setCartBurst] = useState(0);
+
+  function handleSizeChange(size: string) {
+    onSizeChange(size);
+    setSizeBurst((n) => n + 1);
+  }
+
+  function handleAddToCart() {
+    setCartBurst((n) => n + 1);
+    onAddToCart();
+  }
+
 
   async function addSize() {
     const label = window.prompt('Nouvelle taille (ex: M, XL, 42)…');
@@ -127,36 +145,67 @@ export default function ProductOptions({
             {(product.sizes || []).map((size, sIdx) => {
               const isSelected = selectedSize === size;
               return (
-                <motion.button
-                  key={`${size}-${sIdx}`}
-                  type="button"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => onSizeChange(size)}
-                  aria-pressed={isSelected}
-                  className={
-                    'min-w-[48px] h-10 px-4 text-sm font-bold uppercase tracking-wider border transition-all ' +
-                    (isSelected
-                      ? 'bg-foreground text-background border-foreground ring-2 ring-foreground ring-offset-2 ring-offset-background'
-                      : 'bg-transparent text-foreground border-border hover:border-foreground')
-                  }
-                >
-                  <EditableProductArrayField
-                    product={product}
-                    field="sizes"
-                    index={sIdx}
-                    as="span"
-                    placeholder="Taille"
+                <div key={`${size}-${sIdx}`} className="relative">
+                  <SparkleBurst trigger={isSelected ? sizeBurst : 0} count={16} radius={52} />
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    animate={isSelected ? { scale: [1, 1.18, 1] } : { scale: 1 }}
+                    transition={{ duration: 0.35 }}
+                    onClick={() => handleSizeChange(size)}
+                    aria-pressed={isSelected}
+                    className={
+                      'relative min-w-[48px] h-10 px-4 text-sm font-bold uppercase tracking-wider border transition-all ' +
+                      (isSelected
+                        ? 'bg-foreground text-background border-foreground ring-2 ring-yellow-400 ring-offset-2 ring-offset-background shadow-[0_0_14px_rgba(250,204,21,0.45)]'
+                        : 'bg-transparent text-foreground border-border hover:border-foreground')
+                    }
                   >
-                    {size}
-                  </EditableProductArrayField>
-                </motion.button>
+                    <EditableProductArrayField
+                      product={product}
+                      field="sizes"
+                      index={sIdx}
+                      as="span"
+                      placeholder="Taille"
+                    >
+                      {size}
+                    </EditableProductArrayField>
+                  </motion.button>
+                </div>
               );
             })}
           </div>
 
+          {/* Confirmation "satisfaisante" de la taille choisie */}
+          <AnimatePresence>
+            {selectedSize && (
+              <motion.div
+                key={selectedSize}
+                className="mt-3 inline-flex items-center gap-2 chamfer-hud-sm border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5"
+                initial={{ opacity: 0, y: -6, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ type: 'spring', stiffness: 320, damping: 20 }}
+              >
+                <motion.span
+                  className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500"
+                  initial={{ rotate: -90, scale: 0 }}
+                  animate={{ rotate: 0, scale: 1 }}
+                  transition={{ delay: 0.05, type: 'spring', stiffness: 400 }}
+                >
+                  <Check className="h-3 w-3 text-white" />
+                </motion.span>
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                  Taille {selectedSize} sélectionnée
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
         </motion.div>
       )}
+
 
 
       {/* Color Selection */}
@@ -267,16 +316,18 @@ export default function ProductOptions({
         {...fadeUp}
         transition={{ delay: 0.45 }}
       >
-        <motion.div className="flex-1 min-w-[190px]" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+        <motion.div className="relative flex-1 min-w-[190px]" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+          <SparkleBurst trigger={cartBurst} count={22} radius={80} />
           <Button
             className="w-full h-14 px-3 text-sm lg:text-base chamfer-hud-sm uppercase tracking-wide font-bold whitespace-nowrap"
-            onClick={onAddToCart}
+            onClick={handleAddToCart}
             disabled={product.stock === 0}
           >
             <ShoppingCart className="h-5 w-5 mr-2" />
             Ajouter au panier
           </Button>
         </motion.div>
+
         <div className="flex gap-3">
           <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
             <Button variant="outline" size="icon" className="h-14 w-14 chamfer-hud-sm" aria-label="Ajouter aux favoris">

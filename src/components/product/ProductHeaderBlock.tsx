@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
 import { isKidsProduct } from '@/lib/productFamily';
 import KidsNoReturnNotice from './KidsNoReturnNotice';
+import ProductRatingRow from './ProductRatingRow';
 import { cn } from '@/lib/utils';
 
 interface ProductHeaderBlockProps {
@@ -72,6 +73,12 @@ export default function ProductHeaderBlock({ product, isNew, className }: Produc
           placeholder="Sous-titre du produit…"
         />
       </motion.div>
+
+      {/* Note + avis + partage */}
+      <motion.div {...fadeUp} transition={{ delay: 0.12 }}>
+        <ProductRatingRow productId={product.id} productName={product.name} />
+      </motion.div>
+
 
       {/* Prix + stock */}
       <motion.div className="flex flex-wrap items-center gap-x-4 gap-y-2" {...fadeUp} transition={{ delay: 0.15 }}>

@@ -1,14 +1,19 @@
-import { Instagram, Twitter, Youtube, ExternalLink } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
 import { BrandLogo } from '@/components/layout/BrandLogo';
 import TrustpilotWidget from '@/components/TrustpilotWidget';
+import { resolveBrand } from '@/components/icons/BrandIcons';
 
-const socialIcons: Record<string, React.ElementType> = {
-  INSTAGRAM: Instagram,
-  TWITTER: Twitter,
-  YOUTUBE: Youtube,
-};
+/** Réseaux affichés par défaut (l'URL réelle se règle dans l'admin). */
+const DEFAULT_SOCIALS = [
+  { label: 'FACEBOOK', url: '#' },
+  { label: 'INSTAGRAM', url: '#' },
+  { label: 'TIKTOK', url: '#' },
+  { label: 'YOUTUBE', url: '#' },
+];
+
 
 export function Footer() {
   const { designSettings, language } = useApp();
@@ -47,34 +52,55 @@ export function Footer() {
           </div>
           
           {/* Social Links */}
-          <div className="flex items-center gap-4">
-            {socialLinks.map((link) => {
-              const Icon = socialIcons[link.label] || ExternalLink;
-              
-              return (
-                <a
-                  key={link.label}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn(
-                    "group flex items-center gap-2 px-3 py-2 transition-all duration-200",
-                    "hover:bg-primary/10 border border-transparent hover:border-primary/30",
-                    "chamfer-hud-sm"
-                  )}
-                >
-                  {(socialDisplayMode === 'icons' || socialDisplayMode === 'both') && (
-                    <Icon className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                  )}
-                  {(socialDisplayMode === 'text' || socialDisplayMode === 'both') && (
-                    <span className="hud-text text-xs text-muted-foreground group-hover:text-foreground transition-colors">
-                      {link.label}
-                    </span>
-                  )}
-                </a>
-              );
-            })}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {(() => {
+              const configured = socialLinks || [];
+              const merged = [...configured];
+              DEFAULT_SOCIALS.forEach((d) => {
+                const exists = configured.some((l) =>
+                  `${l.label} ${l.url}`.toLowerCase().includes(d.label.toLowerCase())
+                );
+                if (!exists) merged.push(d);
+              });
+              return merged.map((link, i) => {
+                const brand = resolveBrand(link.label, link.url);
+                const Icon = brand?.Icon || ExternalLink;
+                return (
+                  <motion.a
+                    key={`${link.label}-${i}`}
+                    href={link.url || '#'}
+                    target={link.url && link.url !== '#' ? '_blank' : undefined}
+                    rel="noopener noreferrer"
+                    aria-label={brand?.label || link.label}
+                    title={brand?.label || link.label}
+                    whileHover={{ y: -3, scale: 1.08 }}
+                    whileTap={{ scale: 0.92 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 18 }}
+                    className={cn(
+                      'group flex items-center gap-2 px-2.5 py-2 border border-border/50 transition-colors duration-200',
+                      'hover:border-primary/40 hover:bg-primary/5 chamfer-hud-sm'
+                    )}
+                  >
+                    {(socialDisplayMode === 'icons' || socialDisplayMode === 'both') && (
+                      <Icon
+                        className={cn(
+                          'h-4 w-4 transition-transform group-hover:scale-110',
+                          brand ? brand.color : 'text-muted-foreground'
+                        )}
+                      />
+                    )}
+                    {(socialDisplayMode === 'text' || socialDisplayMode === 'both') && (
+                      <span className="hud-text text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+                        {link.label}
+                      </span>
+                    )}
+                  </motion.a>
+
+                );
+              });
+            })()}
           </div>
+
           
           {/* System Info */}
           <div className="hidden lg:flex items-center gap-4 text-muted-foreground/50">

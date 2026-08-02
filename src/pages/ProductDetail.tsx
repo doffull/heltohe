@@ -222,7 +222,7 @@ export default function ProductDetail() {
               onQuantityChange={setQuantity}
               onAddToCart={handleAddToCart}
             />
-            <ProductTrustBar category={product.category} layout="grid" className="sm:grid-cols-1" />
+            <ProductTrustBar category={product.category} />
           </div>
         </div>
 
