@@ -1,51 +1,34 @@
 ## Objectif
 
-Nouvelle disposition de la fiche produit, dans le style Industrial Luxury existant (Helvetica-MP, angles 45°, noir/blanc/gris) mais avec plus de couleur d'accent et d'icônes. **Aucune fonctionnalité retirée** — uniquement réorganisée et améliorée.
+Depuis la fiche produit admin (zone images), un bouton unique génère automatiquement la pastille de couleur du produit (hex + nom, ex. « Rose Poudré » pour la Wilson Femme Rose) à partir de la photo. Cette pastille alimente les filtres Couleurs de la boutique, mais n'apparaît pas comme sélecteur de couleur sur la page produit quand c'est la seule référence coloris.
 
-## Ordre mobile (360px et +)
+## Ce qui sera fait
 
-```text
-1  Fil d'ariane + Retour                (compact, icône)
-2  BLOC IDENTITÉ    catégorie / SKU / TITRE / sous-titre / PRIX (+ remise, stock)
-                    + mention rouge « Ni repris ni échangé » (enfant)
-3  GALERIE          grand visuel plein format, swipe, pagination à points,
-                    vignettes défilantes, badge vidéo, zoom plein écran
-                    + bouton « ESSAYAGE VIRTUEL » en overlay sur la galerie
-4  BLOC ACHAT       couleurs/variations → tailles (+ « Guide des tailles » et
-                    « Trouver ma taille IA » juste à côté des tailles)
-                    → quantité → AJOUTER AU PANIER (+ favoris / partage)
-                    → coloris du même modèle (ColorVariantsStrip)
-5  BLOC CONFIANCE   livraison / paiement sécurisé / délai / retour
-                    (badges de confiance, icônes colorées)
-6  BLOC INFOS       Description, Caractéristiques techniques, Matière, Entretien
-                    en accordéons repliables (1er ouvert)
-7  Avis clients, produits associés, recommandations, compléter le look
-```
+**1. Bouton « Générer la pastille » (admin > produit)**
+- Nouveau bouton dans le bloc images du formulaire produit (`ProductForm.tsx`), à côté des images / galerie.
+- Au clic : analyse de l'image principale (et jusqu'à 3 images galerie) → renvoie un code couleur dominant du vêtement + un nom de couleur mode en français.
+- La pastille proposée s'affiche en aperçu ; validation en un clic pour l'ajouter aux options couleurs, avec possibilité de corriger le hex ou le nom avant enregistrement.
+- Sécurité anti-erreur : la couleur retenue est celle du vêtement, pas du fond ni du mannequin (prompt cadré, comme les autres helpers IA existants).
 
-Barre d'achat collante en bas sur mobile (prix + taille choisie + Ajouter au panier) qui apparaît quand le bouton principal sort de l'écran.
+**2. Pastille « filtre seulement »**
+- Nouvel indicateur sur une option couleur : `filterOnly`.
+- Coché automatiquement quand la pastille est générée pour un produit mono-coloris (une seule option couleur).
+- Case à cocher visible dans l'admin pour basculer manuellement (« Utiliser uniquement dans les filtres boutique »).
 
-## Tablette (≥768px) et Desktop (≥1024px)
+**3. Page produit**
+- Le sélecteur « Couleur » ignore les pastilles marquées `filterOnly` ; si toutes les options sont en filtre seul, le bloc Couleur disparaît complètement → le client achète directement, sans étape de sélection.
+- Aucun changement quand le produit a réellement plusieurs coloris achetables.
 
-- Deux colonnes collantes, pleine hauteur, sans débordement : galerie à gauche (sticky, vignettes verticales sur desktop / sous l'image sur tablette), colonne achat à droite (sticky).
-- Colonne droite = identité → couleurs → tailles + guide des tailles → quantité + panier → essayage virtuel → badges de confiance.
-- Sous les deux colonnes, pleine largeur : onglets/accordéons Description • Caractéristiques • Matière & Entretien, puis avis, coloris, associés, recommandations, look.
-- Tablette : galerie 55% / achat 45% ; desktop : 3 colonnes de grille (galerie 2, achat 1).
+**4. Boutique / filtres**
+- `ShopFilterPanel` continue de lister toutes les pastilles, y compris `filterOnly`, et le rendu utilise déjà bicolore/texture.
+- Le filtrage dans `Shop.tsx` reste inchangé (comparaison par libellé) et prend donc en compte les nouvelles pastilles.
+
+**5. Génération en masse (option incluse)**
+- Dans la liste admin des produits : action « Générer les pastilles manquantes » sur la sélection, qui applique le même traitement aux produits sans option couleur (traitement séquentiel avec compteur de progression et rapport succès/échecs).
 
 ## Détails techniques
 
-- `src/pages/ProductDetail.tsx` : nouvelle structure de mise en page (un seul arbre, ordre piloté par la grille et non par des composants dupliqués, pour garder mobile et desktop synchronisés).
-- Nouveaux composants dans `src/components/product/` :
-  - `ProductHeaderBlock.tsx` — extrait le bloc identité/prix (réutilise `EditableProductField`, donc l'édition inline reste active).
-  - `ProductBuyBox.tsx` — regroupe `ProductOptions`, guide des tailles, essayage virtuel, badges.
-  - `ProductTrustBar.tsx` — badges de confiance avec icônes accentuées (source `getProductTrustBadges`).
-  - `ProductInfoAccordion.tsx` — description / caractéristiques / matière / entretien (blocs vides masqués, visibles en mode admin comme aujourd'hui).
-  - `MobileBuyBar.tsx` — barre d'achat collante mobile.
-- `ProductImageGallery.tsx` : mode « grand écran + swipe » avec points de pagination, vignettes, conservation du zoom 3.5x, du watermark et du paramètre `?color=`.
-- `ProductInfo.tsx` reste en place (utilisé par `ProductTemplateRenderer` et les tests) ; les props `headerOnly` / `detailsOnly` continuent de fonctionner.
-- `VirtualTryOnButton` : conserve le flux actuel (sessionStorage, cadrage corps/hanches) mais devient aussi un bouton visible en ligne, pas seulement flottant.
-- Couleurs/icônes uniquement via tokens sémantiques (`primary`, `accent`, `destructive`…) — aucune couleur codée en dur.
-- Les tests existants `src/components/product/__tests__` sont mis à jour si nécessaire.
-
-## Hors périmètre
-
-Aucun changement de logique métier (panier, prix, stock, RPC, IA). Le rendu par template (`ProductTemplateRenderer`) n'est pas remplacé : la nouvelle disposition s'applique à la fiche produit standard, et le template « Showroom (copie) » reste disponible tel quel.
+- Nouvelle action `swatch-from-image` dans l'edge function `product-ai-helpers` (Lovable AI Gateway, modèle vision déjà utilisé : `google/gemini-3.1-pro-preview`), retour structuré via tool call `{ hex, label, observations }`, avec validation du format `#RRGGBB` côté serveur.
+- `ColorOption` (`src/types/index.ts`) : ajout du champ optionnel `filterOnly?: boolean`. Stocké dans `products.color_options` (jsonb) — aucune migration base nécessaire.
+- `ProductOptions.tsx` : filtrage de `colorItems` sur `!filterOnly`, et masquage du bloc si la liste résultante est vide.
+- Vérification visuelle : page produit mono-coloris (pas de bloc Couleur) + page boutique (pastille présente dans les filtres, filtrage fonctionnel), desktop et mobile.
