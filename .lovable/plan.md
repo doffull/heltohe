@@ -1,38 +1,51 @@
 ## Objectif
 
-Aligner la boutique sur le catalogue officiel `PRIX_ET_TAILLES_HELVETICA_ALPHABETIQUE.xlsx` (59 lignes adultes, 13 enfants) sans rien détruire.
+Nouvelle disposition de la fiche produit, dans le style Industrial Luxury existant (Helvetica-MP, angles 45°, noir/blanc/gris) mais avec plus de couleur d'accent et d'icônes. **Aucune fonctionnalité retirée** — uniquement réorganisée et améliorée.
 
-Choix par défaut retenus (tu skippes les questions) : le fichier fait référence pour les **tailles**, les prix ne sont **jamais baissés automatiquement** (je les signale), les références manquantes sont créées en **brouillon inactif**, les produits en base absents du fichier restent **inchangés**.
+## Ordre mobile (360px et +)
 
-## 1. Corriger les tailles (mise à jour de données)
+```text
+1  Fil d'ariane + Retour                (compact, icône)
+2  BLOC IDENTITÉ    catégorie / SKU / TITRE / sous-titre / PRIX (+ remise, stock)
+                    + mention rouge « Ni repris ni échangé » (enfant)
+3  GALERIE          grand visuel plein format, swipe, pagination à points,
+                    vignettes défilantes, badge vidéo, zoom plein écran
+                    + bouton « ESSAYAGE VIRTUEL » en overlay sur la galerie
+4  BLOC ACHAT       couleurs/variations → tailles (+ « Guide des tailles » et
+                    « Trouver ma taille IA » juste à côté des tailles)
+                    → quantité → AJOUTER AU PANIER (+ favoris / partage)
+                    → coloris du même modèle (ColorVariantsStrip)
+5  BLOC CONFIANCE   livraison / paiement sécurisé / délai / retour
+                    (badges de confiance, icônes colorées)
+6  BLOC INFOS       Description, Caractéristiques techniques, Matière, Entretien
+                    en accordéons repliables (1er ouvert)
+7  Avis clients, produits associés, recommandations, compléter le look
+```
 
-| Produit | Tailles actuelles | Tailles fichier |
-|---|---|---|
-| WILSON (homme) - ROSE BLACK | XS→XXXL | XS, S, M, L |
-| WILSON (homme) - Gris | XS→XXXL | XS→XXL |
-| NED - FULL BLACK | S→XXXL | XS→XXXL |
-| Barnes Kids | 4A→14A | 2A→14A |
+Barre d'achat collante en bas sur mobile (prix + taille choisie + Ajouter au panier) qui apparaît quand le bouton principal sort de l'écran.
 
-Les autres références vérifiées (ARTIC, CARLA, ORLIE, LARSON, PHANTOM, GALAXY, FRED, RAPTOR, RIDER, ULTIMA, VORTEX, SPACE 2, STELLAR, STEVE 2, ELITE, ECLIPSE, BOMBERS, OSMOSE, NITRO, ROYAL, MIDDLE BLOCK, IMPERIAL, VANESSA, ELIE, ARNOLDS, HIMALAYA KIDS, VILAR, COMETE KIDS) sont conformes en prix et tailles.
+## Tablette (≥768px) et Desktop (≥1024px)
 
-## 2. Créer les références manquantes (brouillons inactifs)
-
-Créées avec prix et tailles du fichier, `is_active = false`, image placeholder, SKU dérivé de la référence, stock 0 — à compléter ensuite dans l'admin avec les photos :
-
-- Adultes : PEGA ONE (Full Black, Original, Gris), PEGAMAX 2, QUEYRAS, SHADOW, SUMIT, THORENS, VIBER, WILSON EWARM, WILSON NAVY (Full Black), ELBERT
-- Enfants : RAFAELLI Full Black, RAFAELLI Original
-
-Pour les lignes sans prix dans le fichier (PEGA ONE, QUEYRAS, SHADOW, SUMIT, THORENS, VIBER, WILSON EWARM, PEGAMAX 2), le prix sera mis à 0 et le produit restera inactif jusqu'à ce que tu le renseignes — un produit inactif n'apparaît pas en boutique.
-
-## 3. Écarts signalés mais non modifiés
-
-- `COMET 2` : 169 € en base contre 89 € au fichier (ligne COMETE, XS→XXL). Écart trop important pour être appliqué automatiquement — je te le confirme après ton feu vert.
-- `Rafaelie Kids - vert` correspond probablement à la ligne KAKI du fichier (même prix 109 €) : je peux renommer si tu veux.
-- Présents en base, absents du fichier : SONIA Noire, SONIA Vert Sous-Bois, SILVER SNOW, CAPRI 3, MAXX, plus les accessoires (AUTEUIL, Cargo/Front/Hybrid pants, Porte-clés, WILSON 2 coupe-vent…) — laissés tels quels.
-- Produits sans tailles (accessoires et pantalons) : normal, non traités.
+- Deux colonnes collantes, pleine hauteur, sans débordement : galerie à gauche (sticky, vignettes verticales sur desktop / sous l'image sur tablette), colonne achat à droite (sticky).
+- Colonne droite = identité → couleurs → tailles + guide des tailles → quantité + panier → essayage virtuel → badges de confiance.
+- Sous les deux colonnes, pleine largeur : onglets/accordéons Description • Caractéristiques • Matière & Entretien, puis avis, coloris, associés, recommandations, look.
+- Tablette : galerie 55% / achat 45% ; desktop : 3 colonnes de grille (galerie 2, achat 1).
 
 ## Détails techniques
 
-- Les corrections de tailles et les créations passent par l'outil d'insertion de données (UPDATE/INSERT sur `products`), pas par une migration de schéma.
-- Aucun changement de schéma, aucun changement de code frontend.
-- Un récapitulatif final listera chaque ligne modifiée ou créée.
+- `src/pages/ProductDetail.tsx` : nouvelle structure de mise en page (un seul arbre, ordre piloté par la grille et non par des composants dupliqués, pour garder mobile et desktop synchronisés).
+- Nouveaux composants dans `src/components/product/` :
+  - `ProductHeaderBlock.tsx` — extrait le bloc identité/prix (réutilise `EditableProductField`, donc l'édition inline reste active).
+  - `ProductBuyBox.tsx` — regroupe `ProductOptions`, guide des tailles, essayage virtuel, badges.
+  - `ProductTrustBar.tsx` — badges de confiance avec icônes accentuées (source `getProductTrustBadges`).
+  - `ProductInfoAccordion.tsx` — description / caractéristiques / matière / entretien (blocs vides masqués, visibles en mode admin comme aujourd'hui).
+  - `MobileBuyBar.tsx` — barre d'achat collante mobile.
+- `ProductImageGallery.tsx` : mode « grand écran + swipe » avec points de pagination, vignettes, conservation du zoom 3.5x, du watermark et du paramètre `?color=`.
+- `ProductInfo.tsx` reste en place (utilisé par `ProductTemplateRenderer` et les tests) ; les props `headerOnly` / `detailsOnly` continuent de fonctionner.
+- `VirtualTryOnButton` : conserve le flux actuel (sessionStorage, cadrage corps/hanches) mais devient aussi un bouton visible en ligne, pas seulement flottant.
+- Couleurs/icônes uniquement via tokens sémantiques (`primary`, `accent`, `destructive`…) — aucune couleur codée en dur.
+- Les tests existants `src/components/product/__tests__` sont mis à jour si nécessaire.
+
+## Hors périmètre
+
+Aucun changement de logique métier (panier, prix, stock, RPC, IA). Le rendu par template (`ProductTemplateRenderer`) n'est pas remplacé : la nouvelle disposition s'applique à la fiche produit standard, et le template « Showroom (copie) » reste disponible tel quel.
