@@ -587,6 +587,19 @@ export default function AdminProducts() {
             <Button size="sm" onClick={() => setIsBulkEditOpen(true)} className="h-8 text-xs chamfer-hud-sm">
               <Wand2 className="h-3 w-3 mr-1" />Édition en masse
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleBulkSwatches}
+              disabled={!!swatchProgress}
+              className="h-8 text-xs chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10"
+            >
+              <Wand2 className="h-3 w-3 mr-1" />
+              {swatchProgress
+                ? `Pastilles ${swatchProgress.done}/${swatchProgress.total}`
+                : 'Générer les pastilles manquantes'}
+            </Button>
+
             <Button size="sm" variant="outline" onClick={exportSelectedCsv} className="h-8 text-xs chamfer-hud-sm">
               <Download className="h-3 w-3 mr-1" />Exporter sélection
             </Button>
