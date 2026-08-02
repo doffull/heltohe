@@ -262,16 +262,16 @@ export default function ProductOptions({
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="text-xs">{item.label}</TooltipContent>
                 </Tooltip>
-                {editMode && product.colorOptions && product.colorOptions[cIdx] && (
+                {editMode && item.origIndex >= 0 && product.colorOptions?.[item.origIndex] && (
                   <EditableProductArrayField
                     product={product}
                     field="colorOptions"
-                    index={cIdx}
+                    index={item.origIndex}
                     as="span"
                     className="text-[10px] text-muted-foreground uppercase tracking-wider"
                     placeholder="Nom"
                     allowDelete={false}
-                    onCommit={async (raw) => renameColor(cIdx, raw)}
+                    onCommit={async (raw) => renameColor(item.origIndex, raw)}
                   >
                     {item.label}
                   </EditableProductArrayField>
