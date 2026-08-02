@@ -269,7 +269,7 @@ export default function ProductOptions({
       >
         <motion.div className="flex-1 min-w-[190px]" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
           <Button
-            className="w-full h-14 text-base sm:text-lg chamfer-hud-sm uppercase tracking-wider font-bold"
+            className="w-full h-14 px-3 text-sm lg:text-base chamfer-hud-sm uppercase tracking-wide font-bold whitespace-nowrap"
             onClick={onAddToCart}
             disabled={product.stock === 0}
           >
