@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Check, Sparkles, User, Tag, PackageCheck, AlertTriangle } from 'lucide-react';
+import { Sparkles, User, Tag, PackageCheck, AlertTriangle } from 'lucide-react';
 import { Product } from '@/types';
 import { EditableProductField } from '@/components/visual-editor/EditableProductField';
 import { useAuth } from '@/context/AuthContext';
