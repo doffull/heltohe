@@ -189,7 +189,7 @@ Deno.serve(async (req) => {
     const { user, tool, multimodal } = buildPrompt(body);
     const useVision = multimodal && images.length > 0;
 
-    if (multimodal && images.length === 0 && (body.action === "description" || body.action === "material" || body.action === "attributes")) {
+    if (multimodal && images.length === 0 && (body.action === "description" || body.action === "material" || body.action === "attributes" || body.action === "swatch")) {
       return new Response(
         JSON.stringify({ error: "Ajoutez au moins une photo pour une génération fidèle au produit." }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -231,6 +231,25 @@ Deno.serve(async (req) => {
     }
     if (Array.isArray(parsed.observations)) {
       parsed.observations = parsed.observations.map((o: unknown) => String(o)).filter(Boolean).slice(0, 12);
+    }
+    if (body.action === "swatch") {
+      const norm = (v: unknown): string | null => {
+        const s = String(v || "").trim();
+        const m = /^#?([0-9a-f]{6})$/i.exec(s) || /^#?([0-9a-f]{3})$/i.exec(s);
+        if (!m) return null;
+        const h = m[1];
+        return "#" + (h.length === 3 ? h.split("").map((c) => c + c).join("") : h).toLowerCase();
+      };
+      const hex = norm(parsed.hex);
+      if (!hex) {
+        return new Response(
+          JSON.stringify({ error: "Couleur non identifiable sur les photos." }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      parsed.hex = hex;
+      parsed.hex2 = norm(parsed.hex2);
+      parsed.label = String(parsed.label || "").trim().replace(/^["«\s]+|["»\s]+$/g, "").slice(0, 40) || "Couleur produit";
     }
     parsed.imagesUsed = images.length;
 
