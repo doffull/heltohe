@@ -37,6 +37,7 @@ export default function Cart() {
     promoCode
   } = useCart();
 
+  const { data: catalog = [] } = useProducts();
   const [promoInput, setPromoInput] = useState('');
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
   const autoTriedRef = useRef(false);
@@ -166,6 +167,10 @@ export default function Cart() {
                       {item.color && `Couleur: ${item.color}`}
                     </p>
                   )}
+                  {isKidsProduct(catalog.find((p) => p.id === item.productId)) && (
+                    <KidsNoReturnNotice compact className="mt-2" />
+                  )}
+
                   
                   <div className="flex items-center justify-between gap-2 mt-2 sm:mt-3 flex-wrap">
                     {/* Quantity Controls */}
