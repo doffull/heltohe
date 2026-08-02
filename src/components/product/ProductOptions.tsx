@@ -104,15 +104,18 @@ export default function ProductOptions({
 
   // Build color items from colorOptions or colors.
   // Les pastilles `filterOnly` servent uniquement aux filtres boutique → masquées ici.
-  const selectableColorOptions = (product.colorOptions || []).filter(co => !co.filterOnly);
+  const selectableColorOptions = (product.colorOptions || [])
+    .map((co, i) => ({ co, i }))
+    .filter(({ co }) => !co.filterOnly);
   const colorItems = selectableColorOptions.length
-    ? selectableColorOptions.map(co => ({
+    ? selectableColorOptions.map(({ co, i }) => ({
         key: co.color,
         hex: co.color,
         hex2: co.color2 || null,
         swatchImage: co.swatchImage || null,
         label: co.label,
         image: co.image,
+        origIndex: i,
       }))
     : product.colorOptions?.length
     ? []
@@ -123,6 +126,7 @@ export default function ProductOptions({
         swatchImage: null as string | null,
         label: c,
         image: undefined,
+        origIndex: -1,
       })) || [];
 
 
