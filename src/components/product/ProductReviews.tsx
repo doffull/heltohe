@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { BadgeCheck, MessageSquare, ThumbsUp, Loader2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { BadgeCheck, MessageSquare, ThumbsUp, Loader2, Star, Gift, Users, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -101,8 +102,8 @@ export default function ProductReviews({ productId, productName }: Props) {
   const dist = stats?.distribution ?? {};
 
   return (
-    <section className="mt-16 pt-10 border-t border-border/40">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+    <section id="avis-clients" className="mt-16 pt-10 border-t border-border/40 scroll-mt-24">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
         <div>
           <h2 className="text-2xl font-bold hud-text uppercase tracking-tight">Avis clients</h2>
           <p className="text-sm text-muted-foreground mt-1">
@@ -114,6 +115,46 @@ export default function ProductReviews({ productId, productName }: Props) {
           Laisser un avis
         </Button>
       </div>
+
+      {/* Incitation à laisser un avis */}
+      <motion.div
+        className="mb-8 flex flex-col gap-3 chamfer-hud border border-border/60 bg-card/40 p-4 sm:flex-row sm:items-center sm:justify-between"
+        initial={{ opacity: 0, y: 12 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+      >
+        <div className="flex w-full items-stretch gap-2">
+          {[
+            { Icon: Star, color: 'text-yellow-500', bg: 'bg-yellow-500/12', border: 'border-yellow-500/35', label: 'Notez en 30 secondes' },
+            { Icon: Gift, color: 'text-pink-500', bg: 'bg-pink-500/12', border: 'border-pink-500/35', label: 'Gagnez des points fidélité' },
+            { Icon: Users, color: 'text-sky-500', bg: 'bg-sky-500/12', border: 'border-sky-500/35', label: 'Aidez les autres clients' },
+          ].map(({ Icon, color, bg, border, label }, i) => (
+            <motion.div
+              key={label}
+              className="flex min-w-0 flex-1 basis-0 flex-col items-center gap-1.5 text-center sm:flex-row sm:text-left"
+              initial={{ opacity: 0, y: 8 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.08 }}
+              whileHover={{ y: -2 }}
+            >
+              <motion.span
+                className={cn('flex h-8 w-8 shrink-0 items-center justify-center chamfer-hud-sm border', bg, border)}
+                whileHover={{ rotate: [0, -12, 12, 0], scale: 1.12 }}
+                transition={{ duration: 0.5 }}
+              >
+                <Icon className={cn('h-4 w-4', color)} />
+              </motion.span>
+              <span className="min-w-0 text-[10px] leading-tight sm:text-xs text-muted-foreground line-clamp-2">{label}</span>
+            </motion.div>
+          ))}
+        </div>
+        <Button variant="outline" onClick={openForm} className="shrink-0 gap-2 chamfer-hud-sm">
+          <Sparkles className="h-4 w-4 text-violet-500" />
+          Partager mon expérience
+        </Button>
+      </motion.div>
+
 
       {/* Summary */}
       <div className="grid md:grid-cols-[240px_1fr] gap-8 mb-10">

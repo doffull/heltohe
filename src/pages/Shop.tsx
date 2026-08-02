@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import ShopFilterPanel, { type ShopFilters } from '@/components/products/ShopFilterPanel';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
 import { groupFamiliesAdjacent } from '@/lib/productFamily';
@@ -74,6 +75,7 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
   const [selectedCategory, setSelectedCategory] = useState(categoryFromSlug || searchParams.get('category') || 'Tout');
   const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'newest');
+  const [shopFilters, setShopFilters] = useState<ShopFilters>({ sizes: [], colors: [] });
 
   // Sync category from slug prop or URL params when they change
   useEffect(() => {
@@ -138,8 +140,25 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
     if (selectedCategory !== 'Tout') {
       filtered = filtered.filter(p => p.category === selectedCategory);
     }
+    if (shopFilters.sizes.length) {
+      filtered = filtered.filter(p => (p.sizes || []).some(s => shopFilters.sizes.includes(s)));
+    }
+    if (shopFilters.colors.length) {
+      const wanted = shopFilters.colors.map(c => c.toLowerCase());
+      filtered = filtered.filter(p =>
+        (p.colorOptions || []).some(co => wanted.includes((co.label || co.color || '').toLowerCase()))
+      );
+    }
     return filtered;
-  }, [products, searchQuery, selectedCategory]);
+  }, [products, searchQuery, selectedCategory, shopFilters]);
+
+  // Options de filtres calculées avant application des filtres taille/couleur
+  const baseFilteredForOptions = useMemo(() => {
+    let filtered = [...products];
+    if (selectedCategory !== 'Tout') filtered = filtered.filter(p => p.category === selectedCategory);
+    return filtered;
+  }, [products, selectedCategory]);
+
 
   const orderedBase = useOrderedProducts(baseFiltered, selectedCategory);
 
@@ -274,7 +293,18 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
           )}
         </div>
 
-        {/* Products */}
+        {/* Filtres + Produits */}
+        <div className="mb-4 lg:hidden">
+          <ShopFilterPanel products={baseFilteredForOptions} value={shopFilters} onChange={setShopFilters} />
+        </div>
+        <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-8 xl:gap-10">
+          <ShopFilterPanel
+            products={baseFilteredForOptions}
+            value={shopFilters}
+            onChange={setShopFilters}
+            className="lg:sticky lg:top-24 lg:self-start"
+          />
+          <div>
         {isLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
@@ -360,6 +390,9 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
             ))}
           </div>
         )}
+          </div>
+        </div>
+
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import ColorVariantsStrip from './ColorVariantsStrip';
 import SizeGuideModal from './SizeGuideModal';
 import { SizeGuideAIModal } from './SizeGuideAIModal';
 import VirtualTryOnButton from './VirtualTryOnButton';
+import ProductDeliveryEstimate from './ProductDeliveryEstimate';
 import type { SizeCategory } from '@/lib/sizeCharts';
 import { cn } from '@/lib/utils';
 
@@ -80,6 +81,9 @@ export default function ProductBuyBox({
           </Button>
         </motion.div>
       )}
+
+      {/* Estimation de livraison */}
+      <ProductDeliveryEstimate />
 
       {/* Essayage virtuel — toujours visible */}
       <VirtualTryOnButton product={product} selectedColor={selectedColor} variant="inline" className="w-full" />
