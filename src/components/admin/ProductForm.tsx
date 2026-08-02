@@ -17,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { usePageTemplates } from '@/hooks/usePageTemplates';
 import { getSwatchStyle } from '@/lib/swatch';
+import { generateSwatchFromImages, swatchToColorOption } from '@/lib/generateSwatch';
 import {
   DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent,
 } from '@dnd-kit/core';
@@ -106,7 +107,44 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [autoSaveState, setAutoSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const [swatchBusy, setSwatchBusy] = useState(false);
+  const [swatchDraft, setSwatchDraft] = useState<ColorOption | null>(null);
   const skipAutoSaveRef = useRef(true);
+
+  const generateSwatch = async () => {
+    setSwatchBusy(true);
+    try {
+      const res = await generateSwatchFromImages({
+        image: formData.image,
+        galleryImages: formData.galleryImages,
+        name: formData.name,
+        category: formData.category,
+      });
+      if (res.observations?.length) setAiObservations(res.observations);
+      setSwatchDraft(swatchToColorOption(res, { filterOnly: formData.colorOptions.length === 0 }));
+      toast.success('Pastille générée — vérifiez puis ajoutez');
+    } catch (e: any) {
+      toast.error(e?.message || 'Erreur lors de la génération de la pastille');
+    } finally {
+      setSwatchBusy(false);
+    }
+  };
+
+  const confirmSwatch = () => {
+    if (!swatchDraft) return;
+    const opt = { ...swatchDraft, label: (swatchDraft.label || '').trim() || 'Couleur produit' };
+    if (formData.colorOptions.some(o => (o.label || '').toLowerCase() === opt.label.toLowerCase())) {
+      toast.error('Cette pastille existe déjà');
+      return;
+    }
+    setFormData(prev => ({
+      ...prev,
+      colorOptions: [...prev.colorOptions, opt],
+      colors: [...prev.colors, opt.color],
+    }));
+    setSwatchDraft(null);
+    toast.success('Pastille ajoutée');
+  };
 
   const setAsMainImage = (url: string, index: number) => {
     setFormData(prev => {
