@@ -448,7 +448,67 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
             title="Sélectionner l'image principale"
             onSelect={(url) => setFormData(prev => ({ ...prev, image: url }))}
           />
+
+          {/* Pastille de couleur automatique (depuis les images) */}
+          <div className="space-y-2 border border-primary/30 bg-primary/5 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <Label className="hud-text text-[11px] text-primary">// PASTILLE COULEUR AUTO</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={generateSwatch}
+                disabled={swatchBusy}
+                className="h-7 text-[11px] gap-1"
+              >
+                {swatchBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                Générer la pastille
+              </Button>
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              Analyse les photos et crée la pastille utilisée par les filtres Couleurs de la boutique.
+            </p>
+            {swatchDraft && (
+              <div className="space-y-2 pt-2 border-t border-border/30">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-9 h-9 rounded-sm border border-border/60 shrink-0"
+                    style={getSwatchStyle({ color: swatchDraft.color, color2: swatchDraft.color2 || null })}
+                  />
+                  <Input
+                    type="color"
+                    value={swatchDraft.color}
+                    onChange={(e) => setSwatchDraft(d => (d ? { ...d, color: e.target.value } : d))}
+                    className="w-12 h-9 p-1 cursor-pointer"
+                  />
+                  <Input
+                    value={swatchDraft.label}
+                    onChange={(e) => setSwatchDraft(d => (d ? { ...d, label: e.target.value } : d))}
+                    className="h-9 flex-1 bg-secondary/50 border-border/30 text-xs"
+                    placeholder="Nom de la couleur"
+                  />
+                </div>
+                <label className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={swatchDraft.filterOnly !== false}
+                    onChange={(e) => setSwatchDraft(d => (d ? { ...d, filterOnly: e.target.checked } : d))}
+                  />
+                  Utiliser uniquement dans les filtres boutique (masquée sur la page produit)
+                </label>
+                <div className="flex gap-2">
+                  <Button type="button" size="sm" className="h-7 text-[11px]" onClick={confirmSwatch}>
+                    <Plus className="h-3 w-3 mr-1" />Ajouter la pastille
+                  </Button>
+                  <Button type="button" size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => setSwatchDraft(null)}>
+                    Annuler
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
+
 
         {/* Gallery (additional images) */}
         <div className="space-y-2">
