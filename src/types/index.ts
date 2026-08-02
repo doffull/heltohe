@@ -14,6 +14,8 @@ export interface ColorOption {
   color2?: string | null;
   /** Optional swatch image / texture (PNG/JPG). Takes priority over color(s) when rendering the chip. */
   swatchImage?: string | null;
+  /** True → pastille utilisée uniquement dans les filtres boutique, masquée sur la page produit. */
+  filterOnly?: boolean;
 }
 
 export interface ProductDefaults {
