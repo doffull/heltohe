@@ -102,9 +102,11 @@ export default function ProductOptions({
   }
 
 
-  // Build color items from colorOptions or colors
-  const colorItems = product.colorOptions?.length
-    ? product.colorOptions.map(co => ({
+  // Build color items from colorOptions or colors.
+  // Les pastilles `filterOnly` servent uniquement aux filtres boutique → masquées ici.
+  const selectableColorOptions = (product.colorOptions || []).filter(co => !co.filterOnly);
+  const colorItems = selectableColorOptions.length
+    ? selectableColorOptions.map(co => ({
         key: co.color,
         hex: co.color,
         hex2: co.color2 || null,
@@ -112,6 +114,8 @@ export default function ProductOptions({
         label: co.label,
         image: co.image,
       }))
+    : product.colorOptions?.length
+    ? []
     : product.colors?.map(c => ({
         key: c,
         hex: resolveColorHex(c),
@@ -120,6 +124,7 @@ export default function ProductOptions({
         label: c,
         image: undefined,
       })) || [];
+
 
   return (
     <>
