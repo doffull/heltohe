@@ -199,19 +199,19 @@ export default function ProductDetail() {
         </motion.div>
 
         {/* ---------- Bloc principal ---------- */}
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] gap-6 lg:gap-10 xl:gap-14 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] gap-6 md:gap-8 lg:gap-10 xl:gap-14 items-start">
 
           {/* 1. Identité (mobile : tout en haut / desktop : colonne droite) */}
-          <ProductHeaderBlock product={product} isNew={isNewImport} className="lg:hidden" />
+          <ProductHeaderBlock product={product} isNew={isNewImport} className="md:hidden" />
 
           {/* 2. Galerie */}
-          <div className="lg:sticky lg:top-24">
+          <div className="md:sticky md:top-24">
             {gallery}
           </div>
 
           {/* 3. Colonne achat */}
-          <div ref={buyBoxRef} className="flex flex-col gap-6 lg:sticky lg:top-24">
-            <ProductHeaderBlock product={product} isNew={isNewImport} className="hidden lg:flex" />
+          <div ref={buyBoxRef} className="flex flex-col gap-6 md:sticky md:top-24">
+            <ProductHeaderBlock product={product} isNew={isNewImport} className="hidden md:flex" />
             <ProductBuyBox
               product={product}
               selectedSize={selectedSize}
