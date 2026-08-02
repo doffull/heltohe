@@ -1,15 +1,17 @@
 import { useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Sparkles, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, Sparkles, ShoppingCart, ChevronRight } from 'lucide-react';
 import { useProduct } from '@/hooks/useProducts';
 import { useCart } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import ProductImageGallery from '@/components/product/ProductImageGallery';
-import ProductInfo from '@/components/product/ProductInfo';
-import { EditableProductImage } from '@/components/visual-editor/EditableProductImage';
-import ProductOptions from '@/components/product/ProductOptions';
+import ProductHeaderBlock from '@/components/product/ProductHeaderBlock';
+import ProductBuyBox from '@/components/product/ProductBuyBox';
+import ProductTrustBar from '@/components/product/ProductTrustBar';
+import ProductInfoAccordion from '@/components/product/ProductInfoAccordion';
+import MobileBuyBar from '@/components/product/MobileBuyBar';
 import RelatedProducts from '@/components/product/RelatedProducts';
 import { useProductLooks } from '@/hooks/useProductLooks';
 import { useProducts } from '@/hooks/useProducts';
@@ -44,8 +46,9 @@ export default function ProductDetail() {
   const { data: allProducts = [] } = useProducts();
   const recommended = useRecommendedProducts(allProducts, product?.id);
 
-  // Ref to scroll to image when color changes
+  // Refs : galerie (scroll au changement de couleur) + ancre barre d'achat mobile
   const imageRef = useRef<HTMLDivElement>(null);
+  const buyBoxRef = useRef<HTMLDivElement>(null);
 
   const scrollToImage = useCallback(() => {
     imageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -66,6 +69,7 @@ export default function ProductDetail() {
         description: 'Veuillez choisir une taille avant d\'ajouter au panier',
         variant: 'destructive',
       });
+      buyBoxRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
 
@@ -115,7 +119,6 @@ export default function ProductDetail() {
   }
 
   // If a template is assigned (or a default exists), use the dynamic renderer
-  // If a template is assigned (or a default exists), use the dynamic renderer
   if (activeTemplate) {
     return (
       <>
@@ -129,9 +132,26 @@ export default function ProductDetail() {
     );
   }
 
+  const gallery = (
+    <div ref={imageRef} style={{ scrollMarginTop: '80px' }}>
+      <ProductImageGallery
+        image={product.image}
+        name={product.name}
+        videoUrl={product.videoUrl}
+        galleryImages={product.galleryImages}
+        colorOptions={product.colorOptions}
+        selectedColor={selectedColor}
+        onColorChange={handleColorChange}
+        modelHeight={(product as any).modelHeight}
+        modelSizeWorn={(product as any).modelSizeWorn}
+        product={product}
+      />
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-4 md:py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-3 md:py-8 max-w-[1500px]">
 
         {/* "Freshly imported" banner */}
         <AnimatePresence>
@@ -160,56 +180,54 @@ export default function ProductDetail() {
           )}
         </AnimatePresence>
 
-        {/* Back Button */}
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-          <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4 md:mb-6 h-9 md:h-10 text-sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
+        {/* Fil d'ariane + retour */}
+        <motion.div
+          className="flex items-center gap-1 mb-3 md:mb-5 text-xs text-muted-foreground"
+          initial={{ opacity: 0, x: -12 }}
+          animate={{ opacity: 1, x: 0 }}
+        >
+          <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="h-8 px-2 text-xs">
+            <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
             Retour
           </Button>
+          <ChevronRight className="h-3 w-3 opacity-50" />
+          <button onClick={() => navigate('/boutique')} className="uppercase tracking-wider hover:text-foreground transition-colors">
+            Boutique
+          </button>
+          <ChevronRight className="h-3 w-3 opacity-50" />
+          <span className="uppercase tracking-wider text-foreground/80 truncate">{product.category}</span>
         </motion.div>
 
-        <div className="grid lg:grid-cols-2 gap-6 lg:gap-12">
-          {/* Left: Image Gallery — ref for scroll target */}
-          <div ref={imageRef} style={{ scrollMarginTop: '80px' }}>
-            <ProductImageGallery
-              image={product.image}
-              name={product.name}
-              videoUrl={product.videoUrl}
-              galleryImages={product.galleryImages}
-              colorOptions={product.colorOptions}
-              selectedColor={selectedColor}
-              onColorChange={handleColorChange}
-              modelHeight={(product as any).modelHeight}
-              modelSizeWorn={(product as any).modelSizeWorn}
-              product={product}
-            />
+        {/* ---------- Bloc principal ---------- */}
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] gap-6 lg:gap-10 xl:gap-14 items-start">
+
+          {/* 1. Identité (mobile : tout en haut / desktop : colonne droite) */}
+          <ProductHeaderBlock product={product} isNew={isNewImport} className="lg:hidden" />
+
+          {/* 2. Galerie */}
+          <div className="lg:sticky lg:top-24">
+            {gallery}
           </div>
 
-
-
-          {/* Right: Product Details */}
-          <div className="flex flex-col gap-6">
-            <div className="order-1">
-              <ProductInfo product={product} isNew={isNewImport} headerOnly />
-            </div>
-            <div className="order-2 lg:order-3 flex flex-col gap-4">
-              <ProductOptions
-                product={product}
-                selectedSize={selectedSize}
-                selectedColor={selectedColor}
-                quantity={quantity}
-                onSizeChange={setSelectedSize}
-                onColorChange={handleColorChange}
-                onQuantityChange={setQuantity}
-                onAddToCart={handleAddToCart}
-              />
-              <ColorVariantsStrip product={product} />
-            </div>
-            <div className="order-3 lg:order-2 flex flex-col gap-6">
-              <ProductInfo product={product} detailsOnly />
-            </div>
+          {/* 3. Colonne achat */}
+          <div ref={buyBoxRef} className="flex flex-col gap-6 lg:sticky lg:top-24">
+            <ProductHeaderBlock product={product} isNew={isNewImport} className="hidden lg:flex" />
+            <ProductBuyBox
+              product={product}
+              selectedSize={selectedSize}
+              selectedColor={selectedColor}
+              quantity={quantity}
+              onSizeChange={setSelectedSize}
+              onColorChange={handleColorChange}
+              onQuantityChange={setQuantity}
+              onAddToCart={handleAddToCart}
+            />
+            <ProductTrustBar category={product.category} layout="grid" className="sm:grid-cols-1" />
           </div>
         </div>
+
+        {/* 4. Description / caractéristiques / matière & entretien */}
+        <ProductInfoAccordion product={product} className="mt-8 md:mt-14" />
 
         {/* Customer reviews */}
         <ProductReviews productId={product.id} productName={product.name} />
@@ -219,7 +237,6 @@ export default function ProductDetail() {
 
         {/* Personalized recommendations from browsing history */}
         <ProductStrip eyebrow="RECOMMANDÉ POUR VOUS" title="Sélection basée sur vos visites" products={recommended} />
-
 
         {/* Complete the look */}
         <CompleteLook productId={product.id} onAddToCart={addItem} />
@@ -234,10 +251,17 @@ export default function ProductDetail() {
         />
       )}
 
-      <VirtualTryOnButton product={product} selectedColor={selectedColor} />
+      {/* Barre d'achat collante mobile */}
+      <MobileBuyBar
+        product={product}
+        selectedSize={selectedSize}
+        onAddToCart={handleAddToCart}
+        anchorRef={buyBoxRef}
+      />
     </div>
   );
 }
+
 
 /* ------------------------------------------------------------------ */
 /* Complete The Look Section                                            */
