@@ -7,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-type Action = "name" | "subtitle" | "description" | "material" | "care" | "attributes" | "color-name";
+type Action = "name" | "subtitle" | "description" | "material" | "care" | "attributes" | "color-name" | "swatch";
 
 interface Body {
   action: Action;
@@ -134,6 +134,32 @@ N'invente aucun indice de performance (imperméabilité, températures, grammage
 La teinte doit correspondre exactement au hex fourni (ne change pas la famille de couleur). Exemples : "Noir Obsidienne", "Vert Sapin", "Beige Sable", "Gris Béton". Réponse : le nom seul, sans guillemets.`,
         multimodal: false,
         tool: TEXT_TOOL,
+      };
+    case "swatch":
+      return {
+        user: `Analyse les photos et détermine la COULEUR DOMINANTE DU VÊTEMENT lui-même (pas le fond, pas la peau ou les cheveux du mannequin, pas les accessoires, pas les ombres).
+
+Renseigne :
+- "observations" : 2 à 4 constats visuels (type de vêtement, zone de couleur retenue, nuance perçue).
+- "hex" : le code hexadécimal exact au format #RRGGBB de cette couleur, mesuré sur une zone bien éclairée et représentative du tissu (évite les zones brûlées par la lumière ou dans l'ombre).
+- "label" : un nom de couleur mode en français, 1 à 3 mots, cohérent avec le hex (ex: "Rose Poudré", "Noir Obsidienne", "Beige Sable", "Vert Sapin").
+- "hex2" : uniquement si le vêtement est réellement bicolore de façon franche et équilibrée, le hex de la seconde couleur. Sinon, laisse vide.
+
+N'invente aucune matière ni performance. Si plusieurs coloris de produits différents apparaissent, retiens celui du vêtement principal porté au premier plan.${ctx(b)}`,
+        multimodal: true,
+        tool: {
+          name: "return_swatch",
+          params: {
+            type: "object",
+            properties: {
+              observations: { type: "array", items: { type: "string" } },
+              hex: { type: "string", description: "Format #RRGGBB" },
+              hex2: { type: "string", description: "Format #RRGGBB, vide si non bicolore" },
+              label: { type: "string" },
+            },
+            required: ["hex", "label"],
+          },
+        },
       };
     default:
       return {
