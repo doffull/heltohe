@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useCheckoutConfig, useSaveCheckoutConfig, type CheckoutConfig, type PaymentMethod, PAYMENT_GATEWAYS, DEFAULT_RELAY_MAP_SETTINGS } from '@/hooks/useCheckoutConfig';
+import { useGatewaySecrets, useSaveGatewaySecret, useDeleteGatewaySecret, type GatewaySecretStatus } from '@/hooks/useGatewaySecrets';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +21,8 @@ import {
   XCircle,
   Eye,
   EyeOff,
+  Lock,
+  ShieldCheck,
 } from 'lucide-react';
 
 export default function AdminCheckout() {
@@ -40,9 +43,47 @@ export default function AdminCheckout() {
 
   const [visibleKeys, setVisibleKeys] = useState<Record<string, boolean>>({});
 
+  // ── Clés secrètes (stockées côté serveur, jamais renvoyées) ──
+  const { data: secretsList } = useGatewaySecrets();
+  const saveSecretMutation = useSaveGatewaySecret();
+  const deleteSecretMutation = useDeleteGatewaySecret();
+  const [secretDrafts, setSecretDrafts] = useState<Record<string, string>>({});
+  const [savingSecret, setSavingSecret] = useState<string | null>(null);
+
+  const secretStatus = useMemo(() => {
+    const map: Record<string, GatewaySecretStatus | undefined> = {};
+    (secretsList ?? []).forEach(s => { map[s.gateway] = s; });
+    return map;
+  }, [secretsList]);
+
+  const saveSecret = async (gateway: string) => {
+    const secretKey = (secretDrafts[gateway] || '').trim();
+    if (!secretKey) return;
+    setSavingSecret(gateway);
+    try {
+      await saveSecretMutation.mutateAsync({ gateway, secretKey });
+      setSecretDrafts(prev => ({ ...prev, [gateway]: '' }));
+      toast({ title: 'Clé secrète enregistrée en sécurité' });
+    } catch (e: any) {
+      toast({ title: 'Erreur', description: e?.message, variant: 'destructive' });
+    } finally {
+      setSavingSecret(null);
+    }
+  };
+
+  const removeSecret = async (gateway: string) => {
+    try {
+      await deleteSecretMutation.mutateAsync(gateway);
+      toast({ title: 'Clé secrète supprimée' });
+    } catch (e: any) {
+      toast({ title: 'Erreur', description: e?.message, variant: 'destructive' });
+    }
+  };
+
   useEffect(() => {
     if (config) setForm(config);
   }, [config]);
+
 
   const handleSave = async () => {
     try {
