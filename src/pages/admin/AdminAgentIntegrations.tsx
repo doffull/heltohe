@@ -152,6 +152,19 @@ export default function AdminAgentIntegrations() {
       });
 
       const text = await res.text();
+      if (res.status === 401 || res.status === 403) {
+        // Attendu : le serveur MCP n'accepte que les jetons OAuth émis à un client
+        // enregistré (claim client_id). Un jeton de session applicative est refusé.
+        setTest({
+          status: 'ok',
+          message: 'Serveur MCP protégé — OAuth actif ✅',
+          details:
+            "Le point de connexion a refusé un jeton de session applicative (401), ce qui est le comportement attendu.\n" +
+            "Seuls les clients OAuth enregistrés (Claude, ChatGPT, Cursor…) peuvent appeler les outils.\n" +
+            'Pour un test réel : ajoutez l’URL MCP ci-dessus dans votre client IA, puis approuvez la connexion sur l’écran de consentement.',
+        });
+        return;
+      }
       if (!res.ok) {
         setTest({
           status: 'error',
