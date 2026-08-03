@@ -70,6 +70,9 @@ export default function Checkout() {
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
+  const payplugEnabled = Boolean(
+    checkoutConfig?.paymentMethods?.find(pm => pm.key === 'payplug')?.enabled,
+  );
   const [paidMethod, setPaidMethod] = useState<string | null>(null);
   const paidWithPaypal = paidMethod !== null;
 
