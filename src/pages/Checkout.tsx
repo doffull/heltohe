@@ -264,6 +264,8 @@ export default function Checkout() {
             <p className="text-sm font-bold hud-text flex items-center gap-2">
               <Shield className="h-4 w-4" style={{ color: `hsl(var(--step-confirm))` }} />
               INFORMATIONS DE PAIEMENT
+            </p>
+
             {paidWithPaypal ? (
               <>
                 <p className="text-[11px] sm:text-xs text-muted-foreground break-words">
