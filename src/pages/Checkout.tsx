@@ -747,7 +747,7 @@ export default function Checkout() {
                     buildPayload={buildPaypalPayload}
                     disabled={isProcessing || (deliveryMode === 'relay' && !selectedRelay)}
                     onPaid={({ orderNumber: num }) => {
-                      setPaidWithPaypal(true);
+                      setPaidMethod('PayPal');
                       setOrderNumber(num);
                       clearCart();
                       setStep('confirmation');
