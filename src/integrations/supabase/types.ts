@@ -1955,6 +1955,56 @@ export type Database = {
         }
         Relationships: []
       }
+      payplug_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          failure_message: string | null
+          id: string
+          is_live: boolean
+          order_id: string | null
+          payplug_payment_id: string
+          raw: Json
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          failure_message?: string | null
+          id?: string
+          is_live?: boolean
+          order_id?: string | null
+          payplug_payment_id: string
+          raw?: Json
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          failure_message?: string | null
+          id?: string
+          is_live?: boolean
+          order_id?: string | null
+          payplug_payment_id?: string
+          raw?: Json
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payplug_transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_category_order: {
         Row: {
           category_slug: string

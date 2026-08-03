@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
@@ -45,6 +45,7 @@ interface RelayPoint {
 
 import { PayPalCheckout, type PayPalCheckoutPayload } from '@/components/payments/PayPalCheckout';
 import { PayPalMessaging } from '@/components/payments/PayPalMessaging';
+import { PayPlugCheckout } from '@/components/payments/PayPlugCheckout';
 
 export default function Checkout() {
 
@@ -69,7 +70,58 @@ export default function Checkout() {
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
-  const [paidWithPaypal, setPaidWithPaypal] = useState(false);
+  const payplugEnabled = Boolean(
+    checkoutConfig?.paymentMethods?.find(pm => pm.key === 'payplug')?.enabled,
+  );
+  const [paidMethod, setPaidMethod] = useState<string | null>(null);
+  const paidWithPaypal = paidMethod !== null;
+
+  // Retour depuis la page de paiement PayPlug : on vérifie le statut côté serveur.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const flag = params.get('payplug');
+    if (!flag) return;
+    const num = params.get('order') || '';
+    window.history.replaceState({}, '', '/checkout');
+    if (flag === 'cancel' || !num) {
+      toast({ title: 'Paiement annulé', description: 'Vous pouvez réessayer quand vous le souhaitez.' });
+      return;
+    }
+    (async () => {
+      setIsProcessing(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('payplug', {
+          body: { action: 'check-order', orderNumber: num },
+        });
+        if (error) throw error;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const res = data as any;
+        if (res?.paid) {
+          setPaidMethod('PayPlug (carte bancaire)');
+          setOrderNumber(num);
+          clearCart();
+          setStep('confirmation');
+        } else {
+          toast({
+            title: 'Paiement non confirmé',
+            description: 'Le paiement PayPlug n’a pas été validé. Veuillez réessayer.',
+            variant: 'destructive',
+          });
+        }
+      } catch {
+        toast({
+          title: 'Vérification impossible',
+          description: 'Impossible de vérifier votre paiement PayPlug.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsProcessing(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+
 
 
   // Relay point state
@@ -314,10 +366,10 @@ export default function Checkout() {
             {paidWithPaypal ? (
               <>
                 <p className="text-[11px] sm:text-xs text-muted-foreground break-words">
-                  Votre paiement PayPal a été accepté. Aucune action supplémentaire n'est requise.
+                  Votre paiement {paidMethod} a été accepté. Aucune action supplémentaire n'est requise.
                 </p>
                 <div className="border border-border chamfer-hud-sm p-3 text-[11px] sm:text-xs space-y-1 font-mono">
-                  <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Moyen :</span><span className="text-right break-words">PayPal</span></div>
+                  <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Moyen :</span><span className="text-right break-words">{paidMethod}</span></div>
                   <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Montant :</span><span className="font-bold" style={{ color: `hsl(var(--step-confirm))` }}>{orderTotal.toFixed(2)} €</span></div>
                   <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Référence :</span><span className="text-right break-all">{orderNumber}</span></div>
                 </div>
@@ -698,13 +750,22 @@ export default function Checkout() {
                     buildPayload={buildPaypalPayload}
                     disabled={isProcessing || (deliveryMode === 'relay' && !selectedRelay)}
                     onPaid={({ orderNumber: num }) => {
-                      setPaidWithPaypal(true);
+                      setPaidMethod('PayPal');
                       setOrderNumber(num);
                       clearCart();
                       setStep('confirmation');
                     }}
                   />
                 </div>
+
+                {/* PayPlug : carte bancaire (page de paiement sécurisée) */}
+                {payplugEnabled && (
+                  <PayPlugCheckout
+                    buildPayload={buildPaypalPayload}
+                    amount={orderTotal}
+                    disabled={isProcessing || (deliveryMode === 'relay' && !selectedRelay)}
+                  />
+                )}
 
 
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
