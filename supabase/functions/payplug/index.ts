@@ -189,8 +189,9 @@ Deno.serve(async (req) => {
           shipping: {
             ...person,
             // Valeurs autorisées par PayPlug : BILLING, VERIFIED, NEW,
-            // SHIP_TO_STORE, PICKUP_POINT, OTHER.
-            delivery_type: deliveryMode === "relay" ? "PICKUP_POINT" : "BILLING",
+            // SHIP_TO_STORE, OTHER. (PICKUP_POINT n'est pas accepté par l'API.)
+            delivery_type: deliveryMode === "relay" ? "SHIP_TO_STORE" : "BILLING",
+
           },
           hosted_payment: {
             return_url: `${returnBase}?payplug=return&order=${orderNumber}`,
