@@ -45,6 +45,7 @@ interface RelayPoint {
 
 import { PayPalCheckout, type PayPalCheckoutPayload } from '@/components/payments/PayPalCheckout';
 import { PayPalMessaging } from '@/components/payments/PayPalMessaging';
+import { PayPlugCheckout } from '@/components/payments/PayPlugCheckout';
 
 export default function Checkout() {
 
