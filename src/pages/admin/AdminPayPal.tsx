@@ -35,13 +35,16 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import {
   PayPalConfig,
+  PayPalTransaction,
   usePayPalConfig,
   useSavePayPalConfig,
   usePayPalTransactions,
+  usePayPalTransactionEvents,
   usePayPalWebhookEvents,
   usePayPalCredentialStatus,
   useRefundPayPal,
 } from '@/hooks/usePayPalConfig';
+
 import { PayPalMessaging } from '@/components/payments/PayPalMessaging';
 
 const WEBHOOK_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/paypal-webhook`;
