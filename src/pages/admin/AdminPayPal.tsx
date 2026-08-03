@@ -491,7 +491,7 @@ export default function AdminPayPal() {
                       </td>
                       <td className="p-2 text-right whitespace-nowrap space-x-1">
                         <Button size="sm" variant="ghost" onClick={() => setHistoryTx(tx)}>
-                          <History className="h-3.5 w-3.5 mr-1" /> Historique
+                          <HistoryIcon className="h-3.5 w-3.5 mr-1" /> Historique
                         </Button>
                         <Button
                           size="sm"
@@ -516,7 +516,7 @@ export default function AdminPayPal() {
             <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
-                  <History className="h-4 w-4" /> Historique du paiement
+                  <HistoryIcon className="h-4 w-4" /> Historique du paiement
                 </DialogTitle>
               </DialogHeader>
               {historyTx && (
