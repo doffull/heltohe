@@ -363,10 +363,10 @@ export default function Checkout() {
             {paidWithPaypal ? (
               <>
                 <p className="text-[11px] sm:text-xs text-muted-foreground break-words">
-                  Votre paiement PayPal a été accepté. Aucune action supplémentaire n'est requise.
+                  Votre paiement {paidMethod} a été accepté. Aucune action supplémentaire n'est requise.
                 </p>
                 <div className="border border-border chamfer-hud-sm p-3 text-[11px] sm:text-xs space-y-1 font-mono">
-                  <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Moyen :</span><span className="text-right break-words">PayPal</span></div>
+                  <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Moyen :</span><span className="text-right break-words">{paidMethod}</span></div>
                   <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Montant :</span><span className="font-bold" style={{ color: `hsl(var(--step-confirm))` }}>{orderTotal.toFixed(2)} €</span></div>
                   <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Référence :</span><span className="text-right break-all">{orderNumber}</span></div>
                 </div>
