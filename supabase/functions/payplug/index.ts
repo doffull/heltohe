@@ -54,8 +54,9 @@ async function payplugFetch(key: string, path: string, init: RequestInit = {}) {
   const text = await res.text();
   const body = text ? JSON.parse(text) : {};
   if (!res.ok) {
-    const detail = body?.message || body?.details || "Erreur PayPlug";
-    throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+    const msg = body?.message ? String(body.message) : "Erreur PayPlug";
+    const details = body?.details ? ` ${JSON.stringify(body.details)}` : "";
+    throw new Error(`${msg}${details}`);
   }
   return body;
 }
@@ -163,6 +164,20 @@ Deno.serve(async (req) => {
 
       const fullName = String(orderData.customer_name || "").trim();
       const [firstName, ...rest] = fullName.split(" ");
+      const email = String(orderData.customer_email || "").trim();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        return json({ error: "Adresse e-mail invalide pour le paiement" }, 400);
+      }
+      const person = {
+        first_name: (firstName || "Client").slice(0, 30),
+        last_name: (rest.join(" ") || "LVTK").slice(0, 30),
+        email,
+        address1: String(orderData.customer_address || "").slice(0, 255) || "N/A",
+        postcode: String(orderData.customer_zip || "").slice(0, 16) || "00000",
+        city: String(orderData.customer_city || "").slice(0, 63) || "N/A",
+        country: "FR",
+        language: "fr",
+      };
       const key = await secretKey();
 
       const payment = await payplugFetch(key, "/payments", {
@@ -170,27 +185,12 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           amount: amountCents,
           currency: "EUR",
-          billing: {
-            title: null,
-            first_name: firstName || "Client",
-            last_name: rest.join(" ") || "LVTK",
-            email: String(orderData.customer_email || ""),
-            address1: String(orderData.customer_address || "").slice(0, 255),
-            postcode: String(orderData.customer_zip || ""),
-            city: String(orderData.customer_city || ""),
-            country: "FR",
-            language: "fr",
-          },
+          billing: person,
           shipping: {
-            first_name: firstName || "Client",
-            last_name: rest.join(" ") || "LVTK",
-            email: String(orderData.customer_email || ""),
-            address1: String(orderData.customer_address || "").slice(0, 255),
-            postcode: String(orderData.customer_zip || ""),
-            city: String(orderData.customer_city || ""),
-            country: "FR",
-            language: "fr",
-            delivery_type: deliveryMode === "relay" ? "PICKUP_POINT" : "SHIP_TO_BILLING",
+            ...person,
+            // Valeurs autorisées par PayPlug : BILLING, VERIFIED, NEW,
+            // SHIP_TO_STORE, PICKUP_POINT, OTHER.
+            delivery_type: deliveryMode === "relay" ? "PICKUP_POINT" : "BILLING",
           },
           hosted_payment: {
             return_url: `${returnBase}?payplug=return&order=${orderNumber}`,
