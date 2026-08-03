@@ -116,6 +116,8 @@ const SIDEBAR_ITEMS = [
   { icon: ShoppingCart, label: 'Commandes', href: '/admin/commandes' },
   { icon: ClipboardCheck, label: 'Préparations', href: '/admin/preparations' },
   { icon: CreditCard, label: 'Checkout', href: '/admin/checkout' },
+  { icon: CreditCard, label: 'PayPal', href: '/admin/paypal' },
+
   { icon: Users, label: 'Clients', href: '/admin/clients' },
   { icon: FileText, label: 'Pages', href: '/admin/pages' },
   { icon: FolderOpen, label: 'Média', href: '/admin/media' },
