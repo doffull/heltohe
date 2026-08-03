@@ -87,6 +87,8 @@ export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin/produits': '#3B82F6',
   '/admin/commandes': '#F59E0B',
   '/admin/checkout': '#10B981',
+  '/admin/paypal': '#0070BA',
+
   '/admin/clients': '#8B5CF6',
   '/admin/pages': '#6366F1',
   '/admin/media': '#EC4899',
