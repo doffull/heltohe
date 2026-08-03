@@ -487,6 +487,20 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
             onSelect={(url) => setFormData(prev => ({ ...prev, image: url }))}
           />
 
+          {/* IA : nouvelle pose / expression (super admin) */}
+          <AiPoseButton
+            className="w-full"
+            imageUrl={formData.image}
+            onReplace={(url) => setFormData(prev => ({ ...prev, image: url }))}
+            onAddToGallery={(url) =>
+              setFormData(prev => ({
+                ...prev,
+                galleryImages: Array.from(new Set([...(prev.galleryImages || []), url])).slice(0, 10),
+              }))
+            }
+          />
+
+
           {/* Pastille de couleur automatique (depuis les images) */}
           <div className="space-y-2 border border-primary/30 bg-primary/5 p-3">
             <div className="flex items-center justify-between gap-2">
