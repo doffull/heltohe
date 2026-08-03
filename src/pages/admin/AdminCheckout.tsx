@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useCheckoutConfig, useSaveCheckoutConfig, type CheckoutConfig, type PaymentMethod, PAYMENT_GATEWAYS, DEFAULT_RELAY_MAP_SETTINGS } from '@/hooks/useCheckoutConfig';
+import { useGatewaySecrets, useSaveGatewaySecret, useDeleteGatewaySecret, type GatewaySecretStatus } from '@/hooks/useGatewaySecrets';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +21,8 @@ import {
   XCircle,
   Eye,
   EyeOff,
+  Lock,
+  ShieldCheck,
 } from 'lucide-react';
 
 export default function AdminCheckout() {
@@ -40,9 +43,47 @@ export default function AdminCheckout() {
 
   const [visibleKeys, setVisibleKeys] = useState<Record<string, boolean>>({});
 
+  // ── Clés secrètes (stockées côté serveur, jamais renvoyées) ──
+  const { data: secretsList } = useGatewaySecrets();
+  const saveSecretMutation = useSaveGatewaySecret();
+  const deleteSecretMutation = useDeleteGatewaySecret();
+  const [secretDrafts, setSecretDrafts] = useState<Record<string, string>>({});
+  const [savingSecret, setSavingSecret] = useState<string | null>(null);
+
+  const secretStatus = useMemo(() => {
+    const map: Record<string, GatewaySecretStatus | undefined> = {};
+    (secretsList ?? []).forEach(s => { map[s.gateway] = s; });
+    return map;
+  }, [secretsList]);
+
+  const saveSecret = async (gateway: string) => {
+    const secretKey = (secretDrafts[gateway] || '').trim();
+    if (!secretKey) return;
+    setSavingSecret(gateway);
+    try {
+      await saveSecretMutation.mutateAsync({ gateway, secretKey });
+      setSecretDrafts(prev => ({ ...prev, [gateway]: '' }));
+      toast({ title: 'Clé secrète enregistrée en sécurité' });
+    } catch (e: any) {
+      toast({ title: 'Erreur', description: e?.message, variant: 'destructive' });
+    } finally {
+      setSavingSecret(null);
+    }
+  };
+
+  const removeSecret = async (gateway: string) => {
+    try {
+      await deleteSecretMutation.mutateAsync(gateway);
+      toast({ title: 'Clé secrète supprimée' });
+    } catch (e: any) {
+      toast({ title: 'Erreur', description: e?.message, variant: 'destructive' });
+    }
+  };
+
   useEffect(() => {
     if (config) setForm(config);
   }, [config]);
+
 
   const handleSave = async () => {
     try {
@@ -199,17 +240,54 @@ export default function AdminCheckout() {
                         </div>
                         <div className="space-y-1.5">
                           <Label className="text-xs text-muted-foreground">Clé API secrète</Label>
-                          <div className="relative">
+                          <div className="flex gap-2">
                             <Input
                               type="password"
-                              placeholder="sk_live_... (stockée côté serveur)"
-                              disabled
-                              className="pr-10"
+                              autoComplete="off"
+                              placeholder={
+                                secretStatus[pm.key]
+                                  ? `•••••••••••••${secretStatus[pm.key]?.last4 ?? ''}`
+                                  : 'sk_live_... (stockée côté serveur)'
+                              }
+                              value={secretDrafts[pm.key] ?? ''}
+                              onChange={e =>
+                                setSecretDrafts(prev => ({ ...prev, [pm.key]: e.target.value }))
+                              }
                             />
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={
+                                !(secretDrafts[pm.key] || '').trim() || savingSecret === pm.key
+                              }
+                              onClick={() => saveSecret(pm.key)}
+                            >
+                              {savingSecret === pm.key ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Lock className="h-4 w-4" />
+                              )}
+                            </Button>
                           </div>
-                          <p className="text-[10px] text-muted-foreground">
-                            Les clés secrètes sont gérées de manière sécurisée côté serveur.
-                          </p>
+                          {secretStatus[pm.key] ? (
+                            <div className="flex items-center gap-2 text-[10px] text-green-600">
+                              <ShieldCheck className="h-3 w-3" />
+                              Clé enregistrée (•••{secretStatus[pm.key]?.last4}) —{' '}
+                              {new Date(secretStatus[pm.key]!.updated_at).toLocaleDateString('fr-FR')}
+                              <button
+                                type="button"
+                                className="text-destructive hover:underline"
+                                onClick={() => removeSecret(pm.key)}
+                              >
+                                Supprimer
+                              </button>
+                            </div>
+                          ) : (
+                            <p className="text-[10px] text-muted-foreground">
+                              Chiffrée côté serveur, jamais renvoyée au navigateur.
+                            </p>
+                          )}
                         </div>
                       </div>
                       {pm.docUrl && (
