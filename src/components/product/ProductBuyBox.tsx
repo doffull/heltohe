@@ -85,6 +85,13 @@ export default function ProductBuyBox({
       {/* Estimation de livraison */}
       <ProductDeliveryEstimate />
 
+      {/* PayPal — paiement en 3x/4x sans frais */}
+      <PayPalMessaging
+        amount={(product.salePrice ?? product.price) * Math.max(1, quantity)}
+        placement="product"
+      />
+
+
       {/* Essayage virtuel — toujours visible */}
       <VirtualTryOnButton product={product} selectedColor={selectedColor} variant="inline" className="w-full" />
 
