@@ -38,12 +38,12 @@ async function loadConfig() {
 
 function credsFor(env: string): PayPalCreds {
   const live = env === "live";
-  const clientId = (live
+  const clientId = ((live
     ? Deno.env.get("PAYPAL_LIVE_CLIENT_ID")
-    : Deno.env.get("PAYPAL_SANDBOX_CLIENT_ID")) ?? "";
-  const secret = (live
+    : Deno.env.get("PAYPAL_SANDBOX_CLIENT_ID")) ?? "").trim();
+  const secret = ((live
     ? Deno.env.get("PAYPAL_LIVE_CLIENT_SECRET")
-    : Deno.env.get("PAYPAL_SANDBOX_CLIENT_SECRET")) ?? "";
+    : Deno.env.get("PAYPAL_SANDBOX_CLIENT_SECRET")) ?? "").trim();
   return {
     clientId,
     secret,
@@ -67,9 +67,19 @@ async function accessToken(creds: PayPalCreds): Promise<string> {
     body: "grant_type=client_credentials",
   });
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(body?.error_description || "Authentification PayPal échouée");
+  if (!res.ok) {
+    const raw = String(body?.error_description || body?.error || "Authentification PayPal échouée");
+    if (/authentication/i.test(raw)) {
+      throw new Error(
+        `PayPal a refusé les identifiants ${creds.env} (Client Authentication failed). ` +
+          `Vérifiez que le Client ID et le Secret proviennent bien d'une application ${creds.env === "sandbox" ? "Sandbox" : "Live"} du même compte PayPal Developer, sans espace ni retour à la ligne.`,
+      );
+    }
+    throw new Error(raw);
+  }
   return body.access_token as string;
 }
+
 
 async function paypalFetch(
   creds: PayPalCreds,
