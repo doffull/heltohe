@@ -326,6 +326,8 @@ export default function Admin() {
             <Route path="commandes/*" element={<AdminOrders />} />
             <Route path="preparations/*" element={<AdminPreparations />} />
             <Route path="checkout/*" element={<AdminCheckout />} />
+            <Route path="paypal/*" element={<AdminPayPal />} />
+
             <Route path="clients/*" element={<AdminCustomers />} />
             <Route path="pages/*" element={<AdminPages />} />
             <Route path="media/*" element={<AdminMedia />} />
