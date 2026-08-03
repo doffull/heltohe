@@ -1761,6 +1761,30 @@ export type Database = {
           },
         ]
       }
+      payment_gateway_secrets: {
+        Row: {
+          gateway: string
+          last4: string | null
+          secret_key: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          gateway: string
+          last4?: string | null
+          secret_key: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          gateway?: string
+          last4?: string | null
+          secret_key?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       product_category_order: {
         Row: {
           category_slug: string
