@@ -626,6 +626,22 @@ export default function Checkout() {
                   </div>
                 </div>
 
+                {/* PayPal : compte PayPal, 3x/4x sans frais, carte & wallets */}
+                <div className="space-y-3">
+                  <PayPalMessaging amount={orderTotal} placement="payment" />
+                  <PayPalCheckout
+                    buildPayload={buildPaypalPayload}
+                    disabled={isProcessing || (deliveryMode === 'relay' && !selectedRelay)}
+                    onPaid={({ orderNumber: num }) => {
+                      setPaidWithPaypal(true);
+                      setOrderNumber(num);
+                      clearCart();
+                      setStep('confirmation');
+                    }}
+                  />
+                </div>
+
+
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                   <Button variant="outline" onClick={() => setStep('address')} className="sm:flex-1 h-11">
                     <ArrowLeft className="h-4 w-4 mr-2" />
