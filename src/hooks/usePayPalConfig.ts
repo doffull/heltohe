@@ -162,6 +162,17 @@ export interface PayPalTransaction {
   payer_name: string | null;
   refunded_amount: number;
   created_at: string;
+  updated_at?: string;
+  /** Commande boutique liée (jointure). */
+  order?: {
+    id: string;
+    order_number: string;
+    status: string;
+    payment_status: string;
+    total: number;
+    customer_email: string | null;
+    updated_at: string | null;
+  } | null;
 }
 
 export function usePayPalTransactions() {
@@ -170,7 +181,9 @@ export function usePayPalTransactions() {
     queryFn: async (): Promise<PayPalTransaction[]> => {
       const { data, error } = await supabase
         .from('paypal_transactions' as never)
-        .select('*')
+        .select(
+          '*, order:orders(id, order_number, status, payment_status, total, customer_email, updated_at)',
+        )
         .order('created_at' as never, { ascending: false })
         .limit(200);
       if (error) throw error;
@@ -178,6 +191,34 @@ export function usePayPalTransactions() {
     },
   });
 }
+
+/** Historique des changements de statut de paiement issus des webhooks PayPal. */
+export interface PayPalTransactionEvent {
+  id: string;
+  event_type: string;
+  verification_status: string | null;
+  processed: boolean;
+  error_message: string | null;
+  created_at: string;
+}
+
+export function usePayPalTransactionEvents(tx?: PayPalTransaction | null) {
+  const ids = [tx?.paypal_order_id, tx?.capture_id].filter(Boolean) as string[];
+  return useQuery({
+    queryKey: ['paypal_transaction_events', ids],
+    enabled: ids.length > 0,
+    queryFn: async (): Promise<PayPalTransactionEvent[]> => {
+      const { data, error } = await supabase
+        .from('paypal_webhook_events' as never)
+        .select('id, event_type, verification_status, processed, error_message, created_at')
+        .in('resource_id' as never, ids as never)
+        .order('created_at' as never, { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as PayPalTransactionEvent[];
+    },
+  });
+}
+
 
 export interface PayPalWebhookEvent {
   id: string;

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   CreditCard,
   Loader2,
@@ -11,7 +12,11 @@ import {
   Copy,
   CheckCircle2,
   XCircle,
+  ExternalLink,
+  History as HistoryIcon,
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,13 +35,16 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import {
   PayPalConfig,
+  PayPalTransaction,
   usePayPalConfig,
   useSavePayPalConfig,
   usePayPalTransactions,
+  usePayPalTransactionEvents,
   usePayPalWebhookEvents,
   usePayPalCredentialStatus,
   useRefundPayPal,
 } from '@/hooks/usePayPalConfig';
+
 import { PayPalMessaging } from '@/components/payments/PayPalMessaging';
 
 const WEBHOOK_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/paypal-webhook`;
@@ -74,6 +82,9 @@ export default function AdminPayPal() {
   const [form, setForm] = useState<PayPalConfig | null>(null);
   const [testing, setTesting] = useState<'sandbox' | 'live' | null>(null);
   const [refundNote, setRefundNote] = useState('');
+  const [historyTx, setHistoryTx] = useState<PayPalTransaction | null>(null);
+  const { data: txEvents } = usePayPalTransactionEvents(historyTx);
+
 
   useEffect(() => {
     if (config && !form) setForm(config);
@@ -442,11 +453,13 @@ export default function AdminPayPal() {
                 <tr className="text-left">
                   <th className="p-2">Date</th>
                   <th className="p-2">Commande PayPal</th>
+                  <th className="p-2">Commande boutique</th>
+                  <th className="p-2">Paiement</th>
                   <th className="p-2">Acheteur</th>
                   <th className="p-2">Montant</th>
                   <th className="p-2">Remboursé</th>
                   <th className="p-2">Statut</th>
-                  <th className="p-2 text-right">Action</th>
+                  <th className="p-2 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -456,13 +469,36 @@ export default function AdminPayPal() {
                     <tr key={tx.id} className="border-t border-border">
                       <td className="p-2 whitespace-nowrap">{new Date(tx.created_at).toLocaleString('fr-FR')}</td>
                       <td className="p-2 font-mono">{tx.paypal_order_id}</td>
+                      <td className="p-2 whitespace-nowrap">
+                        {tx.order ? (
+                          <Link
+                            to={`/admin/orders?q=${encodeURIComponent(tx.order.order_number)}`}
+                            className="inline-flex items-center gap-1 font-mono underline underline-offset-2"
+                          >
+                            {tx.order.order_number}
+                            <ExternalLink className="h-3 w-3" />
+                          </Link>
+                        ) : (
+                          <span className="text-muted-foreground">Non liée</span>
+                        )}
+                      </td>
+                      <td className="p-2">
+                        {tx.order ? (
+                          <Badge variant={tx.order.payment_status === 'paid' ? 'default' : 'secondary'}>
+                            {tx.order.payment_status}
+                          </Badge>
+                        ) : '—'}
+                      </td>
                       <td className="p-2">{tx.payer_email || tx.payer_name || '—'}</td>
                       <td className="p-2 whitespace-nowrap">{Number(tx.amount).toFixed(2)} {tx.currency}</td>
                       <td className="p-2 whitespace-nowrap">{Number(tx.refunded_amount || 0).toFixed(2)}</td>
                       <td className="p-2">
                         <Badge variant={tx.status === 'completed' ? 'default' : 'secondary'}>{tx.status}</Badge>
                       </td>
-                      <td className="p-2 text-right">
+                      <td className="p-2 text-right whitespace-nowrap space-x-1">
+                        <Button size="sm" variant="ghost" onClick={() => setHistoryTx(tx)}>
+                          <HistoryIcon className="h-3.5 w-3.5 mr-1" /> Historique
+                        </Button>
                         <Button
                           size="sm"
                           variant="outline"
@@ -476,12 +512,64 @@ export default function AdminPayPal() {
                   );
                 })}
                 {(transactions ?? []).length === 0 && (
-                  <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Aucune transaction PayPal</td></tr>
+                  <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Aucune transaction PayPal</td></tr>
                 )}
               </tbody>
             </table>
           </div>
+
+          <Dialog open={!!historyTx} onOpenChange={o => !o && setHistoryTx(null)}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <HistoryIcon className="h-4 w-4" /> Historique du paiement
+                </DialogTitle>
+              </DialogHeader>
+              {historyTx && (
+                <div className="space-y-4 text-xs">
+                  <div className="space-y-1">
+                    <p><span className="text-muted-foreground">Commande PayPal :</span> <span className="font-mono">{historyTx.paypal_order_id}</span></p>
+                    <p><span className="text-muted-foreground">Capture :</span> <span className="font-mono">{historyTx.capture_id || '—'}</span></p>
+                    <p>
+                      <span className="text-muted-foreground">Commande boutique :</span>{' '}
+                      {historyTx.order ? (
+                        <Link to={`/admin/orders?q=${encodeURIComponent(historyTx.order.order_number)}`} className="font-mono underline">
+                          {historyTx.order.order_number}
+                        </Link>
+                      ) : 'Non liée'}
+                    </p>
+                    {historyTx.order && (
+                      <p>
+                        <span className="text-muted-foreground">Statut commande :</span> {historyTx.order.status} · {historyTx.order.payment_status}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <p className="font-semibold">Changements de statut</p>
+                    <div className="border border-border rounded-lg divide-y divide-border">
+                      <div className="p-2 flex items-center justify-between">
+                        <span>Transaction créée</span>
+                        <span className="text-muted-foreground">{new Date(historyTx.created_at).toLocaleString('fr-FR')}</span>
+                      </div>
+                      {(txEvents ?? []).map(ev => (
+                        <div key={ev.id} className="p-2 flex items-center justify-between gap-2">
+                          <span className="font-mono">{ev.event_type}</span>
+                          <span className="text-muted-foreground whitespace-nowrap">
+                            {ev.verification_status || '—'} · {new Date(ev.created_at).toLocaleString('fr-FR')}
+                          </span>
+                        </div>
+                      ))}
+                      {(txEvents ?? []).length === 0 && (
+                        <div className="p-3 text-center text-muted-foreground">Aucun événement webhook reçu pour cette transaction</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
         </TabsContent>
+
 
         {/* WEBHOOKS */}
         <TabsContent value="webhooks" className="space-y-4 pt-4">
@@ -519,6 +607,48 @@ export default function AdminPayPal() {
               </ul>
             </div>
           </div>
+
+          {/* État de réception des webhooks (aucun secret affiché) */}
+          {(() => {
+            const list = events ?? [];
+            const last = list[0];
+            const lastVerified = list.find(e => e.verification_status === 'SUCCESS');
+            const failures = list.filter(
+              e => e.verification_status && e.verification_status !== 'SUCCESS',
+            ).length;
+            const unprocessed = list.filter(e => !e.processed).length;
+            return (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="border border-border rounded-lg p-3 space-y-1">
+                  <p className="text-xs text-muted-foreground">Dernière réception</p>
+                  <p className="text-sm font-semibold">
+                    {last ? new Date(last.created_at).toLocaleString('fr-FR') : 'Jamais'}
+                  </p>
+                  {last && <p className="text-[11px] font-mono text-muted-foreground">{last.event_type}</p>}
+                </div>
+                <div className="border border-border rounded-lg p-3 space-y-1">
+                  <p className="text-xs text-muted-foreground">Dernière vérification OK</p>
+                  <p className="text-sm font-semibold">
+                    {lastVerified ? new Date(lastVerified.created_at).toLocaleString('fr-FR') : '—'}
+                  </p>
+                  <StatusPill
+                    ok={!!form.webhookId}
+                    label={form.webhookId ? 'Webhook ID configuré' : 'Webhook ID manquant'}
+                  />
+                </div>
+                <div className="border border-border rounded-lg p-3 space-y-1">
+                  <p className="text-xs text-muted-foreground">Signatures en échec</p>
+                  <p className="text-sm font-semibold">{failures}</p>
+                  <StatusPill ok={failures === 0} label={failures === 0 ? 'Aucune anomalie' : 'À vérifier'} />
+                </div>
+                <div className="border border-border rounded-lg p-3 space-y-1">
+                  <p className="text-xs text-muted-foreground">Non traités</p>
+                  <p className="text-sm font-semibold">{unprocessed}</p>
+                  <StatusPill ok={unprocessed === 0} label={unprocessed === 0 ? 'À jour' : 'En attente'} />
+                </div>
+              </div>
+            );
+          })()}
 
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">{events?.length ?? 0} événement(s) reçu(s)</p>
