@@ -1785,6 +1785,176 @@ export type Database = {
         }
         Relationships: []
       }
+      paypal_config: {
+        Row: {
+          brand_name: string | null
+          button_style: Json
+          client_id_live: string | null
+          client_id_sandbox: string | null
+          config_key: string
+          created_at: string
+          currency: string
+          enable_card_fields: boolean
+          enable_messaging: boolean
+          enable_pay_later: boolean
+          enable_paypal_button: boolean
+          enable_venmo: boolean
+          enable_wallets: boolean
+          enabled: boolean
+          environment: string
+          id: string
+          intent: string
+          locale: string
+          messaging_placements: Json
+          updated_at: string
+          webhook_id: string | null
+        }
+        Insert: {
+          brand_name?: string | null
+          button_style?: Json
+          client_id_live?: string | null
+          client_id_sandbox?: string | null
+          config_key?: string
+          created_at?: string
+          currency?: string
+          enable_card_fields?: boolean
+          enable_messaging?: boolean
+          enable_pay_later?: boolean
+          enable_paypal_button?: boolean
+          enable_venmo?: boolean
+          enable_wallets?: boolean
+          enabled?: boolean
+          environment?: string
+          id?: string
+          intent?: string
+          locale?: string
+          messaging_placements?: Json
+          updated_at?: string
+          webhook_id?: string | null
+        }
+        Update: {
+          brand_name?: string | null
+          button_style?: Json
+          client_id_live?: string | null
+          client_id_sandbox?: string | null
+          config_key?: string
+          created_at?: string
+          currency?: string
+          enable_card_fields?: boolean
+          enable_messaging?: boolean
+          enable_pay_later?: boolean
+          enable_paypal_button?: boolean
+          enable_venmo?: boolean
+          enable_wallets?: boolean
+          enabled?: boolean
+          environment?: string
+          id?: string
+          intent?: string
+          locale?: string
+          messaging_placements?: Json
+          updated_at?: string
+          webhook_id?: string | null
+        }
+        Relationships: []
+      }
+      paypal_transactions: {
+        Row: {
+          amount: number
+          capture_id: string | null
+          created_at: string
+          currency: string
+          environment: string
+          funding_source: string | null
+          id: string
+          order_id: string | null
+          payer_email: string | null
+          payer_name: string | null
+          paypal_order_id: string
+          raw: Json
+          refunded_amount: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          capture_id?: string | null
+          created_at?: string
+          currency?: string
+          environment?: string
+          funding_source?: string | null
+          id?: string
+          order_id?: string | null
+          payer_email?: string | null
+          payer_name?: string | null
+          paypal_order_id: string
+          raw?: Json
+          refunded_amount?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          capture_id?: string | null
+          created_at?: string
+          currency?: string
+          environment?: string
+          funding_source?: string | null
+          id?: string
+          order_id?: string | null
+          payer_email?: string | null
+          payer_name?: string | null
+          paypal_order_id?: string
+          raw?: Json
+          refunded_amount?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "paypal_transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      paypal_webhook_events: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          event_id: string | null
+          event_type: string
+          id: string
+          payload: Json
+          processed: boolean
+          resource_id: string | null
+          verification_status: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          event_id?: string | null
+          event_type: string
+          id?: string
+          payload?: Json
+          processed?: boolean
+          resource_id?: string | null
+          verification_status?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          event_id?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          processed?: boolean
+          resource_id?: string | null
+          verification_status?: string | null
+        }
+        Relationships: []
+      }
       product_category_order: {
         Row: {
           category_slug: string
