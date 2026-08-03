@@ -4,8 +4,6 @@ import { Product } from '@/types';
 import { EditableProductField } from '@/components/visual-editor/EditableProductField';
 import { useAuth } from '@/context/AuthContext';
 import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
-import { isKidsProduct } from '@/lib/productFamily';
-import KidsNoReturnNotice from './KidsNoReturnNotice';
 import ProductRatingRow from './ProductRatingRow';
 import { cn } from '@/lib/utils';
 
@@ -158,13 +156,6 @@ export default function ProductHeaderBlock({ product, isNew, className }: Produc
           )}
         </span>
       </motion.div>
-
-      {/* Enfant : ni repris ni échangé */}
-      {isKidsProduct(product) && (
-        <motion.div {...fadeUp} transition={{ delay: 0.18 }}>
-          <KidsNoReturnNotice />
-        </motion.div>
-      )}
 
       {/* Mannequin */}
       {(hasModel || editing) && (
