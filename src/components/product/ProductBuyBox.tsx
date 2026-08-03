@@ -9,6 +9,8 @@ import SizeGuideModal from './SizeGuideModal';
 import { SizeGuideAIModal } from './SizeGuideAIModal';
 import VirtualTryOnButton from './VirtualTryOnButton';
 import ProductDeliveryEstimate from './ProductDeliveryEstimate';
+import { PayPalMessaging } from '@/components/payments/PayPalMessaging';
+
 import type { SizeCategory } from '@/lib/sizeCharts';
 import { cn } from '@/lib/utils';
 
