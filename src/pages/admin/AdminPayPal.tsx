@@ -82,6 +82,9 @@ export default function AdminPayPal() {
   const [form, setForm] = useState<PayPalConfig | null>(null);
   const [testing, setTesting] = useState<'sandbox' | 'live' | null>(null);
   const [refundNote, setRefundNote] = useState('');
+  const [historyTx, setHistoryTx] = useState<PayPalTransaction | null>(null);
+  const { data: txEvents } = usePayPalTransactionEvents(historyTx);
+
 
   useEffect(() => {
     if (config && !form) setForm(config);
