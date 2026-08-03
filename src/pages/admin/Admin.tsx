@@ -76,6 +76,8 @@ import AdminPageTemplates from './AdminPageTemplates';
 import AdminReviews from './AdminReviews';
 import AdminAgentIntegrations from './AdminAgentIntegrations';
 import AdminProductBadges from './AdminProductBadges';
+import AdminPayPal from './AdminPayPal';
+
 import { AdminSaveBar } from '@/components/admin/AdminSaveBar';
 
 
@@ -85,6 +87,8 @@ export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin/produits': '#3B82F6',
   '/admin/commandes': '#F59E0B',
   '/admin/checkout': '#10B981',
+  '/admin/paypal': '#0070BA',
+
   '/admin/clients': '#8B5CF6',
   '/admin/pages': '#6366F1',
   '/admin/media': '#EC4899',
@@ -114,6 +118,8 @@ const SIDEBAR_ITEMS = [
   { icon: ShoppingCart, label: 'Commandes', href: '/admin/commandes' },
   { icon: ClipboardCheck, label: 'Préparations', href: '/admin/preparations' },
   { icon: CreditCard, label: 'Checkout', href: '/admin/checkout' },
+  { icon: CreditCard, label: 'PayPal', href: '/admin/paypal' },
+
   { icon: Users, label: 'Clients', href: '/admin/clients' },
   { icon: FileText, label: 'Pages', href: '/admin/pages' },
   { icon: FolderOpen, label: 'Média', href: '/admin/media' },
@@ -322,6 +328,8 @@ export default function Admin() {
             <Route path="commandes/*" element={<AdminOrders />} />
             <Route path="preparations/*" element={<AdminPreparations />} />
             <Route path="checkout/*" element={<AdminCheckout />} />
+            <Route path="paypal/*" element={<AdminPayPal />} />
+
             <Route path="clients/*" element={<AdminCustomers />} />
             <Route path="pages/*" element={<AdminPages />} />
             <Route path="media/*" element={<AdminMedia />} />

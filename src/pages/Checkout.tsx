@@ -43,7 +43,11 @@ interface RelayPoint {
   typeDePoint?: string;
 }
 
+import { PayPalCheckout, type PayPalCheckoutPayload } from '@/components/payments/PayPalCheckout';
+import { PayPalMessaging } from '@/components/payments/PayPalMessaging';
+
 export default function Checkout() {
+
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -65,6 +69,8 @@ export default function Checkout() {
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
+  const [paidWithPaypal, setPaidWithPaypal] = useState(false);
+
 
   // Relay point state
   const [relayPoints, setRelayPoints] = useState<RelayPoint[]>([]);
@@ -155,6 +161,45 @@ export default function Checkout() {
     if (!h || h === '00:00-00:00' || h === '') return 'Fermé';
     return h;
   };
+
+  /** Charge utile envoyée au serveur PayPal : les prix sont recalculés côté serveur. */
+  const buildPaypalPayload = (): PayPalCheckoutPayload | null => {
+    if (!items.length) return null;
+    if (deliveryMode === 'relay' && !selectedRelay) {
+      toast({ title: 'Point relais requis', description: 'Veuillez sélectionner un point relais', variant: 'destructive' });
+      return null;
+    }
+    if (!form.email || !form.firstName || !form.lastName || !form.address || !form.city || !form.zip) {
+      toast({ title: 'Adresse incomplète', description: 'Complétez vos coordonnées de livraison', variant: 'destructive' });
+      return null;
+    }
+    const customerAddress = deliveryMode === 'relay' && form.relayInfo
+      ? `Point Relais: ${form.relayInfo} — ${form.address}`
+      : form.address;
+
+    return {
+      items: items.map(item => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        size: item.size,
+        color: item.color,
+      })),
+      promoCode: promoCode || '',
+      deliveryMode,
+      orderData: {
+        order_number: `LVTK-${Date.now().toString(36).toUpperCase()}`,
+        user_id: user?.id || '',
+        customer_email: form.email,
+        customer_name: `${form.firstName} ${form.lastName}`,
+        customer_phone: form.phone || '',
+        customer_address: customerAddress,
+        customer_city: form.city,
+        customer_zip: form.zip,
+        customer_country: form.country,
+      },
+    };
+  };
+
 
   const handlePlaceOrder = async () => {
     if (deliveryMode === 'relay' && !selectedRelay) {
@@ -265,17 +310,37 @@ export default function Checkout() {
               <Shield className="h-4 w-4" style={{ color: `hsl(var(--step-confirm))` }} />
               INFORMATIONS DE PAIEMENT
             </p>
-            <p className="text-[11px] sm:text-xs text-muted-foreground break-words">
-              Votre commande est en attente de paiement. Veuillez effectuer un virement bancaire avec la référence <span className="font-bold text-foreground break-all">{orderNumber}</span>.
-            </p>
-            <div className="border border-border chamfer-hud-sm p-3 text-[11px] sm:text-xs space-y-1 font-mono">
-              <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Bénéficiaire :</span><span className="text-right break-words">LVTK6 Concept</span></div>
-              <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Montant :</span><span className="font-bold" style={{ color: `hsl(var(--step-confirm))` }}>{orderTotal.toFixed(2)} €</span></div>
-              <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Référence :</span><span className="text-right break-all">{orderNumber}</span></div>
-            </div>
-            <p className="text-[11px] sm:text-xs text-muted-foreground break-words">
-              Une confirmation vous sera envoyée à <span className="font-medium text-foreground break-all">{form.email}</span> dès réception du paiement.
-            </p>
+
+            {paidWithPaypal ? (
+              <>
+                <p className="text-[11px] sm:text-xs text-muted-foreground break-words">
+                  Votre paiement PayPal a été accepté. Aucune action supplémentaire n'est requise.
+                </p>
+                <div className="border border-border chamfer-hud-sm p-3 text-[11px] sm:text-xs space-y-1 font-mono">
+                  <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Moyen :</span><span className="text-right break-words">PayPal</span></div>
+                  <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Montant :</span><span className="font-bold" style={{ color: `hsl(var(--step-confirm))` }}>{orderTotal.toFixed(2)} €</span></div>
+                  <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Référence :</span><span className="text-right break-all">{orderNumber}</span></div>
+                </div>
+                <p className="text-[11px] sm:text-xs text-muted-foreground break-words">
+                  Une confirmation vous sera envoyée à <span className="font-medium text-foreground break-all">{form.email}</span>.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-[11px] sm:text-xs text-muted-foreground break-words">
+                  Votre commande est en attente de paiement. Veuillez effectuer un virement bancaire avec la référence <span className="font-bold text-foreground break-all">{orderNumber}</span>.
+                </p>
+                <div className="border border-border chamfer-hud-sm p-3 text-[11px] sm:text-xs space-y-1 font-mono">
+                  <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Bénéficiaire :</span><span className="text-right break-words">LVTK6 Concept</span></div>
+                  <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Montant :</span><span className="font-bold" style={{ color: `hsl(var(--step-confirm))` }}>{orderTotal.toFixed(2)} €</span></div>
+                  <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Référence :</span><span className="text-right break-all">{orderNumber}</span></div>
+                </div>
+                <p className="text-[11px] sm:text-xs text-muted-foreground break-words">
+                  Une confirmation vous sera envoyée à <span className="font-medium text-foreground break-all">{form.email}</span> dès réception du paiement.
+                </p>
+              </>
+            )}
+
           </div>
 
           {deliveryMode === 'relay' && selectedRelay && (
@@ -625,6 +690,22 @@ export default function Checkout() {
                     <span className="break-words min-w-0">{form.firstName} {form.lastName} — {form.address}, {form.zip} {form.city}</span>
                   </div>
                 </div>
+
+                {/* PayPal : compte PayPal, 3x/4x sans frais, carte & wallets */}
+                <div className="space-y-3">
+                  <PayPalMessaging amount={orderTotal} placement="payment" />
+                  <PayPalCheckout
+                    buildPayload={buildPaypalPayload}
+                    disabled={isProcessing || (deliveryMode === 'relay' && !selectedRelay)}
+                    onPaid={({ orderNumber: num }) => {
+                      setPaidWithPaypal(true);
+                      setOrderNumber(num);
+                      clearCart();
+                      setStep('confirmation');
+                    }}
+                  />
+                </div>
+
 
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                   <Button variant="outline" onClick={() => setStep('address')} className="sm:flex-1 h-11">
