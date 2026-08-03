@@ -162,6 +162,45 @@ export default function Checkout() {
     return h;
   };
 
+  /** Charge utile envoyée au serveur PayPal : les prix sont recalculés côté serveur. */
+  const buildPaypalPayload = (): PayPalCheckoutPayload | null => {
+    if (!items.length) return null;
+    if (deliveryMode === 'relay' && !selectedRelay) {
+      toast({ title: 'Point relais requis', description: 'Veuillez sélectionner un point relais', variant: 'destructive' });
+      return null;
+    }
+    if (!form.email || !form.firstName || !form.lastName || !form.address || !form.city || !form.zip) {
+      toast({ title: 'Adresse incomplète', description: 'Complétez vos coordonnées de livraison', variant: 'destructive' });
+      return null;
+    }
+    const customerAddress = deliveryMode === 'relay' && form.relayInfo
+      ? `Point Relais: ${form.relayInfo} — ${form.address}`
+      : form.address;
+
+    return {
+      items: items.map(item => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        size: item.size,
+        color: item.color,
+      })),
+      promoCode: promoCode || '',
+      deliveryMode,
+      orderData: {
+        order_number: `LVTK-${Date.now().toString(36).toUpperCase()}`,
+        user_id: user?.id || '',
+        customer_email: form.email,
+        customer_name: `${form.firstName} ${form.lastName}`,
+        customer_phone: form.phone || '',
+        customer_address: customerAddress,
+        customer_city: form.city,
+        customer_zip: form.zip,
+        customer_country: form.country,
+      },
+    };
+  };
+
+
   const handlePlaceOrder = async () => {
     if (deliveryMode === 'relay' && !selectedRelay) {
       toast({ title: 'Point relais requis', description: 'Veuillez sélectionner un point relais', variant: 'destructive' });
