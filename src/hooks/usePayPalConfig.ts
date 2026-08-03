@@ -51,7 +51,7 @@ const DEFAULTS: PayPalConfig = {
   environment: 'sandbox',
   clientIdSandbox: '',
   clientIdLive: '',
-  enabled: false,
+  enabled: !!import.meta.env.VITE_PAYPAL_CLIENT_ID,
   enablePaypalButton: true,
   enablePayLater: true,
   enableCardFields: true,
