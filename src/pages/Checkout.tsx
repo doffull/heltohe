@@ -264,18 +264,36 @@ export default function Checkout() {
             <p className="text-sm font-bold hud-text flex items-center gap-2">
               <Shield className="h-4 w-4" style={{ color: `hsl(var(--step-confirm))` }} />
               INFORMATIONS DE PAIEMENT
-            </p>
-            <p className="text-[11px] sm:text-xs text-muted-foreground break-words">
-              Votre commande est en attente de paiement. Veuillez effectuer un virement bancaire avec la référence <span className="font-bold text-foreground break-all">{orderNumber}</span>.
-            </p>
-            <div className="border border-border chamfer-hud-sm p-3 text-[11px] sm:text-xs space-y-1 font-mono">
-              <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Bénéficiaire :</span><span className="text-right break-words">LVTK6 Concept</span></div>
-              <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Montant :</span><span className="font-bold" style={{ color: `hsl(var(--step-confirm))` }}>{orderTotal.toFixed(2)} €</span></div>
-              <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Référence :</span><span className="text-right break-all">{orderNumber}</span></div>
-            </div>
-            <p className="text-[11px] sm:text-xs text-muted-foreground break-words">
-              Une confirmation vous sera envoyée à <span className="font-medium text-foreground break-all">{form.email}</span> dès réception du paiement.
-            </p>
+            {paidWithPaypal ? (
+              <>
+                <p className="text-[11px] sm:text-xs text-muted-foreground break-words">
+                  Votre paiement PayPal a été accepté. Aucune action supplémentaire n'est requise.
+                </p>
+                <div className="border border-border chamfer-hud-sm p-3 text-[11px] sm:text-xs space-y-1 font-mono">
+                  <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Moyen :</span><span className="text-right break-words">PayPal</span></div>
+                  <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Montant :</span><span className="font-bold" style={{ color: `hsl(var(--step-confirm))` }}>{orderTotal.toFixed(2)} €</span></div>
+                  <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Référence :</span><span className="text-right break-all">{orderNumber}</span></div>
+                </div>
+                <p className="text-[11px] sm:text-xs text-muted-foreground break-words">
+                  Une confirmation vous sera envoyée à <span className="font-medium text-foreground break-all">{form.email}</span>.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-[11px] sm:text-xs text-muted-foreground break-words">
+                  Votre commande est en attente de paiement. Veuillez effectuer un virement bancaire avec la référence <span className="font-bold text-foreground break-all">{orderNumber}</span>.
+                </p>
+                <div className="border border-border chamfer-hud-sm p-3 text-[11px] sm:text-xs space-y-1 font-mono">
+                  <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Bénéficiaire :</span><span className="text-right break-words">LVTK6 Concept</span></div>
+                  <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Montant :</span><span className="font-bold" style={{ color: `hsl(var(--step-confirm))` }}>{orderTotal.toFixed(2)} €</span></div>
+                  <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Référence :</span><span className="text-right break-all">{orderNumber}</span></div>
+                </div>
+                <p className="text-[11px] sm:text-xs text-muted-foreground break-words">
+                  Une confirmation vous sera envoyée à <span className="font-medium text-foreground break-all">{form.email}</span> dès réception du paiement.
+                </p>
+              </>
+            )}
+
           </div>
 
           {deliveryMode === 'relay' && selectedRelay && (
