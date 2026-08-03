@@ -606,7 +606,17 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
                         }}
                         className="text-[10px] px-1 disabled:opacity-30"
                       >→</button>
+                      <AiPoseButton
+                        compact
+                        imageUrl={img}
+                        onReplace={(url) => {
+                          const arr = [...formData.galleryImages];
+                          arr[i] = url;
+                          setFormData(prev => ({ ...prev, galleryImages: arr }));
+                        }}
+                      />
                     </div>
+
                     <button
                       type="button"
                       onClick={() => setFormData(prev => ({ ...prev, galleryImages: prev.galleryImages.filter((_, idx) => idx !== i) }))}
