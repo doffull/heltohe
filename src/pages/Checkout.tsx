@@ -755,6 +755,15 @@ export default function Checkout() {
                   />
                 </div>
 
+                {/* PayPlug : carte bancaire (page de paiement sécurisée) */}
+                {payplugEnabled && (
+                  <PayPlugCheckout
+                    buildPayload={buildPaypalPayload}
+                    amount={orderTotal}
+                    disabled={isProcessing || (deliveryMode === 'relay' && !selectedRelay)}
+                  />
+                )}
+
 
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                   <Button variant="outline" onClick={() => setStep('address')} className="sm:flex-1 h-11">
