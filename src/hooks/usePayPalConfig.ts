@@ -108,10 +108,15 @@ export function usePayPalConfig() {
   });
 }
 
+/** Client ID public fourni par variable d'environnement (fallback si l'admin n'en a pas saisi). */
+export const ENV_PAYPAL_CLIENT_ID: string =
+  (import.meta.env.VITE_PAYPAL_CLIENT_ID as string | undefined)?.trim() || 'test';
+
 /** Identifiant public actif selon l'environnement choisi. */
 export function activeClientId(config?: PayPalConfig | null): string {
-  if (!config) return '';
-  return config.environment === 'live' ? config.clientIdLive : config.clientIdSandbox;
+  if (!config) return ENV_PAYPAL_CLIENT_ID;
+  const fromDb = config.environment === 'live' ? config.clientIdLive : config.clientIdSandbox;
+  return fromDb || (config.environment === 'live' ? '' : ENV_PAYPAL_CLIENT_ID);
 }
 
 export function useSavePayPalConfig() {
