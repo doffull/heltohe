@@ -65,6 +65,8 @@ export default function Checkout() {
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
+  const [paidWithPaypal, setPaidWithPaypal] = useState(false);
+
 
   // Relay point state
   const [relayPoints, setRelayPoints] = useState<RelayPoint[]>([]);
