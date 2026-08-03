@@ -13,6 +13,8 @@ import { AiTextButton } from '@/components/admin/AiTextButton';
 import { AiColorNameButton } from '@/components/admin/AiColorNameButton';
 import { AiAttributesButton } from '@/components/admin/AiAttributesButton';
 import { AiProductVideoButton } from '@/components/admin/AiProductVideoButton';
+import { AiPoseButton } from '@/components/admin/AiPoseEditorDialog';
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { usePageTemplates } from '@/hooks/usePageTemplates';
@@ -487,6 +489,20 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
             onSelect={(url) => setFormData(prev => ({ ...prev, image: url }))}
           />
 
+          {/* IA : nouvelle pose / expression (super admin) */}
+          <AiPoseButton
+            className="w-full"
+            imageUrl={formData.image}
+            onReplace={(url) => setFormData(prev => ({ ...prev, image: url }))}
+            onAddToGallery={(url) =>
+              setFormData(prev => ({
+                ...prev,
+                galleryImages: Array.from(new Set([...(prev.galleryImages || []), url])).slice(0, 10),
+              }))
+            }
+          />
+
+
           {/* Pastille de couleur automatique (depuis les images) */}
           <div className="space-y-2 border border-primary/30 bg-primary/5 p-3">
             <div className="flex items-center justify-between gap-2">
@@ -590,7 +606,17 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
                         }}
                         className="text-[10px] px-1 disabled:opacity-30"
                       >→</button>
+                      <AiPoseButton
+                        compact
+                        imageUrl={img}
+                        onReplace={(url) => {
+                          const arr = [...formData.galleryImages];
+                          arr[i] = url;
+                          setFormData(prev => ({ ...prev, galleryImages: arr }));
+                        }}
+                      />
                     </div>
+
                     <button
                       type="button"
                       onClick={() => setFormData(prev => ({ ...prev, galleryImages: prev.galleryImages.filter((_, idx) => idx !== i) }))}

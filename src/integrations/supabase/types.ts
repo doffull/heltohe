@@ -1560,6 +1560,7 @@ export type Database = {
           customer_phone: string | null
           customer_zip: string
           id: string
+          is_test: boolean
           items: Json
           loyalty_awarded_at: string | null
           notes: string | null
@@ -1589,6 +1590,7 @@ export type Database = {
           customer_phone?: string | null
           customer_zip: string
           id?: string
+          is_test?: boolean
           items?: Json
           loyalty_awarded_at?: string | null
           notes?: string | null
@@ -1618,6 +1620,7 @@ export type Database = {
           customer_phone?: string | null
           customer_zip?: string
           id?: string
+          is_test?: boolean
           items?: Json
           loyalty_awarded_at?: string | null
           notes?: string | null

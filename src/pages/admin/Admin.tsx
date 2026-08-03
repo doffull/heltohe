@@ -37,9 +37,10 @@ import {
   LayoutTemplate,
   AlertTriangle,
   Star,
-  Plug
-
+  Plug,
+  FlaskConical,
 } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -77,6 +78,7 @@ import AdminReviews from './AdminReviews';
 import AdminAgentIntegrations from './AdminAgentIntegrations';
 import AdminProductBadges from './AdminProductBadges';
 import AdminPayPal from './AdminPayPal';
+import AdminPaymentTest from './AdminPaymentTest';
 
 import { AdminSaveBar } from '@/components/admin/AdminSaveBar';
 
@@ -88,6 +90,7 @@ export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin/commandes': '#F59E0B',
   '/admin/checkout': '#10B981',
   '/admin/paypal': '#0070BA',
+  '/admin/test-paiement': '#F43F5E',
 
   '/admin/clients': '#8B5CF6',
   '/admin/pages': '#6366F1',
@@ -119,6 +122,7 @@ const SIDEBAR_ITEMS = [
   { icon: ClipboardCheck, label: 'Préparations', href: '/admin/preparations' },
   { icon: CreditCard, label: 'Checkout', href: '/admin/checkout' },
   { icon: CreditCard, label: 'PayPal', href: '/admin/paypal' },
+  { icon: FlaskConical, label: 'Test paiement', href: '/admin/test-paiement' },
 
   { icon: Users, label: 'Clients', href: '/admin/clients' },
   { icon: FileText, label: 'Pages', href: '/admin/pages' },
@@ -329,6 +333,7 @@ export default function Admin() {
             <Route path="preparations/*" element={<AdminPreparations />} />
             <Route path="checkout/*" element={<AdminCheckout />} />
             <Route path="paypal/*" element={<AdminPayPal />} />
+            <Route path="test-paiement/*" element={<AdminPaymentTest />} />
 
             <Route path="clients/*" element={<AdminCustomers />} />
             <Route path="pages/*" element={<AdminPages />} />
