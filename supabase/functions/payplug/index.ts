@@ -54,8 +54,9 @@ async function payplugFetch(key: string, path: string, init: RequestInit = {}) {
   const text = await res.text();
   const body = text ? JSON.parse(text) : {};
   if (!res.ok) {
-    const detail = body?.message || body?.details || "Erreur PayPlug";
-    throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+    const msg = body?.message ? String(body.message) : "Erreur PayPlug";
+    const details = body?.details ? ` ${JSON.stringify(body.details)}` : "";
+    throw new Error(`${msg}${details}`);
   }
   return body;
 }
