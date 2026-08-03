@@ -608,6 +608,48 @@ export default function AdminPayPal() {
             </div>
           </div>
 
+          {/* État de réception des webhooks (aucun secret affiché) */}
+          {(() => {
+            const list = events ?? [];
+            const last = list[0];
+            const lastVerified = list.find(e => e.verification_status === 'SUCCESS');
+            const failures = list.filter(
+              e => e.verification_status && e.verification_status !== 'SUCCESS',
+            ).length;
+            const unprocessed = list.filter(e => !e.processed).length;
+            return (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="border border-border rounded-lg p-3 space-y-1">
+                  <p className="text-xs text-muted-foreground">Dernière réception</p>
+                  <p className="text-sm font-semibold">
+                    {last ? new Date(last.created_at).toLocaleString('fr-FR') : 'Jamais'}
+                  </p>
+                  {last && <p className="text-[11px] font-mono text-muted-foreground">{last.event_type}</p>}
+                </div>
+                <div className="border border-border rounded-lg p-3 space-y-1">
+                  <p className="text-xs text-muted-foreground">Dernière vérification OK</p>
+                  <p className="text-sm font-semibold">
+                    {lastVerified ? new Date(lastVerified.created_at).toLocaleString('fr-FR') : '—'}
+                  </p>
+                  <StatusPill
+                    ok={!!form.webhookId}
+                    label={form.webhookId ? 'Webhook ID configuré' : 'Webhook ID manquant'}
+                  />
+                </div>
+                <div className="border border-border rounded-lg p-3 space-y-1">
+                  <p className="text-xs text-muted-foreground">Signatures en échec</p>
+                  <p className="text-sm font-semibold">{failures}</p>
+                  <StatusPill ok={failures === 0} label={failures === 0 ? 'Aucune anomalie' : 'À vérifier'} />
+                </div>
+                <div className="border border-border rounded-lg p-3 space-y-1">
+                  <p className="text-xs text-muted-foreground">Non traités</p>
+                  <p className="text-sm font-semibold">{unprocessed}</p>
+                  <StatusPill ok={unprocessed === 0} label={unprocessed === 0 ? 'À jour' : 'En attente'} />
+                </div>
+              </div>
+            );
+          })()}
+
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">{events?.length ?? 0} événement(s) reçu(s)</p>
             <Button size="sm" variant="outline" onClick={() => refetchEvents()}>
