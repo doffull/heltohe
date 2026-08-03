@@ -199,17 +199,54 @@ export default function AdminCheckout() {
                         </div>
                         <div className="space-y-1.5">
                           <Label className="text-xs text-muted-foreground">Clé API secrète</Label>
-                          <div className="relative">
+                          <div className="flex gap-2">
                             <Input
                               type="password"
-                              placeholder="sk_live_... (stockée côté serveur)"
-                              disabled
-                              className="pr-10"
+                              autoComplete="off"
+                              placeholder={
+                                secretStatus[pm.key]
+                                  ? `•••••••••••••${secretStatus[pm.key]?.last4 ?? ''}`
+                                  : 'sk_live_... (stockée côté serveur)'
+                              }
+                              value={secretDrafts[pm.key] ?? ''}
+                              onChange={e =>
+                                setSecretDrafts(prev => ({ ...prev, [pm.key]: e.target.value }))
+                              }
                             />
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={
+                                !(secretDrafts[pm.key] || '').trim() || savingSecret === pm.key
+                              }
+                              onClick={() => saveSecret(pm.key)}
+                            >
+                              {savingSecret === pm.key ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Lock className="h-4 w-4" />
+                              )}
+                            </Button>
                           </div>
-                          <p className="text-[10px] text-muted-foreground">
-                            Les clés secrètes sont gérées de manière sécurisée côté serveur.
-                          </p>
+                          {secretStatus[pm.key] ? (
+                            <div className="flex items-center gap-2 text-[10px] text-green-600">
+                              <ShieldCheck className="h-3 w-3" />
+                              Clé enregistrée (•••{secretStatus[pm.key]?.last4}) —{' '}
+                              {new Date(secretStatus[pm.key]!.updated_at).toLocaleDateString('fr-FR')}
+                              <button
+                                type="button"
+                                className="text-destructive hover:underline"
+                                onClick={() => removeSecret(pm.key)}
+                              >
+                                Supprimer
+                              </button>
+                            </div>
+                          ) : (
+                            <p className="text-[10px] text-muted-foreground">
+                              Chiffrée côté serveur, jamais renvoyée au navigateur.
+                            </p>
+                          )}
                         </div>
                       </div>
                       {pm.docUrl && (
