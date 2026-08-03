@@ -43,7 +43,11 @@ interface RelayPoint {
   typeDePoint?: string;
 }
 
+import { PayPalCheckout, type PayPalCheckoutPayload } from '@/components/payments/PayPalCheckout';
+import { PayPalMessaging } from '@/components/payments/PayPalMessaging';
+
 export default function Checkout() {
+
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
