@@ -37,10 +37,10 @@ import {
   LayoutTemplate,
   AlertTriangle,
   Star,
-  Plug
-
+  Plug,
   FlaskConical,
 } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
