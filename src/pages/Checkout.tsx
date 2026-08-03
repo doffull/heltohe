@@ -70,7 +70,55 @@ export default function Checkout() {
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
-  const [paidWithPaypal, setPaidWithPaypal] = useState(false);
+  const [paidMethod, setPaidMethod] = useState<string | null>(null);
+  const paidWithPaypal = paidMethod !== null;
+
+  // Retour depuis la page de paiement PayPlug : on vérifie le statut côté serveur.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const flag = params.get('payplug');
+    if (!flag) return;
+    const num = params.get('order') || '';
+    window.history.replaceState({}, '', '/checkout');
+    if (flag === 'cancel' || !num) {
+      toast({ title: 'Paiement annulé', description: 'Vous pouvez réessayer quand vous le souhaitez.' });
+      return;
+    }
+    (async () => {
+      setIsProcessing(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('payplug', {
+          body: { action: 'check-order', orderNumber: num },
+        });
+        if (error) throw error;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const res = data as any;
+        if (res?.paid) {
+          setPaidMethod('PayPlug (carte bancaire)');
+          setOrderNumber(num);
+          clearCart();
+          setStep('confirmation');
+        } else {
+          toast({
+            title: 'Paiement non confirmé',
+            description: 'Le paiement PayPlug n’a pas été validé. Veuillez réessayer.',
+            variant: 'destructive',
+          });
+        }
+      } catch {
+        toast({
+          title: 'Vérification impossible',
+          description: 'Impossible de vérifier votre paiement PayPlug.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsProcessing(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+
 
 
   // Relay point state
