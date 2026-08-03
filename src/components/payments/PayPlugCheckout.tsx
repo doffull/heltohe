@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CreditCard, Loader2, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,6 +25,21 @@ interface Props {
 export function PayPlugCheckout({ buildPayload, amount, disabled }: Props) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState<'test' | 'live' | null>(null);
+
+  // Le mode (test/live) est déduit côté serveur du préfixe de la clé secrète.
+  useEffect(() => {
+    let alive = true;
+    supabase.functions
+      .invoke('payplug', { body: { action: 'status' } })
+      .then(({ data }) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const res = data as any;
+        if (alive && res?.mode) setMode(res.mode);
+      })
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, []);
 
   const start = async () => {
     const payload = buildPayload();
@@ -72,6 +87,11 @@ export function PayPlugCheckout({ buildPayload, amount, disabled }: Props) {
       <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
         <ShieldCheck className="h-3 w-3" />
         Paiement sécurisé PayPlug — 3-D Secure, solution française
+        {mode === 'test' && (
+          <span className="ml-1 border border-border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider">
+            Mode test
+          </span>
+        )}
       </p>
     </div>
   );
