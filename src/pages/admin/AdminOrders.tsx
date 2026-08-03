@@ -134,7 +134,10 @@ export default function AdminOrders() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [bulkProcessing, setBulkProcessing] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditForm | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(
+    () => new URLSearchParams(window.location.search).get('q') ?? '',
+  );
+
   const [isGeneratingLabel, setIsGeneratingLabel] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [isMarkingPaid, setIsMarkingPaid] = useState(false);
