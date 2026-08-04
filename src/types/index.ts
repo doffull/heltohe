@@ -50,6 +50,8 @@ export interface Product {
   galleryImages?: string[];
   templateId?: string | null;
   isActive?: boolean;
+  /** Affiche le badge « LIMITED EDITION » sur la vignette et la fiche produit. */
+  limitedEdition?: boolean;
 }
 
 export interface OrderItem {

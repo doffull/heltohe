@@ -32,6 +32,7 @@ function dbToAppProduct(db: Record<string, unknown>): Product {
     galleryImages: (db.gallery_images as string[]) || [],
     templateId: (db.template_id as string) || null,
     isActive: db.is_active === undefined || db.is_active === null ? true : Boolean(db.is_active),
+    limitedEdition: Boolean(db.limited_edition),
   };
 }
 
@@ -63,6 +64,7 @@ const FIELD_MAP: Record<string, { col: string; transform: (v: any) => any }> = {
   galleryImages: { col: 'gallery_images', transform: (v) => sanitizePersistableUrls(v) },
   templateId: { col: 'template_id', transform: (v) => v ?? null },
   isActive: { col: 'is_active', transform: (v) => v },
+  limitedEdition: { col: 'limited_edition', transform: (v) => Boolean(v) },
 };
 
 function appToDbProduct(product: Partial<Product> & { isActive?: boolean }): Record<string, unknown> {

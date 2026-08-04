@@ -2402,6 +2402,7 @@ export type Database = {
           id: string
           image: string
           is_active: boolean | null
+          limited_edition: boolean
           material: string | null
           model_height: string | null
           model_name: string | null
@@ -2431,6 +2432,7 @@ export type Database = {
           id?: string
           image: string
           is_active?: boolean | null
+          limited_edition?: boolean
           material?: string | null
           model_height?: string | null
           model_name?: string | null
@@ -2460,6 +2462,7 @@ export type Database = {
           id?: string
           image?: string
           is_active?: boolean | null
+          limited_edition?: boolean
           material?: string | null
           model_height?: string | null
           model_name?: string | null
