@@ -416,19 +416,14 @@ serve(async (req) => {
         }
       }
 
-      // Resolve pageImages[] from _pages using pageUrls map
+      // Resolve images (embedded ghost/worn first, page shots as fallback)
       const allProducts = Array.from(seen.values()).map((p) => {
         const pages: number[] = Array.isArray((p as any)._pages) ? (p as any)._pages : [];
-        const urls: string[] = [];
-        for (const n of pages) {
-          const u = pageUrls[n];
-          if (u && !urls.includes(u)) urls.push(u);
-          if (urls.length >= MAX_IMAGES_PER_PRODUCT) break;
-        }
-        const out = { ...p, pageImages: urls };
+        const out = { ...p, ...resolveProductImages(pages, pageUrls, embedded) };
         delete (out as any)._pages;
         return out;
       });
+
 
       if (rasterAvailable && processedPages > 0) {
         return new Response(JSON.stringify({
