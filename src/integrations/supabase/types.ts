@@ -668,6 +668,122 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_contacts: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string | null
+          notes: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name?: string | null
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string | null
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      crm_conversations: {
+        Row: {
+          contact_id: string
+          created_at: string
+          id: string
+          last_message_at: string
+          order_id: string | null
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          order_id?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          order_id?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_conversations_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_conversations_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          direction: string
+          id: string
+          recipient_email: string
+          sender_email: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          direction?: string
+          id?: string
+          recipient_email: string
+          sender_email: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          direction?: string
+          id?: string
+          recipient_email?: string
+          sender_email?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "crm_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           created_at: string
@@ -1300,6 +1416,39 @@ export type Database = {
           is_read?: boolean | null
           message?: string
           name?: string
+        }
+        Relationships: []
+      }
+      messaging_config: {
+        Row: {
+          config_key: string
+          created_at: string
+          default_from_email: string | null
+          default_from_name: string | null
+          id: string
+          provider: string
+          signature: string | null
+          updated_at: string
+        }
+        Insert: {
+          config_key?: string
+          created_at?: string
+          default_from_email?: string | null
+          default_from_name?: string | null
+          id?: string
+          provider?: string
+          signature?: string | null
+          updated_at?: string
+        }
+        Update: {
+          config_key?: string
+          created_at?: string
+          default_from_email?: string | null
+          default_from_name?: string | null
+          id?: string
+          provider?: string
+          signature?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
