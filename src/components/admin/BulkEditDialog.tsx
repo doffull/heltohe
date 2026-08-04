@@ -69,7 +69,9 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
   const [subtitleOp, setSubtitleOp] = useState<SubtitleOp>('unchanged');
   const [subtitleArg, setSubtitleArg] = useState('');
 
+  const computeUpdates = (p: Product) => {
     const upd: Partial<Product> & { isActive?: boolean } = {};
+
 
     if (priceOp !== 'unchanged') {
       const arg = parseFloat(priceArg || '0');
