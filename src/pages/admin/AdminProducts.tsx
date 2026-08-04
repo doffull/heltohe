@@ -109,6 +109,7 @@ export default function AdminProducts() {
   const [isQuickCsvOpen, setIsQuickCsvOpen] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [extractedProducts, setExtractedProducts] = useState<ExtractedProduct[]>([]);
+  const [autoMainStrategy, setAutoMainStrategy] = useState<AutoMainStrategy>('worn-first');
   const [isImporting, setIsImporting] = useState(false);
   // Inline stock edit
   const [editingStockId, setEditingStockId] = useState<string | null>(null);
