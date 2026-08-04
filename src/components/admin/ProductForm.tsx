@@ -92,6 +92,11 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
     galleryImages: [] as string[],
     templateId: null as string | null,
     limitedEdition: false,
+    limitedEditionLabel: '',
+    limitedEditionColor: '',
+    limitedEditionTextColor: '',
+    limitedEditionPosition: 'bottom-right' as 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right',
+
   });
 
   // Variant stock state (local to form — passed up on submit)
