@@ -356,6 +356,8 @@ serve(async (req) => {
       let processedPages = 0;
       // Map global page number -> public URL
       const pageUrls: Record<number, string> = {};
+      // Images réellement embarquées (ghost / porté) par page
+      const embedded = await collectEmbedded(pdfBytes, pagesToRender);
 
       for (let start = 1; start <= pagesToRender && rasterAvailable; start += PAGE_BATCH_SIZE) {
         const batch: { page: number; base64: string; mime: string; bytes: Uint8Array }[] = [];
