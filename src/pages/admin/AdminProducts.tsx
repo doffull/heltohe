@@ -41,7 +41,7 @@ import { BulkVariantStockDialog } from '@/components/admin/BulkVariantStockDialo
 import { GlobalSizesEditor } from '@/components/admin/GlobalSizesEditor';
 import { ProductDefaultsEditor } from '@/components/admin/ProductDefaultsEditor';
 import { Textarea } from '@/components/ui/textarea';
-import { importProductsFromPdf } from '@/lib/productPdfImport';
+import { importProductsFromPdf, type MainImageSource } from '@/lib/productPdfImport';
 import { useDesignSettings, useSaveDesignSettings } from '@/hooks/useDesignSettings';
 
 interface ExtractedProduct {
@@ -57,8 +57,19 @@ interface ExtractedProduct {
   sku: string;
   stock: number;
   pageImages?: string[];
+  mainImage?: string | null;
+  mainSource?: MainImageSource | null;
+  ghostImages?: string[];
+  wornImages?: string[];
   selected: boolean;
 }
+
+const MAIN_SOURCE_LABEL: Record<MainImageSource, string> = {
+  worn: 'Porté',
+  ghost: 'Ghost',
+  page: 'Page',
+};
+
 
 export default function AdminProducts() {
   const navigate = useNavigate();
