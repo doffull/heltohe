@@ -4,6 +4,9 @@ import { ZoomIn, ZoomOut, Play, Image as ImageIcon, X, ChevronLeft, ChevronRight
 import { ColorOption, Product } from '@/types';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { EditableProductImage } from '@/components/visual-editor/EditableProductImage';
+import { cn } from '@/lib/utils';
+import { LimitedEditionBadge, badgeCornerClasses, getBadgePosition } from '@/components/product/LimitedEditionBadge';
+
 
 interface ProductImageGalleryProps {
   image: string;
