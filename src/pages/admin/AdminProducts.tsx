@@ -437,15 +437,23 @@ export default function AdminProducts() {
     let success = 0;
     for (const p of selected) {
       try {
-        const imgs = Array.isArray(p.pageImages) ? p.pageImages.filter(Boolean) : [];
+        const all = Array.isArray(p.pageImages) ? p.pageImages.filter(Boolean) : [];
+        const main = p.mainImage || all[0] || null;
+        // Galerie : ghosts d'abord, puis les autres visuels
+        const gallery: string[] = [];
+        for (const u of [...(p.ghostImages || []), ...all]) {
+          if (u && u !== main && !gallery.includes(u)) gallery.push(u);
+          if (gallery.length >= 5) break;
+        }
         await createProduct.mutateAsync({
           name: p.name, subtitle: p.subtitle, price: p.price, salePrice: p.salePrice || undefined,
-          image: imgs[0] || '/placeholder.svg',
-          galleryImages: imgs.slice(1, 5),
+          image: main || '/placeholder.svg',
+          galleryImages: gallery,
           category: p.category || 'Autre', stock: p.stock || 50,
           sku: p.sku, description: p.description, material: p.material,
           sizes: p.sizes || [], colors: p.colors || [], colorOptions: [], attributes: {},
         });
+
         success++;
       } catch {}
     }
