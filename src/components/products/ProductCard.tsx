@@ -101,11 +101,8 @@ export function ProductCard({ product, onClick, onAddToCart, onNavigate, swatchS
 
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-2 items-start">
-          {product.limitedEdition && (
-            <span className="bevel-corners border border-foreground bg-background/95 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.18em] backdrop-blur-sm">
-              Limited Edition
-            </span>
-          )}
+          <LimitedEditionBadge product={product} compact animate={false} />
+
           {hasDiscount && (
             <Badge className="bg-foreground text-background uppercase text-[10px] px-2 py-1 rounded-none">
               Promo
