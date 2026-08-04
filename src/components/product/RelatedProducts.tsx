@@ -3,6 +3,7 @@ import { useProducts, useProduct } from '@/hooks/useProducts';
 import { Skeleton } from '@/components/ui/skeleton';
 import ProductStrip from './ProductStrip';
 import { productFamilyKey } from '@/lib/productFamily';
+import { excludeMarketplaceProducts, isMarketplaceCategory } from '@/lib/shopVisibility';
 
 interface RelatedProductsProps {
   category: string;
@@ -18,7 +19,11 @@ export default function RelatedProducts({ category, currentId }: RelatedProducts
   const { data: current } = useProduct(currentId);
 
   const related = useMemo(() => {
-    const list = (allProducts || []).filter((p) => p.id !== currentId && p.isActive !== false);
+    // Les produits marketplace (Collab) ne remontent jamais hors de leur page dédiée.
+    const pool = isMarketplaceCategory(category)
+      ? (allProducts || []).filter((p) => isMarketplaceCategory(p.category))
+      : excludeMarketplaceProducts(allProducts || []);
+    const list = pool.filter((p) => p.id !== currentId && p.isActive !== false);
     const familyKey = current ? productFamilyKey(current) : '';
     const currentTags = new Set(current?.tags || []);
 

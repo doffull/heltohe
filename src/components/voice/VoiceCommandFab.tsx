@@ -9,6 +9,7 @@ import { useApp } from '@/context/AppContext';
 import { useCart } from '@/context/CartContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { excludeMarketplaceProducts } from '@/lib/shopVisibility';
 
 type SR = any;
 const TEST_MODE_KEY = 'voice_test_mode';
@@ -72,7 +73,8 @@ function describeAction(action: any, products: any[]): string {
 }
 
 export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: VoiceCommandFabProps = {}) {
-  const { designSettings, products, navigateToProduct } = useApp();
+  const { designSettings, products: allProducts, navigateToProduct } = useApp();
+  const products = excludeMarketplaceProducts(allProducts);
   const cart = useCart() as any;
   const { addItem, items, subtotal, total } = cart;
   const navigate = useNavigate();

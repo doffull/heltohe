@@ -4,6 +4,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { Product } from '@/types';
 import { ChevronLeft, ChevronRight, Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { excludeMarketplaceProducts } from '@/lib/shopVisibility';
 
 function getTimeLeft(endDate: string) {
   const diff = new Date(endDate).getTime() - Date.now();
@@ -49,7 +50,7 @@ export function PromoCountdown() {
 
   const promoProducts = useMemo(
     () =>
-      products.filter(
+      excludeMarketplaceProducts(products).filter(
         (p: Product) =>
           p.salePrice && p.promoEndsAt && new Date(p.promoEndsAt).getTime() > Date.now()
       ),

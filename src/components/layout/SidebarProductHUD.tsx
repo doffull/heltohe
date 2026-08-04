@@ -5,6 +5,7 @@ import { useSidebarOptional } from '@/context/SidebarContext';
 import { Product } from '@/types';
 import { Play, ChevronLeft, ChevronRight } from 'lucide-react';
 import { StatBar } from './StatBar';
+import { excludeMarketplaceProducts } from '@/lib/shopVisibility';
 
 const DEFAULT_STATS = [
   { label: 'Durabilité', value: 85 },
@@ -144,7 +145,8 @@ function BrandBlock({ designSettings }: { designSettings: any }) {
 }
 
 export function SidebarProductHUD() {
-  const { designSettings, selectedProduct, products } = useApp();
+  const { designSettings, selectedProduct, products: allProducts } = useApp();
+  const products = excludeMarketplaceProducts(allProducts);
   const sidebarContext = useSidebarOptional();
   const navigate = useNavigate();
 
