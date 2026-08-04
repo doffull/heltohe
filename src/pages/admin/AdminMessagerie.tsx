@@ -580,18 +580,65 @@ export default function AdminMessagerie() {
                     </ScrollArea>
 
                     <div className="p-3 border-t border-border space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Select value="" onValueChange={applyTemplate}>
+                          <SelectTrigger className="h-9 w-full sm:w-64">
+                            <span className="flex items-center gap-1.5 text-sm">
+                              <FileText className="h-4 w-4" />
+                              <SelectValue placeholder="Réponse rapide (modèle)" />
+                            </span>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {templates.filter((t) => t.is_active).map((t) => (
+                              <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                            ))}
+                            {!templates.filter((t) => t.is_active).length && (
+                              <div className="px-2 py-2 text-xs text-muted-foreground">Aucun modèle actif</div>
+                            )}
+                          </SelectContent>
+                        </Select>
+                        {subjectOverride !== null && (
+                          <Input
+                            className="h-9 flex-1 min-w-[180px]"
+                            value={subjectOverride}
+                            onChange={(e) => setSubjectOverride(e.target.value)}
+                            placeholder="Objet de l'e-mail"
+                          />
+                        )}
+                      </div>
+
                       <Textarea
-                        rows={3}
+                        rows={4}
                         value={reply}
                         onChange={(e) => setReply(e.target.value)}
-                        placeholder={`Répondre à ${selectedContact?.email || 'ce contact'}…`}
+                        placeholder={`Répondre à ${selectedContact?.email || 'ce contact'}… (variables {{prenom}}, {{numero_commande}}…)`}
                       />
+
+                      <div className="flex flex-wrap gap-1.5">
+                        {TEMPLATE_VARS.slice(0, 6).map((v) => (
+                          <button
+                            key={v.key}
+                            type="button"
+                            title={v.label}
+                            onClick={() => setReply((r) => `${r}{{${v.key}}}`)}
+                            className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-border bg-muted/50 hover:bg-muted"
+                          >
+                            {`{{${v.key}}}`}
+                          </button>
+                        ))}
+                      </div>
+
                       <div className="flex justify-end">
-                        <Button size="sm" onClick={doSend} disabled={!reply.trim() || sendMessage.isPending}>
-                          <Send className="h-4 w-4 mr-1.5" /> Envoyer
+                        <Button
+                          size="sm"
+                          onClick={() => setPreviewOpen(true)}
+                          disabled={!reply.trim() || sendMessage.isPending}
+                        >
+                          <Eye className="h-4 w-4 mr-1.5" /> Aperçu &amp; envoyer
                         </Button>
                       </div>
                     </div>
+
                   </div>
 
                   <aside className="p-4 space-y-3 hidden xl:block">
