@@ -120,27 +120,19 @@ export async function importProductsFromPdf(
     for (const product of batchProducts as ParsedCatalogProduct[]) {
       const key = String(product.sku || `${product.name || ''}-${product.price ?? ''}`).trim().toUpperCase();
       if (!key) continue;
-      const incomingImages = Array.isArray(product.pageImages) ? product.pageImages : [];
       const existingIndex = products.findIndex((p) => {
         const k = String(p.sku || `${p.name || ''}-${p.price ?? ''}`).trim().toUpperCase();
         return k === key;
       });
       if (existingIndex >= 0) {
-        // Merge images (union, cap 5)
-        const existing = products[existingIndex];
-        const existingImgs = Array.isArray(existing.pageImages) ? existing.pageImages : [];
-        const merged: string[] = [];
-        for (const u of [...existingImgs, ...incomingImages]) {
-          if (u && !merged.includes(u)) merged.push(u);
-          if (merged.length >= 5) break;
-        }
-        products[existingIndex] = { ...existing, pageImages: merged };
+        products[existingIndex] = mergeProducts(products[existingIndex], product);
         continue;
       }
       if (seen.has(key)) continue;
       seen.add(key);
-      products.push({ ...product, pageImages: incomingImages.slice(0, 5) });
+      products.push(normalizeProduct(product));
     }
+
     onProgress?.({ batchIndex: index + 1, totalBatches: pdfParts.length, productsSoFar: products.length });
   }
 
