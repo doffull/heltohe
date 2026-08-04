@@ -14,7 +14,8 @@ export function ProductSections() {
   const { setIsDirty } = useVisualEditor();
   const { homeSections } = designSettings;
 
-  const byTag = (tag: string) => products.filter(p => p.tags?.includes(tag));
+  const shopProducts = excludeMarketplaceProducts(products);
+  const byTag = (tag: string) => shopProducts.filter(p => p.tags?.includes(tag));
 
   const featuredTagged = byTag('featured');
   const newTagged = byTag('new');
