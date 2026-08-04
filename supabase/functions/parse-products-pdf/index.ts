@@ -431,6 +431,7 @@ serve(async (req) => {
           mode: "raster-compressed",
           pagesProcessed: processedPages,
           pagesUploaded: Object.keys(pageUrls).length,
+          embeddedImages: Object.values(embedded).reduce((n, l) => n + l.length, 0),
           errors: errors.length ? errors : undefined,
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
