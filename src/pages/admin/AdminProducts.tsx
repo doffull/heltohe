@@ -25,6 +25,7 @@ import { ImportMockupDialog } from '@/components/admin/ImportMockupDialog';
 import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
 import { CsvImportDialog } from '@/components/admin/CsvImportDialog';
 import { BulkProductImagesDialog } from '@/components/admin/BulkProductImagesDialog';
+import { MainImagePicker } from '@/components/admin/MainImagePicker';
 import { SplitVariantsDialog } from '@/components/admin/SplitVariantsDialog';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -669,9 +670,8 @@ export default function AdminProducts() {
                     <td className="p-4"><Checkbox checked={selectedIds.has(product.id)} onCheckedChange={() => toggle(product.id)} /></td>
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-muted rounded overflow-hidden flex-shrink-0">
-                          <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                        </div>
+                        <MainImagePicker product={product} />
+
                         <div className="min-w-0">
                           {editingCell?.id === product.id && editingCell.field === 'name' ? (
                             <input
