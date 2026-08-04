@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
   Inbox, Send, Users, Settings as SettingsIcon, Plus, Search, Mail, Phone,
-  Pencil, Trash2, MessageSquare, Package, ArrowLeft,
+  Pencil, Trash2, MessageSquare, Package, ArrowLeft, Eye, FileText, AlertTriangle,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,9 +23,12 @@ import { cn } from '@/lib/utils';
 import {
   useCrmContacts, useSaveCrmContact, useDeleteCrmContact,
   useCrmConversations, useCrmMessages, useCreateConversation, useUpdateConversation,
-  useSendCrmMessage, useMessagingConfig, useSaveMessagingConfig,
+  useSendCrmMessage, useMessagingConfig, useSaveMessagingConfig, useCrmMessageTemplates,
   type CrmContact, type CrmConversation, type MessagingConfig,
 } from '@/hooks/useCrm';
+import { CrmTemplatesManager } from '@/components/admin/CrmTemplatesManager';
+import { renderTemplate, missingVars, TEMPLATE_VARS, type TemplateContext } from '@/lib/crmTemplateVars';
+
 
 type View = 'inbox' | 'sent' | 'contacts' | 'settings';
 
