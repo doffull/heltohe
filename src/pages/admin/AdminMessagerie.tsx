@@ -224,11 +224,14 @@ export default function AdminMessagerie() {
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reply, setReply] = useState('');
+  const [subjectOverride, setSubjectOverride] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [contactDialog, setContactDialog] = useState<{ open: boolean; contact: CrmContact | null }>({ open: false, contact: null });
   const [convDialog, setConvDialog] = useState(false);
 
   const { data: contacts = [] } = useCrmContacts();
   const { data: conversations = [] } = useCrmConversations();
+  const { data: templates = [] } = useCrmMessageTemplates();
   const deleteContact = useDeleteCrmContact();
   const updateConv = useUpdateConversation();
   const sendMessage = useSendCrmMessage();
@@ -257,18 +260,69 @@ export default function AdminMessagerie() {
   const selectedContact = selected ? contactById[selected.contact_id] : null;
   const { data: messages = [] } = useCrmMessages(selected?.id);
 
+  // Same query key as OrderPanel -> shared cache, used to feed template variables
+  const { data: ctxOrders = [] } = useQuery({
+    queryKey: ['crm-order-context', selectedContact?.email, selected?.order_id],
+    enabled: !!selectedContact?.email || !!selected?.order_id,
+    queryFn: async () => {
+      let q = (supabase as any)
+        .from('orders')
+        .select('id, order_number, status, payment_status, total, tracking_number, shipping_carrier, created_at')
+        .order('created_at', { ascending: false })
+        .limit(5);
+      q = selected?.order_id ? q.eq('id', selected.order_id) : q.eq('customer_email', selectedContact?.email);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const visibleMessages = view === 'sent' ? messages.filter((m) => m.direction === 'outbound') : messages;
 
+  const templateContext: TemplateContext = useMemo(() => {
+    const order = (ctxOrders as any[])[0];
+    const fullName = selectedContact?.name || '';
+    return {
+      prenom: fullName.split(' ')[0] || '',
+      nom_complet: fullName,
+      email: selectedContact?.email || '',
+      telephone: selectedContact?.phone || '',
+      objet: selected?.subject || '',
+      numero_commande: order?.order_number || '',
+      statut_commande: order?.status || '',
+      total_commande: order ? `${Number(order.total).toFixed(2)} €` : '',
+      numero_suivi: order?.tracking_number || '',
+      transporteur: order?.shipping_carrier || (order?.tracking_number ? 'Colissimo' : ''),
+      boutique: config?.default_from_name || 'LVTK6',
+      signature: config?.signature || '',
+      date: new Date().toLocaleDateString('fr-FR'),
+    };
+  }, [ctxOrders, selectedContact, selected, config]);
+
+  const renderedBody = renderTemplate(reply, templateContext);
+  const renderedSubject = renderTemplate(subjectOverride ?? selected?.subject ?? '', templateContext);
+  const unresolved = missingVars(reply + ' ' + (subjectOverride ?? ''), templateContext);
+
+  const applyTemplate = (id: string) => {
+    const tpl = templates.find((t) => t.id === id);
+    if (!tpl) return;
+    setReply(tpl.body);
+    setSubjectOverride(tpl.subject || null);
+    toast({ title: `Modèle « ${tpl.name} » appliqué`, description: 'Vérifiez l’aperçu avant envoi.' });
+  };
+
   const doSend = async () => {
-    if (!selected || !selectedContact || !reply.trim()) return;
+    if (!selected || !selectedContact || !renderedBody.trim()) return;
     try {
       const res = await sendMessage.mutateAsync({
         conversationId: selected.id,
-        content: reply.trim(),
+        content: renderedBody.trim(),
         to: selectedContact.email,
-        subject: selected.subject,
+        subject: renderedSubject.trim() || selected.subject,
       });
       setReply('');
+      setSubjectOverride(null);
+      setPreviewOpen(false);
       toast({
         title: res?.sent ? 'Message envoyé' : 'Message enregistré',
         description: res?.warning,
@@ -277,6 +331,7 @@ export default function AdminMessagerie() {
       toast({ title: 'Envoi impossible', description: e.message, variant: 'destructive' });
     }
   };
+
 
   const navItems: { key: View; label: string; icon: typeof Inbox; count?: number }[] = [
     { key: 'inbox', label: 'Boîte de réception', icon: Inbox, count: conversations.filter((c) => c.status !== 'closed').length },
