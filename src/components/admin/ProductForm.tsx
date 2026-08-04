@@ -268,6 +268,15 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
     }
   }, [product]);
 
+  // Nouveau produit dans la catégorie Collab → badge « LIMITED EDITION » pré-coché
+  useEffect(() => {
+    if (product) return;
+    if ((formData.category || '').trim().toLowerCase() !== 'collab') return;
+    setFormData(prev => (prev.limitedEdition ? prev : { ...prev, limitedEdition: true }));
+  }, [formData.category, product]);
+
+
+
   const buildPayload = () => {
     const submitData = {
       ...formData,
