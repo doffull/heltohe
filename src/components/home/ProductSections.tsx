@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ProductGrid } from '@/components/products/ProductCard';
 import { InlineEditable } from '@/components/visual-editor/InlineEditable';
 import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
+import { excludeMarketplaceProducts } from '@/lib/shopVisibility';
 
 export function ProductSections() {
   const { designSettings, updateDesignSettings, products, navigateToCategory, language } = useApp();
