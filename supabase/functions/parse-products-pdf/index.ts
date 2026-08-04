@@ -4,6 +4,7 @@ import { extractText, getDocumentProxy, renderPageAsImage } from "https://esm.sh
 // Pure-JS image codec (no native deps) used to downscale & re-encode
 // rendered PDF pages as JPEG before shipping them to the AI.
 import { Image } from "https://deno.land/x/imagescript@1.2.17/mod.ts";
+import { extractEmbeddedImages, type EmbeddedKind } from "./embeddedImages.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
