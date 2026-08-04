@@ -50,6 +50,8 @@ function getLayoutClasses(layout: LayoutId): { wrapper: string; item?: (i: numbe
 }
 
 
+const PAGE_SIZE_OPTIONS = [12, 24, 48, 96];
+
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Nouveautés' },
   { value: 'price-asc', label: 'Prix croissant' },
@@ -77,6 +79,11 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
   const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'newest');
   const [shopFilters, setShopFilters] = useState<ShopFilters>({ sizes: [], colors: [] });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(24);
+
+  // Catégorie verrouillée (page de catégorie dédiée type /collab)
+  const lockedCategory = !!categoryFromSlug;
 
   // Sync category from slug prop or URL params when they change
   useEffect(() => {
@@ -178,6 +185,34 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
     return groupFamiliesAdjacent(orderedBase);
   }, [orderedBase, sortBy]);
 
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, selectedCategory, selectedSubCategory, sortBy, shopFilters, pageSize]);
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
+  const pagedProducts = useMemo(
+    () => filteredProducts.slice((page - 1) * pageSize, page * pageSize),
+    [filteredProducts, page, pageSize],
+  );
+
+  const goToPage = (p: number) => {
+    setPage(Math.min(Math.max(1, p), totalPages));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const pageNumbers = useMemo(() => {
+    const nums: (number | 'gap')[] = [];
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || Math.abs(i - page) <= 1) nums.push(i);
+      else if (nums[nums.length - 1] !== 'gap') nums.push('gap');
+    }
+    return nums;
+  }, [totalPages, page]);
+
   const handleAddToCart = async (product: typeof products[0]) => {
     await addItem({
       productId: product.id,
@@ -226,17 +261,19 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
                 className="pl-12 h-12 bg-background border-0"
               />
             </div>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full sm:w-[180px] h-12 bg-background border-0">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Catégorie" />
-              </SelectTrigger>
-              <SelectContent>
-                {CATEGORIES.map((cat) => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {!lockedCategory && (
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="w-full sm:w-[180px] h-12 bg-background border-0">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Catégorie" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((cat) => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-full sm:w-[180px] h-12 bg-background border-0">
                 <SlidersHorizontal className="h-4 w-4 mr-2" />
@@ -257,22 +294,40 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
               </Button>
             </div>
           </div>
-          <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-4 lg:mt-6">
-            {CATEGORIES.map((cat) => (
-              <Button
-                key={cat}
-                variant={selectedCategory === cat ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => { setSelectedCategory(cat); setSelectedSubCategory(null); }}
-                className={cn(
-                  "uppercase tracking-wider text-[10px] sm:text-xs px-2.5 py-1.5 sm:px-3 sm:py-2 h-auto",
-                  selectedCategory !== cat && "bg-secondary/40 border-border/40 text-muted-foreground hover:bg-secondary/70"
-                )}
-              >
-                {cat}
-              </Button>
-            ))}
+          {!lockedCategory && (
+            <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-4 lg:mt-6">
+              {CATEGORIES.map((cat) => (
+                <Button
+                  key={cat}
+                  variant={selectedCategory === cat ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => { setSelectedCategory(cat); setSelectedSubCategory(null); }}
+                  className={cn(
+                    "uppercase tracking-wider text-[10px] sm:text-xs px-2.5 py-1.5 sm:px-3 sm:py-2 h-auto",
+                    selectedCategory !== cat && "bg-secondary/40 border-border/40 text-muted-foreground hover:bg-secondary/70"
+                  )}
+                >
+                  {cat}
+                </Button>
+              ))}
+            </div>
+          )}
+
+          {/* Nombre de produits par page */}
+          <div className="flex items-center gap-2 mt-4">
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Par page</span>
+            <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+              <SelectTrigger className="w-[90px] h-9 bg-background border-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZE_OPTIONS.map((n) => (
+                  <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+
           {/* Sub-category filters */}
           {subCategories.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-3">
@@ -321,7 +376,7 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
               <Search className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
               <h2 className="text-xl font-bold uppercase mb-2">Aucun produit trouvé</h2>
               <p className="text-muted-foreground mb-6">Essayez d'ajuster vos filtres</p>
-              <Button onClick={() => { setSearchQuery(''); setSelectedCategory('Tout'); }}>
+              <Button onClick={() => { setSearchQuery(''); setShopFilters({ sizes: [], colors: [] }); if (!lockedCategory) setSelectedCategory('Tout'); }}>
                 Réinitialiser
               </Button>
             </div>
@@ -332,7 +387,7 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
             const { wrapper, item } = getLayoutClasses(layoutId);
             return (
               <div className={wrapper}>
-                {filteredProducts.map((product, index) => (
+                {pagedProducts.map((product, index) => (
                   <div
                     key={product.id}
                     className={cn('animate-fade-in', item?.(index))}
@@ -352,7 +407,7 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
           })()
         ) : (
           <div className="space-y-4">
-            {filteredProducts.map((product, index) => (
+            {pagedProducts.map((product, index) => (
               <div
                 key={product.id}
                 className="bevel-corners-sm bg-card p-4 sm:p-6 flex flex-col sm:flex-row gap-4 sm:gap-8 border border-border hover:border-foreground transition-all animate-fade-in"
@@ -394,6 +449,50 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
             ))}
           </div>
         )}
+            {/* Pagination */}
+            {!isLoading && totalPages > 1 && (
+              <nav className="mt-10 flex flex-col sm:flex-row items-center justify-between gap-4" aria-label="Pagination">
+                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                  Page {page} / {totalPages} — {filteredProducts.length} produits
+                </p>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-10 px-3 uppercase text-xs tracking-wider"
+                    onClick={() => goToPage(page - 1)}
+                    disabled={page === 1}
+                  >
+                    Préc.
+                  </Button>
+                  {pageNumbers.map((n, i) =>
+                    n === 'gap' ? (
+                      <span key={`gap-${i}`} className="px-2 text-muted-foreground">…</span>
+                    ) : (
+                      <Button
+                        key={n}
+                        variant={n === page ? 'default' : 'outline'}
+                        size="sm"
+                        className="h-10 w-10 p-0 text-xs"
+                        aria-current={n === page ? 'page' : undefined}
+                        onClick={() => goToPage(n)}
+                      >
+                        {n}
+                      </Button>
+                    )
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-10 px-3 uppercase text-xs tracking-wider"
+                    onClick={() => goToPage(page + 1)}
+                    disabled={page === totalPages}
+                  >
+                    Suiv.
+                  </Button>
+                </div>
+              </nav>
+            )}
           </div>
         </div>
 
