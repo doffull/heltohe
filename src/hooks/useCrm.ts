@@ -38,7 +38,75 @@ export interface MessagingConfig {
   signature: string | null;
 }
 
+export interface CrmMessageTemplate {
+  id: string;
+  name: string;
+  category: string;
+  subject: string | null;
+  body: string;
+  sort_order: number;
+  is_active: boolean;
+}
+
 const db = supabase as any;
+
+/* ---------------- Modèles de réponse ---------------- */
+
+export function useCrmMessageTemplates() {
+  return useQuery({
+    queryKey: ['crm_message_templates'],
+    queryFn: async (): Promise<CrmMessageTemplate[]> => {
+      const { data, error } = await db
+        .from('crm_message_templates')
+        .select('*')
+        .order('sort_order', { ascending: true })
+        .order('name', { ascending: true });
+      if (error) throw error;
+      return (data || []) as CrmMessageTemplate[];
+    },
+  });
+}
+
+export function useSaveCrmMessageTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (tpl: Partial<CrmMessageTemplate>) => {
+      const payload = {
+        name: (tpl.name || '').trim() || 'Modèle sans nom',
+        category: tpl.category || 'general',
+        subject: tpl.subject?.trim() || null,
+        body: tpl.body || '',
+        sort_order: tpl.sort_order ?? 0,
+        is_active: tpl.is_active ?? true,
+      };
+      if (tpl.id) {
+        const { error } = await db.from('crm_message_templates').update(payload).eq('id', tpl.id);
+        if (error) throw error;
+        return tpl.id;
+      }
+      const { data, error } = await db
+        .from('crm_message_templates')
+        .insert(payload)
+        .select('id')
+        .single();
+      if (error) throw error;
+      return data.id as string;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['crm_message_templates'] }),
+  });
+}
+
+export function useDeleteCrmMessageTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await db.from('crm_message_templates').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['crm_message_templates'] }),
+  });
+}
+
 
 /* ---------------- Contacts ---------------- */
 
