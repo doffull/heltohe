@@ -1100,10 +1100,14 @@ export default function AdminProducts() {
                     ? {
                         ...pp,
                         mainImage: url,
+                        mainManual: true,
                         mainSource: (pp.ghostImages || []).includes(url)
                           ? 'ghost'
                           : (pp.wornImages || []).includes(url) ? 'worn' : 'page',
                       }
+                    : pp));
+                  const resetAuto = () => setExtractedProducts(ps => ps.map((pp, j) => j === i
+                    ? { ...pp, ...pickMainImage(pp, autoMainStrategy), mainManual: false }
                     : pp));
                   return (
                   <div key={i} className={`flex items-start gap-4 p-3 border rounded-lg transition-colors ${p.selected ? 'border-primary bg-primary/5' : 'border-border opacity-60'}`}>
@@ -1123,8 +1127,17 @@ export default function AdminProducts() {
                       )}
                       {p.mainSource && (
                         <p className="text-[9px] uppercase tracking-wider text-center text-muted-foreground">
-                          {MAIN_SOURCE_LABEL[p.mainSource]}
+                          {MAIN_SOURCE_LABEL[p.mainSource]}{p.mainManual ? ' · manuel' : ' · auto'}
                         </p>
+                      )}
+                      {p.mainManual && (
+                        <button
+                          type="button"
+                          onClick={resetAuto}
+                          className="block mx-auto text-[9px] uppercase tracking-wider text-primary hover:underline"
+                        >
+                          Auto
+                        </button>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
