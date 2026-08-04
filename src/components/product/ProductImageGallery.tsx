@@ -231,33 +231,45 @@ export default function ProductImageGallery({
           )}
         </AnimatePresence>
 
-        {/* Zoom indicator (image only) */}
-        {activeMedia === 'image' && (
-          <motion.div
-            className="absolute bottom-4 right-4 bg-background/80 backdrop-blur-sm p-2 rounded-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-          >
-            {isZoomed ? (
-              <ZoomOut className="h-5 w-5 text-muted-foreground" />
-            ) : (
-              <ZoomIn className="h-5 w-5 text-muted-foreground" />
-            )}
-          </motion.div>
-        )}
+        {/* Right-side overlay stack: Limited Edition badge + zoom/hint */}
+        <div className="absolute bottom-4 right-4 z-20 flex flex-col items-end gap-2 pointer-events-none">
+          {product?.limitedEdition && activeMedia === 'image' && (
+            <motion.span
+              className="bevel-corners border border-foreground bg-background/95 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] backdrop-blur-sm pointer-events-auto"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3, type: 'spring', stiffness: 260 }}
+            >
+              Limited Edition
+            </motion.span>
+          )}
 
-        {/* Mobile double-tap hint */}
-        {isMobile && activeMedia === 'image' && (
-          <motion.div
-            className="absolute bottom-4 right-4 bg-background/80 backdrop-blur-sm px-2.5 py-1.5 rounded-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-          >
-            <span className="text-[10px] text-muted-foreground">Double-tap pour zoomer</span>
-          </motion.div>
-        )}
+          {activeMedia === 'image' && (
+            <motion.div
+              className="bg-background/80 backdrop-blur-sm p-2 rounded-sm pointer-events-auto"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+            >
+              {isZoomed ? (
+                <ZoomOut className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ZoomIn className="h-5 w-5 text-muted-foreground" />
+              )}
+            </motion.div>
+          )}
+
+          {isMobile && activeMedia === 'image' && (
+            <motion.div
+              className="bg-background/80 backdrop-blur-sm px-2.5 py-1.5 rounded-sm pointer-events-auto"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+            >
+              <span className="text-[10px] text-muted-foreground">Double-tap pour zoomer</span>
+            </motion.div>
+          )}
+        </div>
 
         {/* Mannequin badge — bottom-left, dismissable */}
         {showModelBadge && (modelHeight || modelSizeWorn) && activeMedia === 'image' && (

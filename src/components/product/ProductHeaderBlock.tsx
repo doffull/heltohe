@@ -51,22 +51,12 @@ export default function ProductHeaderBlock({ product, isNew, className }: Produc
             as="h1"
             className="text-2xl sm:text-3xl lg:text-4xl font-bold hud-text uppercase tracking-wider leading-tight"
           />
-          {product.limitedEdition && (
-            <motion.span
-              className="inline-flex items-center gap-1 border border-foreground bg-background px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] chamfer-hud-sm"
-              initial={{ opacity: 0, scale: 0.7 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.3, type: 'spring', stiffness: 260 }}
-            >
-              Limited Edition
-            </motion.span>
-          )}
           {isNew && (
             <motion.span
               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-primary/40 bg-primary/10 text-xs font-bold hud-text"
               initial={{ opacity: 0, scale: 0.7 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.35, type: 'spring', stiffness: 260 }}
+              transition={{ delay: 0.3, type: 'spring', stiffness: 260 }}
             >
               <Sparkles className="h-3 w-3" />
               IA
