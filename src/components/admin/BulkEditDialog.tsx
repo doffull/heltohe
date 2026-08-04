@@ -329,6 +329,7 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
                       {upd.stock !== undefined && <Diff before={String(p.stock)} after={String(upd.stock)} label="stock" />}
                       {upd.sku !== undefined && <Diff before={p.sku} after={upd.sku} label="sku" />}
                       {upd.category !== undefined && <Diff before={p.category} after={upd.category} label="cat" />}
+                          {'subtitle' in upd && <Diff before={p.subtitle || '—'} after={upd.subtitle || '—'} label="sous-titre" />}
                       {upd.tags !== undefined && <Diff before={(p.tags || []).join(',') || '—'} after={upd.tags.join(',') || '—'} label="tags" />}
                       {upd.isActive !== undefined && <Diff before="—" after={upd.isActive ? 'Actif' : 'Inactif'} label="statut" />}
                     </div>
@@ -368,6 +369,7 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
                           {upd.stock !== undefined && <Diff before={String(p.stock)} after={String(upd.stock)} label="stock" />}
                           {upd.sku !== undefined && <Diff before={p.sku} after={upd.sku} label="sku" />}
                           {upd.category !== undefined && <Diff before={p.category} after={upd.category} label="cat" />}
+                          {'subtitle' in upd && <Diff before={p.subtitle || '—'} after={upd.subtitle || '—'} label="sous-titre" />}
                           {upd.tags !== undefined && <Diff before={(p.tags || []).join(',') || '—'} after={upd.tags.join(',') || '—'} label="tags" />}
                           {upd.isActive !== undefined && <Diff before="—" after={upd.isActive ? 'Actif' : 'Inactif'} label="statut" />}
                         </div>
