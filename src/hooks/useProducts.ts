@@ -33,6 +33,11 @@ function dbToAppProduct(db: Record<string, unknown>): Product {
     templateId: (db.template_id as string) || null,
     isActive: db.is_active === undefined || db.is_active === null ? true : Boolean(db.is_active),
     limitedEdition: Boolean(db.limited_edition),
+    limitedEditionLabel: (db.limited_edition_label as string) || undefined,
+    limitedEditionColor: (db.limited_edition_color as string) || undefined,
+    limitedEditionTextColor: (db.limited_edition_text_color as string) || undefined,
+    limitedEditionPosition: ((db.limited_edition_position as string) || undefined) as Product['limitedEditionPosition'],
+
   };
 }
 
