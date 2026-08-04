@@ -746,6 +746,42 @@ export type Database = {
           },
         ]
       }
+      crm_message_templates: {
+        Row: {
+          body: string
+          category: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       crm_messages: {
         Row: {
           content: string
