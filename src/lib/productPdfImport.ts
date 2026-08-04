@@ -10,13 +10,25 @@ export interface ImportProgress {
   productsSoFar: number;
 }
 
+export type MainImageSource = 'worn' | 'ghost' | 'page';
+
 export interface ParsedCatalogProduct {
   name?: string;
   price?: number;
   sku?: string;
+  /** Tous les visuels retenus (image principale en premier). */
   pageImages?: string[];
+  /** Visuel principal détecté (porté de préférence). */
+  mainImage?: string | null;
+  /** Provenance du visuel principal. */
+  mainSource?: MainImageSource | null;
+  /** Packshots détourés sur fond blanc. */
+  ghostImages?: string[];
+  /** Visuels portés / mise en scène. */
+  wornImages?: string[];
   [key: string]: unknown;
 }
+
 
 export interface CatalogImportResult {
   products: ParsedCatalogProduct[];
@@ -78,6 +90,63 @@ async function readFunctionError(error: unknown): Promise<string> {
   return error instanceof Error ? error.message : 'Erreur inconnue';
 }
 
+const MAX_IMAGES = 6;
+
+function uniq(...lists: (string[] | undefined)[]): string[] {
+  const out: string[] = [];
+  for (const list of lists) {
+    for (const u of list ?? []) {
+      if (u && !out.includes(u)) out.push(u);
+      if (out.length >= MAX_IMAGES) return out;
+    }
+  }
+  return out;
+}
+
+/** Normalise les visuels d'un produit extrait (image principale en tête). */
+function normalizeProduct(product: ParsedCatalogProduct): ParsedCatalogProduct {
+  const worn = Array.isArray(product.wornImages) ? product.wornImages.filter(Boolean) : [];
+  const ghosts = Array.isArray(product.ghostImages) ? product.ghostImages.filter(Boolean) : [];
+  const pages = Array.isArray(product.pageImages) ? product.pageImages.filter(Boolean) : [];
+  const mainImage = product.mainImage || worn[0] || ghosts[0] || pages[0] || null;
+  const mainSource: MainImageSource | null =
+    (product.mainSource as MainImageSource | undefined) ??
+    (worn.includes(mainImage as string)
+      ? 'worn'
+      : ghosts.includes(mainImage as string)
+        ? 'ghost'
+        : mainImage
+          ? 'page'
+          : null);
+  return {
+    ...product,
+    mainImage,
+    mainSource,
+    wornImages: worn,
+    ghostImages: ghosts,
+    pageImages: uniq(mainImage ? [mainImage] : [], worn, ghosts, pages),
+  };
+}
+
+/** Fusionne deux extractions d'un même produit (lots différents). */
+function mergeProducts(existing: ParsedCatalogProduct, incoming: ParsedCatalogProduct): ParsedCatalogProduct {
+  const a = normalizeProduct(existing);
+  const b = normalizeProduct(incoming);
+  const worn = uniq(a.wornImages, b.wornImages);
+  const ghosts = uniq(a.ghostImages, b.ghostImages);
+  const mainImage = a.mainSource === 'worn' ? a.mainImage : (b.mainSource === 'worn' ? b.mainImage : a.mainImage || b.mainImage);
+  return {
+    ...a,
+    ...b,
+    mainImage,
+    mainSource: worn.includes(mainImage as string) ? 'worn' : ghosts.includes(mainImage as string) ? 'ghost' : mainImage ? 'page' : null,
+    wornImages: worn,
+    ghostImages: ghosts,
+    pageImages: uniq(mainImage ? [mainImage] : [], worn, ghosts, a.pageImages, b.pageImages),
+  };
+}
+
+
 export async function importProductsFromPdf(
   file: File,
   onProgress?: (progress: ImportProgress) => void,
@@ -108,27 +177,19 @@ export async function importProductsFromPdf(
     for (const product of batchProducts as ParsedCatalogProduct[]) {
       const key = String(product.sku || `${product.name || ''}-${product.price ?? ''}`).trim().toUpperCase();
       if (!key) continue;
-      const incomingImages = Array.isArray(product.pageImages) ? product.pageImages : [];
       const existingIndex = products.findIndex((p) => {
         const k = String(p.sku || `${p.name || ''}-${p.price ?? ''}`).trim().toUpperCase();
         return k === key;
       });
       if (existingIndex >= 0) {
-        // Merge images (union, cap 5)
-        const existing = products[existingIndex];
-        const existingImgs = Array.isArray(existing.pageImages) ? existing.pageImages : [];
-        const merged: string[] = [];
-        for (const u of [...existingImgs, ...incomingImages]) {
-          if (u && !merged.includes(u)) merged.push(u);
-          if (merged.length >= 5) break;
-        }
-        products[existingIndex] = { ...existing, pageImages: merged };
+        products[existingIndex] = mergeProducts(products[existingIndex], product);
         continue;
       }
       if (seen.has(key)) continue;
       seen.add(key);
-      products.push({ ...product, pageImages: incomingImages.slice(0, 5) });
+      products.push(normalizeProduct(product));
     }
+
     onProgress?.({ batchIndex: index + 1, totalBatches: pdfParts.length, productsSoFar: products.length });
   }
 

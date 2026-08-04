@@ -41,7 +41,7 @@ import { BulkVariantStockDialog } from '@/components/admin/BulkVariantStockDialo
 import { GlobalSizesEditor } from '@/components/admin/GlobalSizesEditor';
 import { ProductDefaultsEditor } from '@/components/admin/ProductDefaultsEditor';
 import { Textarea } from '@/components/ui/textarea';
-import { importProductsFromPdf } from '@/lib/productPdfImport';
+import { importProductsFromPdf, type MainImageSource } from '@/lib/productPdfImport';
 import { useDesignSettings, useSaveDesignSettings } from '@/hooks/useDesignSettings';
 
 interface ExtractedProduct {
@@ -57,8 +57,19 @@ interface ExtractedProduct {
   sku: string;
   stock: number;
   pageImages?: string[];
+  mainImage?: string | null;
+  mainSource?: MainImageSource | null;
+  ghostImages?: string[];
+  wornImages?: string[];
   selected: boolean;
 }
+
+const MAIN_SOURCE_LABEL: Record<MainImageSource, string> = {
+  worn: 'Porté',
+  ghost: 'Ghost',
+  page: 'Page',
+};
+
 
 export default function AdminProducts() {
   const navigate = useNavigate();
@@ -426,15 +437,23 @@ export default function AdminProducts() {
     let success = 0;
     for (const p of selected) {
       try {
-        const imgs = Array.isArray(p.pageImages) ? p.pageImages.filter(Boolean) : [];
+        const all = Array.isArray(p.pageImages) ? p.pageImages.filter(Boolean) : [];
+        const main = p.mainImage || all[0] || null;
+        // Galerie : ghosts d'abord, puis les autres visuels
+        const gallery: string[] = [];
+        for (const u of [...(p.ghostImages || []), ...all]) {
+          if (u && u !== main && !gallery.includes(u)) gallery.push(u);
+          if (gallery.length >= 5) break;
+        }
         await createProduct.mutateAsync({
           name: p.name, subtitle: p.subtitle, price: p.price, salePrice: p.salePrice || undefined,
-          image: imgs[0] || '/placeholder.svg',
-          galleryImages: imgs.slice(1, 5),
+          image: main || '/placeholder.svg',
+          galleryImages: gallery,
           category: p.category || 'Autre', stock: p.stock || 50,
           sku: p.sku, description: p.description, material: p.material,
           sizes: p.sizes || [], colors: p.colors || [], colorOptions: [], attributes: {},
         });
+
         success++;
       } catch {}
     }
@@ -987,29 +1006,72 @@ export default function AdminProducts() {
                 </div>
               </div>
               <div className="space-y-2 max-h-[50vh] overflow-y-auto">
-                {extractedProducts.map((p, i) => (
-                  <div key={i} className={`flex items-center gap-4 p-3 border rounded-lg transition-colors ${p.selected ? 'border-primary bg-primary/5' : 'border-border opacity-60'}`}>
-                    <button type="button" onClick={() => setExtractedProducts(ps => ps.map((pp, j) => j === i ? { ...pp, selected: !pp.selected } : pp))}>
+                {extractedProducts.map((p, i) => {
+                  const all = (p.pageImages || []).filter(Boolean);
+                  const main = p.mainImage || all[0] || null;
+                  const ghostCount = (p.ghostImages || []).filter(Boolean).length;
+                  const promote = (url: string) => setExtractedProducts(ps => ps.map((pp, j) => j === i
+                    ? {
+                        ...pp,
+                        mainImage: url,
+                        mainSource: (pp.ghostImages || []).includes(url)
+                          ? 'ghost'
+                          : (pp.wornImages || []).includes(url) ? 'worn' : 'page',
+                      }
+                    : pp));
+                  return (
+                  <div key={i} className={`flex items-start gap-4 p-3 border rounded-lg transition-colors ${p.selected ? 'border-primary bg-primary/5' : 'border-border opacity-60'}`}>
+                    <button type="button" className="mt-1" onClick={() => setExtractedProducts(ps => ps.map((pp, j) => j === i ? { ...pp, selected: !pp.selected } : pp))}>
                       {p.selected ? <Check className="h-5 w-5 text-primary" /> : <X className="h-5 w-5 text-muted-foreground" />}
                     </button>
-                    {p.pageImages && p.pageImages[0] ? (
-                      <img src={p.pageImages[0]} alt="" className="h-12 w-12 object-cover rounded border border-border shrink-0" loading="lazy" />
-                    ) : (
-                      <div className="h-12 w-12 rounded border border-dashed border-border shrink-0 flex items-center justify-center text-[9px] text-muted-foreground">Pas d'img</div>
-                    )}
+                    <div className="shrink-0 space-y-1">
+                      {main ? (
+                        <img
+                          src={main}
+                          alt=""
+                          className={`h-14 w-14 object-cover rounded border-2 ${p.mainSource === 'worn' ? 'border-primary' : p.mainSource === 'ghost' ? 'border-amber-500' : 'border-border'}`}
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="h-14 w-14 rounded border border-dashed border-border flex items-center justify-center text-[9px] text-muted-foreground">Pas d'img</div>
+                      )}
+                      {p.mainSource && (
+                        <p className="text-[9px] uppercase tracking-wider text-center text-muted-foreground">
+                          {MAIN_SOURCE_LABEL[p.mainSource]}
+                        </p>
+                      )}
+                    </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{p.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {p.category} · SKU: {p.sku}
-                        {p.pageImages && p.pageImages.length > 0 && ` · ${p.pageImages.length} image${p.pageImages.length > 1 ? 's' : ''}`}
+                        {all.length > 0 && ` · ${all.length} visuel${all.length > 1 ? 's' : ''}`}
+                        {ghostCount > 0 && ` · ${ghostCount} ghost`}
                       </p>
+                      {all.length > 1 && (
+                        <div className="flex gap-1.5 mt-2 flex-wrap">
+                          {all.slice(0, 8).map((url) => (
+                            <button
+                              key={url}
+                              type="button"
+                              title={url === main ? 'Image principale' : 'Définir comme image principale'}
+                              onClick={() => promote(url)}
+                              className={`h-9 w-9 rounded overflow-hidden border transition-all ${url === main ? 'border-primary ring-1 ring-primary' : 'border-border hover:border-foreground'}`}
+                            >
+                              <img src={url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div className="text-right">
                       <p className="font-bold text-sm">{p.price}€</p>
                       {p.salePrice && <p className="text-xs text-muted-foreground line-through">{p.salePrice}€</p>}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
+
               </div>
               <div className="flex justify-end gap-3 pt-4 border-t border-border">
                 <Button variant="outline" onClick={() => { setExtractedProducts([]); setIsPdfDialogOpen(false); }}>Annuler</Button>

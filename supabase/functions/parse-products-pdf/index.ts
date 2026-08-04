@@ -4,6 +4,7 @@ import { extractText, getDocumentProxy, renderPageAsImage } from "https://esm.sh
 // Pure-JS image codec (no native deps) used to downscale & re-encode
 // rendered PDF pages as JPEG before shipping them to the AI.
 import { Image } from "https://deno.land/x/imagescript@1.2.17/mod.ts";
+import { extractEmbeddedImages, type EmbeddedImage, type EmbeddedKind } from "./embeddedImages.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -223,6 +224,98 @@ serve(async (req) => {
       }
     }
 
+    type EmbeddedRef = { url: string; kind: EmbeddedKind };
+
+    async function uploadBytes(path: string, bytes: Uint8Array): Promise<string | null> {
+      if (!storageClient) return null;
+      try {
+        const { error } = await storageClient.storage.from(STORAGE_BUCKET).upload(path, bytes, {
+          contentType: "image/jpeg",
+          upsert: true,
+        });
+        if (error) {
+          console.warn("storage upload failed:", error.message);
+          return null;
+        }
+        const { data } = storageClient.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+        return data?.publicUrl ?? null;
+      } catch (e) {
+        console.warn("storage upload threw:", (e as Error).message);
+        return null;
+      }
+    }
+
+    /** Extrait les images embarquées du PDF et les envoie au stockage. */
+    async function collectEmbedded(
+      pdfBytes: Uint8Array | null,
+      maxPage: number,
+    ): Promise<Record<number, EmbeddedRef[]>> {
+      const out: Record<number, EmbeddedRef[]> = {};
+      if (!pdfBytes || maxPage <= 0 || !storageClient) return out;
+      let map: Map<number, EmbeddedImage[]>;
+      try {
+        map = await extractEmbeddedImages(pdfBytes, maxPage);
+      } catch (e) {
+        console.warn("collectEmbedded failed:", (e as Error).message);
+        return out;
+      }
+      for (const [pageNumber, images] of map) {
+        const refs: EmbeddedRef[] = [];
+        for (const im of images) {
+          const path = `pdf-import/${dayFolder}/${batchId}/p${pageNumber}-${im.index}-${im.kind}.jpg`;
+          const url = await uploadBytes(path, im.bytes);
+          if (url) refs.push({ url, kind: im.kind });
+        }
+        if (refs.length > 0) out[pageNumber] = refs;
+      }
+      return out;
+    }
+
+    /** Résout les visuels d'un produit à partir de ses pages. */
+    function resolveProductImages(
+      pages: number[],
+      pageUrls: Record<number, string>,
+      embedded: Record<number, EmbeddedRef[]>,
+    ) {
+      const worn: string[] = [];
+      const ghosts: string[] = [];
+      const pageShots: string[] = [];
+      for (const n of pages) {
+        for (const ref of embedded[n] ?? []) {
+          const bucket = ref.kind === "ghost" ? ghosts : worn;
+          if (!bucket.includes(ref.url)) bucket.push(ref.url);
+        }
+        const shot = pageUrls[n];
+        if (shot && !pageShots.includes(shot)) pageShots.push(shot);
+      }
+      const mainImage = worn[0] ?? ghosts[0] ?? pageShots[0] ?? null;
+      const mainSource: "worn" | "ghost" | "page" | null = worn[0]
+        ? "worn"
+        : ghosts[0]
+          ? "ghost"
+          : pageShots[0]
+            ? "page"
+            : null;
+      const gallery: string[] = [];
+      for (const u of [...ghosts, ...worn.slice(1), ...pageShots]) {
+        if (u && u !== mainImage && !gallery.includes(u)) gallery.push(u);
+        if (gallery.length >= MAX_IMAGES_PER_PRODUCT) break;
+      }
+      const all: string[] = [];
+      for (const u of [mainImage, ...gallery]) {
+        if (u && !all.includes(u)) all.push(u);
+      }
+      return {
+        mainImage,
+        mainSource,
+        ghostImages: ghosts.slice(0, MAX_IMAGES_PER_PRODUCT),
+        wornImages: worn.slice(0, MAX_IMAGES_PER_PRODUCT),
+        pageImages: all.slice(0, MAX_IMAGES_PER_PRODUCT + 1),
+      };
+    }
+
+
+
     // 1. Extract text locally
     let rawText = "";
     if (fileType === "pdf") {
@@ -263,6 +356,8 @@ serve(async (req) => {
       let processedPages = 0;
       // Map global page number -> public URL
       const pageUrls: Record<number, string> = {};
+      // Images réellement embarquées (ghost / porté) par page
+      const embedded = await collectEmbedded(pdfBytes, pagesToRender);
 
       for (let start = 1; start <= pagesToRender && rasterAvailable; start += PAGE_BATCH_SIZE) {
         const batch: { page: number; base64: string; mime: string; bytes: Uint8Array }[] = [];
@@ -321,19 +416,14 @@ serve(async (req) => {
         }
       }
 
-      // Resolve pageImages[] from _pages using pageUrls map
+      // Resolve images (embedded ghost/worn first, page shots as fallback)
       const allProducts = Array.from(seen.values()).map((p) => {
         const pages: number[] = Array.isArray((p as any)._pages) ? (p as any)._pages : [];
-        const urls: string[] = [];
-        for (const n of pages) {
-          const u = pageUrls[n];
-          if (u && !urls.includes(u)) urls.push(u);
-          if (urls.length >= MAX_IMAGES_PER_PRODUCT) break;
-        }
-        const out = { ...p, pageImages: urls };
+        const out = { ...p, ...resolveProductImages(pages, pageUrls, embedded) };
         delete (out as any)._pages;
         return out;
       });
+
 
       if (rasterAvailable && processedPages > 0) {
         return new Response(JSON.stringify({
@@ -341,6 +431,7 @@ serve(async (req) => {
           mode: "raster-compressed",
           pagesProcessed: processedPages,
           pagesUploaded: Object.keys(pageUrls).length,
+          embeddedImages: Object.values(embedded).reduce((n, l) => n + l.length, 0),
           errors: errors.length ? errors : undefined,
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
@@ -384,6 +475,8 @@ serve(async (req) => {
       }
     }
     const pageUrls: Record<number, string> = {};
+    // Images embarquées (ghost / porté) : c'est la source d'images prioritaire
+    const embedded = await collectEmbedded(pdfBytesForImages, backgroundPageCount);
     // Render + upload pages sequentially to bound memory (fire-and-await before AI to keep flow simple)
     for (let p = 1; p <= backgroundPageCount; p++) {
       const img = await renderCompressedPage(pdfBytesForImages!, p);
@@ -391,6 +484,8 @@ serve(async (req) => {
       const url = await uploadPageJpeg(p, img.bytes);
       if (url) pageUrls[p] = url;
     }
+
+
 
     const chunks = chunkText(rawText, CHUNK_CHARS);
     if (chunks.length === 0) {
@@ -439,19 +534,13 @@ serve(async (req) => {
       }
     }
 
-    // Attach pageImages from uploaded pages. If the model didn't provide any
-    // _pageIndex (common for text mode), we don't know which pages belong to
-    // which product — leave pageImages empty for those and let the client fall
-    // back to placeholder. When we do have _pages, resolve URLs.
+    // Attach images from _pages: visuels embarqués (porté/ghost) en priorité,
+    // captures de page en dernier recours. Sans _pageIndex, on ne sait pas
+    // rattacher — sauf si le lot ne contient qu'une seule page.
     const productsWithImages = Array.from(seen.values()).map((p) => {
-      const pages: number[] = Array.isArray((p as any)._pages) ? (p as any)._pages : [];
-      const urls: string[] = [];
-      for (const n of pages) {
-        const u = pageUrls[n];
-        if (u && !urls.includes(u)) urls.push(u);
-        if (urls.length >= MAX_IMAGES_PER_PRODUCT) break;
-      }
-      const out = { ...p, pageImages: urls };
+      let pages: number[] = Array.isArray((p as any)._pages) ? (p as any)._pages : [];
+      if (pages.length === 0 && backgroundPageCount === 1) pages = [1];
+      const out = { ...p, ...resolveProductImages(pages, pageUrls, embedded) };
       delete (out as any)._pages;
       return out;
     });
@@ -462,6 +551,7 @@ serve(async (req) => {
       chunksProcessed: chunks.length,
       textLength: rawText.length,
       pagesUploaded: Object.keys(pageUrls).length,
+      embeddedImages: Object.values(embedded).reduce((n, l) => n + l.length, 0),
       errors: errors.length ? errors : undefined,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
