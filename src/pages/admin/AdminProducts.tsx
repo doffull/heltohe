@@ -42,7 +42,7 @@ import { BulkVariantStockDialog } from '@/components/admin/BulkVariantStockDialo
 import { GlobalSizesEditor } from '@/components/admin/GlobalSizesEditor';
 import { ProductDefaultsEditor } from '@/components/admin/ProductDefaultsEditor';
 import { Textarea } from '@/components/ui/textarea';
-import { importProductsFromPdf, type MainImageSource } from '@/lib/productPdfImport';
+import { importProductsFromPdf, pickMainImage, AUTO_MAIN_STRATEGY_LABEL, type AutoMainStrategy, type MainImageSource } from '@/lib/productPdfImport';
 import { useDesignSettings, useSaveDesignSettings } from '@/hooks/useDesignSettings';
 
 interface ExtractedProduct {
@@ -62,7 +62,10 @@ interface ExtractedProduct {
   mainSource?: MainImageSource | null;
   ghostImages?: string[];
   wornImages?: string[];
+  /** true si l'utilisateur a choisi manuellement l'image principale. */
+  mainManual?: boolean;
   selected: boolean;
+  [key: string]: unknown;
 }
 
 const MAIN_SOURCE_LABEL: Record<MainImageSource, string> = {
@@ -107,6 +110,7 @@ export default function AdminProducts() {
   const [isQuickCsvOpen, setIsQuickCsvOpen] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [extractedProducts, setExtractedProducts] = useState<ExtractedProduct[]>([]);
+  const [autoMainStrategy, setAutoMainStrategy] = useState<AutoMainStrategy>('worn-first');
   const [isImporting, setIsImporting] = useState(false);
   // Inline stock edit
   const [editingStockId, setEditingStockId] = useState<string | null>(null);
@@ -424,9 +428,17 @@ export default function AdminProducts() {
         }
       });
       if (result.products.length > 0) {
-        setExtractedProducts(result.products.map((product) => ({ ...product, selected: true })) as ExtractedProduct[]);
+        setExtractedProducts(result.products.map((product) => ({
+          ...product,
+          ...pickMainImage(product, autoMainStrategy),
+          mainManual: false,
+          selected: true,
+        })) as ExtractedProduct[]);
         const warning = result.errors.length > 0 ? ` · ${result.errors.length} lot(s) en erreur` : '';
-        toast({ title: `${result.products.length} produits extraits · ${result.batchesProcessed} lot(s) analysé(s)${warning}` });
+        toast({
+          title: `${result.products.length} produits extraits · ${result.batchesProcessed} lot(s) analysé(s)${warning}`,
+          description: `Image principale auto : ${AUTO_MAIN_STRATEGY_LABEL[autoMainStrategy]}`,
+        });
       } else {
         toast({ title: 'Aucun produit trouvé', variant: 'destructive' });
       }
@@ -436,6 +448,22 @@ export default function AdminProducts() {
       setIsParsing(false);
     }
   };
+
+  /** Réapplique l'auto-sélection de l'image principale (force = écrase les choix manuels). */
+  const applyAutoMain = (strategy: AutoMainStrategy, force = false) => {
+    let changed = 0;
+    setExtractedProducts(ps => ps.map((p) => {
+      if (p.mainManual && !force) return p;
+      const picked = pickMainImage(p, strategy);
+      if (picked.mainImage && picked.mainImage !== p.mainImage) changed++;
+      return { ...p, ...picked, mainManual: false };
+    }));
+    toast({
+      title: 'Auto-sélection appliquée',
+      description: `${AUTO_MAIN_STRATEGY_LABEL[strategy]} · ${changed} image(s) principale(s) mise(s) à jour`,
+    });
+  };
+
 
   const handleImportSelected = async () => {
     const selected = extractedProducts.filter(p => p.selected);
@@ -1043,6 +1071,26 @@ export default function AdminProducts() {
                   <Button variant="outline" size="sm" onClick={() => setExtractedProducts([])}>Effacer</Button>
                 </div>
               </div>
+              <div className="flex flex-wrap items-center gap-2 p-3 rounded-lg border border-border bg-muted/30">
+                <span className="text-xs uppercase tracking-wider text-muted-foreground">Image principale auto</span>
+                <Select
+                  value={autoMainStrategy}
+                  onValueChange={(v) => { setAutoMainStrategy(v as AutoMainStrategy); applyAutoMain(v as AutoMainStrategy); }}
+                >
+                  <SelectTrigger className="h-8 w-[230px] text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(AUTO_MAIN_STRATEGY_LABEL) as AutoMainStrategy[]).map((s) => (
+                      <SelectItem key={s} value={s} className="text-xs">{AUTO_MAIN_STRATEGY_LABEL[s]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="sm" onClick={() => applyAutoMain(autoMainStrategy, true)}>
+                  Réinitialiser tout en auto
+                </Button>
+                <span className="text-[11px] text-muted-foreground">
+                  {extractedProducts.filter(p => p.mainManual).length} choix manuel(s) préservé(s)
+                </span>
+              </div>
               <div className="space-y-2 max-h-[50vh] overflow-y-auto">
                 {extractedProducts.map((p, i) => {
                   const all = (p.pageImages || []).filter(Boolean);
@@ -1052,10 +1100,14 @@ export default function AdminProducts() {
                     ? {
                         ...pp,
                         mainImage: url,
+                        mainManual: true,
                         mainSource: (pp.ghostImages || []).includes(url)
                           ? 'ghost'
                           : (pp.wornImages || []).includes(url) ? 'worn' : 'page',
                       }
+                    : pp));
+                  const resetAuto = () => setExtractedProducts(ps => ps.map((pp, j) => j === i
+                    ? { ...pp, ...pickMainImage(pp, autoMainStrategy), mainManual: false }
                     : pp));
                   return (
                   <div key={i} className={`flex items-start gap-4 p-3 border rounded-lg transition-colors ${p.selected ? 'border-primary bg-primary/5' : 'border-border opacity-60'}`}>
@@ -1075,8 +1127,17 @@ export default function AdminProducts() {
                       )}
                       {p.mainSource && (
                         <p className="text-[9px] uppercase tracking-wider text-center text-muted-foreground">
-                          {MAIN_SOURCE_LABEL[p.mainSource]}
+                          {MAIN_SOURCE_LABEL[p.mainSource]}{p.mainManual ? ' · manuel' : ' · auto'}
                         </p>
+                      )}
+                      {p.mainManual && (
+                        <button
+                          type="button"
+                          onClick={resetAuto}
+                          className="block mx-auto text-[9px] uppercase tracking-wider text-primary hover:underline"
+                        >
+                          Auto
+                        </button>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">

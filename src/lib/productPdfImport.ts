@@ -199,3 +199,42 @@ export async function importProductsFromPdf(
 
   return { products, batchesProcessed: pdfParts.length, errors };
 }
+/** Stratégies d'auto-sélection de l'image principale à l'import. */
+export type AutoMainStrategy = 'worn-first' | 'ghost-first' | 'first';
+
+export const AUTO_MAIN_STRATEGY_LABEL: Record<AutoMainStrategy, string> = {
+  'worn-first': 'Porté en priorité',
+  'ghost-first': 'Ghost (packshot) en priorité',
+  first: 'Premier visuel extrait',
+};
+
+function sourceOf(url: string, product: ParsedCatalogProduct): MainImageSource {
+  if ((product.wornImages || []).includes(url)) return 'worn';
+  if ((product.ghostImages || []).includes(url)) return 'ghost';
+  return 'page';
+}
+
+/**
+ * Applique une stratégie d'auto-sélection de l'image principale.
+ * Retourne l'URL choisie et sa provenance (null si aucun visuel).
+ */
+export function pickMainImage(
+  product: ParsedCatalogProduct,
+  strategy: AutoMainStrategy = 'worn-first',
+): { mainImage: string | null; mainSource: MainImageSource | null } {
+  const worn = (product.wornImages || []).filter(Boolean);
+  const ghosts = (product.ghostImages || []).filter(Boolean);
+  const pages = (product.pageImages || []).filter(Boolean);
+
+  const order =
+    strategy === 'ghost-first'
+      ? [ghosts, worn, pages]
+      : strategy === 'first'
+        ? [pages, worn, ghosts]
+        : [worn, ghosts, pages];
+
+  for (const list of order) {
+    if (list[0]) return { mainImage: list[0], mainSource: sourceOf(list[0], product) };
+  }
+  return { mainImage: null, mainSource: null };
+}
