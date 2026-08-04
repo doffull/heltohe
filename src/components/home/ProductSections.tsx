@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ProductGrid } from '@/components/products/ProductCard';
 import { InlineEditable } from '@/components/visual-editor/InlineEditable';
 import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
+import { excludeMarketplaceProducts } from '@/lib/shopVisibility';
 
 export function ProductSections() {
   const { designSettings, updateDesignSettings, products, navigateToCategory, language } = useApp();
@@ -14,7 +15,8 @@ export function ProductSections() {
   const { setIsDirty } = useVisualEditor();
   const { homeSections } = designSettings;
 
-  const byTag = (tag: string) => products.filter(p => p.tags?.includes(tag));
+  const shopProducts = excludeMarketplaceProducts(products);
+  const byTag = (tag: string) => shopProducts.filter(p => p.tags?.includes(tag));
 
   const featuredTagged = byTag('featured');
   const newTagged = byTag('new');
@@ -24,12 +26,12 @@ export function ProductSections() {
   const promoTagged = byTag('promo');
 
   const sectionProducts: Record<string, typeof products> = {
-    featured: featuredTagged.length > 0 ? featuredTagged.slice(0, 8) : products.slice(0, 4),
-    new: newTagged.length > 0 ? newTagged.slice(0, 8) : products.slice(0, 4),
-    top: topTagged.length > 0 ? topTagged.slice(0, 8) : products.slice(0, 4),
-    trending: trendingTagged.length > 0 ? trendingTagged.slice(0, 8) : products.filter(p => p.stock > 10).slice(0, 4),
-    style: styleTagged.length > 0 ? styleTagged.slice(0, 8) : products.filter(p => p.category === 'Homme').slice(0, 4),
-    promo: promoTagged.length > 0 ? promoTagged.slice(0, 8) : products.filter(p => p.salePrice).slice(0, 4),
+    featured: featuredTagged.length > 0 ? featuredTagged.slice(0, 8) : shopProducts.slice(0, 4),
+    new: newTagged.length > 0 ? newTagged.slice(0, 8) : shopProducts.slice(0, 4),
+    top: topTagged.length > 0 ? topTagged.slice(0, 8) : shopProducts.slice(0, 4),
+    trending: trendingTagged.length > 0 ? trendingTagged.slice(0, 8) : shopProducts.filter(p => p.stock > 10).slice(0, 4),
+    style: styleTagged.length > 0 ? styleTagged.slice(0, 8) : shopProducts.filter(p => p.category === 'Homme').slice(0, 4),
+    promo: promoTagged.length > 0 ? promoTagged.slice(0, 8) : shopProducts.filter(p => p.salePrice).slice(0, 4),
   };
 
   const visibleSections = homeSections.filter(s => s.isVisible);

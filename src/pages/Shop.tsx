@@ -3,6 +3,7 @@ import ShopFilterPanel, { type ShopFilters } from '@/components/products/ShopFil
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
 import { groupFamiliesAdjacent } from '@/lib/productFamily';
+import { isMarketplaceCategory } from '@/lib/shopVisibility';
 import { useOrderedProducts } from '@/hooks/useCategoryOrder';
 import { useCategories } from '@/hooks/useCategories';
 import { useDesignSettings } from '@/hooks/useDesignSettings';
@@ -66,8 +67,8 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
   const { data: dbCategories = [] } = useCategories();
   const { data: designSettings } = useDesignSettings();
 
-  // Build category list from DB
-  const rootCategories = dbCategories.filter(c => !c.parentId);
+  // Build category list from DB (les catégories marketplace restent hors boutique)
+  const rootCategories = dbCategories.filter(c => !c.parentId && !isMarketplaceCategory(c.title));
   const CATEGORIES = ['Tout', ...rootCategories.map(c => c.title)];
 
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -139,7 +140,10 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
     }
     if (selectedCategory !== 'Tout') {
       filtered = filtered.filter(p => p.category === selectedCategory);
+    } else {
+      filtered = filtered.filter(p => !isMarketplaceCategory(p.category));
     }
+
     if (shopFilters.sizes.length) {
       filtered = filtered.filter(p => (p.sizes || []).some(s => shopFilters.sizes.includes(s)));
     }
@@ -156,6 +160,7 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
   const baseFilteredForOptions = useMemo(() => {
     let filtered = [...products];
     if (selectedCategory !== 'Tout') filtered = filtered.filter(p => p.category === selectedCategory);
+    else filtered = filtered.filter(p => !isMarketplaceCategory(p.category));
     return filtered;
   }, [products, selectedCategory]);
 
