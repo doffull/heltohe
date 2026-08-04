@@ -294,10 +294,8 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
         </div>
 
         {/* Filtres + Produits */}
-        <div className="mb-4 lg:hidden">
-          <ShopFilterPanel products={baseFilteredForOptions} value={shopFilters} onChange={setShopFilters} />
-        </div>
         <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-8 xl:gap-10">
+
           <ShopFilterPanel
             products={baseFilteredForOptions}
             value={shopFilters}
