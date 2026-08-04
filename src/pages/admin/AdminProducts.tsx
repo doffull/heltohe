@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { useCategories } from '@/hooks/useCategories';
 import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, useBulkDeleteProducts, useBulkUpdateProducts } from '@/hooks/useProducts';
 import { BulkEditDialog } from '@/components/admin/BulkEditDialog';
 import { QuickPriceStockImportDialog } from '@/components/admin/QuickPriceStockImportDialog';
@@ -114,11 +115,12 @@ export default function AdminProducts() {
 
   // Bulk edit state
 
+  const { data: dbCategories = [] } = useCategories();
   const [bulkCategory, setBulkCategory] = useState('__unchanged__');
   const [bulkPrice, setBulkPrice] = useState('');
   const [bulkStock, setBulkStock] = useState('');
 
-  const categories = [...new Set(products.map(p => p.category))];
+  const categories = [...new Set([...dbCategories.map(c => c.title), ...products.map(p => p.category)].filter(Boolean))];
 
   let filteredProducts = products.filter(p => {
     if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase()) && !p.sku.toLowerCase().includes(searchQuery.toLowerCase())) return false;
