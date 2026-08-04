@@ -62,6 +62,8 @@ interface ExtractedProduct {
   mainSource?: MainImageSource | null;
   ghostImages?: string[];
   wornImages?: string[];
+  /** true si l'utilisateur a choisi manuellement l'image principale. */
+  mainManual?: boolean;
   selected: boolean;
 }
 
