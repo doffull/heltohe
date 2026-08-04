@@ -6,6 +6,8 @@ import { loadGoogleFont } from '@/config/blockVariants';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import RelatedProducts from '@/components/product/RelatedProducts';
+import { LimitedEditionBadge, badgeCornerClasses, getBadgePosition } from '@/components/product/LimitedEditionBadge';
+
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
 import { getProductTrustBadges, TRUST_BADGE_ICONS } from '@/lib/productTrustBadges';
