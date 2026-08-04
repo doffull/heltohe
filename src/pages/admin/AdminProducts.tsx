@@ -448,6 +448,22 @@ export default function AdminProducts() {
     }
   };
 
+  /** Réapplique l'auto-sélection de l'image principale (force = écrase les choix manuels). */
+  const applyAutoMain = (strategy: AutoMainStrategy, force = false) => {
+    let changed = 0;
+    setExtractedProducts(ps => ps.map((p) => {
+      if (p.mainManual && !force) return p;
+      const picked = pickMainImage(p, strategy);
+      if (picked.mainImage && picked.mainImage !== p.mainImage) changed++;
+      return { ...p, ...picked, mainManual: false };
+    }));
+    toast({
+      title: 'Auto-sélection appliquée',
+      description: `${AUTO_MAIN_STRATEGY_LABEL[strategy]} · ${changed} image(s) principale(s) mise(s) à jour`,
+    });
+  };
+
+
   const handleImportSelected = async () => {
     const selected = extractedProducts.filter(p => p.selected);
     if (selected.length === 0) return;
