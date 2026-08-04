@@ -254,6 +254,27 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
               )}
             </FieldRow>
 
+            {/* Sous-titre */}
+            <FieldRow label="Sous-titre">
+              <Select value={subtitleOp} onValueChange={(v) => setSubtitleOp(v as SubtitleOp)}>
+                <SelectTrigger className="w-[220px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unchanged">Inchangé</SelectItem>
+                  <SelectItem value="collab">Préréglage Collab</SelectItem>
+                  <SelectItem value="set">Fixer à…</SelectItem>
+                  <SelectItem value="clear">Supprimer</SelectItem>
+                </SelectContent>
+              </Select>
+              {subtitleOp === 'set' && (
+                <Input placeholder="ex : MARQUE X MARQUE" value={subtitleArg} onChange={e => setSubtitleArg(e.target.value)} className="flex-1 h-8 text-xs uppercase" />
+              )}
+              {subtitleOp === 'collab' && (
+                <span className="text-[11px] font-mono text-muted-foreground truncate">{COLLAB_SUBTITLE}</span>
+              )}
+            </FieldRow>
+
+
+
             {/* Category */}
             <FieldRow label="Catégorie">
               <Select value={category} onValueChange={setCategory}>
