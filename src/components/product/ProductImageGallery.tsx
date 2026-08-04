@@ -231,19 +231,25 @@ export default function ProductImageGallery({
           )}
         </AnimatePresence>
 
-        {/* Right-side overlay stack: Limited Edition badge + zoom/hint */}
-        <div className="absolute bottom-4 right-4 z-20 flex flex-col items-end gap-2 pointer-events-none">
-          {product?.limitedEdition && activeMedia === 'image' && (
-            <motion.span
-              className="bevel-corners border border-foreground bg-background/95 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] backdrop-blur-sm pointer-events-auto"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.3, type: 'spring', stiffness: 260 }}
-            >
-              Limited Edition
-            </motion.span>
-          )}
+        {/* Limited Edition badge — configurable corner, mobile-safe insets */}
+        {product?.limitedEdition && activeMedia === 'image' && (
+          <div
+            className={cn(
+              'absolute z-30 flex flex-col pointer-events-none max-w-[calc(100%-1rem)]',
+              badgeCornerClasses(getBadgePosition(product)),
+            )}
+          >
+            <LimitedEditionBadge product={product} className="pointer-events-auto" />
+          </div>
+        )}
 
+        {/* Bottom-right stack: zoom indicator + mobile hint */}
+        <div
+          className={cn(
+            'absolute bottom-2 right-2 sm:bottom-4 sm:right-4 z-20 flex flex-col items-end gap-2 pointer-events-none',
+            product?.limitedEdition && getBadgePosition(product) === 'bottom-right' && 'bottom-11 sm:bottom-14',
+          )}
+        >
           {activeMedia === 'image' && (
             <motion.div
               className="bg-background/80 backdrop-blur-sm p-2 rounded-sm pointer-events-auto"
@@ -270,6 +276,7 @@ export default function ProductImageGallery({
             </motion.div>
           )}
         </div>
+
 
         {/* Mannequin badge — bottom-left, dismissable */}
         {showModelBadge && (modelHeight || modelSizeWorn) && activeMedia === 'image' && (
