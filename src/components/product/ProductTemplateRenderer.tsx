@@ -376,17 +376,30 @@ function Gallery({ images, idx, setIdx, sticky, product }: { images: string[]; i
           </>
         )}
 
-        {/* Bottom-right overlay stack: Limited Edition badge + zoom */}
-        <div className="absolute bottom-3 right-3 z-20 flex flex-col items-end gap-2 pointer-events-none">
-          {product?.limitedEdition && (
-            <span className="bevel-corners border border-foreground bg-background/95 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] backdrop-blur-sm pointer-events-auto">
-              Limited Edition
-            </span>
+        {/* Limited Edition badge — configurable corner */}
+        {product?.limitedEdition && (
+          <div
+            className={cn(
+              'absolute z-30 flex flex-col pointer-events-none max-w-[calc(100%-1rem)]',
+              badgeCornerClasses(getBadgePosition(product)),
+            )}
+          >
+            <LimitedEditionBadge product={product} animate={false} className="pointer-events-auto" />
+          </div>
+        )}
+
+        {/* Bottom-right zoom */}
+        <div
+          className={cn(
+            'absolute bottom-3 right-3 z-20 flex flex-col items-end gap-2 pointer-events-none',
+            product?.limitedEdition && getBadgePosition(product) === 'bottom-right' && 'bottom-12',
           )}
+        >
           <button className="w-10 h-10 rounded-full bg-white/90 backdrop-blur flex items-center justify-center shadow pointer-events-auto">
             <ZoomIn className="w-4 h-4" />
           </button>
         </div>
+
       </div>
     </div>
   );
