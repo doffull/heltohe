@@ -269,6 +269,11 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         galleryImages: product.galleryImages || [],
         templateId: product.templateId ?? null,
         limitedEdition: product.limitedEdition ?? false,
+        limitedEditionLabel: product.limitedEditionLabel || '',
+        limitedEditionColor: product.limitedEditionColor || '',
+        limitedEditionTextColor: product.limitedEditionTextColor || '',
+        limitedEditionPosition: product.limitedEditionPosition || 'bottom-right',
+
       });
     }
   }, [product]);
