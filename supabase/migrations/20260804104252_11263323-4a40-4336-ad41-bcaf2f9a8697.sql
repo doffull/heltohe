@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.validate_and_create_order(jsonb, text, text, jsonb) TO anon;
