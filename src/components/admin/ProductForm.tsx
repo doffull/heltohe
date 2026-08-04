@@ -745,6 +745,18 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
               </button>
             ))}
           </div>
+          <div className="flex gap-2 items-center">
+            <Input
+              value={newCategoryDraft}
+              onChange={(e) => setNewCategoryDraft(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCategory(); } }}
+              placeholder="Nouvelle catégorie..."
+              className="bg-secondary/50 border-border/30 h-8 text-xs max-w-[220px]"
+            />
+            <Button type="button" size="sm" variant="outline" className="h-8 chamfer-hud-sm" onClick={addCategory} disabled={createCategory.isPending || !newCategoryDraft.trim()}>
+              <Plus className="h-3.5 w-3.5" /> Ajouter
+            </Button>
+          </div>
         </div>
       </div>
 
