@@ -112,6 +112,14 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
 
     if (activeOp !== 'unchanged') upd.isActive = activeOp === 'true';
 
+    if (subtitleOp !== 'unchanged') {
+      const next =
+        subtitleOp === 'clear' ? '' :
+        subtitleOp === 'collab' ? COLLAB_SUBTITLE :
+        subtitleArg.trim().toUpperCase();
+      if (next !== (p.subtitle || '')) upd.subtitle = next || undefined;
+    }
+
     return upd;
   };
 
@@ -120,7 +128,8 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
   const allDiff = useMemo(
     () => products.map(p => ({ p, upd: computeUpdates(p) })).filter(x => Object.keys(x.upd).length > 0),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [products, priceOp, priceArg, saleOp, saleArg, stockOp, stockArg, skuOp, skuArg, skuFind, category, tagsOp, tagsArg, activeOp],
+    [products, priceOp, priceArg, saleOp, saleArg, stockOp, stockArg, skuOp, skuArg, skuFind, category, tagsOp, tagsArg, activeOp, subtitleOp, subtitleArg],
+
   );
 
   const warnings = useMemo(() => {
