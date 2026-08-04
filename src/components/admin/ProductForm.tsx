@@ -491,6 +491,24 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
           />
         </div>
 
+        {/* Édition limitée */}
+        <label className="flex items-center gap-3 border border-border/40 bg-secondary/30 px-3 py-2.5 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={formData.limitedEdition}
+            onChange={(e) => setFormData(prev => ({ ...prev, limitedEdition: e.target.checked }))}
+            className="h-4 w-4 accent-primary"
+          />
+          <span className="flex flex-col">
+            <span className="hud-text text-xs">Édition limitée</span>
+            <span className="text-[10px] text-muted-foreground">
+              Affiche le badge « LIMITED EDITION » sur la vignette et la fiche produit.
+            </span>
+          </span>
+        </label>
+
+
+
         <div className="space-y-2">
           <Label className="hud-text text-xs">Image du produit *</Label>
           <FileDropZone
