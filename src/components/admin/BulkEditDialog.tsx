@@ -17,6 +17,10 @@ type StockOp = 'unchanged' | 'set' | 'add' | 'sub' | 'zero';
 type SkuOp = 'unchanged' | 'prefix' | 'suffix' | 'replace';
 type TagsOp = 'unchanged' | 'add' | 'remove' | 'replace';
 type BoolOp = 'unchanged' | 'true' | 'false';
+type SubtitleOp = 'unchanged' | 'set' | 'collab' | 'clear';
+
+export const COLLAB_SUBTITLE = 'HELVETICA MOUNTAIN PIONEERS X PEGASHOES';
+
 
 interface Props {
   open: boolean;
@@ -62,9 +66,12 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
   const [tagsOp, setTagsOp] = useState<TagsOp>('unchanged');
   const [tagsArg, setTagsArg] = useState('');
   const [activeOp, setActiveOp] = useState<BoolOp>('unchanged');
+  const [subtitleOp, setSubtitleOp] = useState<SubtitleOp>('unchanged');
+  const [subtitleArg, setSubtitleArg] = useState('');
 
   const computeUpdates = (p: Product) => {
     const upd: Partial<Product> & { isActive?: boolean } = {};
+
 
     if (priceOp !== 'unchanged') {
       const arg = parseFloat(priceArg || '0');
@@ -105,6 +112,14 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
 
     if (activeOp !== 'unchanged') upd.isActive = activeOp === 'true';
 
+    if (subtitleOp !== 'unchanged') {
+      const next =
+        subtitleOp === 'clear' ? '' :
+        subtitleOp === 'collab' ? COLLAB_SUBTITLE :
+        subtitleArg.trim().toUpperCase();
+      if (next !== (p.subtitle || '')) upd.subtitle = next || undefined;
+    }
+
     return upd;
   };
 
@@ -113,7 +128,8 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
   const allDiff = useMemo(
     () => products.map(p => ({ p, upd: computeUpdates(p) })).filter(x => Object.keys(x.upd).length > 0),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [products, priceOp, priceArg, saleOp, saleArg, stockOp, stockArg, skuOp, skuArg, skuFind, category, tagsOp, tagsArg, activeOp],
+    [products, priceOp, priceArg, saleOp, saleArg, stockOp, stockArg, skuOp, skuArg, skuFind, category, tagsOp, tagsArg, activeOp, subtitleOp, subtitleArg],
+
   );
 
   const warnings = useMemo(() => {
@@ -238,6 +254,27 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
               )}
             </FieldRow>
 
+            {/* Sous-titre */}
+            <FieldRow label="Sous-titre">
+              <Select value={subtitleOp} onValueChange={(v) => setSubtitleOp(v as SubtitleOp)}>
+                <SelectTrigger className="w-[220px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unchanged">Inchangé</SelectItem>
+                  <SelectItem value="collab">Préréglage Collab</SelectItem>
+                  <SelectItem value="set">Fixer à…</SelectItem>
+                  <SelectItem value="clear">Supprimer</SelectItem>
+                </SelectContent>
+              </Select>
+              {subtitleOp === 'set' && (
+                <Input placeholder="ex : MARQUE X MARQUE" value={subtitleArg} onChange={e => setSubtitleArg(e.target.value)} className="flex-1 h-8 text-xs uppercase" />
+              )}
+              {subtitleOp === 'collab' && (
+                <span className="text-[11px] font-mono text-muted-foreground truncate">{COLLAB_SUBTITLE}</span>
+              )}
+            </FieldRow>
+
+
+
             {/* Category */}
             <FieldRow label="Catégorie">
               <Select value={category} onValueChange={setCategory}>
@@ -292,6 +329,7 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
                       {upd.stock !== undefined && <Diff before={String(p.stock)} after={String(upd.stock)} label="stock" />}
                       {upd.sku !== undefined && <Diff before={p.sku} after={upd.sku} label="sku" />}
                       {upd.category !== undefined && <Diff before={p.category} after={upd.category} label="cat" />}
+                          {'subtitle' in upd && <Diff before={p.subtitle || '—'} after={upd.subtitle || '—'} label="sous-titre" />}
                       {upd.tags !== undefined && <Diff before={(p.tags || []).join(',') || '—'} after={upd.tags.join(',') || '—'} label="tags" />}
                       {upd.isActive !== undefined && <Diff before="—" after={upd.isActive ? 'Actif' : 'Inactif'} label="statut" />}
                     </div>
@@ -331,6 +369,7 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
                           {upd.stock !== undefined && <Diff before={String(p.stock)} after={String(upd.stock)} label="stock" />}
                           {upd.sku !== undefined && <Diff before={p.sku} after={upd.sku} label="sku" />}
                           {upd.category !== undefined && <Diff before={p.category} after={upd.category} label="cat" />}
+                          {'subtitle' in upd && <Diff before={p.subtitle || '—'} after={upd.subtitle || '—'} label="sous-titre" />}
                           {upd.tags !== undefined && <Diff before={(p.tags || []).join(',') || '—'} after={upd.tags.join(',') || '—'} label="tags" />}
                           {upd.isActive !== undefined && <Diff before="—" after={upd.isActive ? 'Actif' : 'Inactif'} label="statut" />}
                         </div>
