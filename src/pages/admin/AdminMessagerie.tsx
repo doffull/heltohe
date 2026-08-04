@@ -481,8 +481,13 @@ export default function AdminMessagerie() {
               </p>
             </div>
             <p className="text-xs text-muted-foreground">Les modifications sont enregistrées automatiquement.</p>
+
+            <div className="pt-4 border-t border-border">
+              <CrmTemplatesManager />
+            </div>
           </Card>
         )}
+
 
         {/* Column 2 — conversations */}
         {(view === 'inbox' || view === 'sent') && (
