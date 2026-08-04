@@ -65,6 +65,7 @@ interface ExtractedProduct {
   /** true si l'utilisateur a choisi manuellement l'image principale. */
   mainManual?: boolean;
   selected: boolean;
+  [key: string]: unknown;
 }
 
 const MAIN_SOURCE_LABEL: Record<MainImageSource, string> = {
