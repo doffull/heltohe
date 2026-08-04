@@ -39,6 +39,7 @@ import {
   Star,
   Plug,
   FlaskConical,
+  Mail,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -79,6 +80,7 @@ import AdminAgentIntegrations from './AdminAgentIntegrations';
 import AdminProductBadges from './AdminProductBadges';
 import AdminPayPal from './AdminPayPal';
 import AdminPaymentTest from './AdminPaymentTest';
+import AdminMessagerie from './AdminMessagerie';
 
 import { AdminSaveBar } from '@/components/admin/AdminSaveBar';
 
@@ -93,6 +95,7 @@ export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin/test-paiement': '#F43F5E',
 
   '/admin/clients': '#8B5CF6',
+  '/admin/messagerie': '#2563EB',
   '/admin/pages': '#6366F1',
   '/admin/media': '#EC4899',
   '/admin/marketing': '#EF4444',
@@ -125,6 +128,7 @@ const SIDEBAR_ITEMS = [
   { icon: FlaskConical, label: 'Test paiement', href: '/admin/test-paiement' },
 
   { icon: Users, label: 'Clients', href: '/admin/clients' },
+  { icon: Mail, label: 'Messagerie & CRM', href: '/admin/messagerie' },
   { icon: FileText, label: 'Pages', href: '/admin/pages' },
   { icon: FolderOpen, label: 'Média', href: '/admin/media' },
   { icon: Megaphone, label: 'Marketing', href: '/admin/marketing' },
@@ -336,6 +340,7 @@ export default function Admin() {
             <Route path="test-paiement/*" element={<AdminPaymentTest />} />
 
             <Route path="clients/*" element={<AdminCustomers />} />
+            <Route path="messagerie/*" element={<AdminMessagerie />} />
             <Route path="pages/*" element={<AdminPages />} />
             <Route path="media/*" element={<AdminMedia />} />
             <Route path="marketing/*" element={<AdminMarketing />} />
