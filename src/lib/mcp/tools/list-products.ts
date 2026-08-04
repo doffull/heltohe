@@ -25,6 +25,7 @@ export default defineTool({
       .order("name")
       .limit(limit);
     if (category) q = q.eq("category", category);
+    else q = q.not("category", "eq", "Collab"); // produits marketplace: page dédiée uniquement
     if (search) q = q.ilike("name", `%${search}%`);
     const { data, error } = await q;
     if (error) return { content: [{ type: "text", text: error.message }], isError: true };
