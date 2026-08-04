@@ -70,6 +70,11 @@ const FIELD_MAP: Record<string, { col: string; transform: (v: any) => any }> = {
   templateId: { col: 'template_id', transform: (v) => v ?? null },
   isActive: { col: 'is_active', transform: (v) => v },
   limitedEdition: { col: 'limited_edition', transform: (v) => Boolean(v) },
+  limitedEditionLabel: { col: 'limited_edition_label', transform: (v) => (v ? String(v) : null) },
+  limitedEditionColor: { col: 'limited_edition_color', transform: (v) => v || null },
+  limitedEditionTextColor: { col: 'limited_edition_text_color', transform: (v) => v || null },
+  limitedEditionPosition: { col: 'limited_edition_position', transform: (v) => v || null },
+
 };
 
 function appToDbProduct(product: Partial<Product> & { isActive?: boolean }): Record<string, unknown> {
