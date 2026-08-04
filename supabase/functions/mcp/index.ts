@@ -27,6 +27,7 @@ var list_products_default = defineTool({
     );
     let q = supabase.from("products").select("id, name, subtitle, price, sale_price, category, sku, stock, image").eq("is_active", true).order("name").limit(limit);
     if (category) q = q.eq("category", category);
+    else q = q.not("category", "eq", "Collab");
     if (search) q = q.ilike("name", `%${search}%`);
     const { data, error } = await q;
     if (error) return { content: [{ type: "text", text: error.message }], isError: true };

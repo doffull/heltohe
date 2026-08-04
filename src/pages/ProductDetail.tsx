@@ -13,6 +13,7 @@ import ProductTrustBar from '@/components/product/ProductTrustBar';
 import ProductInfoAccordion from '@/components/product/ProductInfoAccordion';
 import MobileBuyBar from '@/components/product/MobileBuyBar';
 import RelatedProducts from '@/components/product/RelatedProducts';
+import { excludeMarketplaceProducts, isMarketplaceCategory } from '@/lib/shopVisibility';
 import { useProductLooks } from '@/hooks/useProductLooks';
 import { useProducts } from '@/hooks/useProducts';
 import { usePageTemplate, useDefaultTemplate } from '@/hooks/usePageTemplates';
@@ -43,7 +44,11 @@ export default function ProductDetail() {
 
   // Historique de consultation → recommandations personnalisées
   useTrackProductView(product?.id);
-  const { data: allProducts = [] } = useProducts();
+  const { data: rawProducts = [] } = useProducts();
+  // Produits marketplace (Collab) : jamais recommandés hors de leur page dédiée
+  const allProducts = isMarketplaceCategory(product?.category)
+    ? rawProducts.filter((p) => isMarketplaceCategory(p.category))
+    : excludeMarketplaceProducts(rawProducts);
   const recommended = useRecommendedProducts(allProducts, product?.id);
 
   // Refs : galerie (scroll au changement de couleur) + ancre barre d'achat mobile
@@ -277,7 +282,7 @@ function CompleteLook({ productId, onAddToCart }: { productId: string; onAddToCa
 
   // Get all other products from those looks (deduplicated, excluding current product)
   const otherProductIds = [...new Set(myLooks.flatMap(l => l.productIds.filter(id => id !== productId)))];
-  const lookProducts = allProducts.filter(p => otherProductIds.includes(p.id));
+  const lookProducts = excludeMarketplaceProducts(allProducts).filter(p => otherProductIds.includes(p.id));
 
   if (lookProducts.length === 0) return null;
 

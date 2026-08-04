@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { useParallax } from '@/hooks/useParallax';
 import { SafeImage, SafeVideo } from '@/lib/safeMedia';
 import type { PageSection } from '@/hooks/usePages';
+import { excludeMarketplaceProducts, isMarketplaceCategory } from '@/lib/shopVisibility';
 
 const HOVER_CLASSES: Record<string, string> = {
   zoom: 'group-hover:scale-110',
@@ -211,6 +212,8 @@ function ProductsSection({ content }: { content: Record<string, any> }) {
   let filtered = products;
   if (content.category) {
     filtered = filtered.filter(p => p.category === content.category);
+  } else {
+    filtered = excludeMarketplaceProducts(filtered);
   }
   filtered = filtered.slice(0, limit);
 
@@ -254,7 +257,7 @@ function CategoriesSection({ content }: { content: Record<string, any> }) {
   let items = ids.length > 0
     ? ids.map(id => categories.find(c => c.id === id)).filter(Boolean) as typeof categories
     : categories;
-  items = items.slice(0, limit);
+  items = items.filter((c: any) => !isMarketplaceCategory(c?.title)).slice(0, limit);
 
   const goTo = (cat: any) => {
     const slug = cat.slug || cat.title?.toLowerCase().replace(/\s+/g, '-');

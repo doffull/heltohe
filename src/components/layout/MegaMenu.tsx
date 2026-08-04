@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, Search, ArrowUpRight, ChevronRight } from 'lucide-react';
 import { useMegaMenu } from '@/context/MegaMenuContext';
+import { excludeMarketplaceProducts, isMarketplaceCategory } from '@/lib/shopVisibility';
 import { useCategories } from '@/hooks/useCategories';
 import { useProducts } from '@/hooks/useProducts';
 import { useApp } from '@/context/AppContext';
@@ -40,12 +41,13 @@ const itemV = {
 export function MegaMenu() {
   const { open, setOpen } = useMegaMenu();
   const { data: dbCategories = [] } = useCategories();
-  const { data: products = [] } = useProducts();
+  const { data: allProducts = [] } = useProducts();
+  const products = useMemo(() => excludeMarketplaceProducts(allProducts), [allProducts]);
   const { designSettings } = useApp();
   const [hovered, setHovered] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
-  const rootCats = useMemo(() => dbCategories.filter((c) => !c.parentId), [dbCategories]);
+  const rootCats = useMemo(() => dbCategories.filter((c) => !c.parentId && !isMarketplaceCategory(c.title)), [dbCategories]);
   const staticLinks = (designSettings.megaMenuLinks ?? DEFAULT_STATIC_LINKS).filter((l) => l.enabled);
 
   // ESC close + lock scroll

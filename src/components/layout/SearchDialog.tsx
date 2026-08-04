@@ -5,6 +5,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useProducts } from '@/hooks/useProducts';
+import { excludeMarketplaceProducts } from '@/lib/shopVisibility';
 import { useCategories } from '@/hooks/useCategories';
 import { Product } from '@/types';
 import { cn } from '@/lib/utils';
@@ -42,7 +43,8 @@ interface SearchDialogProps {
 
 export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
   const navigate = useNavigate();
-  const { data: products = [] } = useProducts();
+  const { data: allProducts = [] } = useProducts();
+  const products = useMemo(() => excludeMarketplaceProducts(allProducts), [allProducts]);
   const { data: categories = [] } = useCategories();
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
