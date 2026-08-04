@@ -66,8 +66,8 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
   const { data: dbCategories = [] } = useCategories();
   const { data: designSettings } = useDesignSettings();
 
-  // Build category list from DB
-  const rootCategories = dbCategories.filter(c => !c.parentId);
+  // Build category list from DB (les catégories marketplace restent hors boutique)
+  const rootCategories = dbCategories.filter(c => !c.parentId && !isMarketplaceCategory(c.title));
   const CATEGORIES = ['Tout', ...rootCategories.map(c => c.title)];
 
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
