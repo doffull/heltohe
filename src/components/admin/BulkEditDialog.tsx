@@ -66,8 +66,9 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
   const [tagsOp, setTagsOp] = useState<TagsOp>('unchanged');
   const [tagsArg, setTagsArg] = useState('');
   const [activeOp, setActiveOp] = useState<BoolOp>('unchanged');
+  const [subtitleOp, setSubtitleOp] = useState<SubtitleOp>('unchanged');
+  const [subtitleArg, setSubtitleArg] = useState('');
 
-  const computeUpdates = (p: Product) => {
     const upd: Partial<Product> & { isActive?: boolean } = {};
 
     if (priceOp !== 'unchanged') {
