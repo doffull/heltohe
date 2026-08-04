@@ -25,6 +25,7 @@ import { ImportMockupDialog } from '@/components/admin/ImportMockupDialog';
 import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
 import { CsvImportDialog } from '@/components/admin/CsvImportDialog';
 import { BulkProductImagesDialog } from '@/components/admin/BulkProductImagesDialog';
+import { MainImagePicker } from '@/components/admin/MainImagePicker';
 import { SplitVariantsDialog } from '@/components/admin/SplitVariantsDialog';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
