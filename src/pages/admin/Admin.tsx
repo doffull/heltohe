@@ -40,6 +40,7 @@ import {
   Plug,
   FlaskConical,
   Mail,
+  FileUp,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -58,6 +59,7 @@ import AdminMarketing from './AdminMarketing';
 import AdminSettings from './AdminSettings';
 import AdminDesign from './AdminDesign';
 import AdminMedia from './AdminMedia';
+import AdminPdfExtract from './AdminPdfExtract';
 import AdminPages from './AdminPages';
 import AdminStock from './AdminStock';
 import AdminWooCommerce from './AdminWooCommerce';
@@ -131,6 +133,7 @@ const SIDEBAR_ITEMS = [
   { icon: Mail, label: 'Messagerie & CRM', href: '/admin/messagerie' },
   { icon: FileText, label: 'Pages', href: '/admin/pages' },
   { icon: FolderOpen, label: 'Média', href: '/admin/media' },
+  { icon: FileUp, label: 'Import PDF / Médias', href: '/admin/import-pdf' },
   { icon: Megaphone, label: 'Marketing', href: '/admin/marketing' },
   { icon: Gift, label: 'Roulette', href: '/admin/roulette' },
   { icon: Palette, label: 'Design', href: '/admin/design' },
@@ -343,6 +346,7 @@ export default function Admin() {
             <Route path="messagerie/*" element={<AdminMessagerie />} />
             <Route path="pages/*" element={<AdminPages />} />
             <Route path="media/*" element={<AdminMedia />} />
+            <Route path="import-pdf/*" element={<AdminPdfExtract />} />
             <Route path="marketing/*" element={<AdminMarketing />} />
             <Route path="roulette/*" element={<AdminRoulette />} />
             <Route path="bannieres/*" element={<Navigate to="/admin/marketing" replace />} />
