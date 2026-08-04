@@ -6,10 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Shield, User, Mail, Lock, Eye, EyeOff, ChevronRight } from 'lucide-react';
+import { Shield, User, Mail, Lock, Eye, EyeOff, ChevronRight, Smartphone, KeyRound, Apple } from 'lucide-react';
 import { z } from 'zod';
 import { lovable } from '@/integrations/lovable/index';
 import { Separator } from '@/components/ui/separator';
+import { supabase } from '@/integrations/supabase/client';
 
 const emailSchema = z.string().email('Email invalide');
 const passwordSchema = z.string().min(6, 'Le mot de passe doit contenir au moins 6 caractères');
@@ -29,6 +30,13 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
+
+  // Phone (SMS OTP) login
+  const [phone, setPhone] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [phoneLoading, setPhoneLoading] = useState(false);
 
   // Login form
   const [loginEmail, setLoginEmail] = useState('');
@@ -82,6 +90,85 @@ export default function Auth() {
       });
     }
     setGoogleLoading(false);
+  };
+
+  const handleAppleLogin = async () => {
+    setAppleLoading(true);
+    try {
+      const result = await lovable.auth.signInWithOAuth("apple", {
+        redirect_uri: redirectOrigin,
+      });
+
+      if (result.error) {
+        toast({
+          title: 'Erreur',
+          description: 'Impossible de se connecter avec Apple',
+          variant: 'destructive',
+        });
+        setAppleLoading(false);
+        return;
+      }
+
+      if (result.redirected) return;
+
+      toast({ title: 'Connexion réussie', description: 'Bienvenue !' });
+      navigate(nextPath);
+    } catch {
+      toast({
+        title: 'Erreur',
+        description: 'Une erreur est survenue avec Apple',
+        variant: 'destructive',
+      });
+    }
+    setAppleLoading(false);
+  };
+
+  const normalizePhone = (value: string) => {
+    const cleaned = value.replace(/[^\d+]/g, '');
+    if (cleaned.startsWith('+')) return cleaned;
+    if (cleaned.startsWith('0')) return '+33' + cleaned.slice(1);
+    return '+' + cleaned;
+  };
+
+  const handleSendOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const target = normalizePhone(phone);
+    if (target.length < 10) {
+      toast({ title: 'Erreur', description: 'Numéro de mobile invalide', variant: 'destructive' });
+      return;
+    }
+    setPhoneLoading(true);
+    const { error } = await supabase.auth.signInWithOtp({ phone: target });
+    setPhoneLoading(false);
+    if (error) {
+      toast({
+        title: 'Erreur',
+        description: error.message.includes('not enabled')
+          ? "La connexion par SMS n'est pas encore activée sur ce projet."
+          : error.message,
+        variant: 'destructive',
+      });
+      return;
+    }
+    setOtpSent(true);
+    toast({ title: 'Code envoyé', description: `Un SMS a été envoyé au ${target}` });
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPhoneLoading(true);
+    const { error } = await supabase.auth.verifyOtp({
+      phone: normalizePhone(phone),
+      token: otpCode.trim(),
+      type: 'sms',
+    });
+    setPhoneLoading(false);
+    if (error) {
+      toast({ title: 'Erreur', description: 'Code invalide ou expiré', variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'Connexion réussie', description: 'Bienvenue sur LVTK6' });
+    navigate(nextPath);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -220,6 +307,16 @@ export default function Auth() {
             {googleLoading ? 'Connexion...' : 'Continuer avec Google'}
           </Button>
 
+          <Button
+            variant="outline"
+            className="w-full mb-4 gap-2"
+            onClick={handleAppleLogin}
+            disabled={appleLoading}
+          >
+            <Apple className="h-4 w-4" />
+            {appleLoading ? 'Connexion...' : 'Continuer avec Apple'}
+          </Button>
+
           <div className="flex items-center gap-3 mb-4">
             <Separator className="flex-1" />
             <span className="text-xs text-muted-foreground hud-text">OU</span>
@@ -227,11 +324,14 @@ export default function Auth() {
           </div>
 
           <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login" className="hud-text text-xs">
+            <TabsList className="grid w-full grid-cols-3 mb-6">
+              <TabsTrigger value="login" className="hud-text text-[10px] sm:text-xs">
                 CONNEXION
               </TabsTrigger>
-              <TabsTrigger value="signup" className="hud-text text-xs">
+              <TabsTrigger value="phone" className="hud-text text-[10px] sm:text-xs">
+                MOBILE
+              </TabsTrigger>
+              <TabsTrigger value="signup" className="hud-text text-[10px] sm:text-xs">
                 INSCRIPTION
               </TabsTrigger>
             </TabsList>
@@ -294,6 +394,85 @@ export default function Auth() {
                   )}
                 </Button>
               </form>
+            </TabsContent>
+
+            <TabsContent value="phone">
+              {!otpSent ? (
+                <form onSubmit={handleSendOtp} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="login-phone" className="text-xs hud-text flex items-center gap-2">
+                      <Smartphone className="h-3 w-3" />
+                      NUMÉRO DE MOBILE
+                    </Label>
+                    <Input
+                      id="login-phone"
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      placeholder="06 12 34 56 78"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="bg-background/50"
+                      required
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Format international accepté (ex. +33 6 12 34 56 78).
+                    </p>
+                  </div>
+
+                  <Button type="submit" className="w-full chamfer-hud-sm group" disabled={phoneLoading}>
+                    {phoneLoading ? 'ENVOI DU CODE...' : (
+                      <>
+                        RECEVOIR LE CODE SMS
+                        <ChevronRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                      </>
+                    )}
+                  </Button>
+                </form>
+              ) : (
+                <form onSubmit={handleVerifyOtp} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="login-otp" className="text-xs hud-text flex items-center gap-2">
+                      <KeyRound className="h-3 w-3" />
+                      CODE REÇU PAR SMS
+                    </Label>
+                    <Input
+                      id="login-otp"
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={8}
+                      placeholder="123456"
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value)}
+                      className="bg-background/50 tracking-[0.3em] text-center"
+                      required
+                    />
+                  </div>
+
+                  <Button type="submit" className="w-full chamfer-hud-sm" disabled={phoneLoading}>
+                    {phoneLoading ? 'VÉRIFICATION...' : 'VALIDER LE CODE'}
+                  </Button>
+
+                  <div className="flex items-center justify-between text-xs">
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground"
+                      onClick={() => { setOtpSent(false); setOtpCode(''); }}
+                    >
+                      ← Changer de numéro
+                    </button>
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground"
+                      onClick={(e) => handleSendOtp(e as unknown as React.FormEvent)}
+                      disabled={phoneLoading}
+                    >
+                      Renvoyer le code
+                    </button>
+                  </div>
+                </form>
+              )}
             </TabsContent>
 
             <TabsContent value="signup">
