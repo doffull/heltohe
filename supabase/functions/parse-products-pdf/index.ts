@@ -224,6 +224,98 @@ serve(async (req) => {
       }
     }
 
+    type EmbeddedRef = { url: string; kind: EmbeddedKind };
+
+    async function uploadBytes(path: string, bytes: Uint8Array): Promise<string | null> {
+      if (!storageClient) return null;
+      try {
+        const { error } = await storageClient.storage.from(STORAGE_BUCKET).upload(path, bytes, {
+          contentType: "image/jpeg",
+          upsert: true,
+        });
+        if (error) {
+          console.warn("storage upload failed:", error.message);
+          return null;
+        }
+        const { data } = storageClient.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+        return data?.publicUrl ?? null;
+      } catch (e) {
+        console.warn("storage upload threw:", (e as Error).message);
+        return null;
+      }
+    }
+
+    /** Extrait les images embarquées du PDF et les envoie au stockage. */
+    async function collectEmbedded(
+      pdfBytes: Uint8Array | null,
+      maxPage: number,
+    ): Promise<Record<number, EmbeddedRef[]>> {
+      const out: Record<number, EmbeddedRef[]> = {};
+      if (!pdfBytes || maxPage <= 0 || !storageClient) return out;
+      let map: Map<number, Awaited<ReturnType<typeof extractEmbeddedImages>> extends Map<number, infer T> ? T : never>;
+      try {
+        map = await extractEmbeddedImages(pdfBytes, maxPage);
+      } catch (e) {
+        console.warn("collectEmbedded failed:", (e as Error).message);
+        return out;
+      }
+      for (const [pageNumber, images] of map) {
+        const refs: EmbeddedRef[] = [];
+        for (const im of images) {
+          const path = `pdf-import/${dayFolder}/${batchId}/p${pageNumber}-${im.index}-${im.kind}.jpg`;
+          const url = await uploadBytes(path, im.bytes);
+          if (url) refs.push({ url, kind: im.kind });
+        }
+        if (refs.length > 0) out[pageNumber] = refs;
+      }
+      return out;
+    }
+
+    /** Résout les visuels d'un produit à partir de ses pages. */
+    function resolveProductImages(
+      pages: number[],
+      pageUrls: Record<number, string>,
+      embedded: Record<number, EmbeddedRef[]>,
+    ) {
+      const worn: string[] = [];
+      const ghosts: string[] = [];
+      const pageShots: string[] = [];
+      for (const n of pages) {
+        for (const ref of embedded[n] ?? []) {
+          const bucket = ref.kind === "ghost" ? ghosts : worn;
+          if (!bucket.includes(ref.url)) bucket.push(ref.url);
+        }
+        const shot = pageUrls[n];
+        if (shot && !pageShots.includes(shot)) pageShots.push(shot);
+      }
+      const mainImage = worn[0] ?? ghosts[0] ?? pageShots[0] ?? null;
+      const mainSource: "worn" | "ghost" | "page" | null = worn[0]
+        ? "worn"
+        : ghosts[0]
+          ? "ghost"
+          : pageShots[0]
+            ? "page"
+            : null;
+      const gallery: string[] = [];
+      for (const u of [...ghosts, ...worn.slice(1), ...pageShots]) {
+        if (u && u !== mainImage && !gallery.includes(u)) gallery.push(u);
+        if (gallery.length >= MAX_IMAGES_PER_PRODUCT) break;
+      }
+      const all: string[] = [];
+      for (const u of [mainImage, ...gallery]) {
+        if (u && !all.includes(u)) all.push(u);
+      }
+      return {
+        mainImage,
+        mainSource,
+        ghostImages: ghosts.slice(0, MAX_IMAGES_PER_PRODUCT),
+        wornImages: worn.slice(0, MAX_IMAGES_PER_PRODUCT),
+        pageImages: all.slice(0, MAX_IMAGES_PER_PRODUCT + 1),
+      };
+    }
+
+
+
     // 1. Extract text locally
     let rawText = "";
     if (fileType === "pdf") {
