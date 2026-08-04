@@ -33,6 +33,7 @@ function dbToAppProduct(db: Record<string, unknown>): Product {
     templateId: (db.template_id as string) || null,
     isActive: db.is_active === undefined || db.is_active === null ? true : Boolean(db.is_active),
     limitedEdition: Boolean(db.limited_edition),
+  };
 }
 
 // Field-by-field mapping App → DB. Each entry is only included in the payload
