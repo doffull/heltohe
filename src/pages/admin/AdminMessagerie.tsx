@@ -667,6 +667,39 @@ export default function AdminMessagerie() {
         onOpenChange={(v) => setContactDialog({ open: v, contact: v ? contactDialog.contact : null })}
         contact={contactDialog.contact}
       />
+
+      {/* Aperçu avant envoi */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader><DialogTitle>Aperçu avant envoi</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-lg border border-border p-3 text-xs space-y-1 bg-muted/40">
+              <p><span className="text-muted-foreground">De :</span> {config?.default_from_name || 'Service client'} &lt;{config?.default_from_email || 'non configuré'}&gt;</p>
+              <p><span className="text-muted-foreground">À :</span> {selectedContact?.email}</p>
+              <p><span className="text-muted-foreground">Objet :</span> <span className="font-medium">{renderedSubject || '(sans objet)'}</span></p>
+            </div>
+            <div className="rounded-lg border border-border p-3 text-sm whitespace-pre-wrap max-h-[45vh] overflow-y-auto">
+              {renderedBody}
+            </div>
+            {!!unresolved.length && (
+              <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700">
+                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                <p>
+                  Variables sans valeur (affichées entre crochets) :{' '}
+                  <span className="font-mono">{unresolved.join(', ')}</span>
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPreviewOpen(false)}>Modifier</Button>
+            <Button onClick={doSend} disabled={sendMessage.isPending}>
+              <Send className="h-4 w-4 mr-1.5" /> Envoyer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <NewConversationDialog
         open={convDialog}
         onOpenChange={setConvDialog}
