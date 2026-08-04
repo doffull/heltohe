@@ -257,14 +257,13 @@ function CategoriesSection({ content }: { content: Record<string, any> }) {
   let items = ids.length > 0
     ? ids.map(id => categories.find(c => c.id === id)).filter(Boolean) as typeof categories
     : categories;
-  items = items.filter(visibleItemsFilter).slice(0, limit);
+  items = items.filter((c: any) => !isMarketplaceCategory(c?.title)).slice(0, limit);
 
   const goTo = (cat: any) => {
     const slug = cat.slug || cat.title?.toLowerCase().replace(/\s+/g, '-');
     navigate(`/categorie/${slug}`);
   };
   const countFor = (cat: any) => products.filter((p: any) => p.category === cat.title).length;
-  const visibleItemsFilter = (cat: any) => !isMarketplaceCategory(cat?.title);
 
   if (style === 'banner') {
     return (
