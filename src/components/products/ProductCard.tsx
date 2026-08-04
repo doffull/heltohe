@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Star } from 'lucide-react';
 import { useReviewStats } from '@/hooks/useProductReviews';
 import { getSwatchStyle } from '@/lib/swatch';
+import { LimitedEditionBadge } from '@/components/product/LimitedEditionBadge';
+
 
 interface ProductCardProps {
   product: Product;
