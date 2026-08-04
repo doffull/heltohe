@@ -91,6 +91,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
     modelName: '',
     galleryImages: [] as string[],
     templateId: null as string | null,
+    limitedEdition: false,
   });
 
   // Variant stock state (local to form — passed up on submit)
@@ -262,6 +263,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         modelName: product.modelName || '',
         galleryImages: product.galleryImages || [],
         templateId: product.templateId ?? null,
+        limitedEdition: product.limitedEdition ?? false,
       });
     }
   }, [product]);
