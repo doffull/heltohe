@@ -116,10 +116,11 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
   // Get sub-categories for selected category
   const subCategories = useMemo(() => {
     if (selectedCategory === 'Tout') return [];
-    const parent = rootCategories.find(c => c.title === selectedCategory);
+    // On cherche dans toutes les catégories racines (y compris marketplace type "Collab")
+    const parent = dbCategories.find(c => !c.parentId && c.title === selectedCategory);
     if (!parent) return [];
     return dbCategories.filter(c => c.parentId === parent.id);
-  }, [selectedCategory, dbCategories, rootCategories]);
+  }, [selectedCategory, dbCategories]);
 
   const handleProductHover = (product: Product) => {
     sidebarContext?.setHoveredProduct(product);
