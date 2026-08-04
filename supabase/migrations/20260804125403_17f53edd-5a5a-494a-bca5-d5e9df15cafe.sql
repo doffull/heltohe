@@ -1,0 +1,1 @@
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS limited_edition boolean NOT NULL DEFAULT false;
