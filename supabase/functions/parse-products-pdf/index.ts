@@ -534,19 +534,13 @@ serve(async (req) => {
       }
     }
 
-    // Attach pageImages from uploaded pages. If the model didn't provide any
-    // _pageIndex (common for text mode), we don't know which pages belong to
-    // which product — leave pageImages empty for those and let the client fall
-    // back to placeholder. When we do have _pages, resolve URLs.
+    // Attach images from _pages: visuels embarqués (porté/ghost) en priorité,
+    // captures de page en dernier recours. Sans _pageIndex, on ne sait pas
+    // rattacher — sauf si le lot ne contient qu'une seule page.
     const productsWithImages = Array.from(seen.values()).map((p) => {
-      const pages: number[] = Array.isArray((p as any)._pages) ? (p as any)._pages : [];
-      const urls: string[] = [];
-      for (const n of pages) {
-        const u = pageUrls[n];
-        if (u && !urls.includes(u)) urls.push(u);
-        if (urls.length >= MAX_IMAGES_PER_PRODUCT) break;
-      }
-      const out = { ...p, pageImages: urls };
+      let pages: number[] = Array.isArray((p as any)._pages) ? (p as any)._pages : [];
+      if (pages.length === 0 && backgroundPageCount === 1) pages = [1];
+      const out = { ...p, ...resolveProductImages(pages, pageUrls, embedded) };
       delete (out as any)._pages;
       return out;
     });
@@ -557,6 +551,7 @@ serve(async (req) => {
       chunksProcessed: chunks.length,
       textLength: rawText.length,
       pagesUploaded: Object.keys(pageUrls).length,
+      embeddedImages: Object.values(embedded).reduce((n, l) => n + l.length, 0),
       errors: errors.length ? errors : undefined,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
