@@ -99,7 +99,7 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
   const renderBlock = (b: TemplateBlock) => {
     if (b.visible === false) return null;
     switch (b.type) {
-      case 'gallery': return <Gallery images={images} idx={imgIdx} setIdx={setImgIdx} sticky={b.props?.sticky} />;
+      case 'gallery': return <Gallery images={images} idx={imgIdx} setIdx={setImgIdx} sticky={b.props?.sticky} product={product} />;
       case 'breadcrumb': return (
         <nav className="text-xs" style={{ color: t.colors.muted, padding: '8px 0' }}>
           <Link to="/">Accueil</Link> <span className="mx-2">›</span>
