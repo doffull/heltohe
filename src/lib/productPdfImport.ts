@@ -10,13 +10,25 @@ export interface ImportProgress {
   productsSoFar: number;
 }
 
+export type MainImageSource = 'worn' | 'ghost' | 'page';
+
 export interface ParsedCatalogProduct {
   name?: string;
   price?: number;
   sku?: string;
+  /** Tous les visuels retenus (image principale en premier). */
   pageImages?: string[];
+  /** Visuel principal détecté (porté de préférence). */
+  mainImage?: string | null;
+  /** Provenance du visuel principal. */
+  mainSource?: MainImageSource | null;
+  /** Packshots détourés sur fond blanc. */
+  ghostImages?: string[];
+  /** Visuels portés / mise en scène. */
+  wornImages?: string[];
   [key: string]: unknown;
 }
+
 
 export interface CatalogImportResult {
   products: ParsedCatalogProduct[];
