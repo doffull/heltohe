@@ -42,7 +42,7 @@ import { BulkVariantStockDialog } from '@/components/admin/BulkVariantStockDialo
 import { GlobalSizesEditor } from '@/components/admin/GlobalSizesEditor';
 import { ProductDefaultsEditor } from '@/components/admin/ProductDefaultsEditor';
 import { Textarea } from '@/components/ui/textarea';
-import { importProductsFromPdf, type MainImageSource } from '@/lib/productPdfImport';
+import { importProductsFromPdf, pickMainImage, AUTO_MAIN_STRATEGY_LABEL, type AutoMainStrategy, type MainImageSource } from '@/lib/productPdfImport';
 import { useDesignSettings, useSaveDesignSettings } from '@/hooks/useDesignSettings';
 
 interface ExtractedProduct {
