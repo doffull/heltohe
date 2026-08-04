@@ -241,7 +241,7 @@ export default function AdminProducts() {
     }
   };
 
-  const startEditCell = (id: string, field: 'price' | 'salePrice' | 'sku' | 'category', currentValue: string | number | null | undefined) => {
+  const startEditCell = (id: string, field: 'price' | 'salePrice' | 'sku' | 'category' | 'name' | 'subtitle', currentValue: string | number | null | undefined) => {
     setEditingCell({ id, field });
     setEditingCellValue(currentValue === null || currentValue === undefined ? '' : String(currentValue));
   };
@@ -267,7 +267,13 @@ export default function AdminProducts() {
         await updateProduct.mutateAsync({ id, sku: editingCellValue.trim() });
       } else if (field === 'category') {
         await updateProduct.mutateAsync({ id, category: editingCellValue.trim() });
+      } else if (field === 'name') {
+        if (!editingCellValue.trim()) throw new Error('Nom vide');
+        await updateProduct.mutateAsync({ id, name: editingCellValue.trim() });
+      } else if (field === 'subtitle') {
+        await updateProduct.mutateAsync({ id, subtitle: editingCellValue.trim() });
       }
+
       toast({ title: 'Modifié' });
     } catch (e: any) {
       toast({ title: 'Erreur', description: e?.message, variant: 'destructive' });
