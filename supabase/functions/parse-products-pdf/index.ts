@@ -475,6 +475,8 @@ serve(async (req) => {
       }
     }
     const pageUrls: Record<number, string> = {};
+    // Images embarquées (ghost / porté) : c'est la source d'images prioritaire
+    const embedded = await collectEmbedded(pdfBytesForImages, backgroundPageCount);
     // Render + upload pages sequentially to bound memory (fire-and-await before AI to keep flow simple)
     for (let p = 1; p <= backgroundPageCount; p++) {
       const img = await renderCompressedPage(pdfBytesForImages!, p);
@@ -482,6 +484,8 @@ serve(async (req) => {
       const url = await uploadPageJpeg(p, img.bytes);
       if (url) pageUrls[p] = url;
     }
+
+
 
     const chunks = chunkText(rawText, CHUNK_CHARS);
     if (chunks.length === 0) {
