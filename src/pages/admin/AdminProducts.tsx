@@ -1071,6 +1071,26 @@ export default function AdminProducts() {
                   <Button variant="outline" size="sm" onClick={() => setExtractedProducts([])}>Effacer</Button>
                 </div>
               </div>
+              <div className="flex flex-wrap items-center gap-2 p-3 rounded-lg border border-border bg-muted/30">
+                <span className="text-xs uppercase tracking-wider text-muted-foreground">Image principale auto</span>
+                <Select
+                  value={autoMainStrategy}
+                  onValueChange={(v) => { setAutoMainStrategy(v as AutoMainStrategy); applyAutoMain(v as AutoMainStrategy); }}
+                >
+                  <SelectTrigger className="h-8 w-[230px] text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(AUTO_MAIN_STRATEGY_LABEL) as AutoMainStrategy[]).map((s) => (
+                      <SelectItem key={s} value={s} className="text-xs">{AUTO_MAIN_STRATEGY_LABEL[s]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="sm" onClick={() => applyAutoMain(autoMainStrategy, true)}>
+                  Réinitialiser tout en auto
+                </Button>
+                <span className="text-[11px] text-muted-foreground">
+                  {extractedProducts.filter(p => p.mainManual).length} choix manuel(s) préservé(s)
+                </span>
+              </div>
               <div className="space-y-2 max-h-[50vh] overflow-y-auto">
                 {extractedProducts.map((p, i) => {
                   const all = (p.pageImages || []).filter(Boolean);
