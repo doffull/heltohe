@@ -17,6 +17,10 @@ type StockOp = 'unchanged' | 'set' | 'add' | 'sub' | 'zero';
 type SkuOp = 'unchanged' | 'prefix' | 'suffix' | 'replace';
 type TagsOp = 'unchanged' | 'add' | 'remove' | 'replace';
 type BoolOp = 'unchanged' | 'true' | 'false';
+type SubtitleOp = 'unchanged' | 'set' | 'collab' | 'clear';
+
+export const COLLAB_SUBTITLE = 'HELVETICA MOUNTAIN PIONEERS X PEGASHOES';
+
 
 interface Props {
   open: boolean;
