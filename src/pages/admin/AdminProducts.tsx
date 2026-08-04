@@ -672,10 +672,42 @@ export default function AdminProducts() {
                         <div className="w-12 h-12 bg-muted rounded overflow-hidden flex-shrink-0">
                           <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
                         </div>
-                        <div>
-                          <p className="font-medium text-sm">{product.name}</p>
-                          {product.subtitle && <p className="text-xs text-muted-foreground">{product.subtitle}</p>}
+                        <div className="min-w-0">
+                          {editingCell?.id === product.id && editingCell.field === 'name' ? (
+                            <input
+                              autoFocus
+                              value={editingCellValue}
+                              onChange={e => setEditingCellValue(e.target.value)}
+                              onBlur={commitEditCell}
+                              onKeyDown={e => { if (e.key === 'Enter') commitEditCell(); if (e.key === 'Escape') setEditingCell(null); }}
+                              className="font-medium text-sm bg-background border border-primary rounded px-2 py-1 w-56"
+                            />
+                          ) : (
+                            <p
+                              className="font-medium text-sm cursor-pointer hover:text-primary"
+                              title="Cliquer pour modifier le nom"
+                              onClick={() => startEditCell(product.id, 'name', product.name)}
+                            >{product.name}</p>
+                          )}
+                          {editingCell?.id === product.id && editingCell.field === 'subtitle' ? (
+                            <input
+                              autoFocus
+                              value={editingCellValue}
+                              onChange={e => setEditingCellValue(e.target.value)}
+                              onBlur={commitEditCell}
+                              onKeyDown={e => { if (e.key === 'Enter') commitEditCell(); if (e.key === 'Escape') setEditingCell(null); }}
+                              placeholder="Sous-titre…"
+                              className="mt-1 text-xs bg-background border border-primary rounded px-2 py-1 w-56"
+                            />
+                          ) : (
+                            <p
+                              className="text-xs text-muted-foreground cursor-pointer hover:text-primary"
+                              title="Cliquer pour modifier le sous-titre"
+                              onClick={() => startEditCell(product.id, 'subtitle', product.subtitle)}
+                            >{product.subtitle || '+ Ajouter un sous-titre'}</p>
+                          )}
                         </div>
+
                       </div>
                     </td>
                     <td className="p-4">
