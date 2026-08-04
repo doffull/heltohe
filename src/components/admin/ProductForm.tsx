@@ -18,6 +18,7 @@ import { AiPoseButton } from '@/components/admin/AiPoseEditorDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { usePageTemplates } from '@/hooks/usePageTemplates';
+import { useCategories, useCreateCategory } from '@/hooks/useCategories';
 import { getSwatchStyle } from '@/lib/swatch';
 import { generateSwatchFromImages, swatchToColorOption } from '@/lib/generateSwatch';
 import {
@@ -50,7 +51,6 @@ export interface VariantStockData {
   globalStock: number;
 }
 
-const CATEGORIES = ['Homme', 'Femme', 'Enfant', 'Accessoires'];
 const DEFAULT_SIZES_FALLBACK = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
 const COLOR_HEX_MAP: Record<string, string> = {
@@ -63,6 +63,9 @@ function colorSwatch(hex: string) {
 
 export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductFormProps) {
   const { designSettings } = useApp();
+  const { data: dbCategories = [] } = useCategories();
+  const createCategory = useCreateCategory();
+  const [newCategoryDraft, setNewCategoryDraft] = useState('');
   const DEFAULT_SIZES = designSettings.globalProductSizes?.length ? designSettings.globalProductSizes : DEFAULT_SIZES_FALLBACK;
   const productDefaults = designSettings.productDefaults;
   const [formData, setFormData] = useState({
@@ -112,6 +115,35 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
   const [swatchBusy, setSwatchBusy] = useState(false);
   const [swatchDraft, setSwatchDraft] = useState<ColorOption | null>(null);
   const skipAutoSaveRef = useRef(true);
+
+  const categoryNames = Array.from(
+    new Set([
+      ...dbCategories.filter((c) => !c.parentId).map((c) => c.title),
+      ...dbCategories.filter((c) => c.parentId).map((c) => c.title),
+      ...(formData.category ? [formData.category] : []),
+    ].filter(Boolean))
+  );
+
+  const addCategory = async () => {
+    const title = newCategoryDraft.trim();
+    if (!title) return;
+    if (!categoryNames.some((c) => c.toLowerCase() === title.toLowerCase())) {
+      try {
+        await createCategory.mutateAsync({
+          title,
+          sortOrder: dbCategories.length,
+          displaySize: 'medium',
+          coverMode: 'cover',
+        });
+        toast.success(`Catégorie « ${title} » créée`);
+      } catch (e) {
+        toast.error("Impossible de créer la catégorie");
+        return;
+      }
+    }
+    setFormData((prev) => ({ ...prev, category: title }));
+    setNewCategoryDraft('');
+  };
 
   const generateSwatch = async () => {
     setSwatchBusy(true);
@@ -697,7 +729,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         <div className="space-y-2">
           <Label className="hud-text text-xs">Catégorie *</Label>
           <div className="flex flex-wrap gap-2">
-            {CATEGORIES.map(cat => (
+            {categoryNames.map(cat => (
               <button
                 key={cat}
                 type="button"
