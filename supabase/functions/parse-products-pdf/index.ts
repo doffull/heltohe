@@ -4,7 +4,7 @@ import { extractText, getDocumentProxy, renderPageAsImage } from "https://esm.sh
 // Pure-JS image codec (no native deps) used to downscale & re-encode
 // rendered PDF pages as JPEG before shipping them to the AI.
 import { Image } from "https://deno.land/x/imagescript@1.2.17/mod.ts";
-import { extractEmbeddedImages, type EmbeddedKind } from "./embeddedImages.ts";
+import { extractEmbeddedImages, type EmbeddedImage, type EmbeddedKind } from "./embeddedImages.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -252,7 +252,7 @@ serve(async (req) => {
     ): Promise<Record<number, EmbeddedRef[]>> {
       const out: Record<number, EmbeddedRef[]> = {};
       if (!pdfBytes || maxPage <= 0 || !storageClient) return out;
-      let map: Map<number, Awaited<ReturnType<typeof extractEmbeddedImages>> extends Map<number, infer T> ? T : never>;
+      let map: Map<number, EmbeddedImage[]>;
       try {
         map = await extractEmbeddedImages(pdfBytes, maxPage);
       } catch (e) {
