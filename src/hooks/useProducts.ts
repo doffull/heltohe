@@ -33,6 +33,11 @@ function dbToAppProduct(db: Record<string, unknown>): Product {
     templateId: (db.template_id as string) || null,
     isActive: db.is_active === undefined || db.is_active === null ? true : Boolean(db.is_active),
     limitedEdition: Boolean(db.limited_edition),
+    limitedEditionLabel: (db.limited_edition_label as string) || undefined,
+    limitedEditionColor: (db.limited_edition_color as string) || undefined,
+    limitedEditionTextColor: (db.limited_edition_text_color as string) || undefined,
+    limitedEditionPosition: ((db.limited_edition_position as string) || undefined) as Product['limitedEditionPosition'],
+
   };
 }
 
@@ -65,6 +70,11 @@ const FIELD_MAP: Record<string, { col: string; transform: (v: any) => any }> = {
   templateId: { col: 'template_id', transform: (v) => v ?? null },
   isActive: { col: 'is_active', transform: (v) => v },
   limitedEdition: { col: 'limited_edition', transform: (v) => Boolean(v) },
+  limitedEditionLabel: { col: 'limited_edition_label', transform: (v) => (v ? String(v) : null) },
+  limitedEditionColor: { col: 'limited_edition_color', transform: (v) => v || null },
+  limitedEditionTextColor: { col: 'limited_edition_text_color', transform: (v) => v || null },
+  limitedEditionPosition: { col: 'limited_edition_position', transform: (v) => v || null },
+
 };
 
 function appToDbProduct(product: Partial<Product> & { isActive?: boolean }): Record<string, unknown> {

@@ -2403,6 +2403,10 @@ export type Database = {
           image: string
           is_active: boolean | null
           limited_edition: boolean
+          limited_edition_color: string | null
+          limited_edition_label: string | null
+          limited_edition_position: string | null
+          limited_edition_text_color: string | null
           material: string | null
           model_height: string | null
           model_name: string | null
@@ -2433,6 +2437,10 @@ export type Database = {
           image: string
           is_active?: boolean | null
           limited_edition?: boolean
+          limited_edition_color?: string | null
+          limited_edition_label?: string | null
+          limited_edition_position?: string | null
+          limited_edition_text_color?: string | null
           material?: string | null
           model_height?: string | null
           model_name?: string | null
@@ -2463,6 +2471,10 @@ export type Database = {
           image?: string
           is_active?: boolean | null
           limited_edition?: boolean
+          limited_edition_color?: string | null
+          limited_edition_label?: string | null
+          limited_edition_position?: string | null
+          limited_edition_text_color?: string | null
           material?: string | null
           model_height?: string | null
           model_name?: string | null

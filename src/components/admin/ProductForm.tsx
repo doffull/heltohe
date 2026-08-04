@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils';
 import { FileDropZone } from '@/components/admin/FileDropZone';
 import { useApp } from '@/context/AppContext';
 import { AiTextButton } from '@/components/admin/AiTextButton';
+import { LimitedEditionBadge, BADGE_POSITIONS } from '@/components/product/LimitedEditionBadge';
+
 import { AiColorNameButton } from '@/components/admin/AiColorNameButton';
 import { AiAttributesButton } from '@/components/admin/AiAttributesButton';
 import { AiProductVideoButton } from '@/components/admin/AiProductVideoButton';
@@ -92,6 +94,11 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
     galleryImages: [] as string[],
     templateId: null as string | null,
     limitedEdition: false,
+    limitedEditionLabel: '',
+    limitedEditionColor: '',
+    limitedEditionTextColor: '',
+    limitedEditionPosition: 'bottom-right' as 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right',
+
   });
 
   // Variant stock state (local to form — passed up on submit)
@@ -264,6 +271,11 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         galleryImages: product.galleryImages || [],
         templateId: product.templateId ?? null,
         limitedEdition: product.limitedEdition ?? false,
+        limitedEditionLabel: product.limitedEditionLabel || '',
+        limitedEditionColor: product.limitedEditionColor || '',
+        limitedEditionTextColor: product.limitedEditionTextColor || '',
+        limitedEditionPosition: product.limitedEditionPosition || 'bottom-right',
+
       });
     }
   }, [product]);
@@ -501,20 +513,115 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         </div>
 
         {/* Édition limitée */}
-        <label className="flex items-center gap-3 border border-border/40 bg-secondary/30 px-3 py-2.5 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={formData.limitedEdition}
-            onChange={(e) => setFormData(prev => ({ ...prev, limitedEdition: e.target.checked }))}
-            className="h-4 w-4 accent-primary"
-          />
-          <span className="flex flex-col">
-            <span className="hud-text text-xs">Édition limitée</span>
-            <span className="text-[10px] text-muted-foreground">
-              Affiche le badge « LIMITED EDITION » sur la vignette et la fiche produit.
+        <div className="space-y-3 border border-border/40 bg-secondary/30 px-3 py-2.5">
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={formData.limitedEdition}
+              onChange={(e) => setFormData(prev => ({ ...prev, limitedEdition: e.target.checked }))}
+              className="h-4 w-4 accent-primary"
+            />
+            <span className="flex flex-col">
+              <span className="hud-text text-xs">Édition limitée</span>
+              <span className="text-[10px] text-muted-foreground">
+                Affiche le badge « LIMITED EDITION » sur la vignette et la fiche produit.
+              </span>
             </span>
-          </span>
-        </label>
+          </label>
+
+          {formData.limitedEdition && (
+            <div className="space-y-3 border-t border-border/40 pt-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label className="hud-text text-[10px]">Texte du badge</Label>
+                  <Input
+                    value={formData.limitedEditionLabel}
+                    onChange={(e) => setFormData(prev => ({ ...prev, limitedEditionLabel: e.target.value }))}
+                    className="bg-secondary/50 border-border/30"
+                    placeholder="Limited Edition"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="hud-text text-[10px]">Position sur l'image</Label>
+                  <select
+                    value={formData.limitedEditionPosition}
+                    onChange={(e) => setFormData(prev => ({ ...prev, limitedEditionPosition: e.target.value as typeof prev.limitedEditionPosition }))}
+                    className="h-10 w-full border border-border/30 bg-secondary/50 px-2 text-xs"
+                  >
+                    {BADGE_POSITIONS.map(p => (
+                      <option key={p.value} value={p.value}>{p.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="hud-text text-[10px]">Couleur de fond</Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={formData.limitedEditionColor || '#ffffff'}
+                      onChange={(e) => setFormData(prev => ({ ...prev, limitedEditionColor: e.target.value }))}
+                      className="h-10 w-12 border border-border/30 bg-transparent p-0.5"
+                    />
+                    <Input
+                      value={formData.limitedEditionColor}
+                      onChange={(e) => setFormData(prev => ({ ...prev, limitedEditionColor: e.target.value }))}
+                      className="bg-secondary/50 border-border/30 text-xs"
+                      placeholder="Défaut"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="hud-text text-[10px]">Couleur du texte</Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={formData.limitedEditionTextColor || '#000000'}
+                      onChange={(e) => setFormData(prev => ({ ...prev, limitedEditionTextColor: e.target.value }))}
+                      className="h-10 w-12 border border-border/30 bg-transparent p-0.5"
+                    />
+                    <Input
+                      value={formData.limitedEditionTextColor}
+                      onChange={(e) => setFormData(prev => ({ ...prev, limitedEditionTextColor: e.target.value }))}
+                      className="bg-secondary/50 border-border/30 text-xs"
+                      placeholder="Défaut"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-muted-foreground">Aperçu :</span>
+                  <LimitedEditionBadge
+                    animate={false}
+                    product={{
+                      limitedEdition: true,
+                      limitedEditionLabel: formData.limitedEditionLabel,
+                      limitedEditionColor: formData.limitedEditionColor,
+                      limitedEditionTextColor: formData.limitedEditionTextColor,
+                    }}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-[10px]"
+                  onClick={() => setFormData(prev => ({
+                    ...prev,
+                    limitedEditionLabel: '',
+                    limitedEditionColor: '',
+                    limitedEditionTextColor: '',
+                    limitedEditionPosition: 'bottom-right',
+                  }))}
+                >
+                  Réinitialiser
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
 
 
 

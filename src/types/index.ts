@@ -52,6 +52,15 @@ export interface Product {
   isActive?: boolean;
   /** Affiche le badge « LIMITED EDITION » sur la vignette et la fiche produit. */
   limitedEdition?: boolean;
+  /** Texte personnalisé du badge (défaut : « Limited Edition »). */
+  limitedEditionLabel?: string;
+  /** Couleur de fond du badge (CSS color). Vide = style par défaut. */
+  limitedEditionColor?: string;
+  /** Couleur du texte / bordure du badge (CSS color). */
+  limitedEditionTextColor?: string;
+  /** Position du badge sur l'image. */
+  limitedEditionPosition?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
 }
 
 export interface OrderItem {
