@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
   Inbox, Send, Users, Settings as SettingsIcon, Plus, Search, Mail, Phone,
-  Pencil, Trash2, MessageSquare, Package, ArrowLeft,
+  Pencil, Trash2, MessageSquare, Package, ArrowLeft, Eye, FileText, AlertTriangle,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,9 +23,12 @@ import { cn } from '@/lib/utils';
 import {
   useCrmContacts, useSaveCrmContact, useDeleteCrmContact,
   useCrmConversations, useCrmMessages, useCreateConversation, useUpdateConversation,
-  useSendCrmMessage, useMessagingConfig, useSaveMessagingConfig,
+  useSendCrmMessage, useMessagingConfig, useSaveMessagingConfig, useCrmMessageTemplates,
   type CrmContact, type CrmConversation, type MessagingConfig,
 } from '@/hooks/useCrm';
+import { CrmTemplatesManager } from '@/components/admin/CrmTemplatesManager';
+import { renderTemplate, missingVars, TEMPLATE_VARS, type TemplateContext } from '@/lib/crmTemplateVars';
+
 
 type View = 'inbox' | 'sent' | 'contacts' | 'settings';
 
@@ -221,11 +224,14 @@ export default function AdminMessagerie() {
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reply, setReply] = useState('');
+  const [subjectOverride, setSubjectOverride] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [contactDialog, setContactDialog] = useState<{ open: boolean; contact: CrmContact | null }>({ open: false, contact: null });
   const [convDialog, setConvDialog] = useState(false);
 
   const { data: contacts = [] } = useCrmContacts();
   const { data: conversations = [] } = useCrmConversations();
+  const { data: templates = [] } = useCrmMessageTemplates();
   const deleteContact = useDeleteCrmContact();
   const updateConv = useUpdateConversation();
   const sendMessage = useSendCrmMessage();
@@ -254,18 +260,69 @@ export default function AdminMessagerie() {
   const selectedContact = selected ? contactById[selected.contact_id] : null;
   const { data: messages = [] } = useCrmMessages(selected?.id);
 
+  // Same query key as OrderPanel -> shared cache, used to feed template variables
+  const { data: ctxOrders = [] } = useQuery({
+    queryKey: ['crm-order-context', selectedContact?.email, selected?.order_id],
+    enabled: !!selectedContact?.email || !!selected?.order_id,
+    queryFn: async () => {
+      let q = (supabase as any)
+        .from('orders')
+        .select('id, order_number, status, payment_status, total, tracking_number, shipping_carrier, created_at')
+        .order('created_at', { ascending: false })
+        .limit(5);
+      q = selected?.order_id ? q.eq('id', selected.order_id) : q.eq('customer_email', selectedContact?.email);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const visibleMessages = view === 'sent' ? messages.filter((m) => m.direction === 'outbound') : messages;
 
+  const templateContext: TemplateContext = useMemo(() => {
+    const order = (ctxOrders as any[])[0];
+    const fullName = selectedContact?.name || '';
+    return {
+      prenom: fullName.split(' ')[0] || '',
+      nom_complet: fullName,
+      email: selectedContact?.email || '',
+      telephone: selectedContact?.phone || '',
+      objet: selected?.subject || '',
+      numero_commande: order?.order_number || '',
+      statut_commande: order?.status || '',
+      total_commande: order ? `${Number(order.total).toFixed(2)} €` : '',
+      numero_suivi: order?.tracking_number || '',
+      transporteur: order?.shipping_carrier || (order?.tracking_number ? 'Colissimo' : ''),
+      boutique: config?.default_from_name || 'LVTK6',
+      signature: config?.signature || '',
+      date: new Date().toLocaleDateString('fr-FR'),
+    };
+  }, [ctxOrders, selectedContact, selected, config]);
+
+  const renderedBody = renderTemplate(reply, templateContext);
+  const renderedSubject = renderTemplate(subjectOverride ?? selected?.subject ?? '', templateContext);
+  const unresolved = missingVars(reply + ' ' + (subjectOverride ?? ''), templateContext);
+
+  const applyTemplate = (id: string) => {
+    const tpl = templates.find((t) => t.id === id);
+    if (!tpl) return;
+    setReply(tpl.body);
+    setSubjectOverride(tpl.subject || null);
+    toast({ title: `Modèle « ${tpl.name} » appliqué`, description: 'Vérifiez l’aperçu avant envoi.' });
+  };
+
   const doSend = async () => {
-    if (!selected || !selectedContact || !reply.trim()) return;
+    if (!selected || !selectedContact || !renderedBody.trim()) return;
     try {
       const res = await sendMessage.mutateAsync({
         conversationId: selected.id,
-        content: reply.trim(),
+        content: renderedBody.trim(),
         to: selectedContact.email,
-        subject: selected.subject,
+        subject: renderedSubject.trim() || selected.subject,
       });
       setReply('');
+      setSubjectOverride(null);
+      setPreviewOpen(false);
       toast({
         title: res?.sent ? 'Message envoyé' : 'Message enregistré',
         description: res?.warning,
@@ -274,6 +331,7 @@ export default function AdminMessagerie() {
       toast({ title: 'Envoi impossible', description: e.message, variant: 'destructive' });
     }
   };
+
 
   const navItems: { key: View; label: string; icon: typeof Inbox; count?: number }[] = [
     { key: 'inbox', label: 'Boîte de réception', icon: Inbox, count: conversations.filter((c) => c.status !== 'closed').length },
@@ -423,8 +481,13 @@ export default function AdminMessagerie() {
               </p>
             </div>
             <p className="text-xs text-muted-foreground">Les modifications sont enregistrées automatiquement.</p>
+
+            <div className="pt-4 border-t border-border">
+              <CrmTemplatesManager />
+            </div>
           </Card>
         )}
+
 
         {/* Column 2 — conversations */}
         {(view === 'inbox' || view === 'sent') && (
@@ -522,18 +585,65 @@ export default function AdminMessagerie() {
                     </ScrollArea>
 
                     <div className="p-3 border-t border-border space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Select value="" onValueChange={applyTemplate}>
+                          <SelectTrigger className="h-9 w-full sm:w-64">
+                            <span className="flex items-center gap-1.5 text-sm">
+                              <FileText className="h-4 w-4" />
+                              <SelectValue placeholder="Réponse rapide (modèle)" />
+                            </span>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {templates.filter((t) => t.is_active).map((t) => (
+                              <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                            ))}
+                            {!templates.filter((t) => t.is_active).length && (
+                              <div className="px-2 py-2 text-xs text-muted-foreground">Aucun modèle actif</div>
+                            )}
+                          </SelectContent>
+                        </Select>
+                        {subjectOverride !== null && (
+                          <Input
+                            className="h-9 flex-1 min-w-[180px]"
+                            value={subjectOverride}
+                            onChange={(e) => setSubjectOverride(e.target.value)}
+                            placeholder="Objet de l'e-mail"
+                          />
+                        )}
+                      </div>
+
                       <Textarea
-                        rows={3}
+                        rows={4}
                         value={reply}
                         onChange={(e) => setReply(e.target.value)}
-                        placeholder={`Répondre à ${selectedContact?.email || 'ce contact'}…`}
+                        placeholder={`Répondre à ${selectedContact?.email || 'ce contact'}… (variables {{prenom}}, {{numero_commande}}…)`}
                       />
+
+                      <div className="flex flex-wrap gap-1.5">
+                        {TEMPLATE_VARS.slice(0, 6).map((v) => (
+                          <button
+                            key={v.key}
+                            type="button"
+                            title={v.label}
+                            onClick={() => setReply((r) => `${r}{{${v.key}}}`)}
+                            className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-border bg-muted/50 hover:bg-muted"
+                          >
+                            {`{{${v.key}}}`}
+                          </button>
+                        ))}
+                      </div>
+
                       <div className="flex justify-end">
-                        <Button size="sm" onClick={doSend} disabled={!reply.trim() || sendMessage.isPending}>
-                          <Send className="h-4 w-4 mr-1.5" /> Envoyer
+                        <Button
+                          size="sm"
+                          onClick={() => setPreviewOpen(true)}
+                          disabled={!reply.trim() || sendMessage.isPending}
+                        >
+                          <Eye className="h-4 w-4 mr-1.5" /> Aperçu &amp; envoyer
                         </Button>
                       </div>
                     </div>
+
                   </div>
 
                   <aside className="p-4 space-y-3 hidden xl:block">
@@ -562,6 +672,39 @@ export default function AdminMessagerie() {
         onOpenChange={(v) => setContactDialog({ open: v, contact: v ? contactDialog.contact : null })}
         contact={contactDialog.contact}
       />
+
+      {/* Aperçu avant envoi */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader><DialogTitle>Aperçu avant envoi</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-lg border border-border p-3 text-xs space-y-1 bg-muted/40">
+              <p><span className="text-muted-foreground">De :</span> {config?.default_from_name || 'Service client'} &lt;{config?.default_from_email || 'non configuré'}&gt;</p>
+              <p><span className="text-muted-foreground">À :</span> {selectedContact?.email}</p>
+              <p><span className="text-muted-foreground">Objet :</span> <span className="font-medium">{renderedSubject || '(sans objet)'}</span></p>
+            </div>
+            <div className="rounded-lg border border-border p-3 text-sm whitespace-pre-wrap max-h-[45vh] overflow-y-auto">
+              {renderedBody}
+            </div>
+            {!!unresolved.length && (
+              <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700">
+                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                <p>
+                  Variables sans valeur (affichées entre crochets) :{' '}
+                  <span className="font-mono">{unresolved.join(', ')}</span>
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPreviewOpen(false)}>Modifier</Button>
+            <Button onClick={doSend} disabled={sendMessage.isPending}>
+              <Send className="h-4 w-4 mr-1.5" /> Envoyer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <NewConversationDialog
         open={convDialog}
         onOpenChange={setConvDialog}
