@@ -427,9 +427,17 @@ export default function AdminProducts() {
         }
       });
       if (result.products.length > 0) {
-        setExtractedProducts(result.products.map((product) => ({ ...product, selected: true })) as ExtractedProduct[]);
+        setExtractedProducts(result.products.map((product) => ({
+          ...product,
+          ...pickMainImage(product, autoMainStrategy),
+          mainManual: false,
+          selected: true,
+        })) as ExtractedProduct[]);
         const warning = result.errors.length > 0 ? ` · ${result.errors.length} lot(s) en erreur` : '';
-        toast({ title: `${result.products.length} produits extraits · ${result.batchesProcessed} lot(s) analysé(s)${warning}` });
+        toast({
+          title: `${result.products.length} produits extraits · ${result.batchesProcessed} lot(s) analysé(s)${warning}`,
+          description: `Image principale auto : ${AUTO_MAIN_STRATEGY_LABEL[autoMainStrategy]}`,
+        });
       } else {
         toast({ title: 'Aucun produit trouvé', variant: 'destructive' });
       }
