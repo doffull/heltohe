@@ -2,7 +2,7 @@ import { Helmet } from 'react-helmet-async';
 import { useLocation } from 'react-router-dom';
 import { useDesignSettings } from '@/hooks/useDesignSettings';
 
-const SITE_URL = 'https://lvtk2026.helvetica-mp.net';
+const SITE_URL = 'https://helvetica-mp.helvetica-mp.net';
 
 /**
  * Métadonnées SEO par route + interrupteur global de visibilité Google.

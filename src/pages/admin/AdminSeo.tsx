@@ -13,7 +13,7 @@ import { MaintenancePage } from '@/components/maintenance/MaintenancePage';
 import { Globe, EyeOff, Save, Loader2, Wrench, Image as ImageIcon, ExternalLink, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
-const SITE_URL = 'https://lvtk2026.helvetica-mp.net';
+const SITE_URL = 'https://helvetica-mp.helvetica-mp.net';
 
 export default function AdminSeo() {
   const { designSettings, updateDesignSettings, flushDesignSettings } = useApp();
