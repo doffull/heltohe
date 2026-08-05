@@ -93,6 +93,8 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
     modelName: '',
     galleryImages: [] as string[],
     hoverImage: '',
+    titleLogo: '',
+
     templateId: null as string | null,
     limitedEdition: false,
     limitedEditionLabel: '',
@@ -119,6 +121,8 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
   const [showGalleryPicker, setShowGalleryPicker] = useState(false);
   const [showMainPicker, setShowMainPicker] = useState(false);
   const [showHoverPicker, setShowHoverPicker] = useState(false);
+  const [showLogoPicker, setShowLogoPicker] = useState(false);
+
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [autoSaveState, setAutoSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
@@ -273,6 +277,8 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         modelName: product.modelName || '',
         galleryImages: product.galleryImages || [],
         hoverImage: product.hoverImage || '',
+        titleLogo: product.titleLogo || '',
+
         templateId: product.templateId ?? null,
         limitedEdition: product.limitedEdition ?? false,
         limitedEditionLabel: product.limitedEditionLabel || '',
@@ -299,6 +305,8 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
       salePrice: formData.salePrice || undefined,
       videoUrl: formData.videoUrl || undefined,
       hoverImage: formData.hoverImage || undefined,
+      titleLogo: formData.titleLogo || undefined,
+
       tags: formData.tags,
     };
     const variantStockData: VariantStockData = {
