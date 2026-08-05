@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useProducts } from "@/hooks/useProducts";
+import { excludeMarketplaceProducts } from "@/lib/shopVisibility";
 import { useCategories } from "@/hooks/useCategories";
 import { useCart } from "@/context/CartContext";
 import { useApp } from "@/context/AppContext";
