@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+
 
 import { useCategories } from '@/hooks/useCategories';
 import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, useBulkDeleteProducts, useBulkUpdateProducts } from '@/hooks/useProducts';
@@ -128,6 +129,21 @@ export default function AdminProducts() {
   const [stockDialogLocations, setStockDialogLocations] = useState<{ id: string; type: string }[]>([]);
   const [variantStockDialog, setVariantStockDialog] = useState<{ productId: string; productName: string } | null>(null);
   const [splitProduct, setSplitProduct] = useState<Product | null>(null);
+
+  // Deep-link: /admin/products?edit=<productId> ouvre directement le formulaire produit
+  const [editParams, setEditParams] = useSearchParams();
+  const editIdParam = editParams.get('edit');
+  useEffect(() => {
+    if (!editIdParam || !products.length) return;
+    const target = products.find(p => p.id === editIdParam);
+    if (!target) return;
+    setEditingProduct(target);
+    setIsFormOpen(true);
+    const next = new URLSearchParams(editParams);
+    next.delete('edit');
+    setEditParams(next, { replace: true });
+  }, [editIdParam, products]);
+
 
   // Bulk edit state
 

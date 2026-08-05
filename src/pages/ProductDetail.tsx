@@ -1,7 +1,9 @@
 import { useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Sparkles, ShoppingCart, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Sparkles, ShoppingCart, ChevronRight, Pencil } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+
 import { useProduct } from '@/hooks/useProducts';
 import { useCart } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
@@ -28,6 +30,8 @@ export default function ProductDetail() {
   const { slugOrId, id } = useParams<{ slugOrId?: string; id?: string }>();
   const productId = slugOrId || id || '';
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
+
   const [searchParams] = useSearchParams();
   const isNewImport = searchParams.get('new') === '1';
   const colorFromUrl = searchParams.get('color');
@@ -201,7 +205,20 @@ export default function ProductDetail() {
           </button>
           <ChevronRight className="h-3 w-3 opacity-50" />
           <span className="uppercase tracking-wider text-foreground/80 truncate">{product.category}</span>
+
+          {isAdmin && (
+            <Button
+              size="sm"
+              onClick={() => navigate(`/admin/products?edit=${product.id}`)}
+              className="ml-auto h-8 gap-1.5 px-3 text-[11px] font-bold uppercase tracking-wider chamfer-hud-sm shrink-0"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Modifier le produit</span>
+              <span className="sm:hidden">Modifier</span>
+            </Button>
+          )}
         </motion.div>
+
 
         {/* ---------- Bloc principal ---------- */}
         <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] gap-6 md:gap-8 lg:gap-10 xl:gap-14 items-start">
