@@ -63,7 +63,7 @@ export function CategoryGrid() {
   const [editValue, setEditValue] = useState('');
 
   const categories = dbCategories
-    .filter(c => !c.parentId)
+    .filter(c => !c.parentId && !isMarketplaceCategory(c.title))
     .sort((a, b) => a.sortOrder - b.sortOrder)
     .map(c => ({ id: c.id, title: c.title, image: c.image || CATEGORY_PLACEHOLDER, sortOrder: c.sortOrder, ...c }));
 
