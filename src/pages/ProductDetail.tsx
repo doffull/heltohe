@@ -30,6 +30,8 @@ export default function ProductDetail() {
   const { slugOrId, id } = useParams<{ slugOrId?: string; id?: string }>();
   const productId = slugOrId || id || '';
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
+
   const [searchParams] = useSearchParams();
   const isNewImport = searchParams.get('new') === '1';
   const colorFromUrl = searchParams.get('color');
