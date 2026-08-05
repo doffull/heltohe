@@ -117,7 +117,8 @@ const cardVariants = {
 export default function Home() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { data: products = [] } = useProducts();
+  const { data: allProducts = [] } = useProducts();
+  const products = excludeMarketplaceProducts(allProducts);
   const { addItem } = useCart();
   const { designSettings } = useApp();
   const { data: dbCategories = [] } = useCategories();
