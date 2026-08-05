@@ -12,3 +12,9 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /checkout
+Disallow: /panier
+Disallow: /compte
+
+Sitemap: https://lvtk2026.helvetica-mp.net/sitemap.xml

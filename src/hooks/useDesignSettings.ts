@@ -141,6 +141,20 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     voiceCommandEnabled: db.voice_command_enabled !== null && db.voice_command_enabled !== undefined ? (db.voice_command_enabled as boolean) : true,
     voiceOnboardingHint: db.voice_onboarding_hint !== null && db.voice_onboarding_hint !== undefined ? (db.voice_onboarding_hint as boolean) : true,
     colorDisplayMode: ((db.color_display_mode as string) || base.colorDisplayMode || 'swatches') as 'swatches' | 'images',
+    // SEO / visibilité Google
+    seoIndexable: db.seo_indexable !== null && db.seo_indexable !== undefined ? (db.seo_indexable as boolean) : true,
+    seoNoImageIndex: db.seo_noimageindex === true,
+    seoDefaultTitle: (db.seo_default_title as string) ?? '',
+    seoDefaultDescription: (db.seo_default_description as string) ?? '',
+    seoOgImage: (db.seo_og_image as string) ?? '',
+    // Mode maintenance
+    maintenanceEnabled: db.maintenance_enabled === true,
+    maintenanceTitle: (db.maintenance_title as string) ?? '',
+    maintenanceMessage: (db.maintenance_message as string) ?? '',
+    maintenanceUntil: (db.maintenance_until as string) ?? '',
+    maintenanceImage: (db.maintenance_image as string) ?? '',
+    maintenanceBg: (db.maintenance_bg as string) ?? '',
+    maintenanceAdminBypass: db.maintenance_admin_bypass !== null && db.maintenance_admin_bypass !== undefined ? (db.maintenance_admin_bypass as boolean) : true,
     // Piggyback fields on settings_json
     securityOverlay: ((db.settings_json as any)?.securityOverlay) ?? {
       enabled: true, text: '', showEmail: true, opacity: 0.05, angle: -30, density: 60,
@@ -294,6 +308,20 @@ function settingsToDb(s: DesignSettings) {
     voice_command_enabled: (s as any).voiceCommandEnabled ?? true,
     voice_onboarding_hint: (s as any).voiceOnboardingHint ?? true,
     color_display_mode: s.colorDisplayMode ?? 'swatches',
+    // SEO / visibilité Google
+    seo_indexable: (s as any).seoIndexable ?? true,
+    seo_noimageindex: (s as any).seoNoImageIndex ?? false,
+    seo_default_title: (s as any).seoDefaultTitle ?? '',
+    seo_default_description: (s as any).seoDefaultDescription ?? '',
+    seo_og_image: (s as any).seoOgImage ?? '',
+    // Mode maintenance
+    maintenance_enabled: (s as any).maintenanceEnabled ?? false,
+    maintenance_title: (s as any).maintenanceTitle ?? '',
+    maintenance_message: (s as any).maintenanceMessage ?? '',
+    maintenance_until: (s as any).maintenanceUntil ? (s as any).maintenanceUntil : null,
+    maintenance_image: (s as any).maintenanceImage ?? '',
+    maintenance_bg: (s as any).maintenanceBg ?? '',
+    maintenance_admin_bypass: (s as any).maintenanceAdminBypass ?? true,
     // Real columns
     header_nav_items: ((s as any).headerNavItems ?? []) as unknown as Json,
     top_banner: ((s as any).topBanner ?? null) as unknown as Json,

@@ -41,6 +41,8 @@ import {
   FlaskConical,
   Mail,
   FileUp,
+  Globe,
+
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -74,6 +76,8 @@ import AdminLive from './AdminLive';
 import AdminRoles from './AdminRoles';
 import AdminSecurity from './AdminSecurity';
 import AdminTransitions from './AdminTransitions';
+import AdminSeo from './AdminSeo';
+
 import AdminBannersAnalytics from './AdminBannersAnalytics';
 import AdminBoutiques from './AdminBoutiques';
 import AdminPageTemplates from './AdminPageTemplates';
@@ -102,6 +106,7 @@ export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin/media': '#EC4899',
   '/admin/marketing': '#EF4444',
   '/admin/design': '#06B6D4',
+  '/admin/seo': '#0EA5E9',
   '/admin/stock': '#D97706',
   '/admin/colissimo': '#EAB308',
   '/admin/notifications': '#F97316',
@@ -137,6 +142,8 @@ const SIDEBAR_ITEMS = [
   { icon: Megaphone, label: 'Marketing', href: '/admin/marketing' },
   { icon: Gift, label: 'Roulette', href: '/admin/roulette' },
   { icon: Palette, label: 'Design', href: '/admin/design' },
+  { icon: Globe, label: 'SEO & Visibilité', href: '/admin/seo' },
+
   { icon: MousePointer, label: 'Icônes Accueil', href: '/admin/home-icons' },
     { icon: Sparkles, label: 'Transitions', href: '/admin/transitions' },
     { icon: LayoutTemplate, label: 'Templates de pages', href: '/admin/page-templates' },
@@ -365,6 +372,8 @@ export default function Admin() {
             <Route path="security/*" element={<AdminSecurity />} />
             <Route path="parametres/*" element={<AdminSettings />} />
             <Route path="transitions/*" element={<AdminTransitions />} />
+            <Route path="seo/*" element={<AdminSeo />} />
+
             <Route path="page-templates/*" element={<AdminPageTemplates />} />
             <Route path="bannieres-analytics/*" element={<AdminBannersAnalytics />} />
             <Route path="avis/*" element={<AdminReviews />} />

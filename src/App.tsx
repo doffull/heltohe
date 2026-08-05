@@ -23,7 +23,10 @@ import { AdminViewportProvider } from "@/context/AdminViewportContext";
 import { MegaMenuProvider } from "@/context/MegaMenuContext";
 import { MegaMenu } from "@/components/layout/MegaMenu";
 import { getTransition } from "@/components/transitions/transitionRegistry";
+import { MaintenanceGate } from "@/components/maintenance/MaintenanceGate";
+import { SeoHead, OrganizationJsonLd } from "@/components/seo/SeoHead";
 import { supabase } from "@/integrations/supabase/client";
+
 
 // Pages — Home eager (LCP), the rest lazy for faster initial paint
 import Home from "./pages/Home";
@@ -171,8 +174,12 @@ function AnimatedRoutes() {
         transition={pageTransition}
       >
           <Suspense fallback={<RouteFallback />}>
+          <SeoHead />
+          <MaintenanceGate>
           <Routes location={location}>
-          <Route path="/" element={<MainLayout><Home /></MainLayout>} />
+          <Route path="/" element={<MainLayout><OrganizationJsonLd /><Home /></MainLayout>} />
+
+
           <Route path="/boutique" element={<MainLayout><Shop /></MainLayout>} />
           <Route path="/boutique/:slugOrId" element={<MainLayout><BoutiqueRouter /></MainLayout>} />
           <Route path="/panier" element={<MainLayout><Cart /></MainLayout>} />
@@ -196,7 +203,9 @@ function AnimatedRoutes() {
           <Route path="/:categorySlug" element={<MainLayout><CategoryPageRouter /></MainLayout>} />
           <Route path="*" element={<MainLayout><NotFound /></MainLayout>} />
         </Routes>
+        </MaintenanceGate>
         </Suspense>
+
       </motion.div>
     </AnimatePresence>
   );

@@ -918,6 +918,13 @@ export type Database = {
           logo_background_shape: string | null
           logo_size: number | null
           logo_style: Json | null
+          maintenance_admin_bypass: boolean
+          maintenance_bg: string | null
+          maintenance_enabled: boolean
+          maintenance_image: string | null
+          maintenance_message: string | null
+          maintenance_title: string | null
+          maintenance_until: string | null
           mannequin_hotspots: Json
           mobile_sidebar_image: string | null
           mobile_sidebar_media_type: string | null
@@ -926,6 +933,11 @@ export type Database = {
           product_grid_layout: string
           schedules: Json | null
           security_overlay: Json
+          seo_default_description: string | null
+          seo_default_title: string | null
+          seo_indexable: boolean
+          seo_noimageindex: boolean
+          seo_og_image: string | null
           settings_json: Json
           settings_key: string
           show_logo: boolean | null
@@ -1036,6 +1048,13 @@ export type Database = {
           logo_background_shape?: string | null
           logo_size?: number | null
           logo_style?: Json | null
+          maintenance_admin_bypass?: boolean
+          maintenance_bg?: string | null
+          maintenance_enabled?: boolean
+          maintenance_image?: string | null
+          maintenance_message?: string | null
+          maintenance_title?: string | null
+          maintenance_until?: string | null
           mannequin_hotspots?: Json
           mobile_sidebar_image?: string | null
           mobile_sidebar_media_type?: string | null
@@ -1044,6 +1063,11 @@ export type Database = {
           product_grid_layout?: string
           schedules?: Json | null
           security_overlay?: Json
+          seo_default_description?: string | null
+          seo_default_title?: string | null
+          seo_indexable?: boolean
+          seo_noimageindex?: boolean
+          seo_og_image?: string | null
           settings_json?: Json
           settings_key?: string
           show_logo?: boolean | null
@@ -1154,6 +1178,13 @@ export type Database = {
           logo_background_shape?: string | null
           logo_size?: number | null
           logo_style?: Json | null
+          maintenance_admin_bypass?: boolean
+          maintenance_bg?: string | null
+          maintenance_enabled?: boolean
+          maintenance_image?: string | null
+          maintenance_message?: string | null
+          maintenance_title?: string | null
+          maintenance_until?: string | null
           mannequin_hotspots?: Json
           mobile_sidebar_image?: string | null
           mobile_sidebar_media_type?: string | null
@@ -1162,6 +1193,11 @@ export type Database = {
           product_grid_layout?: string
           schedules?: Json | null
           security_overlay?: Json
+          seo_default_description?: string | null
+          seo_default_title?: string | null
+          seo_indexable?: boolean
+          seo_noimageindex?: boolean
+          seo_og_image?: string | null
           settings_json?: Json
           settings_key?: string
           show_logo?: boolean | null
@@ -3139,12 +3175,24 @@ export type Database = {
           logo_background_shape: string | null
           logo_size: number | null
           logo_style: Json | null
+          maintenance_admin_bypass: boolean | null
+          maintenance_bg: string | null
+          maintenance_enabled: boolean | null
+          maintenance_image: string | null
+          maintenance_message: string | null
+          maintenance_title: string | null
+          maintenance_until: string | null
           mannequin_hotspots: Json | null
           mobile_sidebar_image: string | null
           mobile_sidebar_media_type: string | null
           pages: Json | null
           presets: Json | null
           schedules: Json | null
+          seo_default_description: string | null
+          seo_default_title: string | null
+          seo_indexable: boolean | null
+          seo_noimageindex: boolean | null
+          seo_og_image: string | null
           settings_key: string | null
           show_logo: boolean | null
           show_overlays: boolean | null
@@ -3241,12 +3289,24 @@ export type Database = {
           logo_background_shape?: string | null
           logo_size?: number | null
           logo_style?: Json | null
+          maintenance_admin_bypass?: boolean | null
+          maintenance_bg?: string | null
+          maintenance_enabled?: boolean | null
+          maintenance_image?: string | null
+          maintenance_message?: string | null
+          maintenance_title?: string | null
+          maintenance_until?: string | null
           mannequin_hotspots?: Json | null
           mobile_sidebar_image?: string | null
           mobile_sidebar_media_type?: string | null
           pages?: Json | null
           presets?: Json | null
           schedules?: Json | null
+          seo_default_description?: string | null
+          seo_default_title?: string | null
+          seo_indexable?: boolean | null
+          seo_noimageindex?: boolean | null
+          seo_og_image?: string | null
           settings_key?: string | null
           show_logo?: boolean | null
           show_overlays?: boolean | null
@@ -3343,12 +3403,24 @@ export type Database = {
           logo_background_shape?: string | null
           logo_size?: number | null
           logo_style?: Json | null
+          maintenance_admin_bypass?: boolean | null
+          maintenance_bg?: string | null
+          maintenance_enabled?: boolean | null
+          maintenance_image?: string | null
+          maintenance_message?: string | null
+          maintenance_title?: string | null
+          maintenance_until?: string | null
           mannequin_hotspots?: Json | null
           mobile_sidebar_image?: string | null
           mobile_sidebar_media_type?: string | null
           pages?: Json | null
           presets?: Json | null
           schedules?: Json | null
+          seo_default_description?: string | null
+          seo_default_title?: string | null
+          seo_indexable?: boolean | null
+          seo_noimageindex?: boolean | null
+          seo_og_image?: string | null
           settings_key?: string | null
           show_logo?: boolean | null
           show_overlays?: boolean | null
