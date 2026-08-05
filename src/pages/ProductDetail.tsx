@@ -201,7 +201,20 @@ export default function ProductDetail() {
           </button>
           <ChevronRight className="h-3 w-3 opacity-50" />
           <span className="uppercase tracking-wider text-foreground/80 truncate">{product.category}</span>
+
+          {isAdmin && (
+            <Button
+              size="sm"
+              onClick={() => navigate(`/admin/products?edit=${product.id}`)}
+              className="ml-auto h-8 gap-1.5 px-3 text-[11px] font-bold uppercase tracking-wider chamfer-hud-sm shrink-0"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Modifier le produit</span>
+              <span className="sm:hidden">Modifier</span>
+            </Button>
+          )}
         </motion.div>
+
 
         {/* ---------- Bloc principal ---------- */}
         <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] gap-6 md:gap-8 lg:gap-10 xl:gap-14 items-start">
