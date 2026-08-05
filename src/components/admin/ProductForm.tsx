@@ -704,6 +704,51 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
             />
           </div>
 
+          {/* Logo affiché à côté du titre du produit */}
+          <div className="space-y-2 border border-border/40 bg-secondary/20 p-3">
+            <Label className="hud-text text-[11px]">// LOGO À CÔTÉ DU TITRE</Label>
+            <p className="text-[10px] text-muted-foreground">
+              Affiché à gauche du nom du produit (fiche produit + vignette). PNG transparent recommandé.
+            </p>
+            {formData.titleLogo && (
+              <div className="flex items-center gap-3 bg-background/60 p-2 border border-border/30">
+                <img src={formData.titleLogo} alt="Aperçu logo" className="h-8 w-auto max-w-[110px] object-contain" />
+                <span className="text-[10px] text-muted-foreground">Aperçu</span>
+              </div>
+            )}
+            <FileDropZone
+              accept={['image']}
+              folder="products"
+              currentFile={formData.titleLogo}
+              onUpload={(url) => setFormData(prev => ({ ...prev, titleLogo: url }))}
+              label="Glissez le logo ou cliquez"
+            />
+            <Input
+              value={formData.titleLogo || ''}
+              onChange={(e) => setFormData(prev => ({ ...prev, titleLogo: e.target.value }))}
+              className="bg-secondary/50 border-border/30"
+              placeholder="Ou collez une URL de logo..."
+            />
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" size="sm" className="flex-1 h-8 text-xs" onClick={() => setShowLogoPicker(true)}>
+                <Images className="h-3.5 w-3.5 mr-1.5" />
+                Médiathèque
+              </Button>
+              {formData.titleLogo && (
+                <Button type="button" variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setFormData(prev => ({ ...prev, titleLogo: '' }))}>
+                  Retirer
+                </Button>
+              )}
+            </div>
+            <MediaLibraryDialog
+              open={showLogoPicker}
+              onOpenChange={setShowLogoPicker}
+              title="Sélectionner le logo du titre"
+              onSelect={(url) => setFormData(prev => ({ ...prev, titleLogo: url }))}
+            />
+          </div>
+
+
           {/* IA : nouvelle pose / expression (super admin) */}
           <AiPoseButton
             className="w-full"
