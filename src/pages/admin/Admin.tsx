@@ -77,6 +77,7 @@ import AdminRoles from './AdminRoles';
 import AdminSecurity from './AdminSecurity';
 import AdminTransitions from './AdminTransitions';
 import AdminSeo from './AdminSeo';
+import AdminCollab from './AdminCollab';
 
 import AdminBannersAnalytics from './AdminBannersAnalytics';
 import AdminBoutiques from './AdminBoutiques';
@@ -107,6 +108,7 @@ export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin/marketing': '#EF4444',
   '/admin/design': '#06B6D4',
   '/admin/seo': '#0EA5E9',
+  '/admin/collab': '#A855F7',
   '/admin/stock': '#D97706',
   '/admin/colissimo': '#EAB308',
   '/admin/notifications': '#F97316',
@@ -143,6 +145,7 @@ const SIDEBAR_ITEMS = [
   { icon: Gift, label: 'Roulette', href: '/admin/roulette' },
   { icon: Palette, label: 'Design', href: '/admin/design' },
   { icon: Globe, label: 'SEO & Visibilité', href: '/admin/seo' },
+  { icon: Sparkles, label: 'Espace Collab', href: '/admin/collab' },
 
   { icon: MousePointer, label: 'Icônes Accueil', href: '/admin/home-icons' },
     { icon: Sparkles, label: 'Transitions', href: '/admin/transitions' },
@@ -374,6 +377,7 @@ export default function Admin() {
             <Route path="parametres/*" element={<AdminSettings />} />
             <Route path="transitions/*" element={<AdminTransitions />} />
             <Route path="seo/*" element={<AdminSeo />} />
+            <Route path="collab/*" element={<AdminCollab />} />
 
             <Route path="page-templates/*" element={<AdminPageTemplates />} />
             <Route path="bannieres-analytics/*" element={<AdminBannersAnalytics />} />

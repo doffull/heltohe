@@ -48,6 +48,8 @@ export interface Product {
   modelSizeWorn?: string;
   modelName?: string;
   galleryImages?: string[];
+  /** Image affichée au survol de la vignette (effet swap). */
+  hoverImage?: string;
   templateId?: string | null;
   isActive?: boolean;
   /** Affiche le badge « LIMITED EDITION » sur la vignette et la fiche produit. */

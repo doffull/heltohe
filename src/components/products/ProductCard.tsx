@@ -8,16 +8,35 @@ import { getSwatchStyle } from '@/lib/swatch';
 import { LimitedEditionBadge } from '@/components/product/LimitedEditionBadge';
 
 
+export type CardHoverEffect = 'fade' | 'zoom' | 'slide';
+
 interface ProductCardProps {
   product: Product;
   onClick?: () => void;
   onAddToCart?: () => void;
   onNavigate?: (productId: string, selectedColor: string | null) => void;
   swatchStyle?: 'round' | 'square' | 'separated' | 'geometric';
+  /** Effet de swap d'image au survol */
+  hoverEffect?: CardHoverEffect;
+  hoverEnabled?: boolean;
+  hoverDuration?: number;
+  /** Affiche l'overlay des tailles disponibles */
+  showSizes?: boolean;
 }
 
-export function ProductCard({ product, onClick, onAddToCart, onNavigate, swatchStyle = 'round' }: ProductCardProps) {
+export function ProductCard({
+  product,
+  onClick,
+  onAddToCart,
+  onNavigate,
+  swatchStyle = 'round',
+  hoverEffect = 'fade',
+  hoverEnabled = true,
+  hoverDuration = 500,
+  showSizes = true,
+}: ProductCardProps) {
   const [selectedColorIndex, setSelectedColorIndex] = useState<number | null>(null);
+  const [hovered, setHovered] = useState(false);
   const { data: reviewStats } = useReviewStats(product.id);
   const hasDiscount = product.salePrice && product.salePrice < product.price;
   const isLowStock = product.stock <= 5 && product.stock > 0;
@@ -44,12 +63,18 @@ export function ProductCard({ product, onClick, onAddToCart, onNavigate, swatchS
     ? activeColorOpt.image
     : product.image;
 
+  // Image de survol : image dédiée si définie, sinon 2e image de la galerie
+  const gallerySecond = (product.galleryImages || []).find(img => img && img !== displayImage);
+  const hoverImage = hoverEnabled ? (product.hoverImage || gallerySecond) : undefined;
+  const canSwap = !!hoverImage && hoverImage !== displayImage;
+
   const activeColorLabel = activeColorOpt?.label ?? null;
 
   const handleSwatchClick = (e: React.MouseEvent, index: number) => {
     e.stopPropagation();
     setSelectedColorIndex(prev => prev === index ? null : index);
   };
+
 
   return (
     <div
@@ -58,10 +83,13 @@ export function ProductCard({ product, onClick, onAddToCart, onNavigate, swatchS
         "transition-all duration-300 hover:border-foreground hover:shadow-hmp",
         "bevel-corners"
       )}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       {/* Image */}
       <div
         className="relative aspect-[3/4] overflow-hidden"
+        onTouchStart={() => setHovered(true)}
         onClick={() => {
           if (onNavigate) {
             onNavigate(product.id, activeColorOpt?.color ?? null);
@@ -76,8 +104,40 @@ export function ProductCard({ product, onClick, onAddToCart, onNavigate, swatchS
           alt={product.name}
           loading="lazy"
           decoding="async"
-          className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105 animate-fade-in"
+          className={cn(
+            "w-full h-full object-cover transition-all animate-fade-in",
+            canSwap && hovered
+              ? hoverEffect === 'slide'
+                ? 'opacity-0 -translate-x-3'
+                : hoverEffect === 'zoom'
+                  ? 'opacity-0 scale-110'
+                  : 'opacity-0'
+              : 'opacity-100 group-hover:scale-105'
+          )}
+          style={{ transitionDuration: `${hoverDuration}ms` }}
         />
+
+        {/* Image de survol (swap) */}
+        {canSwap && (
+          <img
+            src={hoverImage}
+            alt={`${product.name} — vue alternative`}
+            loading="lazy"
+            decoding="async"
+            aria-hidden="true"
+            className={cn(
+              "absolute inset-0 w-full h-full object-cover transition-all pointer-events-none",
+              hovered
+                ? 'opacity-100 translate-x-0 scale-100'
+                : hoverEffect === 'slide'
+                  ? 'opacity-0 translate-x-3'
+                  : hoverEffect === 'zoom'
+                    ? 'opacity-0 scale-95'
+                    : 'opacity-0'
+            )}
+            style={{ transitionDuration: `${hoverDuration}ms` }}
+          />
+        )}
 
         {/* Active color tint overlay (subtle) */}
         {activeColorOpt && !activeColorOpt.image && (
@@ -87,19 +147,20 @@ export function ProductCard({ product, onClick, onAddToCart, onNavigate, swatchS
           />
         )}
 
-        {/* Overlay on hover */}
-        <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-xs uppercase tracking-wider mb-3">Tailles disponibles</p>
-            <div className="flex gap-1.5 justify-center">
+        {/* Tailles disponibles — bas de l'image, apparition au survol */}
+        {showSizes && (
+          <div className="absolute inset-x-0 bottom-0 z-[1] translate-y-2 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 bg-gradient-to-t from-background/95 via-background/80 to-transparent pt-8 pb-3 px-2 pointer-events-none">
+            <p className="text-[10px] uppercase tracking-wider text-center mb-2 text-muted-foreground">Tailles disponibles</p>
+            <div className="flex gap-1.5 justify-center flex-wrap">
               {(product.sizes || ['XS', 'S', 'M', 'L', 'XL']).slice(0, 5).map((size) => (
-                <span key={size} className="w-8 h-8 border border-foreground flex items-center justify-center text-xs font-medium">
+                <span key={size} className="w-7 h-7 border border-foreground bg-background/60 flex items-center justify-center text-[10px] font-medium">
                   {size}
                 </span>
               ))}
             </div>
           </div>
-        </div>
+        )}
+
 
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-2 items-start">

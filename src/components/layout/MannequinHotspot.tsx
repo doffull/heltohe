@@ -2,7 +2,7 @@ import { forwardRef, useState } from 'react';
 import { LucideIcon, Shield, Package, Layers, Move } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { MannequinHotspotConfig, MarkerType } from '@/types';
-import { useProducts } from '@/hooks/useProducts';
+import { useShopProducts as useProducts } from '@/hooks/useShopProducts';
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Shield,
