@@ -19,7 +19,13 @@ export default function ColorVariantsStrip({ product, className }: ColorVariants
   const navigate = useNavigate();
   const { data: allProducts = [] } = useProducts();
 
-  const variants = useMemo(() => getFamilyVariants(allProducts, product), [allProducts, product]);
+  // Un produit Collab ne propose que des variantes Collab, et inversement.
+  const scoped = useMemo(() => {
+    const isCollab = isMarketplaceCategory(product.category);
+    return allProducts.filter((p) => isMarketplaceCategory(p.category) === isCollab);
+  }, [allProducts, product.category]);
+
+  const variants = useMemo(() => getFamilyVariants(scoped, product), [scoped, product]);
   if (!variants.length) return null;
 
   return (
