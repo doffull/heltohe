@@ -498,10 +498,25 @@ serve(async (req) => {
         });
       }
       const parsed = extractJson(aiRes.text) || {};
-      const products = (Array.isArray(parsed) ? parsed : (parsed.products || [])).map((p: any) => ({ ...p, pageImages: [] }));
-      return new Response(JSON.stringify({ products, mode: "multimodal", chunksProcessed: 1 }), {
+      // Rasterization unavailable: fall back on the images embedded in the PDF
+      // (ghost / worn) so products still come back with visuals.
+      const products = (Array.isArray(parsed) ? parsed : (parsed.products || [])).map((p: any) => {
+        const pages = normalizePageIndex(p?._pageIndex);
+        const clean = { ...p };
+        delete clean._pageIndex;
+        return { ...clean, ...resolveProductImages(pages, {}, embedded) };
+      });
+      return new Response(JSON.stringify({
+        products,
+        mode: "multimodal",
+        rasterAvailable: false,
+        embeddedImages: Object.values(embedded).reduce((n, l) => n + l.length, 0),
+        errors: errors.length ? errors : undefined,
+        chunksProcessed: 1,
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+
     }
 
     // 3. Text-only mode: also rasterize pages in the background to attach images
