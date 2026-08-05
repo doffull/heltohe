@@ -61,15 +61,51 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(bin);
 }
 
+/**
+ * Canvas backend for unpdf.
+ * The edge runtime (Deno / Linux ARM64) cannot resolve the native bindings of
+ * `@napi-rs/canvas`, so we use the pure WASM Skia canvas instead. The module is
+ * loaded once and memoized; if it cannot be loaded we disable rasterization
+ * entirely instead of retrying (and logging) for every single page.
+ */
+// deno-lint-disable no-explicit-any
+let canvasModule: any | null = null;
+let rasterDisabled = false;
+
+async function loadCanvasModule(): Promise<any | null> {
+  if (canvasModule || rasterDisabled) return canvasModule;
+  try {
+    const mod: any = await import("https://deno.land/x/canvas@v1.4.2/mod.ts");
+    canvasModule = {
+      createCanvas: (width: number, height: number) => {
+        const canvas: any = mod.createCanvas(width, height);
+        if (typeof canvas.toBuffer !== "function") {
+          canvas.toBuffer = () => canvas.encode("png");
+        }
+        return canvas;
+      },
+      loadImage: mod.loadImage,
+      DOMMatrix: (globalThis as any).DOMMatrix,
+    };
+  } catch (e) {
+    rasterDisabled = true;
+    console.warn("PDF rasterization unavailable (canvas WASM load failed):", (e as Error).message);
+  }
+  return canvasModule;
+}
+
 async function renderCompressedPage(
   pdfBytes: Uint8Array,
   pageNumber: number,
 ): Promise<{ base64: string; mime: string; bytes: Uint8Array } | null> {
+  if (rasterDisabled) return null;
+  const canvasBackend = await loadCanvasModule();
+  if (!canvasBackend) return null;
   try {
     const pngBuf = await renderPageAsImage(pdfBytes, pageNumber, {
       scale: PAGE_RENDER_SCALE,
       // deno-lint-ignore no-explicit-any
-      canvas: (async () => await import("npm:@napi-rs/canvas@0.1.53")) as any,
+      canvas: (async () => canvasBackend) as any,
     });
     const img = await Image.decode(new Uint8Array(pngBuf));
     const longest = Math.max(img.width, img.height);
@@ -81,10 +117,14 @@ async function renderCompressedPage(
     const bytes = new Uint8Array(jpeg);
     return { base64: bytesToBase64(bytes), mime: "image/jpeg", bytes };
   } catch (e) {
-    console.warn(`renderCompressedPage failed page ${pageNumber}:`, (e as Error).message);
+    // First failure disables the whole path: the cause is environmental,
+    // retrying page after page only floods the logs.
+    rasterDisabled = true;
+    console.warn(`renderCompressedPage failed page ${pageNumber} (rasterization disabled):`, (e as Error).message);
     return null;
   }
 }
+
 
 function chunkText(text: string, size: number): string[] {
   const chunks: string[] = [];
