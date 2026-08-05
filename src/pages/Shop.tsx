@@ -253,13 +253,36 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
         {/* Header — hidden when a CategoryPageRouter provides its own hero */}
         {!hideHeader && (
           <div className="mb-6 lg:mb-10">
-            <p className="font-mono text-[10px] lg:text-xs tracking-[0.3em] text-muted-foreground mb-2">// CATALOGUE</p>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight mb-2">Boutique</h1>
+            {isMarketplacePage && collab?.page.heroImage && (
+              <img
+                src={collab.page.heroImage}
+                alt={collab.page.title || 'Collab'}
+                className="mb-5 h-40 w-full object-cover lg:h-64"
+              />
+            )}
+            <p className="font-mono text-[10px] lg:text-xs tracking-[0.3em] text-muted-foreground mb-2">
+              // {isMarketplacePage ? (collab?.page.subtitle || 'CATALOGUE') : 'CATALOGUE'}
+            </p>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight mb-2">
+              {isMarketplacePage ? (collab?.page.title || 'Collab') : 'Boutique'}
+            </h1>
+            {isMarketplacePage && collab?.page.intro && (
+              <p className="max-w-2xl text-sm text-muted-foreground mb-2">{collab.page.intro}</p>
+            )}
+            {isMarketplacePage && collab?.page.ctaLabel && collab?.page.ctaHref && (
+              <a
+                href={collab.page.ctaHref}
+                className="mb-3 inline-block border border-foreground px-4 py-2 text-xs font-bold uppercase tracking-wider hover:bg-foreground hover:text-background transition-colors"
+              >
+                {collab.page.ctaLabel}
+              </a>
+            )}
             <p className="text-sm text-muted-foreground">
               {filteredProducts.length} produit{filteredProducts.length !== 1 ? 's' : ''} disponible{filteredProducts.length !== 1 ? 's' : ''}
             </p>
           </div>
         )}
+
 
         {/* Product count when header is hidden */}
         {hideHeader && (
