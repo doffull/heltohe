@@ -7,6 +7,7 @@ import { Check, Pencil, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useBoutiques } from '@/hooks/useBoutiques';
+import { isMarketplaceCategory } from '@/lib/shopVisibility';
 
 const CATEGORY_PLACEHOLDER = '/placeholder.svg';
 
