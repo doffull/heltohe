@@ -469,12 +469,14 @@ serve(async (req) => {
         return new Response(JSON.stringify({
           products: allProducts,
           mode: "raster-compressed",
+          rasterAvailable: true,
           pagesProcessed: processedPages,
           pagesUploaded: Object.keys(pageUrls).length,
           embeddedImages: Object.values(embedded).reduce((n, l) => n + l.length, 0),
           errors: errors.length ? errors : undefined,
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+
 
       // Fallback: raw-PDF multimodal (no images extracted)
       if (fileBase64.length > MAX_MULTIMODAL_SIZE) {
