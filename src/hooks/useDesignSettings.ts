@@ -141,6 +141,20 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     voiceCommandEnabled: db.voice_command_enabled !== null && db.voice_command_enabled !== undefined ? (db.voice_command_enabled as boolean) : true,
     voiceOnboardingHint: db.voice_onboarding_hint !== null && db.voice_onboarding_hint !== undefined ? (db.voice_onboarding_hint as boolean) : true,
     colorDisplayMode: ((db.color_display_mode as string) || base.colorDisplayMode || 'swatches') as 'swatches' | 'images',
+    // SEO / visibilité Google
+    seoIndexable: db.seo_indexable !== null && db.seo_indexable !== undefined ? (db.seo_indexable as boolean) : true,
+    seoNoImageIndex: db.seo_noimageindex === true,
+    seoDefaultTitle: (db.seo_default_title as string) ?? '',
+    seoDefaultDescription: (db.seo_default_description as string) ?? '',
+    seoOgImage: (db.seo_og_image as string) ?? '',
+    // Mode maintenance
+    maintenanceEnabled: db.maintenance_enabled === true,
+    maintenanceTitle: (db.maintenance_title as string) ?? '',
+    maintenanceMessage: (db.maintenance_message as string) ?? '',
+    maintenanceUntil: (db.maintenance_until as string) ?? '',
+    maintenanceImage: (db.maintenance_image as string) ?? '',
+    maintenanceBg: (db.maintenance_bg as string) ?? '',
+    maintenanceAdminBypass: db.maintenance_admin_bypass !== null && db.maintenance_admin_bypass !== undefined ? (db.maintenance_admin_bypass as boolean) : true,
     // Piggyback fields on settings_json
     securityOverlay: ((db.settings_json as any)?.securityOverlay) ?? {
       enabled: true, text: '', showEmail: true, opacity: 0.05, angle: -30, density: 60,
