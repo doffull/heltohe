@@ -1,7 +1,9 @@
 import { useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Sparkles, ShoppingCart, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Sparkles, ShoppingCart, ChevronRight, Pencil } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+
 import { useProduct } from '@/hooks/useProducts';
 import { useCart } from '@/context/CartContext';
 import { Button } from '@/components/ui/button';
