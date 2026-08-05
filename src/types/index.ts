@@ -322,6 +322,20 @@ export interface ProductTrustBadgesConfig {
 
 
 export interface DesignSettings {
+  // SEO / visibilité Google
+  seoIndexable?: boolean;
+  seoNoImageIndex?: boolean;
+  seoDefaultTitle?: string;
+  seoDefaultDescription?: string;
+  seoOgImage?: string;
+  // Mode maintenance
+  maintenanceEnabled?: boolean;
+  maintenanceTitle?: string;
+  maintenanceMessage?: string;
+  maintenanceUntil?: string;
+  maintenanceImage?: string;
+  maintenanceBg?: string;
+  maintenanceAdminBypass?: boolean;
   // Newsletter widget + voice command
   showSidebarNewsletter?: boolean;
   sidebarNewsletterTitle?: string;
