@@ -5,6 +5,7 @@ import type { Product } from '@/types';
 import { useProducts } from '@/hooks/useProducts';
 import { getFamilyVariants } from '@/lib/productFamily';
 import { getSwatchStyle } from '@/lib/swatch';
+import { isMarketplaceCategory } from '@/lib/shopVisibility';
 
 interface ColorVariantsStripProps {
   product: Product;
