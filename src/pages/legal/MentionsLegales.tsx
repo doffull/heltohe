@@ -20,7 +20,7 @@ export default function MentionsLegales() {
         Le présent site est édité par :<br />
         <strong><NC value={info.companyName} /></strong><br />
         Forme juridique : <NC value={info.companyForm} /><br />
-        Capital social : <NC value={info.capital} /> €<br />
+        Capital social : <NC value={info.capital} />{info.capital !== '[Non configuré]' ? ' €' : ''}<br />
         Siège social : <NC value={info.fullAddress} /><br />
         SIRET : <NC value={info.siret} /><br />
         RCS : <NC value={info.rcs} /><br />
