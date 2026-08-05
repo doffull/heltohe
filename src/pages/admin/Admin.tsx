@@ -106,6 +106,7 @@ export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin/media': '#EC4899',
   '/admin/marketing': '#EF4444',
   '/admin/design': '#06B6D4',
+  '/admin/seo': '#0EA5E9',
   '/admin/stock': '#D97706',
   '/admin/colissimo': '#EAB308',
   '/admin/notifications': '#F97316',
