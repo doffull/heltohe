@@ -129,6 +129,21 @@ export default function AdminProducts() {
   const [variantStockDialog, setVariantStockDialog] = useState<{ productId: string; productName: string } | null>(null);
   const [splitProduct, setSplitProduct] = useState<Product | null>(null);
 
+  // Deep-link: /admin/products?edit=<productId> ouvre directement le formulaire produit
+  const [editParams, setEditParams] = useSearchParams();
+  const editIdParam = editParams.get('edit');
+  useEffect(() => {
+    if (!editIdParam || !products.length) return;
+    const target = products.find(p => p.id === editIdParam);
+    if (!target) return;
+    setEditingProduct(target);
+    setIsFormOpen(true);
+    const next = new URLSearchParams(editParams);
+    next.delete('edit');
+    setEditParams(next, { replace: true });
+  }, [editIdParam, products]);
+
+
   // Bulk edit state
 
   const { data: dbCategories = [] } = useCategories();
