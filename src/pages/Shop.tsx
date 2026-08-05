@@ -2,6 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import ShopFilterPanel, { type ShopFilters } from '@/components/products/ShopFilterPanel';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
+import { useShopProducts, useCollabProducts } from '@/hooks/useShopProducts';
+import { useCollabSettings } from '@/hooks/useCollabSettings';
 import { groupFamiliesAdjacent } from '@/lib/productFamily';
 import { isMarketplaceCategory } from '@/lib/shopVisibility';
 import { useOrderedProducts } from '@/hooks/useCategoryOrder';
@@ -63,7 +65,24 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const { data: products = [], isLoading } = useProducts();
+  // Espace marketplace (ex: /collab) → catalogue totalement séparé de la boutique
+  const isMarketplacePage = isMarketplaceCategory(categoryFromSlug);
+  const shopQuery = useShopProducts();
+  const collabQuery = useCollabProducts();
+  const { data: products = [], isLoading } = isMarketplacePage ? collabQuery : shopQuery;
+  const { data: collabConf } = useCollabSettings();
+  const collab = collabConf?.collab;
+  const hover = isMarketplacePage
+    ? {
+        enabled: collab?.animation.hoverEnabled ?? true,
+        effect: collab?.animation.hoverEffect ?? 'fade',
+        duration: collab?.animation.hoverDuration ?? 500,
+      }
+    : {
+        enabled: collabConf?.shopHover.enabled ?? true,
+        effect: collabConf?.shopHover.effect ?? 'fade',
+        duration: collabConf?.shopHover.duration ?? 500,
+      };
   const { addItem } = useCart();
   const sidebarContext = useSidebarOptional();
   const { data: dbCategories = [] } = useCategories();
@@ -361,6 +380,8 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
             products={baseFilteredForOptions}
             value={shopFilters}
             onChange={setShopFilters}
+            sizesOverride={isMarketplacePage ? collab?.sizes : undefined}
+            colorsOverride={isMarketplacePage ? collab?.colors : undefined}
             className="lg:sticky lg:top-24 lg:self-start"
           />
           <div>
@@ -385,12 +406,18 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
           (() => {
             const layoutId = ((designSettings as any)?.productGridLayout ?? 'classic') as LayoutId;
             const { wrapper, item } = getLayoutClasses(layoutId);
+            const colM: Record<number, string> = { 1: 'grid-cols-1', 2: 'grid-cols-2', 3: 'grid-cols-3' };
+            const colT: Record<number, string> = { 1: 'md:grid-cols-1', 2: 'md:grid-cols-2', 3: 'md:grid-cols-3', 4: 'md:grid-cols-4' };
+            const colD: Record<number, string> = { 1: 'lg:grid-cols-1', 2: 'lg:grid-cols-2', 3: 'lg:grid-cols-3', 4: 'lg:grid-cols-4', 5: 'lg:grid-cols-5' };
+            const collabWrapper = isMarketplacePage && collab
+              ? cn('grid gap-6', colM[collab.layout.columnsMobile] || 'grid-cols-2', colT[collab.layout.columnsTablet] || 'md:grid-cols-2', colD[collab.layout.columnsDesktop] || 'lg:grid-cols-3')
+              : null;
             return (
-              <div className={wrapper}>
+              <div className={collabWrapper || wrapper}>
                 {pagedProducts.map((product, index) => (
                   <div
                     key={product.id}
-                    className={cn('animate-fade-in', item?.(index))}
+                    className={cn('animate-fade-in', !collabWrapper && item?.(index))}
                     style={{ animationDelay: `${index * 50}ms` }}
                     onMouseEnter={() => handleProductHover(product)}
                     onMouseLeave={handleProductLeave}
@@ -399,6 +426,11 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
                       product={product}
                       onNavigate={(id, color) => navigate(`/boutique/${id}${color ? `?color=${encodeURIComponent(color)}` : ''}`)}
                       onAddToCart={() => handleAddToCart(product)}
+                      hoverEnabled={hover.enabled}
+                      hoverEffect={hover.effect}
+                      hoverDuration={hover.duration}
+                      swatchStyle={isMarketplacePage ? collab?.layout.swatchStyle : undefined}
+                      showSizes={isMarketplacePage ? collab?.layout.showSizes ?? true : true}
                     />
                   </div>
                 ))}

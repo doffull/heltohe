@@ -92,6 +92,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
     modelSizeWorn: '',
     modelName: '',
     galleryImages: [] as string[],
+    hoverImage: '',
     templateId: null as string | null,
     limitedEdition: false,
     limitedEditionLabel: '',
@@ -117,6 +118,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
   const [aiObservations, setAiObservations] = useState<string[]>([]);
   const [showGalleryPicker, setShowGalleryPicker] = useState(false);
   const [showMainPicker, setShowMainPicker] = useState(false);
+  const [showHoverPicker, setShowHoverPicker] = useState(false);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [autoSaveState, setAutoSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
@@ -159,6 +161,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
       const res = await generateSwatchFromImages({
         image: formData.image,
         galleryImages: formData.galleryImages,
+        
         name: formData.name,
         category: formData.category,
       });
@@ -269,6 +272,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         modelSizeWorn: product.modelSizeWorn || '',
         modelName: product.modelName || '',
         galleryImages: product.galleryImages || [],
+        hoverImage: product.hoverImage || '',
         templateId: product.templateId ?? null,
         limitedEdition: product.limitedEdition ?? false,
         limitedEditionLabel: product.limitedEditionLabel || '',
@@ -294,6 +298,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
       ...formData,
       salePrice: formData.salePrice || undefined,
       videoUrl: formData.videoUrl || undefined,
+      hoverImage: formData.hoverImage || undefined,
       tags: formData.tags,
     };
     const variantStockData: VariantStockData = {
@@ -656,6 +661,40 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
             title="Sélectionner l'image principale"
             onSelect={(url) => setFormData(prev => ({ ...prev, image: url }))}
           />
+
+          {/* Image de survol (effet swap sur la vignette) */}
+          <div className="space-y-2 border border-border/40 bg-secondary/20 p-3">
+            <Label className="hud-text text-[11px]">// IMAGE AU SURVOL (SWAP)</Label>
+            <p className="text-[10px] text-muted-foreground">
+              Si vide, la 2e image de la galerie est utilisée automatiquement.
+            </p>
+            {formData.hoverImage && (
+              <img src={formData.hoverImage} alt="Aperçu survol" className="h-24 w-auto object-cover border border-border/40" />
+            )}
+            <Input
+              value={formData.hoverImage || ''}
+              onChange={(e) => setFormData(prev => ({ ...prev, hoverImage: e.target.value }))}
+              className="bg-secondary/50 border-border/30"
+              placeholder="URL de l'image affichée au survol..."
+            />
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" size="sm" className="flex-1 h-8 text-xs" onClick={() => setShowHoverPicker(true)}>
+                <Images className="h-3.5 w-3.5 mr-1.5" />
+                Médiathèque
+              </Button>
+              {formData.hoverImage && (
+                <Button type="button" variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setFormData(prev => ({ ...prev, hoverImage: '' }))}>
+                  Retirer
+                </Button>
+              )}
+            </div>
+            <MediaLibraryDialog
+              open={showHoverPicker}
+              onOpenChange={setShowHoverPicker}
+              title="Sélectionner l'image de survol"
+              onSelect={(url) => setFormData(prev => ({ ...prev, hoverImage: url }))}
+            />
+          </div>
 
           {/* IA : nouvelle pose / expression (super admin) */}
           <AiPoseButton

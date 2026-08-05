@@ -16,6 +16,10 @@ interface Props {
   value: ShopFilters;
   onChange: (v: ShopFilters) => void;
   className?: string;
+  /** Force la liste des tailles (ex: filtres spécifiques Collab) */
+  sizesOverride?: string[];
+  /** Force la liste des coloris (ex: filtres spécifiques Collab) */
+  colorsOverride?: { label: string; color: string }[];
 }
 
 function isLight(hex: string) {
@@ -67,12 +71,13 @@ function Group({
 }
 
 /** Panneau de filtres boutique : tailles + coloris (avec libellés). */
-export default function ShopFilterPanel({ products, value, onChange, className }: Props) {
+export default function ShopFilterPanel({ products, value, onChange, className, sizesOverride, colorsOverride }: Props) {
   const { designSettings } = useApp();
   const globalSizes: string[] = ((designSettings as any)?.globalProductSizes || []) as string[];
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const sizes = useMemo(() => {
+    if (sizesOverride && sizesOverride.length) return sizesOverride;
     const set = new Set<string>();
     products.forEach((p) => (p.sizes || []).forEach((s) => s && set.add(s)));
     const arr = [...set];
@@ -84,9 +89,10 @@ export default function ShopFilterPanel({ products, value, onChange, className }
       });
     }
     return arr;
-  }, [products, globalSizes]);
+  }, [products, globalSizes, sizesOverride]);
 
   const colors = useMemo(() => {
+    if (colorsOverride && colorsOverride.length) return colorsOverride;
     const map = new Map<string, { color: string; label: string }>();
     products.forEach((p) =>
       (p.colorOptions || []).forEach((co) => {
@@ -95,7 +101,7 @@ export default function ShopFilterPanel({ products, value, onChange, className }
       })
     );
     return [...map.values()];
-  }, [products]);
+  }, [products, colorsOverride]);
 
   const toggle = (kind: keyof ShopFilters, v: string) => {
     const cur = value[kind];

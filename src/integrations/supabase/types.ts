@@ -876,6 +876,7 @@ export type Database = {
           colissimo_sender_city: string | null
           colissimo_sender_name: string | null
           colissimo_sender_zip: string | null
+          collab_settings: Json
           color_display_mode: string
           contact_email: string | null
           contact_phone: string | null
@@ -940,6 +941,7 @@ export type Database = {
           seo_og_image: string | null
           settings_json: Json
           settings_key: string
+          shop_hover_effect: Json
           show_logo: boolean | null
           show_overlays: boolean | null
           show_sidebar_gallery: boolean | null
@@ -1006,6 +1008,7 @@ export type Database = {
           colissimo_sender_city?: string | null
           colissimo_sender_name?: string | null
           colissimo_sender_zip?: string | null
+          collab_settings?: Json
           color_display_mode?: string
           contact_email?: string | null
           contact_phone?: string | null
@@ -1070,6 +1073,7 @@ export type Database = {
           seo_og_image?: string | null
           settings_json?: Json
           settings_key?: string
+          shop_hover_effect?: Json
           show_logo?: boolean | null
           show_overlays?: boolean | null
           show_sidebar_gallery?: boolean | null
@@ -1136,6 +1140,7 @@ export type Database = {
           colissimo_sender_city?: string | null
           colissimo_sender_name?: string | null
           colissimo_sender_zip?: string | null
+          collab_settings?: Json
           color_display_mode?: string
           contact_email?: string | null
           contact_phone?: string | null
@@ -1200,6 +1205,7 @@ export type Database = {
           seo_og_image?: string | null
           settings_json?: Json
           settings_key?: string
+          shop_hover_effect?: Json
           show_logo?: boolean | null
           show_overlays?: boolean | null
           show_sidebar_gallery?: boolean | null
@@ -2435,6 +2441,7 @@ export type Database = {
           created_at: string
           description: string | null
           gallery_images: string[]
+          hover_image: string | null
           id: string
           image: string
           is_active: boolean | null
@@ -2469,6 +2476,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           gallery_images?: string[]
+          hover_image?: string | null
           id?: string
           image: string
           is_active?: boolean | null
@@ -2503,6 +2511,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           gallery_images?: string[]
+          hover_image?: string | null
           id?: string
           image?: string
           is_active?: boolean | null
