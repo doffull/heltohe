@@ -3154,6 +3154,8 @@ export type Database = {
           category_layout: Json | null
           click_scale: number | null
           color_display_mode: string | null
+          contact_email: string | null
+          contact_phone: string | null
           created_at: string | null
           custom_unit_id: string | null
           favicon_url: string | null
@@ -3181,6 +3183,12 @@ export type Database = {
           legal_city: string | null
           legal_company_form: string | null
           legal_company_name: string | null
+          legal_director: string | null
+          legal_rcs: string | null
+          legal_return_email: string | null
+          legal_rgpd_email: string | null
+          legal_siret: string | null
+          legal_vat: string | null
           legal_zip: string | null
           logo_background_color: string | null
           logo_background_padding: number | null
@@ -3268,6 +3276,8 @@ export type Database = {
           category_layout?: Json | null
           click_scale?: number | null
           color_display_mode?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
           created_at?: string | null
           custom_unit_id?: string | null
           favicon_url?: string | null
@@ -3295,6 +3305,12 @@ export type Database = {
           legal_city?: string | null
           legal_company_form?: string | null
           legal_company_name?: string | null
+          legal_director?: string | null
+          legal_rcs?: string | null
+          legal_return_email?: string | null
+          legal_rgpd_email?: string | null
+          legal_siret?: string | null
+          legal_vat?: string | null
           legal_zip?: string | null
           logo_background_color?: string | null
           logo_background_padding?: number | null
@@ -3382,6 +3398,8 @@ export type Database = {
           category_layout?: Json | null
           click_scale?: number | null
           color_display_mode?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
           created_at?: string | null
           custom_unit_id?: string | null
           favicon_url?: string | null
@@ -3409,6 +3427,12 @@ export type Database = {
           legal_city?: string | null
           legal_company_form?: string | null
           legal_company_name?: string | null
+          legal_director?: string | null
+          legal_rcs?: string | null
+          legal_return_email?: string | null
+          legal_rgpd_email?: string | null
+          legal_siret?: string | null
+          legal_vat?: string | null
           legal_zip?: string | null
           logo_background_color?: string | null
           logo_background_padding?: number | null
