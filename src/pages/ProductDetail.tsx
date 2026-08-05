@@ -181,7 +181,7 @@ export default function ProductDetail() {
                 variant="ghost"
                 size="sm"
                 className="ml-auto text-xs"
-                onClick={() => navigate(`/admin/products`, { replace: true })}
+                onClick={() => navigate(`/admin/produits`, { replace: true })}
               >
                 Retour admin
               </Button>
