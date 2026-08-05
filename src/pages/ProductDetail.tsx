@@ -181,7 +181,7 @@ export default function ProductDetail() {
                 variant="ghost"
                 size="sm"
                 className="ml-auto text-xs"
-                onClick={() => navigate(`/admin/products`, { replace: true })}
+                onClick={() => navigate(`/admin/produits`, { replace: true })}
               >
                 Retour admin
               </Button>
@@ -209,7 +209,7 @@ export default function ProductDetail() {
           {isAdmin && (
             <Button
               size="sm"
-              onClick={() => navigate(`/admin/products?edit=${product.id}`)}
+              onClick={() => navigate(`/admin/produits?edit=${product.id}`)}
               className="ml-auto h-8 gap-1.5 px-3 text-[11px] font-bold uppercase tracking-wider chamfer-hud-sm shrink-0"
             >
               <Pencil className="h-3.5 w-3.5" />

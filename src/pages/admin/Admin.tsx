@@ -343,6 +343,7 @@ export default function Admin() {
             <Route index element={<AdminDashboard />} />
             <Route path="live/*" element={<AdminLive />} />
             <Route path="produits/*" element={<AdminProducts />} />
+            <Route path="products/*" element={<AdminProducts />} />
             <Route path="commandes/*" element={<AdminOrders />} />
             <Route path="preparations/*" element={<AdminPreparations />} />
             <Route path="checkout/*" element={<AdminCheckout />} />
