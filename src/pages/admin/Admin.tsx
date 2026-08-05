@@ -41,6 +41,8 @@ import {
   FlaskConical,
   Mail,
   FileUp,
+  Globe,
+
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -74,6 +76,8 @@ import AdminLive from './AdminLive';
 import AdminRoles from './AdminRoles';
 import AdminSecurity from './AdminSecurity';
 import AdminTransitions from './AdminTransitions';
+import AdminSeo from './AdminSeo';
+
 import AdminBannersAnalytics from './AdminBannersAnalytics';
 import AdminBoutiques from './AdminBoutiques';
 import AdminPageTemplates from './AdminPageTemplates';
@@ -137,6 +141,8 @@ const SIDEBAR_ITEMS = [
   { icon: Megaphone, label: 'Marketing', href: '/admin/marketing' },
   { icon: Gift, label: 'Roulette', href: '/admin/roulette' },
   { icon: Palette, label: 'Design', href: '/admin/design' },
+  { icon: Globe, label: 'SEO & Visibilité', href: '/admin/seo' },
+
   { icon: MousePointer, label: 'Icônes Accueil', href: '/admin/home-icons' },
     { icon: Sparkles, label: 'Transitions', href: '/admin/transitions' },
     { icon: LayoutTemplate, label: 'Templates de pages', href: '/admin/page-templates' },
