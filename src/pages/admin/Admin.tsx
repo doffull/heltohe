@@ -371,6 +371,8 @@ export default function Admin() {
             <Route path="security/*" element={<AdminSecurity />} />
             <Route path="parametres/*" element={<AdminSettings />} />
             <Route path="transitions/*" element={<AdminTransitions />} />
+            <Route path="seo/*" element={<AdminSeo />} />
+
             <Route path="page-templates/*" element={<AdminPageTemplates />} />
             <Route path="bannieres-analytics/*" element={<AdminBannersAnalytics />} />
             <Route path="avis/*" element={<AdminReviews />} />
