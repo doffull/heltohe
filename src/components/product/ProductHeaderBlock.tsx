@@ -5,6 +5,8 @@ import { EditableProductField } from '@/components/visual-editor/EditableProduct
 import { useAuth } from '@/context/AuthContext';
 import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
 import ProductRatingRow from './ProductRatingRow';
+import ProductTitleLogo from './ProductTitleLogo';
+
 import { cn } from '@/lib/utils';
 
 interface ProductHeaderBlockProps {
@@ -45,12 +47,14 @@ export default function ProductHeaderBlock({ product, isNew, className }: Produc
       {/* Titre */}
       <motion.div {...fadeUp} transition={{ delay: 0.1 }}>
         <div className="flex items-center gap-3 flex-wrap">
+          <ProductTitleLogo src={product.titleLogo} alt={`${product.name} logo`} />
           <EditableProductField
             product={product}
             field="name"
             as="h1"
             className="text-2xl sm:text-3xl lg:text-4xl font-bold hud-text uppercase tracking-wider leading-tight"
           />
+
           {isNew && (
             <motion.span
               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-primary/40 bg-primary/10 text-xs font-bold hud-text"
