@@ -31,6 +31,8 @@ function dbToAppProduct(db: Record<string, unknown>): Product {
     modelName: (db.model_name as string) || undefined,
     galleryImages: (db.gallery_images as string[]) || [],
     hoverImage: (db.hover_image as string) || undefined,
+    titleLogo: (db.title_logo as string) || undefined,
+
     templateId: (db.template_id as string) || null,
     isActive: db.is_active === undefined || db.is_active === null ? true : Boolean(db.is_active),
     limitedEdition: Boolean(db.limited_edition),
@@ -69,6 +71,8 @@ const FIELD_MAP: Record<string, { col: string; transform: (v: any) => any }> = {
   modelName: { col: 'model_name', transform: (v) => v || null },
   galleryImages: { col: 'gallery_images', transform: (v) => sanitizePersistableUrls(v) },
   hoverImage: { col: 'hover_image', transform: (v) => sanitizePersistableUrl(v) },
+  titleLogo: { col: 'title_logo', transform: (v) => sanitizePersistableUrl(v) },
+
   templateId: { col: 'template_id', transform: (v) => v ?? null },
   isActive: { col: 'is_active', transform: (v) => v },
   limitedEdition: { col: 'limited_edition', transform: (v) => Boolean(v) },

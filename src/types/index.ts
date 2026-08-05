@@ -50,6 +50,9 @@ export interface Product {
   galleryImages?: string[];
   /** Image affichée au survol de la vignette (effet swap). */
   hoverImage?: string;
+  /** Logo affiché à côté du titre du produit (vignette + fiche produit). */
+  titleLogo?: string;
+
   templateId?: string | null;
   isActive?: boolean;
   /** Affiche le badge « LIMITED EDITION » sur la vignette et la fiche produit. */

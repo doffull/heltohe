@@ -2464,6 +2464,7 @@ export type Database = {
           subtitle: string | null
           tags: string[] | null
           template_id: string | null
+          title_logo: string | null
           updated_at: string
           video_url: string | null
         }
@@ -2499,6 +2500,7 @@ export type Database = {
           subtitle?: string | null
           tags?: string[] | null
           template_id?: string | null
+          title_logo?: string | null
           updated_at?: string
           video_url?: string | null
         }
@@ -2534,6 +2536,7 @@ export type Database = {
           subtitle?: string | null
           tags?: string[] | null
           template_id?: string | null
+          title_logo?: string | null
           updated_at?: string
           video_url?: string | null
         }
