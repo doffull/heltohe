@@ -202,9 +202,13 @@ export function ProductCard({
           {product.category}
         </div>
 
-        <h3 className="text-sm font-bold uppercase tracking-tight truncate">
-          {product.name}
+        <h3 className="text-sm font-bold uppercase tracking-tight truncate flex items-center gap-1.5">
+          {product.titleLogo && (
+            <ProductTitleLogo src={product.titleLogo} alt={`${product.name} logo`} size="sm" />
+          )}
+          <span className="truncate">{product.name}</span>
         </h3>
+
 
         {product.subtitle && (
           <p className="text-[10px] uppercase text-muted-foreground truncate">
