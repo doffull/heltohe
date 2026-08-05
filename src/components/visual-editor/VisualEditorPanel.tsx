@@ -13,7 +13,7 @@ import { HeroCtaEditorTab } from './tabs/HeroCtaEditorTab';
 import { PageSwitcher } from './PageSwitcher';
 import { useDesignHistory } from '@/hooks/useDesignHistory';
 
-const DEFAULT_PUBLISHED_ORIGIN = 'https://lvtk2026.helvetica-mp.net';
+const DEFAULT_PUBLISHED_ORIGIN = 'https://helvetica-mp.helvetica-mp.net';
 
 function getPublishedOrigin() {
   const origin = window.location.origin;
