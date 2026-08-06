@@ -5,6 +5,7 @@ import AccountOrders from './AccountOrders';
 import AccountProfile from './AccountProfile';
 import AccountAddresses from './AccountAddresses';
 import AccountLoyalty from './AccountLoyalty';
+import AccountTryOns from './AccountTryOns';
 
 export default function Account() {
   const { user, isLoading } = useAuth();
@@ -31,6 +32,7 @@ export default function Account() {
       <Route path="profil" element={<AccountProfile />} />
       <Route path="adresses" element={<AccountAddresses />} />
       <Route path="fidelite" element={<AccountLoyalty />} />
+      <Route path="essais" element={<AccountTryOns />} />
     </Routes>
   );
 }

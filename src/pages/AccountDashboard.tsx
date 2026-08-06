@@ -3,6 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useMyLoyalty } from '@/hooks/useLoyalty';
 import { Button } from '@/components/ui/button';
 import {
+  Sparkles,
   User,
   Package,
   MapPin,
@@ -40,6 +41,12 @@ export default function AccountDashboard() {
       label: 'Programme Fidélité', 
       description: 'Voir vos points et récompenses',
       href: '/compte/fidelite' 
+    },
+    { 
+      icon: Sparkles, 
+      label: 'Mes essais virtuels', 
+      description: 'Vos looks enregistrés sur mannequin',
+      href: '/compte/essais' 
     },
   ];
 

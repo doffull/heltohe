@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Upload, Loader2, RefreshCw, X, Camera, ArrowRight, ArrowLeft, ImageIcon } from 'lucide-react';
+import { Sparkles, Upload, Loader2, RefreshCw, X, Camera, ArrowRight, ArrowLeft, ImageIcon, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,10 +8,12 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import MannequinTryOn from './MannequinTryOn';
 
 interface Props {
   product: any;
   selectedColor?: string | null;
+  selectedSize?: string | null;
   className?: string;
   variant?: 'floating' | 'inline';
 }
@@ -32,7 +34,11 @@ interface PersistedState {
   framing: Framing;
 }
 
-export default function VirtualTryOnButton({ product, selectedColor, className, variant = 'floating' }: Props) {
+export default function VirtualTryOnButton({ product, selectedColor, selectedSize, className, variant = 'floating' }: Props) {
+  const mode = (product?.tryonMode as 'none' | 'photo' | 'mannequin' | 'both') || 'both';
+  const showPhoto = mode === 'photo' || mode === 'both';
+  const showMannequin = mode === 'mannequin' || mode === 'both';
+  const [tab, setTab] = useState<'photo' | 'mannequin'>(showPhoto ? 'photo' : 'mannequin');
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>('photo');
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
@@ -130,6 +136,8 @@ export default function VirtualTryOnButton({ product, selectedColor, className, 
     if (!o) reset();
   };
 
+  if (mode === 'none') return null;
+
   return (
     <>
       {variant === 'floating' ? (
@@ -170,20 +178,51 @@ export default function VirtualTryOnButton({ product, selectedColor, className, 
               <Sparkles className="h-4 w-4 text-primary" />
               <span className="font-bold text-xs uppercase tracking-widest hud-text">Essai virtuel IA</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              {(['photo','body','result'] as Step[]).map((s, i) => (
-                <span
-                  key={s}
-                  className={cn(
-                    'h-1.5 transition-all',
-                    s === step ? 'w-6 bg-primary' : i < ['photo','body','result'].indexOf(step) ? 'w-3 bg-primary/60' : 'w-3 bg-border',
-                  )}
-                />
-              ))}
-            </div>
+            {tab === 'photo' && (
+              <div className="flex items-center gap-1.5">
+                {(['photo','body','result'] as Step[]).map((s, i) => (
+                  <span
+                    key={s}
+                    className={cn(
+                      'h-1.5 transition-all',
+                      s === step ? 'w-6 bg-primary' : i < ['photo','body','result'].indexOf(step) ? 'w-3 bg-primary/60' : 'w-3 bg-border',
+                    )}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
+          {/* Onglets : ma photo / mannequin */}
+          {showPhoto && showMannequin && (
+            <div className="grid grid-cols-2 border-b border-border">
+              <button
+                type="button"
+                onClick={() => setTab('photo')}
+                className={cn(
+                  'py-2.5 text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors',
+                  tab === 'photo' ? 'bg-foreground text-background' : 'bg-card/20 hover:bg-card/40',
+                )}
+              >
+                <Camera className="h-3.5 w-3.5" /> Ma photo
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab('mannequin')}
+                className={cn(
+                  'py-2.5 text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors',
+                  tab === 'mannequin' ? 'bg-foreground text-background' : 'bg-card/20 hover:bg-card/40',
+                )}
+              >
+                <Users className="h-3.5 w-3.5" /> Sur un mannequin
+              </button>
+            </div>
+          )}
+
           <div className="p-5 max-h-[75vh] overflow-y-auto">
+            {tab === 'mannequin' ? (
+              <MannequinTryOn product={product} selectedColor={selectedColor} selectedSize={selectedSize} />
+            ) : (
             <AnimatePresence mode="wait">
               {step === 'photo' && (
                 <motion.div key="photo" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }}>
@@ -385,6 +424,7 @@ export default function VirtualTryOnButton({ product, selectedColor, className, 
                 </motion.div>
               )}
             </AnimatePresence>
+            )}
           </div>
         </DialogContent>
       </Dialog>
