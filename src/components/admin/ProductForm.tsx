@@ -96,6 +96,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
     galleryImages: [] as string[],
     hoverImage: '',
     titleLogo: '',
+    tryonMode: 'both' as 'none' | 'photo' | 'mannequin' | 'both',
 
     templateId: null as string | null,
     limitedEdition: false,
@@ -282,6 +283,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         galleryImages: product.galleryImages || [],
         hoverImage: product.hoverImage || '',
         titleLogo: product.titleLogo || '',
+        tryonMode: product.tryonMode || 'both',
 
         templateId: product.templateId ?? null,
         limitedEdition: product.limitedEdition ?? false,
