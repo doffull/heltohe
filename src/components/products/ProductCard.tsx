@@ -6,6 +6,8 @@ import { Star } from 'lucide-react';
 import { useReviewStats } from '@/hooks/useProductReviews';
 import { getSwatchStyle } from '@/lib/swatch';
 import { LimitedEditionBadge } from '@/components/product/LimitedEditionBadge';
+import { ProductStatusBadges } from '@/components/product/ProductStatusBadges';
+
 import ProductTitleLogo from '@/components/product/ProductTitleLogo';
 
 
