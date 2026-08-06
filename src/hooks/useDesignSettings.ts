@@ -189,6 +189,7 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     fontBody: ((db.settings_json as any)?.fonts?.body) ?? '',
     sliderImageOpacity: ((db.settings_json as any)?.sliderImageOpacity) ?? 1,
     homeSectionProducts: ((db.settings_json as any)?.homeSectionProducts) ?? {},
+    gifPresets: ((db.settings_json as any)?.gifPresets) ?? [],
 
   } as DesignSettings;
 }
