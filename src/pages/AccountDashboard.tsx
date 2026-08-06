@@ -3,6 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useMyLoyalty } from '@/hooks/useLoyalty';
 import { Button } from '@/components/ui/button';
 import {
+  Sparkles,
   User,
   Package,
   MapPin,
