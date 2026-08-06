@@ -457,6 +457,9 @@ export interface DesignSettings {
   // Categories and sections
   categories: Category[];
   homeSections: HomeSection[];
+  /** Curated ordered product ids per homepage section id (e.g. { top: [...], new: [...] }) */
+  homeSectionProducts?: Record<string, string[]>;
+
   homeCustomSections?: any[];
   homePageBlocks?: Array<{ id: string; visible: boolean; label?: string; settings?: Record<string, any> }>;
   homeTexts?: Record<string, string>;
