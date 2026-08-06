@@ -121,6 +121,8 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
   const [showGalleryPicker, setShowGalleryPicker] = useState(false);
   const [showMainPicker, setShowMainPicker] = useState(false);
   const [showHoverPicker, setShowHoverPicker] = useState(false);
+  const [showGifBuilder, setShowGifBuilder] = useState(false);
+
   const [showLogoPicker, setShowLogoPicker] = useState(false);
 
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
