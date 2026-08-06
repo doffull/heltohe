@@ -81,6 +81,7 @@ import AdminCollab from './AdminCollab';
 
 import AdminBannersAnalytics from './AdminBannersAnalytics';
 import AdminBoutiques from './AdminBoutiques';
+import AdminMannequins from './AdminMannequins';
 import AdminPageTemplates from './AdminPageTemplates';
 import AdminReviews from './AdminReviews';
 import AdminAgentIntegrations from './AdminAgentIntegrations';
@@ -119,6 +120,7 @@ export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin/roulette': '#F59E0B',
   '/admin/parametres': '#64748B',
   '/admin/boutiques': '#0D9488',
+  '/admin/mannequins': '#EC4899',
   '/admin/roles': '#DC2626',
   '/admin/security': '#0EA5E9',
   '/admin/page-templates': '#A855F7',
@@ -154,6 +156,7 @@ const SIDEBAR_ITEMS = [
   { icon: Warehouse, label: 'Stock', href: '/admin/stock' },
   { icon: Truck, label: 'Colissimo', href: '/admin/colissimo' },
   { icon: Store, label: 'Boutiques', href: '/admin/boutiques' },
+  { icon: Users, label: "Mannequins d'essai", href: '/admin/mannequins' },
   { icon: Bell, label: 'Notifications', href: '/admin/notifications' },
   { icon: Bot, label: 'Chatbot', href: '/admin/chatbot' },
   { icon: Star, label: 'Avis clients', href: '/admin/avis' },
