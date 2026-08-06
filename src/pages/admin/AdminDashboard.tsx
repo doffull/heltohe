@@ -30,7 +30,10 @@ const ALL_SECTIONS: { id: string; title: string; desc: string }[] = [
   { id: 'flash', title: 'Offres Flash', desc: 'Promos avec countdown' },
   { id: 'featured', title: 'En vedette', desc: 'Produits mis en avant' },
   { id: 'new', title: 'Nouveautés', desc: 'Derniers produits ajoutés' },
+  { id: 'top', title: 'Top ventes', desc: 'Meilleures ventes mises en avant' },
+  { id: 'promo', title: 'Promotions', desc: 'Sélection de produits en promo' },
   { id: 'trending', title: 'Tendances', desc: 'Produits populaires' },
+
   { id: 'loyalty', title: 'Fidélité', desc: 'Bandeau programme fidélité' },
   { id: 'newsletter', title: 'Newsletter', desc: 'Inscription newsletter' },
 ];
