@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Product } from '@/types';
-import { Badge } from '@/components/ui/badge';
 import { Star } from 'lucide-react';
 import { useReviewStats } from '@/hooks/useProductReviews';
 import { getSwatchStyle } from '@/lib/swatch';
 import { LimitedEditionBadge } from '@/components/product/LimitedEditionBadge';
+import { ProductStatusBadges } from '@/components/product/ProductStatusBadges';
+
 import ProductTitleLogo from '@/components/product/ProductTitleLogo';
 
 
@@ -41,7 +42,6 @@ export function ProductCard({
   const [hovered, setHovered] = useState(false);
   const { data: reviewStats } = useReviewStats(product.id);
   const hasDiscount = product.salePrice && product.salePrice < product.price;
-  const isLowStock = product.stock <= 5 && product.stock > 0;
   const isOutOfStock = product.stock === 0;
 
   const swatchClasses: Record<string, string> = {
@@ -165,25 +165,11 @@ export function ProductCard({
 
 
         {/* Badges */}
-        <div className="absolute top-3 left-3 flex flex-col gap-2 items-start">
+        <div className="absolute top-3 left-3 z-[2] flex flex-col gap-1.5 items-start">
           <LimitedEditionBadge product={product} compact animate={false} />
-
-          {hasDiscount && (
-            <Badge className="bg-foreground text-background uppercase text-[10px] px-2 py-1 rounded-none">
-              Promo
-            </Badge>
-          )}
-          {isLowStock && (
-            <Badge className="bg-destructive text-destructive-foreground uppercase text-[10px] px-2 py-1 rounded-none">
-              Stock limité
-            </Badge>
-          )}
-          {isOutOfStock && (
-            <Badge className="bg-muted text-muted-foreground uppercase text-[10px] px-2 py-1 rounded-none">
-              Épuisé
-            </Badge>
-          )}
+          <ProductStatusBadges product={product} compact max={3} />
         </div>
+
 
 
         {/* Selected color badge (bottom-left of image) */}

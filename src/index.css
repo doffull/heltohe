@@ -70,7 +70,17 @@
     --step-address: 210 90% 50%;
     --step-delivery: 28 95% 55%;
     --step-confirm: 142 70% 42%;
+
+    /* Product status badges (glossy tech) */
+    --badge-promo: 350 85% 52%;
+    --badge-new: 190 95% 45%;
+    --badge-top: 42 95% 52%;
+    --badge-trending: 275 85% 60%;
+    --badge-stock: 22 95% 52%;
+    --badge-soldout: 0 0% 35%;
+    --badge-limited: 0 0% 8%;
   }
+
 
   .dark {
     --background: 0 0% 4%;
@@ -143,7 +153,74 @@
 }
 
 @layer components {
+  /* ===== Glossy tech product badges ===== */
+  .glossy-badge {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    overflow: hidden;
+    isolation: isolate;
+    color: hsl(0 0% 100%);
+    background-image: linear-gradient(
+      145deg,
+      hsl(var(--badge-hue) / 0.98) 0%,
+      hsl(var(--badge-hue) / 0.78) 45%,
+      hsl(var(--badge-hue) / 0.95) 100%
+    );
+    border: 1px solid hsl(0 0% 100% / 0.35);
+    box-shadow:
+      0 0 0 1px hsl(var(--badge-hue) / 0.35),
+      0 4px 14px -4px hsl(var(--badge-hue) / 0.7),
+      inset 0 1px 0 hsl(0 0% 100% / 0.45);
+    backdrop-filter: blur(6px);
+  }
+
+  /* Top light reflection */
+  .glossy-badge::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 55% 0;
+    background: linear-gradient(to bottom, hsl(0 0% 100% / 0.4), hsl(0 0% 100% / 0));
+    pointer-events: none;
+  }
+
+  /* Animated sheen sweep */
+  .glossy-badge::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 45%;
+    left: -60%;
+    background: linear-gradient(
+      100deg,
+      hsl(0 0% 100% / 0) 0%,
+      hsl(0 0% 100% / 0.55) 50%,
+      hsl(0 0% 100% / 0) 100%
+    );
+    transform: skewX(-18deg);
+    animation: badge-sheen 3.2s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  .glossy-badge-static::after {
+    animation: none;
+    opacity: 0;
+  }
+
+  @keyframes badge-sheen {
+    0% { left: -60%; }
+    55% { left: 130%; }
+    100% { left: 130%; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .glossy-badge::after { animation: none; opacity: 0; }
+  }
+
   /* Beveled corners - 45 degree cuts (Helvetica-MP signature) */
+
   .bevel-corners {
     clip-path: polygon(
       16px 0,

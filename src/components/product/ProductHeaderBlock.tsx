@@ -6,6 +6,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
 import ProductRatingRow from './ProductRatingRow';
 import ProductTitleLogo from './ProductTitleLogo';
+import { ProductStatusBadges } from './ProductStatusBadges';
+
 
 import { cn } from '@/lib/utils';
 
@@ -76,10 +78,16 @@ export default function ProductHeaderBlock({ product, isNew, className }: Produc
         />
       </motion.div>
 
+      {/* Badges dynamiques (promo, nouveau, top vente…) */}
+      <motion.div {...fadeUp} transition={{ delay: 0.11 }}>
+        <ProductStatusBadges product={product} max={4} />
+      </motion.div>
+
       {/* Note + avis + partage */}
       <motion.div {...fadeUp} transition={{ delay: 0.12 }}>
         <ProductRatingRow productId={product.id} productName={product.name} />
       </motion.div>
+
 
 
       {/* Prix + stock */}
