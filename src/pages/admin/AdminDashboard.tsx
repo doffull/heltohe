@@ -73,34 +73,70 @@ function SectionsTab({ sections, onUpdate }: { sections: HomeSection[]; onUpdate
 // ─── Tab: Product tagging ───
 function ProductsTab({ products }: { products: Product[] }) {
   const updateProduct = useUpdateProduct();
-  const [activeTag, setActiveTag] = useState<string>('featured');
+  const { designSettings, updateDesignSettings } = useApp();
+  const [activeTag, setActiveTag] = useState<string>('top');
   const [search, setSearch] = useState('');
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   const tags = [
-    { key: 'featured', label: 'En vedette', icon: Star },
+    { key: 'top', label: 'Top ventes', icon: Flame },
     { key: 'new', label: 'Nouveautés', icon: Sparkles },
+    { key: 'featured', label: 'En vedette', icon: Star },
     { key: 'promo', label: 'Promo', icon: Flame },
     { key: 'trending', label: 'Tendances', icon: ArrowUpRight },
   ];
+
+  const curatedMap = designSettings.homeSectionProducts || {};
+
+  // Curated order for the active section; falls back to the tagged products.
+  const curatedIds: string[] = useMemo(() => {
+    const stored = curatedMap[activeTag];
+    if (Array.isArray(stored) && stored.length > 0) {
+      return stored.filter((id) => products.some((p) => p.id === id));
+    }
+    return products.filter((p) => p.tags?.includes(activeTag)).map((p) => p.id);
+  }, [curatedMap, activeTag, products]);
+
+  const saveCurated = (ids: string[]) => {
+    updateDesignSettings({ homeSectionProducts: { ...curatedMap, [activeTag]: ids } });
+  };
 
   const filtered = products.filter(
     (p) => p.name.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase())
   );
 
-  const toggleTag = (product: Product, tag: string) => {
+  const toggleProduct = (product: Product) => {
+    const isIn = curatedIds.includes(product.id);
+    const nextIds = isIn ? curatedIds.filter((id) => id !== product.id) : [...curatedIds, product.id];
+    saveCurated(nextIds);
+
+    // Keep the product tag in sync for backward compatibility
     const currentTags = product.tags || [];
-    const hasTag = currentTags.includes(tag);
-    const newTags = hasTag ? currentTags.filter((t) => t !== tag) : [...currentTags, tag];
+    const nextTags = isIn ? currentTags.filter((t) => t !== activeTag) : Array.from(new Set([...currentTags, activeTag]));
     updateProduct.mutate(
-      { ...product, tags: newTags },
+      { ...product, tags: nextTags },
       {
-        onSuccess: () => toast.success(hasTag ? 'Tag retiré' : 'Tag ajouté'),
+        onSuccess: () => toast.success(isIn ? 'Produit retiré de la section' : 'Produit ajouté à la section'),
         onError: () => toast.error('Erreur'),
       }
     );
   };
 
-  const count = (tag: string) => products.filter((p) => p.tags?.includes(tag)).length;
+  const handleDrop = (targetIndex: number) => {
+    if (dragIndex === null || dragIndex === targetIndex) return;
+    const next = [...curatedIds];
+    const [moved] = next.splice(dragIndex, 1);
+    next.splice(targetIndex, 0, moved);
+    setDragIndex(null);
+    saveCurated(next);
+    toast.success('Ordre mis à jour');
+  };
+
+  const count = (tag: string) => {
+    const stored = curatedMap[tag];
+    if (Array.isArray(stored) && stored.length > 0) return stored.length;
+    return products.filter((p) => p.tags?.includes(tag)).length;
+  };
 
   return (
     <div className="space-y-4">
@@ -124,9 +160,57 @@ function ProductsTab({ products }: { products: Product[] }) {
         })}
       </div>
 
+      {/* Curated, ordered selection for the active section */}
+      <div className="border border-border rounded-sm p-3 bg-background/40">
+        <p className="text-xs font-medium mb-1">Produits mis en avant (ordre d'affichage)</p>
+        <p className="text-[11px] text-muted-foreground mb-3">
+          Glissez-déposez pour changer l'ordre. Les 8 premiers sont affichés sur la page d'accueil.
+        </p>
+        {curatedIds.length === 0 ? (
+          <p className="text-xs text-muted-foreground py-3 text-center">
+            Aucun produit sélectionné — ajoutez-en depuis la liste ci-dessous.
+          </p>
+        ) : (
+          <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+            {curatedIds.map((id, index) => {
+              const product = products.find((p) => p.id === id);
+              if (!product) return null;
+              return (
+                <div
+                  key={id}
+                  draggable
+                  onDragStart={() => setDragIndex(index)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => handleDrop(index)}
+                  onDragEnd={() => setDragIndex(null)}
+                  className={cn(
+                    'flex items-center gap-3 p-2 border rounded bg-background/60 cursor-grab active:cursor-grabbing transition-all',
+                    dragIndex === index ? 'border-primary opacity-60' : 'border-border',
+                    index >= 8 && 'opacity-50'
+                  )}
+                >
+                  <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-[10px] font-bold w-5 text-center text-muted-foreground">{index + 1}</span>
+                  <div className="w-9 h-9 rounded overflow-hidden flex-shrink-0 bg-muted">
+                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{product.name}</p>
+                    <p className="text-xs text-muted-foreground">{product.price.toFixed(2)}€</p>
+                  </div>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => toggleProduct(product)}>
+                    Retirer
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Rechercher…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9 text-sm" />
+        <Input placeholder="Rechercher un produit à ajouter…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9 text-sm" />
       </div>
 
       <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
@@ -134,7 +218,7 @@ function ProductsTab({ products }: { products: Product[] }) {
           <p className="text-muted-foreground text-sm text-center py-6">Aucun produit</p>
         ) : (
           filtered.map((product) => {
-            const isActive = product.tags?.includes(activeTag) ?? false;
+            const isActive = curatedIds.includes(product.id);
             return (
               <div
                 key={product.id}
@@ -142,7 +226,7 @@ function ProductsTab({ products }: { products: Product[] }) {
                   'flex items-center gap-3 p-3 rounded border transition-all cursor-pointer hover:border-primary/30',
                   isActive ? 'border-primary/50 bg-primary/5' : 'border-border bg-background/50'
                 )}
-                onClick={() => toggleTag(product, activeTag)}
+                onClick={() => toggleProduct(product)}
               >
                 <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-muted">
                   <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
@@ -166,6 +250,7 @@ function ProductsTab({ products }: { products: Product[] }) {
     </div>
   );
 }
+
 
 // ─── Tab: Flash promos ───
 function FlashPromosTab({ products }: { products: Product[] }) {
