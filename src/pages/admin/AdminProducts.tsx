@@ -28,6 +28,7 @@ import { CsvImportDialog } from '@/components/admin/CsvImportDialog';
 import { BulkProductImagesDialog } from '@/components/admin/BulkProductImagesDialog';
 import { MainImagePicker } from '@/components/admin/MainImagePicker';
 import { SplitVariantsDialog } from '@/components/admin/SplitVariantsDialog';
+import { BulkGifDialog } from '@/components/admin/BulkGifDialog';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
