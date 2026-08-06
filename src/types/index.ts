@@ -52,6 +52,8 @@ export interface Product {
   hoverImage?: string;
   /** Logo affiché à côté du titre du produit (vignette + fiche produit). */
   titleLogo?: string;
+  /** Mode d'essai proposé sur la fiche produit. */
+  tryonMode?: 'none' | 'photo' | 'mannequin' | 'both';
 
   templateId?: string | null;
   isActive?: boolean;

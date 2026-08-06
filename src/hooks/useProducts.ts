@@ -32,6 +32,7 @@ function dbToAppProduct(db: Record<string, unknown>): Product {
     galleryImages: (db.gallery_images as string[]) || [],
     hoverImage: (db.hover_image as string) || undefined,
     titleLogo: (db.title_logo as string) || undefined,
+    tryonMode: ((db.tryon_mode as string) || 'both') as Product['tryonMode'],
 
     templateId: (db.template_id as string) || null,
     isActive: db.is_active === undefined || db.is_active === null ? true : Boolean(db.is_active),
@@ -72,6 +73,7 @@ const FIELD_MAP: Record<string, { col: string; transform: (v: any) => any }> = {
   galleryImages: { col: 'gallery_images', transform: (v) => sanitizePersistableUrls(v) },
   hoverImage: { col: 'hover_image', transform: (v) => sanitizePersistableUrl(v) },
   titleLogo: { col: 'title_logo', transform: (v) => sanitizePersistableUrl(v) },
+  tryonMode: { col: 'tryon_mode', transform: (v) => v || 'both' },
 
   templateId: { col: 'template_id', transform: (v) => v ?? null },
   isActive: { col: 'is_active', transform: (v) => v },
