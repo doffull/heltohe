@@ -41,6 +41,12 @@ export default function AccountDashboard() {
       description: 'Voir vos points et récompenses',
       href: '/compte/fidelite' 
     },
+    { 
+      icon: Sparkles, 
+      label: 'Mes essais virtuels', 
+      description: 'Vos looks enregistrés sur mannequin',
+      href: '/compte/essais' 
+    },
   ];
 
   return (
