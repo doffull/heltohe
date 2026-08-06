@@ -76,10 +76,16 @@ export default function ProductHeaderBlock({ product, isNew, className }: Produc
         />
       </motion.div>
 
+      {/* Badges dynamiques (promo, nouveau, top vente…) */}
+      <motion.div {...fadeUp} transition={{ delay: 0.11 }}>
+        <ProductStatusBadges product={product} max={4} />
+      </motion.div>
+
       {/* Note + avis + partage */}
       <motion.div {...fadeUp} transition={{ delay: 0.12 }}>
         <ProductRatingRow productId={product.id} productName={product.name} />
       </motion.div>
+
 
 
       {/* Prix + stock */}
