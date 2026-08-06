@@ -348,6 +348,7 @@ function settingsToDb(s: DesignSettings) {
       },
       sliderImageOpacity: (s as any).sliderImageOpacity ?? 1,
       homeSectionProducts: (s as any).homeSectionProducts ?? {},
+      gifPresets: (s as any).gifPresets ?? [],
 
     } as unknown as Json,
   };
