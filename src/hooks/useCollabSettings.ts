@@ -82,8 +82,8 @@ export function useCollabSettings() {
   return useQuery({
     queryKey: QK,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('design_settings')
+      const { data, error } = await (supabase as any)
+        .from('design_settings_public')
         .select('collab_settings, shop_hover_effect')
         .eq('settings_key', 'main')
         .maybeSingle();
