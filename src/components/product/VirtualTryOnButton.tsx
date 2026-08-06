@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Upload, Loader2, RefreshCw, X, Camera, ArrowRight, ArrowLeft, ImageIcon } from 'lucide-react';
+import { Sparkles, Upload, Loader2, RefreshCw, X, Camera, ArrowRight, ArrowLeft, ImageIcon, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,10 +8,12 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import MannequinTryOn from './MannequinTryOn';
 
 interface Props {
   product: any;
   selectedColor?: string | null;
+  selectedSize?: string | null;
   className?: string;
   variant?: 'floating' | 'inline';
 }
