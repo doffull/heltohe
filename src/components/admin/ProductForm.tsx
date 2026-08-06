@@ -531,6 +531,26 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
           />
         </div>
 
+        {/* Mode d'essai */}
+        <div className="space-y-1.5 border border-border/40 bg-secondary/30 px-3 py-2.5">
+          <Label className="hud-text text-xs">Mode d'essai proposé au client</Label>
+          <select
+            value={formData.tryonMode}
+            onChange={(e) => setFormData(prev => ({ ...prev, tryonMode: e.target.value as typeof prev.tryonMode }))}
+            className="w-full h-9 bg-secondary/50 border border-border/30 px-2 text-sm"
+          >
+            <option value="both">Les deux (photo client + mannequin)</option>
+            <option value="photo">Photo du client uniquement</option>
+            <option value="mannequin">Mannequin uniquement</option>
+            <option value="none">Aucun essai</option>
+          </select>
+          <p className="text-[10px] text-muted-foreground">
+            Les mannequins se gèrent dans « Mannequins d'essai » du tableau de bord.
+          </p>
+        </div>
+
+
+
         {/* Édition limitée */}
         <div className="space-y-3 border border-border/40 bg-secondary/30 px-3 py-2.5">
           <label className="flex items-center gap-3 cursor-pointer select-none">
