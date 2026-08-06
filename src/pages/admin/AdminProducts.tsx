@@ -1227,6 +1227,11 @@ export default function AdminProducts() {
       <WordPressSyncDialog open={isSyncDialogOpen} onOpenChange={setIsSyncDialogOpen} />
       <CsvImportDialog open={isCsvDialogOpen} onOpenChange={setIsCsvDialogOpen} />
       <BulkProductImagesDialog open={isBulkImagesOpen} onOpenChange={setIsBulkImagesOpen} products={products} />
+      <BulkGifDialog
+        open={isBulkGifOpen}
+        onOpenChange={setIsBulkGifOpen}
+        products={filteredProducts.filter(p => selectedIds.has(p.id))}
+      />
       <SplitVariantsDialog
         open={!!splitProduct}
         onOpenChange={(v) => { if (!v) setSplitProduct(null); }}
