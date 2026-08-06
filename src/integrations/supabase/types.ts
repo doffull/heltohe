@@ -3248,6 +3248,7 @@ export type Database = {
           category_columns: number | null
           category_layout: Json | null
           click_scale: number | null
+          collab_settings: Json | null
           color_display_mode: string | null
           contact_email: string | null
           contact_phone: string | null
@@ -3309,6 +3310,7 @@ export type Database = {
           seo_noimageindex: boolean | null
           seo_og_image: string | null
           settings_key: string | null
+          shop_hover_effect: Json | null
           show_logo: boolean | null
           show_overlays: boolean | null
           show_sidebar_gallery: boolean | null
@@ -3370,6 +3372,7 @@ export type Database = {
           category_columns?: number | null
           category_layout?: Json | null
           click_scale?: number | null
+          collab_settings?: Json | null
           color_display_mode?: string | null
           contact_email?: string | null
           contact_phone?: string | null
@@ -3431,6 +3434,7 @@ export type Database = {
           seo_noimageindex?: boolean | null
           seo_og_image?: string | null
           settings_key?: string | null
+          shop_hover_effect?: Json | null
           show_logo?: boolean | null
           show_overlays?: boolean | null
           show_sidebar_gallery?: boolean | null
@@ -3492,6 +3496,7 @@ export type Database = {
           category_columns?: number | null
           category_layout?: Json | null
           click_scale?: number | null
+          collab_settings?: Json | null
           color_display_mode?: string | null
           contact_email?: string | null
           contact_phone?: string | null
@@ -3553,6 +3558,7 @@ export type Database = {
           seo_noimageindex?: boolean | null
           seo_og_image?: string | null
           settings_key?: string | null
+          shop_hover_effect?: Json | null
           show_logo?: boolean | null
           show_overlays?: boolean | null
           show_sidebar_gallery?: boolean | null
