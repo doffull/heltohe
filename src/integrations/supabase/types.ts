@@ -1470,6 +1470,54 @@ export type Database = {
           },
         ]
       }
+      mannequins: {
+        Row: {
+          age_range: string
+          created_at: string
+          fit_notes: string | null
+          gender: string
+          height_cm: number | null
+          id: string
+          image_url: string
+          is_active: boolean
+          morphology: string
+          name: string
+          skin_tone: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          age_range?: string
+          created_at?: string
+          fit_notes?: string | null
+          gender?: string
+          height_cm?: number | null
+          id?: string
+          image_url: string
+          is_active?: boolean
+          morphology?: string
+          name: string
+          skin_tone?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          age_range?: string
+          created_at?: string
+          fit_notes?: string | null
+          gender?: string
+          height_cm?: number | null
+          id?: string
+          image_url?: string
+          is_active?: boolean
+          morphology?: string
+          name?: string
+          skin_tone?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           created_at: string
@@ -2465,6 +2513,7 @@ export type Database = {
           tags: string[] | null
           template_id: string | null
           title_logo: string | null
+          tryon_mode: string
           updated_at: string
           video_url: string | null
         }
@@ -2501,6 +2550,7 @@ export type Database = {
           tags?: string[] | null
           template_id?: string | null
           title_logo?: string | null
+          tryon_mode?: string
           updated_at?: string
           video_url?: string | null
         }
@@ -2537,6 +2587,7 @@ export type Database = {
           tags?: string[] | null
           template_id?: string | null
           title_logo?: string | null
+          tryon_mode?: string
           updated_at?: string
           video_url?: string | null
         }
@@ -2977,6 +3028,50 @@ export type Database = {
             columns: ["to_location_id"]
             isOneToOne: false
             referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tryon_looks: {
+        Row: {
+          base_product_id: string | null
+          created_at: string
+          id: string
+          items: Json
+          mannequin_id: string | null
+          result_image: string | null
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          base_product_id?: string | null
+          created_at?: string
+          id?: string
+          items?: Json
+          mannequin_id?: string | null
+          result_image?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          base_product_id?: string | null
+          created_at?: string
+          id?: string
+          items?: Json
+          mannequin_id?: string | null
+          result_image?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tryon_looks_mannequin_id_fkey"
+            columns: ["mannequin_id"]
+            isOneToOne: false
+            referencedRelation: "mannequins"
             referencedColumns: ["id"]
           },
         ]
