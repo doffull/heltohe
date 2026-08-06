@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Product } from '@/types';
-import { Badge } from '@/components/ui/badge';
 import { Star } from 'lucide-react';
 import { useReviewStats } from '@/hooks/useProductReviews';
 import { getSwatchStyle } from '@/lib/swatch';
@@ -43,7 +42,6 @@ export function ProductCard({
   const [hovered, setHovered] = useState(false);
   const { data: reviewStats } = useReviewStats(product.id);
   const hasDiscount = product.salePrice && product.salePrice < product.price;
-  const isLowStock = product.stock <= 5 && product.stock > 0;
   const isOutOfStock = product.stock === 0;
 
   const swatchClasses: Record<string, string> = {
