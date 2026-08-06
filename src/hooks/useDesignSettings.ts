@@ -346,6 +346,8 @@ function settingsToDb(s: DesignSettings) {
         body: (s as any).fontBody ?? '',
       },
       sliderImageOpacity: (s as any).sliderImageOpacity ?? 1,
+      homeSectionProducts: (s as any).homeSectionProducts ?? {},
+
     } as unknown as Json,
   };
 }
