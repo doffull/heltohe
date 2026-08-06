@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Plus, Search, Pencil, Trash2, MoreHorizontal, Package, Upload, Download, FileText, X, Check, Filter, Wand2, Copy, Tag, DollarSign, Archive, Layers2, Boxes, RefreshCw, Images, LayoutGrid, ArrowUpDown
+  Plus, Search, Pencil, Trash2, MoreHorizontal, Package, Upload, Download, FileText, X, Check, Filter, Wand2, Copy, Tag, DollarSign, Archive, Layers2, Boxes, RefreshCw, Images, LayoutGrid, ArrowUpDown, Film
 } from 'lucide-react';
 import { AdminCategoryOrdering } from '@/components/admin/AdminCategoryOrdering';
 import { ImportMockupDialog } from '@/components/admin/ImportMockupDialog';
@@ -28,6 +28,7 @@ import { CsvImportDialog } from '@/components/admin/CsvImportDialog';
 import { BulkProductImagesDialog } from '@/components/admin/BulkProductImagesDialog';
 import { MainImagePicker } from '@/components/admin/MainImagePicker';
 import { SplitVariantsDialog } from '@/components/admin/SplitVariantsDialog';
+import { BulkGifDialog } from '@/components/admin/BulkGifDialog';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -106,6 +107,7 @@ export default function AdminProducts() {
   const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
   const [isCsvDialogOpen, setIsCsvDialogOpen] = useState(false);
   const [isBulkImagesOpen, setIsBulkImagesOpen] = useState(false);
+  const [isBulkGifOpen, setIsBulkGifOpen] = useState(false);
   const [swatchProgress, setSwatchProgress] = useState<{ done: number; total: number } | null>(null);
   const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
   const [isQuickCsvOpen, setIsQuickCsvOpen] = useState(false);
@@ -672,7 +674,11 @@ export default function AdminProducts() {
                 : 'Générer les pastilles manquantes'}
             </Button>
 
+            <Button size="sm" variant="outline" onClick={() => setIsBulkGifOpen(true)} className="h-8 text-xs chamfer-hud-sm">
+              <Film className="h-3 w-3 mr-1" />Créer des GIF
+            </Button>
             <Button size="sm" variant="outline" onClick={exportSelectedCsv} className="h-8 text-xs chamfer-hud-sm">
+
               <Download className="h-3 w-3 mr-1" />Exporter sélection
             </Button>
             <Button variant="destructive" size="sm" onClick={handleBulkDelete} disabled={bulkDelete.isPending} className="h-8 text-xs chamfer-hud-sm">
@@ -1221,6 +1227,11 @@ export default function AdminProducts() {
       <WordPressSyncDialog open={isSyncDialogOpen} onOpenChange={setIsSyncDialogOpen} />
       <CsvImportDialog open={isCsvDialogOpen} onOpenChange={setIsCsvDialogOpen} />
       <BulkProductImagesDialog open={isBulkImagesOpen} onOpenChange={setIsBulkImagesOpen} products={products} />
+      <BulkGifDialog
+        open={isBulkGifOpen}
+        onOpenChange={setIsBulkGifOpen}
+        products={filteredProducts.filter(p => selectedIds.has(p.id))}
+      />
       <SplitVariantsDialog
         open={!!splitProduct}
         onOpenChange={(v) => { if (!v) setSplitProduct(null); }}
