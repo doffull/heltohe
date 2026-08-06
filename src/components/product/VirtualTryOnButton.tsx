@@ -136,6 +136,8 @@ export default function VirtualTryOnButton({ product, selectedColor, selectedSiz
     if (!o) reset();
   };
 
+  if (mode === 'none') return null;
+
   return (
     <>
       {variant === 'floating' ? (

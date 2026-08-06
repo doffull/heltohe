@@ -95,7 +95,7 @@ export default function ProductBuyBox({
 
 
       {/* Essayage virtuel — toujours visible */}
-      <VirtualTryOnButton product={product} selectedColor={selectedColor} variant="inline" className="w-full" />
+      <VirtualTryOnButton product={product} selectedColor={selectedColor} selectedSize={selectedSize} variant="inline" className="w-full" />
 
       {/* Autres coloris du même modèle */}
       <ColorVariantsStrip product={product} />
