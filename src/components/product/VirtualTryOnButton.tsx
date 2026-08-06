@@ -34,7 +34,11 @@ interface PersistedState {
   framing: Framing;
 }
 
-export default function VirtualTryOnButton({ product, selectedColor, className, variant = 'floating' }: Props) {
+export default function VirtualTryOnButton({ product, selectedColor, selectedSize, className, variant = 'floating' }: Props) {
+  const mode = (product?.tryonMode as 'none' | 'photo' | 'mannequin' | 'both') || 'both';
+  const showPhoto = mode === 'photo' || mode === 'both';
+  const showMannequin = mode === 'mannequin' || mode === 'both';
+  const [tab, setTab] = useState<'photo' | 'mannequin'>(showPhoto ? 'photo' : 'mannequin');
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>('photo');
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
