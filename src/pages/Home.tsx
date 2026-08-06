@@ -181,8 +181,27 @@ export default function Home() {
     return () => clearInterval(timer);
   }, [autoPlay, sliderSpeed, heroSlides.length]);
 
-  const featuredProducts = products.slice(0, 4);
-  const newArrivals = products.slice(4, 10);
+  // Curation admin (Dashboard → Gestion page d'accueil → Produits) : priorité
+  // à la sélection ordonnée, puis aux tags, puis au repli automatique.
+  const curatedSections = (designSettings as any).homeSectionProducts as Record<string, string[]> | undefined;
+  const resolveSection = (keys: string[], fallback: typeof products) => {
+    for (const key of keys) {
+      const ids = curatedSections?.[key];
+      if (Array.isArray(ids) && ids.length > 0) {
+        const ordered = ids.map((id) => products.find((p) => p.id === id)).filter(Boolean) as typeof products;
+        if (ordered.length > 0) return ordered.slice(0, 8);
+      }
+    }
+    for (const key of keys) {
+      const tagged = products.filter((p) => p.tags?.includes(key));
+      if (tagged.length > 0) return tagged.slice(0, 8);
+    }
+    return fallback;
+  };
+
+  const featuredProducts = resolveSection(["top", "featured"], products.slice(0, 4));
+  const newArrivals = resolveSection(["new"], products.slice(4, 10));
+
 
   const handleAddToCart = async (product: (typeof products)[0]) => {
     await addItem({
