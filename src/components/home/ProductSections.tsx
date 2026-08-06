@@ -34,6 +34,18 @@ export function ProductSections() {
     promo: promoTagged.length > 0 ? promoTagged.slice(0, 8) : shopProducts.filter(p => p.salePrice).slice(0, 4),
   };
 
+  // Manual curation from the admin wins over the automatic tag logic.
+  const curated = designSettings.homeSectionProducts || {};
+  for (const [sectionId, ids] of Object.entries(curated)) {
+    if (!Array.isArray(ids) || ids.length === 0) continue;
+    const ordered = ids
+      .map(id => shopProducts.find(p => p.id === id))
+      .filter((p): p is typeof products[0] => Boolean(p))
+      .slice(0, 8);
+    if (ordered.length > 0) sectionProducts[sectionId] = ordered;
+  }
+
+
   const visibleSections = homeSections.filter(s => s.isVisible);
 
   const handleAddToCart = async (product: typeof products[0]) => {

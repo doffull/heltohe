@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Plus, Trash2, Sparkles, Loader2, Images, GripVertical } from 'lucide-react';
+import { X, Plus, Trash2, Sparkles, Loader2, Images, GripVertical, Film } from 'lucide-react';
 import { MediaLibraryDialog } from '@/components/visual-editor/MediaLibraryDialog';
 import { Product, ColorOption } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,8 @@ import { FileDropZone } from '@/components/admin/FileDropZone';
 import { useApp } from '@/context/AppContext';
 import { AiTextButton } from '@/components/admin/AiTextButton';
 import { LimitedEditionBadge, BADGE_POSITIONS } from '@/components/product/LimitedEditionBadge';
+import { GifBuilderDialog } from '@/components/admin/GifBuilderDialog';
+
 
 import { AiColorNameButton } from '@/components/admin/AiColorNameButton';
 import { AiAttributesButton } from '@/components/admin/AiAttributesButton';
@@ -121,6 +123,8 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
   const [showGalleryPicker, setShowGalleryPicker] = useState(false);
   const [showMainPicker, setShowMainPicker] = useState(false);
   const [showHoverPicker, setShowHoverPicker] = useState(false);
+  const [showGifBuilder, setShowGifBuilder] = useState(false);
+
   const [showLogoPicker, setShowLogoPicker] = useState(false);
 
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
@@ -669,6 +673,32 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
             title="Sélectionner l'image principale"
             onSelect={(url) => setFormData(prev => ({ ...prev, image: url }))}
           />
+
+          {/* Générateur de GIF animé à partir des images du produit */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowGifBuilder(true)}
+            className="w-full h-8 text-xs"
+          >
+            <Film className="h-3.5 w-3.5 mr-1.5" />
+            Créer un GIF animé
+          </Button>
+          <GifBuilderDialog
+            open={showGifBuilder}
+            onOpenChange={setShowGifBuilder}
+            images={[formData.image, ...(formData.galleryImages || [])].filter(Boolean)}
+            onApply={(url, target) =>
+              setFormData(prev => ({
+                ...prev,
+                image: target.main ? url : prev.image,
+                hoverImage: target.hover ? url : prev.hoverImage,
+              }))
+            }
+          />
+
+
 
           {/* Image de survol (effet swap sur la vignette) */}
           <div className="space-y-2 border border-border/40 bg-secondary/20 p-3">
