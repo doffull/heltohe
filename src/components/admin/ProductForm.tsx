@@ -674,6 +674,32 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
             onSelect={(url) => setFormData(prev => ({ ...prev, image: url }))}
           />
 
+          {/* Générateur de GIF animé à partir des images du produit */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowGifBuilder(true)}
+            className="w-full h-8 text-xs"
+          >
+            <Film className="h-3.5 w-3.5 mr-1.5" />
+            Créer un GIF animé
+          </Button>
+          <GifBuilderDialog
+            open={showGifBuilder}
+            onOpenChange={setShowGifBuilder}
+            images={[formData.image, ...(formData.galleryImages || [])].filter(Boolean)}
+            onApply={(url, target) =>
+              setFormData(prev => ({
+                ...prev,
+                image: target.main ? url : prev.image,
+                hoverImage: target.hover ? url : prev.hoverImage,
+              }))
+            }
+          />
+
+
+
           {/* Image de survol (effet swap sur la vignette) */}
           <div className="space-y-2 border border-border/40 bg-secondary/20 p-3">
             <Label className="hud-text text-[11px]">// IMAGE AU SURVOL (SWAP)</Label>
