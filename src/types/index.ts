@@ -461,6 +461,8 @@ export interface DesignSettings {
   homeSections: HomeSection[];
   /** Curated ordered product ids per homepage section id (e.g. { top: [...], new: [...] }) */
   homeSectionProducts?: Record<string, string[]>;
+  /** Saved GIF builder presets (shared across admins). */
+  gifPresets?: import('@/lib/gifBuilder').GifPreset[];
 
   homeCustomSections?: any[];
   homePageBlocks?: Array<{ id: string; visible: boolean; label?: string; settings?: Record<string, any> }>;
