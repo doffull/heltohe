@@ -70,7 +70,17 @@
     --step-address: 210 90% 50%;
     --step-delivery: 28 95% 55%;
     --step-confirm: 142 70% 42%;
+
+    /* Product status badges (glossy tech) */
+    --badge-promo: 350 85% 52%;
+    --badge-new: 190 95% 45%;
+    --badge-top: 42 95% 52%;
+    --badge-trending: 275 85% 60%;
+    --badge-stock: 22 95% 52%;
+    --badge-soldout: 0 0% 35%;
+    --badge-limited: 0 0% 8%;
   }
+
 
   .dark {
     --background: 0 0% 4%;
