@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { GIFEncoder, quantize, applyPalette } from 'gifenc';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Film, ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { toast } from 'sonner';
+import { buildGifBlob, clampWidth, GIF_WIDTH_MAX, GIF_WIDTH_MIN } from '@/lib/gifBuilder';
+import { readGifLastUsed, writeGifLastUsed } from '@/lib/gifPresets';
+import { GifPresetBar } from '@/components/admin/GifPresetBar';
 
 interface Props {
   open: boolean;
@@ -18,23 +21,15 @@ interface Props {
   onApply: (url: string, target: { main: boolean; hover: boolean }) => void;
 }
 
-const SIZES = [600, 900] as const;
-
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error(`Image illisible: ${src}`));
-    img.src = src;
-  });
-}
+const SIZE_SHORTCUTS = [600, 900, 1200] as const;
 
 export function GifBuilderDialog({ open, onOpenChange, images, onApply }: Props) {
   const { upload, uploading } = useFileUpload({ bucket: 'media', folder: 'products/gifs' });
   const [selected, setSelected] = useState<string[]>([]);
   const [delay, setDelay] = useState(400);
   const [width, setWidth] = useState<number>(600);
+  const [widthDraft, setWidthDraft] = useState('600');
+  const [loop, setLoop] = useState(true);
   const [asMain, setAsMain] = useState(true);
   const [asHover, setAsHover] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -51,10 +46,25 @@ export function GifBuilderDialog({ open, onOpenChange, images, onApply }: Props)
       setSelected(uniqueImages.slice(0, Math.min(3, uniqueImages.length)));
       setPreviewUrl(null);
       blobRef.current = null;
+      const last = readGifLastUsed();
+      setDelay(last.delay);
+      setWidth(last.width);
+      setWidthDraft(String(last.width));
+      setLoop(last.loop);
+      setAsMain(last.asMain);
+      setAsHover(last.asHover);
     }
   }, [open, uniqueImages]);
 
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
+
+  const current = { delay, width, loop, asMain, asHover };
+
+  function commitWidth(raw: string) {
+    const w = clampWidth(parseInt(raw, 10));
+    setWidth(w);
+    setWidthDraft(String(w));
+  }
 
   function toggle(src: string) {
     setSelected((prev) =>
@@ -79,39 +89,11 @@ export function GifBuilderDialog({ open, onOpenChange, images, onApply }: Props)
     }
     setBusy(true);
     try {
-      const loaded = await Promise.all(selected.map(loadImage));
-      const first = loaded[0];
-      const outW = width;
-      const outH = Math.round((first.naturalHeight / first.naturalWidth) * outW);
-
-      const canvas = document.createElement('canvas');
-      canvas.width = outW;
-      canvas.height = outH;
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      if (!ctx) throw new Error('Canvas indisponible');
-
-      const gif = GIFEncoder();
-
-      for (const img of loaded) {
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, outW, outH);
-        // Letterbox: keep ratio, center inside the frame
-        const scale = Math.min(outW / img.naturalWidth, outH / img.naturalHeight);
-        const w = img.naturalWidth * scale;
-        const h = img.naturalHeight * scale;
-        ctx.drawImage(img, (outW - w) / 2, (outH - h) / 2, w, h);
-
-        const { data } = ctx.getImageData(0, 0, outW, outH);
-        const palette = quantize(data, 256);
-        const index = applyPalette(data, palette);
-        gif.writeFrame(index, outW, outH, { palette, delay });
-      }
-
-      gif.finish();
-      const blob = new Blob([gif.bytesView()], { type: 'image/gif' });
+      const blob = await buildGifBlob(selected, { delay, width, loop });
       blobRef.current = blob;
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(URL.createObjectURL(blob));
+      writeGifLastUsed(current);
       toast.success('GIF généré — vérifiez l\'aperçu');
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Échec de la génération';
@@ -133,6 +115,7 @@ export function GifBuilderDialog({ open, onOpenChange, images, onApply }: Props)
     const file = new File([blobRef.current], `anim-${Date.now()}.gif`, { type: 'image/gif' });
     const url = await upload(file);
     if (!url) return;
+    writeGifLastUsed(current);
     onApply(url, { main: asMain, hover: asHover });
     onOpenChange(false);
   }
@@ -153,6 +136,19 @@ export function GifBuilderDialog({ open, onOpenChange, images, onApply }: Props)
             </p>
           ) : (
             <>
+              <GifPresetBar
+                current={current}
+                onApply={(p) => {
+                  setDelay(p.delay);
+                  setWidth(p.width);
+                  setWidthDraft(String(p.width));
+                  setLoop(p.loop);
+                  setAsMain(p.asMain);
+                  setAsHover(p.asHover);
+                  toast.success(`Preset « ${p.name} » appliqué`);
+                }}
+              />
+
               <div>
                 <Label className="text-xs">Images ({selected.length}/10)</Label>
                 <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 mt-2">
@@ -211,17 +207,28 @@ export function GifBuilderDialog({ open, onOpenChange, images, onApply }: Props)
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">Largeur de sortie</Label>
-                  <div className="flex gap-2 mt-2">
-                    {SIZES.map((s) => (
+                  <Label className="text-xs">Largeur de sortie ({GIF_WIDTH_MIN}–{GIF_WIDTH_MAX} px)</Label>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Input
+                      type="number"
+                      min={GIF_WIDTH_MIN}
+                      max={GIF_WIDTH_MAX}
+                      value={widthDraft}
+                      onChange={(e) => setWidthDraft(e.target.value)}
+                      onBlur={(e) => commitWidth(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commitWidth(widthDraft); } }}
+                      className="h-8 w-24 text-xs"
+                    />
+                    {SIZE_SHORTCUTS.map((s) => (
                       <Button
                         key={s}
                         type="button"
                         size="sm"
                         variant={width === s ? 'default' : 'outline'}
-                        onClick={() => setWidth(s)}
+                        className="h-8 text-xs"
+                        onClick={() => { setWidth(s); setWidthDraft(String(s)); }}
                       >
-                        {s} px
+                        {s}
                       </Button>
                     ))}
                   </div>
@@ -229,6 +236,10 @@ export function GifBuilderDialog({ open, onOpenChange, images, onApply }: Props)
               </div>
 
               <div className="flex flex-wrap items-center gap-4">
+                <label className="flex items-center gap-2 text-xs cursor-pointer">
+                  <Checkbox checked={loop} onCheckedChange={(v) => setLoop(Boolean(v))} />
+                  Boucle infinie
+                </label>
                 <label className="flex items-center gap-2 text-xs cursor-pointer">
                   <Checkbox checked={asMain} onCheckedChange={(v) => setAsMain(Boolean(v))} />
                   Définir comme image principale
