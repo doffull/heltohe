@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Plus, Trash2, Sparkles, Loader2, Images, GripVertical } from 'lucide-react';
+import { X, Plus, Trash2, Sparkles, Loader2, Images, GripVertical, Film } from 'lucide-react';
 import { MediaLibraryDialog } from '@/components/visual-editor/MediaLibraryDialog';
 import { Product, ColorOption } from '@/types';
 import { Button } from '@/components/ui/button';
