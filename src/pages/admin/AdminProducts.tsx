@@ -106,6 +106,7 @@ export default function AdminProducts() {
   const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
   const [isCsvDialogOpen, setIsCsvDialogOpen] = useState(false);
   const [isBulkImagesOpen, setIsBulkImagesOpen] = useState(false);
+  const [isBulkGifOpen, setIsBulkGifOpen] = useState(false);
   const [swatchProgress, setSwatchProgress] = useState<{ done: number; total: number } | null>(null);
   const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
   const [isQuickCsvOpen, setIsQuickCsvOpen] = useState(false);
