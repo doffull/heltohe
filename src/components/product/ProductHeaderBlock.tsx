@@ -6,6 +6,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
 import ProductRatingRow from './ProductRatingRow';
 import ProductTitleLogo from './ProductTitleLogo';
+import { ProductStatusBadges } from './ProductStatusBadges';
+
 
 import { cn } from '@/lib/utils';
 
