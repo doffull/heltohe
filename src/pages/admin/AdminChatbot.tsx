@@ -174,7 +174,7 @@ export default function AdminChatbot() {
                 onChange={e => setSystemPrompt(e.target.value)}
                 rows={16}
                 className="bg-secondary/50 border-border/30 font-mono text-xs"
-                placeholder="Tu es Helvetica, expert mode de LVTK6..."
+                placeholder="Tu es Helvetica, expert mode de HELVETICA-MP..."
               />
               <p className="text-xs text-muted-foreground">
                 {systemPrompt.length} caractères

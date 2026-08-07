@@ -16,7 +16,7 @@ interface BrandLogoProps {
  * Single robust logo renderer. Source order:
  *  1. designSettings.hudLogo (or footerLogo for footer variant)
  *  2. site name text
- *  3. constant fallback "LVTK6"
+ *  3. constant fallback "HELVETICA-MP"
  *
  * - Reserves height so the layout never jumps during fetch / image swap.
  * - Falls back to text instantly on image error without leaving a hole.
@@ -34,7 +34,7 @@ export function BrandLogo({
     variant === 'footer'
       ? ((designSettings as any).footerLogo as string) || designSettings.hudLogo
       : designSettings.hudLogo;
-  const siteName = (designSettings as any).siteName || 'LVTK6';
+  const siteName = (designSettings as any).siteName || 'HELVETICA-MP';
   const [broken, setBroken] = useState(false);
 
   // Reset broken state when URL changes (admin save → live update).

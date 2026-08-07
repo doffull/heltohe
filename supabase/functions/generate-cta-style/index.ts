@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
     const { context } = await req.json().catch(() => ({}));
     // Gemini API key checked inside callGemini()
 
-    const sys = `Tu es un directeur artistique pour une marque techwear/luxe minimaliste (LVTK6).
+    const sys = `Tu es un directeur artistique pour une marque techwear/luxe minimaliste (HELVETICA-MP).
 Tu proposes UN preset de design pour deux boutons CTA (principal + secondaire) sur un hero produit.
 Choisis des combinaisons audacieuses mais lisibles. Réponds uniquement via l'outil "return_preset".`;
 

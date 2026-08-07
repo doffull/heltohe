@@ -143,7 +143,7 @@ export default function AdminSecurity() {
             <Input
               value={overlay.text ?? ''}
               onChange={e => setOverlay((o: any) => ({ ...o, text: e.target.value }))}
-              placeholder="Ex : © LVTK6 — Propriété — Ne pas diffuser"
+              placeholder="Ex : © HELVETICA-MP — Propriété — Ne pas diffuser"
             />
             <p className="text-[11px] text-muted-foreground">Laissez vide pour n'afficher que l'email et le timestamp.</p>
           </div>

@@ -15,7 +15,7 @@ export default function BoutiqueRouter() {
   // SEO for custom pages
   useEffect(() => {
     if (customPage?.metaTitle) document.title = customPage.metaTitle;
-    return () => { document.title = 'LVTK6 Concept'; };
+    return () => { document.title = 'HELVETICA-MP Concept'; };
   }, [customPage]);
 
   if (!slugOrId) return <Shop />;

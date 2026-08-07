@@ -56,7 +56,7 @@ describe('Home — HeroSlider visual fallback', () => {
         <HeroSlider />
       </BrowserRouter>,
     );
-    expect(screen.getByText(/LVTK6/i)).toBeInTheDocument();
+    expect(screen.getByText(/HELVETICA-MP/i)).toBeInTheDocument();
     expect(screen.getByText(/COLLECTION TECHNIQUE PREMIUM/i)).toBeInTheDocument();
   });
 });

@@ -88,7 +88,7 @@ serve(async (req) => {
         description: (p.description || "").slice(0, 120),
       }));
 
-      const searchPrompt = `Tu es l'assistant shopping vocal de LVTK6. À partir de la requête utilisateur en français, sélectionne 1 à 6 produits du catalogue qui correspondent le mieux.
+      const searchPrompt = `Tu es l'assistant shopping vocal de HELVETICA-MP. À partir de la requête utilisateur en français, sélectionne 1 à 6 produits du catalogue qui correspondent le mieux.
 ${mode === "recommend" ? "Mode RECOMMANDATION : propose 3 produits avec une raison parlée naturelle." : "Mode RECHERCHE : retourne les meilleurs résultats."}
 Catalogue JSON:\n${JSON.stringify(catalog)}\n
 Réponds via la fonction search_results.`;
@@ -159,7 +159,7 @@ Réponds via la fonction search_results.`;
     const addr = context.address || {};
     const addrSummary = [addr.name, addr.address, addr.zip, addr.city, addr.phone].filter(Boolean).join(", ") || "non renseignée";
 
-    const systemPrompt = `Tu es un assistant vocal e-commerce francophone pour LVTK6.
+    const systemPrompt = `Tu es un assistant vocal e-commerce francophone pour HELVETICA-MP.
 Reconnais l'intention dans la phrase et retourne UNE action via tool calling.
 Reste concis (max 25 mots).
 

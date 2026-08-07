@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 export default defineTool({
   name: "list_boutiques",
   title: "Boutiques physiques",
-  description: "Liste les boutiques physiques LVTK6 actives (nom, adresse, ville, coordonnées).",
+  description: "Liste les boutiques physiques HELVETICA-MP actives (nom, adresse, ville, coordonnées).",
   inputSchema: {},
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async () => {

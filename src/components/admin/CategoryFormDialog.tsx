@@ -82,7 +82,7 @@ export function CategoryFormDialog({ open, onOpenChange, category, categories, o
     setAiLoading(true);
     try {
       // Simple AI-generated SEO based on category name
-      const metaTitle = `${form.title} - Collection Premium | LVTK6`;
+      const metaTitle = `${form.title} - Collection Premium | HELVETICA-MP`;
       const metaDesc = `Découvrez notre collection ${form.title.toLowerCase()} : vêtements et accessoires techniques haut de gamme. Livraison offerte dès 100€.`;
       setForm(p => ({
         ...p,
@@ -298,7 +298,7 @@ export function CategoryFormDialog({ open, onOpenChange, category, categories, o
                 <div className="mt-4 p-4 rounded-lg bg-secondary/30 border border-border space-y-1">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Aperçu Google</p>
                   <p className="text-sm text-primary font-medium truncate">{form.metaTitle || form.title}</p>
-                  <p className="text-xs text-muted-foreground font-mono">lvtk6.com/{form.slug || '...'}</p>
+                  <p className="text-xs text-muted-foreground font-mono">helvetica-mp.com/{form.slug || '...'}</p>
                   <p className="text-xs text-muted-foreground line-clamp-2">{form.metaDescription || 'Aucune description définie.'}</p>
                 </div>
               )}

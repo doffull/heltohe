@@ -48,7 +48,7 @@ export function Sidebar() {
             </div>
           )}
           <span className="hidden lg:block hud-text text-sm font-bold text-foreground tracking-widest">
-            LVTK6
+            HELVETICA-MP
           </span>
         </div>
       </div>

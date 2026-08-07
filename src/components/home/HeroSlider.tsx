@@ -20,7 +20,7 @@ const FALLBACK_HERO_SLIDE: HeroSlide = {
   id: 'fallback-home-hero',
   media: HERO_PLACEHOLDER,
   mediaType: 'image',
-  title: 'LVTK6',
+  title: 'HELVETICA-MP',
   subtitle: 'COLLECTION TECHNIQUE PREMIUM',
   ctaText: 'Découvrir',
   ctaUrl: '/boutique',

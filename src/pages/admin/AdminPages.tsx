@@ -88,7 +88,7 @@ export default function AdminPages() {
     if (!editingPage) return;
     setEditingPage(p => p ? {
       ...p,
-      metaTitle: `${p.title} — Collection Premium | LVTK6`,
+      metaTitle: `${p.title} — Collection Premium | HELVETICA-MP`,
       metaDescription: `Découvrez ${p.title?.toLowerCase()} dans notre boutique. Collection exclusive, livraison rapide et paiement sécurisé.`,
     } : p);
   };
@@ -230,7 +230,7 @@ export default function AdminPages() {
                       <div className="mt-6 p-4 bg-muted/30 rounded-lg border border-border">
                         <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider">Aperçu Google</p>
                         <p className="text-blue-400 text-base hover:underline cursor-pointer">{editingPage.metaTitle || editingPage.title || 'Titre de la page'}</p>
-                        <p className="text-green-400 text-xs">lvtk6.com/boutique/{editingPage.slug || '...'}</p>
+                        <p className="text-green-400 text-xs">helvetica-mp.com/boutique/{editingPage.slug || '...'}</p>
                         <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{editingPage.metaDescription || 'Description de la page...'}</p>
                       </div>
                     </div>

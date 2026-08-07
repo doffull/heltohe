@@ -1,4 +1,4 @@
-// Types for LVTK6 E-commerce Platform
+// Types for HELVETICA-MP E-commerce Platform
 
 export type ViewType = 'Home' | 'Shop' | 'About' | 'ProductDetail' | 'Dashboard';
 export type Language = 'FR' | 'EN';

@@ -205,7 +205,7 @@ function SidebarContent({ user, signOut, location, sectionColors, allowedHrefs, 
         <Link to="/admin" className="flex items-center gap-3">
           <Shield className="h-7 w-7 lg:h-8 lg:w-8 text-primary" />
           <div>
-            <span className="text-base lg:text-lg font-bold hud-text">LVTK6</span>
+            <span className="text-base lg:text-lg font-bold hud-text">HELVETICA-MP</span>
             <p className="text-[10px] lg:text-xs text-muted-foreground">ADMIN PANEL</p>
           </div>
         </Link>
@@ -340,7 +340,7 @@ export default function Admin() {
           </SheetContent>
         </Sheet>
         <Shield className="h-5 w-5 text-primary" />
-        <span className="font-bold hud-text text-sm">LVTK6 ADMIN</span>
+        <span className="font-bold hud-text text-sm">HELVETICA-MP ADMIN</span>
       </div>
 
       {/* Main Content */}

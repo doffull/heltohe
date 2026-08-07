@@ -104,7 +104,7 @@ export default function Boutiques() {
     return () => { cancelled = true; };
   }, [boutiques]);
 
-  useDocTitle('Nos boutiques — LVTK6', 'Découvrez toutes nos boutiques en France : magasins permanents et boutiques éphémères.');
+  useDocTitle('Nos boutiques — HELVETICA-MP', 'Découvrez toutes nos boutiques en France : magasins permanents et boutiques éphémères.');
 
   return (
     <>

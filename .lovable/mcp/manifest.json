@@ -11,15 +11,15 @@
   },
   "mcp": {
     "server": {
-      "name": "lvtk6-mcp",
+      "name": "helvetica-mp-mcp",
       "version": "0.1.0",
-      "title": "LVTK6 Store MCP"
+      "title": "HELVETICA-MP Store MCP"
     },
     "tools": [
       {
         "name": "list_products",
         "title": "Lister les produits",
-        "description": "Liste les produits actifs du catalogue LVTK6 avec filtres facultatifs (catégorie, recherche texte).",
+        "description": "Liste les produits actifs du catalogue HELVETICA-MP avec filtres facultatifs (catégorie, recherche texte).",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -51,7 +51,7 @@
       {
         "name": "get_product",
         "title": "Détail d'un produit",
-        "description": "Retourne toutes les informations d'un produit LVTK6 par son identifiant ou SKU.",
+        "description": "Retourne toutes les informations d'un produit HELVETICA-MP par son identifiant ou SKU.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -76,7 +76,7 @@
       {
         "name": "list_boutiques",
         "title": "Boutiques physiques",
-        "description": "Liste les boutiques physiques LVTK6 actives (nom, adresse, ville, coordonnées).",
+        "description": "Liste les boutiques physiques HELVETICA-MP actives (nom, adresse, ville, coordonnées).",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,

@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
       if (items.length === 0) return json({ error: "Panier vide" }, 400);
       const orderData = (body.orderData ?? {}) as Record<string, unknown>;
       const deliveryMode = body.deliveryMode === "home" ? "home" : "relay";
-      const orderNumber = `LVTK-${Date.now().toString(36).toUpperCase()}`;
+      const orderNumber = `HMP-${Date.now().toString(36).toUpperCase()}`;
 
       const db = admin();
       const { data: rpcResult, error: rpcError } = await db.rpc("validate_and_create_order", {

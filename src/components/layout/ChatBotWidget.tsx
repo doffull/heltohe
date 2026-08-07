@@ -107,7 +107,7 @@ export function ChatBotWidget({ open: openProp, onOpenChange, hideTrigger }: Cha
   });
 
   const botName = botConfig?.bot_name || 'Helvetica';
-  const welcomeMessage = botConfig?.welcome_message || 'Bonjour ! Je suis Helvetica, votre expert mode LVTK6. Comment puis-je vous aider ?';
+  const welcomeMessage = botConfig?.welcome_message || 'Bonjour ! Je suis Helvetica, votre expert mode HELVETICA-MP. Comment puis-je vous aider ?';
   const suggestions: string[] = Array.isArray(botConfig?.suggestions) ? (botConfig.suggestions as string[]) : [];
 
   // Init welcome message when opening for the first time

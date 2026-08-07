@@ -20,7 +20,7 @@ const TOOLS: ToolSpec[] = [
   {
     name: 'list_products',
     title: 'Liste des produits',
-    description: 'Retourne les produits actifs du catalogue LVTK6 (filtrable par catégorie, recherche, prix).',
+    description: 'Retourne les produits actifs du catalogue HELVETICA-MP (filtrable par catégorie, recherche, prix).',
     auth: 'public',
     input: [
       { key: 'query', type: 'string?', description: 'Recherche texte sur le nom / SKU.' },
@@ -40,7 +40,7 @@ const TOOLS: ToolSpec[] = [
   {
     name: 'list_boutiques',
     title: 'Boutiques physiques',
-    description: 'Liste des boutiques LVTK6 actives (adresse, ville, GPS).',
+    description: 'Liste des boutiques HELVETICA-MP actives (adresse, ville, GPS).',
     auth: 'public',
     input: [],
     output: '{ boutiques: Boutique[] }',

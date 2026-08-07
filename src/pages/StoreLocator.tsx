@@ -62,7 +62,7 @@ export default function StoreLocator() {
   const markersRef = useRef<Map<string, { marker: any; info: any }>>(new Map());
   const userMarkerRef = useRef<any>(null);
 
-  useDocTitle('Trouver une boutique — LVTK6', 'Localisez la boutique LVTK6 la plus proche : recherche par ville, code postal ou géolocalisation.');
+  useDocTitle('Trouver une boutique — HELVETICA-MP', 'Localisez la boutique HELVETICA-MP la plus proche : recherche par ville, code postal ou géolocalisation.');
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
       availableSizes?.length && `Tailles disponibles: ${availableSizes.join(', ')}`,
     ].filter(Boolean).join('\n');
 
-    const systemPrompt = `Tu es un expert en taille de vêtements pour la marque LVTK6. Utilise la grille de tailles EU standard suivante:
+    const systemPrompt = `Tu es un expert en taille de vêtements pour la marque HELVETICA-MP. Utilise la grille de tailles EU standard suivante:
 ${sizeTable}
 
 Recommande LA taille la plus adaptée parmi les tailles disponibles (si fournies). Si une mensuration est entre deux tailles, prends en compte la coupe préférée. Donne une alternative si pertinente. Sois bref et précis en français.`;

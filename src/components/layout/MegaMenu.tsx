@@ -107,7 +107,7 @@ export function MegaMenu() {
                   />
                 ) : (
                   <span className="font-bold tracking-[0.3em] uppercase text-sm">
-                    {(designSettings as any).siteName || 'LVTK6'}
+                    {(designSettings as any).siteName || 'HELVETICA-MP'}
                   </span>
                 )}
                 <span className="hidden md:inline text-[10px] tracking-[0.3em] text-muted-foreground uppercase">

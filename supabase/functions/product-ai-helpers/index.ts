@@ -21,7 +21,7 @@ interface Body {
   hex?: string;
 }
 
-const SYS = `Tu es directeur de la rédaction produit pour LVTK6 / HELVETICA-MP : mode & outerwear technique, positionnement "Industrial Luxury", français, minimaliste et factuel.
+const SYS = `Tu es directeur de la rédaction produit pour HELVETICA-MP / HELVETICA-MP : mode & outerwear technique, positionnement "Industrial Luxury", français, minimaliste et factuel.
 
 MÉTHODE (obligatoire) :
 1. OBSERVER : n'utilise que ce qui est visible sur les photos fournies + les données saisies par l'admin.

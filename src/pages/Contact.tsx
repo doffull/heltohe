@@ -89,7 +89,7 @@ export default function Contact() {
 
   // Chatbot
   const [messages, setMessages] = useState<Msg[]>([
-    { role: 'assistant', content: 'Bonjour ! Je suis l\'assistant LVTK6. Comment puis-je vous aider aujourd\'hui ?' },
+    { role: 'assistant', content: 'Bonjour ! Je suis l\'assistant HELVETICA-MP. Comment puis-je vous aider aujourd\'hui ?' },
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -198,7 +198,7 @@ export default function Contact() {
             {/* Info cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
-                { icon: Mail, label: 'Email', value: 'contact@lvtk6.com' },
+                { icon: Mail, label: 'Email', value: 'contact@helvetica-mp.com' },
                 { icon: Phone, label: 'Téléphone', value: '+33 1 23 45 67 89' },
                 { icon: MapPin, label: 'Adresse', value: 'Paris, France' },
               ].map(({ icon: Icon, label, value }) => (
@@ -318,7 +318,7 @@ export default function Contact() {
                   <Bot className="h-4 w-4 text-primary" />
                 </div>
                 <div>
-                  <p className="text-xs font-bold hud-text uppercase tracking-widest">Assistant LVTK6</p>
+                  <p className="text-xs font-bold hud-text uppercase tracking-widest">Assistant HELVETICA-MP</p>
                   <p className="text-[10px] text-primary flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block animate-pulse" />
                     En ligne

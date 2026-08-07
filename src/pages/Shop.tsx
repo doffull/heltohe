@@ -136,7 +136,7 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
         document.head.appendChild(meta);
       }
     }
-    return () => { document.title = 'LVTK6 Concept'; };
+    return () => { document.title = 'HELVETICA-MP Concept'; };
   }, [activeCategory, selectedCategory]);
 
   // Get sub-categories for selected category
