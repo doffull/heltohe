@@ -99,13 +99,14 @@ export function HeroSlider() {
             src={bgMedia}
             poster={currentSlide.foregroundMedia || currentSlide.midgroundMedia || HERO_PLACEHOLDER}
             objectPosition={objectPosition as string}
+            objectFit={objectFit as any}
           />
         ) : (
           <img
             src={bgMedia}
             alt={currentSlide.title}
             className="w-full h-full"
-            style={{ objectFit: 'cover', objectPosition }}
+            style={{ objectFit: objectFit as any, objectPosition }}
             {...({ fetchpriority: 'high' } as any)}
             onError={(e) => { e.currentTarget.src = HERO_PLACEHOLDER; }}
           />
