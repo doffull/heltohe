@@ -276,8 +276,6 @@ export interface HeroSlide {
   /** Cadrage spécifique mobile (prioritaire sur objectFit sur petit écran) */
   mobileObjectFit?: 'cover' | 'contain' | 'fill' | 'none';
   mobileObjectPosition?: string;
-  mobileObjectFit?: 'cover' | 'contain' | 'fill' | 'none';
-  mobileObjectPosition?: string;
   mobileMediaType?: 'image' | 'video';
 }
 
