@@ -273,6 +273,9 @@ export interface HeroSlide {
   mobileImage?: string;
   objectFit?: 'cover' | 'contain' | 'fill' | 'none';
   objectPosition?: string;
+  /** Cadrage spécifique mobile (prioritaire sur objectFit sur petit écran) */
+  mobileObjectFit?: 'cover' | 'contain' | 'fill' | 'none';
+  mobileObjectPosition?: string;
   mobileObjectFit?: 'cover' | 'contain' | 'fill' | 'none';
   mobileObjectPosition?: string;
   mobileMediaType?: 'image' | 'video';

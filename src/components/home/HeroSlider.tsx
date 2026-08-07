@@ -81,8 +81,10 @@ export function HeroSlider() {
   // across devices (user requested "exactement pareil").
   const bgMedia = currentSlide.backgroundMedia || currentSlide.media || HERO_PLACEHOLDER;
   const effectiveMediaType = currentSlide.mediaType;
-  const objectFit = currentSlide.objectFit || 'cover';
-  const objectPosition = currentSlide.objectPosition || 'center';
+  // Cadrage indépendant mobile / desktop (contain, cover, remplir, original).
+  const objectFit = (isMobile ? (currentSlide as any).mobileObjectFit : null) || currentSlide.objectFit || 'cover';
+  const objectPosition =
+    (isMobile ? (currentSlide as any).mobileObjectPosition : null) || currentSlide.objectPosition || 'center';
 
   return (
     <div className="relative -mx-3 lg:-mx-5 -mt-3 lg:-mt-5 h-[100svh] sm:h-[92vh] lg:h-[94vh] overflow-hidden bg-black">
