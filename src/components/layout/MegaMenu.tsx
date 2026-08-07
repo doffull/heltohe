@@ -70,7 +70,7 @@ export function MegaMenu() {
     const cat = rootCats.find((c) => c.id === activeCat);
     const title = cat?.title?.toLowerCase();
     return products
-      .filter((p) => !title || p.category?.toLowerCase().includes(title))
+      .filter((p) => !title || productMatchesCategoryLoose(p, title))
       .slice(0, 4);
   }, [activeCat, products, rootCats]);
 

@@ -3,22 +3,31 @@
 // leur page de catégorie dédiée (ex: /collab).
 export const MARKETPLACE_CATEGORIES = ['Collab'];
 
+import { productCategories } from './productCategories';
+
 const normalize = (v?: string | null) => (v || '').trim().toLowerCase();
+
+type ProductLike = { category?: string | null; categories?: string[] | null };
+
+/** Un produit est marketplace si N'IMPORTE laquelle de ses catégories l'est. */
+export function isMarketplaceProduct(p: ProductLike, marketplaceTitles?: string[]) {
+  const cats = productCategories(p);
+  if (marketplaceTitles && marketplaceTitles.length > 0) {
+    return cats.some((c) => marketplaceTitles.some((t) => normalize(t) === normalize(c)));
+  }
+  return cats.some((c) => isMarketplaceCategory(c));
+}
 
 export function isMarketplaceCategory(category?: string | null) {
   return MARKETPLACE_CATEGORIES.some(c => normalize(c) === normalize(category));
 }
 
-export function excludeMarketplaceProducts<T extends { category?: string | null }>(
-  products: T[],
-): T[] {
-  return products.filter(p => !isMarketplaceCategory(p.category));
+export function excludeMarketplaceProducts<T extends ProductLike>(products: T[]): T[] {
+  return products.filter(p => !isMarketplaceProduct(p));
 }
 
-export function onlyMarketplaceProducts<T extends { category?: string | null }>(
-  products: T[],
-): T[] {
-  return products.filter(p => isMarketplaceCategory(p.category));
+export function onlyMarketplaceProducts<T extends ProductLike>(products: T[]): T[] {
+  return products.filter(p => isMarketplaceProduct(p));
 }
 
 type CategoryLike = { id: string; title: string; parentId?: string | null };
