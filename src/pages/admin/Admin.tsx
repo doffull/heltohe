@@ -77,6 +77,8 @@ import AdminRoles from './AdminRoles';
 import AdminSecurity from './AdminSecurity';
 import AdminTransitions from './AdminTransitions';
 import AdminSeo from './AdminSeo';
+import AdminTopBanner from './AdminTopBanner';
+import AdminFeedSections from './AdminFeedSections';
 import AdminCollab from './AdminCollab';
 
 import AdminBannersAnalytics from './AdminBannersAnalytics';
@@ -381,6 +383,8 @@ export default function Admin() {
             <Route path="parametres/*" element={<AdminSettings />} />
             <Route path="transitions/*" element={<AdminTransitions />} />
             <Route path="seo/*" element={<AdminSeo />} />
+            <Route path="top-banner" element={<AdminTopBanner />} />
+            <Route path="feed-sections" element={<AdminFeedSections />} />
             <Route path="collab/*" element={<AdminCollab />} />
 
             <Route path="page-templates/*" element={<AdminPageTemplates />} />

@@ -12,6 +12,7 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type D
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { PageSection } from '@/hooks/usePages';
+import { resolveFeedSections, feedBlockId, FEED_BLOCK_PREFIX } from '@/config/homeFeedSections';
 
 const EDIT_ROUTE: Record<string, string> = {
   hero: '/admin/design#techwear-hero',
@@ -163,6 +164,7 @@ export function HomeBlocksEditor() {
   const dirtyRef = useRef(false);
 
   const customSections = ((designSettings as any).homeCustomSections || []) as PageSection[];
+  const feedSections = resolveFeedSections((designSettings as any).homeFeedSections);
 
   // Merge: keep saved order, add missing customs at bottom, drop deleted ones.
   const merged = useMemo<Block[]>(() => {
@@ -170,22 +172,43 @@ export function HomeBlocksEditor() {
     const customIds = new Set(customSections.map((s) => `custom:${s.id}`));
     const customLabelMap = new Map(customSections.map((s) => [`custom:${s.id}`, sectionLabel(s)]));
 
+    const feedLabelMap = new Map(feedSections.map((f) => [feedBlockId(f.id), `Feed — ${f.title}`]));
+
     const validSaved = saved.filter((b) =>
-      b.id.startsWith('custom:') ? customIds.has(b.id) : (b.id in BUILTIN_LABELS)
+      b.id.startsWith('custom:')
+        ? customIds.has(b.id)
+        : b.id.startsWith(FEED_BLOCK_PREFIX)
+          ? feedLabelMap.has(b.id)
+          : (b.id in BUILTIN_LABELS)
     ).map((b) => ({
       ...b,
-      label: b.id.startsWith('custom:') ? customLabelMap.get(b.id) || 'Section' : BUILTIN_LABELS[b.id as BuiltinId],
+      label: b.id.startsWith('custom:')
+        ? customLabelMap.get(b.id) || 'Section'
+        : b.id.startsWith(FEED_BLOCK_PREFIX)
+          ? feedLabelMap.get(b.id)
+          : BUILTIN_LABELS[b.id as BuiltinId],
     }));
 
     // Add missing builtins
     DEFAULT_BUILTIN.forEach((d) => { if (!validSaved.find((b) => b.id === d.id)) validSaved.push({ id: d.id, visible: d.visible, label: d.label }); });
+    // Add missing feed sections right after "Dernières arrivées"
+    feedSections.forEach((f) => {
+      const id = feedBlockId(f.id);
+      if (!validSaved.find((b) => b.id === id)) {
+        const anchor = validSaved.findIndex((b) => b.id === 'newArrivals');
+        const entry = { id, visible: true, label: `Feed — ${f.title}` };
+        if (anchor >= 0) validSaved.splice(anchor + 1, 0, entry);
+        else validSaved.push(entry);
+      }
+    });
     // Add missing customs at the end
     customSections.forEach((s) => {
       const id = `custom:${s.id}`;
       if (!validSaved.find((b) => b.id === id)) validSaved.push({ id, visible: true, label: sectionLabel(s) });
     });
     return validSaved;
-  }, [designSettings, customSections]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [designSettings, customSections, JSON.stringify(feedSections.map((f) => [f.id, f.title]))]);
 
   const [blocks, setBlocks] = useState<Block[]>(merged);
   // Reset dirty state on mount → always pick up the latest server snapshot when
