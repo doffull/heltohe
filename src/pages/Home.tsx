@@ -22,6 +22,8 @@ import { HeroErrorBoundary } from "@/components/home/HeroErrorBoundary";
 import PageRenderer from "@/components/page/PageRenderer";
 import { VoiceAssistantBanner } from "@/components/home/VoiceAssistantBanner";
 import { StoreFinderSection } from "@/components/home/StoreFinderSection";
+import { ProductFeedSection } from "@/components/home/ProductFeedSection";
+import { resolveFeedSections, feedBlockId } from "@/config/homeFeedSections";
 import { SectionControls } from "@/components/visual-editor/SectionControls";
 import { EditableText } from "@/components/visual-editor/EditableText";
 import type { PageSection } from "@/hooks/usePages";
@@ -220,6 +222,8 @@ export default function Home() {
 
   const slide = heroSlides[currentSlide];
 
+  const feedSections = resolveFeedSections((designSettings as any).homeFeedSections);
+
   const DEFAULT_BLOCKS = [
     { id: "hero", visible: true },
     { id: "categories", visible: true },
@@ -227,6 +231,7 @@ export default function Home() {
     { id: "featured", visible: true },
     { id: "flash", visible: true },
     { id: "newArrivals", visible: true },
+    ...feedSections.map((f) => ({ id: feedBlockId(f.id), visible: true })),
     { id: "voiceBanner", visible: true },
     { id: "loyalty", visible: true },
     { id: "newsletter", visible: true },
@@ -246,6 +251,16 @@ export default function Home() {
       if (catIdx >= 0) out.splice(catIdx + 1, 0, entry);
       else out.push(entry);
     }
+    // Inject newly-shipped feed sections (Tendance, Cagoule, Veste…) when missing
+    feedSections.forEach((f) => {
+      const id = feedBlockId(f.id);
+      if (!out.find((b) => b.id === id)) {
+        const anchor = out.findIndex((b) => b.id === "newArrivals");
+        const entry = { id, visible: true };
+        if (anchor >= 0) out.splice(anchor + 1, 0, entry);
+        else out.push(entry);
+      }
+    });
     customSections.forEach((s) => {
       const id = `custom:${s.id}`;
       if (!out.find((b) => b.id === id)) out.push({ id, visible: true });
@@ -254,6 +269,9 @@ export default function Home() {
   })();
 
   const blockRenderers: Record<string, () => JSX.Element | null> = {
+    ...Object.fromEntries(
+      feedSections.map((f) => [feedBlockId(f.id), () => <ProductFeedSection section={f} />]),
+    ),
     hero: () =>
       (designSettings as any).techwearHero?.enabled ? (
         <HeroErrorBoundary label="TechwearHero">
