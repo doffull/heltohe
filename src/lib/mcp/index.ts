@@ -16,11 +16,11 @@ import listAddresses from "./tools/list-addresses";
 const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID ?? "project-ref-unset";
 
 export default defineMcp({
-  name: "lvtk6-mcp",
-  title: "LVTK6 Store MCP",
+  name: "helvetica-mp-mcp",
+  title: "HELVETICA-MP Store MCP",
   version: "0.1.0",
   instructions: [
-    "Outils MCP pour la boutique LVTK6.",
+    "Outils MCP pour la boutique HELVETICA-MP.",
     "• Outils lecture publique : list_products, get_product, list_boutiques.",
     "• Outils utilisateur (authentifié) : list_my_orders, get_my_order, my_loyalty, list_wishlist, add_to_wishlist, remove_from_wishlist, list_my_addresses.",
     "Toutes les actions utilisateur passent par Supabase RLS et n'accèdent qu'aux données du compte connecté.",

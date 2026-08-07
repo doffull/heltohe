@@ -148,7 +148,7 @@ export function GameScratchFab({ open: openProp, onOpenChange, hideTrigger }: Pr
               {sounds.enabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
             </button>
             <div className="flex-1 text-center px-2 min-w-0">
-              <p className="font-mono text-[9px] tracking-[0.3em] text-muted-foreground uppercase">// Jeu LVTK6</p>
+              <p className="font-mono text-[9px] tracking-[0.3em] text-muted-foreground uppercase">// Jeu HELVETICA-MP</p>
               <h2 className="text-sm sm:text-base font-bold tracking-[0.2em] uppercase truncate">
                 {config.title || 'Gratte & Gagne'}
               </h2>

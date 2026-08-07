@@ -167,7 +167,7 @@ export default function Auth() {
       toast({ title: 'Erreur', description: 'Code invalide ou expiré', variant: 'destructive' });
       return;
     }
-    toast({ title: 'Connexion réussie', description: 'Bienvenue sur LVTK6' });
+    toast({ title: 'Connexion réussie', description: 'Bienvenue sur HELVETICA-MP' });
     navigate(nextPath);
   };
 
@@ -208,7 +208,7 @@ export default function Auth() {
     } else {
       toast({
         title: 'Connexion réussie',
-        description: 'Bienvenue sur LVTK6',
+        description: 'Bienvenue sur HELVETICA-MP',
       });
       navigate(nextPath);
     }
@@ -279,10 +279,10 @@ export default function Auth() {
       <div className="relative w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="sr-only">Connexion à votre compte LVTK6</h1>
+          <h1 className="sr-only">Connexion à votre compte HELVETICA-MP</h1>
           <div className="inline-flex items-center gap-3 mb-4" aria-hidden="true">
             <Shield className="h-10 w-10 text-primary" />
-            <span className="text-3xl font-bold tracking-wider hud-text">LVTK6</span>
+            <span className="text-3xl font-bold tracking-wider hud-text">HELVETICA-MP</span>
           </div>
           <p className="text-muted-foreground text-sm tracking-wide">
             CONNEXION À VOTRE ESPACE
@@ -346,7 +346,7 @@ export default function Auth() {
                   <Input
                     id="login-email"
                     type="email"
-                    placeholder="operateur@lvtk6.com"
+                    placeholder="operateur@helvetica-mp.com"
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
                     className="bg-background/50"
@@ -515,7 +515,7 @@ export default function Auth() {
                   <Input
                     id="signup-email"
                     type="email"
-                    placeholder="operateur@lvtk6.com"
+                    placeholder="operateur@helvetica-mp.com"
                     value={signupEmail}
                     onChange={(e) => setSignupEmail(e.target.value)}
                     className="bg-background/50"

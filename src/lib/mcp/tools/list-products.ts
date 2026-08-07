@@ -5,7 +5,7 @@ import { z } from "zod";
 export default defineTool({
   name: "list_products",
   title: "Lister les produits",
-  description: "Liste les produits actifs du catalogue LVTK6 avec filtres facultatifs (catégorie, recherche texte).",
+  description: "Liste les produits actifs du catalogue HELVETICA-MP avec filtres facultatifs (catégorie, recherche texte).",
   inputSchema: {
     category: z.string().optional().describe("Filtrer par nom de catégorie (ex: Homme, Femme, Sportwear)."),
     search: z.string().optional().describe("Recherche texte dans le nom du produit."),

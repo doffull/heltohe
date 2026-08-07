@@ -16,7 +16,7 @@ export const TEMPLATE_VARS: TemplateVarDef[] = [
   { key: 'total_commande', label: 'Total de la commande', example: '149,00 €' },
   { key: 'numero_suivi', label: 'Numéro de suivi', example: '6A12345678901' },
   { key: 'transporteur', label: 'Transporteur', example: 'Colissimo' },
-  { key: 'boutique', label: 'Nom de la boutique', example: 'LVTK6' },
+  { key: 'boutique', label: 'Nom de la boutique', example: 'HELVETICA-MP' },
   { key: 'signature', label: 'Signature configurée', example: 'Service client' },
   { key: 'date', label: "Date du jour", example: '04/08/2026' },
 ];

@@ -107,9 +107,9 @@ export default function OAuthConsent() {
         <div className="flex items-center gap-3">
           <Shield className="h-8 w-8 text-primary" />
           <div>
-            <h1 className="text-xl font-bold">Connecter {clientName} à LVTK6</h1>
+            <h1 className="text-xl font-bold">Connecter {clientName} à HELVETICA-MP</h1>
             <p className="text-sm text-muted-foreground">
-              L'application pourra utiliser les outils LVTK6 activés en agissant comme vous.
+              L'application pourra utiliser les outils HELVETICA-MP activés en agissant comme vous.
             </p>
           </div>
         </div>
@@ -125,11 +125,11 @@ export default function OAuthConsent() {
           <div className="font-semibold">Ce que {clientName} pourra faire :</div>
           <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
             <li>Consulter votre profil (nom, e-mail).</li>
-            <li>Utiliser les outils LVTK6 exposés (commandes, fidélité, favoris) en votre nom.</li>
+            <li>Utiliser les outils HELVETICA-MP exposés (commandes, fidélité, favoris) en votre nom.</li>
             {scopes.length > 0 && scopes.map((s) => <li key={s}>Portée demandée : <code>{s}</code></li>)}
           </ul>
           <p className="text-xs text-muted-foreground pt-2">
-            Cela ne contourne pas les règles de sécurité LVTK6 : chaque action reste soumise à vos droits d'utilisateur.
+            Cela ne contourne pas les règles de sécurité HELVETICA-MP : chaque action reste soumise à vos droits d'utilisateur.
           </p>
         </div>
 

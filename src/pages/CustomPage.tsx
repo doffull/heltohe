@@ -11,13 +11,13 @@ export default function CustomPage() {
   // SEO
   useEffect(() => {
     if (page?.metaTitle) document.title = page.metaTitle;
-    else if (page?.title) document.title = `${page.title} — LVTK6`;
+    else if (page?.title) document.title = `${page.title} — HELVETICA-MP`;
     if (page?.metaDescription) {
       let meta = document.querySelector('meta[name="description"]');
       if (!meta) { meta = document.createElement('meta'); (meta as HTMLMetaElement).name = 'description'; document.head.appendChild(meta); }
       meta.setAttribute('content', page.metaDescription);
     }
-    return () => { document.title = 'LVTK6 Concept'; };
+    return () => { document.title = 'HELVETICA-MP Concept'; };
   }, [page]);
 
   if (isLoading) {

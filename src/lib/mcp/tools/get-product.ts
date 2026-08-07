@@ -5,7 +5,7 @@ import { z } from "zod";
 export default defineTool({
   name: "get_product",
   title: "Détail d'un produit",
-  description: "Retourne toutes les informations d'un produit LVTK6 par son identifiant ou SKU.",
+  description: "Retourne toutes les informations d'un produit HELVETICA-MP par son identifiant ou SKU.",
   inputSchema: {
     idOrSku: z.string().min(1).describe("UUID ou SKU du produit."),
   },

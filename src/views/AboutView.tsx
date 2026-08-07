@@ -94,7 +94,7 @@ export function AboutView() {
             // {language === 'FR' ? 'À PROPOS' : 'ABOUT US'}
           </h1>
           <h2 className="text-4xl lg:text-5xl font-bold mb-6 tracking-tight">
-            {language === 'FR' ? 'LVTK6 CONCEPT' : 'LVTK6 CONCEPT'}
+            {language === 'FR' ? 'HELVETICA-MP CONCEPT' : 'HELVETICA-MP CONCEPT'}
           </h2>
           <p className="text-lg text-muted-foreground leading-relaxed mb-8">
             {language === 'FR' 

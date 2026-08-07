@@ -101,7 +101,7 @@ export default function CategoryPageRouter() {
     } else if (category.metaTitle) {
       document.title = category.metaTitle;
     } else {
-      document.title = `${category.title} — LVTK6`;
+      document.title = `${category.title} — HELVETICA-MP`;
     }
 
     // Meta description
@@ -133,7 +133,7 @@ export default function CategoryPageRouter() {
     }
 
     return () => {
-      document.title = 'LVTK6 Concept';
+      document.title = 'HELVETICA-MP Concept';
       const md = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
       if (md) md.content = '';
     };

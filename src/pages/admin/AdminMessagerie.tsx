@@ -293,7 +293,7 @@ export default function AdminMessagerie() {
       total_commande: order ? `${Number(order.total).toFixed(2)} €` : '',
       numero_suivi: order?.tracking_number || '',
       transporteur: order?.shipping_carrier || (order?.tracking_number ? 'Colissimo' : ''),
-      boutique: config?.default_from_name || 'LVTK6',
+      boutique: config?.default_from_name || 'HELVETICA-MP',
       signature: config?.signature || '',
       date: new Date().toLocaleDateString('fr-FR'),
     };
@@ -446,7 +446,7 @@ export default function AdminMessagerie() {
                 <Input
                   defaultValue={config?.default_from_name || ''}
                   onBlur={(e) => saveConfig.mutate({ ...(config as MessagingConfig), default_from_name: e.target.value })}
-                  placeholder="Service client LVTK6"
+                  placeholder="Service client HELVETICA-MP"
                 />
               </div>
             </div>
@@ -469,7 +469,7 @@ export default function AdminMessagerie() {
                 rows={4}
                 defaultValue={config?.signature || ''}
                 onBlur={(e) => saveConfig.mutate({ ...(config as MessagingConfig), signature: e.target.value })}
-                placeholder={'—\nService client LVTK6'}
+                placeholder={'—\nService client HELVETICA-MP'}
               />
             </div>
             <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground space-y-1">

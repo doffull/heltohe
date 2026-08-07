@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
 
       const orderData = (body.orderData ?? {}) as Record<string, unknown>;
       const deliveryMode = body.deliveryMode === "home" ? "home" : "relay";
-      const orderNumber = `LVTK-${Date.now().toString(36).toUpperCase()}`;
+      const orderNumber = `HMP-${Date.now().toString(36).toUpperCase()}`;
       const returnBase = String(body.returnUrl || "").split("?")[0];
       if (!returnBase.startsWith("http")) return json({ error: "URL de retour invalide" }, 400);
 

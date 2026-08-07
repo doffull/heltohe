@@ -239,7 +239,7 @@ export default function Checkout() {
       promoCode: promoCode || '',
       deliveryMode,
       orderData: {
-        order_number: `LVTK-${Date.now().toString(36).toUpperCase()}`,
+        order_number: `HMP-${Date.now().toString(36).toUpperCase()}`,
         user_id: user?.id || '',
         customer_email: form.email,
         customer_name: `${form.firstName} ${form.lastName}`,
@@ -260,7 +260,7 @@ export default function Checkout() {
     }
     setIsProcessing(true);
     try {
-      const num = `LVTK-${Date.now().toString(36).toUpperCase()}`;
+      const num = `HMP-${Date.now().toString(36).toUpperCase()}`;
 
       // Build minimal item list — server will re-fetch prices from DB
       const orderItemsPayload = items.map(item => ({
@@ -383,7 +383,7 @@ export default function Checkout() {
                   Votre commande est en attente de paiement. Veuillez effectuer un virement bancaire avec la référence <span className="font-bold text-foreground break-all">{orderNumber}</span>.
                 </p>
                 <div className="border border-border chamfer-hud-sm p-3 text-[11px] sm:text-xs space-y-1 font-mono">
-                  <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Bénéficiaire :</span><span className="text-right break-words">LVTK6 Concept</span></div>
+                  <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Bénéficiaire :</span><span className="text-right break-words">HELVETICA-MP Concept</span></div>
                   <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Montant :</span><span className="font-bold" style={{ color: `hsl(var(--step-confirm))` }}>{orderTotal.toFixed(2)} €</span></div>
                   <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Référence :</span><span className="text-right break-all">{orderNumber}</span></div>
                 </div>

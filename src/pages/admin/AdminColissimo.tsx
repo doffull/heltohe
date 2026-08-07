@@ -1616,7 +1616,7 @@ function ConfigurationTab() {
           <div className="space-y-3">
             <div>
               <Label>Nom / Société</Label>
-              <Input className="mt-1" placeholder="ex: LVTK6 Concept Store" value={form.senderName} onChange={handleChange('senderName')} />
+              <Input className="mt-1" placeholder="ex: HELVETICA-MP Concept Store" value={form.senderName} onChange={handleChange('senderName')} />
             </div>
             <div>
               <Label>Adresse</Label>
@@ -1663,7 +1663,7 @@ function ConfigurationTab() {
 export default function AdminColissimo() {
   const { data: adminConfig } = useAdminConfig();
   const { data: settings } = useDesignSettings();
-  const senderName = adminConfig?.colissimoSenderName || settings?.siteName || 'LVTK6 Concept Store';
+  const senderName = adminConfig?.colissimoSenderName || settings?.siteName || 'HELVETICA-MP Concept Store';
   const senderAddress = adminConfig?.colissimoSenderAddress || '1 Rue de la Paix';
   const senderZip = adminConfig?.colissimoSenderZip || '75001';
   const senderCity = adminConfig?.colissimoSenderCity || 'Paris';

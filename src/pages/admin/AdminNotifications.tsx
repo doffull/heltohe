@@ -10,15 +10,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Bell, Mail, MessageSquare, Save, Loader2, Clock, CheckCircle, XCircle, Settings2, FileText, History } from 'lucide-react';
 
 const DEFAULT_EMAIL_TEMPLATES = {
-  identity_verified: { subject: "Commande {{order_number}} - Identité vérifiée", body: "Bonjour {{customer_name}},\n\nVotre identité a été vérifiée pour la commande {{order_number}}.\n\nCordialement,\nL'équipe LVTK6" },
-  payment_verified: { subject: "Commande {{order_number}} - Paiement confirmé", body: "Bonjour {{customer_name}},\n\nLe paiement de votre commande {{order_number}} a été confirmé.\n\nCordialement,\nL'équipe LVTK6" },
-  all_validated: { subject: "Commande {{order_number}} - Commande validée", body: "Bonjour {{customer_name}},\n\nVotre commande {{order_number}} est entièrement validée et sera expédiée prochainement.\n\nCordialement,\nL'équipe LVTK6" },
+  identity_verified: { subject: "Commande {{order_number}} - Identité vérifiée", body: "Bonjour {{customer_name}},\n\nVotre identité a été vérifiée pour la commande {{order_number}}.\n\nCordialement,\nL'équipe HELVETICA-MP" },
+  payment_verified: { subject: "Commande {{order_number}} - Paiement confirmé", body: "Bonjour {{customer_name}},\n\nLe paiement de votre commande {{order_number}} a été confirmé.\n\nCordialement,\nL'équipe HELVETICA-MP" },
+  all_validated: { subject: "Commande {{order_number}} - Commande validée", body: "Bonjour {{customer_name}},\n\nVotre commande {{order_number}} est entièrement validée et sera expédiée prochainement.\n\nCordialement,\nL'équipe HELVETICA-MP" },
 };
 
 const DEFAULT_SMS_TEMPLATES = {
-  identity_verified: "LVTK6: Votre identité est vérifiée pour la commande {{order_number}}.",
-  payment_verified: "LVTK6: Paiement confirmé pour la commande {{order_number}}.",
-  all_validated: "LVTK6: Commande {{order_number}} validée ! Expédition prochaine.",
+  identity_verified: "HELVETICA-MP: Votre identité est vérifiée pour la commande {{order_number}}.",
+  payment_verified: "HELVETICA-MP: Paiement confirmé pour la commande {{order_number}}.",
+  all_validated: "HELVETICA-MP: Commande {{order_number}} validée ! Expédition prochaine.",
 };
 
 const TEMPLATE_LABELS: Record<string, string> = {

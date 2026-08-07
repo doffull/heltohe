@@ -67,7 +67,7 @@ function buildEmailHtml(payload: EmailPayload): string {
           <!-- Header -->
           <tr>
             <td style="background-color: #111111; padding: 32px 40px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 22px; font-weight: 900; letter-spacing: 4px; text-transform: uppercase;">LVTK6</h1>
+              <h1 style="margin: 0; color: #ffffff; font-size: 22px; font-weight: 900; letter-spacing: 4px; text-transform: uppercase;">HELVETICA-MP</h1>
               <p style="margin: 6px 0 0; color: #888; font-size: 11px; letter-spacing: 2px; text-transform: uppercase;">Concept Store</p>
             </td>
           </tr>
@@ -134,7 +134,7 @@ function buildEmailHtml(payload: EmailPayload): string {
                 <table width="100%" cellpadding="0" cellspacing="0" style="font-family: 'Courier New', monospace; font-size: 13px;">
                   <tr>
                     <td style="padding: 6px 0; color: #888;">Bénéficiaire :</td>
-                    <td style="padding: 6px 0; text-align: right; color: #111; font-weight: 600;">LVTK6 Concept</td>
+                    <td style="padding: 6px 0; text-align: right; color: #111; font-weight: 600;">HELVETICA-MP Concept</td>
                   </tr>
                   <tr>
                     <td style="padding: 6px 0; color: #888;">Montant :</td>
@@ -166,7 +166,7 @@ function buildEmailHtml(payload: EmailPayload): string {
                 Cet email a été envoyé à <strong>${customerEmail}</strong>.
               </p>
               <p style="margin: 16px 0 0; font-size: 11px; color: #ccc; text-align: center; letter-spacing: 2px; text-transform: uppercase;">
-                LVTK6 Concept Store
+                HELVETICA-MP Concept Store
               </p>
             </td>
           </tr>
@@ -216,7 +216,7 @@ function buildPaymentConfirmationHtml(payload: EmailPayload): string {
           <!-- Header -->
           <tr>
             <td style="background-color: #111111; padding: 32px 40px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 22px; font-weight: 900; letter-spacing: 4px; text-transform: uppercase;">LVTK6</h1>
+              <h1 style="margin: 0; color: #ffffff; font-size: 22px; font-weight: 900; letter-spacing: 4px; text-transform: uppercase;">HELVETICA-MP</h1>
               <p style="margin: 6px 0 0; color: #888; font-size: 11px; letter-spacing: 2px; text-transform: uppercase;">Concept Store</p>
             </td>
           </tr>
@@ -285,7 +285,7 @@ function buildPaymentConfirmationHtml(payload: EmailPayload): string {
                 Cet email a été envoyé à <strong>${customerEmail}</strong>.
               </p>
               <p style="margin: 16px 0 0; font-size: 11px; color: #ccc; text-align: center; letter-spacing: 2px; text-transform: uppercase;">
-                LVTK6 Concept Store
+                HELVETICA-MP Concept Store
               </p>
             </td>
           </tr>
@@ -339,7 +339,7 @@ function buildAdminEmailHtml(payload: EmailPayload): string {
           <!-- Brand -->
           <tr>
             <td style="background:#111;padding:24px 32px 16px;text-align:center;border-bottom:1px solid #222;">
-              <h1 style="margin:0;color:#fff;font-size:20px;font-weight:900;letter-spacing:4px;text-transform:uppercase;">LVTK6</h1>
+              <h1 style="margin:0;color:#fff;font-size:20px;font-weight:900;letter-spacing:4px;text-transform:uppercase;">HELVETICA-MP</h1>
               <p style="margin:4px 0 0;color:#555;font-size:10px;letter-spacing:2px;text-transform:uppercase;">Admin Notification</p>
             </td>
           </tr>
@@ -404,7 +404,7 @@ function buildAdminEmailHtml(payload: EmailPayload): string {
                   </td>
                 </tr>
               </table>
-              <p style="margin:20px 0 0;font-size:11px;color:#444;text-align:center;letter-spacing:1px;">LVTK6 Concept Store — Notification automatique</p>
+              <p style="margin:20px 0 0;font-size:11px;color:#444;text-align:center;letter-spacing:1px;">HELVETICA-MP Concept Store — Notification automatique</p>
             </td>
           </tr>
 
@@ -495,13 +495,13 @@ serve(async (req) => {
 
     if (emailType === 'payment_confirmation') {
       html = buildPaymentConfirmationHtml(payload);
-      subject = `✅ Paiement reçu — Commande ${orderNumber} — LVTK6`;
+      subject = `✅ Paiement reçu — Commande ${orderNumber} — HELVETICA-MP`;
     } else {
       // order_confirmation or resend_confirmation
       html = buildEmailHtml(payload);
       subject = emailType === 'resend_confirmation'
-        ? `[Renvoi] Confirmation de commande ${orderNumber} — LVTK6`
-        : `Confirmation de commande ${orderNumber} — LVTK6`;
+        ? `[Renvoi] Confirmation de commande ${orderNumber} — HELVETICA-MP`
+        : `Confirmation de commande ${orderNumber} — HELVETICA-MP`;
     }
 
     // Send customer email
@@ -512,7 +512,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'LVTK6 Concept <onboarding@resend.dev>',
+        from: 'HELVETICA-MP Concept <onboarding@resend.dev>',
         to: [customerEmail],
         subject,
         html,
@@ -539,7 +539,7 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: 'LVTK6 Boutique <onboarding@resend.dev>',
+          from: 'HELVETICA-MP Boutique <onboarding@resend.dev>',
           to: [adminEmail],
           subject: `🛍️ Nouvelle commande ${orderNumber} — ${customerName}`,
           html: adminHtml,

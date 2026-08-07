@@ -560,7 +560,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background overflow-hidden">
       <h1 className="sr-only">
-        {(designSettings as any).siteName || "LVTK6"} —{" "}
+        {(designSettings as any).siteName || "HELVETICA-MP"} —{" "}
         {(designSettings as any).siteTagline || "Boutique de mode techwear"}
       </h1>
       <PromoBanner />

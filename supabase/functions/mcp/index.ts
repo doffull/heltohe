@@ -12,7 +12,7 @@ import { z } from "npm:zod@^4.4.3";
 var list_products_default = defineTool({
   name: "list_products",
   title: "Lister les produits",
-  description: "Liste les produits actifs du catalogue LVTK6 avec filtres facultatifs (cat\xE9gorie, recherche texte).",
+  description: "Liste les produits actifs du catalogue HELVETICA-MP avec filtres facultatifs (cat\xE9gorie, recherche texte).",
   inputSchema: {
     category: z.string().optional().describe("Filtrer par nom de cat\xE9gorie (ex: Homme, Femme, Sportwear)."),
     search: z.string().optional().describe("Recherche texte dans le nom du produit."),
@@ -45,7 +45,7 @@ import { z as z2 } from "npm:zod@^4.4.3";
 var get_product_default = defineTool2({
   name: "get_product",
   title: "D\xE9tail d'un produit",
-  description: "Retourne toutes les informations d'un produit LVTK6 par son identifiant ou SKU.",
+  description: "Retourne toutes les informations d'un produit HELVETICA-MP par son identifiant ou SKU.",
   inputSchema: {
     idOrSku: z2.string().min(1).describe("UUID ou SKU du produit.")
   },
@@ -73,7 +73,7 @@ import { createClient as createClient3 } from "npm:@supabase/supabase-js@^2.94.0
 var list_boutiques_default = defineTool3({
   name: "list_boutiques",
   title: "Boutiques physiques",
-  description: "Liste les boutiques physiques LVTK6 actives (nom, adresse, ville, coordonn\xE9es).",
+  description: "Liste les boutiques physiques HELVETICA-MP actives (nom, adresse, ville, coordonn\xE9es).",
   inputSchema: {},
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async () => {
@@ -346,11 +346,11 @@ var list_addresses_default = defineTool10({
 // src/lib/mcp/index.ts
 var projectRef = "bumfyrfmormisyjletpb";
 var mcp_default = defineMcp({
-  name: "lvtk6-mcp",
-  title: "LVTK6 Store MCP",
+  name: "helvetica-mp-mcp",
+  title: "HELVETICA-MP Store MCP",
   version: "0.1.0",
   instructions: [
-    "Outils MCP pour la boutique LVTK6.",
+    "Outils MCP pour la boutique HELVETICA-MP.",
     "\u2022 Outils lecture publique : list_products, get_product, list_boutiques.",
     "\u2022 Outils utilisateur (authentifi\xE9) : list_my_orders, get_my_order, my_loyalty, list_wishlist, add_to_wishlist, remove_from_wishlist, list_my_addresses.",
     "Toutes les actions utilisateur passent par Supabase RLS et n'acc\xE8dent qu'aux donn\xE9es du compte connect\xE9."

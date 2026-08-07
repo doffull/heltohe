@@ -540,7 +540,7 @@ function LogoTab() {
               <Input
                 value={designSettings.siteName ?? ''}
                 onChange={(e) => updateDesignSettings({ siteName: e.target.value })}
-                placeholder="Ex : LVTK6 CONCEPT"
+                placeholder="Ex : HELVETICA-MP CONCEPT"
               />
             </div>
             <div className="space-y-2">

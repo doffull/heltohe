@@ -98,10 +98,10 @@ serve(async (req) => {
               "X-Connection-Api-Key": RESEND_API_KEY,
             },
             body: JSON.stringify({
-              from: "LVTK6 <onboarding@resend.dev>",
+              from: "HELVETICA-MP <onboarding@resend.dev>",
               to: [recipient],
-              subject: `LVTK6 — Nouveau rôle attribué : ${label}`,
-              html: `<div style="font-family:Arial,sans-serif;padding:20px;max-width:600px;margin:0 auto"><h2>Bienvenue dans l'équipe LVTK6</h2><p>Bonjour ${customerName || ""},</p><p>Le rôle <strong>${label}</strong> vient de vous être attribué sur la plateforme LVTK6.</p><p>Vous pouvez désormais accéder à votre espace de gestion en vous connectant à votre compte.</p><p style="color:#666;font-size:12px;margin-top:24px">Si vous n'avez pas demandé cet accès, contactez l'administrateur.</p></div>`,
+              subject: `HELVETICA-MP — Nouveau rôle attribué : ${label}`,
+              html: `<div style="font-family:Arial,sans-serif;padding:20px;max-width:600px;margin:0 auto"><h2>Bienvenue dans l'équipe HELVETICA-MP</h2><p>Bonjour ${customerName || ""},</p><p>Le rôle <strong>${label}</strong> vient de vous être attribué sur la plateforme HELVETICA-MP.</p><p>Vous pouvez désormais accéder à votre espace de gestion en vous connectant à votre compte.</p><p style="color:#666;font-size:12px;margin-top:24px">Si vous n'avez pas demandé cet accès, contactez l'administrateur.</p></div>`,
             }),
           });
           status = res.ok ? "sent" : "failed";
@@ -187,10 +187,10 @@ serve(async (req) => {
                 "X-Connection-Api-Key": RESEND_API_KEY,
               },
               body: JSON.stringify({
-                from: "LVTK6 <onboarding@resend.dev>",
+                from: "HELVETICA-MP <onboarding@resend.dev>",
                 to: [to],
                 subject,
-                html: `<div style="font-family:Arial,sans-serif;padding:20px;max-width:600px;margin:0 auto"><h2>LVTK6 — Préparation</h2><div style="white-space:pre-line;color:#333">${body}</div></div>`,
+                html: `<div style="font-family:Arial,sans-serif;padding:20px;max-width:600px;margin:0 auto"><h2>HELVETICA-MP — Préparation</h2><div style="white-space:pre-line;color:#333">${body}</div></div>`,
               }),
             });
             results.push({ to, status: res.ok ? "sent" : "failed" });
@@ -231,10 +231,10 @@ serve(async (req) => {
                 "X-Connection-Api-Key": RESEND_API_KEY,
               },
               body: JSON.stringify({
-                from: "LVTK6 <onboarding@resend.dev>",
+                from: "HELVETICA-MP <onboarding@resend.dev>",
                 to: [customerEmail],
                 subject: applyTemplate(template.subject, templateVars),
-                html: `<div style="font-family:Arial,sans-serif;padding:20px;max-width:600px;margin:0 auto"><h2 style="color:#333">LVTK6</h2><div style="white-space:pre-line;color:#555">${applyTemplate(template.body, templateVars)}</div></div>`,
+                html: `<div style="font-family:Arial,sans-serif;padding:20px;max-width:600px;margin:0 auto"><h2 style="color:#333">HELVETICA-MP</h2><div style="white-space:pre-line;color:#555">${applyTemplate(template.body, templateVars)}</div></div>`,
               }),
             });
             
