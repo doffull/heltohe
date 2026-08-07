@@ -20,6 +20,8 @@ import { SearchDialog } from './SearchDialog';
 // SidebarNewsletter retiré du panneau latéral
 import { MiniNavbar } from '@/components/ui/mini-navbar';
 import { NewsletterPopupHost } from '@/components/home/NewsletterPopupHost';
+import { InstallAppBanner } from '@/components/pwa/InstallAppBanner';
+
 import { InlineEditable } from '@/components/visual-editor/InlineEditable';
 import { 
   Search, 
