@@ -5,7 +5,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { useShopProducts, useCollabProducts } from '@/hooks/useShopProducts';
 import { useCollabSettings } from '@/hooks/useCollabSettings';
 import { groupFamiliesAdjacent } from '@/lib/productFamily';
-import { isMarketplaceCategory } from '@/lib/shopVisibility';
+import { isMarketplaceCategory, isMarketplaceProduct } from '@/lib/shopVisibility';
 import { productInCategory, productCategoriesText } from '@/lib/productCategories';
 import { useOrderedProducts } from '@/hooks/useCategoryOrder';
 import { useCategories } from '@/hooks/useCategories';
