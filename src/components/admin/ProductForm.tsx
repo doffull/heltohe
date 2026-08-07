@@ -79,6 +79,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
     salePrice: undefined as number | undefined,
     image: '',
     category: 'Homme',
+    categories: ['Homme'] as string[],
     stock: 0,
     sku: '',
     description: '',
@@ -160,8 +161,47 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         return;
       }
     }
-    setFormData((prev) => ({ ...prev, category: title }));
+    setFormData((prev) => ({
+      ...prev,
+      category: title,
+      categories: Array.from(new Set([...(prev.categories || []), title])),
+    }));
     setNewCategoryDraft('');
+  };
+
+  // ---- Multi-catégories -----------------------------------------------------
+  const selectedCategories = Array.from(
+    new Set([
+      ...(formData.category ? [formData.category] : []),
+      ...(formData.categories || []),
+    ].filter(Boolean)),
+  );
+
+  const toggleCategory = (cat: string) => {
+    setFormData((prev) => {
+      const current = Array.from(
+        new Set([...(prev.category ? [prev.category] : []), ...(prev.categories || [])].filter(Boolean)),
+      );
+      const has = current.some((c) => c.toLowerCase() === cat.toLowerCase());
+      if (!has) {
+        return { ...prev, categories: [...current, cat], category: prev.category || cat };
+      }
+      const next = current.filter((c) => c.toLowerCase() !== cat.toLowerCase());
+      if (next.length === 0) {
+        // On garde toujours au moins une catégorie : celle-ci devient la principale
+        return { ...prev, categories: [cat], category: cat };
+      }
+      const isMain = (prev.category || '').toLowerCase() === cat.toLowerCase();
+      return { ...prev, categories: next, category: isMain ? next[0] : prev.category };
+    });
+  };
+
+  const setMainCategory = (cat: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      category: cat,
+      categories: Array.from(new Set([cat, ...(prev.categories || [])])),
+    }));
   };
 
   const generateSwatch = async () => {
@@ -266,6 +306,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         salePrice: product.salePrice,
         image: product.image,
         category: product.category,
+        categories: product.categories?.length ? product.categories : (product.category ? [product.category] : []),
         stock: product.stock,
         sku: product.sku,
         description: product.description || '',
@@ -314,6 +355,11 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
       titleLogo: formData.titleLogo || undefined,
 
       tags: formData.tags,
+      categories: Array.from(
+        new Set(
+          [...(formData.category ? [formData.category] : []), ...(formData.categories || [])].filter(Boolean),
+        ),
+      ),
     };
     const variantStockData: VariantStockData = {
       variantGrid,
