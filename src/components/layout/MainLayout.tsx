@@ -870,6 +870,10 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Newsletter Popup Host */}
       {!isAdmin && <NewsletterPopupHost />}
+
+      {/* Invitation à installer l'app sur l'écran d'accueil */}
+      <InstallAppBanner />
+
     </div>
   );
 }
