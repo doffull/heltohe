@@ -273,6 +273,7 @@ export interface HeroSlide {
   mobileImage?: string;
   objectFit?: 'cover' | 'contain' | 'fill' | 'none';
   objectPosition?: string;
+  /** Cadrage spécifique mobile (prioritaire sur objectFit sur petit écran) */
   mobileObjectFit?: 'cover' | 'contain' | 'fill' | 'none';
   mobileObjectPosition?: string;
   mobileMediaType?: 'image' | 'video';
@@ -461,6 +462,8 @@ export interface DesignSettings {
   homeSections: HomeSection[];
   /** Curated ordered product ids per homepage section id (e.g. { top: [...], new: [...] }) */
   homeSectionProducts?: Record<string, string[]>;
+  /** Configurable product feed sections (Tendance, Cagoule, Veste…) */
+  homeFeedSections?: import('@/config/homeFeedSections').FeedSectionConfig[];
   /** Saved GIF builder presets (shared across admins). */
   gifPresets?: import('@/lib/gifBuilder').GifPreset[];
 

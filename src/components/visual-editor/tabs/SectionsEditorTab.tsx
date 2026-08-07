@@ -6,6 +6,7 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type D
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { PageSection } from '@/hooks/usePages';
+import { resolveFeedSections, feedBlockId, FEED_BLOCK_PREFIX } from '@/config/homeFeedSections';
 
 interface Block { id: string; visible: boolean; label?: string; settings?: Record<string, any> }
 type BuiltinId = 'hero' | 'categories' | 'storeFinder' | 'featured' | 'flash' | 'newArrivals' | 'voiceBanner' | 'loyalty' | 'newsletter';
@@ -63,6 +64,8 @@ export function SectionsEditorTab() {
   // Single source of truth — same key used by Home.tsx and the desktop admin.
   const saved = ((designSettings as any).homePageBlocks || []) as Block[];
   const customSections = ((designSettings as any).homeCustomSections || []) as PageSection[];
+  const feedSections = resolveFeedSections((designSettings as any).homeFeedSections);
+  const feedMap = new Map(feedSections.map((f) => [feedBlockId(f.id), `Feed — ${f.title}`]));
 
   // Merge defaults so every known block is visible in the list.
   const allIds = Object.keys(BUILTIN_LABELS) as BuiltinId[];
@@ -70,12 +73,26 @@ export function SectionsEditorTab() {
   const merged: Block[] = (() => {
     const present = new Set(saved.map((b) => b.id));
     const out: Block[] = saved
-      .filter((b) => b.id.startsWith('custom:') ? customMap.has(b.id) : (b.id in BUILTIN_LABELS))
+      .filter((b) =>
+        b.id.startsWith('custom:')
+          ? customMap.has(b.id)
+          : b.id.startsWith(FEED_BLOCK_PREFIX)
+            ? feedMap.has(b.id)
+            : (b.id in BUILTIN_LABELS),
+      )
       .map((b) => ({
         ...b,
-        label: b.id.startsWith('custom:') ? customMap.get(b.id) : BUILTIN_LABELS[b.id as BuiltinId],
+        label: b.id.startsWith('custom:')
+          ? customMap.get(b.id)
+          : b.id.startsWith(FEED_BLOCK_PREFIX)
+            ? feedMap.get(b.id)
+            : BUILTIN_LABELS[b.id as BuiltinId],
       }));
     allIds.forEach((id) => { if (!present.has(id)) out.push({ id, visible: true, label: BUILTIN_LABELS[id] }); });
+    feedSections.forEach((f) => {
+      const id = feedBlockId(f.id);
+      if (!present.has(id)) out.push({ id, visible: true, label: `Feed — ${f.title}` });
+    });
     customSections.forEach((s) => {
       const id = `custom:${s.id}`;
       if (!present.has(id)) out.push({ id, visible: true, label: sectionLabel(s) });

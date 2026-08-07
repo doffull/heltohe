@@ -20,6 +20,8 @@ interface Props {
   src: string;
   poster?: string;
   objectPosition?: string;
+  /** contain | cover | fill | none — respected on the video AND the poster fallback */
+  objectFit?: 'cover' | 'contain' | 'fill' | 'none' | 'scale-down';
 }
 
 function deriveAlt(src: string): string | null {
@@ -37,7 +39,7 @@ function mimeFor(url: string): string {
   return 'video/mp4';
 }
 
-export function HeroVideo({ src, poster, objectPosition = 'center' }: Props) {
+export function HeroVideo({ src, poster, objectPosition = 'center', objectFit = 'cover' }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [failed, setFailed] = useState(false);
   const alt = deriveAlt(src);
@@ -90,7 +92,7 @@ export function HeroVideo({ src, poster, objectPosition = 'center' }: Props) {
         src={poster}
         alt=""
         className="w-full h-full"
-        style={{ objectFit: 'cover', objectPosition }}
+        style={{ objectFit, objectPosition }}
         onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
       />
     );
@@ -108,7 +110,7 @@ export function HeroVideo({ src, poster, objectPosition = 'center' }: Props) {
       disablePictureInPicture
       controls={false}
       className="w-full h-full"
-      style={{ objectFit: 'cover', objectPosition }}
+      style={{ objectFit, objectPosition }}
     >
       <source src={src} type={mimeFor(src)} />
       {alt && <source src={alt} type={mimeFor(alt)} />}

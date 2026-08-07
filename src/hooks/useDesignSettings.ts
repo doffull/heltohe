@@ -189,6 +189,7 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     fontBody: ((db.settings_json as any)?.fonts?.body) ?? '',
     sliderImageOpacity: ((db.settings_json as any)?.sliderImageOpacity) ?? 1,
     homeSectionProducts: ((db.settings_json as any)?.homeSectionProducts) ?? {},
+    homeFeedSections: ((db.settings_json as any)?.homeFeedSections) ?? [],
     gifPresets: ((db.settings_json as any)?.gifPresets) ?? [],
 
   } as DesignSettings;
@@ -348,7 +349,9 @@ function settingsToDb(s: DesignSettings) {
       },
       sliderImageOpacity: (s as any).sliderImageOpacity ?? 1,
       homeSectionProducts: (s as any).homeSectionProducts ?? {},
+      homeFeedSections: (s as any).homeFeedSections ?? [],
       gifPresets: (s as any).gifPresets ?? [],
+
 
     } as unknown as Json,
   };

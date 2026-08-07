@@ -17,6 +17,8 @@ import { UnifiedFab } from './UnifiedFab';
 import { BrandLogo } from './BrandLogo';
 import { MegaMenuTrigger } from './MegaMenuTrigger';
 import { SearchDialog } from './SearchDialog';
+import { TopBanner } from './TopBanner';
+import { resolveTopBanner } from '@/lib/bannerIcons';
 // SidebarNewsletter retiré du panneau latéral
 import { MiniNavbar } from '@/components/ui/mini-navbar';
 import { NewsletterPopupHost } from '@/components/home/NewsletterPopupHost';
@@ -98,7 +100,9 @@ export function MainLayout({ children }: MainLayoutProps) {
   const headerBgColor = (designSettings as any).headerBgColor || '';
   const headerTextColor = (designSettings as any).headerTextColor || '';
   const headerFixed = (designSettings as any).headerFixed !== false;
-  const topBanner = (designSettings as any).topBanner || { enabled: false, text: '', bgColor: '#000000', textColor: '#ffffff' };
+  const topBannerRaw = (designSettings as any).topBanner;
+  const topBanner = resolveTopBanner(topBannerRaw);
+  const topBannerActive = topBanner.enabled && topBanner.items.some((i) => i.text?.trim());
   const footerLogo = (designSettings as any).footerLogo || '';
   const headerNavItems: { label: string; href: string }[] = (designSettings as any).headerNavItems;
   const ds = designSettings as any;
@@ -272,19 +276,10 @@ export function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Top Banner */}
-      {topBanner.enabled && topBanner.text && (
-        <div
-          className={cn(
-            "text-center text-xs py-2 px-4 font-medium tracking-wider transition-all duration-500",
-            sidebarActive ? "lg:ml-[35%]" : "lg:ml-0"
-          )}
-          style={{ backgroundColor: topBanner.bgColor || '#000', color: topBanner.textColor || '#fff' }}
-        >
-          {topBanner.link ? (
-            <Link to={topBanner.link} className="hover:underline">{topBanner.text}</Link>
-          ) : topBanner.text}
-        </div>
-      )}
+      <TopBanner
+        raw={topBannerRaw}
+        className={cn('transition-all duration-500', sidebarActive ? 'lg:ml-[35%]' : 'lg:ml-0')}
+      />
 
 
       <div
@@ -292,7 +287,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           'top-0 left-0 right-0 z-40 pointer-events-none lg:transition-all lg:duration-500',
           headerFixed ? 'fixed' : 'sticky',
           sidebarActive ? 'lg:ml-[35%]' : 'lg:ml-0',
-          topBanner.enabled && topBanner.text ? 'pt-9' : 'pt-2 lg:pt-3',
+          topBannerActive ? 'pt-9' : 'pt-2 lg:pt-3',
         )}
       >
         <MiniNavbar
@@ -733,7 +728,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       <main className={cn(
         "transition-all duration-500",
         isHomePage ? "" : (headerFixed ? "pt-14 lg:pt-20" : ""),
-        !isHomePage && topBanner.enabled ? "pt-[calc(theme(spacing.14)+2rem)] lg:pt-[calc(theme(spacing.20)+2rem)]" : "",
+        !isHomePage && topBannerActive ? "pt-[calc(theme(spacing.14)+2rem)] lg:pt-[calc(theme(spacing.20)+2rem)]" : "",
         sidebarActive ? "lg:ml-[35%]" : "lg:ml-0"
       )}>
         {children}
