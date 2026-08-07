@@ -169,7 +169,10 @@ export function useSavePayPalConfig() {
         .upsert(payload as any, { onConflict: 'config_key' });
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['paypal_config'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['paypal_config_admin'] });
+      queryClient.invalidateQueries({ queryKey: ['paypal_config_public'] });
+    },
   });
 }
 
