@@ -126,6 +126,8 @@ export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin/roles': '#DC2626',
   '/admin/security': '#0EA5E9',
   '/admin/page-templates': '#A855F7',
+  '/admin/top-banner': '#0EA5E9',
+  '/admin/feed-sections': '#8B5CF6',
 };
 
 const SIDEBAR_ITEMS = [
@@ -151,6 +153,8 @@ const SIDEBAR_ITEMS = [
   { icon: Globe, label: 'SEO & Visibilité', href: '/admin/seo' },
   { icon: Sparkles, label: 'Espace Collab', href: '/admin/collab' },
 
+  { icon: Megaphone, label: 'Bannière haute', href: '/admin/top-banner' },
+  { icon: LayoutTemplate, label: 'Sections du feed', href: '/admin/feed-sections' },
   { icon: MousePointer, label: 'Icônes Accueil', href: '/admin/home-icons' },
     { icon: Sparkles, label: 'Transitions', href: '/admin/transitions' },
     { icon: LayoutTemplate, label: 'Templates de pages', href: '/admin/page-templates' },
