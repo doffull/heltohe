@@ -20,6 +20,8 @@ interface Props {
   src: string;
   poster?: string;
   objectPosition?: string;
+  /** contain | cover | fill | none — respected on the video AND the poster fallback */
+  objectFit?: 'cover' | 'contain' | 'fill' | 'none' | 'scale-down';
 }
 
 function deriveAlt(src: string): string | null {
