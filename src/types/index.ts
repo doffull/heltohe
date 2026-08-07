@@ -32,6 +32,8 @@ export interface Product {
   salePrice?: number;
   image: string;
   category: string;
+  /** Toutes les catégories du produit (la principale incluse). */
+  categories?: string[];
   stock: number;
   sku: string;
   description?: string;
