@@ -3,6 +3,7 @@ import { useProducts, useProduct } from '@/hooks/useProducts';
 import { Skeleton } from '@/components/ui/skeleton';
 import ProductStrip from './ProductStrip';
 import { productFamilyKey } from '@/lib/productFamily';
+import { productCategories, normCat } from '@/lib/productCategories';
 import { excludeMarketplaceProducts, isMarketplaceCategory } from '@/lib/shopVisibility';
 
 interface RelatedProductsProps {
@@ -26,12 +27,14 @@ export default function RelatedProducts({ category, currentId }: RelatedProducts
     const list = pool.filter((p) => p.id !== currentId && p.isActive !== false);
     const familyKey = current ? productFamilyKey(current) : '';
     const currentTags = new Set(current?.tags || []);
+    const currentCats = new Set(productCategories({ category, categories: current?.categories }).map(normCat));
 
     return list
       .map((p) => {
         let score = 0;
         if (familyKey && productFamilyKey(p) === familyKey) score += 100;
-        if (p.category === category) score += 10;
+        const sharedCats = productCategories(p).filter((c) => currentCats.has(normCat(c)));
+        if (sharedCats.length) score += 10 * sharedCats.length;
         (p.tags || []).forEach((t) => { if (currentTags.has(t)) score += 3; });
         const base = current ? (current.salePrice || current.price) : 0;
         const price = p.salePrice || p.price;

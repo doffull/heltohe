@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useProducts } from '@/hooks/useProducts';
+import { productInCategory } from '@/lib/productCategories';
 import { useCategories } from '@/hooks/useCategories';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -211,7 +212,7 @@ function ProductsSection({ content }: { content: Record<string, any> }) {
 
   let filtered = products;
   if (content.category) {
-    filtered = filtered.filter(p => p.category === content.category);
+    filtered = filtered.filter(p => productInCategory(p, content.category));
   } else {
     filtered = excludeMarketplaceProducts(filtered);
   }
@@ -263,7 +264,7 @@ function CategoriesSection({ content }: { content: Record<string, any> }) {
     const slug = cat.slug || cat.title?.toLowerCase().replace(/\s+/g, '-');
     navigate(`/categorie/${slug}`);
   };
-  const countFor = (cat: any) => products.filter((p: any) => p.category === cat.title).length;
+  const countFor = (cat: any) => products.filter((p: any) => productInCategory(p, cat.title)).length;
 
   if (style === 'banner') {
     return (

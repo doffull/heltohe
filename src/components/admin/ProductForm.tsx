@@ -79,6 +79,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
     salePrice: undefined as number | undefined,
     image: '',
     category: 'Homme',
+    categories: ['Homme'] as string[],
     stock: 0,
     sku: '',
     description: '',
@@ -160,8 +161,47 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         return;
       }
     }
-    setFormData((prev) => ({ ...prev, category: title }));
+    setFormData((prev) => ({
+      ...prev,
+      category: title,
+      categories: Array.from(new Set([...(prev.categories || []), title])),
+    }));
     setNewCategoryDraft('');
+  };
+
+  // ---- Multi-catégories -----------------------------------------------------
+  const selectedCategories = Array.from(
+    new Set([
+      ...(formData.category ? [formData.category] : []),
+      ...(formData.categories || []),
+    ].filter(Boolean)),
+  );
+
+  const toggleCategory = (cat: string) => {
+    setFormData((prev) => {
+      const current = Array.from(
+        new Set([...(prev.category ? [prev.category] : []), ...(prev.categories || [])].filter(Boolean)),
+      );
+      const has = current.some((c) => c.toLowerCase() === cat.toLowerCase());
+      if (!has) {
+        return { ...prev, categories: [...current, cat], category: prev.category || cat };
+      }
+      const next = current.filter((c) => c.toLowerCase() !== cat.toLowerCase());
+      if (next.length === 0) {
+        // On garde toujours au moins une catégorie : celle-ci devient la principale
+        return { ...prev, categories: [cat], category: cat };
+      }
+      const isMain = (prev.category || '').toLowerCase() === cat.toLowerCase();
+      return { ...prev, categories: next, category: isMain ? next[0] : prev.category };
+    });
+  };
+
+  const setMainCategory = (cat: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      category: cat,
+      categories: Array.from(new Set([cat, ...(prev.categories || [])])),
+    }));
   };
 
   const generateSwatch = async () => {
@@ -266,6 +306,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         salePrice: product.salePrice,
         image: product.image,
         category: product.category,
+        categories: product.categories?.length ? product.categories : (product.category ? [product.category] : []),
         stock: product.stock,
         sku: product.sku,
         description: product.description || '',
@@ -314,6 +355,11 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
       titleLogo: formData.titleLogo || undefined,
 
       tags: formData.tags,
+      categories: Array.from(
+        new Set(
+          [...(formData.category ? [formData.category] : []), ...(formData.categories || [])].filter(Boolean),
+        ),
+      ),
     };
     const variantStockData: VariantStockData = {
       variantGrid,
@@ -1007,24 +1053,57 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         </div>
 
         <div className="space-y-2">
-          <Label className="hud-text text-xs">Catégorie *</Label>
+          <Label className="hud-text text-xs">Catégories * (cliquez pour cocher/décocher)</Label>
+          <p className="text-[11px] text-muted-foreground">
+            Un produit peut appartenir à plusieurs catégories. La catégorie marquée
+            « principale » sert au fil d'Ariane et au référencement.
+          </p>
           <div className="flex flex-wrap gap-2">
-            {categoryNames.map(cat => (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setFormData(prev => ({ ...prev, category: cat }))}
-                className={cn(
-                  "px-3 py-1.5 hud-text text-xs border chamfer-hud-sm transition-all",
-                  formData.category === cat
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-secondary/30 text-muted-foreground border-border/30 hover:border-primary/50"
-                )}
-              >
-                {cat}
-              </button>
-            ))}
+            {categoryNames.map(cat => {
+              const isMain = formData.category === cat;
+              const isSelected = isMain || selectedCategories.some(c => c.toLowerCase() === cat.toLowerCase());
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => toggleCategory(cat)}
+                  onDoubleClick={() => setMainCategory(cat)}
+                  title={isSelected && !isMain ? 'Double-clic : définir comme principale' : undefined}
+                  className={cn(
+                    "px-3 py-1.5 hud-text text-xs border chamfer-hud-sm transition-all flex items-center gap-1.5",
+                    isMain
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : isSelected
+                        ? "bg-primary/15 text-primary border-primary/60"
+                        : "bg-secondary/30 text-muted-foreground border-border/30 hover:border-primary/50"
+                  )}
+                >
+                  {cat}
+                  {isMain && <span className="text-[9px] opacity-80">PRINCIPALE</span>}
+                </button>
+              );
+            })}
           </div>
+          {selectedCategories.length > 1 && (
+            <div className="flex flex-wrap gap-1.5 items-center pt-1">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Principale :</span>
+              {selectedCategories.map(cat => (
+                <button
+                  key={`main-${cat}`}
+                  type="button"
+                  onClick={() => setMainCategory(cat)}
+                  className={cn(
+                    "px-2 py-0.5 text-[10px] border chamfer-hud-sm",
+                    formData.category === cat
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-secondary/30 text-muted-foreground border-border/30 hover:border-primary/50"
+                  )}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex gap-2 items-center">
             <Input
               value={newCategoryDraft}

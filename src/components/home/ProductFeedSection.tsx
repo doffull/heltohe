@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
+import { productCategories } from '@/lib/productCategories';
 import { useProducts } from '@/hooks/useProducts';
 import { excludeMarketplaceProducts } from '@/lib/shopVisibility';
 import { useApp } from '@/context/AppContext';
@@ -53,9 +54,9 @@ export function resolveFeedProducts(
   const matched = products.filter((p) => {
     const pTags = (p.tags || []).map(norm);
     if (tags.some((t) => pTags.includes(t))) return true;
-    const pCat = norm(p.category || '');
+    const pCats = productCategories(p).map(norm);
     const pSub = norm((p as any).subcategory || '');
-    return cats.some((c) => c && (pCat === c || pSub === c || pCat.includes(c) || pSub.includes(c)));
+    return cats.some((c) => c && (pSub === c || pSub.includes(c) || pCats.some((pc) => pc === c || pc.includes(c))));
   });
   return matched.slice(0, section.limit);
 }

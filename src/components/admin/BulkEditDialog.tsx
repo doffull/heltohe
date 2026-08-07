@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/select';
 import { Loader2, Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { productCategories } from '@/lib/productCategories';
 import { Product } from '@/types';
 import { useBulkUpdatePerRow } from '@/hooks/useProducts';
 
@@ -63,6 +64,8 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
   const [skuArg, setSkuArg] = useState('');
   const [skuFind, setSkuFind] = useState('');
   const [category, setCategory] = useState<string>('__unchanged__');
+  const [extraCatOp, setExtraCatOp] = useState<'unchanged' | 'add' | 'remove'>('unchanged');
+  const [extraCat, setExtraCat] = useState<string>('');
   const [tagsOp, setTagsOp] = useState<TagsOp>('unchanged');
   const [tagsArg, setTagsArg] = useState('');
   const [activeOp, setActiveOp] = useState<BoolOp>('unchanged');
@@ -100,7 +103,25 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
       else if (skuOp === 'replace' && skuFind) upd.sku = p.sku.split(skuFind).join(skuArg || '');
     }
 
-    if (category !== '__unchanged__') upd.category = category;
+    if (category !== '__unchanged__') {
+      upd.category = category;
+      upd.categories = Array.from(new Set([category, ...productCategories(p)]));
+    }
+
+    if (extraCatOp !== 'unchanged' && extraCat) {
+      const current = upd.categories || productCategories(p);
+      if (extraCatOp === 'add') {
+        if (!current.some(c => c.toLowerCase() === extraCat.toLowerCase())) {
+          upd.categories = [...current, extraCat];
+        }
+      } else {
+        const main = (upd.category || p.category || '').toLowerCase();
+        if (extraCat.toLowerCase() !== main) {
+          const next = current.filter(c => c.toLowerCase() !== extraCat.toLowerCase());
+          if (next.length !== current.length) upd.categories = next;
+        }
+      }
+    }
 
     if (tagsOp !== 'unchanged') {
       const list = tagsArg.split(',').map(s => s.trim()).filter(Boolean);
@@ -128,7 +149,7 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
   const allDiff = useMemo(
     () => products.map(p => ({ p, upd: computeUpdates(p) })).filter(x => Object.keys(x.upd).length > 0),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [products, priceOp, priceArg, saleOp, saleArg, stockOp, stockArg, skuOp, skuArg, skuFind, category, tagsOp, tagsArg, activeOp, subtitleOp, subtitleArg],
+    [products, priceOp, priceArg, saleOp, saleArg, stockOp, stockArg, skuOp, skuArg, skuFind, category, extraCatOp, extraCat, tagsOp, tagsArg, activeOp, subtitleOp, subtitleArg],
 
   );
 
@@ -284,6 +305,26 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
                   {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                 </SelectContent>
               </Select>
+            </FieldRow>
+
+            {/* Catégories additionnelles */}
+            <FieldRow label="Catégories add.">
+              <Select value={extraCatOp} onValueChange={(v) => setExtraCatOp(v as typeof extraCatOp)}>
+                <SelectTrigger className="w-[220px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unchanged">Inchangées</SelectItem>
+                  <SelectItem value="add">Ajouter une catégorie</SelectItem>
+                  <SelectItem value="remove">Retirer une catégorie</SelectItem>
+                </SelectContent>
+              </Select>
+              {extraCatOp !== 'unchanged' && (
+                <Select value={extraCat} onValueChange={setExtraCat}>
+                  <SelectTrigger className="w-[220px] h-8 text-xs"><SelectValue placeholder="Choisir…" /></SelectTrigger>
+                  <SelectContent>
+                    {categories.map(c => <SelectItem key={`x-${c}`} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
             </FieldRow>
 
             {/* Tags */}

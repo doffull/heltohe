@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
-import { isInMarketplace, marketplaceCategoryTitles } from '@/lib/shopVisibility';
+import { isMarketplaceProduct, marketplaceCategoryTitles } from '@/lib/shopVisibility';
 
 /**
  * Source de vérité unique pour la vitrine : le catalogue "normal" (Homme, Femme,
@@ -15,7 +15,7 @@ export function useShopProducts() {
   const titles = useMemo(() => marketplaceCategoryTitles(categories as any), [categories]);
 
   const data = useMemo(
-    () => (query.data || []).filter(p => !isInMarketplace(p.category, titles)),
+    () => (query.data || []).filter(p => !isMarketplaceProduct(p, titles)),
     [query.data, titles],
   );
 
@@ -30,7 +30,7 @@ export function useCollabProducts() {
   const titles = useMemo(() => marketplaceCategoryTitles(categories as any), [categories]);
 
   const data = useMemo(
-    () => (query.data || []).filter(p => isInMarketplace(p.category, titles)),
+    () => (query.data || []).filter(p => isMarketplaceProduct(p, titles)),
     [query.data, titles],
   );
 

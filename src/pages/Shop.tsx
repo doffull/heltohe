@@ -5,7 +5,8 @@ import { useProducts } from '@/hooks/useProducts';
 import { useShopProducts, useCollabProducts } from '@/hooks/useShopProducts';
 import { useCollabSettings } from '@/hooks/useCollabSettings';
 import { groupFamiliesAdjacent } from '@/lib/productFamily';
-import { isMarketplaceCategory } from '@/lib/shopVisibility';
+import { isMarketplaceCategory, isMarketplaceProduct } from '@/lib/shopVisibility';
+import { productInCategory, productCategoriesText } from '@/lib/productCategories';
 import { useOrderedProducts } from '@/hooks/useCategoryOrder';
 import { useCategories } from '@/hooks/useCategories';
 import { useDesignSettings } from '@/hooks/useDesignSettings';
@@ -162,13 +163,13 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
       filtered = filtered.filter(p =>
         p.name.toLowerCase().includes(query) ||
         p.description?.toLowerCase().includes(query) ||
-        p.category.toLowerCase().includes(query)
+        productCategoriesText(p).includes(query)
       );
     }
     if (selectedCategory !== 'Tout') {
-      filtered = filtered.filter(p => p.category === selectedCategory);
+      filtered = filtered.filter(p => productInCategory(p, selectedCategory));
     } else {
-      filtered = filtered.filter(p => !isMarketplaceCategory(p.category));
+      filtered = filtered.filter(p => !isMarketplaceProduct(p));
     }
 
     if (shopFilters.sizes.length) {
@@ -186,8 +187,8 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
   // Options de filtres calculées avant application des filtres taille/couleur
   const baseFilteredForOptions = useMemo(() => {
     let filtered = [...products];
-    if (selectedCategory !== 'Tout') filtered = filtered.filter(p => p.category === selectedCategory);
-    else filtered = filtered.filter(p => !isMarketplaceCategory(p.category));
+    if (selectedCategory !== 'Tout') filtered = filtered.filter(p => productInCategory(p, selectedCategory));
+    else filtered = filtered.filter(p => !isMarketplaceProduct(p));
     return filtered;
   }, [products, selectedCategory]);
 

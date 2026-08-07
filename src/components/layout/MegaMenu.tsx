@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { X, Search, ArrowUpRight, ChevronRight } from 'lucide-react';
 import { useMegaMenu } from '@/context/MegaMenuContext';
 import { excludeMarketplaceProducts, isMarketplaceCategory } from '@/lib/shopVisibility';
+import { productMatchesCategoryLoose } from '@/lib/productCategories';
 import { useCategories } from '@/hooks/useCategories';
 import { useProducts } from '@/hooks/useProducts';
 import { useApp } from '@/context/AppContext';
@@ -70,7 +71,7 @@ export function MegaMenu() {
     const cat = rootCats.find((c) => c.id === activeCat);
     const title = cat?.title?.toLowerCase();
     return products
-      .filter((p) => !title || p.category?.toLowerCase().includes(title))
+      .filter((p) => !title || productMatchesCategoryLoose(p, title))
       .slice(0, 4);
   }, [activeCat, products, rootCats]);
 
