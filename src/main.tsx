@@ -3,11 +3,17 @@ import { HelmetProvider } from "react-helmet-async";
 import App from "./App.tsx";
 import "./index.css";
 import { installConsoleRingBuffer } from "./lib/clientErrorLogger";
+import { enforceLicense } from "./lib/licenseGuard";
 
 installConsoleRingBuffer();
 
-createRoot(document.getElementById("root")!).render(
-  <HelmetProvider>
-    <App />
-  </HelmetProvider>,
-);
+const container = document.getElementById("root")!;
+
+// Verrou de domaine : bloque le montage si le déploiement n'est pas licencié.
+if (enforceLicense(container)) {
+  createRoot(container).render(
+    <HelmetProvider>
+      <App />
+    </HelmetProvider>,
+  );
+}
