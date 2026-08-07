@@ -20,6 +20,8 @@ import { SearchDialog } from './SearchDialog';
 // SidebarNewsletter retiré du panneau latéral
 import { MiniNavbar } from '@/components/ui/mini-navbar';
 import { NewsletterPopupHost } from '@/components/home/NewsletterPopupHost';
+import { InstallAppBanner } from '@/components/pwa/InstallAppBanner';
+
 import { InlineEditable } from '@/components/visual-editor/InlineEditable';
 import { 
   Search, 
@@ -870,6 +872,10 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Newsletter Popup Host */}
       {!isAdmin && <NewsletterPopupHost />}
+
+      {/* Invitation à installer l'app sur l'écran d'accueil */}
+      <InstallAppBanner />
+
     </div>
   );
 }
