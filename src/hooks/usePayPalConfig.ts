@@ -72,8 +72,9 @@ function dbToConfig(db: any): PayPalConfig {
   return {
     id: db.id,
     environment: db.environment === 'live' ? 'live' : 'sandbox',
-    clientIdSandbox: db.client_id_sandbox || '',
-    clientIdLive: db.client_id_live || '',
+    clientIdSandbox:
+      db.client_id_sandbox || (db.environment !== 'live' ? db.client_id || '' : ''),
+    clientIdLive: db.client_id_live || (db.environment === 'live' ? db.client_id || '' : ''),
     enabled: !!db.enabled,
     enablePaypalButton: db.enable_paypal_button ?? true,
     enablePayLater: db.enable_pay_later ?? true,
@@ -91,9 +92,28 @@ function dbToConfig(db: any): PayPalConfig {
   };
 }
 
+/** Configuration publique (vue restreinte : aucun webhook_id ni identifiants non actifs). */
 export function usePayPalConfig() {
   return useQuery({
-    queryKey: ['paypal_config'],
+    queryKey: ['paypal_config_public'],
+    queryFn: async (): Promise<PayPalConfig> => {
+      const { data, error } = await supabase
+        .from('paypal_config_public' as never)
+        .select('*')
+        .eq('config_key' as never, 'main' as never)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return DEFAULTS;
+      return dbToConfig(data);
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+/** Configuration complète, réservée aux administrateurs (RLS admin). */
+export function usePayPalConfigAdmin() {
+  return useQuery({
+    queryKey: ['paypal_config_admin'],
     queryFn: async (): Promise<PayPalConfig> => {
       const { data, error } = await supabase
         .from('paypal_config' as never)
@@ -104,7 +124,7 @@ export function usePayPalConfig() {
       if (!data) return DEFAULTS;
       return dbToConfig(data);
     },
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 30,
   });
 }
 
