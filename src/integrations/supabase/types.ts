@@ -2483,6 +2483,7 @@ export type Database = {
         Row: {
           attributes: Json | null
           care_instructions: string | null
+          categories: string[]
           category: string
           color_options: Json | null
           colors: string[] | null
@@ -2520,6 +2521,7 @@ export type Database = {
         Insert: {
           attributes?: Json | null
           care_instructions?: string | null
+          categories?: string[]
           category: string
           color_options?: Json | null
           colors?: string[] | null
@@ -2557,6 +2559,7 @@ export type Database = {
         Update: {
           attributes?: Json | null
           care_instructions?: string | null
+          categories?: string[]
           category?: string
           color_options?: Json | null
           colors?: string[] | null
