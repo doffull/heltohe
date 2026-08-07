@@ -1007,24 +1007,57 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         </div>
 
         <div className="space-y-2">
-          <Label className="hud-text text-xs">Catégorie *</Label>
+          <Label className="hud-text text-xs">Catégories * (cliquez pour cocher/décocher)</Label>
+          <p className="text-[11px] text-muted-foreground">
+            Un produit peut appartenir à plusieurs catégories. La catégorie marquée
+            « principale » sert au fil d'Ariane et au référencement.
+          </p>
           <div className="flex flex-wrap gap-2">
-            {categoryNames.map(cat => (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setFormData(prev => ({ ...prev, category: cat }))}
-                className={cn(
-                  "px-3 py-1.5 hud-text text-xs border chamfer-hud-sm transition-all",
-                  formData.category === cat
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-secondary/30 text-muted-foreground border-border/30 hover:border-primary/50"
-                )}
-              >
-                {cat}
-              </button>
-            ))}
+            {categoryNames.map(cat => {
+              const isMain = formData.category === cat;
+              const isSelected = isMain || selectedCategories.some(c => c.toLowerCase() === cat.toLowerCase());
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => toggleCategory(cat)}
+                  onDoubleClick={() => setMainCategory(cat)}
+                  title={isSelected && !isMain ? 'Double-clic : définir comme principale' : undefined}
+                  className={cn(
+                    "px-3 py-1.5 hud-text text-xs border chamfer-hud-sm transition-all flex items-center gap-1.5",
+                    isMain
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : isSelected
+                        ? "bg-primary/15 text-primary border-primary/60"
+                        : "bg-secondary/30 text-muted-foreground border-border/30 hover:border-primary/50"
+                  )}
+                >
+                  {cat}
+                  {isMain && <span className="text-[9px] opacity-80">PRINCIPALE</span>}
+                </button>
+              );
+            })}
           </div>
+          {selectedCategories.length > 1 && (
+            <div className="flex flex-wrap gap-1.5 items-center pt-1">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Principale :</span>
+              {selectedCategories.map(cat => (
+                <button
+                  key={`main-${cat}`}
+                  type="button"
+                  onClick={() => setMainCategory(cat)}
+                  className={cn(
+                    "px-2 py-0.5 text-[10px] border chamfer-hud-sm",
+                    formData.category === cat
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-secondary/30 text-muted-foreground border-border/30 hover:border-primary/50"
+                  )}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex gap-2 items-center">
             <Input
               value={newCategoryDraft}
