@@ -3614,6 +3614,63 @@ export type Database = {
         }
         Relationships: []
       }
+      paypal_config_public: {
+        Row: {
+          brand_name: string | null
+          button_style: Json | null
+          client_id: string | null
+          config_key: string | null
+          currency: string | null
+          enable_card_fields: boolean | null
+          enable_messaging: boolean | null
+          enable_pay_later: boolean | null
+          enable_paypal_button: boolean | null
+          enable_venmo: boolean | null
+          enable_wallets: boolean | null
+          enabled: boolean | null
+          environment: string | null
+          intent: string | null
+          locale: string | null
+          messaging_placements: Json | null
+        }
+        Insert: {
+          brand_name?: string | null
+          button_style?: Json | null
+          client_id?: never
+          config_key?: string | null
+          currency?: string | null
+          enable_card_fields?: boolean | null
+          enable_messaging?: boolean | null
+          enable_pay_later?: boolean | null
+          enable_paypal_button?: boolean | null
+          enable_venmo?: boolean | null
+          enable_wallets?: boolean | null
+          enabled?: boolean | null
+          environment?: string | null
+          intent?: string | null
+          locale?: string | null
+          messaging_placements?: Json | null
+        }
+        Update: {
+          brand_name?: string | null
+          button_style?: Json | null
+          client_id?: never
+          config_key?: string | null
+          currency?: string | null
+          enable_card_fields?: boolean | null
+          enable_messaging?: boolean | null
+          enable_pay_later?: boolean | null
+          enable_paypal_button?: boolean | null
+          enable_venmo?: boolean | null
+          enable_wallets?: boolean | null
+          enabled?: boolean | null
+          environment?: string | null
+          intent?: string | null
+          locale?: string | null
+          messaging_placements?: Json | null
+        }
+        Relationships: []
+      }
       roulette_config_public: {
         Row: {
           auto_open_delay_ms: number | null

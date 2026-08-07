@@ -36,7 +36,7 @@ import { supabase } from '@/integrations/supabase/client';
 import {
   PayPalConfig,
   PayPalTransaction,
-  usePayPalConfig,
+  usePayPalConfigAdmin,
   useSavePayPalConfig,
   usePayPalTransactions,
   usePayPalTransactionEvents,
@@ -72,7 +72,7 @@ function StatusPill({ ok, label }: { ok: boolean; label: string }) {
 
 export default function AdminPayPal() {
   const { toast } = useToast();
-  const { data: config, isLoading } = usePayPalConfig();
+  const { data: config, isLoading } = usePayPalConfigAdmin();
   const save = useSavePayPalConfig();
   const { data: creds, refetch: refetchCreds } = usePayPalCredentialStatus();
   const { data: transactions, refetch: refetchTx, isFetching: txFetching } = usePayPalTransactions();
