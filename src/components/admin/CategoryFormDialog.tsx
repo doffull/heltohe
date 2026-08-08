@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CategoryRecord } from '@/hooks/useCategories';
+import { CategoryRecord, CategoryVisibility } from '@/hooks/useCategories';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { FileDropZone } from './FileDropZone';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Sparkles, Loader2, X, Globe, Image as ImageIcon, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
+import CategoryIcon, { CATEGORY_ICON_NAMES } from '@/components/categories/CategoryIcon';
+import { cn } from '@/lib/utils';
 
 interface CategoryFormDialogProps {
   open: boolean;
@@ -29,6 +31,9 @@ export function CategoryFormDialog({ open, onOpenChange, category, categories, o
     metaTitle: '',
     metaDescription: '',
     seoKeywords: '',
+    icon: '',
+    iconImage: '',
+    visibility: 'all' as CategoryVisibility,
   });
   const [aiLoading, setAiLoading] = useState(false);
 
@@ -45,9 +50,13 @@ export function CategoryFormDialog({ open, onOpenChange, category, categories, o
         metaTitle: category?.metaTitle || '',
         metaDescription: category?.metaDescription || '',
         seoKeywords: category?.seoKeywords || '',
+        icon: category?.icon || '',
+        iconImage: category?.iconImage || '',
+        visibility: category?.visibility || 'all',
       });
     }
   }, [open, category]);
+
 
   // Auto-generate slug from title
   useEffect(() => {
