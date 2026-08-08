@@ -1,4 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
+import CategoryIcon from '@/components/categories/CategoryIcon';
 import { useCategories } from '@/hooks/useCategories';
 import { usePage } from '@/hooks/usePages';
 import { useEffect } from 'react';
@@ -49,7 +50,10 @@ function CategoryHeader({ category }: { category: { title: string; image?: strin
           <ChevronRight className="h-3 w-3" />
           <Link to="/boutique" className="hover:text-foreground transition-colors">BOUTIQUE</Link>
           <ChevronRight className="h-3 w-3" />
-          <span className="text-primary">{category.title.toUpperCase()}</span>
+          <span className="text-primary inline-flex items-center gap-1.5">
+            <CategoryIcon icon={(category as any).icon} iconImage={(category as any).iconImage} size="xs" />
+            {category.title.toUpperCase()}
+          </span>
         </nav>
 
         {/* Label */}
@@ -58,7 +62,8 @@ function CategoryHeader({ category }: { category: { title: string; image?: strin
         </p>
 
         {/* Title */}
-        <h1 className="text-5xl md:text-7xl font-bold uppercase tracking-tight text-foreground leading-none mb-4">
+        <h1 className="text-5xl md:text-7xl font-bold uppercase tracking-tight text-foreground leading-none mb-4 flex items-center gap-3">
+          <CategoryIcon icon={(category as any).icon} iconImage={(category as any).iconImage} size="lg" className="text-primary" />
           {category.title}
         </h1>
 
