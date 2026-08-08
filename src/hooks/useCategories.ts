@@ -89,6 +89,10 @@ export function useCreateCategory() {
         meta_title: cat.metaTitle || null,
         meta_description: cat.metaDescription || null,
         seo_keywords: cat.seoKeywords || null,
+        icon: cat.icon || null,
+        icon_image: cat.iconImage || null,
+        visibility: cat.visibility || 'all',
+
       } as any);
 
       const { error } = await supabase.from('categories').insert(buildPayload(cat.slug || null));
