@@ -189,9 +189,13 @@ export function MegaMenu() {
                               isActive ? 'text-primary' : 'hover:text-primary'
                             )}
                           >
-                            <span className="text-2xl lg:text-4xl font-bold uppercase tracking-tight">
-                              {c.title}
+                            <span className="flex items-center gap-2 lg:gap-3 min-w-0">
+                              <CategoryIcon icon={c.icon} iconImage={c.iconImage} size="md" className="lg:h-7 lg:w-7 opacity-80" />
+                              <span className="text-2xl lg:text-4xl font-bold uppercase tracking-tight truncate">
+                                {c.title}
+                              </span>
                             </span>
+
                             <ChevronRight className={cn(
                               'h-5 w-5 transition-transform',
                               isActive ? 'translate-x-1' : 'group-hover:translate-x-1'
