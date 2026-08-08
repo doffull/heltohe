@@ -5,7 +5,9 @@ import { X, Search, ArrowUpRight, ChevronRight } from 'lucide-react';
 import { useMegaMenu } from '@/context/MegaMenuContext';
 import { excludeMarketplaceProducts, isMarketplaceCategory } from '@/lib/shopVisibility';
 import { productMatchesCategoryLoose } from '@/lib/productCategories';
-import { useCategories } from '@/hooks/useCategories';
+import { useCategories, isCategoryInMenu } from '@/hooks/useCategories';
+import CategoryIcon from '@/components/categories/CategoryIcon';
+
 import { useProducts } from '@/hooks/useProducts';
 import { useApp } from '@/context/AppContext';
 import { cn } from '@/lib/utils';
