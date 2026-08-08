@@ -359,6 +359,8 @@ export type Database = {
           cover_mode: string | null
           created_at: string
           display_size: string | null
+          icon: string | null
+          icon_image: string | null
           id: string
           image: string | null
           meta_description: string | null
@@ -370,11 +372,14 @@ export type Database = {
           template_id: string | null
           title: string
           updated_at: string
+          visibility: string
         }
         Insert: {
           cover_mode?: string | null
           created_at?: string
           display_size?: string | null
+          icon?: string | null
+          icon_image?: string | null
           id?: string
           image?: string | null
           meta_description?: string | null
@@ -386,11 +391,14 @@ export type Database = {
           template_id?: string | null
           title: string
           updated_at?: string
+          visibility?: string
         }
         Update: {
           cover_mode?: string | null
           created_at?: string
           display_size?: string | null
+          icon?: string | null
+          icon_image?: string | null
           id?: string
           image?: string | null
           meta_description?: string | null
@@ -402,6 +410,7 @@ export type Database = {
           template_id?: string | null
           title?: string
           updated_at?: string
+          visibility?: string
         }
         Relationships: [
           {
