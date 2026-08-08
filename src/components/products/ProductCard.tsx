@@ -8,6 +8,9 @@ import { LimitedEditionBadge } from '@/components/product/LimitedEditionBadge';
 import { ProductStatusBadges } from '@/components/product/ProductStatusBadges';
 
 import ProductTitleLogo from '@/components/product/ProductTitleLogo';
+import KidsNoReturnNotice from '@/components/product/KidsNoReturnNotice';
+import { isKidsProduct } from '@/lib/productFamily';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 
 
@@ -164,10 +167,21 @@ export function ProductCard({
         )}
 
 
-        {/* Badges */}
-        <div className="absolute top-3 left-3 z-[2] flex flex-col gap-1.5 items-start">
+        {/* Badges — discrets sur mobile (1 seul, sans animation) */}
+        <div
+          className={cn(
+            'absolute z-[2] flex flex-col items-start',
+            isMobile ? 'top-1.5 left-1.5 gap-1 opacity-80' : 'top-3 left-3 gap-1.5'
+          )}
+        >
           <LimitedEditionBadge product={product} compact animate={false} />
-          <ProductStatusBadges product={product} compact max={3} />
+          <ProductStatusBadges
+            product={product}
+            compact
+            animated={!isMobile}
+            max={isMobile ? 1 : 3}
+            className={isMobile ? 'scale-[0.82] origin-top-left' : undefined}
+          />
         </div>
 
 
@@ -224,6 +238,9 @@ export function ProductCard({
             <span className="text-base font-bold">{product.price}€</span>
           )}
         </div>
+
+        {/* Mention légale discrète — articles enfant */}
+        {isKids && <KidsNoReturnNotice variant="subtle" />}
 
         {/* Color swatches — clickable */}
         {hasColorOptions ? (
