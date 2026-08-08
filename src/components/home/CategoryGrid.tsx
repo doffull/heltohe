@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
-import { useCategories, useUpdateCategory } from '@/hooks/useCategories';
+import { useCategories, useUpdateCategory, isCategoryOnSite } from '@/hooks/useCategories';
+import CategoryIcon from '@/components/categories/CategoryIcon';
 import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
 import { Check, Pencil, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
@@ -63,7 +64,7 @@ export function CategoryGrid() {
   const [editValue, setEditValue] = useState('');
 
   const categories = dbCategories
-    .filter(c => !c.parentId && !isMarketplaceCategory(c.title))
+    .filter(c => !c.parentId && !isMarketplaceCategory(c.title) && isCategoryOnSite(c))
     .sort((a, b) => a.sortOrder - b.sortOrder)
     .map(c => ({ id: c.id, title: c.title, image: c.image || CATEGORY_PLACEHOLDER, sortOrder: c.sortOrder, ...c }));
 
@@ -199,8 +200,9 @@ export function CategoryGrid() {
                     </button>
                   </div>
                 ) : (
-                  <h3 className="hud-text text-xl font-bold tracking-wider text-foreground group-hover:text-primary transition-colors">
-                    {category.title}
+                  <h3 className="hud-text text-xl font-bold tracking-wider text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
+                    <CategoryIcon icon={category.icon} iconImage={category.iconImage} size="md" className="text-primary" />
+                    <span className="truncate">{category.title}</span>
                   </h3>
                 )}
                 <div className="mt-2 h-0.5 w-0 bg-primary group-hover:w-16 transition-all duration-500" />

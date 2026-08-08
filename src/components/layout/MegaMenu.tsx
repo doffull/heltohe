@@ -5,7 +5,9 @@ import { X, Search, ArrowUpRight, ChevronRight } from 'lucide-react';
 import { useMegaMenu } from '@/context/MegaMenuContext';
 import { excludeMarketplaceProducts, isMarketplaceCategory } from '@/lib/shopVisibility';
 import { productMatchesCategoryLoose } from '@/lib/productCategories';
-import { useCategories } from '@/hooks/useCategories';
+import { useCategories, isCategoryInMenu } from '@/hooks/useCategories';
+import CategoryIcon from '@/components/categories/CategoryIcon';
+
 import { useProducts } from '@/hooks/useProducts';
 import { useApp } from '@/context/AppContext';
 import { cn } from '@/lib/utils';
@@ -48,7 +50,11 @@ export function MegaMenu() {
   const [hovered, setHovered] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
-  const rootCats = useMemo(() => dbCategories.filter((c) => !c.parentId && !isMarketplaceCategory(c.title)), [dbCategories]);
+  const rootCats = useMemo(
+    () => dbCategories.filter((c) => !c.parentId && !isMarketplaceCategory(c.title) && isCategoryInMenu(c)),
+    [dbCategories],
+  );
+
   const staticLinks = (designSettings.megaMenuLinks ?? DEFAULT_STATIC_LINKS).filter((l) => l.enabled);
 
   // ESC close + lock scroll
@@ -183,9 +189,13 @@ export function MegaMenu() {
                               isActive ? 'text-primary' : 'hover:text-primary'
                             )}
                           >
-                            <span className="text-2xl lg:text-4xl font-bold uppercase tracking-tight">
-                              {c.title}
+                            <span className="flex items-center gap-2 lg:gap-3 min-w-0">
+                              <CategoryIcon icon={c.icon} iconImage={c.iconImage} size="md" className="lg:h-7 lg:w-7 opacity-80" />
+                              <span className="text-2xl lg:text-4xl font-bold uppercase tracking-tight truncate">
+                                {c.title}
+                              </span>
                             </span>
+
                             <ChevronRight className={cn(
                               'h-5 w-5 transition-transform',
                               isActive ? 'translate-x-1' : 'group-hover:translate-x-1'

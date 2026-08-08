@@ -7,6 +7,9 @@ import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider
 import ProductRatingRow from './ProductRatingRow';
 import ProductTitleLogo from './ProductTitleLogo';
 import { ProductStatusBadges } from './ProductStatusBadges';
+import KidsNoReturnNotice from './KidsNoReturnNotice';
+import { isKidsProduct } from '@/lib/productFamily';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 
 import { cn } from '@/lib/utils';
@@ -28,6 +31,8 @@ const fadeUp = {
  */
 export default function ProductHeaderBlock({ product, isNew, className }: ProductHeaderBlockProps) {
   const { isAdmin } = useAuth();
+  const isMobile = useIsMobile();
+  const isKids = isKidsProduct(product);
   const { isOpen: editorOpen } = useVisualEditor();
   const editing = isAdmin && editorOpen;
   const hasModel = Boolean(product.modelHeight || product.modelSizeWorn || product.modelName);
@@ -80,7 +85,7 @@ export default function ProductHeaderBlock({ product, isNew, className }: Produc
 
       {/* Badges dynamiques (promo, nouveau, top vente…) */}
       <motion.div {...fadeUp} transition={{ delay: 0.11 }}>
-        <ProductStatusBadges product={product} max={4} />
+        <ProductStatusBadges product={product} max={isMobile ? 2 : 4} compact={isMobile} animated={!isMobile} />
       </motion.div>
 
       {/* Note + avis + partage */}
@@ -168,6 +173,10 @@ export default function ProductHeaderBlock({ product, isNew, className }: Produc
           )}
         </span>
       </motion.div>
+
+      {/* Mention légale discrète — articles enfant */}
+      {isKids && <KidsNoReturnNotice variant="subtle" className="text-[10px]" />}
+
 
       {/* Mannequin */}
       {(hasModel || editing) && (

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CategoryRecord } from '@/hooks/useCategories';
+import { CategoryRecord, CategoryVisibility } from '@/hooks/useCategories';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { FileDropZone } from './FileDropZone';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Sparkles, Loader2, X, Globe, Image as ImageIcon, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
+import CategoryIcon, { CATEGORY_ICON_NAMES } from '@/components/categories/CategoryIcon';
+import { cn } from '@/lib/utils';
 
 interface CategoryFormDialogProps {
   open: boolean;
@@ -29,6 +31,9 @@ export function CategoryFormDialog({ open, onOpenChange, category, categories, o
     metaTitle: '',
     metaDescription: '',
     seoKeywords: '',
+    icon: '',
+    iconImage: '',
+    visibility: 'all' as CategoryVisibility,
   });
   const [aiLoading, setAiLoading] = useState(false);
 
@@ -45,9 +50,13 @@ export function CategoryFormDialog({ open, onOpenChange, category, categories, o
         metaTitle: category?.metaTitle || '',
         metaDescription: category?.metaDescription || '',
         seoKeywords: category?.seoKeywords || '',
+        icon: category?.icon || '',
+        iconImage: category?.iconImage || '',
+        visibility: category?.visibility || 'all',
       });
     }
   }, [open, category]);
+
 
   // Auto-generate slug from title
   useEffect(() => {
@@ -229,7 +238,77 @@ export function CategoryFormDialog({ open, onOpenChange, category, categories, o
               {form.image && (
                 <p className="text-[10px] text-muted-foreground font-mono break-all">{form.image}</p>
               )}
+
+              {/* Visibilité */}
+              <div className="space-y-2 pt-2 border-t border-border">
+                <Label className="hud-text text-xs">Où afficher cette catégorie</Label>
+                <select
+                  value={form.visibility}
+                  onChange={(e) => setForm(p => ({ ...p, visibility: e.target.value as CategoryVisibility }))}
+                  className="w-full h-10 rounded-md border border-border bg-secondary/50 px-3 text-sm"
+                >
+                  <option value="all">Partout (site + menu)</option>
+                  <option value="menu">Menu uniquement</option>
+                  <option value="site">Site uniquement</option>
+                </select>
+                <p className="text-[10px] text-muted-foreground">
+                  La page de la catégorie et son lien direct restent toujours accessibles.
+                </p>
+              </div>
+
+              {/* Icône / logo */}
+              <div className="space-y-3 pt-2 border-t border-border">
+                <div className="flex items-center justify-between">
+                  <Label className="hud-text text-xs">Icône à côté du nom</Label>
+                  <div className="flex items-center gap-2">
+                    <CategoryIcon icon={form.icon} iconImage={form.iconImage} size="md" className="text-primary" />
+                    {(form.icon || form.iconImage) && (
+                      <button
+                        type="button"
+                        onClick={() => setForm(p => ({ ...p, icon: '', iconImage: '' }))}
+                        className="text-[10px] text-muted-foreground hover:text-destructive uppercase tracking-wider"
+                      >
+                        Retirer
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-8 gap-1.5">
+                  {CATEGORY_ICON_NAMES.map((name) => (
+                    <button
+                      key={name}
+                      type="button"
+                      title={name}
+                      onClick={() => setForm(p => ({ ...p, icon: name, iconImage: '' }))}
+                      className={cn(
+                        'h-9 flex items-center justify-center border transition-colors',
+                        form.icon === name && !form.iconImage
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-border/50 bg-secondary/40 text-muted-foreground hover:border-primary/50'
+                      )}
+                    >
+                      <CategoryIcon icon={name} size="sm" />
+                    </button>
+                  ))}
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="hud-text text-[10px] text-muted-foreground">
+                    ou un logo personnalisé
+                  </Label>
+                  <FileDropZone
+                    accept={['image']}
+                    currentFile={form.iconImage}
+                    onUpload={(url) => setForm(p => ({ ...p, iconImage: url, icon: '' }))}
+                    folder="categories"
+                    label="Logo de la catégorie"
+                    className="min-h-[110px]"
+                  />
+                </div>
+              </div>
             </div>
+
 
             {/* Column 3: SEO */}
             <div className="p-6 space-y-5">

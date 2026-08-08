@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
+export type CategoryVisibility = 'all' | 'menu' | 'site';
+
 export interface CategoryRecord {
   id: string;
   title: string;
@@ -13,6 +15,12 @@ export interface CategoryRecord {
   metaTitle?: string;
   metaDescription?: string;
   seoKeywords?: string;
+  /** Nom d'icône Lucide affiché à côté du nom. */
+  icon?: string;
+  /** Logo/image personnalisé affiché à côté du nom. */
+  iconImage?: string;
+  /** Où la catégorie apparaît : partout, menu uniquement, site uniquement. */
+  visibility?: CategoryVisibility;
 }
 
 function dbToCat(db: Record<string, unknown>): CategoryRecord {
@@ -28,8 +36,22 @@ function dbToCat(db: Record<string, unknown>): CategoryRecord {
     metaTitle: (db.meta_title as string) || undefined,
     metaDescription: (db.meta_description as string) || undefined,
     seoKeywords: (db.seo_keywords as string) || undefined,
+    icon: (db.icon as string) || undefined,
+    iconImage: (db.icon_image as string) || undefined,
+    visibility: ((db.visibility as CategoryVisibility) || 'all'),
   };
 }
+
+/** La catégorie doit-elle apparaître dans le méga menu ? */
+export function isCategoryInMenu(c: CategoryRecord): boolean {
+  return (c.visibility || 'all') !== 'site';
+}
+
+/** La catégorie doit-elle apparaître dans les grilles/sections du site ? */
+export function isCategoryOnSite(c: CategoryRecord): boolean {
+  return (c.visibility || 'all') !== 'menu';
+}
+
 
 export function useCategories() {
   return useQuery({
@@ -67,6 +89,10 @@ export function useCreateCategory() {
         meta_title: cat.metaTitle || null,
         meta_description: cat.metaDescription || null,
         seo_keywords: cat.seoKeywords || null,
+        icon: cat.icon || null,
+        icon_image: cat.iconImage || null,
+        visibility: cat.visibility || 'all',
+
       } as any);
 
       const { error } = await supabase.from('categories').insert(buildPayload(cat.slug || null));
@@ -107,6 +133,10 @@ export function useUpdateCategory() {
         meta_title: cat.metaTitle || null,
         meta_description: cat.metaDescription || null,
         seo_keywords: cat.seoKeywords || null,
+        icon: cat.icon || null,
+        icon_image: cat.iconImage || null,
+        visibility: cat.visibility || 'all',
+
       } as any).eq('id', id);
       if (error) throw error;
     },
