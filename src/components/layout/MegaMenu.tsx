@@ -50,7 +50,11 @@ export function MegaMenu() {
   const [hovered, setHovered] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
-  const rootCats = useMemo(() => dbCategories.filter((c) => !c.parentId && !isMarketplaceCategory(c.title)), [dbCategories]);
+  const rootCats = useMemo(
+    () => dbCategories.filter((c) => !c.parentId && !isMarketplaceCategory(c.title) && isCategoryInMenu(c)),
+    [dbCategories],
+  );
+
   const staticLinks = (designSettings.megaMenuLinks ?? DEFAULT_STATIC_LINKS).filter((l) => l.enabled);
 
   // ESC close + lock scroll
