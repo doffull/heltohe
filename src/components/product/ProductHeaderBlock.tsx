@@ -174,6 +174,10 @@ export default function ProductHeaderBlock({ product, isNew, className }: Produc
         </span>
       </motion.div>
 
+      {/* Mention légale discrète — articles enfant */}
+      {isKids && <KidsNoReturnNotice variant="subtle" className="text-[10px]" />}
+
+
       {/* Mannequin */}
       {(hasModel || editing) && (
         <motion.div
