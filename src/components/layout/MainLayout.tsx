@@ -21,7 +21,7 @@ import { TopBanner } from './TopBanner';
 import { resolveTopBanner } from '@/lib/bannerIcons';
 // SidebarNewsletter retiré du panneau latéral
 import { MiniNavbar } from '@/components/ui/mini-navbar';
-import { NewsletterPopupHost } from '@/components/home/NewsletterPopupHost';
+import { PopupHost } from '@/components/popups/PopupHost';
 import { InstallAppBanner } from '@/components/pwa/InstallAppBanner';
 
 import { InlineEditable } from '@/components/visual-editor/InlineEditable';
@@ -866,7 +866,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
 
       {/* Newsletter Popup Host */}
-      {!isAdmin && <NewsletterPopupHost />}
+      {!isAdmin && <PopupHost />}
 
       {/* Invitation à installer l'app sur l'écran d'accueil */}
       <InstallAppBanner />

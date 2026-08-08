@@ -5,6 +5,8 @@ import { useApp } from '@/context/AppContext';
 import { BrandLogo } from '@/components/layout/BrandLogo';
 import TrustpilotWidget from '@/components/TrustpilotWidget';
 import { resolveBrand } from '@/components/icons/BrandIcons';
+import InstallAppButton from '@/components/pwa/InstallAppButton';
+
 
 /** Réseaux affichés par défaut (l'URL réelle se règle dans l'admin). */
 const DEFAULT_SOCIALS = [
@@ -101,12 +103,16 @@ export function Footer() {
             })()}
           </div>
 
-          
-          {/* System Info */}
-          <div className="hidden lg:flex items-center gap-4 text-muted-foreground/50">
-            <span className="hud-text text-[10px]">NODE_ACTIVE</span>
-            <div className="w-2 h-2 bg-hud-success rounded-full animate-pulse" />
+
+          {/* App + System Info */}
+          <div className="flex items-center gap-4">
+            <InstallAppButton />
+            <div className="hidden lg:flex items-center gap-4 text-muted-foreground/50">
+              <span className="hud-text text-[10px]">NODE_ACTIVE</span>
+              <div className="w-2 h-2 bg-hud-success rounded-full animate-pulse" />
+            </div>
           </div>
+
         </div>
       </div>
       
