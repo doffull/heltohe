@@ -2292,6 +2292,113 @@ export type Database = {
           },
         ]
       }
+      popup_campaigns: {
+        Row: {
+          background: Json
+          created_at: string
+          delay_seconds: number
+          display_trigger: string
+          ends_at: string | null
+          format: string
+          frequency_days: number
+          id: string
+          idle_seconds: number
+          is_active: boolean
+          layers: Json
+          max_views: number
+          name: string
+          priority: number
+          scroll_percent: number
+          starts_at: string | null
+          targeting: Json
+          type: string
+          updated_at: string
+          visit_count: number
+        }
+        Insert: {
+          background?: Json
+          created_at?: string
+          delay_seconds?: number
+          display_trigger?: string
+          ends_at?: string | null
+          format?: string
+          frequency_days?: number
+          id?: string
+          idle_seconds?: number
+          is_active?: boolean
+          layers?: Json
+          max_views?: number
+          name: string
+          priority?: number
+          scroll_percent?: number
+          starts_at?: string | null
+          targeting?: Json
+          type?: string
+          updated_at?: string
+          visit_count?: number
+        }
+        Update: {
+          background?: Json
+          created_at?: string
+          delay_seconds?: number
+          display_trigger?: string
+          ends_at?: string | null
+          format?: string
+          frequency_days?: number
+          id?: string
+          idle_seconds?: number
+          is_active?: boolean
+          layers?: Json
+          max_views?: number
+          name?: string
+          priority?: number
+          scroll_percent?: number
+          starts_at?: string | null
+          targeting?: Json
+          type?: string
+          updated_at?: string
+          visit_count?: number
+        }
+        Relationships: []
+      }
+      popup_events: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          event: string
+          id: string
+          meta: Json
+          session_id: string | null
+          url: string | null
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          event: string
+          id?: string
+          meta?: Json
+          session_id?: string | null
+          url?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          event?: string
+          id?: string
+          meta?: Json
+          session_id?: string | null
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "popup_events_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "popup_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_category_order: {
         Row: {
           category_slug: string

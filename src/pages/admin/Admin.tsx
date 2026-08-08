@@ -88,6 +88,7 @@ import AdminPageTemplates from './AdminPageTemplates';
 import AdminReviews from './AdminReviews';
 import AdminAgentIntegrations from './AdminAgentIntegrations';
 import AdminProductBadges from './AdminProductBadges';
+import AdminPopups from './AdminPopups';
 import AdminPayPal from './AdminPayPal';
 import AdminPaymentTest from './AdminPaymentTest';
 import AdminMessagerie from './AdminMessagerie';
@@ -109,6 +110,7 @@ export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin/pages': '#6366F1',
   '/admin/media': '#EC4899',
   '/admin/marketing': '#EF4444',
+  '/admin/popups': '#F97316',
   '/admin/design': '#06B6D4',
   '/admin/seo': '#0EA5E9',
   '/admin/collab': '#A855F7',
@@ -148,6 +150,7 @@ const SIDEBAR_ITEMS = [
   { icon: FolderOpen, label: 'Média', href: '/admin/media' },
   { icon: FileUp, label: 'Import PDF / Médias', href: '/admin/import-pdf' },
   { icon: Megaphone, label: 'Marketing', href: '/admin/marketing' },
+  { icon: Megaphone, label: 'Studio Pop-ups', href: '/admin/popups' },
   { icon: Gift, label: 'Roulette', href: '/admin/roulette' },
   { icon: Palette, label: 'Design', href: '/admin/design' },
   { icon: Globe, label: 'SEO & Visibilité', href: '/admin/seo' },
@@ -368,6 +371,7 @@ export default function Admin() {
             <Route path="media/*" element={<AdminMedia />} />
             <Route path="import-pdf/*" element={<AdminPdfExtract />} />
             <Route path="marketing/*" element={<AdminMarketing />} />
+            <Route path="popups/*" element={<AdminPopups />} />
             <Route path="roulette/*" element={<AdminRoulette />} />
             <Route path="bannieres/*" element={<Navigate to="/admin/marketing" replace />} />
             <Route path="design/*" element={<AdminDesign />} />
