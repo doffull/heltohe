@@ -133,6 +133,10 @@ export function useUpdateCategory() {
         meta_title: cat.metaTitle || null,
         meta_description: cat.metaDescription || null,
         seo_keywords: cat.seoKeywords || null,
+        icon: cat.icon || null,
+        icon_image: cat.iconImage || null,
+        visibility: cat.visibility || 'all',
+
       } as any).eq('id', id);
       if (error) throw error;
     },
