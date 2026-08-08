@@ -45,6 +45,9 @@ export function ProductCard({
   const [hovered, setHovered] = useState(false);
   const { data: reviewStats } = useReviewStats(product.id);
   const hasDiscount = product.salePrice && product.salePrice < product.price;
+  const isMobile = useIsMobile();
+  const isKids = isKidsProduct(product);
+
   const isOutOfStock = product.stock === 0;
 
   const swatchClasses: Record<string, string> = {
