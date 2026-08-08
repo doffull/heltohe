@@ -15,7 +15,7 @@ export default function KidsNoReturnNotice({ className, compact, variant = 'defa
       <p
         role="note"
         className={cn(
-          'text-[9px] uppercase tracking-[0.12em] text-muted-foreground/80 leading-snug',
+          'mt-1 text-[10px] uppercase tracking-[0.12em] text-muted-foreground/80 leading-snug',
           className
         )}
       >
@@ -23,6 +23,7 @@ export default function KidsNoReturnNotice({ className, compact, variant = 'defa
       </p>
     );
   }
+
 
   return (
     <div
