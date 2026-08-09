@@ -37,7 +37,7 @@ export function PopupHost() {
   const { data: campaigns = [] } = useActivePopupCampaigns();
   const location = useLocation();
   const { user } = (useAuth() as any) || {};
-  const { install, canPrompt } = useInstallApp();
+  const { install, installed } = useInstallApp();
   const [active, setActive] = useState<PopupCampaign | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const shownRef = useRef<Set<string>>(new Set());
@@ -66,7 +66,9 @@ export function PopupHost() {
       if (!devices.includes(isMobile ? 'mobile' : 'desktop')) return false;
       if (t.audience === 'logged-in' && !user) return false;
       if (t.audience === 'guests' && user) return false;
-      if (c.type === 'install-app' && !canPrompt) return false;
+      // L'app installée n'a plus besoin de l'invitation ; iOS/Safari n'émettent jamais
+      // `beforeinstallprompt`, on affiche alors les instructions manuelles.
+      if (c.type === 'install-app' && installed) return false;
       try {
         const seen = localStorage.getItem(seenKey(c.id));
         if (seen && c.frequency_days > 0) {
@@ -80,7 +82,7 @@ export function PopupHost() {
       if (c.display_trigger === 'visit_count' && visitsRef.current < (c.visit_count || 1)) return false;
       return true;
     });
-  }, [campaigns, currentPage, isMobile, user, canPrompt, isAdminRoute]);
+  }, [campaigns, currentPage, isMobile, user, installed, isAdminRoute]);
 
   useEffect(() => {
     if (active || eligible.length === 0) return;

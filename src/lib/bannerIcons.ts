@@ -88,19 +88,25 @@ export const DEFAULT_TOP_BANNER: TopBannerConfig = {
   uppercase: true,
 };
 
-/** Normalize whatever is stored in `design_settings.top_banner` into the new shape. */
-export function resolveTopBanner(raw: unknown): TopBannerConfig {
-  const cfg = (raw && typeof raw === 'object' ? raw : {}) as Partial<TopBannerConfig>;
+/**
+ * Normalize whatever is stored in `design_settings.top_banner` into the new shape.
+ * When nothing has ever been configured, the banner stays disabled with no messages
+ * (pass `useDefaults` from the admin editor to prefill example messages).
+ */
+export function resolveTopBanner(raw: unknown, useDefaults = false): TopBannerConfig {
+  const configured = !!raw && typeof raw === 'object';
+  const cfg = (configured ? raw : {}) as Partial<TopBannerConfig>;
   let items = Array.isArray(cfg.items) ? cfg.items.filter((i) => i && typeof i.text === 'string') : [];
   // Legacy migration: a single `text` becomes the first message.
   if (items.length === 0 && typeof cfg.text === 'string' && cfg.text.trim()) {
     items = [{ id: 'legacy', icon: 'none', text: cfg.text, link: cfg.link || '' }];
   }
-  if (items.length === 0) items = DEFAULT_TOP_BANNER.items;
+  if (items.length === 0 && useDefaults) items = DEFAULT_TOP_BANNER.items;
   return {
     ...DEFAULT_TOP_BANNER,
     ...cfg,
-    enabled: cfg.enabled !== false,
+    enabled: configured ? cfg.enabled !== false : useDefaults,
     items,
   };
 }
+
