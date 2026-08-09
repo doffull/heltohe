@@ -37,7 +37,7 @@ export function PopupHost() {
   const { data: campaigns = [] } = useActivePopupCampaigns();
   const location = useLocation();
   const { user } = (useAuth() as any) || {};
-  const { install, canPrompt } = useInstallApp();
+  const { install, installed } = useInstallApp();
   const [active, setActive] = useState<PopupCampaign | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const shownRef = useRef<Set<string>>(new Set());
@@ -82,7 +82,7 @@ export function PopupHost() {
       if (c.display_trigger === 'visit_count' && visitsRef.current < (c.visit_count || 1)) return false;
       return true;
     });
-  }, [campaigns, currentPage, isMobile, user, canPrompt, isAdminRoute]);
+  }, [campaigns, currentPage, isMobile, user, installed, isAdminRoute]);
 
   useEffect(() => {
     if (active || eligible.length === 0) return;
