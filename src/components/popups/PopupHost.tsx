@@ -66,7 +66,9 @@ export function PopupHost() {
       if (!devices.includes(isMobile ? 'mobile' : 'desktop')) return false;
       if (t.audience === 'logged-in' && !user) return false;
       if (t.audience === 'guests' && user) return false;
-      if (c.type === 'install-app' && !canPrompt) return false;
+      // L'app installée n'a plus besoin de l'invitation ; iOS/Safari n'émettent jamais
+      // `beforeinstallprompt`, on affiche alors les instructions manuelles.
+      if (c.type === 'install-app' && installed) return false;
       try {
         const seen = localStorage.getItem(seenKey(c.id));
         if (seen && c.frequency_days > 0) {
