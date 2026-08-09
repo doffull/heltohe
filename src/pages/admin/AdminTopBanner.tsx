@@ -76,7 +76,7 @@ function SortableItem({
 
 export default function AdminTopBanner() {
   const { designSettings, updateDesignSettings, flushDesignSettings } = useApp();
-  const [cfg, setCfg] = useState<TopBannerConfig>(() => resolveTopBanner((designSettings as any).topBanner));
+  const [cfg, setCfg] = useState<TopBannerConfig>(() => resolveTopBanner((designSettings as any).topBanner, true));
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
   const patch = (next: Partial<TopBannerConfig>) => {
