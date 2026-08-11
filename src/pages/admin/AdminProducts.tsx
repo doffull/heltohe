@@ -714,7 +714,7 @@ export default function AdminProducts() {
           <div>
             <button
               type="button"
-              onClick={() => toggleAll(!allSelected)}
+              onClick={() => toggleAll()}
               aria-pressed={allSelected}
               className="w-full flex items-center gap-3 px-3 py-3 border-b border-border bg-muted/40 text-left active:bg-muted"
             >
