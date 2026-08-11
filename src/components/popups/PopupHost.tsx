@@ -182,6 +182,19 @@ export function PopupHost() {
         cleanups.push(() => window.removeEventListener('lvtk:add-to-cart', onAdd as EventListener));
         break;
       }
+      case 'action': {
+        const evt = c.targeting?.actionEvent || 'lvtk:add-to-cart';
+        const onAction = () => setTimeout(open, (c.delay_seconds || 0) * 1000);
+        window.addEventListener(evt, onAction as EventListener);
+        cleanups.push(() => window.removeEventListener(evt, onAction as EventListener));
+        break;
+      }
+      case 'time_on_site': {
+        // L'éligibilité est déjà vérifiée par le compteur cumulé.
+        const t = setTimeout(open, 400);
+        cleanups.push(() => clearTimeout(t));
+        break;
+      }
     }
     return () => cleanups.forEach((fn) => fn());
   }, [eligible, active]);
