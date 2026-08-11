@@ -560,8 +560,9 @@ export default function AdminProducts() {
 
       </div>
 
-      <Tabs defaultValue="products">
-        <TabsList className="bg-muted/50">
+      <Tabs defaultValue="products" className="min-w-0">
+        <TabsList className="bg-muted/50 admin-tabs-scroll w-full h-auto">
+
           <TabsTrigger value="products" className="gap-2"><Package className="h-4 w-4" />Produits</TabsTrigger>
           <TabsTrigger value="looks" className="gap-2"><Layers2 className="h-4 w-4" />Looks</TabsTrigger>
           <TabsTrigger value="sizes" className="gap-2"><Tag className="h-4 w-4" />Tailles</TabsTrigger>
