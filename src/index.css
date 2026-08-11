@@ -930,8 +930,8 @@ body.admin-route .protected-image-wrap::after {
 
 /* Colonne figée à gauche dans les tableaux admin (repère au scroll) */
 @media (max-width: 1023px) {
-  .admin-table-sticky thead th:nth-child(2),
-  .admin-table-sticky tbody td:nth-child(2) {
+  .admin-sticky-col table thead th:nth-child(2),
+  .admin-sticky-col table tbody td:nth-child(2) {
     position: sticky;
     left: 0;
     z-index: 2;

@@ -20,7 +20,7 @@ export function AdminTableScroll({
     <div
       className={cn(
         'admin-scroll-x admin-scroll-shadow w-full min-w-0',
-        stickyFirstCol && '[&_table]:admin-table-sticky',
+        stickyFirstCol && 'admin-sticky-col',
         className,
       )}
     >
