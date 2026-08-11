@@ -407,8 +407,9 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
           )}
         </div>
 
-        {/* Filtres + Produits */}
-        <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-8 xl:gap-10">
+        {/* Filtres + Produits — flex pour que la grille prenne toute la largeur
+            quand le panneau de filtres n'a rien à afficher (il renvoie null). */}
+        <div className="lg:flex lg:items-start lg:gap-8 xl:gap-10">
 
           <ShopFilterPanel
             products={baseFilteredForOptions}
@@ -416,9 +417,10 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
             onChange={setShopFilters}
             sizesOverride={isMarketplacePage ? collab?.sizes : undefined}
             colorsOverride={isMarketplacePage ? collab?.colors : undefined}
-            className="lg:sticky lg:top-24 lg:self-start"
+            className="lg:sticky lg:top-24 lg:w-[220px] lg:shrink-0 lg:self-start"
           />
-          <div>
+          <div className="min-w-0 flex-1">
+
         {isLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
