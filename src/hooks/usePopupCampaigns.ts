@@ -118,13 +118,17 @@ export async function trackPopupEvent(
   meta: Record<string, unknown> = {},
 ) {
   try {
+    // Le device est joint à chaque événement pour permettre le filtrage
+    // par appareil / plateforme (notamment iOS) dans l'admin.
+    const info = getDeviceInfo();
     await supabase.from('popup_events' as any).insert({
       campaign_id: campaignId,
       event,
       session_id: getPopupSessionId(),
       url: typeof window !== 'undefined' ? window.location.pathname : null,
-      meta,
+      meta: { ...info, ...meta },
     } as any);
+
   } catch {
     /* analytics must never break UX */
   }
