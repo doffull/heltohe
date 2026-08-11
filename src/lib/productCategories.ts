@@ -23,7 +23,7 @@ export function catKey(v?: string | null): string {
 
 type ProductLike = { category?: string | null; categories?: string[] | null };
 
-type CategoryLike = { id: string; title: string; parentId?: string | null };
+type CategoryLike = { id: string; title: string; parentId?: string | null; includeChildren?: boolean };
 
 /**
  * Une catégorie + toutes ses sous-catégories (récursif).
@@ -48,6 +48,21 @@ export function categoryWithDescendants(categories: CategoryLike[], title?: stri
   }
   return Array.from(out);
 }
+
+/**
+ * Périmètre de produits d'une catégorie, en respectant l'option
+ * « inclure les produits des sous-catégories » (activée par défaut).
+ */
+export function categoryScopeFor(categories: CategoryLike[], title?: string | null): string[] {
+  const key = catKey(title);
+  if (!key) return [];
+  const roots = categories.filter((c) => catKey(c.title) === key);
+  if (!roots.length) return [title as string];
+  const includeChildren = roots.some((r) => r.includeChildren !== false);
+  if (!includeChildren) return roots.map((r) => r.title);
+  return categoryWithDescendants(categories, title);
+}
+
 
 /** Le produit appartient-il à l'une de ces catégories ? */
 export function productInAnyCategory(p: ProductLike, titles: string[]): boolean {
