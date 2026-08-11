@@ -17,7 +17,6 @@ export interface ProductMobileCardActions {
   onSplit: (p: Product) => void;
   onDelete: (id: string) => void;
   onToggleActive: (p: Product) => void;
-  onEditField: (id: string, field: string, value: unknown) => void;
 }
 
 /**
@@ -54,7 +53,7 @@ export function ProductMobileCard({
       <div className="min-w-0 flex-1 space-y-1.5">
         <p
           className="font-medium text-sm leading-tight break-words cursor-pointer hover:text-primary"
-          onClick={() => actions.onEditField(product.id, 'name', product.name)}
+          onClick={() => actions.onEdit(product)}
         >
           {product.name}
         </p>
@@ -68,12 +67,7 @@ export function ProductMobileCard({
         </div>
 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-          <span
-            className="font-bold cursor-pointer"
-            onClick={() => actions.onEditField(product.id, 'price', product.price)}
-          >
-            {product.price}€
-          </span>
+          <span className="font-bold">{product.price}€</span>
           {product.salePrice ? (
             <span className="font-bold text-primary">{product.salePrice}€</span>
           ) : null}
