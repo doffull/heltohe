@@ -12,6 +12,7 @@ import { Sparkles, Loader2, X, Globe, Image as ImageIcon, Settings2, FileText } 
 import { toast } from 'sonner';
 import CategoryIcon, { CATEGORY_ICON_NAMES } from '@/components/categories/CategoryIcon';
 import { cn } from '@/lib/utils';
+import { CategoryFramingEditor } from './CategoryFramingEditor';
 
 interface CategoryFormDialogProps {
   open: boolean;
@@ -29,6 +30,9 @@ export function CategoryFormDialog({ open, onOpenChange, category, categories, o
     sortOrder: 0,
     displaySize: 'medium',
     coverMode: 'cover',
+    coverPosition: '50% 50%',
+    coverZoom: 1,
+    coverBg: '',
     parentId: '',
     metaTitle: '',
     metaDescription: '',
@@ -53,6 +57,9 @@ export function CategoryFormDialog({ open, onOpenChange, category, categories, o
         sortOrder: category?.sortOrder || 0,
         displaySize: category?.displaySize || 'medium',
         coverMode: category?.coverMode || 'cover',
+        coverPosition: category?.coverPosition || '50% 50%',
+        coverZoom: category?.coverZoom ?? 1,
+        coverBg: category?.coverBg || '',
         parentId: category?.parentId || '',
         metaTitle: category?.metaTitle || '',
         metaDescription: category?.metaDescription || '',
@@ -200,7 +207,7 @@ export function CategoryFormDialog({ open, onOpenChange, category, categories, o
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3">
                 <div className="space-y-2">
                   <Label className="hud-text text-xs">Taille d'affichage</Label>
                   <select
@@ -211,17 +218,6 @@ export function CategoryFormDialog({ open, onOpenChange, category, categories, o
                     <option value="small">Petit</option>
                     <option value="medium">Moyen</option>
                     <option value="large">Grand</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="hud-text text-xs">Mode image</Label>
-                  <select
-                    value={form.coverMode}
-                    onChange={e => setForm(p => ({ ...p, coverMode: e.target.value }))}
-                    className="w-full h-10 rounded-md border border-border bg-secondary/50 px-3 text-sm"
-                  >
-                    <option value="cover">Cover</option>
-                    <option value="contain">Contain</option>
                   </select>
                 </div>
               </div>
@@ -262,6 +258,20 @@ export function CategoryFormDialog({ open, onOpenChange, category, categories, o
               {form.image && (
                 <p className="text-[10px] text-muted-foreground font-mono break-all">{form.image}</p>
               )}
+
+              <CategoryFramingEditor
+                image={form.image}
+                title={form.title}
+                icon={form.icon}
+                iconImage={form.iconImage}
+                value={{
+                  coverMode: form.coverMode,
+                  coverPosition: form.coverPosition,
+                  coverZoom: form.coverZoom,
+                  coverBg: form.coverBg,
+                }}
+                onChange={(patch) => setForm(p => ({ ...p, ...patch }))}
+              />
 
               {/* Visibilité */}
               <div className="space-y-2 pt-2 border-t border-border">
