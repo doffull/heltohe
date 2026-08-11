@@ -939,13 +939,10 @@ body.admin-route .protected-image-wrap::after {
     box-shadow: 1px 0 0 hsl(var(--border));
   }
   /* Cibles tactiles confortables dans l'admin */
-  body.admin-route button,
-  body.admin-route [role="tab"],
-  body.admin-route a[role="button"] {
+  body.admin-route button:not([role="checkbox"]):not([role="switch"]):not([role="radio"]):not(.h-6):not(.h-7):not(.h-8):not(.h-9),
+  body.admin-route [role="tab"] {
     min-height: 40px;
   }
-  body.admin-route button.h-7,
-  body.admin-route button.h-8 { min-height: 34px; }
 }
 
 /* Barre d'actions de masse collée en bas sur mobile */
