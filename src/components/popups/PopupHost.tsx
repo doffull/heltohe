@@ -93,9 +93,12 @@ export function PopupHost() {
       if (!devices.includes(isMobile ? 'mobile' : 'desktop')) return false;
       if (t.audience === 'logged-in' && !user) return false;
       if (t.audience === 'guests' && user) return false;
-      // L'app installée n'a plus besoin de l'invitation ; iOS/Safari n'émettent jamais
-      // `beforeinstallprompt`, on affiche alors les instructions manuelles.
-      if (c.type === 'install-app' && installed) return false;
+      // Pop-up « Installer l'app » : par défaut on l'affiche même sans
+      // `beforeinstallprompt` (iOS/Safari) en montrant les instructions manuelles.
+      if (c.type === 'install-app') {
+        if (installed && !t.showIfInstalled) return false;
+        if (t.installOnlyIfInstallable && !canPrompt) return false;
+      }
       try {
         const seen = localStorage.getItem(seenKey(c.id));
         if (seen && c.frequency_days > 0) {
@@ -107,9 +110,10 @@ export function PopupHost() {
         /* ignore storage errors */
       }
       if (c.display_trigger === 'visit_count' && visitsRef.current < (c.visit_count || 1)) return false;
+      if (c.display_trigger === 'time_on_site' && timeOnSite < (t.timeOnSiteSeconds || 60)) return false;
       return true;
     });
-  }, [campaigns, currentPage, isMobile, user, installed, isAdminRoute]);
+  }, [campaigns, currentPage, isMobile, user, installed, canPrompt, isAdminRoute, timeOnSite]);
 
   useEffect(() => {
     if (active || eligible.length === 0) return;
