@@ -524,13 +524,13 @@ export default function AdminProducts() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 min-w-0">
         <div>
           <h1 className="text-xl sm:text-3xl font-bold hud-text">PRODUITS</h1>
           <p className="text-muted-foreground text-xs sm:text-sm mt-1">{products.length} produits au catalogue</p>
         </div>
         <div className="flex items-center gap-2 min-w-0">
-          <div className="admin-scroll-x flex flex-nowrap sm:flex-wrap gap-2 min-w-0 pb-1 [&>*]:shrink-0">
+          <div className="admin-scroll-x flex flex-nowrap lg:flex-wrap gap-2 min-w-0 pb-1 [&>*]:shrink-0">
             <Button variant="outline" size="sm" onClick={() => setIsSyncDialogOpen(true)} className="chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10 text-xs">
               <RefreshCw className="h-3.5 w-3.5 mr-1.5" />Sync WP
             </Button>
@@ -667,7 +667,7 @@ export default function AdminProducts() {
             <span className="text-xs sm:text-sm font-bold hud-text">{count} SÉLECTIONNÉ(S)</span>
             <Button variant="ghost" size="sm" onClick={clear} className="h-8 text-xs"><X className="h-3 w-3 mr-1" />Désélectionner</Button>
           </div>
-          <div className="admin-scroll-x flex flex-nowrap sm:flex-wrap items-center gap-2 min-w-0 pb-1 [&>*]:shrink-0">
+          <div className="admin-scroll-x flex flex-nowrap lg:flex-wrap items-center gap-2 min-w-0 pb-1 [&>*]:shrink-0">
 
             <Button size="sm" onClick={() => setIsBulkEditOpen(true)} className="h-8 text-xs chamfer-hud-sm">
               <Wand2 className="h-3 w-3 mr-1" />Édition en masse
