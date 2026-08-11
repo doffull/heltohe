@@ -356,7 +356,10 @@ export type Database = {
       }
       categories: {
         Row: {
+          cover_bg: string | null
           cover_mode: string | null
+          cover_position: string
+          cover_zoom: number
           created_at: string
           display_size: string | null
           icon: string | null
@@ -376,7 +379,10 @@ export type Database = {
           visibility: string
         }
         Insert: {
+          cover_bg?: string | null
           cover_mode?: string | null
+          cover_position?: string
+          cover_zoom?: number
           created_at?: string
           display_size?: string | null
           icon?: string | null
@@ -396,7 +402,10 @@ export type Database = {
           visibility?: string
         }
         Update: {
+          cover_bg?: string | null
           cover_mode?: string | null
+          cover_position?: string
+          cover_zoom?: number
           created_at?: string
           display_size?: string | null
           icon?: string | null

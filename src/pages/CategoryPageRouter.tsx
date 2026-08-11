@@ -1,5 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import CategoryIcon from '@/components/categories/CategoryIcon';
+import { categoryImageStyle, categoryImageBackground } from '@/lib/categoryImageStyle';
 import { catKey } from '@/lib/productCategories';
 
 import { useCategories } from '@/hooks/useCategories';
@@ -29,11 +30,14 @@ function CategoryHeader({ category }: { category: { title: string; image?: strin
       {/* Background image */}
       {hasImage && (
         <>
-          <img
-            src={category.image}
-            alt={category.title}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
+          <div className="absolute inset-0 overflow-hidden" style={categoryImageBackground(category as any)}>
+            <img
+              src={category.image}
+              alt={category.title}
+              className="w-full h-full"
+              style={categoryImageStyle(category as any)}
+            />
+          </div>
           {/* Dark gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-background/20" />
         </>
