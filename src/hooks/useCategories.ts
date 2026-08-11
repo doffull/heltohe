@@ -21,6 +21,9 @@ export interface CategoryRecord {
   iconImage?: string;
   /** Où la catégorie apparaît : partout, menu uniquement, site uniquement. */
   visibility?: CategoryVisibility;
+  /** La page de la catégorie affiche-t-elle aussi les produits des sous-catégories ? */
+  includeChildren?: boolean;
+
 }
 
 function dbToCat(db: Record<string, unknown>): CategoryRecord {
@@ -39,6 +42,7 @@ function dbToCat(db: Record<string, unknown>): CategoryRecord {
     icon: (db.icon as string) || undefined,
     iconImage: (db.icon_image as string) || undefined,
     visibility: ((db.visibility as CategoryVisibility) || 'all'),
+    includeChildren: (db.include_children as boolean) !== false,
   };
 }
 
@@ -92,6 +96,7 @@ export function useCreateCategory() {
         icon: cat.icon || null,
         icon_image: cat.iconImage || null,
         visibility: cat.visibility || 'all',
+        include_children: cat.includeChildren !== false,
 
       } as any);
 
@@ -136,6 +141,7 @@ export function useUpdateCategory() {
         icon: cat.icon || null,
         icon_image: cat.iconImage || null,
         visibility: cat.visibility || 'all',
+        include_children: cat.includeChildren !== false,
 
       } as any).eq('id', id);
       if (error) throw error;

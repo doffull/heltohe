@@ -36,6 +36,7 @@ export function CategoryFormDialog({ open, onOpenChange, category, categories, o
     icon: '',
     iconImage: '',
     visibility: 'all' as CategoryVisibility,
+    includeChildren: true,
   });
   const [aiLoading, setAiLoading] = useState(false);
   const { data: pages = [] } = usePages();
@@ -59,6 +60,7 @@ export function CategoryFormDialog({ open, onOpenChange, category, categories, o
         icon: category?.icon || '',
         iconImage: category?.iconImage || '',
         visibility: category?.visibility || 'all',
+        includeChildren: category?.includeChildren !== false,
       });
     }
   }, [open, category]);
@@ -223,6 +225,22 @@ export function CategoryFormDialog({ open, onOpenChange, category, categories, o
                   </select>
                 </div>
               </div>
+
+              <label className="flex items-start gap-3 rounded-md border border-border bg-secondary/30 p-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.includeChildren}
+                  onChange={e => setForm(p => ({ ...p, includeChildren: e.target.checked }))}
+                  className="mt-0.5 h-4 w-4 accent-primary"
+                />
+                <span className="space-y-1">
+                  <span className="block hud-text text-xs">Inclure les produits des sous-catégories</span>
+                  <span className="block text-[11px] text-muted-foreground">
+                    Activé : la page affiche aussi les produits des sous-catégories (ex. « Homme » montre « Survêtement »).
+                    Désactivé : uniquement les produits rattachés directement à cette catégorie.
+                  </span>
+                </span>
+              </label>
             </div>
 
             {/* Column 2: Image */}

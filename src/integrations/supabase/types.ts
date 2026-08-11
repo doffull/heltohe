@@ -363,6 +363,7 @@ export type Database = {
           icon_image: string | null
           id: string
           image: string | null
+          include_children: boolean
           meta_description: string | null
           meta_title: string | null
           parent_id: string | null
@@ -382,6 +383,7 @@ export type Database = {
           icon_image?: string | null
           id?: string
           image?: string | null
+          include_children?: boolean
           meta_description?: string | null
           meta_title?: string | null
           parent_id?: string | null
@@ -401,6 +403,7 @@ export type Database = {
           icon_image?: string | null
           id?: string
           image?: string | null
+          include_children?: boolean
           meta_description?: string | null
           meta_title?: string | null
           parent_id?: string | null

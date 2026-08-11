@@ -1,0 +1,1 @@
+ALTER TABLE public.categories ADD COLUMN IF NOT EXISTS include_children boolean NOT NULL DEFAULT true;
