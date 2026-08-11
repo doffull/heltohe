@@ -939,10 +939,22 @@ body.admin-route .protected-image-wrap::after {
     box-shadow: 1px 0 0 hsl(var(--border));
   }
   /* Cibles tactiles confortables dans l'admin */
-  body.admin-route button:not([role="checkbox"]):not([role="switch"]):not([role="radio"]):not(.h-6):not(.h-7):not(.h-8):not(.h-9),
+  body.admin-route button:not([role="checkbox"]):not([role="switch"]):not([role="radio"]):not(.h-6):not(.h-7),
   body.admin-route [role="tab"] {
     min-height: 44px;
   }
+  /* Petits boutons compacts (h-8 / h-9) : garder l'aspect, élargir la zone tactile */
+  body.admin-route button.h-6,
+  body.admin-route button.h-7 {
+    position: relative;
+  }
+  body.admin-route button.h-6::after,
+  body.admin-route button.h-7::after {
+    content: '';
+    position: absolute;
+    inset: -10px;
+  }
+
   /* Champs et sélecteurs : hauteur de doigt */
   body.admin-route input:not([type="checkbox"]):not([type="radio"]),
   body.admin-route [role="combobox"],
