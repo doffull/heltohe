@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { getDeviceInfo, type DeviceKind, type PlatformKind } from '@/lib/deviceInfo';
 import type { PopupCampaign } from '@/types/popups';
+
 
 function mapRow(row: any): PopupCampaign {
   return {
