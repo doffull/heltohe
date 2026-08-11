@@ -129,7 +129,7 @@ export default function AdminCheckout() {
       </div>
 
       <Tabs defaultValue="shipping" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-4 admin-tabs-scroll w-full h-auto">
           <TabsTrigger value="shipping" className="gap-2 text-xs sm:text-sm">
             <Truck className="h-4 w-4 hidden sm:block" />Livraison
           </TabsTrigger>

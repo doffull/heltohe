@@ -270,7 +270,7 @@ export default function AdminMarketing() {
 
       <Tabs value={marketingTab} onValueChange={setMarketingTab}>
 
-        <TabsList className="bg-muted/50 flex flex-wrap h-auto gap-1">
+        <TabsList className="bg-muted/50 flex flex-wrap h-auto gap-1 admin-tabs-scroll w-full h-auto">
           <TabsTrigger value="banners" className="gap-1.5 text-xs sm:text-sm"><Image className="h-3.5 w-3.5" />Bannières</TabsTrigger>
           <TabsTrigger value="promos" className="gap-1.5 text-xs sm:text-sm"><Tag className="h-3.5 w-3.5" />Promos</TabsTrigger>
           <TabsTrigger value="newsletter" className="gap-1.5 text-xs sm:text-sm"><Mail className="h-3.5 w-3.5" />Newsletter</TabsTrigger>

@@ -126,7 +126,7 @@ export default function AdminCollab() {
       </div>
 
       <Tabs defaultValue="products">
-        <TabsList className="flex-wrap">
+        <TabsList className="flex-wrap admin-tabs-scroll w-full h-auto">
           <TabsTrigger value="products">Produits</TabsTrigger>
           <TabsTrigger value="filters">Filtres</TabsTrigger>
           <TabsTrigger value="page">Textes & images</TabsTrigger>

@@ -136,7 +136,7 @@ export default function AdminRoulette() {
 
 
       <Tabs defaultValue="config">
-        <TabsList>
+        <TabsList className="admin-tabs-scroll w-full h-auto">
           <TabsTrigger value="config">Configuration</TabsTrigger>
           <TabsTrigger value="segments">Lots ({segments.length})</TabsTrigger>
           <TabsTrigger value="history">Historique ({spins.length})</TabsTrigger>

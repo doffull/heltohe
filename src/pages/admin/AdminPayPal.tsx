@@ -192,7 +192,7 @@ export default function AdminPayPal() {
       )}
 
       <Tabs defaultValue="general">
-        <TabsList className="flex-wrap h-auto">
+        <TabsList className="flex-wrap h-auto admin-tabs-scroll w-full h-auto">
           <TabsTrigger value="general">Général</TabsTrigger>
           <TabsTrigger value="methods">Moyens de paiement</TabsTrigger>
           <TabsTrigger value="style">Boutons & bannières</TabsTrigger>

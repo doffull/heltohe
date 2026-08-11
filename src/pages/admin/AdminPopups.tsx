@@ -290,7 +290,7 @@ export default function AdminPopups() {
 
             {/* Panneaux */}
             <Tabs defaultValue="layer">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-3 admin-tabs-scroll w-full h-auto">
                 <TabsTrigger value="layer">Calque</TabsTrigger>
                 <TabsTrigger value="style">Fond</TabsTrigger>
                 <TabsTrigger value="rules">Règles</TabsTrigger>

@@ -151,7 +151,7 @@ export default function AdminWooCommerce() {
         <p className="text-xs lg:text-sm text-muted-foreground mt-1">Synchronise tes produits, commandes et clients depuis ton site WooCommerce.</p>
       </div>
       <Tabs defaultValue="sync" className="space-y-4">
-        <TabsList>
+        <TabsList className="admin-tabs-scroll w-full h-auto">
           <TabsTrigger value="sync"><Zap className="h-3 w-3 mr-1" /> Synchronisation</TabsTrigger>
           <TabsTrigger value="logs"><FileText className="h-3 w-3 mr-1" /> Logs</TabsTrigger>
         </TabsList>

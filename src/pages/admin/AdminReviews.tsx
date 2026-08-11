@@ -113,7 +113,7 @@ export default function AdminReviews() {
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
-        <TabsList>
+        <TabsList className="admin-tabs-scroll w-full h-auto">
           <TabsTrigger value="pending">En attente</TabsTrigger>
           <TabsTrigger value="approved">Publiés</TabsTrigger>
           <TabsTrigger value="rejected">Refusés</TabsTrigger>

@@ -1681,7 +1681,7 @@ export default function AdminColissimo() {
       </div>
 
       <Tabs defaultValue="commandes">
-        <TabsList className="w-full justify-start flex-wrap h-auto gap-1 p-1">
+        <TabsList className="w-full justify-start flex-wrap h-auto gap-1 p-1 admin-tabs-scroll w-full h-auto">
           <TabsTrigger value="commandes" className="gap-2 text-xs">
             <Package className="h-4 w-4" />
             Commandes

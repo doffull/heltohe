@@ -255,7 +255,7 @@ export default function AdminStock() {
           </Button>
         </div>
         <Tabs value={view} onValueChange={setView}>
-          <TabsList className="w-full grid grid-cols-5">
+          <TabsList className="w-full grid grid-cols-5 admin-tabs-scroll w-full h-auto">
             {VIEWS.map(v => <TabsTrigger key={v.key} value={v.key} className="text-[10px] px-1"><v.icon className="h-4 w-4" /></TabsTrigger>)}
           </TabsList>
         </Tabs>
