@@ -83,7 +83,9 @@ const MAIN_SOURCE_LABEL: Record<MainImageSource, string> = {
 
 export default function AdminProducts() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { toast } = useToast();
+
   const { data: products = [], isLoading } = useProducts();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
