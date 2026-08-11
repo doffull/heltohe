@@ -29,7 +29,7 @@ export default function AdminSettings() {
       </div>
 
       <Tabs defaultValue="customization">
-        <TabsList className="bg-muted/50 w-full overflow-x-auto justify-start flex-nowrap">
+        <TabsList className="bg-muted/50 admin-tabs-scroll w-full h-auto">
           <TabsTrigger value="customization" className="gap-2 text-xs sm:text-sm"><Paintbrush className="h-4 w-4" />Personnalisation</TabsTrigger>
           <TabsTrigger value="general" className="gap-2 text-xs sm:text-sm"><Settings className="h-4 w-4" />Général</TabsTrigger>
           <TabsTrigger value="legal" className="gap-2 text-xs sm:text-sm"><Scale className="h-4 w-4" />Légal</TabsTrigger>

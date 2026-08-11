@@ -96,7 +96,7 @@ export default function AdminNotifications() {
       </div>
 
       <Tabs defaultValue="channels" className="space-y-4">
-        <TabsList className="w-full overflow-x-auto justify-start">
+        <TabsList className="admin-tabs-scroll w-full h-auto">
           <TabsTrigger value="channels" className="gap-1 text-xs sm:text-sm"><Settings2 className="h-3.5 w-3.5" />Canaux</TabsTrigger>
           <TabsTrigger value="triggers" className="gap-1 text-xs sm:text-sm"><Bell className="h-3.5 w-3.5" />Déclencheurs</TabsTrigger>
           <TabsTrigger value="templates" className="gap-1 text-xs sm:text-sm"><FileText className="h-3.5 w-3.5" />Templates</TabsTrigger>
@@ -235,7 +235,7 @@ export default function AdminNotifications() {
                 <p className="text-muted-foreground">Aucune notification envoyée</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="admin-scroll-x admin-scroll-shadow min-w-0">
                 <table className="w-full">
                   <thead className="bg-muted/50 border-b border-border">
                     <tr>

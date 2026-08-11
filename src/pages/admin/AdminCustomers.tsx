@@ -227,7 +227,7 @@ export default function AdminCustomers() {
             <p className="text-muted-foreground">Aucun client trouvé</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="admin-scroll-x admin-scroll-shadow min-w-0">
             <table className="w-full min-w-[760px]">
               <thead className="bg-muted/50 border-b border-border">
                 <tr>

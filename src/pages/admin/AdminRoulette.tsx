@@ -229,7 +229,7 @@ export default function AdminRoulette() {
 
         {/* HISTORY */}
         <TabsContent value="history">
-          <Card className="p-4 overflow-x-auto">
+          <Card className="p-4 admin-scroll-x admin-scroll-shadow min-w-0">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-xs uppercase text-muted-foreground">

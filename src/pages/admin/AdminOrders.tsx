@@ -653,7 +653,7 @@ export default function AdminOrders() {
             <p className="text-muted-foreground">Aucune commande</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="admin-scroll-x admin-scroll-shadow min-w-0">
             <table className="w-full min-w-[700px]">
               <thead className="bg-muted/50 border-b border-border">
                 <tr>

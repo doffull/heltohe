@@ -641,7 +641,7 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
       )}
 
       {/* Table */}
-      <div className="border border-border rounded-lg overflow-x-auto">
+      <div className="border border-border rounded-lg admin-scroll-x admin-scroll-shadow min-w-0">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">

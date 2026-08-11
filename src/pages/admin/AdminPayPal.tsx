@@ -447,7 +447,7 @@ export default function AdminPayPal() {
             className="text-xs"
             rows={2}
           />
-          <div className="overflow-x-auto border border-border rounded-lg">
+          <div className="admin-scroll-x admin-scroll-shadow min-w-0 border border-border rounded-lg">
             <table className="w-full text-xs">
               <thead className="bg-muted/50">
                 <tr className="text-left">
@@ -656,7 +656,7 @@ export default function AdminPayPal() {
               <RefreshCw className="h-3.5 w-3.5 mr-2" /> Actualiser
             </Button>
           </div>
-          <div className="overflow-x-auto border border-border rounded-lg">
+          <div className="admin-scroll-x admin-scroll-shadow min-w-0 border border-border rounded-lg">
             <table className="w-full text-xs">
               <thead className="bg-muted/50">
                 <tr className="text-left">
