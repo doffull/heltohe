@@ -11,6 +11,12 @@ export interface CategoryRecord {
   sortOrder: number;
   displaySize: string;
   coverMode: string;
+  /** Point focal CSS, ex. "50% 50%". */
+  coverPosition?: string;
+  /** Zoom 1 → 3. */
+  coverZoom?: number;
+  /** Couleur de fond utilisée en mode "contain". */
+  coverBg?: string;
   parentId?: string | null;
   metaTitle?: string;
   metaDescription?: string;
