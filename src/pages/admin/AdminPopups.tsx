@@ -23,6 +23,7 @@ import {
   POPUP_TEMPLATES,
   POPUP_TRIGGERS,
   POPUP_TYPES,
+  POPUP_ACTION_EVENTS,
   emptyCampaign,
   newLayer,
   type PopupCampaign,
@@ -398,6 +399,59 @@ export default function AdminPopups() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {form.display_trigger === 'action' && (
+                  <div>
+                    <Label className="text-xs">Action déclenchante</Label>
+                    <Select
+                      value={targeting.actionEvent || 'lvtk:add-to-cart'}
+                      onValueChange={(v) => patch({ targeting: { ...targeting, actionEvent: v as any } })}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {POPUP_ACTION_EVENTS.map((a) => (
+                          <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="mt-1 text-[10px] text-muted-foreground">
+                      La pop-up s’ouvre après cette action (le délai ci-dessous s’applique).
+                    </p>
+                  </div>
+                )}
+
+                {form.display_trigger === 'time_on_site' && (
+                  <div>
+                    <Label className="text-xs">Temps cumulé sur le site (s)</Label>
+                    <Input
+                      type="number"
+                      value={targeting.timeOnSiteSeconds ?? 60}
+                      onChange={(e) => patch({ targeting: { ...targeting, timeOnSiteSeconds: Number(e.target.value) } })}
+                    />
+                  </div>
+                )}
+
+                {form.type === 'install-app' && (
+                  <div className="space-y-3 border border-border p-3">
+                    <p className="text-[11px] font-medium uppercase tracking-wide">Règles d’installation</p>
+                    <div className="flex items-center justify-between gap-3">
+                      <Label className="text-xs font-normal">
+                        Forcer l’affichage même sans invite native (iPhone/Safari)
+                      </Label>
+                      <Switch
+                        checked={!targeting.installOnlyIfInstallable}
+                        onCheckedChange={(v) => patch({ targeting: { ...targeting, installOnlyIfInstallable: !v } })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <Label className="text-xs font-normal">Afficher même si l’app semble déjà installée</Label>
+                      <Switch
+                        checked={!!targeting.showIfInstalled}
+                        onCheckedChange={(v) => patch({ targeting: { ...targeting, showIfInstalled: v } })}
+                      />
+                    </div>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <Label className="text-xs">Délai (s)</Label>

@@ -44,8 +44,16 @@ export function useTrackProductView(productId?: string) {
   const { track } = useRecentlyViewed();
   useEffect(() => {
     track(productId);
+    if (!productId) return;
+    // Signal global : déclencheur « consultation d'un produit » des pop-ups.
+    try {
+      window.dispatchEvent(new CustomEvent('lvtk:product-view', { detail: { productId } }));
+    } catch {
+      /* ignore */
+    }
   }, [productId, track]);
 }
+
 
 /**
  * Recommandations personnalisées : score basé sur les catégories et tags

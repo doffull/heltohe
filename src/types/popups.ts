@@ -77,10 +77,36 @@ export interface PopupBackground {
   blur?: number;
 }
 
+/** Actions du site pouvant déclencher une pop-up. */
+export type PopupActionEvent =
+  | 'lvtk:add-to-cart'
+  | 'lvtk:product-view'
+  | 'lvtk:wishlist-add'
+  | 'lvtk:chat-open'
+  | 'lvtk:open-voice'
+  | 'hmp:install-available';
+
+export const POPUP_ACTION_EVENTS: { value: PopupActionEvent; label: string }[] = [
+  { value: 'lvtk:add-to-cart', label: 'Ajout au panier' },
+  { value: 'lvtk:product-view', label: 'Consultation d’un produit' },
+  { value: 'lvtk:wishlist-add', label: 'Ajout aux favoris' },
+  { value: 'lvtk:chat-open', label: 'Ouverture du chat' },
+  { value: 'lvtk:open-voice', label: 'Commande vocale lancée' },
+  { value: 'hmp:install-available', label: 'App installable détectée' },
+];
+
 export interface PopupTargeting {
   pages?: string[]; // 'home' | 'shop' | 'product' | 'cart' | 'category' | 'all'
   devices?: ('mobile' | 'desktop')[];
   audience?: 'all' | 'logged-in' | 'guests';
+  /** Action du site à écouter pour le déclencheur « après une action ». */
+  actionEvent?: PopupActionEvent;
+  /** Temps cumulé passé sur le site (en secondes) pour le déclencheur « temps passé ». */
+  timeOnSiteSeconds?: number;
+  /** Pop-up « Installer l’app » : n’afficher que si le navigateur propose l’installation native. */
+  installOnlyIfInstallable?: boolean;
+  /** Pop-up « Installer l’app » : afficher même quand l’app semble déjà installée. */
+  showIfInstalled?: boolean;
 }
 
 export type PopupFormat = 'square' | 'portrait' | 'landscape' | 'fullscreen' | 'bar';
@@ -92,7 +118,9 @@ export type PopupTrigger =
   | 'exit_intent'
   | 'idle'
   | 'visit_count'
-  | 'add_to_cart';
+  | 'add_to_cart'
+  | 'action'
+  | 'time_on_site';
 
 export type PopupType =
   | 'promo'
@@ -150,6 +178,8 @@ export const POPUP_TRIGGERS: { value: PopupTrigger; label: string }[] = [
   { value: 'idle', label: 'Après inactivité' },
   { value: 'visit_count', label: 'À la Nième visite' },
   { value: 'add_to_cart', label: 'Ajout au panier' },
+  { value: 'action', label: 'Après une action du visiteur' },
+  { value: 'time_on_site', label: 'Après un temps passé sur le site' },
 ];
 
 export const POPUP_TYPES: { value: PopupType; label: string }[] = [

@@ -13,6 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 const seenKey = (id: string) => `hmp_popup_seen_${id}`;
 const countKey = (id: string) => `hmp_popup_count_${id}`;
 const VISITS_KEY = 'hmp_visit_count';
+const TIME_KEY = 'hmp_time_on_site';
 
 function bumpVisits() {
   try {
@@ -23,6 +24,16 @@ function bumpVisits() {
     return 1;
   }
 }
+
+/** Temps cumulé (en secondes) passé sur le site, toutes visites confondues. */
+function readTimeOnSite() {
+  try {
+    return Number(localStorage.getItem(TIME_KEY) || '0');
+  } catch {
+    return 0;
+  }
+}
+
 
 function pageKey(pathname: string) {
   if (pathname === '/') return 'home';
@@ -37,16 +48,32 @@ export function PopupHost() {
   const { data: campaigns = [] } = useActivePopupCampaigns();
   const location = useLocation();
   const { user } = (useAuth() as any) || {};
-  const { install, installed } = useInstallApp();
+  const { install, installed, canPrompt } = useInstallApp();
   const [active, setActive] = useState<PopupCampaign | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const shownRef = useRef<Set<string>>(new Set());
   const visitsRef = useRef<number>(0);
   const mountedAt = useRef(Date.now());
+  const [timeOnSite, setTimeOnSite] = useState(readTimeOnSite);
 
   useEffect(() => {
     visitsRef.current = bumpVisits();
   }, []);
+
+  // Compteur de temps cumulé, persistant et utilisé par le déclencheur « temps passé ».
+  useEffect(() => {
+    const t = setInterval(() => {
+      const next = readTimeOnSite() + 5;
+      try {
+        localStorage.setItem(TIME_KEY, String(next));
+      } catch {
+        /* ignore */
+      }
+      setTimeOnSite(next);
+    }, 5000);
+    return () => clearInterval(t);
+  }, []);
+
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const currentPage = pageKey(location.pathname);
@@ -66,9 +93,12 @@ export function PopupHost() {
       if (!devices.includes(isMobile ? 'mobile' : 'desktop')) return false;
       if (t.audience === 'logged-in' && !user) return false;
       if (t.audience === 'guests' && user) return false;
-      // L'app installée n'a plus besoin de l'invitation ; iOS/Safari n'émettent jamais
-      // `beforeinstallprompt`, on affiche alors les instructions manuelles.
-      if (c.type === 'install-app' && installed) return false;
+      // Pop-up « Installer l'app » : par défaut on l'affiche même sans
+      // `beforeinstallprompt` (iOS/Safari) en montrant les instructions manuelles.
+      if (c.type === 'install-app') {
+        if (installed && !t.showIfInstalled) return false;
+        if (t.installOnlyIfInstallable && !canPrompt) return false;
+      }
       try {
         const seen = localStorage.getItem(seenKey(c.id));
         if (seen && c.frequency_days > 0) {
@@ -80,9 +110,10 @@ export function PopupHost() {
         /* ignore storage errors */
       }
       if (c.display_trigger === 'visit_count' && visitsRef.current < (c.visit_count || 1)) return false;
+      if (c.display_trigger === 'time_on_site' && timeOnSite < (t.timeOnSiteSeconds || 60)) return false;
       return true;
     });
-  }, [campaigns, currentPage, isMobile, user, installed, isAdminRoute]);
+  }, [campaigns, currentPage, isMobile, user, installed, canPrompt, isAdminRoute, timeOnSite]);
 
   useEffect(() => {
     if (active || eligible.length === 0) return;
@@ -149,6 +180,19 @@ export function PopupHost() {
         const onAdd = () => open();
         window.addEventListener('lvtk:add-to-cart', onAdd as EventListener);
         cleanups.push(() => window.removeEventListener('lvtk:add-to-cart', onAdd as EventListener));
+        break;
+      }
+      case 'action': {
+        const evt = c.targeting?.actionEvent || 'lvtk:add-to-cart';
+        const onAction = () => setTimeout(open, (c.delay_seconds || 0) * 1000);
+        window.addEventListener(evt, onAction as EventListener);
+        cleanups.push(() => window.removeEventListener(evt, onAction as EventListener));
+        break;
+      }
+      case 'time_on_site': {
+        // L'éligibilité est déjà vérifiée par le compteur cumulé.
+        const t = setTimeout(open, 400);
+        cleanups.push(() => clearTimeout(t));
         break;
       }
     }
