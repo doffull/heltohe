@@ -143,9 +143,6 @@ export function ProductMobileCard({
       </div>
     </div>
   );
-
-    </div>
-  );
 }
 
 export default ProductMobileCard;
