@@ -1,48 +1,36 @@
-# Passage du site en SSR (rendu côté serveur)
+# Simplifier catégories = pages
 
-## Situation actuelle (vérifiée)
+## Principe
+Une catégorie = une page. Tout se gère depuis **Catalogue > Catégories**. Créer une catégorie crée sa page automatiquement (et la garde synchronisée si on renomme). Assigner un produit à une catégorie le fait apparaître aussitôt sur la page de cette catégorie et sur celle de sa catégorie parente.
 
-- Le site est une SPA Vite + React Router : `src/App.tsx` déclare toutes les routes côté navigateur, `index.html` ne contient qu'une coquille vide (`<div id="root">`).
-- Les métadonnées par page passent par `react-helmet-async` (`src/components/seo/SeoHead.tsx`), donc elles n'existent que **après** exécution du JavaScript. Google les lit, mais LinkedIn/Facebook/Slack/WhatsApp ne voient qu'un titre générique.
-- `SeoHead.tsx`, `public/sitemap.xml` et `public/robots.txt` pointent vers `https://helvetica-mp.helvetica-mp.net`, qui n'est pas un domaine valide : les canoniques et le sitemap actuels sont donc erronés.
-- ~26 pages publiques + un espace admin complet (une cinquantaine d'écrans), éditeur live, pop-ups, PWA, paiements PayPal/PayPlug, Colissimo, Supabase.
+## 1. Création / renommage automatique de la page
+- La page est créée à l'ajout d'une catégorie (déjà le cas) **et** synchronisée quand on renomme la catégorie ou change son slug : titre, slug et URL suivent la catégorie, le contenu déjà personnalisé reste intact.
+- Suppression d'une catégorie : sa page est supprimée aussi.
+- Slugs propres et sans caractères cassants (« veste & survét » devient « veste-survet »).
 
-## Ce que je vais faire
+## 2. Édition depuis la catégorie
+- Le formulaire catégorie gagne un onglet **Page** : publier / dépublier, SEO (repris de la catégorie), et bouton « Modifier le contenu » qui ouvre directement le Page Builder de cette catégorie.
+- Bouton « Voir la page » (ouvre l'URL publique).
+- L'écran **Pages** ne liste plus que les pages libres (À propos, etc.) ; les pages de catégorie sont accessibles depuis les catégories, avec un lien de renvoi si besoin.
 
-### 1. Migration technique vers le socle SSR (TanStack Start)
+## 3. Produits → catégorie, sans configuration
+- Sur la page d'une catégorie parent, les produits des sous-catégories remontent (« survêtement » apparaît aussi dans « Homme »).
+- Le rattachement produit ↔ catégorie devient insensible à la casse/accents et aux pluriels simples, pour éviter les « cagoule » / « cagoules » qui disparaissent.
+- Dans « Modifier le produit », le sélecteur ne propose que des catégories existantes ; créer une nouvelle catégorie depuis ce sélecteur la crée réellement (avec sa page).
+- Collab reste isolé de la boutique comme aujourd'hui.
 
-Le site passe du socle SPA au socle SSR de Lovable. Concrètement :
-
-- Chaque route actuelle devient une route serveur : le HTML de la page (titre, description, contenu produit, prix, textes) est généré sur le serveur puis envoyé au visiteur et aux robots.
-- Les pages publiques sont rendues côté serveur : accueil, boutique, fiches produits, catégories, collab, à-propos, contact, boutiques/store locator, fidélité, guide des tailles, pages légales.
-- Les zones privées (`/admin/*`, `/compte/*`, `/panier`, `/checkout`, `/auth`) restent en rendu client à l'intérieur du nouveau socle : elles n'ont aucun intérêt SEO et dépendent de la session. Elles restent 100 % fonctionnelles.
-- Tous les contextes existants (panier, auth, design settings, sidebar, méga menu, éditeur visuel) sont recâblés pour tolérer le rendu serveur (aucun accès à `window`/`localStorage` pendant le rendu).
-- La PWA, le verrou de licence, l'obfuscation du build, les pop-ups et les widgets (chatbot, voix, FAB) sont réintégrés après migration.
-
-### 2. SEO servi directement dans le HTML
-
-- Titre, description, canonique et `og:*` propres à chaque page, écrits dans le HTML source.
-- Fiches produits : JSON-LD `Product` (nom, image, prix, disponibilité) + `BreadcrumbList`. Accueil : `Organization`.
-- L'interrupteur « visible sur Google » et le mode maintenance de `/admin/seo` continuent de fonctionner, mais deviennent réellement étanches (le `noindex` est posé côté serveur).
-
-### 3. Correction du domaine
-
-- Remplacement de `helvetica-mp.helvetica-mp.net` par **https://helvetica-mp.com** dans les canoniques, `og:url`, le sitemap et `robots.txt`.
-- Sitemap généré dynamiquement (pages statiques + produits et catégories publiés), avec plafond du nombre d'URLs.
-- À faire de votre côté : connecter `helvetica-mp.com` dans Réglages du projet → Domaines (sinon les canoniques pointeraient vers une adresse non servie).
-
-## Déroulé et points de vigilance
-
-- La migration se fait en une opération encadrée : le projet est basculé sur le nouveau socle, puis les pages sont portées les unes après les autres.
-- C'est un chantier lourd : il faut prévoir une phase de vérification page par page après bascule (accueil, boutique, fiche produit, panier, checkout, admin, éditeur live).
-- Les bibliothèques qui n'existent que côté navigateur (pdfjs, gifenc, leaflet, xlsx, Google Maps, générateur de GIF) sont chargées en import dynamique côté client uniquement.
-- Google met généralement plusieurs jours à plusieurs semaines à recrawler et à répercuter les gains.
+## 4. Nettoyage des données existantes
+- Fusion du doublon de page sur « Homme » (page parasite « veste »).
+- Création de la page manquante pour « survêtement ».
+- Correction du slug « veste & survét ».
+- Création de la catégorie « Cagoule » (sous-catégorie de Homme) et rattachement des 4 produits « cagoule / cagoules ».
 
 ## Détails techniques
+- Migration : réécriture de `auto_create_category_page` + nouveau trigger `AFTER UPDATE` de synchro titre/slug, trigger `AFTER DELETE` pour supprimer la page, normalisation des slugs dans `generate_category_slug` (suppression des `&`, espaces, caractères spéciaux). Index unique `pages(category_id)` après dédoublonnage.
+- Script de données (outil d'insertion) : suppression de la page en trop, création de la page manquante, création de « Cagoule », `UPDATE products` pour normaliser `category`/`categories`.
+- Front : nouvelle fonction `categoryWithDescendants(categories, title)` dans `src/lib/productCategories.ts` ; `Shop.tsx` filtre via cette liste (parent + enfants), matching normalisé (accents, casse, pluriel).
+- `CategoryFormDialog.tsx` : onglet « Page » (publication, lien Page Builder, aperçu). `AdminPages.tsx` : filtre par défaut sur les pages libres + badge « gérée par la catégorie » avec lien.
+- `useCategories.ts` : `useDeleteCategory` inchangé (la page suit via trigger) ; ajout d'un helper de création rapide utilisé par `ProductForm.tsx`.
 
-- Bascule sur le template TanStack Start (`vite.config.ts` via `@lovable.dev/vite-tanstack-config`, `src/routes/` en routage par fichiers, `src/server.ts` + `src/start.ts` avec capture d'erreurs SSR et page d'erreur autonome, `errorComponent` sur la route racine).
-- `react-router-dom` remplacé par le routeur TanStack : `useNavigate`, `useLocation`, `useParams`, `<Link>` remplacés par leurs équivalents ; `AnimatePresence` conservé sur le layout racine.
-- `react-helmet-async` remplacé par l'API `head` des routes TanStack ; `SeoHead.tsx` conservé sous forme d'utilitaire de calcul des balises (lecture de `design_settings`, `seo_indexable`, `maintenance_enabled`).
-- Loaders de routes retournant uniquement des données sérialisables (identifiants/slugs, pas de composants ni de fonctions) ; les données produits/catégories sont préchargées côté serveur via le client Supabase puis hydratées dans React Query.
-- `MaintenanceGate` déplacé en middleware de requête pour renvoyer la page de maintenance et le `noindex` côté serveur.
-- Sitemap servi par une route serveur `/sitemap.xml` alimentée par Supabase, `robots.txt` mis à jour avec la nouvelle directive `Sitemap:`.
+## Hors périmètre
+- Pas de changement de structure d'URL (`/boutique/:slug` conservé), pas de redirections 301 automatiques après renommage.
