@@ -1,5 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import CategoryIcon from '@/components/categories/CategoryIcon';
+import { catKey } from '@/lib/productCategories';
+
 import { useCategories } from '@/hooks/useCategories';
 import { usePage } from '@/hooks/usePages';
 import { useEffect } from 'react';
@@ -93,8 +95,11 @@ export default function CategoryPageRouter() {
   // Robust matching: exact slug → normalized title fallback
   const category = categories.find(c =>
     c.slug === categorySlug ||
-    normalizeSlug(c.title) === normalizeSlug(categorySlug || '')
+    normalizeSlug(c.title) === normalizeSlug(categorySlug || '') ||
+    catKey(c.slug) === catKey(categorySlug) ||
+    catKey(c.title) === catKey(categorySlug)
   );
+
 
   // SEO — title + meta description + keywords
   useEffect(() => {
