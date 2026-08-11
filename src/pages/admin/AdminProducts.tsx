@@ -709,8 +709,8 @@ export default function AdminProducts() {
             <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground">Aucun produit trouvé</p>
           </div>
-        ) : (
         ) : isMobile ? (
+
           <div>
             <div className="flex items-center gap-3 p-3 border-b border-border bg-muted/40">
               <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
