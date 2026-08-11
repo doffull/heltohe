@@ -529,32 +529,35 @@ export default function AdminProducts() {
           <h1 className="text-xl sm:text-3xl font-bold hud-text">PRODUITS</h1>
           <p className="text-muted-foreground text-xs sm:text-sm mt-1">{products.length} produits au catalogue</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={() => setIsSyncDialogOpen(true)} className="chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10 text-xs">
-            <RefreshCw className="h-3.5 w-3.5 mr-1.5" />Sync WP
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setIsMockupDialogOpen(true)} className="chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10 text-xs">
-            <Wand2 className="h-3.5 w-3.5 mr-1.5" />Maquette IA
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setIsBulkImagesOpen(true)} className="chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10 text-xs">
-            <Images className="h-3.5 w-3.5 mr-1.5" />Images produits
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setIsPdfDialogOpen(true)} className="chamfer-hud-sm text-xs">
-            <Upload className="h-3.5 w-3.5 mr-1.5" />PDF
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setIsCsvDialogOpen(true)} className="chamfer-hud-sm text-xs">
-            <Upload className="h-3.5 w-3.5 mr-1.5" />CSV
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setIsQuickCsvOpen(true)} className="chamfer-hud-sm text-xs">
-            <FileText className="h-3.5 w-3.5 mr-1.5" />Prix/Stock CSV
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportSelectedCsv} className="chamfer-hud-sm text-xs">
-            <Download className="h-3.5 w-3.5 mr-1.5" />Exporter
-          </Button>
-          <Button size="sm" onClick={() => { setEditingProduct(null); setIsFormOpen(true); }} className="chamfer-hud-sm text-xs">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="admin-scroll-x flex flex-nowrap sm:flex-wrap gap-2 min-w-0 pb-1 [&>*]:shrink-0">
+            <Button variant="outline" size="sm" onClick={() => setIsSyncDialogOpen(true)} className="chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10 text-xs">
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />Sync WP
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setIsMockupDialogOpen(true)} className="chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10 text-xs">
+              <Wand2 className="h-3.5 w-3.5 mr-1.5" />Maquette IA
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setIsBulkImagesOpen(true)} className="chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10 text-xs">
+              <Images className="h-3.5 w-3.5 mr-1.5" />Images produits
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setIsPdfDialogOpen(true)} className="chamfer-hud-sm text-xs">
+              <Upload className="h-3.5 w-3.5 mr-1.5" />PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setIsCsvDialogOpen(true)} className="chamfer-hud-sm text-xs">
+              <Upload className="h-3.5 w-3.5 mr-1.5" />CSV
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setIsQuickCsvOpen(true)} className="chamfer-hud-sm text-xs">
+              <FileText className="h-3.5 w-3.5 mr-1.5" />Prix/Stock CSV
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportSelectedCsv} className="chamfer-hud-sm text-xs">
+              <Download className="h-3.5 w-3.5 mr-1.5" />Exporter
+            </Button>
+          </div>
+          <Button size="sm" onClick={() => { setEditingProduct(null); setIsFormOpen(true); }} className="chamfer-hud-sm text-xs shrink-0">
             <Plus className="h-3.5 w-3.5 mr-1.5" />Ajouter
           </Button>
         </div>
+
       </div>
 
       <Tabs defaultValue="products">
