@@ -662,12 +662,13 @@ export default function AdminProducts() {
 
       {/* Bulk Actions */}
       {someSelected && (
-        <div className="chamfer-hud bg-primary/10 border border-primary/30 p-3 flex flex-wrap items-center gap-2 justify-between">
+        <div className="admin-bulk-bar chamfer-hud bg-primary/10 border border-primary/30 backdrop-blur-sm p-3 flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:justify-between min-w-0">
           <div className="flex items-center gap-3">
-            <span className="text-sm font-bold hud-text">{count} PRODUIT(S) SÉLECTIONNÉ(S)</span>
-            <Button variant="ghost" size="sm" onClick={clear} className="h-7 text-xs"><X className="h-3 w-3 mr-1" />Désélectionner</Button>
+            <span className="text-xs sm:text-sm font-bold hud-text">{count} SÉLECTIONNÉ(S)</span>
+            <Button variant="ghost" size="sm" onClick={clear} className="h-8 text-xs"><X className="h-3 w-3 mr-1" />Désélectionner</Button>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="admin-scroll-x flex flex-nowrap sm:flex-wrap items-center gap-2 min-w-0 pb-1 [&>*]:shrink-0">
+
             <Button size="sm" onClick={() => setIsBulkEditOpen(true)} className="h-8 text-xs chamfer-hud-sm">
               <Wand2 className="h-3 w-3 mr-1" />Édition en masse
             </Button>
