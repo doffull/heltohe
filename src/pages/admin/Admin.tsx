@@ -146,7 +146,7 @@ const SIDEBAR_ITEMS = [
 
   { icon: Users, label: 'Clients', href: '/admin/clients' },
   { icon: Mail, label: 'Messagerie & CRM', href: '/admin/messagerie' },
-  { icon: FileText, label: 'Pages', href: '/admin/pages' },
+  { icon: FileText, label: 'Pages & Catégories', href: '/admin/pages' },
   { icon: FolderOpen, label: 'Média', href: '/admin/media' },
   { icon: FileUp, label: 'Import PDF / Médias', href: '/admin/import-pdf' },
   { icon: Megaphone, label: 'Marketing', href: '/admin/marketing' },

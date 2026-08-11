@@ -13,6 +13,7 @@ import { useParallax } from '@/hooks/useParallax';
 import { SafeImage, SafeVideo } from '@/lib/safeMedia';
 import type { PageSection } from '@/hooks/usePages';
 import { excludeMarketplaceProducts, isMarketplaceCategory } from '@/lib/shopVisibility';
+import { ProductCard } from '@/components/products/ProductCard';
 
 const HOVER_CLASSES: Record<string, string> = {
   zoom: 'group-hover:scale-110',
@@ -204,10 +205,36 @@ function SliderSection({ content }: { content: Record<string, any> }) {
   );
 }
 
+/** Classes statiques (Tailwind ne compile pas les classes dynamiques). */
+const MOBILE_COLS: Record<number, string> = {
+  1: 'grid-cols-1',
+  2: 'grid-cols-2',
+};
+const DESKTOP_COLS: Record<number, string> = {
+  2: 'md:grid-cols-2',
+  3: 'md:grid-cols-3',
+  4: 'md:grid-cols-4',
+  5: 'md:grid-cols-5',
+  6: 'md:grid-cols-6',
+};
+const GAP_CLASS: Record<string, string> = {
+  none: 'gap-0',
+  sm: 'gap-2',
+  md: 'gap-4',
+  lg: 'gap-8',
+};
+const CARD_MAX_WIDTH: Record<string, string> = {
+  compact: 'max-w-[220px]',
+  normal: '',
+  large: '',
+};
+
 function ProductsSection({ content }: { content: Record<string, any> }) {
   const navigate = useNavigate();
   const { data: products = [] } = useProducts();
-  const cols = content.columns || 3;
+  const desktopCols = Number(content.columns) || 3;
+  const mobileCols = Number(content.columnsMobile) || 2;
+  const cardSize = (content.cardSize as string) || 'normal';
   const limit = content.limit || 12;
 
   let filtered = products;
@@ -218,32 +245,29 @@ function ProductsSection({ content }: { content: Record<string, any> }) {
   }
   filtered = filtered.slice(0, limit);
 
+  const gridClass = cn(
+    'grid',
+    MOBILE_COLS[mobileCols] || 'grid-cols-2',
+    DESKTOP_COLS[desktopCols] || 'md:grid-cols-3',
+    GAP_CLASS[(content.gap as string) || 'md'] || 'gap-4',
+    cardSize === 'large' && 'max-w-6xl mx-auto',
+  );
+
   return (
-    <div className={`grid gap-4`} style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+    <div className={gridClass}>
       {filtered.map(product => (
-        <div key={product.id} className="group cursor-pointer border border-border overflow-hidden" onClick={() => navigate(`/boutique/${product.id}`)}>
-          <div className="aspect-[3/4] overflow-hidden">
-            <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-          </div>
-          <div className="p-3">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{product.category}</p>
-            <h3 className="font-bold text-sm uppercase truncate">{product.name}</h3>
-            <div className="flex items-center gap-2 mt-1">
-              {product.salePrice ? (
-                <>
-                  <span className="font-bold">{product.salePrice}€</span>
-                  <span className="text-xs line-through text-muted-foreground">{product.price}€</span>
-                </>
-              ) : (
-                <span className="font-bold">{product.price}€</span>
-              )}
-            </div>
-          </div>
+        <div key={product.id} className={cn('w-full', CARD_MAX_WIDTH[cardSize])}>
+          <ProductCard
+            product={product}
+            onClick={() => navigate(`/boutique/${product.id}`)}
+            onNavigate={(id, color) => navigate(`/boutique/${id}${color ? `?color=${encodeURIComponent(color)}` : ''}`)}
+          />
         </div>
       ))}
     </div>
   );
 }
+
 
 function CategoriesSection({ content }: { content: Record<string, any> }) {
   const navigate = useNavigate();
@@ -287,7 +311,7 @@ function CategoriesSection({ content }: { content: Record<string, any> }) {
   return (
     <div className="px-6 space-y-4">
       {content.title && <h2 className="text-2xl md:text-3xl font-bold uppercase tracking-tight">{content.title}</h2>}
-      <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+      <div className={cn('grid gap-4', MOBILE_COLS[Number(content.columnsMobile) || 2] || 'grid-cols-2', DESKTOP_COLS[cols] || 'md:grid-cols-3')}>
         {items.map(cat => (
           <button key={cat!.id} onClick={() => goTo(cat)} className="group text-left">
             {style === 'card' && (
