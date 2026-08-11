@@ -178,6 +178,8 @@ export const POPUP_TRIGGERS: { value: PopupTrigger; label: string }[] = [
   { value: 'idle', label: 'Après inactivité' },
   { value: 'visit_count', label: 'À la Nième visite' },
   { value: 'add_to_cart', label: 'Ajout au panier' },
+  { value: 'action', label: 'Après une action du visiteur' },
+  { value: 'time_on_site', label: 'Après un temps passé sur le site' },
 ];
 
 export const POPUP_TYPES: { value: PopupType; label: string }[] = [
