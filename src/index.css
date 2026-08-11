@@ -885,3 +885,72 @@ body.admin-route .protected-image-wrap::after {
 
 
 
+
+/* ===== Admin mobile ergonomics ===== */
+/* Zone de défilement horizontale confinée (tableaux, onglets, barres d'actions) */
+.admin-scroll-x {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+.admin-scroll-x::-webkit-scrollbar { height: 6px; }
+.admin-scroll-x::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.35);
+  border-radius: 999px;
+}
+
+/* Indicateur visuel de contenu défilable sur les bords */
+.admin-scroll-shadow {
+  background-image:
+    linear-gradient(to right, hsl(var(--background)), transparent 12px),
+    linear-gradient(to left, hsl(var(--background)), transparent 12px),
+    linear-gradient(to right, hsl(var(--foreground) / 0.12), transparent 10px),
+    linear-gradient(to left, hsl(var(--foreground) / 0.12), transparent 10px);
+  background-position: 0 0, 100% 0, 0 0, 100% 0;
+  background-repeat: no-repeat;
+  background-size: 24px 100%, 24px 100%, 12px 100%, 12px 100%;
+  background-attachment: local, local, scroll, scroll;
+}
+
+/* Onglets admin : défilables horizontalement sur mobile, jamais coupés */
+.admin-tabs-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  max-width: 100%;
+}
+.admin-tabs-scroll::-webkit-scrollbar { display: none; }
+.admin-tabs-scroll > * { flex: 0 0 auto; }
+
+/* Colonne figée à gauche dans les tableaux admin (repère au scroll) */
+@media (max-width: 1023px) {
+  .admin-table-sticky thead th:nth-child(2),
+  .admin-table-sticky tbody td:nth-child(2) {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: hsl(var(--card));
+    box-shadow: 1px 0 0 hsl(var(--border));
+  }
+  /* Cibles tactiles confortables dans l'admin */
+  body.admin-route button,
+  body.admin-route [role="tab"],
+  body.admin-route a[role="button"] {
+    min-height: 40px;
+  }
+  body.admin-route button.h-7,
+  body.admin-route button.h-8 { min-height: 34px; }
+}
+
+/* Barre d'actions de masse collée en bas sur mobile */
+.admin-bulk-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 30;
+}
