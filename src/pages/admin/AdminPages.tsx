@@ -56,6 +56,7 @@ export default function AdminPages() {
     const target = pages.find(p => p.slug === slug);
     if (target) {
       setTypeFilter('all');
+      setMainTab('pages');
       setEditingPage({ ...target });
       setDialogOpen(true);
     }
