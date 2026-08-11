@@ -151,7 +151,10 @@ export default function AdminPopups() {
         </div>
       </div>
 
+      <InstallAppAnalytics />
+
       {isLoading ? (
+
         <div className="p-12 text-center text-muted-foreground">Chargement…</div>
       ) : campaigns.length === 0 ? (
         <div className="chamfer-hud bg-card/50 p-12 text-center text-sm text-muted-foreground">
