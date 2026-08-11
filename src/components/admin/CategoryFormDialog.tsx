@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { CategoryRecord, CategoryVisibility } from '@/hooks/useCategories';
+import { usePages, useUpsertPage } from '@/hooks/usePages';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { FileDropZone } from './FileDropZone';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Sparkles, Loader2, X, Globe, Image as ImageIcon, Settings2 } from 'lucide-react';
+import { Sparkles, Loader2, X, Globe, Image as ImageIcon, Settings2, FileText } from 'lucide-react';
+
 import { toast } from 'sonner';
 import CategoryIcon, { CATEGORY_ICON_NAMES } from '@/components/categories/CategoryIcon';
 import { cn } from '@/lib/utils';
@@ -36,6 +38,10 @@ export function CategoryFormDialog({ open, onOpenChange, category, categories, o
     visibility: 'all' as CategoryVisibility,
   });
   const [aiLoading, setAiLoading] = useState(false);
+  const { data: pages = [] } = usePages();
+  const upsertPage = useUpsertPage();
+  const categoryPage = category ? pages.find(p => p.categoryId === category.id) : undefined;
+
 
   useEffect(() => {
     if (open) {
@@ -161,7 +167,7 @@ export function CategoryFormDialog({ open, onOpenChange, category, categories, o
                   className={`bg-secondary/50 font-mono text-xs ${slugConflict ? 'border-destructive' : ''}`}
                 />
                 <div className="flex items-center justify-between">
-                  <p className="text-[10px] text-muted-foreground font-mono">/boutique/{form.slug || '...'}</p>
+                  <p className="text-[10px] text-muted-foreground font-mono">/{form.slug || '...'}</p>
                   {slugConflict && (
                     <p className="text-[10px] text-destructive font-mono">Slug déjà utilisé</p>
                   )}
@@ -381,7 +387,74 @@ export function CategoryFormDialog({ open, onOpenChange, category, categories, o
                   <p className="text-xs text-muted-foreground line-clamp-2">{form.metaDescription || 'Aucune description définie.'}</p>
                 </div>
               )}
+
+              {/* Page de la catégorie */}
+              <div className="mt-6 pt-5 border-t border-border space-y-3">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-xs font-bold hud-text tracking-widest text-muted-foreground">PAGE DE LA CATÉGORIE</p>
+                </div>
+
+                {!category ? (
+                  <p className="text-xs text-muted-foreground">
+                    La page de cette catégorie sera créée automatiquement à l'enregistrement, à l'adresse
+                    <span className="font-mono"> /{form.slug || '...'}</span>.
+                  </p>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-secondary/30 border border-border">
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium truncate">{categoryPage?.title || form.title}</p>
+                        <p className="text-[10px] text-muted-foreground font-mono truncate">
+                          /{categoryPage?.slug || form.slug}
+                          {categoryPage ? ` · ${categoryPage.sections.length} section${categoryPage.sections.length !== 1 ? 's' : ''}` : ''}
+                        </p>
+                      </div>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap ${categoryPage?.isPublished ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
+                        {categoryPage?.isPublished ? 'Publiée' : 'Brouillon'}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        disabled={!categoryPage}
+                        onClick={() => categoryPage && window.open(`/admin/pages?page=${categoryPage.slug}`, '_blank')}
+                      >
+                        <Settings2 className="h-3 w-3" /> Modifier le contenu
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => window.open(`/${categoryPage?.slug || form.slug}`, '_blank')}
+                      >
+                        <Globe className="h-3 w-3" /> Voir la page
+                      </Button>
+                      {categoryPage && (
+                        <Button
+                          type="button"
+                          variant={categoryPage.isPublished ? 'ghost' : 'default'}
+                          size="sm"
+                          disabled={upsertPage.isPending}
+                          onClick={async () => {
+                            await upsertPage.mutateAsync({ ...categoryPage, isPublished: !categoryPage.isPublished } as any);
+                            toast.success(categoryPage.isPublished ? 'Page dépubliée' : 'Page publiée');
+                          }}
+                        >
+                          {categoryPage.isPublished ? 'Dépublier' : 'Publier'}
+                        </Button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
+
           </div>
         </form>
 

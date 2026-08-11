@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { usePages, useUpsertPage, useDeletePage, useBulkDeletePages, type Page, type PageSection } from '@/hooks/usePages';
 import { useCategories } from '@/hooks/useCategories';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
@@ -32,7 +32,9 @@ export default function AdminPages() {
   const [editingPage, setEditingPage] = useState<Partial<Page> | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
+  // Par défaut on n'affiche que les pages libres : les pages de catégorie sont
+  // créées et gérées automatiquement depuis l'espace Catégories.
+  const [typeFilter, setTypeFilter] = useState<string>('custom');
 
   const filteredPages = pages.filter(p => {
     if (searchFilter && !p.title.toLowerCase().includes(searchFilter.toLowerCase()) && !p.slug.toLowerCase().includes(searchFilter.toLowerCase())) return false;
@@ -42,6 +44,22 @@ export default function AdminPages() {
     if (typeFilter === 'draft' && p.isPublished) return false;
     return true;
   });
+
+  // Ouverture directe d'une page via ?page=<slug> (lien depuis une catégorie)
+  const [autoOpened, setAutoOpened] = useState(false);
+  useEffect(() => {
+    if (autoOpened || !pages.length) return;
+    const slug = new URLSearchParams(window.location.search).get('page');
+    if (!slug) return;
+    const target = pages.find(p => p.slug === slug);
+    if (target) {
+      setTypeFilter('all');
+      setEditingPage({ ...target });
+      setDialogOpen(true);
+    }
+    setAutoOpened(true);
+  }, [pages, autoOpened]);
+
 
   const { selectedIds, toggle, toggleAll, clear, allSelected, someSelected, count, ids } = useBulkSelection(filteredPages);
 
@@ -95,13 +113,18 @@ export default function AdminPages() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">Pages</h1>
           <p className="text-xs sm:text-sm text-muted-foreground">{pages.length} page{pages.length !== 1 ? 's' : ''}</p>
         </div>
         <Button onClick={openNew} className="gap-2 w-full sm:w-auto" size="sm"><Plus className="h-4 w-4" /> Nouvelle page</Button>
       </div>
+
+      <div className="mb-6 p-3 rounded-lg border border-border bg-muted/30 text-xs text-muted-foreground">
+        Les pages de catégorie sont créées et renommées automatiquement avec leurs catégories : gérez-les depuis <strong>Catégories</strong>.
+      </div>
+
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-4">

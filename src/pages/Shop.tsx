@@ -6,7 +6,7 @@ import { useShopProducts, useCollabProducts } from '@/hooks/useShopProducts';
 import { useCollabSettings } from '@/hooks/useCollabSettings';
 import { groupFamiliesAdjacent } from '@/lib/productFamily';
 import { isMarketplaceCategory, isMarketplaceProduct } from '@/lib/shopVisibility';
-import { productInCategory, productCategoriesText } from '@/lib/productCategories';
+import { productInAnyCategory, categoryWithDescendants, productCategoriesText } from '@/lib/productCategories';
 import { useOrderedProducts } from '@/hooks/useCategoryOrder';
 import { useCategories } from '@/hooks/useCategories';
 import { useDesignSettings } from '@/hooks/useDesignSettings';
@@ -149,6 +149,14 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
     return dbCategories.filter(c => c.parentId === parent.id);
   }, [selectedCategory, dbCategories]);
 
+  // Catégorie sélectionnée + toutes ses sous-catégories : un produit rangé dans
+  // « survêtement » remonte aussi sur la page « Homme ».
+  const categoryScope = useMemo(
+    () => (selectedCategory === 'Tout' ? [] : categoryWithDescendants(dbCategories, selectedCategory)),
+    [selectedCategory, dbCategories],
+  );
+
+
   const handleProductHover = (product: Product) => {
     sidebarContext?.setHoveredProduct(product);
   };
@@ -167,10 +175,11 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
       );
     }
     if (selectedCategory !== 'Tout') {
-      filtered = filtered.filter(p => productInCategory(p, selectedCategory));
+      filtered = filtered.filter(p => productInAnyCategory(p, categoryScope));
     } else {
       filtered = filtered.filter(p => !isMarketplaceProduct(p));
     }
+
 
     if (shopFilters.sizes.length) {
       filtered = filtered.filter(p => (p.sizes || []).some(s => shopFilters.sizes.includes(s)));
@@ -182,15 +191,16 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
       );
     }
     return filtered;
-  }, [products, searchQuery, selectedCategory, shopFilters]);
+  }, [products, searchQuery, selectedCategory, categoryScope, shopFilters]);
 
   // Options de filtres calculées avant application des filtres taille/couleur
   const baseFilteredForOptions = useMemo(() => {
     let filtered = [...products];
-    if (selectedCategory !== 'Tout') filtered = filtered.filter(p => productInCategory(p, selectedCategory));
+    if (selectedCategory !== 'Tout') filtered = filtered.filter(p => productInAnyCategory(p, categoryScope));
     else filtered = filtered.filter(p => !isMarketplaceProduct(p));
     return filtered;
-  }, [products, selectedCategory]);
+  }, [products, selectedCategory, categoryScope]);
+
 
 
   const orderedBase = useOrderedProducts(baseFiltered, selectedCategory);

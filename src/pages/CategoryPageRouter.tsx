@@ -93,8 +93,11 @@ export default function CategoryPageRouter() {
   // Robust matching: exact slug → normalized title fallback
   const category = categories.find(c =>
     c.slug === categorySlug ||
-    normalizeSlug(c.title) === normalizeSlug(categorySlug || '')
+    normalizeSlug(c.title) === normalizeSlug(categorySlug || '') ||
+    catKey(c.slug) === catKey(categorySlug) ||
+    catKey(c.title) === catKey(categorySlug)
   );
+
 
   // SEO — title + meta description + keywords
   useEffect(() => {
