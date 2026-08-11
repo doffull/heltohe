@@ -97,7 +97,6 @@ export function useCreateCategory() {
         icon_image: cat.iconImage || null,
         visibility: cat.visibility || 'all',
         include_children: cat.includeChildren !== false,
-        include_children: cat.includeChildren !== false,
 
       } as any);
 
@@ -142,7 +141,6 @@ export function useUpdateCategory() {
         icon: cat.icon || null,
         icon_image: cat.iconImage || null,
         visibility: cat.visibility || 'all',
-        include_children: cat.includeChildren !== false,
         include_children: cat.includeChildren !== false,
 
       } as any).eq('id', id);
