@@ -13,6 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 const seenKey = (id: string) => `hmp_popup_seen_${id}`;
 const countKey = (id: string) => `hmp_popup_count_${id}`;
 const VISITS_KEY = 'hmp_visit_count';
+const TIME_KEY = 'hmp_time_on_site';
 
 function bumpVisits() {
   try {
@@ -23,6 +24,16 @@ function bumpVisits() {
     return 1;
   }
 }
+
+/** Temps cumulé (en secondes) passé sur le site, toutes visites confondues. */
+function readTimeOnSite() {
+  try {
+    return Number(localStorage.getItem(TIME_KEY) || '0');
+  } catch {
+    return 0;
+  }
+}
+
 
 function pageKey(pathname: string) {
   if (pathname === '/') return 'home';
