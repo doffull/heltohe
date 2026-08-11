@@ -23,6 +23,7 @@ import {
   POPUP_TEMPLATES,
   POPUP_TRIGGERS,
   POPUP_TYPES,
+  POPUP_ACTION_EVENTS,
   emptyCampaign,
   newLayer,
   type PopupCampaign,
