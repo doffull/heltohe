@@ -207,6 +207,34 @@ export function MegaMenu() {
                   </ul>
                 </div>
 
+                {/* Collab exclusif — visible uniquement dans le méga menu */}
+                <motion.div variants={itemV}>
+                  <p className="font-mono text-[10px] tracking-[0.3em] text-muted-foreground mb-3">// COLLABORATION</p>
+                  <Link
+                    to="/collab"
+                    onClick={close}
+                    aria-label="Collection Helvetica Mountain Pioneers x Pegashoes"
+                    className="group block border border-foreground/15 bg-secondary/30 hover:border-primary/60 hover:bg-secondary/50 transition-colors p-4 lg:p-5"
+                    style={{ clipPath: 'polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px)' }}
+                  >
+                    <div className="flex items-center gap-4">
+                      <img
+                        src={collabLogo}
+                        alt="Helvetica Mountain Pioneers x Pegashoes"
+                        className="h-14 lg:h-16 w-auto object-contain transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                      <span className="min-w-0">
+                        <span className="block text-sm lg:text-base font-bold uppercase tracking-tight truncate">Collab</span>
+                        <span className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Édition limitée</span>
+                      </span>
+                      <ArrowUpRight className="ml-auto h-5 w-5 shrink-0 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                    </div>
+                  </Link>
+                </motion.div>
+
+
+
                 <div>
                   <p className="font-mono text-[10px] tracking-[0.3em] text-muted-foreground mb-3">// LIENS</p>
                   <ul className="flex flex-wrap gap-x-6 gap-y-2">
