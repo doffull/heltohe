@@ -710,8 +710,34 @@ export default function AdminProducts() {
             <p className="text-muted-foreground">Aucun produit trouvé</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+        ) : isMobile ? (
+          <div>
+            <div className="flex items-center gap-3 p-3 border-b border-border bg-muted/40">
+              <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
+              <span className="text-[11px] font-bold hud-text text-muted-foreground">TOUT SÉLECTIONNER</span>
+            </div>
+            {filteredProducts.map((product) => (
+              <ProductMobileCard
+                key={product.id}
+                product={product}
+                selected={selectedIds.has(product.id)}
+                onToggleSelect={toggle}
+                actions={{
+                  onEdit: (p) => { setEditingProduct(p); setIsFormOpen(true); },
+                  onStock: (p) => handleOpenStockDialog(p),
+                  onVariantStock: (p) => setVariantStockDialog({ productId: p.id, productName: p.name }),
+                  onDuplicate: (p) => handleDuplicate(p),
+                  onSplit: (p) => setSplitProduct(p),
+                  onDelete: (id) => handleDelete(id),
+                  onToggleActive: (p) => toggleActive(p),
+                }}
+              />
+            ))}
+          </div>
+        ) : (
+          <AdminTableScroll stickyFirstCol>
             <table className="w-full min-w-[820px]">
+
               <thead className="bg-muted/50 border-b border-border">
                 <tr>
                   <th className="p-4 w-10"><Checkbox checked={allSelected} onCheckedChange={toggleAll} /></th>
