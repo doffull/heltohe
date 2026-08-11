@@ -187,11 +187,14 @@ export function PopupHost() {
         break;
       case 'install-app': {
         const ok = await install();
-        trackPopupEvent(active.id, ok ? 'convert' : 'click', { install: ok });
+        // Le clic est déjà compté ci-dessus : on n'ajoute qu'une conversion
+        // lorsque l'installation a réellement été déclenchée.
+        if (ok) trackPopupEvent(active.id, 'convert', { install: true });
         if (!ok) window.dispatchEvent(new CustomEvent('hmp:show-install-help'));
         close(false);
         break;
       }
+
       case 'close':
         close();
         break;

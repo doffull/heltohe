@@ -10,6 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FileDropZone } from '@/components/admin/FileDropZone';
 import { PopupCanvasEditor } from '@/components/admin/popups/PopupCanvasEditor';
 import { PopupLayerInspector } from '@/components/admin/popups/PopupLayerInspector';
+import { InstallAppAnalytics } from '@/components/admin/popups/InstallAppAnalytics';
+
 import {
   useAllPopupCampaigns,
   useUpsertPopupCampaign,
@@ -149,7 +151,10 @@ export default function AdminPopups() {
         </div>
       </div>
 
+      <InstallAppAnalytics />
+
       {isLoading ? (
+
         <div className="p-12 text-center text-muted-foreground">Chargement…</div>
       ) : campaigns.length === 0 ? (
         <div className="chamfer-hud bg-card/50 p-12 text-center text-sm text-muted-foreground">
