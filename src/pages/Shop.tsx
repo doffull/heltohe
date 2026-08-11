@@ -6,7 +6,7 @@ import { useShopProducts, useCollabProducts } from '@/hooks/useShopProducts';
 import { useCollabSettings } from '@/hooks/useCollabSettings';
 import { groupFamiliesAdjacent } from '@/lib/productFamily';
 import { isMarketplaceCategory, isMarketplaceProduct } from '@/lib/shopVisibility';
-import { productInAnyCategory, categoryWithDescendants, productCategoriesText } from '@/lib/productCategories';
+import { productInAnyCategory, categoryScopeFor, productCategoriesText } from '@/lib/productCategories';
 import { useOrderedProducts } from '@/hooks/useCategoryOrder';
 import { useCategories } from '@/hooks/useCategories';
 import { useDesignSettings } from '@/hooks/useDesignSettings';
@@ -152,7 +152,7 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
   // Catégorie sélectionnée + toutes ses sous-catégories : un produit rangé dans
   // « survêtement » remonte aussi sur la page « Homme ».
   const categoryScope = useMemo(
-    () => (selectedCategory === 'Tout' ? [] : categoryWithDescendants(dbCategories, selectedCategory)),
+    () => (selectedCategory === 'Tout' ? [] : categoryScopeFor(dbCategories, selectedCategory)),
     [selectedCategory, dbCategories],
   );
 
