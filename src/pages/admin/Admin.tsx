@@ -347,10 +347,11 @@ export default function Admin() {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-60 pt-14 lg:pt-0">
+      <main className="flex-1 min-w-0 max-w-full overflow-x-hidden lg:ml-60 pt-14 lg:pt-0">
         {/* Colored top border */}
         <div className="h-1 w-full" style={{ backgroundColor: activeColor }} />
-        <div className="p-3 lg:p-8">
+        <div className="p-3 sm:p-4 lg:p-8 min-w-0 max-w-full">
+
           <div className="mb-4">
             <AdminSaveBar />
           </div>
