@@ -941,8 +941,51 @@ body.admin-route .protected-image-wrap::after {
   /* Cibles tactiles confortables dans l'admin */
   body.admin-route button:not([role="checkbox"]):not([role="switch"]):not([role="radio"]):not(.h-6):not(.h-7):not(.h-8):not(.h-9),
   body.admin-route [role="tab"] {
-    min-height: 40px;
+    min-height: 44px;
   }
+  /* Champs et sélecteurs : hauteur de doigt */
+  body.admin-route input:not([type="checkbox"]):not([type="radio"]),
+  body.admin-route [role="combobox"],
+  body.admin-route select {
+    min-height: 44px;
+  }
+  /* Entrées de menus contextuels (Modifier / Supprimer / …) */
+  body.admin-route [role="menuitem"],
+  body.admin-route [role="menuitemcheckbox"],
+  body.admin-route [role="option"] {
+    min-height: 44px;
+    padding-top: 0.6rem;
+    padding-bottom: 0.6rem;
+    font-size: 0.875rem;
+  }
+  /* Cases à cocher : taille visuelle + zone de clic élargie sans décaler la mise en page */
+  body.admin-route [role="checkbox"] {
+    position: relative;
+    height: 1.35rem;
+    width: 1.35rem;
+  }
+  body.admin-route [role="checkbox"]::after {
+    content: '';
+    position: absolute;
+    inset: -12px;
+  }
+  /* Interrupteurs : zone de clic élargie */
+  body.admin-route [role="switch"] { position: relative; }
+  body.admin-route [role="switch"]::after {
+    content: '';
+    position: absolute;
+    inset: -10px;
+  }
+}
+
+/* Zone tactile étendue explicite (44px minimum) */
+.admin-tap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
 }
 
 /* Barre d'actions de masse collée en bas sur mobile */
@@ -951,3 +994,4 @@ body.admin-route .protected-image-wrap::after {
   bottom: 0;
   z-index: 30;
 }
+
