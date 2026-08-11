@@ -1,5 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import CategoryIcon from '@/components/categories/CategoryIcon';
+import { catKey } from '@/lib/productCategories';
+
 import { useCategories } from '@/hooks/useCategories';
 import { usePage } from '@/hooks/usePages';
 import { useEffect } from 'react';
