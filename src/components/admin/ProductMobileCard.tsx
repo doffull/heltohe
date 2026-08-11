@@ -40,7 +40,7 @@ export function ProductMobileCard({
 
   return (
     <div
-      className={`border-b border-border last:border-0 p-3 flex gap-2 ${selected ? 'bg-primary/5' : ''}`}
+      className={`border-b border-border last:border-0 py-3 pl-2 pr-2 flex gap-1.5 ${selected ? 'bg-primary/5' : ''}`}
     >
       {/* Sélection — toute la colonne gauche est tactile */}
       <button
@@ -87,18 +87,18 @@ export function ProductMobileCard({
           <span className={`font-bold ${stockColor}`}>Stock {product.stock}</span>
         </div>
 
-        <div className="flex items-center gap-2 pt-1.5">
+        <div className="flex items-center gap-1.5 pt-1.5">
           <button
             type="button"
             aria-label={isActive ? 'Désactiver le produit' : 'Activer le produit'}
             onClick={() => actions.onToggleActive(product)}
-            className={`admin-tap px-3 text-[10px] rounded font-bold ${isActive ? 'bg-green-500/20 text-green-500' : 'bg-muted text-muted-foreground'}`}
+            className={`admin-tap px-2 text-[10px] rounded font-bold ${isActive ? 'bg-green-500/20 text-green-500' : 'bg-muted text-muted-foreground'}`}
           >
             {isActive ? 'ACTIF' : 'INACTIF'}
           </button>
           <Button
             variant="outline"
-            className="h-11 flex-1 text-xs px-2"
+            className="h-11 flex-1 min-w-0 text-xs px-2"
             onClick={() => actions.onEdit(product)}
           >
             <Pencil className="h-4 w-4 mr-1.5" />Modifier
@@ -107,14 +107,14 @@ export function ProductMobileCard({
             variant="outline"
             size="icon"
             aria-label={`Supprimer ${product.name}`}
-            className="h-11 w-11 shrink-0 text-destructive border-destructive/40 hover:bg-destructive/10"
+            className="h-11 w-10 shrink-0 text-destructive border-destructive/40 hover:bg-destructive/10"
             onClick={() => actions.onDelete(product.id)}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Plus d'actions" className="h-11 w-11 shrink-0">
+              <Button variant="ghost" size="icon" aria-label="Plus d'actions" className="h-11 w-10 shrink-0">
                 <MoreHorizontal className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
