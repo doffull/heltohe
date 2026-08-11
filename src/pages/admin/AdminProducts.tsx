@@ -712,10 +712,18 @@ export default function AdminProducts() {
         ) : isMobile ? (
 
           <div>
-            <div className="flex items-center gap-3 p-3 border-b border-border bg-muted/40">
-              <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
-              <span className="text-[11px] font-bold hud-text text-muted-foreground">TOUT SÉLECTIONNER</span>
-            </div>
+            <button
+              type="button"
+              onClick={() => toggleAll(!allSelected)}
+              aria-pressed={allSelected}
+              className="w-full flex items-center gap-3 px-3 py-3 border-b border-border bg-muted/40 text-left active:bg-muted"
+            >
+              <Checkbox checked={allSelected} tabIndex={-1} className="pointer-events-none" />
+              <span className="text-[11px] font-bold hud-text text-muted-foreground">
+                {allSelected ? 'TOUT DÉSÉLECTIONNER' : 'TOUT SÉLECTIONNER'}
+              </span>
+            </button>
+
             {filteredProducts.map((product) => (
               <ProductMobileCard
                 key={product.id}
