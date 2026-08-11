@@ -43,6 +43,10 @@ import { InventoryProductDialog } from '@/components/admin/InventoryProductDialo
 import { BulkVariantStockDialog } from '@/components/admin/BulkVariantStockDialog';
 import { GlobalSizesEditor } from '@/components/admin/GlobalSizesEditor';
 import { ProductDefaultsEditor } from '@/components/admin/ProductDefaultsEditor';
+import { AdminTableScroll } from '@/components/admin/AdminTableScroll';
+import { ProductMobileCard } from '@/components/admin/ProductMobileCard';
+import { useIsMobile } from '@/hooks/use-mobile';
+
 import { Textarea } from '@/components/ui/textarea';
 import { importProductsFromPdf, pickMainImage, AUTO_MAIN_STRATEGY_LABEL, type AutoMainStrategy, type MainImageSource } from '@/lib/productPdfImport';
 import { useDesignSettings, useSaveDesignSettings } from '@/hooks/useDesignSettings';
