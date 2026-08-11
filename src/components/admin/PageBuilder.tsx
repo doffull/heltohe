@@ -273,14 +273,53 @@ function SectionEditor({
         {section.type === 'products' && (
           <div className="space-y-3">
             <Input placeholder="Catégorie à afficher (laisser vide = toutes)" value={section.content.category || ''} onChange={e => updateContent('category', e.target.value)} />
-            <Select value={String(section.content.columns || 3)} onValueChange={v => updateContent('columns', parseInt(v))}>
-              <SelectTrigger><SelectValue placeholder="Colonnes" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="2">2 colonnes</SelectItem>
-                <SelectItem value="3">3 colonnes</SelectItem>
-                <SelectItem value="4">4 colonnes</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Colonnes desktop</div>
+                <Select value={String(section.content.columns || 3)} onValueChange={v => updateContent('columns', parseInt(v))}>
+                  <SelectTrigger><SelectValue placeholder="Colonnes" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2">2 colonnes</SelectItem>
+                    <SelectItem value="3">3 colonnes</SelectItem>
+                    <SelectItem value="4">4 colonnes</SelectItem>
+                    <SelectItem value="5">5 colonnes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Colonnes mobile</div>
+                <Select value={String(section.content.columnsMobile || 2)} onValueChange={v => updateContent('columnsMobile', parseInt(v))}>
+                  <SelectTrigger><SelectValue placeholder="Mobile" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 colonne</SelectItem>
+                    <SelectItem value="2">2 colonnes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Taille des cartes</div>
+                <Select value={section.content.cardSize || 'normal'} onValueChange={v => updateContent('cardSize', v)}>
+                  <SelectTrigger><SelectValue placeholder="Taille" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="compact">Compacte</SelectItem>
+                    <SelectItem value="normal">Normale</SelectItem>
+                    <SelectItem value="large">Large</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Espacement</div>
+                <Select value={section.content.gap || 'md'} onValueChange={v => updateContent('gap', v)}>
+                  <SelectTrigger><SelectValue placeholder="Espacement" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Aucun</SelectItem>
+                    <SelectItem value="sm">Serré</SelectItem>
+                    <SelectItem value="md">Normal</SelectItem>
+                    <SelectItem value="lg">Large</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <Input type="number" placeholder="Nombre max de produits" value={section.content.limit || ''} onChange={e => updateContent('limit', parseInt(e.target.value) || undefined)} />
           </div>
         )}

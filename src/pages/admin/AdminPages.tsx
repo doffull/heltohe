@@ -13,9 +13,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import {
-  Plus, FileText, Trash2, Pencil, Search, ExternalLink, Sparkles, Filter
+  Plus, FileText, Trash2, Pencil, Search, ExternalLink, Sparkles, Filter, LayoutGrid
 } from 'lucide-react';
 import PageBuilder from '@/components/admin/PageBuilder';
+import { CategoriesManager } from '@/components/admin/CategoriesManager';
 
 function slugify(text: string) {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -31,6 +32,7 @@ export default function AdminPages() {
 
   const [editingPage, setEditingPage] = useState<Partial<Page> | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [mainTab, setMainTab] = useState('categories');
   const [searchFilter, setSearchFilter] = useState('');
   // Par défaut on n'affiche que les pages libres : les pages de catégorie sont
   // créées et gérées automatiquement depuis l'espace Catégories.
@@ -113,17 +115,32 @@ export default function AdminPages() {
 
   return (
     <div>
+      <div className="mb-4">
+        <h1 className="text-xl sm:text-2xl font-bold">Pages & Catégories</h1>
+        <p className="text-xs sm:text-sm text-muted-foreground">
+          Un seul espace : chaque catégorie possède sa page, réglée depuis le même formulaire.
+        </p>
+      </div>
+
+      <Tabs value={mainTab} onValueChange={setMainTab} className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="categories" className="gap-2"><LayoutGrid className="h-4 w-4" />Catégories & leurs pages</TabsTrigger>
+          <TabsTrigger value="pages" className="gap-2"><FileText className="h-4 w-4" />Pages libres</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="categories">
+          <CategoriesManager />
+        </TabsContent>
+
+        <TabsContent value="pages" className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold">Pages</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground">{pages.length} page{pages.length !== 1 ? 's' : ''}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">{pages.length} page{pages.length !== 1 ? 's' : ''} au total</p>
         </div>
         <Button onClick={openNew} className="gap-2 w-full sm:w-auto" size="sm"><Plus className="h-4 w-4" /> Nouvelle page</Button>
       </div>
 
-      <div className="mb-6 p-3 rounded-lg border border-border bg-muted/30 text-xs text-muted-foreground">
-        Les pages de catégorie sont créées et renommées automatiquement avec leurs catégories : gérez-les depuis <strong>Catégories</strong>.
-      </div>
+
 
 
       {/* Filters */}
@@ -197,6 +214,10 @@ export default function AdminPages() {
           ))
         )}
       </div>
+        </TabsContent>
+      </Tabs>
+
+
 
       {/* Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

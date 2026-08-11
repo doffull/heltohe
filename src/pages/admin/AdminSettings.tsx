@@ -1,72 +1,20 @@
-import { useState } from 'react';
-import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory, CategoryRecord } from '@/hooks/useCategories';
+import { Link } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Pencil, Trash2, LayoutGrid, Settings, Paintbrush, Scale } from 'lucide-react';
-import { CategoryFormDialog } from '@/components/admin/CategoryFormDialog';
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { Settings, Paintbrush, Scale } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAdminConfig, useSaveAdminConfig } from '@/hooks/useAdminConfig';
 
-// CategoryForm moved to CategoryFormDialog component
-
 export default function AdminSettings() {
   const { toast } = useToast();
-  const { designSettings, updateDesignSettings, flushDesignSettings } = useApp();
+  const { designSettings, updateDesignSettings } = useApp();
   const { data: adminConfig } = useAdminConfig();
   const saveAdminConfig = useSaveAdminConfig();
-  const [savingCols, setSavingCols] = useState(false);
 
-  const cols = designSettings.categoryColumns ?? 4;
-  const gridColsClass =
-    cols === 2 ? 'grid-cols-1 sm:grid-cols-2' :
-    cols === 3 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' :
-    cols === 4 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' :
-    cols === 5 ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5' :
-    'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6';
 
-  const handleColumnsChange = async (n: number) => {
-    updateDesignSettings({ categoryColumns: n });
-    setSavingCols(true);
-    try {
-      await flushDesignSettings({ categoryColumns: n });
-      toast({ title: 'Disposition enregistrée ✓', description: `${n} colonnes appliquées.` });
-    } catch {
-      toast({ title: 'Erreur', description: 'Impossible d\'enregistrer.', variant: 'destructive' });
-    } finally {
-      setSavingCols(false);
-    }
-  };
-
-  // Categories
-  const { data: categories = [], isLoading } = useCategories();
-  const createCategory = useCreateCategory();
-  const updateCategory = useUpdateCategory();
-  const deleteCategory = useDeleteCategory();
-  const [catDialogOpen, setCatDialogOpen] = useState(false);
-  const [editingCat, setEditingCat] = useState<CategoryRecord | null>(null);
-  const [catToDelete, setCatToDelete] = useState<CategoryRecord | null>(null);
-
-  const handleCatSubmit = async (data: Omit<CategoryRecord, 'id'>) => {
-    try {
-      if (editingCat) {
-        await updateCategory.mutateAsync({ ...data, id: editingCat.id });
-      } else {
-        await createCategory.mutateAsync(data);
-      }
-      toast({ title: editingCat ? 'Catégorie mise à jour' : 'Catégorie créée' });
-      setCatDialogOpen(false);
-      setEditingCat(null);
-    } catch {
-      toast({ title: 'Erreur', variant: 'destructive' });
-    }
-  };
 
   return (
     <div className="space-y-4 lg:space-y-6">
@@ -75,125 +23,18 @@ export default function AdminSettings() {
         <p className="text-muted-foreground text-xs lg:text-sm mt-1">Configuration de la boutique</p>
       </div>
 
-      <Tabs defaultValue="categories">
+      <div className="p-3 rounded-lg border border-border bg-muted/30 text-xs text-muted-foreground">
+        Les catégories et leurs pages se gèrent désormais au même endroit :{' '}
+        <Link to="/admin/pages" className="text-primary underline">Pages & Catégories</Link>.
+      </div>
+
+      <Tabs defaultValue="customization">
         <TabsList className="bg-muted/50 w-full overflow-x-auto justify-start flex-nowrap">
-          <TabsTrigger value="categories" className="gap-2 text-xs sm:text-sm"><LayoutGrid className="h-4 w-4" />Catégories</TabsTrigger>
           <TabsTrigger value="customization" className="gap-2 text-xs sm:text-sm"><Paintbrush className="h-4 w-4" />Personnalisation</TabsTrigger>
           <TabsTrigger value="general" className="gap-2 text-xs sm:text-sm"><Settings className="h-4 w-4" />Général</TabsTrigger>
           <TabsTrigger value="legal" className="gap-2 text-xs sm:text-sm"><Scale className="h-4 w-4" />Légal</TabsTrigger>
         </TabsList>
 
-        {/* ── CATEGORIES TAB ── */}
-        <TabsContent value="categories" className="space-y-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            {/* Column selector */}
-          <div className="flex items-center gap-3 flex-wrap">
-              <Label className="hud-text text-xs whitespace-nowrap">Colonnes :</Label>
-              <div className="flex border border-border rounded overflow-hidden">
-                {[2, 3, 4, 5, 6].map(n => (
-                  <button
-                    key={n}
-                    onClick={() => handleColumnsChange(n)}
-                    disabled={savingCols}
-                    className={`px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${
-                      cols === n
-                        ? 'bg-foreground text-background'
-                        : 'bg-background hover:bg-secondary'
-                    }`}
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
-              <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-                {savingCols ? 'Enregistrement…' : `Enregistré · ${cols} col.`}
-              </span>
-            </div>
-            <Button onClick={() => { setEditingCat(null); setCatDialogOpen(true); }} className="chamfer-hud-sm">
-              <Plus className="h-4 w-4 mr-2" />Nouvelle catégorie
-            </Button>
-          </div>
-          <div className="chamfer-hud bg-card/50 overflow-hidden">
-            {isLoading ? (
-              <div className="p-12 text-center"><div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto" /></div>
-            ) : categories.length === 0 ? (
-              <div className="p-12 text-center">
-                <LayoutGrid className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Aucune catégorie</p>
-              </div>
-            ) : (
-              <div className={`grid ${gridColsClass} gap-4 p-4`}>
-                {/* Group: root categories first, then children indented */}
-                {categories.filter(c => !c.parentId).map((cat) => {
-                  const children = categories.filter(c => c.parentId === cat.id);
-                  return (
-                    <div key={cat.id} className="space-y-2">
-                      <div className="chamfer-hud bg-card border border-border overflow-hidden group">
-                        {cat.image && (
-                          <div className="h-32 overflow-hidden">
-                            <img src={cat.image} alt={cat.title} className="w-full h-full object-cover" />
-                          </div>
-                        )}
-                        <div className="p-3 sm:p-4 flex items-center justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <p className="font-bold text-sm hud-text truncate">{cat.title}</p>
-                            <p className="text-xs text-muted-foreground">Position: {cat.sortOrder}</p>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => { setEditingCat(cat); setCatDialogOpen(true); }} title="Modifier" aria-label="Modifier">
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button variant="outline" size="icon" className="h-9 w-9 text-destructive hover:text-destructive border-destructive/30" onClick={() => setCatToDelete(cat)} title="Supprimer" aria-label="Supprimer">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                      {/* Sub-categories */}
-                      {children.map(sub => (
-                        <div key={sub.id} className="ml-4 chamfer-hud bg-card/60 border border-border/50 overflow-hidden">
-                          <div className="p-3 flex items-center justify-between gap-2">
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs text-muted-foreground">↳</p>
-                              <p className="font-medium text-sm hud-text truncate">{sub.title}</p>
-                            </div>
-                            <div className="flex items-center gap-1 shrink-0">
-                              <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => { setEditingCat(sub); setCatDialogOpen(true); }} title="Modifier" aria-label="Modifier">
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button variant="outline" size="icon" className="h-9 w-9 text-destructive hover:text-destructive border-destructive/30" onClick={() => setCatToDelete(sub)} title="Supprimer" aria-label="Supprimer">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })}
-                {/* Orphan sub-categories (parent deleted) */}
-                {categories.filter(c => c.parentId && !categories.find(p => p.id === c.parentId)).map((cat) => (
-                  <div key={cat.id} className="chamfer-hud bg-card border border-border overflow-hidden group">
-                    <div className="p-3 sm:p-4 flex items-center justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-sm hud-text truncate">{cat.title}</p>
-                        <p className="text-xs text-destructive">Parent manquant</p>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => { setEditingCat(cat); setCatDialogOpen(true); }} title="Modifier" aria-label="Modifier">
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="icon" className="h-9 w-9 text-destructive hover:text-destructive border-destructive/30" onClick={() => setCatToDelete(cat)} title="Supprimer" aria-label="Supprimer">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </TabsContent>
 
         {/* ── CUSTOMIZATION TAB ── */}
         <TabsContent value="customization" className="space-y-4">
@@ -561,51 +402,8 @@ export default function AdminSettings() {
         </TabsContent>
       </Tabs>
 
-      <CategoryFormDialog
-        open={catDialogOpen}
-        onOpenChange={(v) => { setCatDialogOpen(v); if (!v) setEditingCat(null); }}
-        category={editingCat || undefined}
-        categories={categories}
-        onSubmit={handleCatSubmit}
-      />
 
-      <AlertDialog open={!!catToDelete} onOpenChange={(v) => { if (!v) setCatToDelete(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Supprimer {catToDelete?.parentId ? 'cette sous-catégorie' : 'cette catégorie'} ?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              <span className="font-semibold text-foreground">« {catToDelete?.title} »</span> sera supprimée définitivement.
-              Les produits liés ne seront pas supprimés mais perdront cette catégorie.
-              {!catToDelete?.parentId && categories.some((c) => c.parentId === catToDelete?.id) && (
-                <span className="block mt-2 text-destructive">
-                  ⚠ Ses sous-catégories deviendront orphelines.
-                </span>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={async () => {
-                if (!catToDelete) return;
-                try {
-                  await deleteCategory.mutateAsync(catToDelete.id);
-                  toast({ title: catToDelete.parentId ? 'Sous-catégorie supprimée' : 'Catégorie supprimée' });
-                } catch {
-                  toast({ title: 'Erreur lors de la suppression', variant: 'destructive' });
-                } finally {
-                  setCatToDelete(null);
-                }
-              }}
-            >
-              Supprimer
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
     </div>
   );
 }
