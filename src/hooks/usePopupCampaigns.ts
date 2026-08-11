@@ -98,6 +98,73 @@ export function usePopupStats() {
   });
 }
 
+export interface PopupEventRow {
+  id: string;
+  campaign_id: string;
+  event: 'view' | 'click' | 'dismiss' | 'convert' | string;
+  session_id: string | null;
+  url: string | null;
+  created_at: string;
+  device: DeviceKind | 'unknown';
+  platform: PlatformKind | 'unknown';
+  browser: string;
+  standalone: boolean;
+  /** Vrai quand le clic a réellement déclenché l'installation. */
+  installed: boolean;
+}
+
+/**
+ * Événements bruts des pop-ups « Installer l'app », enrichis du device.
+ * Le filtrage (device / plateforme) se fait ensuite côté client.
+ */
+export function useInstallPopupEvents(days = 30) {
+  return useQuery({
+    queryKey: ['popup-campaigns', 'install-events', days],
+    queryFn: async (): Promise<{ events: PopupEventRow[]; campaigns: { id: string; name: string }[] }> => {
+      const { data: camps, error: campErr } = await supabase
+        .from('popup_campaigns' as any)
+        .select('id, name')
+        .eq('type', 'install-app');
+      if (campErr) throw campErr;
+
+      const campaigns = ((camps || []) as any[]).map((c) => ({ id: c.id as string, name: c.name as string }));
+      if (campaigns.length === 0) return { events: [], campaigns };
+
+      const since = new Date(Date.now() - days * 86_400_000).toISOString();
+      const { data, error } = await supabase
+        .from('popup_events' as any)
+        .select('id, campaign_id, event, session_id, url, meta, created_at')
+        .in('campaign_id', campaigns.map((c) => c.id))
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .limit(20000);
+      if (error) throw error;
+
+      const events: PopupEventRow[] = ((data || []) as any[]).map((row) => {
+        const meta = (row.meta || {}) as Record<string, unknown>;
+        return {
+          id: row.id,
+          campaign_id: row.campaign_id,
+          event: row.event,
+          session_id: row.session_id,
+          url: row.url,
+          created_at: row.created_at,
+          device: (meta.device as DeviceKind) || 'unknown',
+          platform: (meta.platform as PlatformKind) || 'unknown',
+          browser: (meta.browser as string) || 'unknown',
+          standalone: meta.standalone === true,
+          installed: meta.install === true,
+        };
+      });
+
+      return { events, campaigns };
+    },
+    staleTime: 60_000,
+  });
+}
+
+
+
 const SESSION_KEY = 'hmp_popup_session';
 export function getPopupSessionId() {
   try {
