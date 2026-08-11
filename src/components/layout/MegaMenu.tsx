@@ -7,7 +7,8 @@ import { excludeMarketplaceProducts, isMarketplaceCategory } from '@/lib/shopVis
 import { productMatchesCategoryLoose } from '@/lib/productCategories';
 import { useCategories, isCategoryInMenu } from '@/hooks/useCategories';
 import CategoryIcon from '@/components/categories/CategoryIcon';
-import collabLogo from '@/assets/lvtk_x_pegashoes.png';
+import collabLogoAsset from '@/assets/lvtk_x_pegashoes.png.asset.json';
+const collabLogo = collabLogoAsset.url;
 
 
 import { useProducts } from '@/hooks/useProducts';
