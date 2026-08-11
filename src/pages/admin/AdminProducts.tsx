@@ -43,6 +43,10 @@ import { InventoryProductDialog } from '@/components/admin/InventoryProductDialo
 import { BulkVariantStockDialog } from '@/components/admin/BulkVariantStockDialog';
 import { GlobalSizesEditor } from '@/components/admin/GlobalSizesEditor';
 import { ProductDefaultsEditor } from '@/components/admin/ProductDefaultsEditor';
+import { AdminTableScroll } from '@/components/admin/AdminTableScroll';
+import { ProductMobileCard } from '@/components/admin/ProductMobileCard';
+import { useIsMobile } from '@/hooks/use-mobile';
+
 import { Textarea } from '@/components/ui/textarea';
 import { importProductsFromPdf, pickMainImage, AUTO_MAIN_STRATEGY_LABEL, type AutoMainStrategy, type MainImageSource } from '@/lib/productPdfImport';
 import { useDesignSettings, useSaveDesignSettings } from '@/hooks/useDesignSettings';
@@ -79,7 +83,9 @@ const MAIN_SOURCE_LABEL: Record<MainImageSource, string> = {
 
 export default function AdminProducts() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { toast } = useToast();
+
   const { data: products = [], isLoading } = useProducts();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
@@ -518,41 +524,45 @@ export default function AdminProducts() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 min-w-0">
         <div>
           <h1 className="text-xl sm:text-3xl font-bold hud-text">PRODUITS</h1>
           <p className="text-muted-foreground text-xs sm:text-sm mt-1">{products.length} produits au catalogue</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={() => setIsSyncDialogOpen(true)} className="chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10 text-xs">
-            <RefreshCw className="h-3.5 w-3.5 mr-1.5" />Sync WP
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setIsMockupDialogOpen(true)} className="chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10 text-xs">
-            <Wand2 className="h-3.5 w-3.5 mr-1.5" />Maquette IA
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setIsBulkImagesOpen(true)} className="chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10 text-xs">
-            <Images className="h-3.5 w-3.5 mr-1.5" />Images produits
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setIsPdfDialogOpen(true)} className="chamfer-hud-sm text-xs">
-            <Upload className="h-3.5 w-3.5 mr-1.5" />PDF
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setIsCsvDialogOpen(true)} className="chamfer-hud-sm text-xs">
-            <Upload className="h-3.5 w-3.5 mr-1.5" />CSV
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setIsQuickCsvOpen(true)} className="chamfer-hud-sm text-xs">
-            <FileText className="h-3.5 w-3.5 mr-1.5" />Prix/Stock CSV
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportSelectedCsv} className="chamfer-hud-sm text-xs">
-            <Download className="h-3.5 w-3.5 mr-1.5" />Exporter
-          </Button>
-          <Button size="sm" onClick={() => { setEditingProduct(null); setIsFormOpen(true); }} className="chamfer-hud-sm text-xs">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="admin-scroll-x flex flex-nowrap lg:flex-wrap gap-2 min-w-0 pb-1 [&>*]:shrink-0">
+            <Button variant="outline" size="sm" onClick={() => setIsSyncDialogOpen(true)} className="chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10 text-xs">
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />Sync WP
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setIsMockupDialogOpen(true)} className="chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10 text-xs">
+              <Wand2 className="h-3.5 w-3.5 mr-1.5" />Maquette IA
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setIsBulkImagesOpen(true)} className="chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10 text-xs">
+              <Images className="h-3.5 w-3.5 mr-1.5" />Images produits
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setIsPdfDialogOpen(true)} className="chamfer-hud-sm text-xs">
+              <Upload className="h-3.5 w-3.5 mr-1.5" />PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setIsCsvDialogOpen(true)} className="chamfer-hud-sm text-xs">
+              <Upload className="h-3.5 w-3.5 mr-1.5" />CSV
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setIsQuickCsvOpen(true)} className="chamfer-hud-sm text-xs">
+              <FileText className="h-3.5 w-3.5 mr-1.5" />Prix/Stock CSV
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportSelectedCsv} className="chamfer-hud-sm text-xs">
+              <Download className="h-3.5 w-3.5 mr-1.5" />Exporter
+            </Button>
+          </div>
+          <Button size="sm" onClick={() => { setEditingProduct(null); setIsFormOpen(true); }} className="chamfer-hud-sm text-xs shrink-0">
             <Plus className="h-3.5 w-3.5 mr-1.5" />Ajouter
           </Button>
         </div>
+
       </div>
 
-      <Tabs defaultValue="products">
-        <TabsList className="bg-muted/50">
+      <Tabs defaultValue="products" className="min-w-0">
+        <TabsList className="bg-muted/50 admin-tabs-scroll w-full h-auto">
+
           <TabsTrigger value="products" className="gap-2"><Package className="h-4 w-4" />Produits</TabsTrigger>
           <TabsTrigger value="looks" className="gap-2"><Layers2 className="h-4 w-4" />Looks</TabsTrigger>
           <TabsTrigger value="sizes" className="gap-2"><Tag className="h-4 w-4" />Tailles</TabsTrigger>
@@ -652,12 +662,13 @@ export default function AdminProducts() {
 
       {/* Bulk Actions */}
       {someSelected && (
-        <div className="chamfer-hud bg-primary/10 border border-primary/30 p-3 flex flex-wrap items-center gap-2 justify-between">
+        <div className="admin-bulk-bar chamfer-hud bg-primary/10 border border-primary/30 backdrop-blur-sm p-3 flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:justify-between min-w-0">
           <div className="flex items-center gap-3">
-            <span className="text-sm font-bold hud-text">{count} PRODUIT(S) SÉLECTIONNÉ(S)</span>
-            <Button variant="ghost" size="sm" onClick={clear} className="h-7 text-xs"><X className="h-3 w-3 mr-1" />Désélectionner</Button>
+            <span className="text-xs sm:text-sm font-bold hud-text">{count} SÉLECTIONNÉ(S)</span>
+            <Button variant="ghost" size="sm" onClick={clear} className="h-8 text-xs"><X className="h-3 w-3 mr-1" />Désélectionner</Button>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="admin-scroll-x flex flex-nowrap lg:flex-wrap items-center gap-2 min-w-0 pb-1 [&>*]:shrink-0">
+
             <Button size="sm" onClick={() => setIsBulkEditOpen(true)} className="h-8 text-xs chamfer-hud-sm">
               <Wand2 className="h-3 w-3 mr-1" />Édition en masse
             </Button>
@@ -698,9 +709,35 @@ export default function AdminProducts() {
             <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground">Aucun produit trouvé</p>
           </div>
+        ) : isMobile ? (
+
+          <div>
+            <div className="flex items-center gap-3 p-3 border-b border-border bg-muted/40">
+              <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
+              <span className="text-[11px] font-bold hud-text text-muted-foreground">TOUT SÉLECTIONNER</span>
+            </div>
+            {filteredProducts.map((product) => (
+              <ProductMobileCard
+                key={product.id}
+                product={product}
+                selected={selectedIds.has(product.id)}
+                onToggleSelect={toggle}
+                actions={{
+                  onEdit: (p) => { setEditingProduct(p); setIsFormOpen(true); },
+                  onStock: (p) => handleOpenStockDialog(p),
+                  onVariantStock: (p) => setVariantStockDialog({ productId: p.id, productName: p.name }),
+                  onDuplicate: (p) => handleDuplicate(p),
+                  onSplit: (p) => setSplitProduct(p),
+                  onDelete: (id) => handleDelete(id),
+                  onToggleActive: (p) => toggleActive(p),
+                }}
+              />
+            ))}
+          </div>
         ) : (
-          <div className="overflow-x-auto">
+          <AdminTableScroll stickyFirstCol>
             <table className="w-full min-w-[820px]">
+
               <thead className="bg-muted/50 border-b border-border">
                 <tr>
                   <th className="p-4 w-10"><Checkbox checked={allSelected} onCheckedChange={toggleAll} /></th>
@@ -899,7 +936,8 @@ export default function AdminProducts() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </AdminTableScroll>
+
         )}
       </div>
         </TabsContent>

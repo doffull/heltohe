@@ -177,7 +177,7 @@ export default function AdminPreparations() {
         })}
       </div>
 
-      <div className="border rounded-lg overflow-x-auto">
+      <div className="border rounded-lg admin-scroll-x admin-scroll-shadow min-w-0">
         <Table className="min-w-[760px]">
           <TableHeader>
             <TableRow>

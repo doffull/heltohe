@@ -323,7 +323,7 @@ function TemplateEditorDialog({ template, onClose, onSaved }:
         </DialogHeader>
 
         <Tabs defaultValue="info">
-          <TabsList className="w-full justify-start">
+          <TabsList className="w-full justify-start admin-tabs-scroll w-full h-auto">
             <TabsTrigger value="info"><Settings2 className="w-4 h-4 mr-1" /> Infos</TabsTrigger>
             <TabsTrigger value="theme"><Palette className="w-4 h-4 mr-1" /> Thème</TabsTrigger>
             <TabsTrigger value="typo"><Type className="w-4 h-4 mr-1" /> Typo</TabsTrigger>

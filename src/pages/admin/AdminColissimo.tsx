@@ -641,7 +641,7 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
       )}
 
       {/* Table */}
-      <div className="border border-border rounded-lg overflow-x-auto">
+      <div className="border border-border rounded-lg admin-scroll-x admin-scroll-shadow min-w-0">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
@@ -1681,7 +1681,7 @@ export default function AdminColissimo() {
       </div>
 
       <Tabs defaultValue="commandes">
-        <TabsList className="w-full justify-start flex-wrap h-auto gap-1 p-1">
+        <TabsList className="w-full justify-start flex-wrap h-auto gap-1 p-1 admin-tabs-scroll w-full h-auto">
           <TabsTrigger value="commandes" className="gap-2 text-xs">
             <Package className="h-4 w-4" />
             Commandes

@@ -322,7 +322,7 @@ export default function AdminProductBadges() {
           </Card>
 
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-            <TabsList>
+            <TabsList className="admin-tabs-scroll w-full h-auto">
               <TabsTrigger value="default">Défaut</TabsTrigger>
               <TabsTrigger value="categories">
                 Par catégorie
@@ -406,7 +406,7 @@ export default function AdminProductBadges() {
                     </p>
                   ) : (
                     <Tabs value={activeCat} onValueChange={setActiveCat}>
-                      <TabsList className="flex-wrap h-auto">
+                      <TabsList className="flex-wrap h-auto admin-tabs-scroll w-full h-auto">
                         {existingCatKeys.map((k) => {
                           const count = countForCatKey(k);
                           return (

@@ -124,7 +124,7 @@ export default function AdminPages() {
       </div>
 
       <Tabs value={mainTab} onValueChange={setMainTab} className="w-full">
-        <TabsList className="mb-4">
+        <TabsList className="mb-4 admin-tabs-scroll w-full h-auto">
           <TabsTrigger value="categories" className="gap-2"><LayoutGrid className="h-4 w-4" />Catégories & leurs pages</TabsTrigger>
           <TabsTrigger value="pages" className="gap-2"><FileText className="h-4 w-4" />Pages libres</TabsTrigger>
         </TabsList>
@@ -234,7 +234,7 @@ export default function AdminPages() {
               </div>
               <div className="flex-1 overflow-y-auto p-6">
                 <Tabs defaultValue="general" className="w-full">
-                  <TabsList className="mb-6">
+                  <TabsList className="mb-6 admin-tabs-scroll w-full h-auto">
                     <TabsTrigger value="general">Général</TabsTrigger>
                     <TabsTrigger value="builder">Page Builder</TabsTrigger>
                     <TabsTrigger value="seo">SEO</TabsTrigger>

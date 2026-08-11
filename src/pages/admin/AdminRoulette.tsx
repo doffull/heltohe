@@ -136,7 +136,7 @@ export default function AdminRoulette() {
 
 
       <Tabs defaultValue="config">
-        <TabsList>
+        <TabsList className="admin-tabs-scroll w-full h-auto">
           <TabsTrigger value="config">Configuration</TabsTrigger>
           <TabsTrigger value="segments">Lots ({segments.length})</TabsTrigger>
           <TabsTrigger value="history">Historique ({spins.length})</TabsTrigger>
@@ -229,7 +229,7 @@ export default function AdminRoulette() {
 
         {/* HISTORY */}
         <TabsContent value="history">
-          <Card className="p-4 overflow-x-auto">
+          <Card className="p-4 admin-scroll-x admin-scroll-shadow min-w-0">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-xs uppercase text-muted-foreground">

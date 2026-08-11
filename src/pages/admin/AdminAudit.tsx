@@ -658,7 +658,7 @@ function RoleAuditLogSection() {
       ) : log.length === 0 ? (
         <p className="text-xs text-muted-foreground">Aucun changement de rôle enregistré.</p>
       ) : (
-        <div className="overflow-x-auto chamfer-hud bg-card/50">
+        <div className="admin-scroll-x admin-scroll-shadow min-w-0 chamfer-hud bg-card/50">
           <table className="w-full text-xs">
             <thead className="bg-muted/50 border-b border-border">
               <tr>

@@ -391,7 +391,7 @@ function HomepageManagement({ products }: { products: Product[] }) {
       </div>
 
       <Tabs defaultValue="sections" className="w-full">
-        <TabsList className="w-full grid grid-cols-4">
+        <TabsList className="w-full grid grid-cols-4 admin-tabs-scroll w-full h-auto">
           <TabsTrigger value="sections" className="text-xs">Sections</TabsTrigger>
           <TabsTrigger value="products" className="text-xs">Produits</TabsTrigger>
           <TabsTrigger value="flash" className="text-xs">Flash</TabsTrigger>
