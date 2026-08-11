@@ -10,6 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FileDropZone } from '@/components/admin/FileDropZone';
 import { PopupCanvasEditor } from '@/components/admin/popups/PopupCanvasEditor';
 import { PopupLayerInspector } from '@/components/admin/popups/PopupLayerInspector';
+import { InstallAppAnalytics } from '@/components/admin/popups/InstallAppAnalytics';
+
 import {
   useAllPopupCampaigns,
   useUpsertPopupCampaign,
