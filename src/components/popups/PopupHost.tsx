@@ -48,16 +48,32 @@ export function PopupHost() {
   const { data: campaigns = [] } = useActivePopupCampaigns();
   const location = useLocation();
   const { user } = (useAuth() as any) || {};
-  const { install, installed } = useInstallApp();
+  const { install, installed, canPrompt } = useInstallApp();
   const [active, setActive] = useState<PopupCampaign | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const shownRef = useRef<Set<string>>(new Set());
   const visitsRef = useRef<number>(0);
   const mountedAt = useRef(Date.now());
+  const [timeOnSite, setTimeOnSite] = useState(readTimeOnSite);
 
   useEffect(() => {
     visitsRef.current = bumpVisits();
   }, []);
+
+  // Compteur de temps cumulé, persistant et utilisé par le déclencheur « temps passé ».
+  useEffect(() => {
+    const t = setInterval(() => {
+      const next = readTimeOnSite() + 5;
+      try {
+        localStorage.setItem(TIME_KEY, String(next));
+      } catch {
+        /* ignore */
+      }
+      setTimeOnSite(next);
+    }, 5000);
+    return () => clearInterval(t);
+  }, []);
+
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const currentPage = pageKey(location.pathname);
