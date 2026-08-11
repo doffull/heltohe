@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useBoutiques } from '@/hooks/useBoutiques';
 import { isMarketplaceCategory } from '@/lib/shopVisibility';
+import { categoryImageStyle, categoryImageBackground } from '@/lib/categoryImageStyle';
 
 const CATEGORY_PLACEHOLDER = '/placeholder.svg';
 
@@ -135,14 +136,17 @@ export function CategoryGrid() {
               }}
             >
               {/* Background image */}
-              <img
-                src={category.image}
-                alt={category.title}
-                className={cn('absolute inset-0 w-full h-full object-cover', hoverImageClasses(hoverEffect))}
-                loading="lazy"
-                decoding="async"
-                onError={keepCategoryFallback}
-              />
+              <div className="absolute inset-0 overflow-hidden" style={categoryImageBackground(category)}>
+                <img
+                  src={category.image}
+                  alt={category.title}
+                  className={cn('w-full h-full', hoverImageClasses(hoverEffect))}
+                  style={categoryImageStyle(category)}
+                  loading="lazy"
+                  decoding="async"
+                  onError={keepCategoryFallback}
+                />
+              </div>
 
               {/* Overlay */}
               <div
