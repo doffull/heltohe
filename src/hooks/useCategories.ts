@@ -21,6 +21,9 @@ export interface CategoryRecord {
   iconImage?: string;
   /** Où la catégorie apparaît : partout, menu uniquement, site uniquement. */
   visibility?: CategoryVisibility;
+  /** La page de la catégorie affiche-t-elle aussi les produits des sous-catégories ? */
+  includeChildren?: boolean;
+
 }
 
 function dbToCat(db: Record<string, unknown>): CategoryRecord {
