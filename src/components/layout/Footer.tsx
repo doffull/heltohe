@@ -419,7 +419,9 @@ export function Footer({ offsetClassName }: FooterProps) {
               <img
                 src={footerLogo}
                 alt={siteName}
-                className="h-8 w-auto object-contain"
+                className="w-auto object-contain"
+                style={{ height: Math.round(logoHeight * 0.8) }}
+
                 loading="lazy"
                 onError={withImageFallback}
               />
