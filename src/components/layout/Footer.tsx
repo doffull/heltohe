@@ -557,6 +557,9 @@ export function Footer({ offsetClassName }: FooterProps) {
             {on(cfg.showPayments) && (
               <FooterPaymentBadges
                 badges={cfg.paymentBadges}
+                customBadges={cfg.customPaymentBadges}
+                height={cfg.paymentBadgeHeight}
+
                 title={cfg.paymentsTitle}
                 note={cfg.paymentsNote}
                 centered={centered}
