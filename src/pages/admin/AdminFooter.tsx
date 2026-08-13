@@ -1068,6 +1068,29 @@ export default function AdminFooter() {
         onSelect={(url: string) => { setDesign({ bgImage: url }); setPickBg(false); }}
       />
 
+      <MediaLibraryDialog
+        open={pickSocial !== null}
+        onOpenChange={(o: boolean) => { if (!o) setPickSocial(null); }}
+        onSelect={(url: string) => {
+          if (pickSocial === null) return;
+          const next = [...socials];
+          next[pickSocial] = { ...next[pickSocial], iconUrl: url } as any;
+          setSocials(next);
+          setPickSocial(null);
+        }}
+      />
+
+      <MediaLibraryDialog
+        open={pickPayment}
+        onOpenChange={setPickPayment}
+        onSelect={(url: string) => {
+          setCfg({ customPaymentBadges: [...(cfg.customPaymentBadges || []), { url, label: '' }] });
+          setPickPayment(false);
+        }}
+      />
+
+
+
     </div>
   );
 }
