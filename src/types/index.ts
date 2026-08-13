@@ -341,7 +341,55 @@ export interface FooterColumn {
   links: FooterLink[];
 }
 
+export type FooterLayout =
+  | 'industrial'
+  | 'minimal'
+  | 'editorial'
+  | 'newsletter-first'
+  | 'showcase'
+  | 'compact';
+
+export interface FooterDesign {
+  bgColor?: string;
+  textColor?: string;
+  headingColor?: string;
+  linkColor?: string;
+  linkHoverColor?: string;
+  borderColor?: string;
+  accentColor?: string;
+  /** Image de fond */
+  bgImage?: string;
+  bgSize?: 'cover' | 'contain' | 'repeat';
+  bgPosition?: 'top' | 'center' | 'bottom';
+  /** Effet parallax (background-attachment: fixed) */
+  bgParallax?: boolean;
+  bgOpacity?: number; // 0-100
+  overlay?: 'none' | 'dark' | 'light';
+  overlayOpacity?: number; // 0-100
+  /** Dégradé */
+  gradientEnabled?: boolean;
+  gradientFrom?: string;
+  gradientTo?: string;
+  gradientAngle?: number;
+  /** Typographie & espacements */
+  textScale?: 'sm' | 'md' | 'lg';
+  uppercaseTitles?: boolean;
+  padding?: 'compact' | 'normal' | 'spacious';
+  contentWidth?: 'container' | 'full';
+  align?: 'left' | 'center';
+  borderTop?: 'none' | 'thin' | 'thick' | 'chamfer';
+  glass?: boolean;
+  shadowTop?: boolean;
+}
+
 export interface FooterConfig {
+  /** Disposition générale du footer */
+  layout?: FooterLayout;
+  /** Dernier preset appliqué */
+  preset?: string;
+  /** Habillage visuel */
+  design?: FooterDesign;
+
   showBrand?: boolean;
   showTagline?: boolean;
   showContact?: boolean;
