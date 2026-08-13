@@ -3373,6 +3373,45 @@ export type Database = {
         }
         Relationships: []
       }
+      checkout_config_public: {
+        Row: {
+          checkout_message: string | null
+          config_key: string | null
+          free_shipping_threshold: number | null
+          home_delivery_enabled: boolean | null
+          id: string | null
+          payment_methods: Json | null
+          relay_enabled: boolean | null
+          relay_map_settings: Json | null
+          shipping_home_price: number | null
+          shipping_relay_price: number | null
+        }
+        Insert: {
+          checkout_message?: string | null
+          config_key?: string | null
+          free_shipping_threshold?: number | null
+          home_delivery_enabled?: boolean | null
+          id?: string | null
+          payment_methods?: never
+          relay_enabled?: boolean | null
+          relay_map_settings?: Json | null
+          shipping_home_price?: number | null
+          shipping_relay_price?: number | null
+        }
+        Update: {
+          checkout_message?: string | null
+          config_key?: string | null
+          free_shipping_threshold?: number | null
+          home_delivery_enabled?: boolean | null
+          id?: string | null
+          payment_methods?: never
+          relay_enabled?: boolean | null
+          relay_map_settings?: Json | null
+          shipping_home_price?: number | null
+          shipping_relay_price?: number | null
+        }
+        Relationships: []
+      }
       design_settings_public: {
         Row: {
           accent_color: string | null
