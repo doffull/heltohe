@@ -551,6 +551,10 @@ export interface DesignSettings {
   footerLogo?: string;
   faviconUrl?: string;
 
+  // Footer configuration (Admin > Footer)
+  footerConfig?: FooterConfig;
+
+
   // Sidebar delay (ms) - legacy
   sidebarDelay?: number;
 
