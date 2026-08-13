@@ -194,15 +194,17 @@ export function Footer({ offsetClassName }: FooterProps) {
   );
 
   /* ---------------------------- Blocs réutilisables ---------------------------- */
+  const logoHeight = cfg.logoHeight && cfg.logoHeight > 0 ? cfg.logoHeight : 40;
+  const socialIconSize = cfg.socialIconSize && cfg.socialIconSize > 0 ? cfg.socialIconSize : undefined;
+
   const Brand = () => (
     <div className={cn(centered && 'flex flex-col items-center text-center')}>
       {footerLogo ? (
         <img
           src={footerLogo}
           alt={siteName}
-          className="h-10 w-auto object-contain mb-4 lg:mb-6"
-          width={160}
-          height={40}
+          className="w-auto object-contain mb-4 lg:mb-6"
+          style={{ height: logoHeight }}
           loading="lazy"
           decoding="async"
           onError={withImageFallback}
@@ -214,6 +216,7 @@ export function Footer({ offsetClassName }: FooterProps) {
           </span>
         </div>
       )}
+
       {brandText && <p className={cn(scale, 'opacity-70 leading-relaxed')}>{brandText}</p>}
       {siteTagline && on(cfg.showTagline) && (
         <p className="text-xs opacity-50 mt-2">{siteTagline}</p>
@@ -277,6 +280,8 @@ export function Footer({ offsetClassName }: FooterProps) {
         {socials.map((link, i) => {
           const brand = resolveBrand(link.label, link.url);
           const Icon = brand?.Icon || ExternalLink;
+          const customIcon = (link as any).iconUrl as string | undefined;
+          const iconPx = socialIconSize ?? (large ? 24 : 16);
           return (
             <motion.a
               key={`${link.label}-${i}`}
@@ -296,14 +301,28 @@ export function Footer({ offsetClassName }: FooterProps) {
               )}
             >
               {(displayMode === 'icons' || displayMode === 'both') && (
-                <Icon
-                  className={cn(
-                    large ? 'h-6 w-6' : 'h-4 w-4',
-                    'transition-transform group-hover:scale-110',
-                    brand ? brand.color : 'opacity-70'
-                  )}
-                />
+                customIcon ? (
+                  <img
+                    src={customIcon}
+                    alt=""
+                    aria-hidden="true"
+                    style={{ height: iconPx, width: iconPx }}
+                    className="object-contain transition-transform group-hover:scale-110"
+                    loading="lazy"
+                    decoding="async"
+                    onError={withImageFallback}
+                  />
+                ) : (
+                  <Icon
+                    style={{ height: iconPx, width: iconPx }}
+                    className={cn(
+                      'transition-transform group-hover:scale-110',
+                      brand ? brand.color : 'opacity-70'
+                    )}
+                  />
+                )
               )}
+
               {(displayMode === 'text' || displayMode === 'both') && (
                 <span className="text-xs font-bold opacity-80 transition-colors">{link.label}</span>
               )}
@@ -400,7 +419,9 @@ export function Footer({ offsetClassName }: FooterProps) {
               <img
                 src={footerLogo}
                 alt={siteName}
-                className="h-8 w-auto object-contain"
+                className="w-auto object-contain"
+                style={{ height: Math.round(logoHeight * 0.8) }}
+
                 loading="lazy"
                 onError={withImageFallback}
               />
@@ -536,6 +557,9 @@ export function Footer({ offsetClassName }: FooterProps) {
             {on(cfg.showPayments) && (
               <FooterPaymentBadges
                 badges={cfg.paymentBadges}
+                customBadges={cfg.customPaymentBadges}
+                height={cfg.paymentBadgeHeight}
+
                 title={cfg.paymentsTitle}
                 note={cfg.paymentsNote}
                 centered={centered}

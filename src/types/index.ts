@@ -285,7 +285,10 @@ export interface SocialLink {
   label: string;
   url: string;
   icon?: string;
+  /** Image personnalisée utilisée à la place de l'icône vectorielle */
+  iconUrl?: string;
 }
+
 
 export interface Category {
   id: string;
@@ -423,6 +426,16 @@ export interface FooterConfig {
   paymentsNote?: string;
   /** Clés des logos : paypal, 3dsecure, cb, visa, mastercard, applepay */
   paymentBadges?: string[];
+  /** Logos de paiement personnalisés (images) */
+  customPaymentBadges?: { url: string; label?: string }[];
+  /** Hauteur des logos de paiement en px (défaut 20) */
+  paymentBadgeHeight?: number;
+  /** Hauteur du logo du footer en px (défaut 40) */
+  logoHeight?: number;
+  /** Taille des icônes de réseaux sociaux en px (défaut 16) */
+  socialIconSize?: number;
+
+
 
   /** Section « Avis clients » */
   showReviews?: boolean;

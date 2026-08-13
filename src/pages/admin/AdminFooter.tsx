@@ -46,6 +46,9 @@ export default function AdminFooter() {
   const [saving, setSaving] = useState(false);
   const [pickLogo, setPickLogo] = useState(false);
   const [pickBg, setPickBg] = useState(false);
+  const [pickSocial, setPickSocial] = useState<number | null>(null);
+  const [pickPayment, setPickPayment] = useState(false);
+
 
   const on = (v: boolean | undefined) => v !== false;
   const setCfg = (patch: Partial<FooterConfig>) =>
@@ -415,6 +418,23 @@ export default function AdminFooter() {
                 )}
               </div>
 
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Taille du logo</Label>
+                  <span className="text-xs text-muted-foreground">{cfg.logoHeight ?? 40} px</span>
+                </div>
+                <Slider
+                  min={20}
+                  max={160}
+                  step={2}
+                  value={[cfg.logoHeight ?? 40]}
+                  onValueChange={([v]) => setCfg({ logoHeight: v })}
+                />
+                <p className="text-[11px] text-muted-foreground">Hauteur du logo dans le pied de page (défaut 40 px).</p>
+              </div>
+
+
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Nom du site</Label>
@@ -554,11 +574,35 @@ export default function AdminFooter() {
               </div>
 
               <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Taille des icônes</Label>
+                  <span className="text-xs text-muted-foreground">{cfg.socialIconSize ?? 16} px</span>
+                </div>
+                <Slider
+                  min={12}
+                  max={48}
+                  step={1}
+                  value={[cfg.socialIconSize ?? 16]}
+                  onValueChange={([v]) => setCfg({ socialIconSize: v })}
+                />
+              </div>
+
+              <div className="space-y-2">
                 {socials.length === 0 && (
                   <p className="text-sm text-muted-foreground">Aucun réseau configuré.</p>
                 )}
                 {socials.map((l, i) => (
                   <div key={i} className="flex flex-wrap items-center gap-2 border border-border p-2">
+                    {(l as any).iconUrl ? (
+                      <img
+                        src={(l as any).iconUrl}
+                        alt=""
+                        className="h-9 w-9 shrink-0 border border-border object-contain p-1"
+                      />
+                    ) : (
+                      <div className="h-9 w-9 shrink-0 border border-dashed border-border" />
+                    )}
+
                     <Input
                       className="flex-1 min-w-[120px]"
                       placeholder="INSTAGRAM"
@@ -580,6 +624,17 @@ export default function AdminFooter() {
                       }}
                     />
                     <div className="flex gap-1">
+                      <Button variant="outline" size="sm" className="gap-1" onClick={() => setPickSocial(i)}>
+                        <ImageIcon className="h-4 w-4" /> Image
+                      </Button>
+                      {(l as any).iconUrl && (
+                        <Button variant="ghost" size="sm" onClick={() => {
+                          const next = [...socials];
+                          next[i] = { ...next[i], iconUrl: '' } as any;
+                          setSocials(next);
+                        }}>Retirer</Button>
+                      )}
+
                       <Button variant="ghost" size="icon" disabled={i === 0} onClick={() => {
                         const next = [...socials];
                         [next[i - 1], next[i]] = [next[i], next[i - 1]];
@@ -849,6 +904,61 @@ export default function AdminFooter() {
                   })}
                 </div>
               </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Hauteur des logos</Label>
+                  <span className="text-xs text-muted-foreground">{cfg.paymentBadgeHeight ?? 20} px</span>
+                </div>
+                <Slider
+                  min={12}
+                  max={64}
+                  step={1}
+                  value={[cfg.paymentBadgeHeight ?? 20]}
+                  onValueChange={([v]) => setCfg({ paymentBadgeHeight: v })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="block">Logos personnalisés (images)</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Ajoutez vos propres images de moyens de paiement. Elles s'affichent après les logos intégrés.
+                </p>
+                {(cfg.customPaymentBadges || []).map((b, i) => (
+                  <div key={i} className="flex flex-wrap items-center gap-2 border border-border p-2">
+                    <img src={b.url} alt={b.label || ''} className="h-9 w-auto max-w-[80px] border border-border object-contain p-1" />
+                    <Input
+                      className="flex-1 min-w-[140px]"
+                      placeholder="Libellé (ex : Klarna)"
+                      value={b.label ?? ''}
+                      onChange={e => {
+                        const next = [...(cfg.customPaymentBadges || [])];
+                        next[i] = { ...next[i], label: e.target.value };
+                        setCfg({ customPaymentBadges: next });
+                      }}
+                    />
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" disabled={i === 0} onClick={() => {
+                        const next = [...(cfg.customPaymentBadges || [])];
+                        [next[i - 1], next[i]] = [next[i], next[i - 1]];
+                        setCfg({ customPaymentBadges: next });
+                      }}><ArrowUp className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" disabled={i === (cfg.customPaymentBadges || []).length - 1} onClick={() => {
+                        const next = [...(cfg.customPaymentBadges || [])];
+                        [next[i + 1], next[i]] = [next[i], next[i + 1]];
+                        setCfg({ customPaymentBadges: next });
+                      }}><ArrowDown className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() =>
+                        setCfg({ customPaymentBadges: (cfg.customPaymentBadges || []).filter((_, j) => j !== i) })
+                      }><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                  </div>
+                ))}
+                <Button variant="outline" className="gap-2" onClick={() => setPickPayment(true)}>
+                  <Plus className="h-4 w-4" /> Ajouter une image
+                </Button>
+              </div>
+
             </CardContent>
           </Card>
 
@@ -957,6 +1067,29 @@ export default function AdminFooter() {
         onOpenChange={setPickBg}
         onSelect={(url: string) => { setDesign({ bgImage: url }); setPickBg(false); }}
       />
+
+      <MediaLibraryDialog
+        open={pickSocial !== null}
+        onOpenChange={(o: boolean) => { if (!o) setPickSocial(null); }}
+        onSelect={(url: string) => {
+          if (pickSocial === null) return;
+          const next = [...socials];
+          next[pickSocial] = { ...next[pickSocial], iconUrl: url } as any;
+          setSocials(next);
+          setPickSocial(null);
+        }}
+      />
+
+      <MediaLibraryDialog
+        open={pickPayment}
+        onOpenChange={setPickPayment}
+        onSelect={(url: string) => {
+          setCfg({ customPaymentBadges: [...(cfg.customPaymentBadges || []), { url, label: '' }] });
+          setPickPayment(false);
+        }}
+      />
+
+
 
     </div>
   );
