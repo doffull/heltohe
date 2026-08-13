@@ -624,6 +624,17 @@ export default function AdminFooter() {
                       }}
                     />
                     <div className="flex gap-1">
+                      <Button variant="outline" size="sm" className="gap-1" onClick={() => setPickSocial(i)}>
+                        <ImageIcon className="h-4 w-4" /> Image
+                      </Button>
+                      {(l as any).iconUrl && (
+                        <Button variant="ghost" size="sm" onClick={() => {
+                          const next = [...socials];
+                          next[i] = { ...next[i], iconUrl: '' } as any;
+                          setSocials(next);
+                        }}>Retirer</Button>
+                      )}
+
                       <Button variant="ghost" size="icon" disabled={i === 0} onClick={() => {
                         const next = [...socials];
                         [next[i - 1], next[i]] = [next[i], next[i - 1]];
