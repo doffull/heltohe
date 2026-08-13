@@ -15,6 +15,7 @@ import { MannequinHotspots } from './MannequinHotspot';
 import { SidebarProductHUD } from './SidebarProductHUD';
 import { UnifiedFab } from './UnifiedFab';
 import { BrandLogo } from './BrandLogo';
+import { Footer } from './Footer';
 import { MegaMenuTrigger } from './MegaMenuTrigger';
 import { SearchDialog } from './SearchDialog';
 import { TopBanner } from './TopBanner';
@@ -734,130 +735,8 @@ export function MainLayout({ children }: MainLayoutProps) {
         {children}
       </main>
 
-      {/* Footer */}
-      <footer
-        className={cn(
-          "border-t border-border py-8 mt-4 lg:py-16 lg:mt-10 transition-all duration-500",
-          sidebarActive ? "lg:ml-[35%]" : "lg:ml-0"
-        )}
-        style={{
-          backgroundColor: ds.footerBgColor || undefined,
-          color: ds.footerTextColor || undefined,
-        }}
-      >
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 lg:gap-12">
-            {/* Brand */}
-            <div className="col-span-2 md:col-span-1">
-              {footerLogo || designSettings.hudLogo ? (
-                <img 
-                  src={footerLogo || designSettings.hudLogo} 
-                  alt="Logo" 
-                  className="h-10 w-auto object-contain mb-4 lg:mb-6" 
-                  width={160}
-                  height={40}
-                  loading="lazy"
-                  decoding="async"
-                  onError={withImageFallback}
-                />
-              ) : (
-                <div className="w-10 h-10 lg:w-12 lg:h-12 bg-background border-2 border-foreground flex items-center justify-center transform rotate-45 mb-4 lg:mb-6">
-                  <span className="transform -rotate-45 text-xs lg:text-sm font-bold">HMP</span>
-                </div>
-              )}
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Helvetica-MP. Design minimaliste et excellence fonctionnelle. Qualité premium pour l'individu moderne.
-              </p>
-            </div>
-            
-            {/* Quick Links */}
-            <div>
-              <h4 className="font-bold uppercase tracking-wider mb-4 lg:mb-6 text-sm">Liens Rapides</h4>
-              <ul className="space-y-3 text-sm text-muted-foreground">
-                <li><Link to="/" className="hover:text-foreground transition-colors">Accueil</Link></li>
-                <li><Link to="/boutique" className="hover:text-foreground transition-colors">Boutique</Link></li>
-                <li><Link to="/compte" className="hover:text-foreground transition-colors">Mon Compte</Link></li>
-                <li><Link to="/a-propos" className="hover:text-foreground transition-colors">À Propos</Link></li>
-              </ul>
-            </div>
-            
-            {/* Social */}
-            <div>
-              <h4 className="font-bold uppercase tracking-wider mb-4 lg:mb-6 text-sm">Suivez-nous</h4>
-              <div className="flex gap-3">
-                <a href="#" className="social-icon">
-                  <span className="text-xs font-bold">FB</span>
-                </a>
-                <a href="#" className="social-icon">
-                  <span className="text-xs font-bold">IG</span>
-                </a>
-                <a href="#" className="social-icon">
-                  <span className="text-xs font-bold">TK</span>
-                </a>
-                <a href="#" className="social-icon">
-                  <span className="text-xs font-bold">YT</span>
-                </a>
-              </div>
-            </div>
-            
-            {/* Newsletter */}
-            <div className="col-span-2 md:col-span-1">
-              <h4 className="font-bold uppercase tracking-wider mb-4 lg:mb-6 text-sm">Newsletter</h4>
-              <p className="text-sm text-muted-foreground mb-4">
-                Inscrivez-vous pour recevoir nos offres exclusives.
-              </p>
-              <form className="flex" onSubmit={async (e) => {
-                e.preventDefault();
-                const emailInput = e.currentTarget.querySelector('input') as HTMLInputElement;
-                const email = emailInput?.value;
-                if (!email) return;
-                try {
-                  await supabase.from('newsletters').insert({ email });
-                  emailInput.value = '';
-                } catch {}
-              }}>
-                <Input 
-                  type="email" 
-                  placeholder="votre@email.com"
-                  required
-                  className="flex-1 h-12 bg-background border-0 rounded-none"
-                />
-                <Button type="submit" className="h-12 px-6 rounded-none">
-                  S'inscrire
-                </Button>
-              </form>
-            </div>
-          </div>
-          
-          {/* Legal Links */}
-          <div className="border-t border-border mt-8 lg:mt-10 pt-6">
-            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
-              <Link to="/mentions-legales" className="hover:text-foreground transition-colors">Mentions légales</Link>
-              <span className="text-border">·</span>
-              <Link to="/cgv" className="hover:text-foreground transition-colors">CGV</Link>
-              <span className="text-border">·</span>
-              <Link to="/confidentialite" className="hover:text-foreground transition-colors">Politique de confidentialité</Link>
-              <span className="text-border">·</span>
-              <Link to="/cookies" className="hover:text-foreground transition-colors">Cookies</Link>
-              <span className="text-border">·</span>
-              <Link to="/retours" className="hover:text-foreground transition-colors">Retours & Échanges</Link>
-            </div>
-          </div>
-
-          <div className="border-t border-border mt-4 pt-4 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-            <p>© {new Date().getFullYear()} HELVETICA-MP. Tous droits réservés.</p>
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setLanguage(language === 'FR' ? 'EN' : 'FR')}
-                className="text-xs font-bold tracking-wider hover:text-foreground transition-colors"
-              >
-                {language === 'FR' ? '🇫🇷 FR' : '🇬🇧 EN'}
-              </button>
-              <span className="font-mono text-xs tracking-widest">EUR €</span>
-            </div>
-          </div>
-        </div>
-      </footer>
+      {/* Footer piloté par Admin → Footer */}
+      <Footer offsetClassName={sidebarActive ? 'lg:ml-[35%]' : 'lg:ml-0'} />
 
       {/* Unified floating action stack (Industrial Luxury) — visible for everyone, including admins for testing */}
       <UnifiedFab />
