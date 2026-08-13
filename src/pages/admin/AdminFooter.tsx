@@ -3,6 +3,7 @@ import { useApp } from '@/context/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,10 +12,18 @@ import { MediaLibraryDialog } from '@/components/visual-editor/MediaLibraryDialo
 import { Footer } from '@/components/layout/Footer';
 import {
   Save, Loader2, PanelBottom, Plus, Trash2, ArrowUp, ArrowDown,
-  Image as ImageIcon, Share2, Columns3, ToggleLeft,
+  Image as ImageIcon, Share2, Columns3, ToggleLeft, Mail,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { FooterColumn, FooterConfig } from '@/types';
+
+const LEGAL_OPTIONS = [
+  { key: 'mentions', label: 'Mentions légales' },
+  { key: 'cgv', label: 'CGV' },
+  { key: 'confidentialite', label: 'Politique de confidentialité' },
+  { key: 'cookies', label: 'Cookies' },
+  { key: 'retours', label: 'Retours & Échanges' },
+];
 
 export default function AdminFooter() {
   const { designSettings, updateDesignSettings, flushDesignSettings } = useApp();
@@ -68,6 +77,7 @@ export default function AdminFooter() {
           <TabsTrigger value="marque" className="gap-2"><ImageIcon className="h-4 w-4" />Marque & contact</TabsTrigger>
           <TabsTrigger value="socials" className="gap-2"><Share2 className="h-4 w-4" />Réseaux sociaux</TabsTrigger>
           <TabsTrigger value="colonnes" className="gap-2"><Columns3 className="h-4 w-4" />Colonnes de liens</TabsTrigger>
+          <TabsTrigger value="bas" className="gap-2"><Mail className="h-4 w-4" />Newsletter & bas de page</TabsTrigger>
           <TabsTrigger value="modules" className="gap-2"><ToggleLeft className="h-4 w-4" />Modules</TabsTrigger>
         </TabsList>
 
@@ -101,6 +111,16 @@ export default function AdminFooter() {
                 <div className="space-y-2">
                   <Label>Slogan</Label>
                   <Input value={s.siteTagline ?? ''} onChange={e => set({ siteTagline: e.target.value })} />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Texte de présentation</Label>
+                  <Textarea
+                    rows={3}
+                    placeholder="Helvetica-MP. Design minimaliste et excellence fonctionnelle…"
+                    value={cfg.brandText ?? ''}
+                    onChange={e => setCfg({ brandText: e.target.value })}
+                  />
+                  <p className="text-[11px] text-muted-foreground">Affiché sous le logo. Laissez vide pour masquer.</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Texte de copyright</Label>
@@ -187,6 +207,14 @@ export default function AdminFooter() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Titre de la colonne</Label>
+                  <Input
+                    placeholder="Suivez-nous"
+                    value={cfg.socialsTitle ?? ''}
+                    onChange={e => setCfg({ socialsTitle: e.target.value })}
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label>Mode d'affichage</Label>
                   <Select
@@ -358,6 +386,98 @@ export default function AdminFooter() {
               >
                 <Plus className="h-4 w-4" /> Ajouter une colonne
               </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ------------- Newsletter & bas de page ------------- */}
+        <TabsContent value="bas" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Newsletter</CardTitle>
+              <CardDescription>Bloc d'inscription affiché dans le pied de page.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <label className="flex items-center justify-between gap-4 text-sm">
+                <span>Afficher le bloc newsletter</span>
+                <Switch checked={on(cfg.showNewsletter)} onCheckedChange={v => setCfg({ showNewsletter: v })} />
+              </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Titre</Label>
+                  <Input placeholder="Newsletter" value={cfg.newsletterTitle ?? ''} onChange={e => setCfg({ newsletterTitle: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Libellé du bouton</Label>
+                  <Input placeholder="S'inscrire" value={cfg.newsletterButton ?? ''} onChange={e => setCfg({ newsletterButton: e.target.value })} />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Texte d'accroche</Label>
+                  <Textarea
+                    rows={2}
+                    placeholder="Inscrivez-vous pour recevoir nos offres exclusives."
+                    value={cfg.newsletterText ?? ''}
+                    onChange={e => setCfg({ newsletterText: e.target.value })}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Liens légaux</CardTitle>
+              <CardDescription>Ligne de liens affichée au-dessus du copyright.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <label className="flex items-center justify-between gap-4 text-sm">
+                <span>Afficher les liens légaux</span>
+                <Switch checked={on(cfg.showLegalLinks)} onCheckedChange={v => setCfg({ showLegalLinks: v })} />
+              </label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {LEGAL_OPTIONS.map(opt => {
+                  const selected = !cfg.legalLinks || cfg.legalLinks.length === 0
+                    ? true
+                    : cfg.legalLinks.includes(opt.key);
+                  return (
+                    <label key={opt.key} className="flex items-center justify-between gap-4 text-sm border border-border px-3 py-2">
+                      <span>{opt.label}</span>
+                      <Switch
+                        checked={selected}
+                        onCheckedChange={v => {
+                          const current = (!cfg.legalLinks || cfg.legalLinks.length === 0)
+                            ? LEGAL_OPTIONS.map(o => o.key)
+                            : cfg.legalLinks;
+                          const next = v
+                            ? Array.from(new Set([...current, opt.key]))
+                            : current.filter(k => k !== opt.key);
+                          setCfg({ legalLinks: LEGAL_OPTIONS.map(o => o.key).filter(k => next.includes(k)) });
+                        }}
+                      />
+                    </label>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Bas de page</CardTitle>
+              <CardDescription>Copyright, sélecteur de langue et devise.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <label className="flex items-center justify-between gap-4 text-sm">
+                <span>Sélecteur de langue (FR / EN)</span>
+                <Switch checked={on(cfg.showLanguageSwitch)} onCheckedChange={v => setCfg({ showLanguageSwitch: v })} />
+              </label>
+              <label className="flex items-center justify-between gap-4 text-sm">
+                <span>Afficher la devise (EUR €)</span>
+                <Switch checked={on(cfg.showCurrency)} onCheckedChange={v => setCfg({ showCurrency: v })} />
+              </label>
+              <p className="text-[11px] text-muted-foreground">
+                Le texte de copyright et les mentions FR/EN se règlent dans l'onglet « Marque & contact ».
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
