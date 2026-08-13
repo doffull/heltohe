@@ -8,14 +8,26 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Slider } from '@/components/ui/slider';
 import { MediaLibraryDialog } from '@/components/visual-editor/MediaLibraryDialog';
 import { Footer } from '@/components/layout/Footer';
 import {
   Save, Loader2, PanelBottom, Plus, Trash2, ArrowUp, ArrowDown,
-  Image as ImageIcon, Share2, Columns3, ToggleLeft, Mail,
+  Image as ImageIcon, Share2, Columns3, ToggleLeft, Mail, Palette, LayoutTemplate, Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import type { FooterColumn, FooterConfig } from '@/types';
+import { FOOTER_PRESETS } from '@/config/footerPresets';
+import type { FooterColumn, FooterConfig, FooterDesign, FooterLayout } from '@/types';
+
+const LAYOUT_OPTIONS: { value: FooterLayout; label: string }[] = [
+  { value: 'industrial', label: 'Industrial (4 colonnes)' },
+  { value: 'minimal', label: 'Minimal Ligne' },
+  { value: 'editorial', label: 'Éditorial' },
+  { value: 'newsletter-first', label: 'Newsletter First' },
+  { value: 'showcase', label: 'Vitrine' },
+  { value: 'compact', label: 'Compact Mobile' },
+];
+
 
 const LEGAL_OPTIONS = [
   { key: 'mentions', label: 'Mentions légales' },
