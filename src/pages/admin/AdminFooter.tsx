@@ -46,6 +46,9 @@ export default function AdminFooter() {
   const [saving, setSaving] = useState(false);
   const [pickLogo, setPickLogo] = useState(false);
   const [pickBg, setPickBg] = useState(false);
+  const [pickSocial, setPickSocial] = useState<number | null>(null);
+  const [pickPayment, setPickPayment] = useState(false);
+
 
   const on = (v: boolean | undefined) => v !== false;
   const setCfg = (patch: Partial<FooterConfig>) =>
