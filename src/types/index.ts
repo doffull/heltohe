@@ -285,7 +285,10 @@ export interface SocialLink {
   label: string;
   url: string;
   icon?: string;
+  /** Image personnalisée utilisée à la place de l'icône vectorielle */
+  iconUrl?: string;
 }
+
 
 export interface Category {
   id: string;
