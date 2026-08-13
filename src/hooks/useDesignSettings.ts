@@ -34,6 +34,8 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     logoBackgroundPadding: (db.logo_background_padding as number) ?? 8,
     footerLogo: (db.footer_logo as string) ?? '',
     faviconUrl: (db.favicon_url as string) ?? '',
+    footerConfig: ((db.footer_config as any) ?? {}) as any,
+
     // adminNotificationEmail and Colissimo sender fields moved to admin_config table
 
     // Sidebar HUD text fields
@@ -224,6 +226,8 @@ function settingsToDb(s: DesignSettings) {
     logo_background_padding: s.logoBackgroundPadding ?? 8,
     footer_logo: s.footerLogo ?? '',
     favicon_url: s.faviconUrl ?? '',
+    footer_config: ((s as any).footerConfig ?? {}) as unknown as Json,
+
     // adminNotificationEmail and Colissimo sender fields moved to admin_config table
     // Core show/hide booleans
     show_logo: s.showLogo,

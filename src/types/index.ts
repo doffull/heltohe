@@ -331,7 +331,35 @@ export interface ProductTrustBadgesConfig {
 }
 
 
+export interface FooterLink {
+  label: string;
+  url: string;
+}
+
+export interface FooterColumn {
+  title: string;
+  links: FooterLink[];
+}
+
+export interface FooterConfig {
+  showBrand?: boolean;
+  showTagline?: boolean;
+  showContact?: boolean;
+  showEmail?: boolean;
+  showPhone?: boolean;
+  showSocials?: boolean;
+  autoFillSocials?: boolean;
+  showInstallApp?: boolean;
+  showTrustpilot?: boolean;
+  showNodeStatus?: boolean;
+  copyrightText?: string;
+  rightsTextFr?: string;
+  rightsTextEn?: string;
+  columns?: FooterColumn[];
+}
+
 export interface DesignSettings {
+
   // SEO / visibilité Google
   seoIndexable?: boolean;
   seoNoImageIndex?: boolean;
