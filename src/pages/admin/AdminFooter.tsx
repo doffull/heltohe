@@ -835,6 +835,13 @@ export default function AdminFooter() {
         onOpenChange={setPickLogo}
         onSelect={(url: string) => { set({ footerLogo: url }); setPickLogo(false); }}
       />
+
+      <MediaLibraryDialog
+        open={pickBg}
+        onOpenChange={setPickBg}
+        onSelect={(url: string) => { setDesign({ bgImage: url }); setPickBg(false); }}
+      />
+
     </div>
   );
 }
