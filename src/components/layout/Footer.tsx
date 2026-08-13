@@ -1,14 +1,23 @@
+import { SyntheticEvent } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
-import { BrandLogo } from '@/components/layout/BrandLogo';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
 import TrustpilotWidget from '@/components/TrustpilotWidget';
 import { resolveBrand } from '@/components/icons/BrandIcons';
 import InstallAppButton from '@/components/pwa/InstallAppButton';
-import type { FooterConfig } from '@/types';
+import type { FooterConfig, FooterColumn } from '@/types';
+import { toast } from 'sonner';
 
+const IMAGE_FALLBACK = '/placeholder.svg';
+const withImageFallback = (event: SyntheticEvent<HTMLImageElement>) => {
+  const img = event.currentTarget;
+  if (!img.src.endsWith(IMAGE_FALLBACK)) img.src = IMAGE_FALLBACK;
+};
 
 /** Réseaux affichés par défaut (l'URL réelle se règle dans l'admin). */
 const DEFAULT_SOCIALS = [
@@ -18,78 +27,183 @@ const DEFAULT_SOCIALS = [
   { label: 'YOUTUBE', url: '#' },
 ];
 
+/** Colonnes par défaut (identiques au rendu historique du site). */
+const DEFAULT_COLUMNS: FooterColumn[] = [
+  {
+    title: 'Liens Rapides',
+    links: [
+      { label: 'Accueil', url: '/' },
+      { label: 'Boutique', url: '/boutique' },
+      { label: 'Mon Compte', url: '/compte' },
+      { label: 'À Propos', url: '/a-propos' },
+    ],
+  },
+];
 
-export function Footer() {
-  const { designSettings, language } = useApp();
+const ALL_LEGAL_LINKS = [
+  { key: 'mentions', label: 'Mentions légales', url: '/mentions-legales' },
+  { key: 'cgv', label: 'CGV', url: '/cgv' },
+  { key: 'confidentialite', label: 'Politique de confidentialité', url: '/confidentialite' },
+  { key: 'cookies', label: 'Cookies', url: '/cookies' },
+  { key: 'retours', label: 'Retours & Échanges', url: '/retours' },
+];
+
+const DEFAULT_BRAND_TEXT =
+  "Helvetica-MP. Design minimaliste et excellence fonctionnelle. Qualité premium pour l'individu moderne.";
+
+interface FooterProps {
+  /** Classe de décalage appliquée quand la sidebar est active. */
+  offsetClassName?: string;
+}
+
+export function Footer({ offsetClassName }: FooterProps) {
+  const { designSettings, language, setLanguage } = useApp();
+  const s = designSettings as any;
   const { socialLinks, socialDisplayMode } = designSettings;
-  const cfg: FooterConfig = ((designSettings as any)?.footerConfig ?? {}) as FooterConfig;
+  const cfg: FooterConfig = (s?.footerConfig ?? {}) as FooterConfig;
   const on = (v: boolean | undefined) => v !== false; // activé par défaut
 
   const siteName = designSettings.siteName || 'Mon Site';
   const siteTagline = designSettings.siteTagline;
+  const footerLogo = s.footerLogo || s.hudLogo;
+  const brandText = cfg.brandText ?? DEFAULT_BRAND_TEXT;
   const contactEmail = on(cfg.showEmail) ? designSettings.contactEmail : '';
   const contactPhone = on(cfg.showPhone) ? designSettings.contactPhone : '';
   const showContact = on(cfg.showContact);
-  const columns = (cfg.columns || []).filter(c => (c.title || '').trim() || (c.links || []).length);
+
+  const rawColumns = cfg.columns && cfg.columns.length ? cfg.columns : DEFAULT_COLUMNS;
+  const columns = rawColumns.filter(
+    (c) => (c.title || '').trim() || (c.links || []).length
+  );
 
   const rights = language === 'FR'
-    ? (cfg.rightsTextFr || 'TOUS DROITS RÉSERVÉS')
-    : (cfg.rightsTextEn || 'ALL RIGHTS RESERVED');
+    ? (cfg.rightsTextFr || 'Tous droits réservés.')
+    : (cfg.rightsTextEn || 'All rights reserved.');
   const copyright = cfg.copyrightText?.trim()
-    ? cfg.copyrightText.replace('{year}', String(new Date().getFullYear())).replace('{site}', siteName.toUpperCase())
-    : null;
+    ? cfg.copyrightText
+        .replace('{year}', String(new Date().getFullYear()))
+        .replace('{site}', siteName.toUpperCase())
+    : `© ${new Date().getFullYear()} ${siteName.toUpperCase()}. ${rights}`;
+
+  const legalKeys = cfg.legalLinks;
+  const legalLinks = ALL_LEGAL_LINKS.filter(
+    (l) => !legalKeys || legalKeys.length === 0 || legalKeys.includes(l.key)
+  );
+
+  const socials = (() => {
+    const configured = socialLinks || [];
+    const merged = [...configured];
+    if (on(cfg.autoFillSocials)) {
+      DEFAULT_SOCIALS.forEach((d) => {
+        const exists = configured.some((l) =>
+          `${l.label} ${l.url}`.toLowerCase().includes(d.label.toLowerCase())
+        );
+        if (!exists) merged.push(d);
+      });
+    }
+    return merged;
+  })();
+
+  const displayMode = socialDisplayMode || 'icons';
+
+  const subscribe = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const emailInput = e.currentTarget.querySelector('input') as HTMLInputElement | null;
+    const email = emailInput?.value;
+    if (!email) return;
+    try {
+      await supabase.from('newsletters').insert({ email });
+      if (emailInput) emailInput.value = '';
+      toast.success('Inscription enregistrée');
+    } catch {
+      /* silencieux */
+    }
+  };
 
   return (
-    <footer className="relative z-20 border-t border-border/30 bg-background/80 backdrop-blur-sm">
-      <div className="px-6 py-8 lg:px-12">
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
-          {/* Brand */}
+    <footer
+      className={cn(
+        'border-t border-border py-8 mt-4 lg:py-16 lg:mt-10 transition-all duration-500',
+        offsetClassName
+      )}
+      style={{
+        backgroundColor: s.footerBgColor || undefined,
+        color: s.footerTextColor || undefined,
+      }}
+    >
+      <div className="container mx-auto px-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 lg:gap-12">
+          {/* Marque */}
           {on(cfg.showBrand) && (
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-4">
-                <BrandLogo variant="footer" />
-                <div className="hud-text text-sm text-muted-foreground">
-                  {copyright ? (
-                    <span>{copyright}</span>
-                  ) : (
-                    <>
-                      <span className="text-primary">© {new Date().getFullYear()}</span> {siteName.toUpperCase()}
-                    </>
-                  )}
+            <div className="col-span-2 md:col-span-1">
+              {footerLogo ? (
+                <img
+                  src={footerLogo}
+                  alt={siteName}
+                  className="h-10 w-auto object-contain mb-4 lg:mb-6"
+                  width={160}
+                  height={40}
+                  loading="lazy"
+                  decoding="async"
+                  onError={withImageFallback}
+                />
+              ) : (
+                <div className="w-10 h-10 lg:w-12 lg:h-12 bg-background border-2 border-foreground flex items-center justify-center transform rotate-45 mb-4 lg:mb-6">
+                  <span className="transform -rotate-45 text-xs lg:text-sm font-bold">
+                    {siteName.slice(0, 3).toUpperCase()}
+                  </span>
                 </div>
-                <div className="hidden md:block w-px h-4 bg-border" />
-                <div className="hidden md:block hud-text text-xs text-muted-foreground/60">
-                  {rights}
-                </div>
-              </div>
+              )}
+              {brandText && (
+                <p className="text-sm text-muted-foreground leading-relaxed">{brandText}</p>
+              )}
               {siteTagline && on(cfg.showTagline) && (
-                <p className="hud-text text-xs text-muted-foreground/50">{siteTagline}</p>
+                <p className="text-xs text-muted-foreground/60 mt-2">{siteTagline}</p>
               )}
               {showContact && (contactEmail || contactPhone) && (
-                <div className="flex items-center gap-3 text-xs text-muted-foreground/50 hud-text">
-                  {contactEmail && <span>{contactEmail}</span>}
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  {contactEmail && <a href={`mailto:${contactEmail}`} className="hover:text-foreground transition-colors">{contactEmail}</a>}
                   {contactEmail && contactPhone && <span>·</span>}
-                  {contactPhone && <span>{contactPhone}</span>}
+                  {contactPhone && <a href={`tel:${contactPhone}`} className="hover:text-foreground transition-colors">{contactPhone}</a>}
                 </div>
               )}
             </div>
           )}
 
-          {/* Social Links */}
+          {/* Colonnes de liens */}
+          {columns.map((col, ci) => (
+            <div key={`${col.title}-${ci}`} className="min-w-0">
+              {col.title && (
+                <h4 className="font-bold uppercase tracking-wider mb-4 lg:mb-6 text-sm">{col.title}</h4>
+              )}
+              <ul className="space-y-3 text-sm text-muted-foreground">
+                {(col.links || []).map((l, li) => {
+                  const url = l.url || '#';
+                  const internal = url.startsWith('/');
+                  return (
+                    <li key={`${l.label}-${li}`}>
+                      {internal ? (
+                        <Link to={url} className="hover:text-foreground transition-colors">{l.label}</Link>
+                      ) : (
+                        <a href={url} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
+                          {l.label}
+                        </a>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+
+          {/* Réseaux sociaux */}
           {on(cfg.showSocials) && (
-            <div className="flex items-center gap-2 sm:gap-3">
-              {(() => {
-                const configured = socialLinks || [];
-                const merged = [...configured];
-                if (on(cfg.autoFillSocials)) {
-                  DEFAULT_SOCIALS.forEach((d) => {
-                    const exists = configured.some((l) =>
-                      `${l.label} ${l.url}`.toLowerCase().includes(d.label.toLowerCase())
-                    );
-                    if (!exists) merged.push(d);
-                  });
-                }
-                return merged.map((link, i) => {
+            <div>
+              <h4 className="font-bold uppercase tracking-wider mb-4 lg:mb-6 text-sm">
+                {cfg.socialsTitle || 'Suivez-nous'}
+              </h4>
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                {socials.map((link, i) => {
                   const brand = resolveBrand(link.label, link.url);
                   const Icon = brand?.Icon || ExternalLink;
                   return (
@@ -108,7 +222,7 @@ export function Footer() {
                         'hover:border-primary/40 hover:bg-primary/5 chamfer-hud-sm'
                       )}
                     >
-                      {(socialDisplayMode === 'icons' || socialDisplayMode === 'both') && (
+                      {(displayMode === 'icons' || displayMode === 'both') && (
                         <Icon
                           className={cn(
                             'h-4 w-4 transition-transform group-hover:scale-110',
@@ -116,83 +230,95 @@ export function Footer() {
                           )}
                         />
                       )}
-                      {(socialDisplayMode === 'text' || socialDisplayMode === 'both') && (
-                        <span className="hud-text text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+                      {(displayMode === 'text' || displayMode === 'both') && (
+                        <span className="text-xs font-bold text-muted-foreground group-hover:text-foreground transition-colors">
                           {link.label}
                         </span>
                       )}
                     </motion.a>
-
                   );
-                });
-              })()}
+                })}
+              </div>
+
+              {(on(cfg.showInstallApp) || on(cfg.showNodeStatus)) && (
+                <div className="mt-4 flex items-center gap-4">
+                  {on(cfg.showInstallApp) && <InstallAppButton />}
+                  {on(cfg.showNodeStatus) && (
+                    <div className="hidden lg:flex items-center gap-2 text-muted-foreground/50">
+                      <span className="text-[10px] font-mono tracking-widest">NODE_ACTIVE</span>
+                      <div className="w-2 h-2 bg-hud-success rounded-full animate-pulse" />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
-
-          {/* App + System Info */}
-          <div className="flex items-center gap-4">
-            {on(cfg.showInstallApp) && <InstallAppButton />}
-            {on(cfg.showNodeStatus) && (
-              <div className="hidden lg:flex items-center gap-4 text-muted-foreground/50">
-                <span className="hud-text text-[10px]">NODE_ACTIVE</span>
-                <div className="w-2 h-2 bg-hud-success rounded-full animate-pulse" />
-              </div>
-            )}
-          </div>
-
+          {/* Newsletter */}
+          {on(cfg.showNewsletter) && (
+            <div className="col-span-2 md:col-span-1">
+              <h4 className="font-bold uppercase tracking-wider mb-4 lg:mb-6 text-sm">
+                {cfg.newsletterTitle || 'Newsletter'}
+              </h4>
+              <p className="text-sm text-muted-foreground mb-4">
+                {cfg.newsletterText || 'Inscrivez-vous pour recevoir nos offres exclusives.'}
+              </p>
+              <form className="flex" onSubmit={subscribe}>
+                <Input
+                  type="email"
+                  placeholder="votre@email.com"
+                  required
+                  className="flex-1 h-12 bg-background border-0 rounded-none"
+                />
+                <Button type="submit" className="h-12 px-6 rounded-none">
+                  {cfg.newsletterButton || "S'inscrire"}
+                </Button>
+              </form>
+            </div>
+          )}
         </div>
 
-        {/* Colonnes de liens configurables */}
-        {columns.length > 0 && (
-          <div className="mt-8 pt-6 border-t border-border/30 grid grid-cols-2 md:grid-cols-4 gap-6">
-            {columns.map((col, ci) => (
-              <div key={`${col.title}-${ci}`} className="min-w-0">
-                {col.title && (
-                  <h3 className="hud-text text-xs text-foreground mb-3">{col.title.toUpperCase()}</h3>
-                )}
-                <ul className="space-y-2">
-                  {(col.links || []).map((l, li) => {
-                    const url = l.url || '#';
-                    const internal = url.startsWith('/');
-                    return (
-                      <li key={`${l.label}-${li}`}>
-                        {internal ? (
-                          <Link
-                            to={url}
-                            className="hud-text text-xs text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            {l.label}
-                          </Link>
-                        ) : (
-                          <a
-                            href={url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="hud-text text-xs text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            {l.label}
-                          </a>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ))}
+        {/* Liens légaux */}
+        {on(cfg.showLegalLinks) && legalLinks.length > 0 && (
+          <div className="border-t border-border mt-8 lg:mt-10 pt-6">
+            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
+              {legalLinks.map((l, i) => (
+                <span key={l.key} className="flex items-center gap-x-5">
+                  {i > 0 && <span className="text-border">·</span>}
+                  <Link to={l.url} className="hover:text-foreground transition-colors">{l.label}</Link>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Bas de footer */}
+        <div className="border-t border-border mt-4 pt-4 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
+          <p>{copyright}</p>
+          {(on(cfg.showLanguageSwitch) || on(cfg.showCurrency)) && (
+            <div className="flex items-center gap-4">
+              {on(cfg.showLanguageSwitch) && (
+                <button
+                  onClick={() => setLanguage(language === 'FR' ? 'EN' : 'FR')}
+                  className="text-xs font-bold tracking-wider hover:text-foreground transition-colors"
+                >
+                  {language === 'FR' ? '🇫🇷 FR' : '🇬🇧 EN'}
+                </button>
+              )}
+              {on(cfg.showCurrency) && (
+                <span className="font-mono text-xs tracking-widest">EUR €</span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Trustpilot */}
+        {on(cfg.showTrustpilot) && s?.trustpilot?.enabled && s?.trustpilot?.showInFooter !== false && (
+          <div className="pt-6">
+            <TrustpilotWidget variant="micro" />
           </div>
         )}
       </div>
-
-      {/* Trustpilot */}
-      {on(cfg.showTrustpilot) && (designSettings as any)?.trustpilot?.enabled && (designSettings as any)?.trustpilot?.showInFooter !== false && (
-        <div className="px-6 lg:px-12 pb-6">
-          <TrustpilotWidget variant="micro" />
-        </div>
-      )}
-
-      {/* Decorative line */}
-      <div className="h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
     </footer>
   );
 }
