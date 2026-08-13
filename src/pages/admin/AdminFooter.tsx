@@ -418,6 +418,23 @@ export default function AdminFooter() {
                 )}
               </div>
 
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Taille du logo</Label>
+                  <span className="text-xs text-muted-foreground">{cfg.logoHeight ?? 40} px</span>
+                </div>
+                <Slider
+                  min={20}
+                  max={160}
+                  step={2}
+                  value={[cfg.logoHeight ?? 40]}
+                  onValueChange={([v]) => setCfg({ logoHeight: v })}
+                />
+                <p className="text-[11px] text-muted-foreground">Hauteur du logo dans le pied de page (défaut 40 px).</p>
+              </div>
+
+
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Nom du site</Label>
