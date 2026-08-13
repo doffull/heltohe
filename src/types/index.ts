@@ -356,6 +356,18 @@ export interface FooterConfig {
   rightsTextFr?: string;
   rightsTextEn?: string;
   columns?: FooterColumn[];
+  /** Texte de présentation sous le logo */
+  brandText?: string;
+  socialsTitle?: string;
+  showNewsletter?: boolean;
+  newsletterTitle?: string;
+  newsletterText?: string;
+  newsletterButton?: string;
+  showLegalLinks?: boolean;
+  /** Clés des liens légaux affichés : mentions, cgv, confidentialite, cookies, retours */
+  legalLinks?: string[];
+  showLanguageSwitch?: boolean;
+  showCurrency?: boolean;
 }
 
 export interface DesignSettings {
