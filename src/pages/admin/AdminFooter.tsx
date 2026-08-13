@@ -102,6 +102,16 @@ export default function AdminFooter() {
                   <Label>Slogan</Label>
                   <Input value={s.siteTagline ?? ''} onChange={e => set({ siteTagline: e.target.value })} />
                 </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Texte de présentation</Label>
+                  <Textarea
+                    rows={3}
+                    placeholder="Helvetica-MP. Design minimaliste et excellence fonctionnelle…"
+                    value={cfg.brandText ?? ''}
+                    onChange={e => setCfg({ brandText: e.target.value })}
+                  />
+                  <p className="text-[11px] text-muted-foreground">Affiché sous le logo. Laissez vide pour masquer.</p>
+                </div>
                 <div className="space-y-2">
                   <Label>Texte de copyright</Label>
                   <Input
