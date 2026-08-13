@@ -153,7 +153,7 @@ export default function AdminAgentIntegrations() {
         details:
           `Ressource : ${payload?.resource ?? MCP_URL}\n` +
           `Serveur d’autorisation : ${payload?.authorization_servers?.[0] ?? '—'}\n` +
-          `${MCP_TOOLS.length} outil(s) déclarés.\n` +
+          `${TOOLS.length} outil(s) déclarés.\n` +
           'Seuls les clients OAuth enregistrés (Claude, ChatGPT, Cursor…) peuvent appeler les outils : ajoutez l’URL MCP ci-dessus dans votre client IA, puis approuvez la connexion sur l’écran de consentement.',
       });
     } catch (err: any) {
