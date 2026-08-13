@@ -525,6 +525,38 @@ export function Footer({ offsetClassName }: FooterProps) {
       <div className={containerClass}>
         {renderLayout()}
 
+        {/* Paiement sécurisé & Avis clients */}
+        {(on(cfg.showPayments) || on(cfg.showReviews)) && (
+          <div
+            className="mt-8 grid grid-cols-1 gap-8 border-t pt-6 lg:grid-cols-2 lg:gap-12"
+            style={sepStyle}
+          >
+            {on(cfg.showPayments) && (
+              <FooterPaymentBadges
+                badges={cfg.paymentBadges}
+                title={cfg.paymentsTitle}
+                note={cfg.paymentsNote}
+                centered={centered}
+                headingClassName={headingClass}
+                borderStyle={sepStyle}
+              />
+            )}
+            {on(cfg.showReviews) && (
+              <FooterReviews
+                title={cfg.reviewsTitle}
+                text={cfg.reviewsText}
+                ctaLabel={cfg.reviewsCtaLabel}
+                ctaUrl={cfg.reviewsCtaUrl}
+                showTrustpilot={cfg.reviewsShowTrustpilot === true}
+                centered={centered}
+                headingClassName={headingClass}
+                scaleClassName={scale}
+                borderStyle={sepStyle}
+              />
+            )}
+          </div>
+        )}
+
         {/* Trustpilot */}
         {on(cfg.showTrustpilot) && s?.trustpilot?.enabled && s?.trustpilot?.showInFooter !== false && (
           <div className="pt-6">
