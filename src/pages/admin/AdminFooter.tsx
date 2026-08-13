@@ -199,6 +199,14 @@ export default function AdminFooter() {
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
+                  <Label>Titre de la colonne</Label>
+                  <Input
+                    placeholder="Suivez-nous"
+                    value={cfg.socialsTitle ?? ''}
+                    onChange={e => setCfg({ socialsTitle: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label>Mode d'affichage</Label>
                   <Select
                     value={s.socialDisplayMode || 'icons'}
