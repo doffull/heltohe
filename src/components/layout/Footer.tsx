@@ -280,6 +280,8 @@ export function Footer({ offsetClassName }: FooterProps) {
         {socials.map((link, i) => {
           const brand = resolveBrand(link.label, link.url);
           const Icon = brand?.Icon || ExternalLink;
+          const customIcon = (link as any).iconUrl as string | undefined;
+          const iconPx = socialIconSize ?? (large ? 24 : 16);
           return (
             <motion.a
               key={`${link.label}-${i}`}
@@ -299,14 +301,28 @@ export function Footer({ offsetClassName }: FooterProps) {
               )}
             >
               {(displayMode === 'icons' || displayMode === 'both') && (
-                <Icon
-                  className={cn(
-                    large ? 'h-6 w-6' : 'h-4 w-4',
-                    'transition-transform group-hover:scale-110',
-                    brand ? brand.color : 'opacity-70'
-                  )}
-                />
+                customIcon ? (
+                  <img
+                    src={customIcon}
+                    alt=""
+                    aria-hidden="true"
+                    style={{ height: iconPx, width: iconPx }}
+                    className="object-contain transition-transform group-hover:scale-110"
+                    loading="lazy"
+                    decoding="async"
+                    onError={withImageFallback}
+                  />
+                ) : (
+                  <Icon
+                    style={{ height: iconPx, width: iconPx }}
+                    className={cn(
+                      'transition-transform group-hover:scale-110',
+                      brand ? brand.color : 'opacity-70'
+                    )}
+                  />
+                )
               )}
+
               {(displayMode === 'text' || displayMode === 'both') && (
                 <span className="text-xs font-bold opacity-80 transition-colors">{link.label}</span>
               )}
