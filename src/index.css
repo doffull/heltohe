@@ -1007,3 +1007,26 @@ body.admin-route .protected-image-wrap::after {
   z-index: 30;
 }
 
+
+/* ============ Footer dynamique (Admin → Footer) ============ */
+.footer-dyn .footer-heading {
+  color: var(--footer-heading, inherit);
+}
+.footer-dyn .footer-link {
+  color: var(--footer-link, inherit);
+}
+.footer-dyn .footer-link:hover {
+  color: var(--footer-link-hover, inherit);
+}
+.footer-dyn details > summary::-webkit-details-marker {
+  display: none;
+}
+.footer-dyn details > summary::after {
+  content: '+';
+  margin-left: auto;
+  font-weight: 400;
+  opacity: 0.6;
+}
+.footer-dyn details[open] > summary::after {
+  content: '−';
+}
