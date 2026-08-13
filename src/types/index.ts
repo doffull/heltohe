@@ -416,6 +416,21 @@ export interface FooterConfig {
   legalLinks?: string[];
   showLanguageSwitch?: boolean;
   showCurrency?: boolean;
+
+  /** Section « Paiement sécurisé » */
+  showPayments?: boolean;
+  paymentsTitle?: string;
+  paymentsNote?: string;
+  /** Clés des logos : paypal, 3dsecure, cb, visa, mastercard, applepay */
+  paymentBadges?: string[];
+
+  /** Section « Avis clients » */
+  showReviews?: boolean;
+  reviewsTitle?: string;
+  reviewsText?: string;
+  reviewsCtaLabel?: string;
+  reviewsCtaUrl?: string;
+  reviewsShowTrustpilot?: boolean;
 }
 
 export interface DesignSettings {

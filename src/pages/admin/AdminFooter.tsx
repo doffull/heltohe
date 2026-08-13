@@ -11,9 +11,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Slider } from '@/components/ui/slider';
 import { MediaLibraryDialog } from '@/components/visual-editor/MediaLibraryDialog';
 import { Footer } from '@/components/layout/Footer';
+import { PAYMENT_BADGE_OPTIONS, DEFAULT_PAYMENT_BADGES } from '@/components/layout/FooterPaymentBadges';
 import {
   Save, Loader2, PanelBottom, Plus, Trash2, ArrowUp, ArrowDown,
-  Image as ImageIcon, Share2, Columns3, ToggleLeft, Mail, Palette, LayoutTemplate, Check,
+  Image as ImageIcon, Share2, Columns3, ToggleLeft, Mail, Palette, LayoutTemplate, Check, ShieldCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { FOOTER_PRESETS } from '@/config/footerPresets';
@@ -128,6 +129,7 @@ export default function AdminFooter() {
           <TabsTrigger value="socials" className="gap-2"><Share2 className="h-4 w-4" />Réseaux sociaux</TabsTrigger>
           <TabsTrigger value="colonnes" className="gap-2"><Columns3 className="h-4 w-4" />Colonnes de liens</TabsTrigger>
           <TabsTrigger value="bas" className="gap-2"><Mail className="h-4 w-4" />Newsletter & bas de page</TabsTrigger>
+          <TabsTrigger value="confiance" className="gap-2"><ShieldCheck className="h-4 w-4" />Paiement & avis</TabsTrigger>
           <TabsTrigger value="modules" className="gap-2"><ToggleLeft className="h-4 w-4" />Modules</TabsTrigger>
         </TabsList>
 
@@ -791,6 +793,120 @@ export default function AdminFooter() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* ------------- Paiement & avis ------------- */}
+        <TabsContent value="confiance" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Paiement sécurisé</CardTitle>
+              <CardDescription>Logos de paiement affichés en bas du footer.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <label className="flex items-center justify-between gap-4 text-sm">
+                <span>Afficher la section paiement sécurisé</span>
+                <Switch checked={on(cfg.showPayments)} onCheckedChange={v => setCfg({ showPayments: v })} />
+              </label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <Label>Titre</Label>
+                  <Input
+                    value={cfg.paymentsTitle ?? ''}
+                    placeholder="Paiement sécurisé"
+                    onChange={e => setCfg({ paymentsTitle: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Texte de réassurance</Label>
+                  <Input
+                    value={cfg.paymentsNote ?? ''}
+                    placeholder="Transactions chiffrées SSL et 3D Secure…"
+                    onChange={e => setCfg({ paymentsNote: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div>
+                <Label className="mb-2 block">Logos affichés</Label>
+                <div className="flex flex-wrap gap-2">
+                  {PAYMENT_BADGE_OPTIONS.map(opt => {
+                    const list = cfg.paymentBadges ?? DEFAULT_PAYMENT_BADGES;
+                    const active = list.includes(opt.key);
+                    return (
+                      <Button
+                        key={opt.key}
+                        type="button"
+                        size="sm"
+                        variant={active ? 'default' : 'outline'}
+                        onClick={() => setCfg({
+                          paymentBadges: active
+                            ? list.filter(k => k !== opt.key)
+                            : [...list, opt.key],
+                        })}
+                      >
+                        {active && <Check className="mr-1 h-3 w-3" />}
+                        {opt.label}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Avis clients</CardTitle>
+              <CardDescription>Les 3 derniers avis approuvés sont affichés automatiquement.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <label className="flex items-center justify-between gap-4 text-sm">
+                <span>Afficher la section avis clients</span>
+                <Switch checked={on(cfg.showReviews)} onCheckedChange={v => setCfg({ showReviews: v })} />
+              </label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <Label>Titre</Label>
+                  <Input
+                    value={cfg.reviewsTitle ?? ''}
+                    placeholder="Avis clients"
+                    onChange={e => setCfg({ reviewsTitle: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Texte d'introduction</Label>
+                  <Input
+                    value={cfg.reviewsText ?? ''}
+                    placeholder="Ils ont adopté nos pièces…"
+                    onChange={e => setCfg({ reviewsText: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Libellé du lien</Label>
+                  <Input
+                    value={cfg.reviewsCtaLabel ?? ''}
+                    placeholder="Voir tous les avis"
+                    onChange={e => setCfg({ reviewsCtaLabel: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>URL du lien</Label>
+                  <Input
+                    value={cfg.reviewsCtaUrl ?? ''}
+                    placeholder="/boutique"
+                    onChange={e => setCfg({ reviewsCtaUrl: e.target.value })}
+                  />
+                </div>
+              </div>
+              <label className="flex items-center justify-between gap-4 text-sm">
+                <span>Ajouter le widget Trustpilot dans cette section</span>
+                <Switch
+                  checked={cfg.reviewsShowTrustpilot === true}
+                  onCheckedChange={v => setCfg({ reviewsShowTrustpilot: v })}
+                />
+              </label>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
 
         {/* ------------- Modules ------------- */}
         <TabsContent value="modules" className="space-y-4">
