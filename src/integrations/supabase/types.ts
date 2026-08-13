@@ -904,6 +904,7 @@ export type Database = {
           created_at: string
           custom_unit_id: string | null
           favicon_url: string | null
+          footer_config: Json
           footer_logo: string | null
           glitch_duration: number | null
           glitch_intensity: number | null
@@ -1036,6 +1037,7 @@ export type Database = {
           created_at?: string
           custom_unit_id?: string | null
           favicon_url?: string | null
+          footer_config?: Json
           footer_logo?: string | null
           glitch_duration?: number | null
           glitch_intensity?: number | null
@@ -1168,6 +1170,7 @@ export type Database = {
           created_at?: string
           custom_unit_id?: string | null
           favicon_url?: string | null
+          footer_config?: Json
           footer_logo?: string | null
           glitch_duration?: number | null
           glitch_intensity?: number | null
