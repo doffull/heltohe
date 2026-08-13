@@ -574,11 +574,35 @@ export default function AdminFooter() {
               </div>
 
               <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Taille des icônes</Label>
+                  <span className="text-xs text-muted-foreground">{cfg.socialIconSize ?? 16} px</span>
+                </div>
+                <Slider
+                  min={12}
+                  max={48}
+                  step={1}
+                  value={[cfg.socialIconSize ?? 16]}
+                  onValueChange={([v]) => setCfg({ socialIconSize: v })}
+                />
+              </div>
+
+              <div className="space-y-2">
                 {socials.length === 0 && (
                   <p className="text-sm text-muted-foreground">Aucun réseau configuré.</p>
                 )}
                 {socials.map((l, i) => (
                   <div key={i} className="flex flex-wrap items-center gap-2 border border-border p-2">
+                    {(l as any).iconUrl ? (
+                      <img
+                        src={(l as any).iconUrl}
+                        alt=""
+                        className="h-9 w-9 shrink-0 border border-border object-contain p-1"
+                      />
+                    ) : (
+                      <div className="h-9 w-9 shrink-0 border border-dashed border-border" />
+                    )}
+
                     <Input
                       className="flex-1 min-w-[120px]"
                       placeholder="INSTAGRAM"
