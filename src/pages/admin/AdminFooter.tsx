@@ -120,14 +120,276 @@ export default function AdminFooter() {
         </Button>
       </div>
 
-      <Tabs defaultValue="marque" className="w-full">
+      <Tabs defaultValue="presets" className="w-full">
         <TabsList className="mb-4 admin-tabs-scroll w-full h-auto">
+          <TabsTrigger value="presets" className="gap-2"><LayoutTemplate className="h-4 w-4" />Presets & disposition</TabsTrigger>
+          <TabsTrigger value="design" className="gap-2"><Palette className="h-4 w-4" />Design</TabsTrigger>
           <TabsTrigger value="marque" className="gap-2"><ImageIcon className="h-4 w-4" />Marque & contact</TabsTrigger>
           <TabsTrigger value="socials" className="gap-2"><Share2 className="h-4 w-4" />Réseaux sociaux</TabsTrigger>
           <TabsTrigger value="colonnes" className="gap-2"><Columns3 className="h-4 w-4" />Colonnes de liens</TabsTrigger>
           <TabsTrigger value="bas" className="gap-2"><Mail className="h-4 w-4" />Newsletter & bas de page</TabsTrigger>
           <TabsTrigger value="modules" className="gap-2"><ToggleLeft className="h-4 w-4" />Modules</TabsTrigger>
         </TabsList>
+
+        {/* ------------- Presets & disposition ------------- */}
+        <TabsContent value="presets" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>6 presets prédéfinis</CardTitle>
+              <CardDescription>
+                Un clic applique une disposition et un habillage complets. Vos textes et liens sont conservés.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {FOOTER_PRESETS.map(p => {
+                const active = cfg.preset === p.key;
+                return (
+                  <button
+                    key={p.key}
+                    onClick={() => applyPreset(p.key)}
+                    className={`text-left border p-3 space-y-2 transition-colors min-h-[44px] ${active ? 'border-primary ring-1 ring-primary' : 'border-border hover:border-primary/50'}`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-sm">{p.name}</span>
+                      {active && <Check className="h-4 w-4 text-primary" />}
+                    </div>
+                    <div className="flex h-6 overflow-hidden">
+                      {p.swatch.map(c => (
+                        <span key={c} className="flex-1" style={{ backgroundColor: c }} />
+                      ))}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">{p.description}</p>
+                  </button>
+                );
+              })}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Disposition</CardTitle>
+              <CardDescription>Change uniquement l'agencement, sans toucher aux couleurs.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Mise en page</Label>
+                <Select value={cfg.layout || 'industrial'} onValueChange={(v) => setCfg({ layout: v as FooterLayout })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {LAYOUT_OPTIONS.map(o => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Largeur du contenu</Label>
+                <Select value={design.contentWidth || 'container'} onValueChange={(v) => setDesign({ contentWidth: v as any })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="container">Contenu centré</SelectItem>
+                    <SelectItem value="full">Pleine largeur</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Alignement</Label>
+                <Select value={design.align || 'left'} onValueChange={(v) => setDesign({ align: v as any })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="left">Gauche</SelectItem>
+                    <SelectItem value="center">Centré</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Espacement vertical</Label>
+                <Select value={design.padding || 'normal'} onValueChange={(v) => setDesign({ padding: v as any })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="compact">Compact</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="spacious">Spacieux</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ------------- Design ------------- */}
+        <TabsContent value="design" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Couleurs</CardTitle>
+              <CardDescription>Laissez vide pour hériter du thème du site.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <ColorField label="Fond" value={design.bgColor} fallback="#0d0d0d" onChange={v => setDesign({ bgColor: v })} />
+              <ColorField label="Texte" value={design.textColor} fallback="#e6e6e6" onChange={v => setDesign({ textColor: v })} />
+              <ColorField label="Titres de colonnes" value={design.headingColor} fallback="#ffffff" onChange={v => setDesign({ headingColor: v })} />
+              <ColorField label="Liens" value={design.linkColor} fallback="#a3a3a3" onChange={v => setDesign({ linkColor: v })} />
+              <ColorField label="Liens au survol" value={design.linkHoverColor} fallback="#ffffff" onChange={v => setDesign({ linkHoverColor: v })} />
+              <ColorField label="Bordures & séparateurs" value={design.borderColor} fallback="#2a2a2a" onChange={v => setDesign({ borderColor: v })} />
+              <ColorField label="Accent (bouton newsletter)" value={design.accentColor} fallback="#ffffff" onChange={v => setDesign({ accentColor: v })} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Image de fond</CardTitle>
+              <CardDescription>Ajoutez un visuel et un voile pour garder le texte lisible.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap items-center gap-3">
+                {design.bgImage ? (
+                  <img src={design.bgImage} alt="Fond du footer" className="h-16 w-28 object-cover border border-border" />
+                ) : (
+                  <div className="h-16 w-28 border border-dashed border-border flex items-center justify-center text-xs text-muted-foreground">
+                    Aucune
+                  </div>
+                )}
+                <Button variant="outline" onClick={() => setPickBg(true)}>Choisir une image</Button>
+                {design.bgImage && <Button variant="ghost" onClick={() => setDesign({ bgImage: '' })}>Retirer</Button>}
+              </div>
+              <div className="space-y-2">
+                <Label>URL de l'image</Label>
+                <Input placeholder="https://…" value={design.bgImage ?? ''} onChange={e => setDesign({ bgImage: e.target.value })} />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Cadrage</Label>
+                  <Select value={design.bgSize || 'cover'} onValueChange={v => setDesign({ bgSize: v as any })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cover">Remplir (cover)</SelectItem>
+                      <SelectItem value="contain">Contenir (contain)</SelectItem>
+                      <SelectItem value="repeat">Motif répété</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Position</Label>
+                  <Select value={design.bgPosition || 'center'} onValueChange={v => setDesign({ bgPosition: v as any })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="top">Haut</SelectItem>
+                      <SelectItem value="center">Centre</SelectItem>
+                      <SelectItem value="bottom">Bas</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Voile</Label>
+                  <Select value={design.overlay || 'none'} onValueChange={v => setDesign({ overlay: v as any })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Aucun</SelectItem>
+                      <SelectItem value="dark">Sombre</SelectItem>
+                      <SelectItem value="light">Clair</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Intensité du voile : {design.overlayOpacity ?? 55}%</Label>
+                  <Slider
+                    value={[design.overlayOpacity ?? 55]}
+                    min={0}
+                    max={100}
+                    step={5}
+                    onValueChange={([v]) => setDesign({ overlayOpacity: v })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Opacité globale : {design.bgOpacity ?? 100}%</Label>
+                  <Slider
+                    value={[design.bgOpacity ?? 100]}
+                    min={20}
+                    max={100}
+                    step={5}
+                    onValueChange={([v]) => setDesign({ bgOpacity: v })}
+                  />
+                </div>
+                <label className="flex items-center gap-3 text-sm self-end">
+                  <Switch checked={!!design.bgParallax} onCheckedChange={v => setDesign({ bgParallax: v })} />
+                  Effet parallax
+                </label>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Dégradé</CardTitle>
+              <CardDescription>Appliqué par-dessus la couleur de fond.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <label className="flex items-center justify-between gap-4 text-sm">
+                <span>Activer le fond dégradé</span>
+                <Switch checked={!!design.gradientEnabled} onCheckedChange={v => setDesign({ gradientEnabled: v })} />
+              </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <ColorField label="Couleur 1" value={design.gradientFrom} fallback="#0d0d0d" onChange={v => setDesign({ gradientFrom: v })} />
+                <ColorField label="Couleur 2" value={design.gradientTo} fallback="#333333" onChange={v => setDesign({ gradientTo: v })} />
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Angle : {design.gradientAngle ?? 135}°</Label>
+                  <Slider
+                    value={[design.gradientAngle ?? 135]}
+                    min={0}
+                    max={360}
+                    step={5}
+                    onValueChange={([v]) => setDesign({ gradientAngle: v })}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Typographie & bordures</CardTitle>
+              <CardDescription>Taille du texte, casse des titres et effets de bordure.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Taille du texte</Label>
+                <Select value={design.textScale || 'md'} onValueChange={v => setDesign({ textScale: v as any })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sm">Petite</SelectItem>
+                    <SelectItem value="md">Moyenne</SelectItem>
+                    <SelectItem value="lg">Grande</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Bordure haute</Label>
+                <Select value={design.borderTop || 'thin'} onValueChange={v => setDesign({ borderTop: v as any })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Aucune</SelectItem>
+                    <SelectItem value="thin">Fine</SelectItem>
+                    <SelectItem value="thick">Épaisse</SelectItem>
+                    <SelectItem value="chamfer">Biseau 45°</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <label className="flex items-center gap-3 text-sm">
+                <Switch checked={design.uppercaseTitles !== false} onCheckedChange={v => setDesign({ uppercaseTitles: v })} />
+                Titres en MAJUSCULES
+              </label>
+              <label className="flex items-center gap-3 text-sm">
+                <Switch checked={!!design.glass} onCheckedChange={v => setDesign({ glass: v })} />
+                Effet verre dépoli
+              </label>
+              <label className="flex items-center gap-3 text-sm">
+                <Switch checked={!!design.shadowTop} onCheckedChange={v => setDesign({ shadowTop: v })} />
+                Ombre haute
+              </label>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
 
         {/* ------------- Marque & contact ------------- */}
         <TabsContent value="marque" className="space-y-4">
