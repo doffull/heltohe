@@ -121,50 +121,20 @@ export default function AdminAgentIntegrations() {
   async function runTest() {
     setTest({ status: 'running' });
     try {
-      const { data: sess } = await supabase.auth.getSession();
-      const token = sess.session?.access_token;
-      if (!token) {
-        setTest({
-          status: 'error',
-          message: 'Vous devez être connecté pour tester l’accès OAuth.',
-        });
-        return;
-      }
       if (!MCP_URL) {
         setTest({ status: 'error', message: 'URL MCP indisponible (project ref manquant).' });
         return;
       }
 
-      // JSON-RPC tools/list over MCP Streamable HTTP
-      const res = await fetch(MCP_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json, text/event-stream',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'tools/list',
-          params: {},
-        }),
+      // On interroge la découverte OAuth (endpoint public) : appeler directement
+      // tools/list avec un jeton de session applicative renverrait toujours 401,
+      // ce qui est le comportement attendu du serveur MCP mais pollue les logs.
+      const res = await fetch(`${MCP_URL}/.well-known/oauth-protected-resource`, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
       });
-
       const text = await res.text();
-      if (res.status === 401 || res.status === 403) {
-        // Attendu : le serveur MCP n'accepte que les jetons OAuth émis à un client
-        // enregistré (claim client_id). Un jeton de session applicative est refusé.
-        setTest({
-          status: 'ok',
-          message: 'Serveur MCP protégé — OAuth actif ✅',
-          details:
-            "Le point de connexion a refusé un jeton de session applicative (401), ce qui est le comportement attendu.\n" +
-            "Seuls les clients OAuth enregistrés (Claude, ChatGPT, Cursor…) peuvent appeler les outils.\n" +
-            'Pour un test réel : ajoutez l’URL MCP ci-dessus dans votre client IA, puis approuvez la connexion sur l’écran de consentement.',
-        });
-        return;
-      }
+
       if (!res.ok) {
         setTest({
           status: 'error',
@@ -174,30 +144,18 @@ export default function AdminAgentIntegrations() {
         return;
       }
 
-      // Response may be JSON or SSE — try to extract JSON
       let payload: any = null;
-      try {
-        payload = JSON.parse(text);
-      } catch {
-        const m = text.match(/data:\s*(\{[\s\S]*?\})\s*\n/);
-        if (m) {
-          try { payload = JSON.parse(m[1]); } catch { /* ignore */ }
-        }
-      }
-      const tools = payload?.result?.tools;
-      if (Array.isArray(tools)) {
-        setTest({
-          status: 'ok',
-          message: `OAuth OK — ${tools.length} outil(s) exposés.`,
-          details: tools.map((t: any) => `• ${t.name}`).join('\n'),
-        });
-      } else {
-        setTest({
-          status: 'ok',
-          message: 'Serveur MCP joignable (réponse reçue).',
-          details: text.slice(0, 800),
-        });
-      }
+      try { payload = JSON.parse(text); } catch { /* ignore */ }
+
+      setTest({
+        status: 'ok',
+        message: 'Serveur MCP en ligne — OAuth actif ✅',
+        details:
+          `Ressource : ${payload?.resource ?? MCP_URL}\n` +
+          `Serveur d’autorisation : ${payload?.authorization_servers?.[0] ?? '—'}\n` +
+          `${TOOLS.length} outil(s) déclarés.\n` +
+          'Seuls les clients OAuth enregistrés (Claude, ChatGPT, Cursor…) peuvent appeler les outils : ajoutez l’URL MCP ci-dessus dans votre client IA, puis approuvez la connexion sur l’écran de consentement.',
+      });
     } catch (err: any) {
       setTest({ status: 'error', message: err?.message ?? 'Erreur réseau.' });
     }
