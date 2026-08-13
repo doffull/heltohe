@@ -89,8 +89,9 @@ export function useCheckoutConfig() {
   return useQuery({
     queryKey: ['checkout_config'],
     queryFn: async () => {
+      // Public storefront reads a sanitized view (no gateway keys / internal flags)
       const { data, error } = await supabase
-        .from('checkout_config')
+        .from('checkout_config_public')
         .select('*')
         .eq('config_key', 'main')
         .maybeSingle();
@@ -101,6 +102,25 @@ export function useCheckoutConfig() {
     staleTime: 1000 * 60 * 5,
   });
 }
+
+/** Admin-only: full config including gateway public keys (requires admin role via RLS). */
+export function useCheckoutConfigAdmin() {
+  return useQuery({
+    queryKey: ['checkout_config_admin'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('checkout_config')
+        .select('*')
+        .eq('config_key', 'main')
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return DEFAULT_CONFIG;
+      return dbToConfig(data as Record<string, unknown>);
+    },
+    staleTime: 0,
+  });
+}
+
 
 export function useSaveCheckoutConfig() {
   const queryClient = useQueryClient();
