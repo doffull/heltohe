@@ -3389,6 +3389,7 @@ export type Database = {
           created_at: string | null
           custom_unit_id: string | null
           favicon_url: string | null
+          footer_config: Json | null
           footer_logo: string | null
           glitch_duration: number | null
           glitch_intensity: number | null
@@ -3513,6 +3514,7 @@ export type Database = {
           created_at?: string | null
           custom_unit_id?: string | null
           favicon_url?: string | null
+          footer_config?: Json | null
           footer_logo?: string | null
           glitch_duration?: number | null
           glitch_intensity?: number | null
@@ -3637,6 +3639,7 @@ export type Database = {
           created_at?: string | null
           custom_unit_id?: string | null
           favicon_url?: string | null
+          footer_config?: Json | null
           footer_logo?: string | null
           glitch_duration?: number | null
           glitch_intensity?: number | null
