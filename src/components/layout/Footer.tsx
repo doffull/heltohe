@@ -194,15 +194,17 @@ export function Footer({ offsetClassName }: FooterProps) {
   );
 
   /* ---------------------------- Blocs réutilisables ---------------------------- */
+  const logoHeight = cfg.logoHeight && cfg.logoHeight > 0 ? cfg.logoHeight : 40;
+  const socialIconSize = cfg.socialIconSize && cfg.socialIconSize > 0 ? cfg.socialIconSize : undefined;
+
   const Brand = () => (
     <div className={cn(centered && 'flex flex-col items-center text-center')}>
       {footerLogo ? (
         <img
           src={footerLogo}
           alt={siteName}
-          className="h-10 w-auto object-contain mb-4 lg:mb-6"
-          width={160}
-          height={40}
+          className="w-auto object-contain mb-4 lg:mb-6"
+          style={{ height: logoHeight }}
           loading="lazy"
           decoding="async"
           onError={withImageFallback}
@@ -214,6 +216,7 @@ export function Footer({ offsetClassName }: FooterProps) {
           </span>
         </div>
       )}
+
       {brandText && <p className={cn(scale, 'opacity-70 leading-relaxed')}>{brandText}</p>}
       {siteTagline && on(cfg.showTagline) && (
         <p className="text-xs opacity-50 mt-2">{siteTagline}</p>
