@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Slider } from '@/components/ui/slider';
 import { MediaLibraryDialog } from '@/components/visual-editor/MediaLibraryDialog';
 import { Footer } from '@/components/layout/Footer';
+import { PAYMENT_BADGE_OPTIONS, DEFAULT_PAYMENT_BADGES } from '@/components/layout/FooterPaymentBadges';
 import {
   Save, Loader2, PanelBottom, Plus, Trash2, ArrowUp, ArrowDown,
   Image as ImageIcon, Share2, Columns3, ToggleLeft, Mail, Palette, LayoutTemplate, Check, ShieldCheck,
