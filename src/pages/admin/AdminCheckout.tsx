@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useCheckoutConfig, useSaveCheckoutConfig, type CheckoutConfig, type PaymentMethod, PAYMENT_GATEWAYS, DEFAULT_RELAY_MAP_SETTINGS } from '@/hooks/useCheckoutConfig';
+import { useCheckoutConfigAdmin, useSaveCheckoutConfig, type CheckoutConfig, type PaymentMethod, PAYMENT_GATEWAYS, DEFAULT_RELAY_MAP_SETTINGS } from '@/hooks/useCheckoutConfig';
 import { useGatewaySecrets, useSaveGatewaySecret, useDeleteGatewaySecret, type GatewaySecretStatus } from '@/hooks/useGatewaySecrets';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 
 export default function AdminCheckout() {
-  const { data: config, isLoading } = useCheckoutConfig();
+  const { data: config, isLoading } = useCheckoutConfigAdmin();
   const saveConfig = useSaveCheckoutConfig();
   const { toast } = useToast();
 

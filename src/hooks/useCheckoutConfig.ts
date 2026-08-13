@@ -144,6 +144,7 @@ export function useSaveCheckoutConfig() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['checkout_config'] });
+      queryClient.invalidateQueries({ queryKey: ['checkout_config_admin'] });
     },
   });
 }
