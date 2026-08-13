@@ -10,6 +10,8 @@ import { supabase } from '@/integrations/supabase/client';
 import TrustpilotWidget from '@/components/TrustpilotWidget';
 import { resolveBrand } from '@/components/icons/BrandIcons';
 import InstallAppButton from '@/components/pwa/InstallAppButton';
+import FooterPaymentBadges from '@/components/layout/FooterPaymentBadges';
+import FooterReviews from '@/components/layout/FooterReviews';
 import type { FooterConfig, FooterColumn, FooterDesign } from '@/types';
 import { toast } from 'sonner';
 
