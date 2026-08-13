@@ -42,6 +42,7 @@ import {
   Mail,
   FileUp,
   Globe,
+  PanelBottom,
 
 } from 'lucide-react';
 
@@ -77,6 +78,7 @@ import AdminRoles from './AdminRoles';
 import AdminSecurity from './AdminSecurity';
 import AdminTransitions from './AdminTransitions';
 import AdminSeo from './AdminSeo';
+import AdminFooter from './AdminFooter';
 import AdminTopBanner from './AdminTopBanner';
 import AdminFeedSections from './AdminFeedSections';
 import AdminCollab from './AdminCollab';
@@ -153,6 +155,7 @@ const SIDEBAR_ITEMS = [
   { icon: Megaphone, label: 'Studio Pop-ups', href: '/admin/popups' },
   { icon: Gift, label: 'Roulette', href: '/admin/roulette' },
   { icon: Palette, label: 'Design', href: '/admin/design' },
+  { icon: PanelBottom, label: 'Footer', href: '/admin/footer' },
   { icon: Globe, label: 'SEO & Visibilité', href: '/admin/seo' },
   { icon: Sparkles, label: 'Espace Collab', href: '/admin/collab' },
 
@@ -392,6 +395,7 @@ export default function Admin() {
             <Route path="parametres/*" element={<AdminSettings />} />
             <Route path="transitions/*" element={<AdminTransitions />} />
             <Route path="seo/*" element={<AdminSeo />} />
+            <Route path="footer/*" element={<AdminFooter />} />
             <Route path="top-banner" element={<AdminTopBanner />} />
             <Route path="feed-sections" element={<AdminFeedSections />} />
             <Route path="collab/*" element={<AdminCollab />} />

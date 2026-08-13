@@ -1,0 +1,1 @@
+ALTER TABLE public.design_settings ADD COLUMN IF NOT EXISTS footer_config jsonb NOT NULL DEFAULT '{}'::jsonb;
