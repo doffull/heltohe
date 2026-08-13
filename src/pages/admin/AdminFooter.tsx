@@ -12,7 +12,7 @@ import { MediaLibraryDialog } from '@/components/visual-editor/MediaLibraryDialo
 import { Footer } from '@/components/layout/Footer';
 import {
   Save, Loader2, PanelBottom, Plus, Trash2, ArrowUp, ArrowDown,
-  Image as ImageIcon, Share2, Columns3, ToggleLeft,
+  Image as ImageIcon, Share2, Columns3, ToggleLeft, Mail,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { FooterColumn, FooterConfig } from '@/types';
