@@ -17,6 +17,14 @@ import {
 import { toast } from 'sonner';
 import type { FooterColumn, FooterConfig } from '@/types';
 
+const LEGAL_OPTIONS = [
+  { key: 'mentions', label: 'Mentions légales' },
+  { key: 'cgv', label: 'CGV' },
+  { key: 'confidentialite', label: 'Politique de confidentialité' },
+  { key: 'cookies', label: 'Cookies' },
+  { key: 'retours', label: 'Retours & Échanges' },
+];
+
 export default function AdminFooter() {
   const { designSettings, updateDesignSettings, flushDesignSettings } = useApp();
   const s = (designSettings as any) || {};
