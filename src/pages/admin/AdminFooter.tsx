@@ -41,13 +41,49 @@ export default function AdminFooter() {
   const { designSettings, updateDesignSettings, flushDesignSettings } = useApp();
   const s = (designSettings as any) || {};
   const cfg: FooterConfig = (s.footerConfig ?? {}) as FooterConfig;
+  const design: FooterDesign = cfg.design ?? {};
   const [saving, setSaving] = useState(false);
   const [pickLogo, setPickLogo] = useState(false);
+  const [pickBg, setPickBg] = useState(false);
 
   const on = (v: boolean | undefined) => v !== false;
   const setCfg = (patch: Partial<FooterConfig>) =>
     updateDesignSettings({ footerConfig: { ...cfg, ...patch } } as any);
+  const setDesign = (patch: Partial<FooterDesign>) =>
+    setCfg({ design: { ...design, ...patch } });
   const set = (patch: Record<string, unknown>) => updateDesignSettings(patch as any);
+
+  const applyPreset = (key: string) => {
+    const preset = FOOTER_PRESETS.find(p => p.key === key);
+    if (!preset) return;
+    setCfg({
+      preset: preset.key,
+      layout: preset.layout,
+      design: { ...design, ...preset.design },
+      ...(preset.toggles || {}),
+    });
+    toast.success(`Preset « ${preset.name} » appliqué`);
+  };
+
+  const ColorField = ({ label, value, onChange, fallback }: { label: string; value?: string; onChange: (v: string) => void; fallback?: string }) => (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={value || fallback || '#000000'}
+          onChange={e => onChange(e.target.value)}
+          className="h-10 w-12 shrink-0 border border-border bg-background p-1 cursor-pointer"
+          aria-label={label}
+        />
+        <Input value={value ?? ''} placeholder={fallback || 'auto'} onChange={e => onChange(e.target.value)} />
+        {value && (
+          <Button variant="ghost" size="sm" onClick={() => onChange('')}>Auto</Button>
+        )}
+      </div>
+    </div>
+  );
+
 
   const socials: { label: string; url: string }[] = s.socialLinks || [];
   const setSocials = (next: { label: string; url: string }[]) => set({ socialLinks: next });
