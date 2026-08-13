@@ -62,6 +62,10 @@ export const DEFAULT_PAYMENT_BADGES = ['paypal', '3dsecure', 'cb', 'visa', 'mast
 
 interface Props {
   badges?: string[];
+  /** Logos personnalisés (images) affichés après les logos intégrés */
+  customBadges?: { url: string; label?: string }[];
+  /** Hauteur des logos en px */
+  height?: number;
   title?: string;
   note?: string;
   centered?: boolean;
@@ -72,6 +76,8 @@ interface Props {
 
 export default function FooterPaymentBadges({
   badges,
+  customBadges,
+  height,
   title,
   note,
   centered,
@@ -79,8 +85,13 @@ export default function FooterPaymentBadges({
   headingClassName,
   borderStyle,
 }: Props) {
-  const keys = (badges && badges.length ? badges : DEFAULT_PAYMENT_BADGES).filter((k) => Logos[k]);
-  if (!keys.length) return null;
+  const keys = (badges ?? DEFAULT_PAYMENT_BADGES).filter((k) => Logos[k]);
+  const customs = (customBadges || []).filter((b) => b?.url);
+  if (!keys.length && !customs.length) return null;
+
+  const h = height && height > 0 ? height : 20;
+  const boxStyle: React.CSSProperties = { ...borderStyle, height: h + 16 };
+  const innerStyle: React.CSSProperties = { height: h };
 
   return (
     <div className={cn(centered && 'text-center', className)}>
@@ -95,10 +106,32 @@ export default function FooterPaymentBadges({
           <span
             key={k}
             title={Logos[k].label}
-            style={borderStyle}
-            className="flex h-9 items-center gap-2 border bg-white/95 px-2.5 text-neutral-900 chamfer-hud-sm"
+            style={boxStyle}
+            className="flex items-center gap-2 border bg-white/95 px-2.5 text-neutral-900 chamfer-hud-sm"
           >
-            {Logos[k].node}
+            <span
+              className="flex items-center [&_svg]:h-full [&_svg]:w-auto"
+              style={innerStyle}
+            >
+              {Logos[k].node}
+            </span>
+          </span>
+        ))}
+        {customs.map((b, i) => (
+          <span
+            key={`custom-${i}`}
+            title={b.label || 'Paiement'}
+            style={boxStyle}
+            className="flex items-center border bg-white/95 px-2.5 chamfer-hud-sm"
+          >
+            <img
+              src={b.url}
+              alt={b.label || 'Moyen de paiement'}
+              style={innerStyle}
+              className="w-auto object-contain"
+              loading="lazy"
+              decoding="async"
+            />
           </span>
         ))}
       </div>
@@ -110,3 +143,4 @@ export default function FooterPaymentBadges({
     </div>
   );
 }
+
