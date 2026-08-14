@@ -268,6 +268,16 @@ export default function Home() {
     return out;
   })();
 
+  const blockSettings = (id: string): Record<string, any> =>
+    ((blocks.find((b) => b.id === id) as any)?.settings as Record<string, any>) || {};
+  const alignClass = (a: string) =>
+    a === 'center' ? 'text-center items-center' : a === 'right' ? 'text-right items-end' : 'text-left items-start';
+  const colClass = (n: number) =>
+    n === 2 ? 'lg:grid-cols-2' : n === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4';
+
+  const featuredCfg = blockSettings('featured');
+  const newArrivalsCfg = blockSettings('newArrivals');
+
   const blockRenderers: Record<string, () => JSX.Element | null> = {
     ...Object.fromEntries(
       feedSections.map((f) => [feedBlockId(f.id), () => <ProductFeedSection section={f} />]),
@@ -368,28 +378,32 @@ export default function Home() {
       <section className={cn(sectionPy, "bg-secondary/30")}>
         <div className="container mx-auto px-4">
           <RevealSection>
-            <div className={cn("flex items-end justify-between", titleMb)}>
-              <div>
-                <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-2">// SÉLECTION</p>
+            <div className={cn("flex items-end justify-between gap-4", titleMb)}>
+              <div className={cn("flex flex-col flex-1", alignClass(featuredCfg.titleAlign || "left"))}>
+                <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-2">
+                  {featuredCfg.eyebrow || "// SÉLECTION"}
+                </p>
                 <EditableText
                   textKey="featuredTitle"
-                  defaultValue="Top ventes"
+                  defaultValue={featuredCfg.title || "Top ventes"}
                   as="h2"
                   className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight"
                 />
               </div>
-              <Button
-                variant="outline"
-                className="hidden md:flex uppercase tracking-wider"
-                onClick={() => navigate("/boutique")}
-              >
-                Tout voir
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
+              {featuredCfg.showCta !== false && (
+                <Button
+                  variant="outline"
+                  className="hidden md:flex uppercase tracking-wider"
+                  onClick={() => navigate("/boutique")}
+                >
+                  Tout voir
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              )}
             </div>
           </RevealSection>
-          <StaggerContainer className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-            {featuredProducts.map((product) => (
+          <StaggerContainer className={cn("grid grid-cols-2 gap-4 lg:gap-6", colClass(featuredCfg.columns || 4))}>
+            {featuredProducts.slice(0, featuredCfg.limit || 8).map((product) => (
               <motion.div
                 key={product.id}
                 variants={cardVariants}
@@ -453,18 +467,20 @@ export default function Home() {
       <section className={sectionPy}>
         <div className="container mx-auto px-4">
           <RevealSection>
-            <div className={cn("text-center", titleMb)}>
-              <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-2">// hiver 2026</p>
+            <div className={cn("flex flex-col", alignClass(newArrivalsCfg.titleAlign || "center"), titleMb)}>
+              <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-2">
+                {newArrivalsCfg.eyebrow || "// hiver 2026"}
+              </p>
               <EditableText
                 textKey="newArrivalsTitle"
-                defaultValue="NOUVEAUTÉS"
+                defaultValue={newArrivalsCfg.title || "NOUVEAUTÉS"}
                 as="h2"
                 className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight"
               />
             </div>
           </RevealSection>
-          <StaggerContainer className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6">
-            {newArrivals.map((product) => (
+          <StaggerContainer className={cn("grid grid-cols-2 gap-4 lg:gap-6", colClass(newArrivalsCfg.columns || 3))}>
+            {newArrivals.slice(0, newArrivalsCfg.limit || 8).map((product) => (
               <motion.div
                 key={product.id}
                 variants={cardVariants}
@@ -495,17 +511,19 @@ export default function Home() {
               </motion.div>
             ))}
           </StaggerContainer>
-          <RevealSection delay={0.3} className="text-center mt-4 lg:mt-6">
-            <Button
-              size="lg"
-              variant="outline"
-              className="uppercase tracking-wider"
-              onClick={() => navigate("/boutique")}
-            >
-              Voir toute la collection
-              <ChevronRight className="ml-2 h-5 w-5" />
-            </Button>
-          </RevealSection>
+          {newArrivalsCfg.showCta !== false && (
+            <RevealSection delay={0.3} className="text-center mt-4 lg:mt-6">
+              <Button
+                size="lg"
+                variant="outline"
+                className="uppercase tracking-wider"
+                onClick={() => navigate("/boutique")}
+              >
+                Voir toute la collection
+                <ChevronRight className="ml-2 h-5 w-5" />
+              </Button>
+            </RevealSection>
+          )}
         </div>
       </section>
     ),
