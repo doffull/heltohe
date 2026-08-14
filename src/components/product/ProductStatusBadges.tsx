@@ -2,6 +2,7 @@ import { Flame, Sparkles, Tag, TrendingUp, AlertTriangle, PackageX, Crown } from
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Product } from '@/types';
+import { useApp } from '@/context/AppContext';
 
 export type BadgeKind = 'promo' | 'new' | 'top' | 'trending' | 'stock' | 'soldout' | 'exclusive';
 
