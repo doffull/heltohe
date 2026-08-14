@@ -88,6 +88,7 @@ function CategoriesBlockInlineEditor({
   const orientation = settings.orientation || 'vertical';
   const columns = String(settings.columns || 3);
   const hoverEffect = settings.hoverEffect || 'zoom';
+  const titleAlign = settings.titleAlign || 'left';
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 border-t bg-muted/20">
       <div className="space-y-1">
