@@ -4,7 +4,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
 import { useBoutiques } from '@/hooks/useBoutiques';
 import { useSeoRedirects, useSeoRedirectMutations, toPath, type SeoRedirect } from '@/hooks/useSeoRedirects';
-import { STATIC_TARGETS, suggestTarget, type RedirectTarget } from '@/lib/seoRedirectSuggest';
+import { STATIC_TARGETS, suggestTarget, suggestTargets, HIGH_CONFIDENCE, type RedirectTarget, type RedirectSuggestion } from '@/lib/seoRedirectSuggest';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
