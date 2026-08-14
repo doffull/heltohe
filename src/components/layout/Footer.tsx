@@ -344,7 +344,16 @@ export function Footer({ offsetClassName }: FooterProps) {
 
       {(on(cfg.showInstallApp) || on(cfg.showNodeStatus)) && (
         <div className={cn('mt-4 flex items-center gap-4', centered && 'justify-center')}>
-          {on(cfg.showInstallApp) && <InstallAppButton />}
+          {on(cfg.showInstallApp) && (
+            <InstallAppButton
+              label={cfg.installApp?.label}
+              subLabel={cfg.installApp?.subLabel}
+              iconUrl={cfg.installApp?.iconUrl}
+              variant={cfg.installApp?.variant}
+              size={cfg.installApp?.size}
+            />
+          )}
+
           {on(cfg.showNodeStatus) && (
             <div className="hidden lg:flex items-center gap-2 opacity-50">
               <span className="text-[10px] font-mono tracking-widest">NODE_ACTIVE</span>
