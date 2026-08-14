@@ -88,9 +88,12 @@ export function Footer({ offsetClassName }: FooterProps) {
   const showContact = on(cfg.showContact);
 
   const rawColumns = cfg.columns && cfg.columns.length ? cfg.columns : DEFAULT_COLUMNS;
-  const columns = rawColumns.filter(
-    (c) => (c.title || '').trim() || (c.links || []).length
-  );
+  const columnCount = cfg.columnCount ?? 4;
+  const columns = rawColumns
+    .filter((c) => (c.title || '').trim() || (c.links || []).length)
+    .slice(0, columnCount);
+  const columnsGridClass =
+    columnCount === 2 ? 'grid-cols-1 sm:grid-cols-2' : columnCount === 3 ? 'grid-cols-2 md:grid-cols-3' : 'grid-cols-2 md:grid-cols-4';
 
   const rights = language === 'FR'
     ? (cfg.rightsTextFr || 'Tous droits réservés.')
