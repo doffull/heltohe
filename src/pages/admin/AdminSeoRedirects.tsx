@@ -307,6 +307,7 @@ export default function AdminSeoRedirects() {
                     </TableHead>
                     <TableHead>Ancienne URL</TableHead>
                     <TableHead>Nouvelle URL cible</TableHead>
+                    <TableHead className="w-56">Suggestions & confiance</TableHead>
                     <TableHead className="w-40">Statut</TableHead>
                     <TableHead className="w-12" />
                   </TableRow>
@@ -317,6 +318,7 @@ export default function AdminSeoRedirects() {
                       key={r.id}
                       row={r}
                       targetGroups={targetGroups}
+                      suggestions={suggestionsById.get(r.id) ?? []}
                       selected={selected.has(r.id)}
                       onToggle={() => toggle(r.id)}
                       onUpdate={(patch) => update.mutate({ id: r.id, ...patch })}
