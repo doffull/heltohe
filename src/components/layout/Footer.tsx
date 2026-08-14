@@ -255,7 +255,8 @@ export function Footer({ offsetClassName }: FooterProps) {
   );
 
   const Columns = ({ collapsible = false }: { collapsible?: boolean }) => (
-    <>
+    !on(cfg.showColumns) ? null : <>
+
       {columns.map((col, ci) =>
         collapsible ? (
           <details key={`${col.title}-${ci}`} className="border-b py-2" style={sepStyle}>
