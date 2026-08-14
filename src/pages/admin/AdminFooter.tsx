@@ -202,6 +202,62 @@ export default function AdminFooter() {
                 <Select value={design.contentWidth || 'container'} onValueChange={(v) => setDesign({ contentWidth: v as any })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
+              </div>
+              <div className="space-y-2">
+                <Label>Nombre de colonnes de liens</Label>
+                <Select
+                  value={String(cfg.columnCount ?? 4)}
+                  onValueChange={(v) => setCfg({ columnCount: Number(v) as 2 | 3 | 4 })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2">2 colonnes</SelectItem>
+                    <SelectItem value="3">3 colonnes</SelectItem>
+                    <SelectItem value="4">4 colonnes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Ordre des blocs (disposition « Personnalisé »)</Label>
+                <div className="space-y-2">
+                  {(cfg.sectionOrder && cfg.sectionOrder.length
+                    ? cfg.sectionOrder
+                    : [...DEFAULT_SECTION_ORDER]
+                  ).map((key, i, arr) => (
+                    <div key={key} className="flex items-center gap-2 border border-border px-3 py-2">
+                      <span className="flex-1 text-sm">{SECTION_LABELS[key] || key}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        disabled={i === 0}
+                        onClick={() => {
+                          const next = [...arr];
+                          [next[i - 1], next[i]] = [next[i], next[i - 1]];
+                          setCfg({ sectionOrder: next as any });
+                        }}
+                      ><ArrowUp className="h-4 w-4" /></Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        disabled={i === arr.length - 1}
+                        onClick={() => {
+                          const next = [...arr];
+                          [next[i + 1], next[i]] = [next[i], next[i + 1]];
+                          setCfg({ sectionOrder: next as any });
+                        }}
+                      ><ArrowDown className="h-4 w-4" /></Button>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Cet ordre s'applique quand la mise en page « Personnalisé (ordre libre) » est sélectionnée.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Largeur du contenu</Label>
+                <Select value={design.contentWidth || 'container'} onValueChange={(v) => setDesign({ contentWidth: v as any })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
                     <SelectItem value="container">Contenu centré</SelectItem>
                     <SelectItem value="full">Pleine largeur</SelectItem>
                   </SelectContent>
