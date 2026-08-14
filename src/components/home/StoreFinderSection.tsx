@@ -187,11 +187,13 @@ export function StoreFinderSection() {
             </div>
           )}
 
-          <div className="mt-3 text-xs text-muted-foreground">
-            <Link to="/boutiques" className="underline hover:text-foreground">
-              Voir la page complète des boutiques →
-            </Link>
-          </div>
+          {showPageLink && (
+            <div className="mt-3 text-xs text-muted-foreground">
+              <Link to="/boutiques" className="underline hover:text-foreground">
+                Voir la page complète des boutiques →
+              </Link>
+            </div>
+          )}
         </div>
       </div>
 
