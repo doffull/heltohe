@@ -129,6 +129,17 @@ function CategoriesBlockInlineEditor({
           </SelectContent>
         </Select>
       </div>
+      <div className="space-y-1">
+        <Label className="text-[10px] uppercase tracking-wider">Alignement des titres</Label>
+        <Select value={titleAlign} onValueChange={(v) => onChange({ ...settings, titleAlign: v })}>
+          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="left">À gauche</SelectItem>
+            <SelectItem value="center">Au milieu</SelectItem>
+            <SelectItem value="right">À droite</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
       <p className="text-[10px] text-muted-foreground md:col-span-2">
         Astuce : l'orientation horizontale présente chaque catégorie comme un large bandeau (image à gauche, titre à droite).
       </p>
