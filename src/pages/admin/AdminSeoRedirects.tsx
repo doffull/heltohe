@@ -83,6 +83,13 @@ export default function AdminSeoRedirects() {
     review: redirects.filter((r) => r.status !== 'valid').length,
   }), [redirects]);
 
+  /** Suggestions classées (règles catégorie + similarité de slug) par redirection. */
+  const suggestionsById = useMemo(() => {
+    const map = new Map<string, RedirectSuggestion[]>();
+    redirects.forEach((r) => map.set(r.id, suggestTargets(r.oldPath, targets, 3)));
+    return map;
+  }, [redirects, targets]);
+
   const addUrls = async (urls: string[], source: string) => {
     const clean = Array.from(new Set(urls.map((u) => u.trim()).filter(Boolean)));
     if (!clean.length) {
