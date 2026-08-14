@@ -2991,6 +2991,42 @@ export type Database = {
           },
         ]
       }
+      seo_redirects: {
+        Row: {
+          created_at: string
+          id: string
+          new_path: string
+          notes: string | null
+          old_path: string
+          old_url: string
+          source: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          new_path?: string
+          notes?: string | null
+          old_path: string
+          old_url: string
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          new_path?: string
+          notes?: string | null
+          old_path?: string
+          old_url?: string
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       stock_history: {
         Row: {
           action: string
