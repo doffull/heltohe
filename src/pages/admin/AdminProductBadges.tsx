@@ -169,6 +169,7 @@ function BadgePreview({
 
 export default function AdminProductBadges() {
   const { designSettings, updateDesignSettings, products } = useApp();
+  const statusBadgesOn = (designSettings as any).showProductStatusBadges === true;
 
   const remoteCfg: ProductTrustBadgesConfig = useMemo(() => {
     return (
