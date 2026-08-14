@@ -336,10 +336,11 @@ export default function AdminSeoRedirects() {
 }
 
 function RedirectRow({
-  row, targetGroups, selected, onToggle, onUpdate, onDelete,
+  row, targetGroups, suggestions, selected, onToggle, onUpdate, onDelete,
 }: {
   row: SeoRedirect;
   targetGroups: Array<[string, RedirectTarget[]]>;
+  suggestions: RedirectSuggestion[];
   selected: boolean;
   onToggle: () => void;
   onUpdate: (patch: { newPath?: string; status?: 'valid' | 'review' }) => void;
