@@ -362,7 +362,8 @@ export type FooterSectionKey =
   | 'legal'
   | 'payments'
   | 'reviews'
-  | 'trustpilot';
+  | 'trustpilot'
+  | 'bottom';
 
 export interface FooterDesign {
   bgColor?: string;
