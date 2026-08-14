@@ -36,6 +36,7 @@ const SECTION_LABELS: Record<string, string> = {
   socials: 'Réseaux sociaux',
   newsletter: 'Newsletter',
   legal: 'Liens légaux',
+  bottom: 'Barre du bas (copyright, langue, devise)',
   payments: 'Paiement sécurisé',
   reviews: 'Avis clients',
   trustpilot: 'Widget Trustpilot',
