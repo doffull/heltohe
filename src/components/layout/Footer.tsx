@@ -591,7 +591,7 @@ export function Footer({ offsetClassName }: FooterProps) {
   const renderLayout = () => {
     switch (layout) {
       case 'custom':
-        return renderCustom();
+        return renderRows();
       case 'minimal':
         return (
           <div className="flex flex-col items-center gap-5 text-center">
