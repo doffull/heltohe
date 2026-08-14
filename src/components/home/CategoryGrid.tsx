@@ -217,12 +217,23 @@ export function CategoryGrid() {
                     </button>
                   </div>
                 ) : (
-                  <h3 className="hud-text text-xl font-bold tracking-wider text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
+                  <h3
+                    className={cn(
+                      'hud-text text-xl font-bold tracking-wider text-foreground group-hover:text-primary transition-colors flex items-center gap-2',
+                      alignRow,
+                    )}
+                  >
                     <CategoryIcon icon={category.icon} iconImage={category.iconImage} size="md" className="text-primary" />
                     <span className="truncate">{category.title}</span>
                   </h3>
                 )}
-                <div className="mt-2 h-0.5 w-0 bg-primary group-hover:w-16 transition-all duration-500" />
+                <div
+                  className={cn(
+                    'mt-2 h-0.5 w-0 bg-primary group-hover:w-16 transition-all duration-500',
+                    titleAlign === 'center' && 'mx-auto',
+                    titleAlign === 'right' && 'ml-auto',
+                  )}
+                />
               </div>
 
               {/* Corner accent */}
