@@ -927,35 +927,9 @@ export default function AdminFooter() {
                   />
                 </div>
               </div>
-              <div>
-                <Label className="mb-2 block">Logos affichés</Label>
-                <div className="flex flex-wrap gap-2">
-                  {PAYMENT_BADGE_OPTIONS.map(opt => {
-                    const list = cfg.paymentBadges ?? DEFAULT_PAYMENT_BADGES;
-                    const active = list.includes(opt.key);
-                    return (
-                      <Button
-                        key={opt.key}
-                        type="button"
-                        size="sm"
-                        variant={active ? 'default' : 'outline'}
-                        onClick={() => setCfg({
-                          paymentBadges: active
-                            ? list.filter(k => k !== opt.key)
-                            : [...list, opt.key],
-                        })}
-                      >
-                        {active && <Check className="mr-1 h-3 w-3" />}
-                        {opt.label}
-                      </Button>
-                    );
-                  })}
-                </div>
-              </div>
-
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>Hauteur des logos</Label>
+                  <Label>Hauteur par défaut des logos</Label>
                   <span className="text-xs text-muted-foreground">{cfg.paymentBadgeHeight ?? 20} px</span>
                 </div>
                 <Slider
@@ -968,44 +942,80 @@ export default function AdminFooter() {
               </div>
 
               <div className="space-y-2">
-                <Label className="block">Logos personnalisés (images)</Label>
+                <Label className="block">Logos (ordre, image, taille)</Label>
                 <p className="text-[11px] text-muted-foreground">
-                  Ajoutez vos propres images de moyens de paiement. Elles s'affichent après les logos intégrés.
+                  Remplacez n'importe quel logo (PayPal, CB, Visa, Apple Pay, 3D Secure…) par votre propre image,
+                  réglez sa hauteur, son ordre et sa visibilité.
                 </p>
-                {(cfg.customPaymentBadges || []).map((b, i) => (
-                  <div key={i} className="flex flex-wrap items-center gap-2 border border-border p-2">
-                    <img src={b.url} alt={b.label || ''} className="h-9 w-auto max-w-[80px] border border-border object-contain p-1" />
+                {paymentItems.map((b, i) => (
+                  <div key={`${b.key}-${i}`} className="flex flex-wrap items-center gap-2 border border-border p-2">
+                    {b.iconUrl ? (
+                      <img src={b.iconUrl} alt="" className="h-9 w-auto max-w-[80px] border border-border object-contain p-1" />
+                    ) : (
+                      <span className="flex h-9 min-w-[70px] items-center justify-center border border-border px-2 text-[10px] font-bold uppercase">
+                        {b.key}
+                      </span>
+                    )}
                     <Input
                       className="flex-1 min-w-[140px]"
                       placeholder="Libellé (ex : Klarna)"
                       value={b.label ?? ''}
-                      onChange={e => {
-                        const next = [...(cfg.customPaymentBadges || [])];
-                        next[i] = { ...next[i], label: e.target.value };
-                        setCfg({ customPaymentBadges: next });
-                      }}
+                      onChange={e => setPaymentItems(paymentItems.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
+                    />
+                    <Input
+                      type="number"
+                      className="w-[90px]"
+                      placeholder="px"
+                      value={b.height ?? ''}
+                      onChange={e => setPaymentItems(paymentItems.map((x, j) => j === i ? { ...x, height: Number(e.target.value) || undefined } : x))}
+                    />
+                    <Switch
+                      checked={b.visible !== false}
+                      aria-label="Afficher ce logo"
+                      onCheckedChange={v => setPaymentItems(paymentItems.map((x, j) => j === i ? { ...x, visible: v } : x))}
                     />
                     <div className="flex gap-1">
+                      <Button variant="outline" size="sm" className="gap-1" onClick={() => setPickPayment(i)}>
+                        <ImageIcon className="h-4 w-4" /> Image
+                      </Button>
+                      {b.iconUrl && (
+                        <Button variant="ghost" size="sm" onClick={() => setPaymentItems(paymentItems.map((x, j) => j === i ? { ...x, iconUrl: undefined } : x))}>
+                          Logo d'origine
+                        </Button>
+                      )}
                       <Button variant="ghost" size="icon" disabled={i === 0} onClick={() => {
-                        const next = [...(cfg.customPaymentBadges || [])];
+                        const next = [...paymentItems];
                         [next[i - 1], next[i]] = [next[i], next[i - 1]];
-                        setCfg({ customPaymentBadges: next });
+                        setPaymentItems(next);
                       }}><ArrowUp className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" disabled={i === (cfg.customPaymentBadges || []).length - 1} onClick={() => {
-                        const next = [...(cfg.customPaymentBadges || [])];
+                      <Button variant="ghost" size="icon" disabled={i === paymentItems.length - 1} onClick={() => {
+                        const next = [...paymentItems];
                         [next[i + 1], next[i]] = [next[i], next[i + 1]];
-                        setCfg({ customPaymentBadges: next });
+                        setPaymentItems(next);
                       }}><ArrowDown className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" className="text-destructive" onClick={() =>
-                        setCfg({ customPaymentBadges: (cfg.customPaymentBadges || []).filter((_, j) => j !== i) })
+                        setPaymentItems(paymentItems.filter((_, j) => j !== i))
                       }><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </div>
                 ))}
-                <Button variant="outline" className="gap-2" onClick={() => setPickPayment(true)}>
-                  <Plus className="h-4 w-4" /> Ajouter une image
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Select value="" onValueChange={(v) => setPaymentItems([...paymentItems, { key: v, visible: true }])}>
+                    <SelectTrigger className="h-10 w-[240px]">
+                      <span className="flex items-center gap-2 text-sm"><Plus className="h-4 w-4" /> Ajouter un logo intégré</span>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAYMENT_BADGE_OPTIONS.map(opt => (
+                        <SelectItem key={opt.key} value={opt.key}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button variant="outline" className="gap-2" onClick={() => setPickPayment('new')}>
+                    <Plus className="h-4 w-4" /> Ajouter une image
+                  </Button>
+                </div>
               </div>
+
 
             </CardContent>
           </Card>
