@@ -445,71 +445,140 @@ export function Footer({ offsetClassName }: FooterProps) {
     on(cfg.showTrustpilot) && s?.trustpilot?.enabled && s?.trustpilot?.showInFooter !== false;
 
   /* ------------------------------- Dispositions ------------------------------- */
-  const renderCustom = () => {
-    const fallback = ['brand', 'columns', 'socials', 'newsletter', 'payments', 'reviews', 'legal', 'trustpilot', 'bottom'] as const;
-    const stored = (cfg.sectionOrder ?? []).filter((k) => (fallback as readonly string[]).includes(k));
-    const order = [...stored, ...fallback.filter((k) => !stored.includes(k as any))] as Array<
-      'brand' | 'columns' | 'socials' | 'newsletter' | 'legal' | 'payments' | 'reviews' | 'trustpilot' | 'bottom'
-    >;
+  const installCfg = cfg.installApp || {};
+  const InstallBlock = () => (
+    <div className={cn('flex flex-wrap items-center gap-4', centered && 'justify-center')}>
+      <InstallAppButton
+        label={installCfg.label}
+        subLabel={installCfg.subLabel}
+        iconUrl={installCfg.iconUrl}
+        variant={installCfg.variant}
+        size={installCfg.size}
+      />
+      {on(cfg.showNodeStatus) && (
+        <div className="hidden lg:flex items-center gap-2 opacity-50">
+          <span className="text-[10px] font-mono tracking-widest">NODE_ACTIVE</span>
+          <div className="w-2 h-2 bg-hud-success rounded-full animate-pulse" />
+        </div>
+      )}
+    </div>
+  );
 
-    const alignClass = (key: string) => {
-      const a = cfg.sectionAlign?.[key as keyof typeof cfg.sectionAlign];
-      if (a === 'center') return 'text-center items-center [&_.footer-row]:justify-center';
-      if (a === 'right') return 'text-right items-end [&_.footer-row]:justify-end';
-      if (a === 'left') return 'text-left items-start [&_.footer-row]:justify-start';
-      return undefined;
-    };
-    const wrap = (key: string, node: React.ReactNode, extra?: string) => (
-      <div key={key} className={cn('flex flex-col', extra, alignClass(key))}>{node}</div>
-    );
+  const alignClass = (a?: 'left' | 'center' | 'right') => {
+    if (a === 'center') return 'text-center items-center [&_.footer-row]:justify-center';
+    if (a === 'right') return 'text-right items-end [&_.footer-row]:justify-end';
+    if (a === 'left') return 'text-left items-start [&_.footer-row]:justify-start';
+    return undefined;
+  };
 
+  /** Rendu d'un bloc du constructeur de lignes. */
+  const renderBlock = (block: FooterBlock): React.ReactNode => {
+    const p = block.props || {};
+    switch (block.type) {
+      case 'brand':
+        return <Brand />;
+      case 'columns':
+        return columns.length ? (
+          <div className={cn('grid gap-6 lg:gap-10 w-full', columnsGridClass)}>
+            <Columns />
+          </div>
+        ) : null;
+      case 'socials':
+        return <Socials />;
+      case 'newsletter':
+        return <Newsletter />;
+      case 'payments':
+        return <PaymentsBlock />;
+      case 'reviews':
+        return <ReviewsBlock />;
+      case 'trustpilot':
+        return trustpilotVisible ? <TrustpilotWidget variant="micro" /> : null;
+      case 'legal':
+        return legalLinks.length ? <div className="w-full"><LegalBar /></div> : null;
+      case 'bottom':
+        return <div className="w-full"><BottomBar /></div>;
+      case 'installApp':
+        return <InstallBlock />;
+      case 'text':
+        return (
+          <div className="w-full">
+            {p.title && <h4 className={headingClass}>{p.title}</h4>}
+            {p.text && <p className={cn(scale, 'opacity-70 leading-relaxed whitespace-pre-line')}>{p.text}</p>}
+          </div>
+        );
+      case 'image':
+        return p.url ? (
+          p.href ? (
+            <a href={p.href} className="inline-block">
+              <img
+                src={p.url}
+                alt={p.alt || ''}
+                style={{ width: p.imgWidth || 160 }}
+                className="h-auto object-contain"
+                loading="lazy"
+                onError={withImageFallback}
+              />
+            </a>
+          ) : (
+            <img
+              src={p.url}
+              alt={p.alt || ''}
+              style={{ width: p.imgWidth || 160 }}
+              className="h-auto object-contain"
+              loading="lazy"
+              onError={withImageFallback}
+            />
+          )
+        ) : null;
+      case 'spacer':
+        return <div style={{ height: p.height ?? 24 }} aria-hidden="true" />;
+      default:
+        return null;
+    }
+  };
+
+  /** Constructeur de lignes : plusieurs blocs côte à côte, largeurs libres. */
+  const renderRows = () => {
+    const rows = resolveFooterRows(cfg);
     return (
       <>
-        {order.map((key) => {
-          switch (key) {
-            case 'brand':
-              return on(cfg.showBrand) ? wrap('brand', <Brand />, 'mb-8') : null;
-            case 'columns':
-              return on(cfg.showColumns) && columns.length > 0
-                ? wrap(
-                    'columns',
-                    <div className={cn('grid gap-6 lg:gap-12 w-full', columnsGridClass)}>
-                      <Columns />
-                    </div>,
-                    'mb-8'
-                  )
-                : null;
-            case 'socials':
-              return on(cfg.showSocials) ? wrap('socials', <Socials />, 'mb-8') : null;
-            case 'newsletter':
-              return on(cfg.showNewsletter) ? wrap('newsletter', <Newsletter />, 'mb-8') : null;
-            case 'payments':
-              return on(cfg.showPayments)
-                ? wrap('payments', <PaymentsBlock />, 'mb-8 border-t pt-6')
-                : null;
-            case 'reviews':
-              return on(cfg.showReviews)
-                ? wrap('reviews', <ReviewsBlock />, 'mb-8 border-t pt-6')
-                : null;
-            case 'trustpilot':
-              return trustpilotVisible
-                ? wrap('trustpilot', <TrustpilotWidget variant="micro" />, 'mb-8')
-                : null;
-            case 'legal':
-              return on(cfg.showLegalLinks) && legalLinks.length > 0
-                ? wrap('legal', <div className="w-full"><LegalBar /></div>)
-                : null;
-            case 'bottom':
-              return on(cfg.showBottomBar)
-                ? wrap('bottom', <div className="w-full"><BottomBar /></div>)
-                : null;
-            default:
-              return null;
-          }
+        {rows.map((row) => {
+          const blocks = (row.blocks || []).filter((b) => footerBlockVisible(cfg, b));
+          if (!blocks.length) return null;
+          const nodes = blocks
+            .map((b) => ({ b, node: renderBlock(b) }))
+            .filter((x) => x.node !== null && x.node !== undefined);
+          if (!nodes.length) return null;
+          return (
+            <div
+              key={row.id}
+              className={cn(
+                'flex flex-wrap w-full mb-8 last:mb-0',
+                FOOTER_GAP_CLASS[row.gap || 'md'],
+                row.valign === 'center' ? 'items-center' : row.valign === 'end' ? 'items-end' : 'items-start',
+                row.divider && 'border-t pt-6'
+              )}
+              style={row.divider ? sepStyle : undefined}
+            >
+              {nodes.map(({ b, node }) => (
+                <div
+                  key={b.id}
+                  className={cn(
+                    'flex min-w-0 grow flex-col',
+                    footerWidthClass(b.width),
+                    alignClass(b.align)
+                  )}
+                >
+                  {node}
+                </div>
+              ))}
+            </div>
+          );
         })}
       </>
     );
   };
+
 
 
   const renderLayout = () => {
