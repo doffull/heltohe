@@ -12,7 +12,14 @@ import { resolveBrand } from '@/components/icons/BrandIcons';
 import InstallAppButton from '@/components/pwa/InstallAppButton';
 import FooterPaymentBadges from '@/components/layout/FooterPaymentBadges';
 import FooterReviews from '@/components/layout/FooterReviews';
-import type { FooterConfig, FooterColumn, FooterDesign } from '@/types';
+import type { FooterConfig, FooterColumn, FooterDesign, FooterBlock } from '@/types';
+import {
+  resolveFooterRows,
+  footerBlockVisible,
+  footerWidthClass,
+  FOOTER_GAP_CLASS,
+} from '@/lib/footerBuilder';
+
 import { toast } from 'sonner';
 
 const IMAGE_FALLBACK = '/placeholder.svg';
