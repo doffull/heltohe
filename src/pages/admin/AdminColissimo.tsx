@@ -1284,7 +1284,7 @@ function PointsRelaisTab() {
 
   // Map settings from checkout config
   const { data: checkoutConfig } = useCheckoutConfig();
-  const saveCheckoutConfig = useSaveCheckoutConfig();
+  const saveCheckoutConfig = useSaveRelayMapSettings();
   const mapSettings = checkoutConfig?.relayMapSettings || DEFAULT_RELAY_MAP_SETTINGS;
 
   const [localMapSettings, setLocalMapSettings] = useState(mapSettings);
@@ -1293,9 +1293,8 @@ function PointsRelaisTab() {
   }, [checkoutConfig?.relayMapSettings]);
 
   const handleSaveMapSettings = async () => {
-    if (!checkoutConfig) return;
     try {
-      await saveCheckoutConfig.mutateAsync({ ...checkoutConfig, relayMapSettings: localMapSettings });
+      await saveCheckoutConfig.mutateAsync(localMapSettings);
       toast({ title: 'Paramètres de la carte sauvegardés' });
     } catch {
       toast({ title: 'Erreur', variant: 'destructive' });
