@@ -59,6 +59,10 @@ export function CategoryGrid() {
   const orientation: CategoryOrientation = blockSettings.orientation || 'vertical';
   const columns: number = blockSettings.columns || 3;
   const hoverEffect: CategoryHover = blockSettings.hoverEffect || 'zoom';
+  const titleAlign: 'left' | 'center' | 'right' = blockSettings.titleAlign || 'left';
+  const alignText = titleAlign === 'center' ? 'text-center' : titleAlign === 'right' ? 'text-right' : 'text-left';
+  const alignRow =
+    titleAlign === 'center' ? 'justify-center' : titleAlign === 'right' ? 'justify-end' : 'justify-start';
 
   // Editing state: categoryId → local title value
   const [editingId, setEditingId] = useState<string | null>(null);
