@@ -140,14 +140,20 @@ export default function AdminSeoRedirects() {
   const autoMapAll = async () => {
     const pending = redirects.filter((r) => !r.newPath);
     let n = 0;
+    let auto = 0;
     for (const r of pending) {
-      const s = suggestTarget(r.oldPath, targets);
+      const s = (suggestionsById.get(r.id) ?? [])[0];
       if (s) {
-        await update.mutateAsync({ id: r.id, newPath: s.target.path });
+        const high = s.confidence >= HIGH_CONFIDENCE;
+        await update.mutateAsync({ id: r.id, newPath: s.target.path, ...(high ? { status: 'valid' as const } : {}) });
         n += 1;
+        if (high) auto += 1;
       }
     }
-    toast({ title: `${n} suggestion(s) appliquée(s)`, description: `${pending.length - n} URL(s) sans correspondance.` });
+    toast({
+      title: `${n} suggestion(s) appliquée(s)`,
+      description: `${auto} validée(s) automatiquement (confiance ≥ ${Math.round(HIGH_CONFIDENCE * 100)} %) · ${pending.length - n} sans correspondance.`,
+    });
   };
 
   const bulkStatus = async (status: 'valid' | 'review') => {
