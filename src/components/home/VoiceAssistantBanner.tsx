@@ -87,18 +87,18 @@ export function VoiceAssistantBanner() {
             <div className="flex items-start gap-4">
               <div className="flex gap-2 shrink-0">
                 <motion.span
-                  className="grid place-items-center h-12 w-12 rounded-full bg-white/15 ring-1 ring-white/40 backdrop-blur-md shadow-[0_4px_18px_hsl(195_100%_60%/0.6)]"
+                  className="grid place-items-center h-12 w-12 rounded-full bg-white/15 ring-1 ring-white/40 backdrop-blur-md shadow-[0_4px_18px_hsl(0_0%_100%/0.25)]"
                   animate={reduce ? undefined : { scale: [1, 1.08, 1] }}
                   transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
                 >
-                  <Mic className="h-5 w-5 text-cyan-100" />
+                  <Mic className="h-5 w-5 text-white" />
                 </motion.span>
                 <span className="grid place-items-center h-12 w-12 rounded-full bg-white/10 ring-1 ring-white/30 backdrop-blur-md">
                   <Bot className="h-5 w-5 text-white" />
                 </span>
               </div>
               <div className="min-w-0">
-                <p className="font-mono text-[10px] tracking-[0.3em] text-cyan-200/90 mb-1 flex items-center gap-1.5">
+                <p className="font-mono text-[10px] tracking-[0.3em] text-white/80 mb-1 flex items-center gap-1.5">
                   <Sparkles className="h-3 w-3" /> NOUVEAU · IA VOCALE
                 </p>
                 <h3 className="text-lg sm:text-xl lg:text-2xl font-bold uppercase tracking-tight leading-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]">
@@ -111,7 +111,7 @@ export function VoiceAssistantBanner() {
               <button
                 type="button"
                 onClick={() => { trackClick({ cta: 'voice' }); window.dispatchEvent(new CustomEvent('lvtk:open-voice')); }}
-                className="group inline-flex items-center justify-center gap-2 h-11 px-5 chamfer-hud-sm bg-white text-blue-950 hover:bg-cyan-100 transition-all text-xs uppercase tracking-[0.18em] font-bold shadow-[0_8px_24px_hsl(195_100%_60%/0.55)] focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-blue-900"
+                className="group inline-flex items-center justify-center gap-2 h-11 px-5 chamfer-hud-sm bg-white text-black hover:bg-gray-100 transition-all text-xs uppercase tracking-[0.18em] font-bold shadow-[0_8px_24px_hsl(0_0%_100%/0.25)] focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
               >
                 <Mic className="h-4 w-4" />
                 {voiceLabel}
@@ -120,7 +120,7 @@ export function VoiceAssistantBanner() {
               <button
                 type="button"
                 onClick={() => { trackClick({ cta: 'chat' }); window.dispatchEvent(new CustomEvent('lvtk:open-chatbot')); }}
-                className="group inline-flex items-center justify-center gap-2 h-11 px-5 chamfer-hud-sm border border-white/50 bg-white/10 text-white hover:bg-white/20 backdrop-blur-md transition-all text-xs uppercase tracking-[0.18em] font-semibold focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-blue-900"
+                className="group inline-flex items-center justify-center gap-2 h-11 px-5 chamfer-hud-sm border border-white/50 bg-white/10 text-white hover:bg-white/20 backdrop-blur-md transition-all text-xs uppercase tracking-[0.18em] font-semibold focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
               >
                 <Bot className="h-4 w-4" />
                 {chatLabel}
