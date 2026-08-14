@@ -362,7 +362,8 @@ export type FooterSectionKey =
   | 'legal'
   | 'payments'
   | 'reviews'
-  | 'trustpilot';
+  | 'trustpilot'
+  | 'bottom';
 
 export interface FooterDesign {
   bgColor?: string;
@@ -408,8 +409,12 @@ export interface FooterConfig {
   sectionOrder?: FooterSectionKey[];
   /** Nombre de colonnes de liens affichées côte à côte (2-4) */
   columnCount?: 2 | 3 | 4;
-
-
+  /** Alignement par bloc (disposition « custom ») */
+  sectionAlign?: Partial<Record<FooterSectionKey, 'left' | 'center' | 'right'>>;
+  /** Affichage du bloc colonnes de liens */
+  showColumns?: boolean;
+  /** Affichage de la barre du bas (copyright, langue, devise) */
+  showBottomBar?: boolean;
 
   showBrand?: boolean;
   showTagline?: boolean;

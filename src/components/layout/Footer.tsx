@@ -255,7 +255,8 @@ export function Footer({ offsetClassName }: FooterProps) {
   );
 
   const Columns = ({ collapsible = false }: { collapsible?: boolean }) => (
-    <>
+    !on(cfg.showColumns) ? null : <>
+
       {columns.map((col, ci) =>
         collapsible ? (
           <details key={`${col.title}-${ci}`} className="border-b py-2" style={sepStyle}>
@@ -279,7 +280,7 @@ export function Footer({ offsetClassName }: FooterProps) {
   const Socials = ({ large = false }: { large?: boolean }) => (
     <div className={cn(centered && 'text-center')}>
       <h4 className={headingClass}>{cfg.socialsTitle || 'Suivez-nous'}</h4>
-      <div className={cn('flex flex-wrap items-center gap-2 sm:gap-3', centered && 'justify-center')}>
+      <div className={cn('footer-row flex flex-wrap items-center gap-2 sm:gap-3', centered && 'justify-center')}>
         {socials.map((link, i) => {
           const brand = resolveBrand(link.label, link.url);
           const Icon = brand?.Icon || ExternalLink;
@@ -379,7 +380,7 @@ export function Footer({ offsetClassName }: FooterProps) {
 
   const LegalBar = () => (
     <div className="border-t mt-8 lg:mt-10 pt-6" style={sepStyle}>
-      <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs opacity-70">
+      <div className="footer-row flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs opacity-70">
         {legalLinks.map((l, i) => (
           <span key={l.key} className="flex items-center gap-x-5">
             {i > 0 && <span className="opacity-40">·</span>}
@@ -391,8 +392,8 @@ export function Footer({ offsetClassName }: FooterProps) {
   );
 
   const BottomBar = () => (
-    <div
-      className="border-t mt-4 pt-4 flex flex-col md:flex-row items-center justify-between gap-4 text-xs opacity-70"
+    !on(cfg.showBottomBar) ? null : <div
+      className="border-t mt-4 pt-4 flex flex-col md:flex-row items-center justify-between gap-4 text-xs opacity-70 footer-row"
       style={sepStyle}
     >
       <p>{copyright}</p>
@@ -445,50 +446,71 @@ export function Footer({ offsetClassName }: FooterProps) {
 
   /* ------------------------------- Dispositions ------------------------------- */
   const renderCustom = () => {
-    const fallback = ['brand', 'columns', 'socials', 'newsletter', 'payments', 'reviews', 'legal', 'trustpilot'] as const;
-    const order = (cfg.sectionOrder && cfg.sectionOrder.length
-      ? cfg.sectionOrder
-      : fallback) as Array<
-      'brand' | 'columns' | 'socials' | 'newsletter' | 'legal' | 'payments' | 'reviews' | 'trustpilot'
+    const fallback = ['brand', 'columns', 'socials', 'newsletter', 'payments', 'reviews', 'legal', 'trustpilot', 'bottom'] as const;
+    const stored = (cfg.sectionOrder ?? []).filter((k) => (fallback as readonly string[]).includes(k));
+    const order = [...stored, ...fallback.filter((k) => !stored.includes(k as any))] as Array<
+      'brand' | 'columns' | 'socials' | 'newsletter' | 'legal' | 'payments' | 'reviews' | 'trustpilot' | 'bottom'
     >;
+
+    const alignClass = (key: string) => {
+      const a = cfg.sectionAlign?.[key as keyof typeof cfg.sectionAlign];
+      if (a === 'center') return 'text-center items-center [&_.footer-row]:justify-center';
+      if (a === 'right') return 'text-right items-end [&_.footer-row]:justify-end';
+      if (a === 'left') return 'text-left items-start [&_.footer-row]:justify-start';
+      return undefined;
+    };
+    const wrap = (key: string, node: React.ReactNode, extra?: string) => (
+      <div key={key} className={cn('flex flex-col', extra, alignClass(key))}>{node}</div>
+    );
+
     return (
       <>
         {order.map((key) => {
           switch (key) {
             case 'brand':
-              return on(cfg.showBrand) ? <div key="brand" className="mb-8"><Brand /></div> : null;
+              return on(cfg.showBrand) ? wrap('brand', <Brand />, 'mb-8') : null;
             case 'columns':
-              return columns.length > 0 ? (
-                <div key="columns" className={cn('grid gap-6 lg:gap-12 mb-8', columnsGridClass)}>
-                  <Columns />
-                </div>
-              ) : null;
+              return on(cfg.showColumns) && columns.length > 0
+                ? wrap(
+                    'columns',
+                    <div className={cn('grid gap-6 lg:gap-12 w-full', columnsGridClass)}>
+                      <Columns />
+                    </div>,
+                    'mb-8'
+                  )
+                : null;
             case 'socials':
-              return on(cfg.showSocials) ? <div key="socials" className="mb-8"><Socials /></div> : null;
+              return on(cfg.showSocials) ? wrap('socials', <Socials />, 'mb-8') : null;
             case 'newsletter':
-              return on(cfg.showNewsletter) ? <div key="newsletter" className="mb-8"><Newsletter /></div> : null;
+              return on(cfg.showNewsletter) ? wrap('newsletter', <Newsletter />, 'mb-8') : null;
             case 'payments':
-              return on(cfg.showPayments) ? (
-                <div key="payments" className="mb-8 border-t pt-6" style={sepStyle}><PaymentsBlock /></div>
-              ) : null;
+              return on(cfg.showPayments)
+                ? wrap('payments', <PaymentsBlock />, 'mb-8 border-t pt-6')
+                : null;
             case 'reviews':
-              return on(cfg.showReviews) ? (
-                <div key="reviews" className="mb-8 border-t pt-6" style={sepStyle}><ReviewsBlock /></div>
-              ) : null;
+              return on(cfg.showReviews)
+                ? wrap('reviews', <ReviewsBlock />, 'mb-8 border-t pt-6')
+                : null;
             case 'trustpilot':
-              return trustpilotVisible ? (
-                <div key="trustpilot" className="mb-8"><TrustpilotWidget variant="micro" /></div>
-              ) : null;
+              return trustpilotVisible
+                ? wrap('trustpilot', <TrustpilotWidget variant="micro" />, 'mb-8')
+                : null;
             case 'legal':
-              return on(cfg.showLegalLinks) && legalLinks.length > 0 ? <LegalBar key="legal" /> : null;
+              return on(cfg.showLegalLinks) && legalLinks.length > 0
+                ? wrap('legal', <div className="w-full"><LegalBar /></div>)
+                : null;
+            case 'bottom':
+              return on(cfg.showBottomBar)
+                ? wrap('bottom', <div className="w-full"><BottomBar /></div>)
+                : null;
             default:
               return null;
           }
         })}
-        <BottomBar />
       </>
     );
   };
+
 
   const renderLayout = () => {
     switch (layout) {
