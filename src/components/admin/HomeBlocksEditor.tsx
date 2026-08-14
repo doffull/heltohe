@@ -34,7 +34,7 @@ type BuiltinId = 'hero' | 'categories' | 'storeFinder' | 'featured' | 'flash' | 
 interface Block { id: string; visible: boolean; label?: string; settings?: Record<string, any> }
 
 // Blocs disposant d'un éditeur inline (panneau pliable au lieu de naviguer)
-const INLINE_EDITABLE = new Set<string>(['categories', 'storeFinder']);
+const INLINE_EDITABLE = new Set<string>(['categories', 'storeFinder', 'featured', 'newArrivals']);
 
 const BUILTIN_LABELS: Record<BuiltinId, string> = {
   hero: 'Hero (slider ou techwear)',
@@ -247,6 +247,85 @@ function StoreFinderBlockInlineEditor({
   );
 }
 
+// ============== Inline editor for product blocks (featured / newArrivals) ==============
+function ProductBlockInlineEditor({
+  blockId,
+  settings,
+  onChange,
+  onOpenProducts,
+}: {
+  blockId: string;
+  settings: Record<string, any>;
+  onChange: (next: Record<string, any>) => void;
+  onOpenProducts: () => void;
+}) {
+  const set = (patch: Record<string, any>) => onChange({ ...settings, ...patch });
+  const align = settings.titleAlign || (blockId === 'newArrivals' ? 'center' : 'left');
+  const columns = String(settings.columns || (blockId === 'newArrivals' ? 3 : 4));
+  const limit = String(settings.limit || 8);
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 border-t bg-muted/20">
+      <div className="space-y-1">
+        <Label className="text-[10px] uppercase tracking-wider">Sur-titre</Label>
+        <Input
+          className="h-9"
+          placeholder={blockId === 'newArrivals' ? '// hiver 2026' : '// SÉLECTION'}
+          value={settings.eyebrow ?? ''}
+          onChange={(e) => set({ eyebrow: e.target.value })}
+        />
+      </div>
+      <div className="space-y-1">
+        <Label className="text-[10px] uppercase tracking-wider">Titre</Label>
+        <Input
+          className="h-9"
+          placeholder={blockId === 'newArrivals' ? 'NOUVEAUTÉS' : 'Top ventes'}
+          value={settings.title ?? ''}
+          onChange={(e) => set({ title: e.target.value })}
+        />
+      </div>
+      <div className="space-y-1">
+        <Label className="text-[10px] uppercase tracking-wider">Alignement du titre</Label>
+        <Select value={align} onValueChange={(v) => set({ titleAlign: v })}>
+          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="left">À gauche</SelectItem>
+            <SelectItem value="center">Au milieu</SelectItem>
+            <SelectItem value="right">À droite</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1">
+        <Label className="text-[10px] uppercase tracking-wider">Colonnes (ordinateur)</Label>
+        <Select value={columns} onValueChange={(v) => set({ columns: parseInt(v, 10) })}>
+          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="2">2 colonnes</SelectItem>
+            <SelectItem value="3">3 colonnes</SelectItem>
+            <SelectItem value="4">4 colonnes</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1">
+        <Label className="text-[10px] uppercase tracking-wider">Nombre de produits</Label>
+        <Select value={limit} onValueChange={(v) => set({ limit: parseInt(v, 10) })}>
+          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {[2, 3, 4, 6, 8, 12].map((n) => <SelectItem key={n} value={String(n)}>{n} produits</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex items-center justify-between gap-2 border border-border p-2">
+        <span className="text-xs">Bouton « Tout voir »</span>
+        <Switch checked={settings.showCta !== false} onCheckedChange={(v) => set({ showCta: v })} />
+      </div>
+      <div className="md:col-span-2 flex items-center justify-between gap-2 border border-dashed border-border p-2">
+        <span className="text-[11px] text-muted-foreground">Choisir les produits mis en avant (catalogue)</span>
+        <Button variant="outline" size="sm" onClick={onOpenProducts}>Ouvrir le catalogue</Button>
+      </div>
+    </div>
+  );
+}
+
 
 
 function Row({ b, onToggle, isCustom, onEdit, expanded, hasInline }: { b: Block; onToggle: () => void; isCustom: boolean; onEdit?: () => void; expanded?: boolean; hasInline?: boolean }) {
@@ -424,6 +503,16 @@ export function HomeBlocksEditor() {
                         <CategoriesBlockInlineEditor
                           settings={b.settings || {}}
                           onChange={(next) => updateSettings(b.id, next)}
+                        />
+                      </div>
+                    )}
+                    {hasInline && expanded && (b.id === 'featured' || b.id === 'newArrivals') && (
+                      <div className="rounded border border-t-0 -mt-px">
+                        <ProductBlockInlineEditor
+                          blockId={b.id}
+                          settings={b.settings || {}}
+                          onChange={(next) => updateSettings(b.id, next)}
+                          onOpenProducts={() => navigate('/admin/products')}
                         />
                       </div>
                     )}
