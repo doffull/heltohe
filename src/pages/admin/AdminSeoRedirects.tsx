@@ -296,7 +296,7 @@ export default function AdminSeoRedirects() {
             <div className="p-6 text-center text-sm text-muted-foreground">Aucune redirection. Importez vos anciennes URLs ci-dessus.</div>
           ) : (
             <AdminTableScroll stickyFirstCol>
-              <Table className="min-w-[760px]">
+              <Table className="min-w-[980px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-10">
