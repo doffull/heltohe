@@ -123,6 +123,20 @@ export default function AdminFooter() {
   const columns: FooterColumn[] = cfg.columns || [];
   const setColumns = (next: FooterColumn[]) => setCfg({ columns: next });
 
+  /** Liste unifiée des logos de paiement (migre l'ancienne config au premier changement). */
+  const paymentItems: FooterPaymentBadgeItem[] = cfg.paymentBadgeItems?.length
+    ? cfg.paymentBadgeItems
+    : [
+        ...(cfg.paymentBadges ?? DEFAULT_PAYMENT_BADGES).map(k => ({
+          key: k,
+          label: PAYMENT_BADGE_OPTIONS.find(o => o.key === k)?.label,
+          visible: true,
+        })),
+        ...(cfg.customPaymentBadges || []).map(b => ({ key: 'custom', label: b.label, iconUrl: b.url, visible: true })),
+      ];
+  const setPaymentItems = (next: FooterPaymentBadgeItem[]) => setCfg({ paymentBadgeItems: next });
+
+
   const save = async () => {
     try {
       setSaving(true);
