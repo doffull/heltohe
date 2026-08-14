@@ -27,7 +27,17 @@ const LAYOUT_OPTIONS: { value: FooterLayout; label: string }[] = [
   { value: 'newsletter-first', label: 'Newsletter First' },
   { value: 'showcase', label: 'Vitrine' },
   { value: 'compact', label: 'Compact Mobile' },
+  { value: 'custom', label: 'Personnalisé (ordre libre)' },
 ];
+
+const SECTION_LABELS: Record<string, string> = {
+  brand: 'Marque / Logo',
+  columns: 'Colonnes de liens',
+  socials: 'Réseaux sociaux',
+  newsletter: 'Newsletter',
+  legal: 'Liens légaux',
+};
+const DEFAULT_SECTION_ORDER = ['brand', 'columns', 'socials', 'newsletter', 'legal'] as const;
 
 
 const LEGAL_OPTIONS = [
