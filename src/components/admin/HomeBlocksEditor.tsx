@@ -148,6 +148,107 @@ function CategoriesBlockInlineEditor({
   );
 }
 
+// ============== Inline editor for the "storeFinder" block ==============
+function StoreFinderBlockInlineEditor({
+  settings,
+  onChange,
+}: {
+  settings: Record<string, any>;
+  onChange: (next: Record<string, any>) => void;
+}) {
+  const [pick, setPick] = useState(false);
+  const set = (patch: Record<string, any>) => onChange({ ...settings, ...patch });
+  const align = settings.titleAlign || 'left';
+  const overlay = typeof settings.overlayOpacity === 'number' ? settings.overlayOpacity : 70;
+  const on = (v: boolean | undefined) => v !== false;
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 border-t bg-muted/20">
+      <div className="space-y-1">
+        <Label className="text-[10px] uppercase tracking-wider">Sur-titre</Label>
+        <Input
+          className="h-9"
+          placeholder="// BOUTIQUES"
+          value={settings.eyebrow ?? ''}
+          onChange={(e) => set({ eyebrow: e.target.value })}
+        />
+      </div>
+      <div className="space-y-1">
+        <Label className="text-[10px] uppercase tracking-wider">Titre</Label>
+        <Input
+          className="h-9"
+          placeholder="Où nous trouver"
+          value={settings.title ?? ''}
+          onChange={(e) => set({ title: e.target.value })}
+        />
+      </div>
+      <div className="space-y-1 md:col-span-2">
+        <Label className="text-[10px] uppercase tracking-wider">Sous-titre</Label>
+        <Textarea
+          rows={2}
+          placeholder="Trouvez la boutique ou le stand le plus proche de chez vous."
+          value={settings.subtitle ?? ''}
+          onChange={(e) => set({ subtitle: e.target.value })}
+        />
+      </div>
+
+      <div className="space-y-1">
+        <Label className="text-[10px] uppercase tracking-wider">Alignement du titre</Label>
+        <Select value={align} onValueChange={(v) => set({ titleAlign: v })}>
+          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="left">À gauche</SelectItem>
+            <SelectItem value="center">Au milieu</SelectItem>
+            <SelectItem value="right">À droite</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1">
+        <Label className="text-[10px] uppercase tracking-wider">Image de fond</Label>
+        <div className="flex items-center gap-2">
+          {settings.backgroundImage ? (
+            <img src={settings.backgroundImage} alt="" className="h-9 w-14 object-cover border border-border" />
+          ) : (
+            <div className="h-9 w-14 border border-dashed border-border" />
+          )}
+          <Button variant="outline" size="sm" onClick={() => setPick(true)}>Choisir</Button>
+          {settings.backgroundImage && (
+            <Button variant="ghost" size="sm" onClick={() => set({ backgroundImage: '' })}>Retirer</Button>
+          )}
+        </div>
+      </div>
+
+      {settings.backgroundImage && (
+        <div className="space-y-1 md:col-span-2">
+          <Label className="text-[10px] uppercase tracking-wider">Opacité du voile ({overlay}%)</Label>
+          <Slider value={[overlay]} min={0} max={95} step={5} onValueChange={([v]) => set({ overlayOpacity: v })} />
+        </div>
+      )}
+
+      <div className="flex items-center justify-between gap-2 border border-border p-2">
+        <span className="text-xs">Bouton « Près de chez moi »</span>
+        <Switch checked={on(settings.showLocate)} onCheckedChange={(v) => set({ showLocate: v })} />
+      </div>
+      <div className="flex items-center justify-between gap-2 border border-border p-2">
+        <span className="text-xs">Bouton « Toutes les boutiques »</span>
+        <Switch checked={on(settings.showAll)} onCheckedChange={(v) => set({ showAll: v })} />
+      </div>
+      <div className="flex items-center justify-between gap-2 border border-border p-2 md:col-span-2">
+        <span className="text-xs">Lien vers la page complète des boutiques</span>
+        <Switch checked={on(settings.showPageLink)} onCheckedChange={(v) => set({ showPageLink: v })} />
+      </div>
+
+      <MediaLibraryDialog
+        open={pick}
+        onOpenChange={setPick}
+        onSelect={(url) => { set({ backgroundImage: url }); setPick(false); }}
+      />
+    </div>
+  );
+}
+
+
+
 function Row({ b, onToggle, isCustom, onEdit, expanded, hasInline }: { b: Block; onToggle: () => void; isCustom: boolean; onEdit?: () => void; expanded?: boolean; hasInline?: boolean }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: b.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
