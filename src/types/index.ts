@@ -528,7 +528,17 @@ export interface FooterConfig {
   reviewsCtaLabel?: string;
   reviewsCtaUrl?: string;
   reviewsShowTrustpilot?: boolean;
+
+  /** Constructeur de lignes (disposition « custom ») : blocs côte à côte */
+  rows?: FooterRow[];
+  /** Logos de paiement réglables individuellement (remplace paymentBadges quand défini) */
+  paymentBadgeItems?: FooterPaymentBadgeItem[];
+  /** Réglages du bouton « Installer l'app » */
+  installApp?: FooterInstallAppConfig;
+  /** Forme des pastilles de réseaux sociaux */
+  socialShape?: 'square' | 'rounded' | 'circle' | 'none';
 }
+
 
 export interface DesignSettings {
 
