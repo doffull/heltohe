@@ -169,6 +169,7 @@ function BadgePreview({
 
 export default function AdminProductBadges() {
   const { designSettings, updateDesignSettings, products } = useApp();
+  const statusBadgesOn = (designSettings as any).showProductStatusBadges === true;
 
   const remoteCfg: ProductTrustBadgesConfig = useMemo(() => {
     return (
@@ -320,6 +321,26 @@ export default function AdminProductBadges() {
               </div>
             </CardHeader>
           </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-base">Badges d'état produit</CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Pastilles « Tendance », « Promo », « Nouveau », « Top vente », « Stock limité », « Exclusivité »
+                  affichées sur les vignettes et les fiches produit.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Switch
+                  checked={statusBadgesOn}
+                  onCheckedChange={(v) => updateDesignSettings({ showProductStatusBadges: v } as any)}
+                />
+                <Label className="text-sm">{statusBadgesOn ? 'Affichés' : 'Masqués partout'}</Label>
+              </div>
+            </CardHeader>
+          </Card>
+
 
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
             <TabsList className="admin-tabs-scroll w-full h-auto">

@@ -5,6 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Slider } from '@/components/ui/slider';
+import { MediaLibraryDialog } from '@/components/visual-editor/MediaLibraryDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GripVertical, Save, Eye, EyeOff, Sparkles, Pencil, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
@@ -30,7 +34,7 @@ type BuiltinId = 'hero' | 'categories' | 'storeFinder' | 'featured' | 'flash' | 
 interface Block { id: string; visible: boolean; label?: string; settings?: Record<string, any> }
 
 // Blocs disposant d'un éditeur inline (panneau pliable au lieu de naviguer)
-const INLINE_EDITABLE = new Set<string>(['categories']);
+const INLINE_EDITABLE = new Set<string>(['categories', 'storeFinder']);
 
 const BUILTIN_LABELS: Record<BuiltinId, string> = {
   hero: 'Hero (slider ou techwear)',
@@ -84,6 +88,7 @@ function CategoriesBlockInlineEditor({
   const orientation = settings.orientation || 'vertical';
   const columns = String(settings.columns || 3);
   const hoverEffect = settings.hoverEffect || 'zoom';
+  const titleAlign = settings.titleAlign || 'left';
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 border-t bg-muted/20">
       <div className="space-y-1">
@@ -125,12 +130,124 @@ function CategoriesBlockInlineEditor({
           </SelectContent>
         </Select>
       </div>
+      <div className="space-y-1">
+        <Label className="text-[10px] uppercase tracking-wider">Alignement des titres</Label>
+        <Select value={titleAlign} onValueChange={(v) => onChange({ ...settings, titleAlign: v })}>
+          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="left">À gauche</SelectItem>
+            <SelectItem value="center">Au milieu</SelectItem>
+            <SelectItem value="right">À droite</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
       <p className="text-[10px] text-muted-foreground md:col-span-2">
         Astuce : l'orientation horizontale présente chaque catégorie comme un large bandeau (image à gauche, titre à droite).
       </p>
     </div>
   );
 }
+
+// ============== Inline editor for the "storeFinder" block ==============
+function StoreFinderBlockInlineEditor({
+  settings,
+  onChange,
+}: {
+  settings: Record<string, any>;
+  onChange: (next: Record<string, any>) => void;
+}) {
+  const [pick, setPick] = useState(false);
+  const set = (patch: Record<string, any>) => onChange({ ...settings, ...patch });
+  const align = settings.titleAlign || 'left';
+  const overlay = typeof settings.overlayOpacity === 'number' ? settings.overlayOpacity : 70;
+  const on = (v: boolean | undefined) => v !== false;
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 border-t bg-muted/20">
+      <div className="space-y-1">
+        <Label className="text-[10px] uppercase tracking-wider">Sur-titre</Label>
+        <Input
+          className="h-9"
+          placeholder="// BOUTIQUES"
+          value={settings.eyebrow ?? ''}
+          onChange={(e) => set({ eyebrow: e.target.value })}
+        />
+      </div>
+      <div className="space-y-1">
+        <Label className="text-[10px] uppercase tracking-wider">Titre</Label>
+        <Input
+          className="h-9"
+          placeholder="Où nous trouver"
+          value={settings.title ?? ''}
+          onChange={(e) => set({ title: e.target.value })}
+        />
+      </div>
+      <div className="space-y-1 md:col-span-2">
+        <Label className="text-[10px] uppercase tracking-wider">Sous-titre</Label>
+        <Textarea
+          rows={2}
+          placeholder="Trouvez la boutique ou le stand le plus proche de chez vous."
+          value={settings.subtitle ?? ''}
+          onChange={(e) => set({ subtitle: e.target.value })}
+        />
+      </div>
+
+      <div className="space-y-1">
+        <Label className="text-[10px] uppercase tracking-wider">Alignement du titre</Label>
+        <Select value={align} onValueChange={(v) => set({ titleAlign: v })}>
+          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="left">À gauche</SelectItem>
+            <SelectItem value="center">Au milieu</SelectItem>
+            <SelectItem value="right">À droite</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1">
+        <Label className="text-[10px] uppercase tracking-wider">Image de fond</Label>
+        <div className="flex items-center gap-2">
+          {settings.backgroundImage ? (
+            <img src={settings.backgroundImage} alt="" className="h-9 w-14 object-cover border border-border" />
+          ) : (
+            <div className="h-9 w-14 border border-dashed border-border" />
+          )}
+          <Button variant="outline" size="sm" onClick={() => setPick(true)}>Choisir</Button>
+          {settings.backgroundImage && (
+            <Button variant="ghost" size="sm" onClick={() => set({ backgroundImage: '' })}>Retirer</Button>
+          )}
+        </div>
+      </div>
+
+      {settings.backgroundImage && (
+        <div className="space-y-1 md:col-span-2">
+          <Label className="text-[10px] uppercase tracking-wider">Opacité du voile ({overlay}%)</Label>
+          <Slider value={[overlay]} min={0} max={95} step={5} onValueChange={([v]) => set({ overlayOpacity: v })} />
+        </div>
+      )}
+
+      <div className="flex items-center justify-between gap-2 border border-border p-2">
+        <span className="text-xs">Bouton « Près de chez moi »</span>
+        <Switch checked={on(settings.showLocate)} onCheckedChange={(v) => set({ showLocate: v })} />
+      </div>
+      <div className="flex items-center justify-between gap-2 border border-border p-2">
+        <span className="text-xs">Bouton « Toutes les boutiques »</span>
+        <Switch checked={on(settings.showAll)} onCheckedChange={(v) => set({ showAll: v })} />
+      </div>
+      <div className="flex items-center justify-between gap-2 border border-border p-2 md:col-span-2">
+        <span className="text-xs">Lien vers la page complète des boutiques</span>
+        <Switch checked={on(settings.showPageLink)} onCheckedChange={(v) => set({ showPageLink: v })} />
+      </div>
+
+      <MediaLibraryDialog
+        open={pick}
+        onOpenChange={setPick}
+        onSelect={(url) => { set({ backgroundImage: url }); setPick(false); }}
+      />
+    </div>
+  );
+}
+
+
 
 function Row({ b, onToggle, isCustom, onEdit, expanded, hasInline }: { b: Block; onToggle: () => void; isCustom: boolean; onEdit?: () => void; expanded?: boolean; hasInline?: boolean }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: b.id });
@@ -305,6 +422,14 @@ export function HomeBlocksEditor() {
                     {hasInline && expanded && b.id === 'categories' && (
                       <div className="rounded border border-t-0 -mt-px">
                         <CategoriesBlockInlineEditor
+                          settings={b.settings || {}}
+                          onChange={(next) => updateSettings(b.id, next)}
+                        />
+                      </div>
+                    )}
+                    {hasInline && expanded && b.id === 'storeFinder' && (
+                      <div className="rounded border border-t-0 -mt-px">
+                        <StoreFinderBlockInlineEditor
                           settings={b.settings || {}}
                           onChange={(next) => updateSettings(b.id, next)}
                         />

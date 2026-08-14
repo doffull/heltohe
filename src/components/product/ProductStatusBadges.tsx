@@ -2,6 +2,7 @@ import { Flame, Sparkles, Tag, TrendingUp, AlertTriangle, PackageX, Crown } from
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Product } from '@/types';
+import { useApp } from '@/context/AppContext';
 
 export type BadgeKind = 'promo' | 'new' | 'top' | 'trending' | 'stock' | 'soldout' | 'exclusive';
 
@@ -87,8 +88,10 @@ interface Props {
 
 /** Dynamic stack of glossy status badges for a product. */
 export function ProductStatusBadges({ product, compact = false, animated = true, max = 3, className }: Props) {
+  const { designSettings } = useApp();
+  const enabled = (designSettings as any)?.showProductStatusBadges === true;
   const badges = getProductBadges(product).slice(0, max);
-  if (badges.length === 0) return null;
+  if (!enabled || badges.length === 0) return null;
   const pct = product ? discountLabel(product) : null;
 
   return (
