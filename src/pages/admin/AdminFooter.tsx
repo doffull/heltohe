@@ -198,7 +198,6 @@ export default function AdminFooter() {
                 </Select>
               </div>
               <div className="space-y-2">
-              <div className="space-y-2">
                 <Label>Nombre de colonnes de liens</Label>
                 <Select
                   value={String(cfg.columnCount ?? 4)}
