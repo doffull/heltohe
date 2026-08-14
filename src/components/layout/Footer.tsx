@@ -630,43 +630,19 @@ export function Footer({ offsetClassName }: FooterProps) {
       <div className={containerClass}>
         {renderLayout()}
 
-        {/* Paiement sécurisé & Avis clients */}
-        {(on(cfg.showPayments) || on(cfg.showReviews)) && (
+        {/* Paiement sécurisé & Avis clients (dispositions autres que « Personnalisé ») */}
+        {layout !== 'custom' && (on(cfg.showPayments) || on(cfg.showReviews)) && (
           <div
             className="mt-8 grid grid-cols-1 gap-8 border-t pt-6 lg:grid-cols-2 lg:gap-12"
             style={sepStyle}
           >
-            {on(cfg.showPayments) && (
-              <FooterPaymentBadges
-                badges={cfg.paymentBadges}
-                customBadges={cfg.customPaymentBadges}
-                height={cfg.paymentBadgeHeight}
-
-                title={cfg.paymentsTitle}
-                note={cfg.paymentsNote}
-                centered={centered}
-                headingClassName={headingClass}
-                borderStyle={sepStyle}
-              />
-            )}
-            {on(cfg.showReviews) && (
-              <FooterReviews
-                title={cfg.reviewsTitle}
-                text={cfg.reviewsText}
-                ctaLabel={cfg.reviewsCtaLabel}
-                ctaUrl={cfg.reviewsCtaUrl}
-                showTrustpilot={cfg.reviewsShowTrustpilot === true}
-                centered={centered}
-                headingClassName={headingClass}
-                scaleClassName={scale}
-                borderStyle={sepStyle}
-              />
-            )}
+            {on(cfg.showPayments) && <PaymentsBlock />}
+            {on(cfg.showReviews) && <ReviewsBlock />}
           </div>
         )}
 
         {/* Trustpilot */}
-        {on(cfg.showTrustpilot) && s?.trustpilot?.enabled && s?.trustpilot?.showInFooter !== false && (
+        {layout !== 'custom' && trustpilotVisible && (
           <div className="pt-6">
             <TrustpilotWidget variant="micro" />
           </div>
