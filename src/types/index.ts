@@ -350,7 +350,11 @@ export type FooterLayout =
   | 'editorial'
   | 'newsletter-first'
   | 'showcase'
-  | 'compact';
+  | 'compact'
+  | 'custom';
+
+/** Blocs réordonnables du footer (disposition « custom »). */
+export type FooterSectionKey = 'brand' | 'columns' | 'socials' | 'newsletter' | 'legal';
 
 export interface FooterDesign {
   bgColor?: string;
