@@ -396,6 +396,12 @@ export interface FooterConfig {
   preset?: string;
   /** Habillage visuel */
   design?: FooterDesign;
+  /** Ordre des blocs pour la disposition « custom » */
+  sectionOrder?: FooterSectionKey[];
+  /** Nombre de colonnes de liens affichées côte à côte (2-4) */
+  columnCount?: 2 | 3 | 4;
+
+
 
   showBrand?: boolean;
   showTagline?: boolean;
