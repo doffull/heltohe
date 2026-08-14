@@ -25,7 +25,7 @@ import {
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Upload,
   FileText, Filter, X,
 } from 'lucide-react';
-import { useCheckoutConfig, useSaveCheckoutConfig, DEFAULT_RELAY_MAP_SETTINGS } from '@/hooks/useCheckoutConfig';
+import { useCheckoutConfig, useSaveRelayMapSettings, DEFAULT_RELAY_MAP_SETTINGS } from '@/hooks/useCheckoutConfig';
 import { useOrders } from '@/hooks/useOrders';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDesignSettings, useSaveDesignSettings } from '@/hooks/useDesignSettings';
@@ -1284,7 +1284,7 @@ function PointsRelaisTab() {
 
   // Map settings from checkout config
   const { data: checkoutConfig } = useCheckoutConfig();
-  const saveCheckoutConfig = useSaveCheckoutConfig();
+  const saveCheckoutConfig = useSaveRelayMapSettings();
   const mapSettings = checkoutConfig?.relayMapSettings || DEFAULT_RELAY_MAP_SETTINGS;
 
   const [localMapSettings, setLocalMapSettings] = useState(mapSettings);
@@ -1293,9 +1293,8 @@ function PointsRelaisTab() {
   }, [checkoutConfig?.relayMapSettings]);
 
   const handleSaveMapSettings = async () => {
-    if (!checkoutConfig) return;
     try {
-      await saveCheckoutConfig.mutateAsync({ ...checkoutConfig, relayMapSettings: localMapSettings });
+      await saveCheckoutConfig.mutateAsync(localMapSettings);
       toast({ title: 'Paramètres de la carte sauvegardés' });
     } catch {
       toast({ title: 'Erreur', variant: 'destructive' });
