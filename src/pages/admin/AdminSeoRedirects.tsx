@@ -396,6 +396,33 @@ function RedirectRow({
           </Select>
         )}
       </TableCell>
+      <TableCell className="min-w-[220px]">
+        {!suggestions.length ? (
+          <span className="text-xs text-muted-foreground">Aucune correspondance</span>
+        ) : (
+          <div className="space-y-1.5">
+            {suggestions.map((s) => (
+              <button
+                key={`${s.target.path}-${s.target.label}`}
+                type="button"
+                onClick={() => { setCustomMode(false); onUpdate({ newPath: s.target.path }); }}
+                className="w-full text-left rounded border border-border px-2 py-1.5 hover:bg-secondary/40 transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  <Badge
+                    variant={s.confidence >= HIGH_CONFIDENCE ? 'default' : 'secondary'}
+                    className="text-[10px] shrink-0"
+                  >
+                    {Math.round(s.confidence * 100)} %
+                  </Badge>
+                  <span className="text-xs truncate">{s.target.label}</span>
+                </span>
+                <span className="block text-[10px] text-muted-foreground truncate">{s.reason}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </TableCell>
       <TableCell>
         <Button
           variant={row.status === 'valid' ? 'default' : 'outline'}
