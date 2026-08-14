@@ -412,12 +412,44 @@ export function Footer({ offsetClassName }: FooterProps) {
     </div>
   );
 
+  /* ------------------------------- Blocs déplaçables ------------------------------- */
+  const PaymentsBlock = () => (
+    <FooterPaymentBadges
+      badges={cfg.paymentBadges}
+      customBadges={cfg.customPaymentBadges}
+      height={cfg.paymentBadgeHeight}
+      title={cfg.paymentsTitle}
+      note={cfg.paymentsNote}
+      centered={centered}
+      headingClassName={headingClass}
+      borderStyle={sepStyle}
+    />
+  );
+
+  const ReviewsBlock = () => (
+    <FooterReviews
+      title={cfg.reviewsTitle}
+      text={cfg.reviewsText}
+      ctaLabel={cfg.reviewsCtaLabel}
+      ctaUrl={cfg.reviewsCtaUrl}
+      showTrustpilot={cfg.reviewsShowTrustpilot === true}
+      centered={centered}
+      headingClassName={headingClass}
+      scaleClassName={scale}
+      borderStyle={sepStyle}
+    />
+  );
+
+  const trustpilotVisible =
+    on(cfg.showTrustpilot) && s?.trustpilot?.enabled && s?.trustpilot?.showInFooter !== false;
+
   /* ------------------------------- Dispositions ------------------------------- */
   const renderCustom = () => {
+    const fallback = ['brand', 'columns', 'socials', 'newsletter', 'payments', 'reviews', 'legal', 'trustpilot'] as const;
     const order = (cfg.sectionOrder && cfg.sectionOrder.length
       ? cfg.sectionOrder
-      : (['brand', 'columns', 'socials', 'newsletter', 'legal'] as const)) as Array<
-      'brand' | 'columns' | 'socials' | 'newsletter' | 'legal'
+      : fallback) as Array<
+      'brand' | 'columns' | 'socials' | 'newsletter' | 'legal' | 'payments' | 'reviews' | 'trustpilot'
     >;
     return (
       <>
@@ -435,6 +467,18 @@ export function Footer({ offsetClassName }: FooterProps) {
               return on(cfg.showSocials) ? <div key="socials" className="mb-8"><Socials /></div> : null;
             case 'newsletter':
               return on(cfg.showNewsletter) ? <div key="newsletter" className="mb-8"><Newsletter /></div> : null;
+            case 'payments':
+              return on(cfg.showPayments) ? (
+                <div key="payments" className="mb-8 border-t pt-6" style={sepStyle}><PaymentsBlock /></div>
+              ) : null;
+            case 'reviews':
+              return on(cfg.showReviews) ? (
+                <div key="reviews" className="mb-8 border-t pt-6" style={sepStyle}><ReviewsBlock /></div>
+              ) : null;
+            case 'trustpilot':
+              return trustpilotVisible ? (
+                <div key="trustpilot" className="mb-8"><TrustpilotWidget variant="micro" /></div>
+              ) : null;
             case 'legal':
               return on(cfg.showLegalLinks) && legalLinks.length > 0 ? <LegalBar key="legal" /> : null;
             default:
@@ -586,43 +630,19 @@ export function Footer({ offsetClassName }: FooterProps) {
       <div className={containerClass}>
         {renderLayout()}
 
-        {/* Paiement sécurisé & Avis clients */}
-        {(on(cfg.showPayments) || on(cfg.showReviews)) && (
+        {/* Paiement sécurisé & Avis clients (dispositions autres que « Personnalisé ») */}
+        {layout !== 'custom' && (on(cfg.showPayments) || on(cfg.showReviews)) && (
           <div
             className="mt-8 grid grid-cols-1 gap-8 border-t pt-6 lg:grid-cols-2 lg:gap-12"
             style={sepStyle}
           >
-            {on(cfg.showPayments) && (
-              <FooterPaymentBadges
-                badges={cfg.paymentBadges}
-                customBadges={cfg.customPaymentBadges}
-                height={cfg.paymentBadgeHeight}
-
-                title={cfg.paymentsTitle}
-                note={cfg.paymentsNote}
-                centered={centered}
-                headingClassName={headingClass}
-                borderStyle={sepStyle}
-              />
-            )}
-            {on(cfg.showReviews) && (
-              <FooterReviews
-                title={cfg.reviewsTitle}
-                text={cfg.reviewsText}
-                ctaLabel={cfg.reviewsCtaLabel}
-                ctaUrl={cfg.reviewsCtaUrl}
-                showTrustpilot={cfg.reviewsShowTrustpilot === true}
-                centered={centered}
-                headingClassName={headingClass}
-                scaleClassName={scale}
-                borderStyle={sepStyle}
-              />
-            )}
+            {on(cfg.showPayments) && <PaymentsBlock />}
+            {on(cfg.showReviews) && <ReviewsBlock />}
           </div>
         )}
 
         {/* Trustpilot */}
-        {on(cfg.showTrustpilot) && s?.trustpilot?.enabled && s?.trustpilot?.showInFooter !== false && (
+        {layout !== 'custom' && trustpilotVisible && (
           <div className="pt-6">
             <TrustpilotWidget variant="micro" />
           </div>

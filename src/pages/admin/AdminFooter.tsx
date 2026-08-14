@@ -36,8 +36,11 @@ const SECTION_LABELS: Record<string, string> = {
   socials: 'Réseaux sociaux',
   newsletter: 'Newsletter',
   legal: 'Liens légaux',
+  payments: 'Paiement sécurisé',
+  reviews: 'Avis clients',
+  trustpilot: 'Widget Trustpilot',
 };
-const DEFAULT_SECTION_ORDER = ['brand', 'columns', 'socials', 'newsletter', 'legal'] as const;
+const DEFAULT_SECTION_ORDER = ['brand', 'columns', 'socials', 'newsletter', 'payments', 'reviews', 'legal', 'trustpilot'] as const;
 
 
 const LEGAL_OPTIONS = [
@@ -212,12 +215,12 @@ export default function AdminFooter() {
                 </Select>
               </div>
               <div className="space-y-2 sm:col-span-2">
-                <Label>Ordre des blocs (disposition « Personnalisé »)</Label>
+                <Label>Ordre des blocs (paiement & avis inclus)</Label>
                 <div className="space-y-2">
-                  {(cfg.sectionOrder && cfg.sectionOrder.length
-                    ? cfg.sectionOrder
-                    : [...DEFAULT_SECTION_ORDER]
-                  ).map((key, i, arr) => (
+                  {([
+                    ...(cfg.sectionOrder ?? []).filter(k => (DEFAULT_SECTION_ORDER as readonly string[]).includes(k)),
+                    ...DEFAULT_SECTION_ORDER.filter(k => !(cfg.sectionOrder ?? []).includes(k as any)),
+                  ] as string[]).map((key, i, arr) => (
                     <div key={key} className="flex items-center gap-2 border border-border px-3 py-2">
                       <span className="flex-1 text-sm">{SECTION_LABELS[key] || key}</span>
                       <Button
@@ -244,7 +247,7 @@ export default function AdminFooter() {
                   ))}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Cet ordre s'applique quand la mise en page « Personnalisé (ordre libre) » est sélectionnée.
+                  L'ordre s'applique à la disposition « Personnalisé (ordre libre) ». Les blocs « Paiement sécurisé », « Avis clients » et « Trustpilot » se déplacent où vous voulez.
                 </p>
               </div>
               <div className="space-y-2">

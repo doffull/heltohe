@@ -354,7 +354,15 @@ export type FooterLayout =
   | 'custom';
 
 /** Blocs réordonnables du footer (disposition « custom »). */
-export type FooterSectionKey = 'brand' | 'columns' | 'socials' | 'newsletter' | 'legal';
+export type FooterSectionKey =
+  | 'brand'
+  | 'columns'
+  | 'socials'
+  | 'newsletter'
+  | 'legal'
+  | 'payments'
+  | 'reviews'
+  | 'trustpilot';
 
 export interface FooterDesign {
   bgColor?: string;
