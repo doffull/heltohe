@@ -198,11 +198,6 @@ export default function AdminFooter() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Largeur du contenu</Label>
-                <Select value={design.contentWidth || 'container'} onValueChange={(v) => setDesign({ contentWidth: v as any })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-              </div>
               <div className="space-y-2">
                 <Label>Nombre de colonnes de liens</Label>
                 <Select
