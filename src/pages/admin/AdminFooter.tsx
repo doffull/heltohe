@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { FOOTER_PRESETS } from '@/config/footerPresets';
-import type { FooterColumn, FooterConfig, FooterDesign, FooterLayout } from '@/types';
+import type { FooterColumn, FooterConfig, FooterDesign, FooterLayout, FooterPaymentBadgeItem } from '@/types';
 
 const LAYOUT_OPTIONS: { value: FooterLayout; label: string }[] = [
   { value: 'industrial', label: 'Industrial (4 colonnes)' },
@@ -75,7 +75,7 @@ export default function AdminFooter() {
   const [pickLogo, setPickLogo] = useState(false);
   const [pickBg, setPickBg] = useState(false);
   const [pickSocial, setPickSocial] = useState<number | null>(null);
-  const [pickPayment, setPickPayment] = useState(false);
+  const [pickPayment, setPickPayment] = useState<number | 'new' | null>(null);
 
 
   const on = (v: boolean | undefined) => v !== false;
