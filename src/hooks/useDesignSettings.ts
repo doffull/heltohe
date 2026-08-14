@@ -193,6 +193,7 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     homeSectionProducts: ((db.settings_json as any)?.homeSectionProducts) ?? {},
     homeFeedSections: ((db.settings_json as any)?.homeFeedSections) ?? [],
     gifPresets: ((db.settings_json as any)?.gifPresets) ?? [],
+    showProductStatusBadges: ((db.settings_json as any)?.showProductStatusBadges) ?? false,
 
   } as DesignSettings;
 }
