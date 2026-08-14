@@ -427,6 +427,14 @@ export function HomeBlocksEditor() {
                         />
                       </div>
                     )}
+                    {hasInline && expanded && b.id === 'storeFinder' && (
+                      <div className="rounded border border-t-0 -mt-px">
+                        <StoreFinderBlockInlineEditor
+                          settings={b.settings || {}}
+                          onChange={(next) => updateSettings(b.id, next)}
+                        />
+                      </div>
+                    )}
                   </div>
                 );
               })}
