@@ -76,6 +76,7 @@ export default function AdminFooter() {
   const [pickBg, setPickBg] = useState(false);
   const [pickSocial, setPickSocial] = useState<number | null>(null);
   const [pickPayment, setPickPayment] = useState<number | 'new' | null>(null);
+  const [pickInstallIcon, setPickInstallIcon] = useState(false);
 
 
   const on = (v: boolean | undefined) => v !== false;
@@ -1232,6 +1233,15 @@ export default function AdminFooter() {
             setPaymentItems(paymentItems.map((x, j) => (j === pickPayment ? { ...x, iconUrl: url } : x)));
           }
           setPickPayment(null);
+        }}
+      />
+
+      <MediaLibraryDialog
+        open={pickInstallIcon}
+        onOpenChange={setPickInstallIcon}
+        onSelect={(url: string) => {
+          setCfg({ installApp: { ...(cfg.installApp || {}), iconUrl: url } });
+          setPickInstallIcon(false);
         }}
       />
 
