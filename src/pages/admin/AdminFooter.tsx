@@ -1153,13 +1153,18 @@ export default function AdminFooter() {
       />
 
       <MediaLibraryDialog
-        open={pickPayment}
-        onOpenChange={setPickPayment}
+        open={pickPayment !== null}
+        onOpenChange={(o: boolean) => { if (!o) setPickPayment(null); }}
         onSelect={(url: string) => {
-          setCfg({ customPaymentBadges: [...(cfg.customPaymentBadges || []), { url, label: '' }] });
-          setPickPayment(false);
+          if (pickPayment === 'new') {
+            setPaymentItems([...paymentItems, { key: 'custom', iconUrl: url, label: '', visible: true }]);
+          } else if (typeof pickPayment === 'number') {
+            setPaymentItems(paymentItems.map((x, j) => (j === pickPayment ? { ...x, iconUrl: url } : x)));
+          }
+          setPickPayment(null);
         }}
       />
+
 
 
 
