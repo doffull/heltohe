@@ -1,14 +1,24 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
+import { useSeoRedirects, toPath } from "@/hooks/useSeoRedirects";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Home } from "lucide-react";
 
 const NotFound = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { data: redirects = [] } = useSeoRedirects();
 
   useEffect(() => {
     console.error("404 Error: route inexistante:", location.pathname);
   }, [location.pathname]);
+
+  // Redirections de migration validées dans l'admin
+  useEffect(() => {
+    const current = toPath(location.pathname);
+    const hit = redirects.find((r) => r.status === "valid" && r.newPath && r.oldPath === current);
+    if (hit) navigate(hit.newPath, { replace: true });
+  }, [redirects, location.pathname, navigate]);
 
   return (
     <div className="flex min-h-[70vh] items-center justify-center bg-background px-4 py-16">
