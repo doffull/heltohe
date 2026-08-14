@@ -36,8 +36,11 @@ const SECTION_LABELS: Record<string, string> = {
   socials: 'Réseaux sociaux',
   newsletter: 'Newsletter',
   legal: 'Liens légaux',
+  payments: 'Paiement sécurisé',
+  reviews: 'Avis clients',
+  trustpilot: 'Widget Trustpilot',
 };
-const DEFAULT_SECTION_ORDER = ['brand', 'columns', 'socials', 'newsletter', 'legal'] as const;
+const DEFAULT_SECTION_ORDER = ['brand', 'columns', 'socials', 'newsletter', 'payments', 'reviews', 'legal', 'trustpilot'] as const;
 
 
 const LEGAL_OPTIONS = [
