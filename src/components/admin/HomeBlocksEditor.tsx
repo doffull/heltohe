@@ -30,7 +30,7 @@ type BuiltinId = 'hero' | 'categories' | 'storeFinder' | 'featured' | 'flash' | 
 interface Block { id: string; visible: boolean; label?: string; settings?: Record<string, any> }
 
 // Blocs disposant d'un éditeur inline (panneau pliable au lieu de naviguer)
-const INLINE_EDITABLE = new Set<string>(['categories']);
+const INLINE_EDITABLE = new Set<string>(['categories', 'storeFinder']);
 
 const BUILTIN_LABELS: Record<BuiltinId, string> = {
   hero: 'Hero (slider ou techwear)',
