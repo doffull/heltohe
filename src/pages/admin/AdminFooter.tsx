@@ -651,6 +651,20 @@ export default function AdminFooter() {
               </div>
 
               <div className="space-y-2">
+                <Label>Forme des pastilles</Label>
+                <Select value={cfg.socialShape || 'square'} onValueChange={v => setCfg({ socialShape: v as any })}>
+                  <SelectTrigger className="sm:w-[240px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="square">Angle biseauté (défaut)</SelectItem>
+                    <SelectItem value="rounded">Coins arrondis</SelectItem>
+                    <SelectItem value="circle">Cercle</SelectItem>
+                    <SelectItem value="none">Sans cadre</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+
+              <div className="space-y-2">
                 {socials.length === 0 && (
                   <p className="text-sm text-muted-foreground">Aucun réseau configuré.</p>
                 )}
