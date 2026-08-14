@@ -306,7 +306,12 @@ export function Footer({ offsetClassName }: FooterProps) {
               transition={{ type: 'spring', stiffness: 400, damping: 18 }}
               style={sepStyle}
               className={cn(
-                'group flex items-center gap-2 border transition-colors duration-200 chamfer-hud-sm',
+                'group flex items-center gap-2 transition-colors duration-200',
+                cfg.socialShape === 'circle' ? 'border rounded-full'
+                  : cfg.socialShape === 'rounded' ? 'border rounded-md'
+                  : cfg.socialShape === 'none' ? 'border-0'
+                  : 'border chamfer-hud-sm',
+
                 large ? 'px-4 py-3' : 'px-2.5 py-2',
                 d.glass && 'backdrop-blur-md bg-white/5'
               )}
