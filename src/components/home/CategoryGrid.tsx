@@ -98,11 +98,20 @@ export function CategoryGrid() {
 
   return (
     <section className="py-16">
-      <div className="px-6 lg:px-12 mb-8">
+      <div className={cn('px-6 lg:px-12 mb-8', alignText)}>
         <h2 className="hud-text text-xs text-primary tracking-[0.3em] mb-2">
           // {language === 'FR' ? 'CATÉGORIES' : 'CATEGORIES'}
         </h2>
-        <div className="h-px bg-gradient-to-r from-primary/50 to-transparent w-32" />
+        <div
+          className={cn(
+            'h-px w-32',
+            titleAlign === 'center'
+              ? 'mx-auto bg-gradient-to-r from-transparent via-primary/50 to-transparent'
+              : titleAlign === 'right'
+                ? 'ml-auto bg-gradient-to-l from-primary/50 to-transparent'
+                : 'bg-gradient-to-r from-primary/50 to-transparent',
+          )}
+        />
       </div>
 
       <div
