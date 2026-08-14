@@ -34,7 +34,7 @@ type BuiltinId = 'hero' | 'categories' | 'storeFinder' | 'featured' | 'flash' | 
 interface Block { id: string; visible: boolean; label?: string; settings?: Record<string, any> }
 
 // Blocs disposant d'un éditeur inline (panneau pliable au lieu de naviguer)
-const INLINE_EDITABLE = new Set<string>(['categories', 'storeFinder']);
+const INLINE_EDITABLE = new Set<string>(['categories', 'storeFinder', 'featured', 'newArrivals']);
 
 const BUILTIN_LABELS: Record<BuiltinId, string> = {
   hero: 'Hero (slider ou techwear)',
@@ -503,6 +503,16 @@ export function HomeBlocksEditor() {
                         <CategoriesBlockInlineEditor
                           settings={b.settings || {}}
                           onChange={(next) => updateSettings(b.id, next)}
+                        />
+                      </div>
+                    )}
+                    {hasInline && expanded && (b.id === 'featured' || b.id === 'newArrivals') && (
+                      <div className="rounded border border-t-0 -mt-px">
+                        <ProductBlockInlineEditor
+                          blockId={b.id}
+                          settings={b.settings || {}}
+                          onChange={(next) => updateSettings(b.id, next)}
+                          onOpenProducts={() => navigate('/admin/products')}
                         />
                       </div>
                     )}
