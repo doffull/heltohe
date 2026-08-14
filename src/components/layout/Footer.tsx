@@ -280,7 +280,7 @@ export function Footer({ offsetClassName }: FooterProps) {
   const Socials = ({ large = false }: { large?: boolean }) => (
     <div className={cn(centered && 'text-center')}>
       <h4 className={headingClass}>{cfg.socialsTitle || 'Suivez-nous'}</h4>
-      <div className={cn('flex flex-wrap items-center gap-2 sm:gap-3', centered && 'justify-center')}>
+      <div className={cn('footer-row flex flex-wrap items-center gap-2 sm:gap-3', centered && 'justify-center')}>
         {socials.map((link, i) => {
           const brand = resolveBrand(link.label, link.url);
           const Icon = brand?.Icon || ExternalLink;
@@ -380,7 +380,7 @@ export function Footer({ offsetClassName }: FooterProps) {
 
   const LegalBar = () => (
     <div className="border-t mt-8 lg:mt-10 pt-6" style={sepStyle}>
-      <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs opacity-70">
+      <div className="footer-row flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs opacity-70">
         {legalLinks.map((l, i) => (
           <span key={l.key} className="flex items-center gap-x-5">
             {i > 0 && <span className="opacity-40">·</span>}
@@ -456,7 +456,7 @@ export function Footer({ offsetClassName }: FooterProps) {
       const a = cfg.sectionAlign?.[key as keyof typeof cfg.sectionAlign];
       if (a === 'center') return 'text-center items-center [&_.footer-row]:justify-center';
       if (a === 'right') return 'text-right items-end [&_.footer-row]:justify-end';
-      if (a === 'left') return 'text-left items-start';
+      if (a === 'left') return 'text-left items-start [&_.footer-row]:justify-start';
       return undefined;
     };
     const wrap = (key: string, node: React.ReactNode, extra?: string) => (
