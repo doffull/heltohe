@@ -78,6 +78,7 @@ import AdminRoles from './AdminRoles';
 import AdminSecurity from './AdminSecurity';
 import AdminTransitions from './AdminTransitions';
 import AdminSeo from './AdminSeo';
+import AdminSeoRedirects from './AdminSeoRedirects';
 import AdminFooter from './AdminFooter';
 import AdminTopBanner from './AdminTopBanner';
 import AdminFeedSections from './AdminFeedSections';
@@ -115,6 +116,7 @@ export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin/popups': '#F97316',
   '/admin/design': '#06B6D4',
   '/admin/seo': '#0EA5E9',
+  '/admin/redirections': '#0284C7',
   '/admin/collab': '#A855F7',
   '/admin/stock': '#D97706',
   '/admin/colissimo': '#EAB308',
@@ -157,6 +159,7 @@ const SIDEBAR_ITEMS = [
   { icon: Palette, label: 'Design', href: '/admin/design' },
   { icon: PanelBottom, label: 'Footer', href: '/admin/footer' },
   { icon: Globe, label: 'SEO & Visibilité', href: '/admin/seo' },
+  { icon: Globe, label: 'Redirections SEO', href: '/admin/redirections' },
   { icon: Sparkles, label: 'Espace Collab', href: '/admin/collab' },
 
   { icon: Megaphone, label: 'Bannière haute', href: '/admin/top-banner' },
@@ -395,6 +398,7 @@ export default function Admin() {
             <Route path="parametres/*" element={<AdminSettings />} />
             <Route path="transitions/*" element={<AdminTransitions />} />
             <Route path="seo/*" element={<AdminSeo />} />
+            <Route path="redirections/*" element={<AdminSeoRedirects />} />
             <Route path="footer/*" element={<AdminFooter />} />
             <Route path="top-banner" element={<AdminTopBanner />} />
             <Route path="feed-sections" element={<AdminFeedSections />} />
