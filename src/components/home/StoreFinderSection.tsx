@@ -89,19 +89,36 @@ export function StoreFinderSection() {
   if (boutiques.length === 0) return null;
 
   return (
-    <section className={sectionPy}>
-      <div className="container mx-auto px-4">
-        <div className={cn('flex items-end justify-between', titleMb)}>
-          <div>
-            <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-2">// BOUTIQUES</p>
-            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight">Où nous trouver</h2>
-            <p className="text-sm text-muted-foreground mt-2 max-w-xl">
-              Trouvez la boutique ou le stand le plus proche de chez vous.
-            </p>
+    <section className={cn('relative', sectionPy, bgImage && 'overflow-hidden')}>
+      {bgImage && (
+        <>
+          <img
+            src={bgImage}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 h-full w-full object-cover"
+            loading="lazy"
+            decoding="async"
+          />
+          <div
+            className="absolute inset-0 bg-background"
+            style={{ opacity: overlayOpacity / 100 }}
+            aria-hidden
+          />
+        </>
+      )}
+      <div className={cn('container mx-auto px-4', bgImage && 'relative py-8 lg:py-12')}>
+        <div className={cn('flex', titleMb, alignText)}>
+          <div className={cn('flex flex-col', alignBox)}>
+            <p className="font-mono text-xs tracking-[0.3em] text-muted-foreground mb-2">{eyebrow}</p>
+            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-tight">{heading}</h2>
+            {subtitle && (
+              <p className={cn('text-sm text-muted-foreground mt-2 max-w-xl', alignText)}>{subtitle}</p>
+            )}
           </div>
         </div>
 
-        <div className="relative max-w-2xl">
+        <div className={cn('relative max-w-2xl', align === 'center' && 'mx-auto', align === 'right' && 'ml-auto')}>
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -112,14 +129,18 @@ export function StoreFinderSection() {
                 className="pl-9 h-11"
               />
             </div>
-            <Button onClick={locateMe} variant="outline" disabled={locating} className="gap-2 h-11">
-              <LocateFixed className={`h-4 w-4 ${locating ? 'animate-pulse' : ''}`} />
-              Près de chez moi
-            </Button>
-            <Button onClick={() => openMap(null)} className="gap-2 h-11">
-              <MapPin className="h-4 w-4" />
-              Toutes les boutiques
-            </Button>
+            {showLocate && (
+              <Button onClick={locateMe} variant="outline" disabled={locating} className="gap-2 h-11">
+                <LocateFixed className={`h-4 w-4 ${locating ? 'animate-pulse' : ''}`} />
+                Près de chez moi
+              </Button>
+            )}
+            {showAll && (
+              <Button onClick={() => openMap(null)} className="gap-2 h-11">
+                <MapPin className="h-4 w-4" />
+                Toutes les boutiques
+              </Button>
+            )}
           </div>
 
           {(query.trim() || userPos) && suggestions.length > 0 && (
