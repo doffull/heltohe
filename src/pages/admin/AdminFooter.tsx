@@ -11,6 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Slider } from '@/components/ui/slider';
 import { MediaLibraryDialog } from '@/components/visual-editor/MediaLibraryDialog';
 import { Footer } from '@/components/layout/Footer';
+import { FooterRowsEditor } from '@/components/admin/FooterRowsEditor';
+
 import { PAYMENT_BADGE_OPTIONS, DEFAULT_PAYMENT_BADGES } from '@/components/layout/FooterPaymentBadges';
 import {
   Save, Loader2, PanelBottom, Plus, Trash2, ArrowUp, ArrowDown,
@@ -18,7 +20,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { FOOTER_PRESETS } from '@/config/footerPresets';
-import type { FooterColumn, FooterConfig, FooterDesign, FooterLayout } from '@/types';
+import type { FooterColumn, FooterConfig, FooterDesign, FooterLayout, FooterPaymentBadgeItem } from '@/types';
 
 const LAYOUT_OPTIONS: { value: FooterLayout; label: string }[] = [
   { value: 'industrial', label: 'Industrial (4 colonnes)' },
@@ -73,7 +75,8 @@ export default function AdminFooter() {
   const [pickLogo, setPickLogo] = useState(false);
   const [pickBg, setPickBg] = useState(false);
   const [pickSocial, setPickSocial] = useState<number | null>(null);
-  const [pickPayment, setPickPayment] = useState(false);
+  const [pickPayment, setPickPayment] = useState<number | 'new' | null>(null);
+  const [pickInstallIcon, setPickInstallIcon] = useState(false);
 
 
   const on = (v: boolean | undefined) => v !== false;
@@ -121,6 +124,20 @@ export default function AdminFooter() {
   const columns: FooterColumn[] = cfg.columns || [];
   const setColumns = (next: FooterColumn[]) => setCfg({ columns: next });
 
+  /** Liste unifiée des logos de paiement (migre l'ancienne config au premier changement). */
+  const paymentItems: FooterPaymentBadgeItem[] = cfg.paymentBadgeItems?.length
+    ? cfg.paymentBadgeItems
+    : [
+        ...(cfg.paymentBadges ?? DEFAULT_PAYMENT_BADGES).map(k => ({
+          key: k,
+          label: PAYMENT_BADGE_OPTIONS.find(o => o.key === k)?.label,
+          visible: true,
+        })),
+        ...(cfg.customPaymentBadges || []).map(b => ({ key: 'custom', label: b.label, iconUrl: b.url, visible: true })),
+      ];
+  const setPaymentItems = (next: FooterPaymentBadgeItem[]) => setCfg({ paymentBadgeItems: next });
+
+
   const save = async () => {
     try {
       setSaving(true);
@@ -134,7 +151,7 @@ export default function AdminFooter() {
   };
 
   return (
-    <div className="space-y-6 p-4 md:p-6 max-w-5xl">
+    <div className="w-full min-w-0 space-y-6 p-4 md:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
@@ -227,70 +244,11 @@ export default function AdminFooter() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2 sm:col-span-2">
-                <Label>Ordre des blocs — visibilité & alignement</Label>
-                <div className="space-y-2">
-                  {([
-                    ...(cfg.sectionOrder ?? []).filter(k => (DEFAULT_SECTION_ORDER as readonly string[]).includes(k)),
-                    ...DEFAULT_SECTION_ORDER.filter(k => !(cfg.sectionOrder ?? []).includes(k as any)),
-                  ] as string[]).map((key, i, arr) => {
-                    const flag = SECTION_VISIBILITY_FLAG[key];
-                    const visible = flag ? on((cfg as any)[flag]) : true;
-                    return (
-                      <div key={key} className="flex flex-wrap items-center gap-2 border border-border px-3 py-2">
-                        <span className="flex-1 min-w-[130px] text-sm">{SECTION_LABELS[key] || key}</span>
-                        <Switch
-                          checked={visible}
-                          aria-label={`Afficher ${SECTION_LABELS[key] || key}`}
-                          onCheckedChange={(v) => flag && setCfg({ [flag]: v } as any)}
-                        />
-                        <Select
-                          value={cfg.sectionAlign?.[key as never] || 'inherit'}
-                          onValueChange={(v) =>
-                            setCfg({
-                              sectionAlign: {
-                                ...(cfg.sectionAlign || {}),
-                                [key]: v === 'inherit' ? undefined : v,
-                              } as any,
-                            })
-                          }
-                        >
-                          <SelectTrigger className="h-9 w-[130px]"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="inherit">Alignement global</SelectItem>
-                            <SelectItem value="left">Gauche</SelectItem>
-                            <SelectItem value="center">Centré</SelectItem>
-                            <SelectItem value="right">Droite</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          disabled={i === 0}
-                          onClick={() => {
-                            const next = [...arr];
-                            [next[i - 1], next[i]] = [next[i], next[i - 1]];
-                            setCfg({ sectionOrder: next as any });
-                          }}
-                        ><ArrowUp className="h-4 w-4" /></Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          disabled={i === arr.length - 1}
-                          onClick={() => {
-                            const next = [...arr];
-                            [next[i + 1], next[i]] = [next[i], next[i + 1]];
-                            setCfg({ sectionOrder: next as any });
-                          }}
-                        ><ArrowDown className="h-4 w-4" /></Button>
-                      </div>
-                    );
-                  })}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  L'ordre et les alignements par bloc s'appliquent à la disposition « Personnalisé (ordre libre) ». Les textes, images et liens de chaque bloc se règlent dans les onglets correspondants.
-                </p>
+              <div className="space-y-3 sm:col-span-2">
+                <Label>Constructeur de lignes (disposition « Personnalisé »)</Label>
+                <FooterRowsEditor cfg={cfg} setCfg={setCfg} />
               </div>
+
 
               <div className="space-y-2">
                 <Label>Largeur du contenu</Label>
@@ -693,6 +651,20 @@ export default function AdminFooter() {
               </div>
 
               <div className="space-y-2">
+                <Label>Forme des pastilles</Label>
+                <Select value={cfg.socialShape || 'square'} onValueChange={v => setCfg({ socialShape: v as any })}>
+                  <SelectTrigger className="sm:w-[240px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="square">Angle biseauté (défaut)</SelectItem>
+                    <SelectItem value="rounded">Coins arrondis</SelectItem>
+                    <SelectItem value="circle">Cercle</SelectItem>
+                    <SelectItem value="none">Sans cadre</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+
+              <div className="space-y-2">
                 {socials.length === 0 && (
                   <p className="text-sm text-muted-foreground">Aucun réseau configuré.</p>
                 )}
@@ -984,35 +956,9 @@ export default function AdminFooter() {
                   />
                 </div>
               </div>
-              <div>
-                <Label className="mb-2 block">Logos affichés</Label>
-                <div className="flex flex-wrap gap-2">
-                  {PAYMENT_BADGE_OPTIONS.map(opt => {
-                    const list = cfg.paymentBadges ?? DEFAULT_PAYMENT_BADGES;
-                    const active = list.includes(opt.key);
-                    return (
-                      <Button
-                        key={opt.key}
-                        type="button"
-                        size="sm"
-                        variant={active ? 'default' : 'outline'}
-                        onClick={() => setCfg({
-                          paymentBadges: active
-                            ? list.filter(k => k !== opt.key)
-                            : [...list, opt.key],
-                        })}
-                      >
-                        {active && <Check className="mr-1 h-3 w-3" />}
-                        {opt.label}
-                      </Button>
-                    );
-                  })}
-                </div>
-              </div>
-
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>Hauteur des logos</Label>
+                  <Label>Hauteur par défaut des logos</Label>
                   <span className="text-xs text-muted-foreground">{cfg.paymentBadgeHeight ?? 20} px</span>
                 </div>
                 <Slider
@@ -1025,44 +971,80 @@ export default function AdminFooter() {
               </div>
 
               <div className="space-y-2">
-                <Label className="block">Logos personnalisés (images)</Label>
+                <Label className="block">Logos (ordre, image, taille)</Label>
                 <p className="text-[11px] text-muted-foreground">
-                  Ajoutez vos propres images de moyens de paiement. Elles s'affichent après les logos intégrés.
+                  Remplacez n'importe quel logo (PayPal, CB, Visa, Apple Pay, 3D Secure…) par votre propre image,
+                  réglez sa hauteur, son ordre et sa visibilité.
                 </p>
-                {(cfg.customPaymentBadges || []).map((b, i) => (
-                  <div key={i} className="flex flex-wrap items-center gap-2 border border-border p-2">
-                    <img src={b.url} alt={b.label || ''} className="h-9 w-auto max-w-[80px] border border-border object-contain p-1" />
+                {paymentItems.map((b, i) => (
+                  <div key={`${b.key}-${i}`} className="flex flex-wrap items-center gap-2 border border-border p-2">
+                    {b.iconUrl ? (
+                      <img src={b.iconUrl} alt="" className="h-9 w-auto max-w-[80px] border border-border object-contain p-1" />
+                    ) : (
+                      <span className="flex h-9 min-w-[70px] items-center justify-center border border-border px-2 text-[10px] font-bold uppercase">
+                        {b.key}
+                      </span>
+                    )}
                     <Input
                       className="flex-1 min-w-[140px]"
                       placeholder="Libellé (ex : Klarna)"
                       value={b.label ?? ''}
-                      onChange={e => {
-                        const next = [...(cfg.customPaymentBadges || [])];
-                        next[i] = { ...next[i], label: e.target.value };
-                        setCfg({ customPaymentBadges: next });
-                      }}
+                      onChange={e => setPaymentItems(paymentItems.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
+                    />
+                    <Input
+                      type="number"
+                      className="w-[90px]"
+                      placeholder="px"
+                      value={b.height ?? ''}
+                      onChange={e => setPaymentItems(paymentItems.map((x, j) => j === i ? { ...x, height: Number(e.target.value) || undefined } : x))}
+                    />
+                    <Switch
+                      checked={b.visible !== false}
+                      aria-label="Afficher ce logo"
+                      onCheckedChange={v => setPaymentItems(paymentItems.map((x, j) => j === i ? { ...x, visible: v } : x))}
                     />
                     <div className="flex gap-1">
+                      <Button variant="outline" size="sm" className="gap-1" onClick={() => setPickPayment(i)}>
+                        <ImageIcon className="h-4 w-4" /> Image
+                      </Button>
+                      {b.iconUrl && (
+                        <Button variant="ghost" size="sm" onClick={() => setPaymentItems(paymentItems.map((x, j) => j === i ? { ...x, iconUrl: undefined } : x))}>
+                          Logo d'origine
+                        </Button>
+                      )}
                       <Button variant="ghost" size="icon" disabled={i === 0} onClick={() => {
-                        const next = [...(cfg.customPaymentBadges || [])];
+                        const next = [...paymentItems];
                         [next[i - 1], next[i]] = [next[i], next[i - 1]];
-                        setCfg({ customPaymentBadges: next });
+                        setPaymentItems(next);
                       }}><ArrowUp className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" disabled={i === (cfg.customPaymentBadges || []).length - 1} onClick={() => {
-                        const next = [...(cfg.customPaymentBadges || [])];
+                      <Button variant="ghost" size="icon" disabled={i === paymentItems.length - 1} onClick={() => {
+                        const next = [...paymentItems];
                         [next[i + 1], next[i]] = [next[i], next[i + 1]];
-                        setCfg({ customPaymentBadges: next });
+                        setPaymentItems(next);
                       }}><ArrowDown className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" className="text-destructive" onClick={() =>
-                        setCfg({ customPaymentBadges: (cfg.customPaymentBadges || []).filter((_, j) => j !== i) })
+                        setPaymentItems(paymentItems.filter((_, j) => j !== i))
                       }><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </div>
                 ))}
-                <Button variant="outline" className="gap-2" onClick={() => setPickPayment(true)}>
-                  <Plus className="h-4 w-4" /> Ajouter une image
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Select value="" onValueChange={(v) => setPaymentItems([...paymentItems, { key: v, visible: true }])}>
+                    <SelectTrigger className="h-10 w-[240px]">
+                      <span className="flex items-center gap-2 text-sm"><Plus className="h-4 w-4" /> Ajouter un logo intégré</span>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAYMENT_BADGE_OPTIONS.map(opt => (
+                        <SelectItem key={opt.key} value={opt.key}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button variant="outline" className="gap-2" onClick={() => setPickPayment('new')}>
+                    <Plus className="h-4 w-4" /> Ajouter une image
+                  </Button>
+                </div>
               </div>
+
 
             </CardContent>
           </Card>
@@ -1145,6 +1127,76 @@ export default function AdminFooter() {
               </label>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Bouton « Télécharger l'application »</CardTitle>
+              <CardDescription>Texte, icône et style du bouton d'installation.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Libellé</Label>
+                <Input
+                  placeholder="Télécharger l’application"
+                  value={cfg.installApp?.label ?? ''}
+                  onChange={e => setCfg({ installApp: { ...(cfg.installApp || {}), label: e.target.value } })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Sous-titre (optionnel)</Label>
+                <Input
+                  placeholder="iOS & Android"
+                  value={cfg.installApp?.subLabel ?? ''}
+                  onChange={e => setCfg({ installApp: { ...(cfg.installApp || {}), subLabel: e.target.value } })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Style</Label>
+                <Select
+                  value={cfg.installApp?.variant || 'outline'}
+                  onValueChange={v => setCfg({ installApp: { ...(cfg.installApp || {}), variant: v as any } })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="outline">Contour</SelectItem>
+                    <SelectItem value="solid">Plein</SelectItem>
+                    <SelectItem value="text">Texte seul</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Taille</Label>
+                <Select
+                  value={cfg.installApp?.size || 'sm'}
+                  onValueChange={v => setCfg({ installApp: { ...(cfg.installApp || {}), size: v as any } })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sm">Petite</SelectItem>
+                    <SelectItem value="md">Moyenne</SelectItem>
+                    <SelectItem value="lg">Grande</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Icône personnalisée</Label>
+                <div className="flex flex-wrap items-center gap-2">
+                  {cfg.installApp?.iconUrl && (
+                    <img src={cfg.installApp.iconUrl} alt="" className="h-10 w-10 border border-border object-contain p-1" />
+                  )}
+                  <Button variant="outline" className="gap-2" onClick={() => setPickInstallIcon(true)}>
+                    <ImageIcon className="h-4 w-4" /> Choisir une image
+                  </Button>
+                  {cfg.installApp?.iconUrl && (
+                    <Button variant="ghost" size="sm" onClick={() => setCfg({ installApp: { ...(cfg.installApp || {}), iconUrl: '' } })}>
+                      Icône par défaut
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
         </TabsContent>
       </Tabs>
 
@@ -1186,13 +1238,27 @@ export default function AdminFooter() {
       />
 
       <MediaLibraryDialog
-        open={pickPayment}
-        onOpenChange={setPickPayment}
+        open={pickPayment !== null}
+        onOpenChange={(o: boolean) => { if (!o) setPickPayment(null); }}
         onSelect={(url: string) => {
-          setCfg({ customPaymentBadges: [...(cfg.customPaymentBadges || []), { url, label: '' }] });
-          setPickPayment(false);
+          if (pickPayment === 'new') {
+            setPaymentItems([...paymentItems, { key: 'custom', iconUrl: url, label: '', visible: true }]);
+          } else if (typeof pickPayment === 'number') {
+            setPaymentItems(paymentItems.map((x, j) => (j === pickPayment ? { ...x, iconUrl: url } : x)));
+          }
+          setPickPayment(null);
         }}
       />
+
+      <MediaLibraryDialog
+        open={pickInstallIcon}
+        onOpenChange={setPickInstallIcon}
+        onSelect={(url: string) => {
+          setCfg({ installApp: { ...(cfg.installApp || {}), iconUrl: url } });
+          setPickInstallIcon(false);
+        }}
+      />
+
 
 
 

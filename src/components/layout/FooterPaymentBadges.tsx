@@ -60,10 +60,20 @@ const Logos: Record<string, { label: string; node: JSX.Element }> = {
 export const PAYMENT_BADGE_OPTIONS = Object.entries(Logos).map(([key, v]) => ({ key, label: v.label }));
 export const DEFAULT_PAYMENT_BADGES = ['paypal', '3dsecure', 'cb', 'visa', 'mastercard'];
 
+export interface PaymentBadgeItem {
+  key: string;
+  label?: string;
+  iconUrl?: string;
+  height?: number;
+  visible?: boolean;
+}
+
 interface Props {
   badges?: string[];
   /** Logos personnalisés (images) affichés après les logos intégrés */
   customBadges?: { url: string; label?: string }[];
+  /** Liste unifiée et réglable individuellement (remplace badges/customBadges) */
+  items?: PaymentBadgeItem[];
   /** Hauteur des logos en px */
   height?: number;
   title?: string;
@@ -77,6 +87,7 @@ interface Props {
 export default function FooterPaymentBadges({
   badges,
   customBadges,
+  items,
   height,
   title,
   note,
@@ -85,13 +96,20 @@ export default function FooterPaymentBadges({
   headingClassName,
   borderStyle,
 }: Props) {
-  const keys = (badges ?? DEFAULT_PAYMENT_BADGES).filter((k) => Logos[k]);
-  const customs = (customBadges || []).filter((b) => b?.url);
-  if (!keys.length && !customs.length) return null;
-
   const h = height && height > 0 ? height : 20;
-  const boxStyle: React.CSSProperties = { ...borderStyle, height: h + 16 };
-  const innerStyle: React.CSSProperties = { height: h };
+
+  const list: PaymentBadgeItem[] = items?.length
+    ? items.filter((b) => b.visible !== false && (b.iconUrl || Logos[b.key]))
+    : [
+        ...(badges ?? DEFAULT_PAYMENT_BADGES)
+          .filter((k) => Logos[k])
+          .map((k) => ({ key: k, label: Logos[k].label })),
+        ...(customBadges || [])
+          .filter((b) => b?.url)
+          .map((b) => ({ key: 'custom', label: b.label, iconUrl: b.url })),
+      ];
+
+  if (!list.length) return null;
 
   return (
     <div className={cn(centered && 'text-center', className)}>
@@ -102,38 +120,33 @@ export default function FooterPaymentBadges({
         </span>
       </h4>
       <div className={cn('flex flex-wrap items-center gap-2', centered && 'justify-center')}>
-        {keys.map((k) => (
-          <span
-            key={k}
-            title={Logos[k].label}
-            style={boxStyle}
-            className="flex items-center gap-2 border bg-white/95 px-2.5 text-neutral-900 chamfer-hud-sm"
-          >
+        {list.map((b, i) => {
+          const bh = b.height && b.height > 0 ? b.height : h;
+          const label = b.label || Logos[b.key]?.label || 'Paiement';
+          return (
             <span
-              className="flex items-center [&_svg]:h-full [&_svg]:w-auto"
-              style={innerStyle}
+              key={`${b.key}-${i}`}
+              title={label}
+              style={{ ...borderStyle, height: bh + 16 }}
+              className="flex items-center gap-2 border bg-white/95 px-2.5 text-neutral-900 chamfer-hud-sm"
             >
-              {Logos[k].node}
+              {b.iconUrl ? (
+                <img
+                  src={b.iconUrl}
+                  alt={label}
+                  style={{ height: bh }}
+                  className="w-auto object-contain"
+                  loading="lazy"
+                  decoding="async"
+                />
+              ) : (
+                <span className="flex items-center [&_svg]:h-full [&_svg]:w-auto" style={{ height: bh }}>
+                  {Logos[b.key].node}
+                </span>
+              )}
             </span>
-          </span>
-        ))}
-        {customs.map((b, i) => (
-          <span
-            key={`custom-${i}`}
-            title={b.label || 'Paiement'}
-            style={boxStyle}
-            className="flex items-center border bg-white/95 px-2.5 chamfer-hud-sm"
-          >
-            <img
-              src={b.url}
-              alt={b.label || 'Moyen de paiement'}
-              style={innerStyle}
-              className="w-auto object-contain"
-              loading="lazy"
-              decoding="async"
-            />
-          </span>
-        ))}
+          );
+        })}
       </div>
       {note !== '' && (
         <p className="mt-3 text-[11px] opacity-60 leading-relaxed">
@@ -143,4 +156,5 @@ export default function FooterPaymentBadges({
     </div>
   );
 }
+
 

@@ -7,7 +7,21 @@ import { useInstallApp } from '@/hooks/useInstallApp';
  * Bouton « Télécharger l'application » + instructions par plateforme.
  * Ouvre le prompt natif si disponible, sinon affiche la marche à suivre.
  */
-export function InstallAppButton({ className }: { className?: string }) {
+export function InstallAppButton({
+  className,
+  label,
+  subLabel,
+  iconUrl,
+  variant = 'outline',
+  size = 'sm',
+}: {
+  className?: string;
+  label?: string;
+  subLabel?: string;
+  iconUrl?: string;
+  variant?: 'solid' | 'outline' | 'text';
+  size?: 'sm' | 'md' | 'lg';
+}) {
   const { canPrompt, installed, install, isIos, isMobile } = useInstallApp();
   const [help, setHelp] = useState(false);
 
@@ -27,6 +41,16 @@ export function InstallAppButton({ className }: { className?: string }) {
 
   if (installed) return null;
 
+  const sizeClass =
+    size === 'lg' ? 'px-5 py-3.5 text-xs' : size === 'md' ? 'px-4 py-3 text-[11px]' : 'px-3 py-2 text-[10px]';
+  const variantClass =
+    variant === 'solid'
+      ? 'bg-foreground text-background hover:opacity-90'
+      : variant === 'text'
+        ? 'text-muted-foreground hover:text-foreground'
+        : 'border border-border/60 text-muted-foreground hover:border-primary/50 hover:text-foreground';
+  const iconPx = size === 'lg' ? 20 : size === 'md' ? 17 : 14;
+
   return (
     <>
       <button
@@ -34,12 +58,20 @@ export function InstallAppButton({ className }: { className?: string }) {
         onClick={onClick}
         className={
           className ||
-          'flex items-center gap-2 border border-border/60 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground chamfer-hud-sm'
+          `flex items-center gap-2 font-bold uppercase tracking-[0.2em] transition-colors chamfer-hud-sm ${sizeClass} ${variantClass}`
         }
       >
-        <Download className="h-3.5 w-3.5" />
-        Télécharger l’application
+        {iconUrl ? (
+          <img src={iconUrl} alt="" aria-hidden="true" style={{ height: iconPx, width: iconPx }} className="object-contain" />
+        ) : (
+          <Download style={{ height: iconPx, width: iconPx }} />
+        )}
+        <span className="flex flex-col items-start leading-tight">
+          <span>{label || 'Télécharger l’application'}</span>
+          {subLabel && <span className="text-[9px] font-normal tracking-normal opacity-70">{subLabel}</span>}
+        </span>
       </button>
+
 
       <Dialog open={help} onOpenChange={setHelp}>
         <DialogContent className="max-w-sm">

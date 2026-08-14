@@ -365,6 +365,67 @@ export type FooterSectionKey =
   | 'trustpilot'
   | 'bottom';
 
+/** Types de blocs disponibles dans le constructeur de lignes. */
+export type FooterBlockType =
+  | FooterSectionKey
+  | 'installApp'
+  | 'text'
+  | 'image'
+  | 'spacer';
+
+export type FooterBlockWidth = 'full' | '3/4' | '2/3' | '1/2' | '1/3' | '1/4';
+
+export interface FooterBlock {
+  id: string;
+  type: FooterBlockType;
+  width?: FooterBlockWidth;
+  align?: 'left' | 'center' | 'right';
+  visible?: boolean;
+  /** Réglages propres aux blocs libres (texte / image / espaceur). */
+  props?: {
+    /** Bloc texte */
+    title?: string;
+    text?: string;
+    /** Bloc image */
+    url?: string;
+    alt?: string;
+    href?: string;
+    imgWidth?: number;
+    /** Bloc espaceur */
+    height?: number;
+  };
+}
+
+export interface FooterRow {
+  id: string;
+  blocks: FooterBlock[];
+  gap?: 'sm' | 'md' | 'lg';
+  divider?: boolean;
+  /** Alignement vertical des blocs de la ligne */
+  valign?: 'start' | 'center' | 'end';
+}
+
+/** Logo de paiement (intégré ou personnalisé) réglable individuellement. */
+export interface FooterPaymentBadgeItem {
+  /** Clé d'un logo intégré (paypal, cb, visa, mastercard, applepay, 3dsecure) ou 'custom' */
+  key: string;
+  label?: string;
+  /** Image personnalisée remplaçant le logo intégré */
+  iconUrl?: string;
+  /** Hauteur propre en px (sinon hauteur globale) */
+  height?: number;
+  visible?: boolean;
+}
+
+export interface FooterInstallAppConfig {
+  label?: string;
+  subLabel?: string;
+  iconUrl?: string;
+  variant?: 'solid' | 'outline' | 'text';
+  size?: 'sm' | 'md' | 'lg';
+}
+
+
 export interface FooterDesign {
   bgColor?: string;
   textColor?: string;
@@ -467,7 +528,17 @@ export interface FooterConfig {
   reviewsCtaLabel?: string;
   reviewsCtaUrl?: string;
   reviewsShowTrustpilot?: boolean;
+
+  /** Constructeur de lignes (disposition « custom ») : blocs côte à côte */
+  rows?: FooterRow[];
+  /** Logos de paiement réglables individuellement (remplace paymentBadges quand défini) */
+  paymentBadgeItems?: FooterPaymentBadgeItem[];
+  /** Réglages du bouton « Installer l'app » */
+  installApp?: FooterInstallAppConfig;
+  /** Forme des pastilles de réseaux sociaux */
+  socialShape?: 'square' | 'rounded' | 'circle' | 'none';
 }
+
 
 export interface DesignSettings {
 
