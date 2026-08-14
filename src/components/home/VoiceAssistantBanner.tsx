@@ -33,19 +33,19 @@ export function VoiceAssistantBanner() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-60px' }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="relative overflow-hidden chamfer-hud border border-white/20 shadow-[0_24px_60px_-20px_rgba(14,40,120,0.55)]"
+          className="relative overflow-hidden chamfer-hud border border-white/20 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.35)]"
           style={{
             background:
-              'linear-gradient(120deg, hsl(222 70% 12%) 0%, hsl(220 85% 22%) 35%, hsl(210 95% 38%) 65%, hsl(190 95% 50%) 100%)',
+              'linear-gradient(120deg, hsl(0 0% 8%) 0%, hsl(0 0% 18%) 40%, hsl(0 0% 35%) 70%, hsl(0 0% 55%) 100%)',
           }}
         >
-          {/* Radial blue glow */}
+          {/* Radial gray glow */}
           <motion.div
             aria-hidden
             className="pointer-events-none absolute -top-24 -right-24 h-80 w-80 rounded-full"
             style={{
               background:
-                'radial-gradient(circle, hsl(195 100% 60% / 0.55) 0%, transparent 70%)',
+                'radial-gradient(circle, hsl(0 0% 100% / 0.35) 0%, transparent 70%)',
               filter: 'blur(20px)',
             }}
             animate={reduce ? undefined : { scale: [1, 1.15, 1], opacity: [0.7, 1, 0.7] }}
@@ -56,7 +56,7 @@ export function VoiceAssistantBanner() {
             className="pointer-events-none absolute -bottom-32 -left-20 h-72 w-72 rounded-full"
             style={{
               background:
-                'radial-gradient(circle, hsl(220 100% 55% / 0.45) 0%, transparent 70%)',
+                'radial-gradient(circle, hsl(0 0% 80% / 0.35) 0%, transparent 70%)',
               filter: 'blur(24px)',
             }}
             animate={reduce ? undefined : { scale: [1.1, 1, 1.1], opacity: [0.6, 0.9, 0.6] }}
@@ -68,7 +68,7 @@ export function VoiceAssistantBanner() {
             className="absolute inset-x-0 top-0 h-px"
             style={{
               background:
-                'linear-gradient(90deg, transparent, hsl(195 100% 85% / 0.9), transparent)',
+                'linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.9), transparent)',
             }}
           />
           {/* Sheen sweep */}
