@@ -413,8 +413,43 @@ export function Footer({ offsetClassName }: FooterProps) {
   );
 
   /* ------------------------------- Dispositions ------------------------------- */
+  const renderCustom = () => {
+    const order = (cfg.sectionOrder && cfg.sectionOrder.length
+      ? cfg.sectionOrder
+      : (['brand', 'columns', 'socials', 'newsletter', 'legal'] as const)) as Array<
+      'brand' | 'columns' | 'socials' | 'newsletter' | 'legal'
+    >;
+    return (
+      <>
+        {order.map((key) => {
+          switch (key) {
+            case 'brand':
+              return on(cfg.showBrand) ? <div key="brand" className="mb-8"><Brand /></div> : null;
+            case 'columns':
+              return columns.length > 0 ? (
+                <div key="columns" className={cn('grid gap-6 lg:gap-12 mb-8', columnsGridClass)}>
+                  <Columns />
+                </div>
+              ) : null;
+            case 'socials':
+              return on(cfg.showSocials) ? <div key="socials" className="mb-8"><Socials /></div> : null;
+            case 'newsletter':
+              return on(cfg.showNewsletter) ? <div key="newsletter" className="mb-8"><Newsletter /></div> : null;
+            case 'legal':
+              return on(cfg.showLegalLinks) && legalLinks.length > 0 ? <LegalBar key="legal" /> : null;
+            default:
+              return null;
+          }
+        })}
+        <BottomBar />
+      </>
+    );
+  };
+
   const renderLayout = () => {
     switch (layout) {
+      case 'custom':
+        return renderCustom();
       case 'minimal':
         return (
           <div className="flex flex-col items-center gap-5 text-center">
