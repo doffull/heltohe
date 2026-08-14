@@ -4,7 +4,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
 import { useBoutiques } from '@/hooks/useBoutiques';
 import { useSeoRedirects, useSeoRedirectMutations, toPath, type SeoRedirect } from '@/hooks/useSeoRedirects';
-import { STATIC_TARGETS, suggestTarget, type RedirectTarget } from '@/lib/seoRedirectSuggest';
+import { STATIC_TARGETS, suggestTarget, suggestTargets, HIGH_CONFIDENCE, type RedirectTarget, type RedirectSuggestion } from '@/lib/seoRedirectSuggest';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -83,6 +83,13 @@ export default function AdminSeoRedirects() {
     review: redirects.filter((r) => r.status !== 'valid').length,
   }), [redirects]);
 
+  /** Suggestions classées (règles catégorie + similarité de slug) par redirection. */
+  const suggestionsById = useMemo(() => {
+    const map = new Map<string, RedirectSuggestion[]>();
+    redirects.forEach((r) => map.set(r.id, suggestTargets(r.oldPath, targets, 3)));
+    return map;
+  }, [redirects, targets]);
+
   const addUrls = async (urls: string[], source: string) => {
     const clean = Array.from(new Set(urls.map((u) => u.trim()).filter(Boolean)));
     if (!clean.length) {
@@ -133,14 +140,20 @@ export default function AdminSeoRedirects() {
   const autoMapAll = async () => {
     const pending = redirects.filter((r) => !r.newPath);
     let n = 0;
+    let auto = 0;
     for (const r of pending) {
-      const s = suggestTarget(r.oldPath, targets);
+      const s = (suggestionsById.get(r.id) ?? [])[0];
       if (s) {
-        await update.mutateAsync({ id: r.id, newPath: s.target.path });
+        const high = s.confidence >= HIGH_CONFIDENCE;
+        await update.mutateAsync({ id: r.id, newPath: s.target.path, ...(high ? { status: 'valid' as const } : {}) });
         n += 1;
+        if (high) auto += 1;
       }
     }
-    toast({ title: `${n} suggestion(s) appliquée(s)`, description: `${pending.length - n} URL(s) sans correspondance.` });
+    toast({
+      title: `${n} suggestion(s) appliquée(s)`,
+      description: `${auto} validée(s) automatiquement (confiance ≥ ${Math.round(HIGH_CONFIDENCE * 100)} %) · ${pending.length - n} sans correspondance.`,
+    });
   };
 
   const bulkStatus = async (status: 'valid' | 'review') => {
@@ -283,7 +296,7 @@ export default function AdminSeoRedirects() {
             <div className="p-6 text-center text-sm text-muted-foreground">Aucune redirection. Importez vos anciennes URLs ci-dessus.</div>
           ) : (
             <AdminTableScroll stickyFirstCol>
-              <Table className="min-w-[760px]">
+              <Table className="min-w-[980px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-10">
@@ -294,6 +307,7 @@ export default function AdminSeoRedirects() {
                     </TableHead>
                     <TableHead>Ancienne URL</TableHead>
                     <TableHead>Nouvelle URL cible</TableHead>
+                    <TableHead className="w-56">Suggestions & confiance</TableHead>
                     <TableHead className="w-40">Statut</TableHead>
                     <TableHead className="w-12" />
                   </TableRow>
@@ -304,6 +318,7 @@ export default function AdminSeoRedirects() {
                       key={r.id}
                       row={r}
                       targetGroups={targetGroups}
+                      suggestions={suggestionsById.get(r.id) ?? []}
                       selected={selected.has(r.id)}
                       onToggle={() => toggle(r.id)}
                       onUpdate={(patch) => update.mutate({ id: r.id, ...patch })}
@@ -321,10 +336,11 @@ export default function AdminSeoRedirects() {
 }
 
 function RedirectRow({
-  row, targetGroups, selected, onToggle, onUpdate, onDelete,
+  row, targetGroups, suggestions, selected, onToggle, onUpdate, onDelete,
 }: {
   row: SeoRedirect;
   targetGroups: Array<[string, RedirectTarget[]]>;
+  suggestions: RedirectSuggestion[];
   selected: boolean;
   onToggle: () => void;
   onUpdate: (patch: { newPath?: string; status?: 'valid' | 'review' }) => void;
@@ -378,6 +394,33 @@ function RedirectRow({
               ))}
             </SelectContent>
           </Select>
+        )}
+      </TableCell>
+      <TableCell className="min-w-[220px]">
+        {!suggestions.length ? (
+          <span className="text-xs text-muted-foreground">Aucune correspondance</span>
+        ) : (
+          <div className="space-y-1.5">
+            {suggestions.map((s) => (
+              <button
+                key={`${s.target.path}-${s.target.label}`}
+                type="button"
+                onClick={() => { setCustomMode(false); onUpdate({ newPath: s.target.path }); }}
+                className="w-full text-left rounded border border-border px-2 py-1.5 hover:bg-secondary/40 transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  <Badge
+                    variant={s.confidence >= HIGH_CONFIDENCE ? 'default' : 'secondary'}
+                    className="text-[10px] shrink-0"
+                  >
+                    {Math.round(s.confidence * 100)} %
+                  </Badge>
+                  <span className="text-xs truncate">{s.target.label}</span>
+                </span>
+                <span className="block text-[10px] text-muted-foreground truncate">{s.reason}</span>
+              </button>
+            ))}
+          </div>
         )}
       </TableCell>
       <TableCell>
