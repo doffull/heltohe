@@ -1112,6 +1112,76 @@ export default function AdminFooter() {
               </label>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Bouton « Télécharger l'application »</CardTitle>
+              <CardDescription>Texte, icône et style du bouton d'installation.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Libellé</Label>
+                <Input
+                  placeholder="Télécharger l’application"
+                  value={cfg.installApp?.label ?? ''}
+                  onChange={e => setCfg({ installApp: { ...(cfg.installApp || {}), label: e.target.value } })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Sous-titre (optionnel)</Label>
+                <Input
+                  placeholder="iOS & Android"
+                  value={cfg.installApp?.subLabel ?? ''}
+                  onChange={e => setCfg({ installApp: { ...(cfg.installApp || {}), subLabel: e.target.value } })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Style</Label>
+                <Select
+                  value={cfg.installApp?.variant || 'outline'}
+                  onValueChange={v => setCfg({ installApp: { ...(cfg.installApp || {}), variant: v as any } })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="outline">Contour</SelectItem>
+                    <SelectItem value="solid">Plein</SelectItem>
+                    <SelectItem value="text">Texte seul</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Taille</Label>
+                <Select
+                  value={cfg.installApp?.size || 'sm'}
+                  onValueChange={v => setCfg({ installApp: { ...(cfg.installApp || {}), size: v as any } })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sm">Petite</SelectItem>
+                    <SelectItem value="md">Moyenne</SelectItem>
+                    <SelectItem value="lg">Grande</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Icône personnalisée</Label>
+                <div className="flex flex-wrap items-center gap-2">
+                  {cfg.installApp?.iconUrl && (
+                    <img src={cfg.installApp.iconUrl} alt="" className="h-10 w-10 border border-border object-contain p-1" />
+                  )}
+                  <Button variant="outline" className="gap-2" onClick={() => setPickInstallIcon(true)}>
+                    <ImageIcon className="h-4 w-4" /> Choisir une image
+                  </Button>
+                  {cfg.installApp?.iconUrl && (
+                    <Button variant="ghost" size="sm" onClick={() => setCfg({ installApp: { ...(cfg.installApp || {}), iconUrl: '' } })}>
+                      Icône par défaut
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
         </TabsContent>
       </Tabs>
 
