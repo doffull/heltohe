@@ -356,6 +356,7 @@ function settingsToDb(s: DesignSettings) {
       homeSectionProducts: (s as any).homeSectionProducts ?? {},
       homeFeedSections: (s as any).homeFeedSections ?? [],
       gifPresets: (s as any).gifPresets ?? [],
+      showProductStatusBadges: (s as any).showProductStatusBadges === true,
 
 
     } as unknown as Json,
