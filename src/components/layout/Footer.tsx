@@ -392,8 +392,8 @@ export function Footer({ offsetClassName }: FooterProps) {
   );
 
   const BottomBar = () => (
-    <div
-      className="border-t mt-4 pt-4 flex flex-col md:flex-row items-center justify-between gap-4 text-xs opacity-70"
+    !on(cfg.showBottomBar) ? null : <div
+      className="border-t mt-4 pt-4 flex flex-col md:flex-row items-center justify-between gap-4 text-xs opacity-70 footer-row"
       style={sepStyle}
     >
       <p>{copyright}</p>
