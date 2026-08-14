@@ -40,7 +40,19 @@ const SECTION_LABELS: Record<string, string> = {
   reviews: 'Avis clients',
   trustpilot: 'Widget Trustpilot',
 };
-const DEFAULT_SECTION_ORDER = ['brand', 'columns', 'socials', 'newsletter', 'payments', 'reviews', 'legal', 'trustpilot'] as const;
+const DEFAULT_SECTION_ORDER = ['brand', 'columns', 'socials', 'newsletter', 'payments', 'reviews', 'legal', 'trustpilot', 'bottom'] as const;
+
+const SECTION_VISIBILITY_FLAG: Record<string, string> = {
+  brand: 'showBrand',
+  columns: 'showColumns',
+  socials: 'showSocials',
+  newsletter: 'showNewsletter',
+  payments: 'showPayments',
+  reviews: 'showReviews',
+  legal: 'showLegalLinks',
+  trustpilot: 'showTrustpilot',
+  bottom: 'showBottomBar',
+};
 
 
 const LEGAL_OPTIONS = [
