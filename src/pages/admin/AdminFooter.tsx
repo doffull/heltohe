@@ -215,41 +215,70 @@ export default function AdminFooter() {
                 </Select>
               </div>
               <div className="space-y-2 sm:col-span-2">
-                <Label>Ordre des blocs (paiement & avis inclus)</Label>
+                <Label>Ordre des blocs — visibilité & alignement</Label>
                 <div className="space-y-2">
                   {([
                     ...(cfg.sectionOrder ?? []).filter(k => (DEFAULT_SECTION_ORDER as readonly string[]).includes(k)),
                     ...DEFAULT_SECTION_ORDER.filter(k => !(cfg.sectionOrder ?? []).includes(k as any)),
-                  ] as string[]).map((key, i, arr) => (
-                    <div key={key} className="flex items-center gap-2 border border-border px-3 py-2">
-                      <span className="flex-1 text-sm">{SECTION_LABELS[key] || key}</span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        disabled={i === 0}
-                        onClick={() => {
-                          const next = [...arr];
-                          [next[i - 1], next[i]] = [next[i], next[i - 1]];
-                          setCfg({ sectionOrder: next as any });
-                        }}
-                      ><ArrowUp className="h-4 w-4" /></Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        disabled={i === arr.length - 1}
-                        onClick={() => {
-                          const next = [...arr];
-                          [next[i + 1], next[i]] = [next[i], next[i + 1]];
-                          setCfg({ sectionOrder: next as any });
-                        }}
-                      ><ArrowDown className="h-4 w-4" /></Button>
-                    </div>
-                  ))}
+                  ] as string[]).map((key, i, arr) => {
+                    const flag = SECTION_VISIBILITY_FLAG[key];
+                    const visible = flag ? on((cfg as any)[flag]) : true;
+                    return (
+                      <div key={key} className="flex flex-wrap items-center gap-2 border border-border px-3 py-2">
+                        <span className="flex-1 min-w-[130px] text-sm">{SECTION_LABELS[key] || key}</span>
+                        <Switch
+                          checked={visible}
+                          aria-label={`Afficher ${SECTION_LABELS[key] || key}`}
+                          onCheckedChange={(v) => flag && setCfg({ [flag]: v } as any)}
+                        />
+                        <Select
+                          value={cfg.sectionAlign?.[key as never] || 'inherit'}
+                          onValueChange={(v) =>
+                            setCfg({
+                              sectionAlign: {
+                                ...(cfg.sectionAlign || {}),
+                                [key]: v === 'inherit' ? undefined : v,
+                              } as any,
+                            })
+                          }
+                        >
+                          <SelectTrigger className="h-9 w-[130px]"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="inherit">Alignement global</SelectItem>
+                            <SelectItem value="left">Gauche</SelectItem>
+                            <SelectItem value="center">Centré</SelectItem>
+                            <SelectItem value="right">Droite</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          disabled={i === 0}
+                          onClick={() => {
+                            const next = [...arr];
+                            [next[i - 1], next[i]] = [next[i], next[i - 1]];
+                            setCfg({ sectionOrder: next as any });
+                          }}
+                        ><ArrowUp className="h-4 w-4" /></Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          disabled={i === arr.length - 1}
+                          onClick={() => {
+                            const next = [...arr];
+                            [next[i + 1], next[i]] = [next[i], next[i + 1]];
+                            setCfg({ sectionOrder: next as any });
+                          }}
+                        ><ArrowDown className="h-4 w-4" /></Button>
+                      </div>
+                    );
+                  })}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  L'ordre s'applique à la disposition « Personnalisé (ordre libre) ». Les blocs « Paiement sécurisé », « Avis clients » et « Trustpilot » se déplacent où vous voulez.
+                  L'ordre et les alignements par bloc s'appliquent à la disposition « Personnalisé (ordre libre) ». Les textes, images et liens de chaque bloc se règlent dans les onglets correspondants.
                 </p>
               </div>
+
               <div className="space-y-2">
                 <Label>Largeur du contenu</Label>
                 <Select value={design.contentWidth || 'container'} onValueChange={(v) => setDesign({ contentWidth: v as any })}>
