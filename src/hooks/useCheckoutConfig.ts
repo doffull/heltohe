@@ -148,3 +148,21 @@ export function useSaveCheckoutConfig() {
     },
   });
 }
+
+/** Met à jour uniquement les réglages de la carte (n'écrase pas les passerelles). */
+export function useSaveRelayMapSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (relayMapSettings: RelayMapSettings) => {
+      const { error } = await supabase
+        .from('checkout_config')
+        .update({ relay_map_settings: relayMapSettings as unknown } as any)
+        .eq('config_key', 'main');
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['checkout_config'] });
+      queryClient.invalidateQueries({ queryKey: ['checkout_config_admin'] });
+    },
+  });
+}
