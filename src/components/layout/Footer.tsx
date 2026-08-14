@@ -433,6 +433,8 @@ export function Footer({ offsetClassName }: FooterProps) {
   const PaymentsBlock = () => (
     <FooterPaymentBadges
       badges={cfg.paymentBadges}
+      items={cfg.paymentBadgeItems}
+
       customBadges={cfg.customPaymentBadges}
       height={cfg.paymentBadgeHeight}
       title={cfg.paymentsTitle}
