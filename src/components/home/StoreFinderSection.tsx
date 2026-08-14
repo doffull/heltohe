@@ -25,6 +25,22 @@ export function StoreFinderSection() {
   const titleMb =
     siteSpacing === 'spacious' ? 'mb-6 lg:mb-10' : siteSpacing === 'normal' ? 'mb-4 lg:mb-8' : 'mb-2 lg:mb-4';
 
+  // Settings coming from the admin "Nos boutiques (recherche + carte)" inline editor
+  const blocks = ((designSettings as any).homePageBlocks || []) as Array<{ id: string; settings?: any }>;
+  const cfg = blocks.find((b) => b.id === 'storeFinder')?.settings || {};
+  const eyebrow: string = cfg.eyebrow || '// BOUTIQUES';
+  const heading: string = cfg.title || 'Où nous trouver';
+  const subtitle: string = cfg.subtitle ?? 'Trouvez la boutique ou le stand le plus proche de chez vous.';
+  const align: 'left' | 'center' | 'right' = cfg.titleAlign || 'left';
+  const bgImage: string = cfg.backgroundImage || '';
+  const overlayOpacity: number = typeof cfg.overlayOpacity === 'number' ? cfg.overlayOpacity : 70;
+  const showLocate = cfg.showLocate !== false;
+  const showAll = cfg.showAll !== false;
+  const showPageLink = cfg.showPageLink !== false;
+
+  const alignText = align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left';
+  const alignBox = align === 'center' ? 'mx-auto items-center' : align === 'right' ? 'ml-auto items-end' : 'mr-auto items-start';
+
   const suggestions = useMemo(() => {
     const q = query.trim().toLowerCase();
     let list: (Boutique & { _d?: number })[] = boutiques;
