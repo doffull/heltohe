@@ -994,6 +994,31 @@ export default function AdminFooter() {
                 />
               </div>
 
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Style de fond des logos</Label>
+                  <Select
+                    value={cfg.paymentBadgeStyle ?? 'transparent'}
+                    onValueChange={(v: 'transparent' | 'light' | 'dark') => setCfg({ paymentBadgeStyle: v })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="transparent">Transparent (sans cadre)</SelectItem>
+                      <SelectItem value="light">Pastille claire</SelectItem>
+                      <SelectItem value="dark">Pastille sombre</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <label className="flex items-center justify-between gap-4 text-sm border border-border px-3 py-2 self-end">
+                  <span>Logos en monochrome</span>
+                  <Switch
+                    checked={cfg.paymentBadgeMonochrome === true}
+                    onCheckedChange={v => setCfg({ paymentBadgeMonochrome: v })}
+                  />
+                </label>
+              </div>
+
+
               <div className="space-y-2">
                 <Label className="block">Logos (ordre, image, taille)</Label>
                 <p className="text-[11px] text-muted-foreground">
