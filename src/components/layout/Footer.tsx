@@ -1,4 +1,4 @@
-import { SyntheticEvent, CSSProperties } from 'react';
+import { SyntheticEvent, CSSProperties, useState, useRef } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
