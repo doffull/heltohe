@@ -498,6 +498,10 @@ export interface FooterConfig {
   newsletterTitle?: string;
   newsletterText?: string;
   newsletterButton?: string;
+  /** Sous-texte de réassurance et message de succès de la newsletter */
+  newsletterSubText?: string;
+  newsletterSuccess?: string;
+  newsletterShowReassurance?: boolean;
   showLegalLinks?: boolean;
   /** Clés des liens légaux affichés : mentions, cgv, confidentialite, cookies, retours */
   legalLinks?: string[];
@@ -514,6 +518,10 @@ export interface FooterConfig {
   customPaymentBadges?: { url: string; label?: string }[];
   /** Hauteur des logos de paiement en px (défaut 20) */
   paymentBadgeHeight?: number;
+  /** Rendu des logos de paiement : transparent (défaut), pastille claire ou sombre */
+  paymentBadgeStyle?: 'transparent' | 'light' | 'dark';
+  /** Force les logos de paiement en monochrome */
+  paymentBadgeMonochrome?: boolean;
   /** Hauteur du logo du footer en px (défaut 40) */
   logoHeight?: number;
   /** Taille des icônes de réseaux sociaux en px (défaut 16) */

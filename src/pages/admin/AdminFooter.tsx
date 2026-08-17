@@ -864,7 +864,31 @@ export default function AdminFooter() {
                     onChange={e => setCfg({ newsletterText: e.target.value })}
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label>Message de succès</Label>
+                  <Input
+                    placeholder="Merci ! Votre inscription est enregistrée."
+                    value={cfg.newsletterSuccess ?? ''}
+                    onChange={e => setCfg({ newsletterSuccess: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Ligne de réassurance</Label>
+                  <Input
+                    placeholder="Désinscription en 1 clic · Pas de spam"
+                    value={cfg.newsletterSubText ?? ''}
+                    onChange={e => setCfg({ newsletterSubText: e.target.value })}
+                  />
+                </div>
+                <label className="flex items-center justify-between gap-4 text-sm sm:col-span-2 border border-border px-3 py-2">
+                  <span>Afficher la ligne de réassurance</span>
+                  <Switch
+                    checked={cfg.newsletterShowReassurance !== false}
+                    onCheckedChange={v => setCfg({ newsletterShowReassurance: v })}
+                  />
+                </label>
               </div>
+
             </CardContent>
           </Card>
 
@@ -969,6 +993,31 @@ export default function AdminFooter() {
                   onValueChange={([v]) => setCfg({ paymentBadgeHeight: v })}
                 />
               </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Style de fond des logos</Label>
+                  <Select
+                    value={cfg.paymentBadgeStyle ?? 'transparent'}
+                    onValueChange={(v: 'transparent' | 'light' | 'dark') => setCfg({ paymentBadgeStyle: v })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="transparent">Transparent (sans cadre)</SelectItem>
+                      <SelectItem value="light">Pastille claire</SelectItem>
+                      <SelectItem value="dark">Pastille sombre</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <label className="flex items-center justify-between gap-4 text-sm border border-border px-3 py-2 self-end">
+                  <span>Logos en monochrome</span>
+                  <Switch
+                    checked={cfg.paymentBadgeMonochrome === true}
+                    onCheckedChange={v => setCfg({ paymentBadgeMonochrome: v })}
+                  />
+                </label>
+              </div>
+
 
               <div className="space-y-2">
                 <Label className="block">Logos (ordre, image, taille)</Label>

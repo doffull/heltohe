@@ -1,5 +1,5 @@
-import { SyntheticEvent, CSSProperties } from 'react';
-import { ExternalLink } from 'lucide-react';
+import { SyntheticEvent, CSSProperties, useState, useRef } from 'react';
+import { ExternalLink, Mail, Check, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -132,19 +132,42 @@ export function Footer({ offsetClassName }: FooterProps) {
 
   const displayMode = socialDisplayMode || 'icons';
 
+  const [nlState, setNlState] = useState<'idle' | 'sending' | 'done'>('idle');
+  const [nlError, setNlError] = useState<string | null>(null);
+  const mountedAt = useRef<number>(Date.now());
+
   const subscribe = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const emailInput = e.currentTarget.querySelector('input') as HTMLInputElement | null;
-    const email = emailInput?.value;
-    if (!email) return;
+    if (nlState === 'sending') return;
+    const form = e.currentTarget;
+    const emailInput = form.querySelector('input[type="email"]') as HTMLInputElement | null;
+    const honeypot = form.querySelector('input[name="company"]') as HTMLInputElement | null;
+    const email = (emailInput?.value || '').trim().slice(0, 255);
+    setNlError(null);
+
+    if (honeypot?.value) return; // bot
+    if (Date.now() - mountedAt.current < 3000) {
+      setNlError('Patientez un instant avant de valider.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      setNlError('Adresse email invalide.');
+      return;
+    }
+
+    setNlState('sending');
     try {
-      await supabase.from('newsletters').insert({ email });
+      const { error } = await supabase.from('newsletters').insert({ email });
+      if (error && !String(error.message || '').toLowerCase().includes('duplicate')) throw error;
       if (emailInput) emailInput.value = '';
+      setNlState('done');
       toast.success('Inscription enregistrée');
     } catch {
-      /* silencieux */
+      setNlState('idle');
+      setNlError("L'inscription a échoué, réessayez.");
     }
   };
+
 
   /* ------------------------- Habillage (design) ------------------------- */
   const bgColor = d.bgColor || s.footerBgColor || undefined;
@@ -372,32 +395,73 @@ export function Footer({ offsetClassName }: FooterProps) {
 
   const Newsletter = ({ banner = false }: { banner?: boolean }) => (
     <div className={cn(banner && 'w-full', centered && !banner && 'text-center')}>
-      <div className={cn(banner && 'flex flex-col md:flex-row md:items-end md:justify-between gap-4')}>
+      <div
+        className={cn(
+          'border p-4 sm:p-5',
+          banner && 'flex flex-col md:flex-row md:items-end md:justify-between gap-4',
+        )}
+        style={{ ...sepStyle, clipPath: 'polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)' }}
+      >
         <div className={banner ? 'md:max-w-lg' : undefined}>
-          <h4 className={headingClass}>{cfg.newsletterTitle || 'Newsletter'}</h4>
+          <h4 className={headingClass}>
+            <span className={cn('inline-flex items-center gap-2', centered && !banner && 'justify-center')}>
+              <Mail className="h-3.5 w-3.5" />
+              {cfg.newsletterTitle || 'Newsletter'}
+            </span>
+          </h4>
           <p className={cn(scale, 'opacity-70 mb-4')}>
             {cfg.newsletterText || 'Inscrivez-vous pour recevoir nos offres exclusives.'}
           </p>
         </div>
-        <form className={cn('flex', banner && 'md:w-[420px]')} onSubmit={subscribe}>
-          <Input
-            type="email"
-            placeholder="votre@email.com"
-            required
-            aria-label="Adresse email"
-            className="flex-1 h-12 bg-background border-0 rounded-none text-foreground"
-          />
-          <Button
-            type="submit"
-            className="h-12 px-6 rounded-none"
-            style={d.accentColor ? { backgroundColor: d.accentColor } : undefined}
-          >
-            {cfg.newsletterButton || "S'inscrire"}
-          </Button>
-        </form>
+        <div className={cn(banner && 'md:w-[420px]')}>
+          {nlState === 'done' ? (
+            <p className="flex items-center gap-2 text-xs font-bold tracking-wider">
+              <Check className="h-4 w-4" />
+              {cfg.newsletterSuccess || 'Merci ! Votre inscription est enregistrée.'}
+            </p>
+          ) : (
+            <form className="flex flex-col sm:flex-row gap-2 sm:gap-0" onSubmit={subscribe} noValidate>
+              <input
+                type="text"
+                name="company"
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                className="absolute -left-[9999px] h-0 w-0 opacity-0"
+              />
+              <Input
+                type="email"
+                name="email"
+                placeholder="votre@email.com"
+                maxLength={255}
+                aria-label="Adresse email"
+                className="flex-1 h-12 bg-background border-0 rounded-none text-foreground"
+              />
+              <Button
+                type="submit"
+                disabled={nlState === 'sending'}
+                className="h-12 px-6 rounded-none shrink-0"
+                style={d.accentColor ? { backgroundColor: d.accentColor } : undefined}
+              >
+                {nlState === 'sending' ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  cfg.newsletterButton || "S'inscrire"
+                )}
+              </Button>
+            </form>
+          )}
+          {nlError && <p className="mt-2 text-xs text-destructive">{nlError}</p>}
+          {cfg.newsletterShowReassurance !== false && nlState !== 'done' && (
+            <p className="mt-2 text-[10px] uppercase tracking-widest opacity-50">
+              {cfg.newsletterSubText || 'Désinscription en 1 clic · Pas de spam'}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
+
 
   const LegalBar = () => (
     <div className="border-t mt-8 lg:mt-10 pt-6" style={sepStyle}>
@@ -439,9 +503,10 @@ export function Footer({ offsetClassName }: FooterProps) {
     <FooterPaymentBadges
       badges={cfg.paymentBadges}
       items={cfg.paymentBadgeItems}
-
       customBadges={cfg.customPaymentBadges}
       height={cfg.paymentBadgeHeight}
+      badgeStyle={cfg.paymentBadgeStyle}
+      monochrome={cfg.paymentBadgeMonochrome}
       title={cfg.paymentsTitle}
       note={cfg.paymentsNote}
       centered={centered}
