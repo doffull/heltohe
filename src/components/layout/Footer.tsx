@@ -503,9 +503,10 @@ export function Footer({ offsetClassName }: FooterProps) {
     <FooterPaymentBadges
       badges={cfg.paymentBadges}
       items={cfg.paymentBadgeItems}
-
       customBadges={cfg.customPaymentBadges}
       height={cfg.paymentBadgeHeight}
+      badgeStyle={cfg.paymentBadgeStyle}
+      monochrome={cfg.paymentBadgeMonochrome}
       title={cfg.paymentsTitle}
       note={cfg.paymentsNote}
       centered={centered}
