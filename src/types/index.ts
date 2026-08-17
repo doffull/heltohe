@@ -498,6 +498,10 @@ export interface FooterConfig {
   newsletterTitle?: string;
   newsletterText?: string;
   newsletterButton?: string;
+  /** Sous-texte de réassurance et message de succès de la newsletter */
+  newsletterSubText?: string;
+  newsletterSuccess?: string;
+  newsletterShowReassurance?: boolean;
   showLegalLinks?: boolean;
   /** Clés des liens légaux affichés : mentions, cgv, confidentialite, cookies, retours */
   legalLinks?: string[];
