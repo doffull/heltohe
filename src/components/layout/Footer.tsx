@@ -132,19 +132,42 @@ export function Footer({ offsetClassName }: FooterProps) {
 
   const displayMode = socialDisplayMode || 'icons';
 
+  const [nlState, setNlState] = useState<'idle' | 'sending' | 'done'>('idle');
+  const [nlError, setNlError] = useState<string | null>(null);
+  const mountedAt = useRef<number>(Date.now());
+
   const subscribe = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const emailInput = e.currentTarget.querySelector('input') as HTMLInputElement | null;
-    const email = emailInput?.value;
-    if (!email) return;
+    if (nlState === 'sending') return;
+    const form = e.currentTarget;
+    const emailInput = form.querySelector('input[type="email"]') as HTMLInputElement | null;
+    const honeypot = form.querySelector('input[name="company"]') as HTMLInputElement | null;
+    const email = (emailInput?.value || '').trim().slice(0, 255);
+    setNlError(null);
+
+    if (honeypot?.value) return; // bot
+    if (Date.now() - mountedAt.current < 3000) {
+      setNlError('Patientez un instant avant de valider.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      setNlError('Adresse email invalide.');
+      return;
+    }
+
+    setNlState('sending');
     try {
-      await supabase.from('newsletters').insert({ email });
+      const { error } = await supabase.from('newsletters').insert({ email });
+      if (error && !String(error.message || '').toLowerCase().includes('duplicate')) throw error;
       if (emailInput) emailInput.value = '';
+      setNlState('done');
       toast.success('Inscription enregistrée');
     } catch {
-      /* silencieux */
+      setNlState('idle');
+      setNlError("L'inscription a échoué, réessayez.");
     }
   };
+
 
   /* ------------------------- Habillage (design) ------------------------- */
   const bgColor = d.bgColor || s.footerBgColor || undefined;
