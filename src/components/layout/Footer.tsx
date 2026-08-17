@@ -1,5 +1,5 @@
 import { SyntheticEvent, CSSProperties, useState, useRef } from 'react';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Mail, Check, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
