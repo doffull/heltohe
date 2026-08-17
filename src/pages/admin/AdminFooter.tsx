@@ -864,7 +864,31 @@ export default function AdminFooter() {
                     onChange={e => setCfg({ newsletterText: e.target.value })}
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label>Message de succès</Label>
+                  <Input
+                    placeholder="Merci ! Votre inscription est enregistrée."
+                    value={cfg.newsletterSuccess ?? ''}
+                    onChange={e => setCfg({ newsletterSuccess: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Ligne de réassurance</Label>
+                  <Input
+                    placeholder="Désinscription en 1 clic · Pas de spam"
+                    value={cfg.newsletterSubText ?? ''}
+                    onChange={e => setCfg({ newsletterSubText: e.target.value })}
+                  />
+                </div>
+                <label className="flex items-center justify-between gap-4 text-sm sm:col-span-2 border border-border px-3 py-2">
+                  <span>Afficher la ligne de réassurance</span>
+                  <Switch
+                    checked={cfg.newsletterShowReassurance !== false}
+                    onCheckedChange={v => setCfg({ newsletterShowReassurance: v })}
+                  />
+                </label>
               </div>
+
             </CardContent>
           </Card>
 
