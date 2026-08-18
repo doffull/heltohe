@@ -1026,6 +1026,16 @@ export default function AdminProducts() {
                     <td className="p-4 text-center">
                       <button
                         type="button"
+                        onClick={() => bulkSetStatus.mutate({ ids: [product.id], status: product.status === 'draft' ? 'published' : 'draft' })}
+                        title="Cliquer pour basculer brouillon / publié"
+                        className={`text-[10px] px-2 py-1 rounded font-bold ${product.status === 'draft' ? 'bg-amber-500/20 text-amber-500' : 'bg-primary/15 text-primary'}`}
+                      >
+                        {product.status === 'draft' ? 'BROUILLON' : 'PUBLIÉ'}
+                      </button>
+                    </td>
+                    <td className="p-4 text-center">
+                      <button
+                        type="button"
                         onClick={() => toggleActive(product)}
                         title="Cliquer pour activer/désactiver"
                         className={`text-[10px] px-2 py-1 rounded font-bold ${((product as any).isActive ?? true) ? 'bg-green-500/20 text-green-500' : 'bg-muted text-muted-foreground'}`}
