@@ -200,20 +200,20 @@ export function CookieConsentBanner() {
                   </div>
                 ))}
 
-                <div className="flex flex-col gap-2 sm:flex-row">
+                <div className="grid gap-2 sm:grid-cols-3">
                   <Button
                     variant="outline"
-                    className="flex-1 text-xs font-bold uppercase tracking-widest"
+                    className="w-full whitespace-normal px-2 text-[11px] font-bold uppercase tracking-wider"
                     onClick={rejectAll}
                   >
                     Tout refuser
                   </Button>
-                  <Button className="flex-1 text-xs font-bold uppercase tracking-widest" onClick={() => save(draft)}>
+                  <Button className="w-full whitespace-normal px-2 text-[11px] font-bold uppercase tracking-wider" onClick={() => save(draft)}>
                     Enregistrer mes choix
                   </Button>
                   <Button
                     variant="secondary"
-                    className="flex-1 text-xs font-bold uppercase tracking-widest"
+                    className="w-full whitespace-normal px-2 text-[11px] font-bold uppercase tracking-wider"
                     onClick={acceptAll}
                   >
                     Tout accepter
