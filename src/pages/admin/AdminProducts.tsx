@@ -777,6 +777,12 @@ export default function AdminProducts() {
             <Button size="sm" onClick={() => setIsBulkEditOpen(true)} className="h-8 text-xs chamfer-hud-sm">
               <Wand2 className="h-3 w-3 mr-1" />Édition en masse
             </Button>
+            <Button size="sm" variant="outline" onClick={() => handleBulkStatus('published')} disabled={bulkSetStatus.isPending} className="h-8 text-xs chamfer-hud-sm">
+              <Send className="h-3 w-3 mr-1" />Publier
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => handleBulkStatus('draft')} disabled={bulkSetStatus.isPending} className="h-8 text-xs chamfer-hud-sm">
+              <FileEdit className="h-3 w-3 mr-1" />Mettre en brouillon
+            </Button>
             <Button
               size="sm"
               variant="outline"
