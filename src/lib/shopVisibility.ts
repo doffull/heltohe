@@ -22,12 +22,23 @@ export function isMarketplaceCategory(category?: string | null) {
   return MARKETPLACE_CATEGORIES.some(c => normalize(c) === normalize(category));
 }
 
-export function excludeMarketplaceProducts<T extends ProductLike>(products: T[]): T[] {
-  return products.filter(p => !isMarketplaceProduct(p));
+type PublishableLike = { status?: string | null; deletedAt?: string | null };
+
+/** Un produit brouillon ou en corbeille n'est jamais visible côté client. */
+export function isPubliclyVisibleProduct(p: PublishableLike) {
+  return !p.deletedAt && (p.status ?? 'published') !== 'draft';
 }
 
-export function onlyMarketplaceProducts<T extends ProductLike>(products: T[]): T[] {
-  return products.filter(p => isMarketplaceProduct(p));
+export function excludeUnpublishedProducts<T extends PublishableLike>(products: T[]): T[] {
+  return products.filter(isPubliclyVisibleProduct);
+}
+
+export function excludeMarketplaceProducts<T extends ProductLike & PublishableLike>(products: T[]): T[] {
+  return products.filter(p => isPubliclyVisibleProduct(p) && !isMarketplaceProduct(p));
+}
+
+export function onlyMarketplaceProducts<T extends ProductLike & PublishableLike>(products: T[]): T[] {
+  return products.filter(p => isPubliclyVisibleProduct(p) && isMarketplaceProduct(p));
 }
 
 type CategoryLike = { id: string; title: string; parentId?: string | null };
