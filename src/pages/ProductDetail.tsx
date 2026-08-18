@@ -116,6 +116,18 @@ export default function ProductDetail() {
     );
   }
 
+  // Brouillon ou produit en corbeille : invisible pour les visiteurs.
+  if (product && !isAdmin && (product.deletedAt || product.status === 'draft')) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Produit non trouvé</h1>
+          <Button onClick={() => navigate('/boutique')}>Retour à la boutique</Button>
+        </div>
+      </div>
+    );
+  }
+
   if (!product) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
