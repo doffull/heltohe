@@ -892,6 +892,14 @@ export default function AdminOrders() {
                     <><Truck className="h-4 w-4 mr-1" />Étiquette Colissimo</>
                   )}
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => selectedOrder && window.open(`/admin/bordereau/${selectedOrder.id}`, '_blank')}
+                  className="border-primary/40 text-primary hover:bg-primary/10"
+                >
+                  <Printer className="h-4 w-4 mr-1" />Bordereau A4 (étiquette + bon)
+                </Button>
                 <Button onClick={handleSave} disabled={updateOrder.isPending}><Save className="h-4 w-4 mr-2" />Enregistrer</Button>
               </div>
             </div>

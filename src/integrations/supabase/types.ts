@@ -1861,6 +1861,9 @@ export type Database = {
           id: string
           is_test: boolean
           items: Json
+          label_generated_at: string | null
+          label_path: string | null
+          label_url: string | null
           loyalty_awarded_at: string | null
           notes: string | null
           order_number: string
@@ -1891,6 +1894,9 @@ export type Database = {
           id?: string
           is_test?: boolean
           items?: Json
+          label_generated_at?: string | null
+          label_path?: string | null
+          label_url?: string | null
           loyalty_awarded_at?: string | null
           notes?: string | null
           order_number: string
@@ -1921,6 +1927,9 @@ export type Database = {
           id?: string
           is_test?: boolean
           items?: Json
+          label_generated_at?: string | null
+          label_path?: string | null
+          label_url?: string | null
           loyalty_awarded_at?: string | null
           notes?: string | null
           order_number?: string
