@@ -42,7 +42,8 @@ function dbToAppProduct(db: Record<string, unknown>): Product {
     limitedEditionColor: (db.limited_edition_color as string) || undefined,
     limitedEditionTextColor: (db.limited_edition_text_color as string) || undefined,
     limitedEditionPosition: ((db.limited_edition_position as string) || undefined) as Product['limitedEditionPosition'],
-
+    status: ((db.status as string) === 'draft' ? 'draft' : 'published') as Product['status'],
+    deletedAt: (db.deleted_at as string) || null,
   };
 }
 
