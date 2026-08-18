@@ -21,6 +21,7 @@ import { ScreenshotWatermark } from "@/components/security/ScreenshotWatermark";
 import { AdminViewportProvider } from "@/context/AdminViewportContext";
 
 import { MegaMenuProvider } from "@/context/MegaMenuContext";
+import { CookieConsentProvider } from "@/context/CookieConsentContext";
 import { MegaMenu } from "@/components/layout/MegaMenu";
 import { getTransition } from "@/components/transitions/transitionRegistry";
 import { MaintenanceGate } from "@/components/maintenance/MaintenanceGate";
@@ -273,6 +274,7 @@ function AppShell() {
   }, [showSplash]);
   return (
     <AppProvider>
+      <CookieConsentProvider>
       <AdminViewportProvider>
       <VisualEditorProvider>
         <MegaMenuProvider>
@@ -296,6 +298,7 @@ function AppShell() {
         </MegaMenuProvider>
       </VisualEditorProvider>
       </AdminViewportProvider>
+      </CookieConsentProvider>
     </AppProvider>
   );
 }

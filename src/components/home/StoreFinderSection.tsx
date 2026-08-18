@@ -8,6 +8,7 @@ import { MapPin, Search, LocateFixed, AlertCircle, Store, ArrowRight } from 'luc
 import { useApp } from '@/context/AppContext';
 import { cn } from '@/lib/utils';
 import { loadGoogleMaps, haversineKm } from '@/lib/loadGoogleMaps';
+import { useCookieConsent } from '@/context/CookieConsentContext';
 
 export function StoreFinderSection() {
   const { data: boutiques = [] } = useBoutiques();
@@ -220,9 +221,11 @@ function StoreMapDialog({
 }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
+  // Google Maps est un service tiers : chargé uniquement avec le consentement.
+  const { consent, acceptThirdParty } = useStoreMapConsent();
 
   useEffect(() => {
-    if (!open || boutiques.length === 0) return;
+    if (!open || boutiques.length === 0 || !consent) return;
     let cancelled = false;
     let mapInstance: any = null;
     setError(null);
@@ -305,7 +308,7 @@ function StoreMapDialog({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [open, boutiques, selectedId]);
+  }, [open, boutiques, selectedId, consent]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -319,6 +322,19 @@ function StoreMapDialog({
         </DialogHeader>
         <div className="relative w-full h-[70vh] bg-muted">
           <div ref={mapRef} className="absolute inset-0" />
+          {!consent && (
+            <div className="absolute inset-0 flex items-center justify-center bg-muted/95 p-6 text-center">
+              <div className="max-w-sm space-y-3">
+                <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  La carte est fournie par Google Maps. Autorisez les services tiers pour l'afficher.
+                </p>
+                <Button size="sm" onClick={acceptThirdParty}>
+                  Autoriser et afficher la carte
+                </Button>
+              </div>
+            </div>
+          )}
           {error && (
             <div className="absolute inset-0 flex items-center justify-center bg-muted/95 text-center p-6">
               <div>
@@ -339,6 +355,15 @@ function StoreMapDialog({
       </DialogContent>
     </Dialog>
   );
+}
+
+/** Consentement « services tiers » + activation en un clic depuis la carte. */
+function useStoreMapConsent() {
+  const { consent, save } = useCookieConsent();
+  return {
+    consent: consent.thirdParty,
+    acceptThirdParty: () => save({ ...consent, thirdParty: true }),
+  };
 }
 
 export default StoreFinderSection;

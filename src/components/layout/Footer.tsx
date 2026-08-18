@@ -3,6 +3,7 @@ import { ExternalLink, Mail, Check, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { openCookiePreferences } from '@/context/CookieConsentContext';
 import { useApp } from '@/context/AppContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -472,6 +473,14 @@ export function Footer({ offsetClassName }: FooterProps) {
             <Link to={l.url} className="footer-link transition-colors">{l.label}</Link>
           </span>
         ))}
+        <span className="opacity-40">·</span>
+        <button
+          type="button"
+          onClick={openCookiePreferences}
+          className="footer-link underline-offset-2 transition-colors hover:underline"
+        >
+          Gérer mes cookies
+        </button>
       </div>
     </div>
   );

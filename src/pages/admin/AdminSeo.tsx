@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { MediaLibraryDialog } from '@/components/visual-editor/MediaLibraryDialog';
 import { MaintenancePage } from '@/components/maintenance/MaintenancePage';
-import { Globe, EyeOff, Save, Loader2, Wrench, Image as ImageIcon, ExternalLink, Search } from 'lucide-react';
+import { Globe, EyeOff, Save, Loader2, Wrench, Image as ImageIcon, ExternalLink, Search, Cookie } from 'lucide-react';
 import { toast } from 'sonner';
 
 const SITE_URL = 'https://helvetica-mp.helvetica-mp.net';
@@ -297,6 +297,89 @@ export default function AdminSeo() {
           <div className="space-y-2">
             <Label>Aperçu</Label>
             <MaintenancePage preview />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ---------------- Bandeau cookies ---------------- */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Cookie className="h-5 w-5" /> Bandeau cookies (RGPD / CNIL)
+          </CardTitle>
+          <CardDescription>
+            Demande le consentement des visiteurs avant tout cookie non essentiel (mesure d'audience, personnalisation,
+            services tiers comme Google Maps).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between gap-4 p-4 border rounded">
+            <div className="min-w-0">
+              <div className="font-semibold">
+                {s.cookieBannerEnabled === false ? 'Bandeau désactivé' : 'Bandeau activé'}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Désactivé, aucun consentement n'est demandé et les cookies non essentiels restent refusés.
+              </p>
+            </div>
+            <Switch
+              checked={s.cookieBannerEnabled !== false}
+              onCheckedChange={(v) => set({ cookieBannerEnabled: v })}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Titre du bandeau</Label>
+            <Input
+              value={s.cookieBannerTitle || ''}
+              onChange={(e) => set({ cookieBannerTitle: e.target.value })}
+              placeholder="Vos données, votre choix"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Texte du bandeau</Label>
+            <Textarea
+              rows={3}
+              value={s.cookieBannerText || ''}
+              onChange={(e) => set({ cookieBannerText: e.target.value })}
+              placeholder="Nous utilisons des cookies essentiels…"
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Position</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={s.cookieBannerPosition === 'center' ? 'outline' : 'default'}
+                  size="sm"
+                  onClick={() => set({ cookieBannerPosition: 'bottom' })}
+                >
+                  Bas de page
+                </Button>
+                <Button
+                  type="button"
+                  variant={s.cookieBannerPosition === 'center' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => set({ cookieBannerPosition: 'center' })}
+                >
+                  Modale centrée
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Durée de mémorisation (mois)</Label>
+              <Input
+                type="number"
+                min={1}
+                max={13}
+                value={s.cookieConsentMonths ?? 6}
+                onChange={(e) => set({ cookieConsentMonths: Math.max(1, Math.min(13, Number(e.target.value) || 6)) })}
+              />
+              <p className="text-[11px] text-muted-foreground">La CNIL recommande 6 mois maximum.</p>
+            </div>
           </div>
         </CardContent>
       </Card>
