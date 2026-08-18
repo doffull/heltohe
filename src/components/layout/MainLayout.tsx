@@ -23,6 +23,8 @@ import { resolveTopBanner } from '@/lib/bannerIcons';
 // SidebarNewsletter retiré du panneau latéral
 import { MiniNavbar } from '@/components/ui/mini-navbar';
 import { PopupHost } from '@/components/popups/PopupHost';
+import { CookieConsentBanner } from '@/components/legal/CookieConsentBanner';
+import { useCookieConsent } from '@/context/CookieConsentContext';
 import { InstallAppBanner } from '@/components/pwa/InstallAppBanner';
 
 import { InlineEditable } from '@/components/visual-editor/InlineEditable';
@@ -92,7 +94,9 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const queryClient = useQueryClient();
-  useVisitorTracking({ enabled: !isAdmin, userId: user?.id ?? null });
+  const { consent: cookieConsent, decided: cookieDecided } = useCookieConsent();
+  // Le suivi d'audience ne démarre qu'avec le consentement « statistiques ».
+  useVisitorTracking({ enabled: !isAdmin && cookieConsent.statistics, userId: user?.id ?? null });
   const { data: dbCategories = [] } = useCategories();
 
   const isHomePage = location.pathname === '/';
@@ -745,7 +749,10 @@ export function MainLayout({ children }: MainLayoutProps) {
       <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
 
       {/* Newsletter Popup Host */}
-      {!isAdmin && <PopupHost />}
+      {!isAdmin && cookieDecided && <PopupHost />}
+
+      {/* Consentement cookies (RGPD/CNIL) */}
+      <CookieConsentBanner />
 
       {/* Invitation à installer l'app sur l'écran d'accueil */}
       <InstallAppBanner />
