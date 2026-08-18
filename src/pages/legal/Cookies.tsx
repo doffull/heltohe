@@ -1,5 +1,7 @@
 import { LegalLayout } from './LegalLayout';
 import { useLegalInfo } from '@/hooks/useLegalInfo';
+import { Button } from '@/components/ui/button';
+import { openCookiePreferences } from '@/context/CookieConsentContext';
 
 function NC({ value }: { value: string }) {
   if (value !== '[Non configuré]') return <>{value}</>;
@@ -20,6 +22,12 @@ export default function Cookies() {
         l'utilisation du site et personnaliser le contenu. La présente politique explique ce que sont les cookies, comment
         <NC value={info.companyName} /> les utilise et comment vous pouvez les gérer.
       </p>
+
+      <div className="not-prose my-6">
+        <Button onClick={openCookiePreferences} className="text-xs font-bold uppercase tracking-widest">
+          Gérer mes préférences cookies
+        </Button>
+      </div>
 
       <h2>Qu'est-ce qu'un cookie ?</h2>
       <p>
