@@ -473,10 +473,10 @@ export default function AdminProducts() {
 
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Supprimer ce produit ?')) return;
+    if (!confirm('Mettre ce produit à la corbeille ?')) return;
     try {
       await deleteProduct.mutateAsync(id);
-      toast({ title: 'Produit supprimé' });
+      toast({ title: 'Produit mis à la corbeille' });
     } catch {
       toast({ title: 'Erreur', variant: 'destructive' });
     }
@@ -1058,7 +1058,10 @@ export default function AdminProducts() {
                            >
                              <Layers2 className="h-4 w-4 mr-2" />Éclater par couleur
                            </DropdownMenuItem>
-                           <DropdownMenuItem onClick={() => handleDelete(product.id)} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" />Supprimer</DropdownMenuItem>
+                           <DropdownMenuItem onClick={() => bulkSetStatus.mutate({ ids: [product.id], status: product.status === 'draft' ? 'published' : 'draft' })}>
+                             {product.status === 'draft' ? <><Send className="h-4 w-4 mr-2" />Publier</> : <><FileEdit className="h-4 w-4 mr-2" />Mettre en brouillon</>}
+                           </DropdownMenuItem>
+                           <DropdownMenuItem onClick={() => handleDelete(product.id)} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" />Mettre à la corbeille</DropdownMenuItem>
                          </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
