@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useApp } from '@/context/AppContext';
 
 /** Version des finalités : incrémentez pour redemander le consentement à tous. */
 export const CONSENT_VERSION = 1;
@@ -54,13 +55,16 @@ function readStored(): StoredConsent | null {
   }
 }
 
-export function CookieConsentProvider({ children, months = 6 }: { children: ReactNode; months?: number }) {
+export function CookieConsentProvider({ children, months }: { children: ReactNode; months?: number }) {
+  const { designSettings } = useApp();
+  // Durée de mémorisation réglable depuis /admin/seo (6 mois par défaut, reco CNIL).
+  const validity = months ?? Number((designSettings as any)?.cookieConsentMonths) || 6;
   const [stored, setStored] = useState<StoredConsent | null>(() => readStored());
   const [preferencesOpen, setPreferencesOpen] = useState(false);
 
   const persist = useCallback(
     (next: ConsentState) => {
-      const record: StoredConsent = { ...next, version: CONSENT_VERSION, date: Date.now(), months };
+      const record: StoredConsent = { ...next, version: CONSENT_VERSION, date: Date.now(), months: validity };
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(record));
       } catch {
@@ -70,7 +74,7 @@ export function CookieConsentProvider({ children, months = 6 }: { children: Reac
       setPreferencesOpen(false);
       window.dispatchEvent(new CustomEvent('hmp:cookie-consent', { detail: next }));
     },
-    [months],
+    [validity],
   );
 
   const value = useMemo<CookieConsentValue>(() => {
