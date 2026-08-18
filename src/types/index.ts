@@ -70,6 +70,10 @@ export interface Product {
   /** Position du badge sur l'image. */
   limitedEditionPosition?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
+  /** Statut de publication : brouillon (invisible côté client) ou publié. */
+  status?: 'draft' | 'published';
+  /** Date de mise à la corbeille (null = non supprimé). */
+  deletedAt?: string | null;
 }
 
 export interface OrderItem {
