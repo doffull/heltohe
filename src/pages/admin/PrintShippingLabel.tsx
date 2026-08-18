@@ -164,13 +164,6 @@ export default function PrintShippingLabel() {
               </p>
             </div>
 
-            {/* ─── Séparateur pointillés + ciseaux ─── */}
-            <div
-              className="pointer-events-none absolute"
-              style={{ position: 'relative', width: 0 }}
-              aria-hidden
-            />
-
             {/* ─── Colonne droite : bon de commande ─── */}
             <div className="relative border-l-2 border-dashed border-neutral-400 pl-[6mm]">
               <div className="absolute -left-[13px] top-2 flex flex-col items-center bg-white py-1">

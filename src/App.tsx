@@ -38,6 +38,7 @@ const Checkout = lazy(() => import("./pages/Checkout"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Account = lazy(() => import("./pages/Account"));
 const Admin = lazy(() => import("./pages/admin/Admin"));
+const PrintShippingLabel = lazy(() => import("./pages/admin/PrintShippingLabel"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const About = lazy(() => import("./pages/About"));
 const Contact = lazy(() => import("./pages/Contact"));
@@ -189,6 +190,7 @@ function AnimatedRoutes() {
           <Route path="/auth" element={<Auth />} />
           <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
           <Route path="/compte/*" element={<MainLayout><Account /></MainLayout>} />
+          <Route path="/admin/bordereau/:id" element={<PrintShippingLabel />} />
           <Route path="/admin/*" element={<Admin />} />
           {/* Legal pages */}
           <Route path="/cgv" element={<MainLayout><CGV /></MainLayout>} />
