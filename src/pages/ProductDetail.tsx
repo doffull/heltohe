@@ -218,6 +218,12 @@ export default function ProductDetail() {
           <ChevronRight className="h-3 w-3 opacity-50" />
           <span className="uppercase tracking-wider text-foreground/80 truncate">{product.category}</span>
 
+          {product.status === 'draft' && (
+            <span className="ml-2 shrink-0 rounded bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-600">
+              Brouillon — non visible publiquement
+            </span>
+          )}
+
           {isAdmin && (
             <Button
               size="sm"
