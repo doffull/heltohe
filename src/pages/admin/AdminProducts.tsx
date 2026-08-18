@@ -92,6 +92,17 @@ export default function AdminProducts() {
   const deleteProduct = useDeleteProduct();
   const bulkDelete = useBulkDeleteProducts();
   const bulkUpdate = useBulkUpdateProducts();
+  // Brouillons & corbeille
+  const { data: trashedProducts = [], isLoading: loadingTrash } = useTrashedProducts();
+  const restoreProducts = useRestoreProducts();
+  const hardDelete = useHardDeleteProducts();
+  const bulkSetStatus = useBulkSetProductStatus();
+  const [trashSelection, setTrashSelection] = useState<Set<string>>(new Set());
+  const toggleTrashSelection = (id: string) => setTrashSelection(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
 
   // Looks
   const { data: looks = [], isLoading: loadingLooks } = useProductLooks();
