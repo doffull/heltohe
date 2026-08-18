@@ -744,6 +744,14 @@ export default function AdminProducts() {
               <SelectItem value="out">Rupture</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as 'all' | 'published' | 'draft')}>
+            <SelectTrigger className="w-full sm:w-[140px]"><SelectValue placeholder="Statut" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous statuts</SelectItem>
+              <SelectItem value="published">Publiés</SelectItem>
+              <SelectItem value="draft">Brouillons</SelectItem>
+            </SelectContent>
+          </Select>
           <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-full sm:w-[140px]"><SelectValue placeholder="Trier" /></SelectTrigger>
             <SelectContent>
