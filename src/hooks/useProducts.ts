@@ -85,7 +85,7 @@ const FIELD_MAP: Record<string, { col: string; transform: (v: any) => any }> = {
   limitedEditionColor: { col: 'limited_edition_color', transform: (v) => v || null },
   limitedEditionTextColor: { col: 'limited_edition_text_color', transform: (v) => v || null },
   limitedEditionPosition: { col: 'limited_edition_position', transform: (v) => v || null },
-
+  status: { col: 'status', transform: (v) => (v === 'draft' ? 'draft' : 'published') },
 };
 
 function appToDbProduct(product: Partial<Product> & { isActive?: boolean }): Record<string, unknown> {
