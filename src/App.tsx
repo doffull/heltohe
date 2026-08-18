@@ -274,7 +274,7 @@ function AppShell() {
   }, [showSplash]);
   return (
     <AppProvider>
-      <CookieConsentProvider>
+      <CookieConsentProvider months={Number((useApp as any) && 0) || undefined}>
       <AdminViewportProvider>
       <VisualEditorProvider>
         <MegaMenuProvider>
