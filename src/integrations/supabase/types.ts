@@ -2619,6 +2619,8 @@ export type Database = {
           color_options: Json | null
           colors: string[] | null
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           description: string | null
           gallery_images: string[]
           hover_image: string | null
@@ -2640,6 +2642,7 @@ export type Database = {
           sale_price: number | null
           sizes: string[] | null
           sku: string
+          status: string
           stock: number
           subtitle: string | null
           tags: string[] | null
@@ -2657,6 +2660,8 @@ export type Database = {
           color_options?: Json | null
           colors?: string[] | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           description?: string | null
           gallery_images?: string[]
           hover_image?: string | null
@@ -2678,6 +2683,7 @@ export type Database = {
           sale_price?: number | null
           sizes?: string[] | null
           sku: string
+          status?: string
           stock?: number
           subtitle?: string | null
           tags?: string[] | null
@@ -2695,6 +2701,8 @@ export type Database = {
           color_options?: Json | null
           colors?: string[] | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           description?: string | null
           gallery_images?: string[]
           hover_image?: string | null
@@ -2716,6 +2724,7 @@ export type Database = {
           sale_price?: number | null
           sizes?: string[] | null
           sku?: string
+          status?: string
           stock?: number
           subtitle?: string | null
           tags?: string[] | null
