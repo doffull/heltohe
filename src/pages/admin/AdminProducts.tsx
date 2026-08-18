@@ -196,11 +196,42 @@ export default function AdminProducts() {
   const { selectedIds, toggle, toggleAll, clear, allSelected, someSelected, count, ids } = useBulkSelection(filteredProducts);
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Supprimer ${count} produit(s) ?`)) return;
+    if (!confirm(`Mettre ${count} produit(s) à la corbeille ?`)) return;
     try {
       await bulkDelete.mutateAsync(ids);
-      toast({ title: `${count} produit(s) supprimé(s)` });
+      toast({ title: `${count} produit(s) dans la corbeille` });
       clear();
+    } catch {
+      toast({ title: 'Erreur', variant: 'destructive' });
+    }
+  };
+
+  const handleBulkStatus = async (status: 'draft' | 'published') => {
+    try {
+      await bulkSetStatus.mutateAsync({ ids, status });
+      toast({ title: status === 'draft' ? `${count} produit(s) en brouillon` : `${count} produit(s) publié(s)` });
+      clear();
+    } catch {
+      toast({ title: 'Erreur', variant: 'destructive' });
+    }
+  };
+
+  const handleRestore = async (restoreIds: string[]) => {
+    try {
+      await restoreProducts.mutateAsync(restoreIds);
+      toast({ title: `${restoreIds.length} produit(s) restauré(s)` });
+      setTrashSelection(new Set());
+    } catch {
+      toast({ title: 'Erreur', variant: 'destructive' });
+    }
+  };
+
+  const handleHardDelete = async (deleteIds: string[]) => {
+    if (!confirm(`Supprimer définitivement ${deleteIds.length} produit(s) ? Cette action est irréversible.`)) return;
+    try {
+      await hardDelete.mutateAsync(deleteIds);
+      toast({ title: 'Suppression définitive effectuée' });
+      setTrashSelection(new Set());
     } catch {
       toast({ title: 'Erreur', variant: 'destructive' });
     }
