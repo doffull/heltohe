@@ -58,7 +58,7 @@ function readStored(): StoredConsent | null {
 export function CookieConsentProvider({ children, months }: { children: ReactNode; months?: number }) {
   const { designSettings } = useApp();
   // Durée de mémorisation réglable depuis /admin/seo (6 mois par défaut, reco CNIL).
-  const validity = months ?? Number((designSettings as any)?.cookieConsentMonths) || 6;
+  const validity = months ?? (Number((designSettings as any)?.cookieConsentMonths) || 6);
   const [stored, setStored] = useState<StoredConsent | null>(() => readStored());
   const [preferencesOpen, setPreferencesOpen] = useState(false);
 
