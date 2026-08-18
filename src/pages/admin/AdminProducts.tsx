@@ -866,6 +866,7 @@ export default function AdminProducts() {
                   <th className="text-right p-4 text-xs font-bold hud-text">PRIX</th>
                   <th className="text-right p-4 text-xs font-bold hud-text">PROMO</th>
                   <th className="text-right p-4 text-xs font-bold hud-text">STOCK</th>
+                  <th className="text-center p-4 text-xs font-bold hud-text">STATUT</th>
                   <th className="text-center p-4 text-xs font-bold hud-text">ACTIF</th>
                   <th className="text-right p-4 text-xs font-bold hud-text">ACTIONS</th>
                 </tr>
