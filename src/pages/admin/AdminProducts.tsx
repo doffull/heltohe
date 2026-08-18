@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 
 import { useCategories } from '@/hooks/useCategories';
-import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, useBulkDeleteProducts, useBulkUpdateProducts } from '@/hooks/useProducts';
+import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, useBulkDeleteProducts, useBulkUpdateProducts, useTrashedProducts, useRestoreProducts, useHardDeleteProducts, useBulkSetProductStatus } from '@/hooks/useProducts';
 import { BulkEditDialog } from '@/components/admin/BulkEditDialog';
 import { QuickPriceStockImportDialog } from '@/components/admin/QuickPriceStockImportDialog';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
