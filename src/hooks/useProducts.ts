@@ -42,7 +42,8 @@ function dbToAppProduct(db: Record<string, unknown>): Product {
     limitedEditionColor: (db.limited_edition_color as string) || undefined,
     limitedEditionTextColor: (db.limited_edition_text_color as string) || undefined,
     limitedEditionPosition: ((db.limited_edition_position as string) || undefined) as Product['limitedEditionPosition'],
-
+    status: ((db.status as string) === 'draft' ? 'draft' : 'published') as Product['status'],
+    deletedAt: (db.deleted_at as string) || null,
   };
 }
 
@@ -84,7 +85,7 @@ const FIELD_MAP: Record<string, { col: string; transform: (v: any) => any }> = {
   limitedEditionColor: { col: 'limited_edition_color', transform: (v) => v || null },
   limitedEditionTextColor: { col: 'limited_edition_text_color', transform: (v) => v || null },
   limitedEditionPosition: { col: 'limited_edition_position', transform: (v) => v || null },
-
+  status: { col: 'status', transform: (v) => (v === 'draft' ? 'draft' : 'published') },
 };
 
 function appToDbProduct(product: Partial<Product> & { isActive?: boolean }): Record<string, unknown> {
@@ -118,6 +119,7 @@ export function useProducts() {
       const { data, error } = await supabase
         .from('products')
         .select('*')
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -194,20 +196,24 @@ export function useUpdateProduct() {
   });
 }
 
+async function softDelete(ids: string[]) {
+  const { data: auth } = await supabase.auth.getUser();
+  const { error } = await supabase
+    .from('products')
+    .update({ deleted_at: new Date().toISOString(), deleted_by: auth?.user?.id ?? null } as any)
+    .in('id', ids);
+  if (error) throw error;
+}
+
+/** Suppression = mise à la corbeille (réversible). */
 export function useDeleteProduct() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-    },
+    mutationFn: async (id: string) => { await softDelete([id]); },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['products-trash'] });
     },
   });
 }
@@ -215,8 +221,68 @@ export function useDeleteProduct() {
 export function useBulkDeleteProducts() {
   const queryClient = useQueryClient();
   return useMutation({
+    mutationFn: async (ids: string[]) => { await softDelete(ids); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['products-trash'] });
+    },
+  });
+}
+
+/** Produits présents dans la corbeille (admin uniquement via RLS). */
+export function useTrashedProducts() {
+  return useQuery({
+    queryKey: ['products-trash'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .not('deleted_at', 'is', null)
+        .order('deleted_at', { ascending: false });
+      if (error) throw error;
+      return (data || []).map((d) => dbToAppProduct(d as Record<string, unknown>));
+    },
+    staleTime: 0,
+  });
+}
+
+export function useRestoreProducts() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase
+        .from('products')
+        .update({ deleted_at: null, deleted_by: null } as any)
+        .in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['products-trash'] });
+    },
+  });
+}
+
+/** Suppression définitive (irréversible). */
+export function useHardDeleteProducts() {
+  const queryClient = useQueryClient();
+  return useMutation({
     mutationFn: async (ids: string[]) => {
       const { error } = await supabase.from('products').delete().in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['products-trash'] });
+    },
+  });
+}
+
+export function useBulkSetProductStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ ids, status }: { ids: string[]; status: 'draft' | 'published' }) => {
+      const { error } = await supabase.from('products').update({ status } as any).in('id', ids);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['products'] }),

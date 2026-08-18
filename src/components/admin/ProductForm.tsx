@@ -105,6 +105,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
     limitedEditionColor: '',
     limitedEditionTextColor: '',
     limitedEditionPosition: 'bottom-right' as 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right',
+    status: 'published' as 'draft' | 'published',
 
   });
 
@@ -332,6 +333,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         limitedEditionColor: product.limitedEditionColor || '',
         limitedEditionTextColor: product.limitedEditionTextColor || '',
         limitedEditionPosition: product.limitedEditionPosition || 'bottom-right',
+        status: product.status === 'draft' ? 'draft' : 'published',
 
       });
     }
@@ -368,6 +370,25 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
       globalStock: formData.stock,
     };
     return { submitData, variantStockData };
+  };
+
+  const saveWithStatus = async (status: 'draft' | 'published') => {
+    setFormData(prev => ({ ...prev, status }));
+    const { submitData, variantStockData } = buildPayload();
+    submitData.status = status;
+    setAutoSaveState('saving');
+    try {
+      if (product) {
+        await onSubmit({ ...submitData, id: product.id }, variantStockData);
+      } else {
+        await onSubmit(submitData, variantStockData);
+      }
+      skipAutoSaveRef.current = true;
+      setAutoSaveState('saved');
+      setLastSavedAt(Date.now());
+    } catch {
+      setAutoSaveState('error');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1822,8 +1843,17 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
           <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
             {product ? 'Fermer' : 'Annuler'}
           </Button>
-          <Button type="submit" disabled={isLoading} className="bg-primary hover:bg-primary/90">
-            {isLoading ? 'Enregistrement...' : product ? 'Enregistrer' : 'Créer le produit'}
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isLoading}
+            onClick={() => saveWithStatus('draft')}
+            title="Le produit ne sera pas visible sur le site"
+          >
+            {formData.status === 'draft' && product ? 'Enregistrer le brouillon' : 'Enregistrer comme brouillon'}
+          </Button>
+          <Button type="button" disabled={isLoading} onClick={() => saveWithStatus('published')} className="bg-primary hover:bg-primary/90">
+            {isLoading ? 'Enregistrement...' : product ? 'Enregistrer et publier' : 'Créer et publier'}
           </Button>
         </div>
       </div>

@@ -116,6 +116,18 @@ export default function ProductDetail() {
     );
   }
 
+  // Brouillon ou produit en corbeille : invisible pour les visiteurs.
+  if (product && !isAdmin && (product.deletedAt || product.status === 'draft')) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Produit non trouvé</h1>
+          <Button onClick={() => navigate('/boutique')}>Retour à la boutique</Button>
+        </div>
+      </div>
+    );
+  }
+
   if (!product) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -205,6 +217,12 @@ export default function ProductDetail() {
           </button>
           <ChevronRight className="h-3 w-3 opacity-50" />
           <span className="uppercase tracking-wider text-foreground/80 truncate">{product.category}</span>
+
+          {product.status === 'draft' && (
+            <span className="ml-2 shrink-0 rounded bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-600">
+              Brouillon — non visible publiquement
+            </span>
+          )}
 
           {isAdmin && (
             <Button

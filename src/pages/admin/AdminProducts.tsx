@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 
 import { useCategories } from '@/hooks/useCategories';
-import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, useBulkDeleteProducts, useBulkUpdateProducts } from '@/hooks/useProducts';
+import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, useBulkDeleteProducts, useBulkUpdateProducts, useTrashedProducts, useRestoreProducts, useHardDeleteProducts, useBulkSetProductStatus } from '@/hooks/useProducts';
 import { BulkEditDialog } from '@/components/admin/BulkEditDialog';
 import { QuickPriceStockImportDialog } from '@/components/admin/QuickPriceStockImportDialog';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Plus, Search, Pencil, Trash2, MoreHorizontal, Package, Upload, Download, FileText, X, Check, Filter, Wand2, Copy, Tag, DollarSign, Archive, Layers2, Boxes, RefreshCw, Images, LayoutGrid, ArrowUpDown, Film
+  Plus, Search, Pencil, Trash2, MoreHorizontal, Package, Upload, Download, FileText, X, Check, Filter, Wand2, Copy, Tag, DollarSign, Archive, Layers2, Boxes, RefreshCw, Images, LayoutGrid, ArrowUpDown, Film, RotateCcw, FileEdit, Send, AlertTriangle
 } from 'lucide-react';
 import { AdminCategoryOrdering } from '@/components/admin/AdminCategoryOrdering';
 import { ImportMockupDialog } from '@/components/admin/ImportMockupDialog';
@@ -92,6 +92,17 @@ export default function AdminProducts() {
   const deleteProduct = useDeleteProduct();
   const bulkDelete = useBulkDeleteProducts();
   const bulkUpdate = useBulkUpdateProducts();
+  // Brouillons & corbeille
+  const { data: trashedProducts = [], isLoading: loadingTrash } = useTrashedProducts();
+  const restoreProducts = useRestoreProducts();
+  const hardDelete = useHardDeleteProducts();
+  const bulkSetStatus = useBulkSetProductStatus();
+  const [trashSelection, setTrashSelection] = useState<Set<string>>(new Set());
+  const toggleTrashSelection = (id: string) => setTrashSelection(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
 
   // Looks
   const { data: looks = [], isLoading: loadingLooks } = useProductLooks();
@@ -105,6 +116,7 @@ export default function AdminProducts() {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [stockFilter, setStockFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
   const [sortBy, setSortBy] = useState<string>('newest');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -163,6 +175,8 @@ export default function AdminProducts() {
   const categories = [...new Set([...dbCategories.map(c => c.title), ...products.map(p => p.category)].filter(Boolean))];
 
   let filteredProducts = products.filter(p => {
+    if (statusFilter === 'draft' && p.status !== 'draft') return false;
+    if (statusFilter === 'published' && p.status === 'draft') return false;
     if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase()) && !p.sku.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     if (categoryFilter !== 'all' && p.category !== categoryFilter) return false;
     if (stockFilter === 'out' && p.stock > 0) return false;
@@ -182,11 +196,42 @@ export default function AdminProducts() {
   const { selectedIds, toggle, toggleAll, clear, allSelected, someSelected, count, ids } = useBulkSelection(filteredProducts);
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Supprimer ${count} produit(s) ?`)) return;
+    if (!confirm(`Mettre ${count} produit(s) à la corbeille ?`)) return;
     try {
       await bulkDelete.mutateAsync(ids);
-      toast({ title: `${count} produit(s) supprimé(s)` });
+      toast({ title: `${count} produit(s) dans la corbeille` });
       clear();
+    } catch {
+      toast({ title: 'Erreur', variant: 'destructive' });
+    }
+  };
+
+  const handleBulkStatus = async (status: 'draft' | 'published') => {
+    try {
+      await bulkSetStatus.mutateAsync({ ids, status });
+      toast({ title: status === 'draft' ? `${count} produit(s) en brouillon` : `${count} produit(s) publié(s)` });
+      clear();
+    } catch {
+      toast({ title: 'Erreur', variant: 'destructive' });
+    }
+  };
+
+  const handleRestore = async (restoreIds: string[]) => {
+    try {
+      await restoreProducts.mutateAsync(restoreIds);
+      toast({ title: `${restoreIds.length} produit(s) restauré(s)` });
+      setTrashSelection(new Set());
+    } catch {
+      toast({ title: 'Erreur', variant: 'destructive' });
+    }
+  };
+
+  const handleHardDelete = async (deleteIds: string[]) => {
+    if (!confirm(`Supprimer définitivement ${deleteIds.length} produit(s) ? Cette action est irréversible.`)) return;
+    try {
+      await hardDelete.mutateAsync(deleteIds);
+      toast({ title: 'Suppression définitive effectuée' });
+      setTrashSelection(new Set());
     } catch {
       toast({ title: 'Erreur', variant: 'destructive' });
     }
@@ -428,10 +473,10 @@ export default function AdminProducts() {
 
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Supprimer ce produit ?')) return;
+    if (!confirm('Mettre ce produit à la corbeille ?')) return;
     try {
       await deleteProduct.mutateAsync(id);
-      toast({ title: 'Produit supprimé' });
+      toast({ title: 'Produit mis à la corbeille' });
     } catch {
       toast({ title: 'Erreur', variant: 'destructive' });
     }
@@ -568,7 +613,59 @@ export default function AdminProducts() {
           <TabsTrigger value="sizes" className="gap-2"><Tag className="h-4 w-4" />Tailles</TabsTrigger>
           <TabsTrigger value="layout" className="gap-2"><LayoutGrid className="h-4 w-4" />Affichage</TabsTrigger>
           <TabsTrigger value="ordering" className="gap-2"><ArrowUpDown className="h-4 w-4" />Rangement</TabsTrigger>
+          <TabsTrigger value="trash" className="gap-2"><Trash2 className="h-4 w-4" />Corbeille{trashedProducts.length > 0 ? ` (${trashedProducts.length})` : ''}</TabsTrigger>
         </TabsList>
+
+        {/* ── CORBEILLE ── */}
+        <TabsContent value="trash" className="space-y-4 mt-4">
+          <div className="chamfer-hud bg-card/50 p-3 flex flex-wrap items-center gap-2 justify-between">
+            <p className="text-xs text-muted-foreground flex items-center gap-2">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              Les produits en corbeille sont invisibles sur le site. Restaurez-les ou supprimez-les définitivement.
+            </p>
+            {trashSelection.size > 0 && (
+              <div className="flex gap-2">
+                <Button size="sm" onClick={() => handleRestore(Array.from(trashSelection))} className="h-8 text-xs chamfer-hud-sm">
+                  <RotateCcw className="h-3 w-3 mr-1" />Restaurer ({trashSelection.size})
+                </Button>
+                <Button size="sm" variant="destructive" onClick={() => handleHardDelete(Array.from(trashSelection))} className="h-8 text-xs chamfer-hud-sm">
+                  <Trash2 className="h-3 w-3 mr-1" />Supprimer définitivement
+                </Button>
+              </div>
+            )}
+          </div>
+          <div className="chamfer-hud bg-card/50 overflow-hidden">
+            {loadingTrash ? (
+              <div className="p-12 text-center"><div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto" /></div>
+            ) : trashedProducts.length === 0 ? (
+              <div className="p-12 text-center">
+                <Trash2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">La corbeille est vide</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border">
+                {trashedProducts.map(p => (
+                  <div key={p.id} className="flex items-center gap-3 p-3">
+                    <Checkbox checked={trashSelection.has(p.id)} onCheckedChange={() => toggleTrashSelection(p.id)} />
+                    {p.image ? <img src={p.image} alt={p.name} className="h-12 w-12 object-cover rounded" loading="lazy" /> : <div className="h-12 w-12 bg-muted rounded" />}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{p.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {p.sku} · supprimé {p.deletedAt ? new Date(p.deletedAt).toLocaleDateString('fr-FR') : ''}
+                      </p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => handleRestore([p.id])} className="h-8 text-xs">
+                      <RotateCcw className="h-3 w-3 mr-1" />Restaurer
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => handleHardDelete([p.id])} className="h-8 text-xs text-destructive">
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </TabsContent>
 
         <TabsContent value="ordering" className="space-y-4 mt-4">
           <AdminCategoryOrdering />
@@ -647,6 +744,14 @@ export default function AdminProducts() {
               <SelectItem value="out">Rupture</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as 'all' | 'published' | 'draft')}>
+            <SelectTrigger className="w-full sm:w-[140px]"><SelectValue placeholder="Statut" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous statuts</SelectItem>
+              <SelectItem value="published">Publiés</SelectItem>
+              <SelectItem value="draft">Brouillons</SelectItem>
+            </SelectContent>
+          </Select>
           <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-full sm:w-[140px]"><SelectValue placeholder="Trier" /></SelectTrigger>
             <SelectContent>
@@ -671,6 +776,12 @@ export default function AdminProducts() {
 
             <Button size="sm" onClick={() => setIsBulkEditOpen(true)} className="h-8 text-xs chamfer-hud-sm">
               <Wand2 className="h-3 w-3 mr-1" />Édition en masse
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => handleBulkStatus('published')} disabled={bulkSetStatus.isPending} className="h-8 text-xs chamfer-hud-sm">
+              <Send className="h-3 w-3 mr-1" />Publier
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => handleBulkStatus('draft')} disabled={bulkSetStatus.isPending} className="h-8 text-xs chamfer-hud-sm">
+              <FileEdit className="h-3 w-3 mr-1" />Mettre en brouillon
             </Button>
             <Button
               size="sm"
@@ -755,6 +866,7 @@ export default function AdminProducts() {
                   <th className="text-right p-4 text-xs font-bold hud-text">PRIX</th>
                   <th className="text-right p-4 text-xs font-bold hud-text">PROMO</th>
                   <th className="text-right p-4 text-xs font-bold hud-text">STOCK</th>
+                  <th className="text-center p-4 text-xs font-bold hud-text">STATUT</th>
                   <th className="text-center p-4 text-xs font-bold hud-text">ACTIF</th>
                   <th className="text-right p-4 text-xs font-bold hud-text">ACTIONS</th>
                 </tr>
@@ -915,6 +1027,16 @@ export default function AdminProducts() {
                     <td className="p-4 text-center">
                       <button
                         type="button"
+                        onClick={() => bulkSetStatus.mutate({ ids: [product.id], status: product.status === 'draft' ? 'published' : 'draft' })}
+                        title="Cliquer pour basculer brouillon / publié"
+                        className={`text-[10px] px-2 py-1 rounded font-bold ${product.status === 'draft' ? 'bg-amber-500/20 text-amber-500' : 'bg-primary/15 text-primary'}`}
+                      >
+                        {product.status === 'draft' ? 'BROUILLON' : 'PUBLIÉ'}
+                      </button>
+                    </td>
+                    <td className="p-4 text-center">
+                      <button
+                        type="button"
                         onClick={() => toggleActive(product)}
                         title="Cliquer pour activer/désactiver"
                         className={`text-[10px] px-2 py-1 rounded font-bold ${((product as any).isActive ?? true) ? 'bg-green-500/20 text-green-500' : 'bg-muted text-muted-foreground'}`}
@@ -936,7 +1058,10 @@ export default function AdminProducts() {
                            >
                              <Layers2 className="h-4 w-4 mr-2" />Éclater par couleur
                            </DropdownMenuItem>
-                           <DropdownMenuItem onClick={() => handleDelete(product.id)} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" />Supprimer</DropdownMenuItem>
+                           <DropdownMenuItem onClick={() => bulkSetStatus.mutate({ ids: [product.id], status: product.status === 'draft' ? 'published' : 'draft' })}>
+                             {product.status === 'draft' ? <><Send className="h-4 w-4 mr-2" />Publier</> : <><FileEdit className="h-4 w-4 mr-2" />Mettre en brouillon</>}
+                           </DropdownMenuItem>
+                           <DropdownMenuItem onClick={() => handleDelete(product.id)} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" />Mettre à la corbeille</DropdownMenuItem>
                          </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
