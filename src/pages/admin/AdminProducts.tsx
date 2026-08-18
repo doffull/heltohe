@@ -613,7 +613,59 @@ export default function AdminProducts() {
           <TabsTrigger value="sizes" className="gap-2"><Tag className="h-4 w-4" />Tailles</TabsTrigger>
           <TabsTrigger value="layout" className="gap-2"><LayoutGrid className="h-4 w-4" />Affichage</TabsTrigger>
           <TabsTrigger value="ordering" className="gap-2"><ArrowUpDown className="h-4 w-4" />Rangement</TabsTrigger>
+          <TabsTrigger value="trash" className="gap-2"><Trash2 className="h-4 w-4" />Corbeille{trashedProducts.length > 0 ? ` (${trashedProducts.length})` : ''}</TabsTrigger>
         </TabsList>
+
+        {/* ── CORBEILLE ── */}
+        <TabsContent value="trash" className="space-y-4 mt-4">
+          <div className="chamfer-hud bg-card/50 p-3 flex flex-wrap items-center gap-2 justify-between">
+            <p className="text-xs text-muted-foreground flex items-center gap-2">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              Les produits en corbeille sont invisibles sur le site. Restaurez-les ou supprimez-les définitivement.
+            </p>
+            {trashSelection.size > 0 && (
+              <div className="flex gap-2">
+                <Button size="sm" onClick={() => handleRestore(Array.from(trashSelection))} className="h-8 text-xs chamfer-hud-sm">
+                  <RotateCcw className="h-3 w-3 mr-1" />Restaurer ({trashSelection.size})
+                </Button>
+                <Button size="sm" variant="destructive" onClick={() => handleHardDelete(Array.from(trashSelection))} className="h-8 text-xs chamfer-hud-sm">
+                  <Trash2 className="h-3 w-3 mr-1" />Supprimer définitivement
+                </Button>
+              </div>
+            )}
+          </div>
+          <div className="chamfer-hud bg-card/50 overflow-hidden">
+            {loadingTrash ? (
+              <div className="p-12 text-center"><div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto" /></div>
+            ) : trashedProducts.length === 0 ? (
+              <div className="p-12 text-center">
+                <Trash2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">La corbeille est vide</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border">
+                {trashedProducts.map(p => (
+                  <div key={p.id} className="flex items-center gap-3 p-3">
+                    <Checkbox checked={trashSelection.has(p.id)} onCheckedChange={() => toggleTrashSelection(p.id)} />
+                    {p.image ? <img src={p.image} alt={p.name} className="h-12 w-12 object-cover rounded" loading="lazy" /> : <div className="h-12 w-12 bg-muted rounded" />}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{p.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {p.sku} · supprimé {p.deletedAt ? new Date(p.deletedAt).toLocaleDateString('fr-FR') : ''}
+                      </p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => handleRestore([p.id])} className="h-8 text-xs">
+                      <RotateCcw className="h-3 w-3 mr-1" />Restaurer
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => handleHardDelete([p.id])} className="h-8 text-xs text-destructive">
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </TabsContent>
 
         <TabsContent value="ordering" className="space-y-4 mt-4">
           <AdminCategoryOrdering />
