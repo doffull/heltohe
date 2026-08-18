@@ -174,6 +174,8 @@ export default function AdminProducts() {
   const categories = [...new Set([...dbCategories.map(c => c.title), ...products.map(p => p.category)].filter(Boolean))];
 
   let filteredProducts = products.filter(p => {
+    if (statusFilter === 'draft' && p.status !== 'draft') return false;
+    if (statusFilter === 'published' && p.status === 'draft') return false;
     if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase()) && !p.sku.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     if (categoryFilter !== 'all' && p.category !== categoryFilter) return false;
     if (stockFilter === 'out' && p.stock > 0) return false;
