@@ -77,14 +77,21 @@ export function CookieConsentProvider({ children, months }: { children: ReactNod
     [validity],
   );
 
+  // Bandeau désactivé depuis /admin/seo : pas de recueil de consentement,
+  // le site fonctionne alors normalement (suivi + pop-ups actifs).
+  const bannerEnabled = (designSettings as any)?.cookieBannerEnabled !== false;
+
   const value = useMemo<CookieConsentValue>(() => {
-    const consent: ConsentState = stored
+    const consent: ConsentState = !bannerEnabled
+      ? ALL_ON
+      : stored
       ? { statistics: !!stored.statistics, personalization: !!stored.personalization, thirdParty: !!stored.thirdParty }
       : ALL_OFF;
     return {
       consent,
-      decided: !!stored,
+      decided: !bannerEnabled || !!stored,
       preferencesOpen,
+
       openPreferences: () => setPreferencesOpen(true),
       closePreferences: () => setPreferencesOpen(false),
       acceptAll: () => persist(ALL_ON),
