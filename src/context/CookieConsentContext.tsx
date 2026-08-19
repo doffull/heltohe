@@ -107,7 +107,7 @@ export function CookieConsentProvider({ children, months }: { children: ReactNod
         setPreferencesOpen(false);
       },
     };
-  }, [stored, preferencesOpen, persist]);
+  }, [stored, preferencesOpen, persist, bannerEnabled]);
 
   // Permet d'ouvrir les préférences depuis n'importe où (footer, page cookies…).
   useEffect(() => {
