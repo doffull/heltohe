@@ -36,7 +36,7 @@ export function PageSwitcher() {
   const location = useLocation();
   const { data: pages = [] } = usePages();
 
-  const customPages = (pages || []).filter((p: any) => p.is_published !== false);
+  const customPages = (pages || []).filter((p: any) => p.isPublished !== false);
 
   const handleChange = (val: string) => {
     setCurrentPageKey(val as EditorPageKey);
