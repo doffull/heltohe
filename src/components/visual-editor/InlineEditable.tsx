@@ -170,7 +170,7 @@ export function InlineEditable({
     >
       {children ?? value}
       <span className="absolute -top-5 left-0 z-[200] hidden group-hover/editable:flex items-center gap-1 text-[9px] font-bold bg-primary text-primary-foreground px-1.5 py-0.5 rounded whitespace-nowrap pointer-events-none">
-        ✏️ Double-clic
+        ✏️ Cliquez pour modifier
       </span>
     </Tag>
   );
