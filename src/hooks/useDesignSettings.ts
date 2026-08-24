@@ -292,6 +292,7 @@ function settingsToDb(s: DesignSettings) {
     home_custom_sections: ((s as any).homeCustomSections ?? []) as unknown as Json,
     home_page_blocks: ((s as any).homePageBlocks ?? []) as unknown as Json,
     home_texts: ((s as any).homeTexts ?? {}) as unknown as Json,
+    legal_pages: ((s as any).legalPages ?? {}) as unknown as Json,
     presets: s.presets as unknown as Json,
     schedules: s.schedules as unknown as Json,
     pages: s.pages as unknown as Json,
