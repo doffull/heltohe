@@ -930,6 +930,7 @@ export type Database = {
           legal_company_form: string | null
           legal_company_name: string | null
           legal_director: string | null
+          legal_pages: Json
           legal_rcs: string | null
           legal_return_email: string | null
           legal_rgpd_email: string | null
@@ -1063,6 +1064,7 @@ export type Database = {
           legal_company_form?: string | null
           legal_company_name?: string | null
           legal_director?: string | null
+          legal_pages?: Json
           legal_rcs?: string | null
           legal_return_email?: string | null
           legal_rgpd_email?: string | null
@@ -1196,6 +1198,7 @@ export type Database = {
           legal_company_form?: string | null
           legal_company_name?: string | null
           legal_director?: string | null
+          legal_pages?: Json
           legal_rcs?: string | null
           legal_return_email?: string | null
           legal_rgpd_email?: string | null
@@ -3508,6 +3511,7 @@ export type Database = {
           legal_company_form: string | null
           legal_company_name: string | null
           legal_director: string | null
+          legal_pages: Json | null
           legal_rcs: string | null
           legal_return_email: string | null
           legal_rgpd_email: string | null
@@ -3633,6 +3637,7 @@ export type Database = {
           legal_company_form?: string | null
           legal_company_name?: string | null
           legal_director?: string | null
+          legal_pages?: Json | null
           legal_rcs?: string | null
           legal_return_email?: string | null
           legal_rgpd_email?: string | null
@@ -3758,6 +3763,7 @@ export type Database = {
           legal_company_form?: string | null
           legal_company_name?: string | null
           legal_director?: string | null
+          legal_pages?: Json | null
           legal_rcs?: string | null
           legal_return_email?: string | null
           legal_rgpd_email?: string | null
