@@ -3,7 +3,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useVisualEditor } from './VisualEditorProvider';
 import { usePages } from '@/hooks/usePages';
 
-export type EditorPageKey = 'home' | 'shop' | 'cart' | 'checkout' | 'account' | 'legal' | `custom:${string}`;
+export type EditorPageKey =
+  | 'home'
+  | 'shop'
+  | 'cart'
+  | 'checkout'
+  | 'account'
+  | 'legal'
+  | 'legal:cgv'
+  | 'legal:mentions'
+  | 'legal:confidentialite'
+  | 'legal:cookies'
+  | 'legal:retours'
+  | `custom:${string}`;
 
 const STATIC_PAGES: { key: EditorPageKey; label: string; route: string }[] = [
   { key: 'home', label: 'Accueil', route: '/' },
@@ -11,7 +23,11 @@ const STATIC_PAGES: { key: EditorPageKey; label: string; route: string }[] = [
   { key: 'cart', label: 'Panier', route: '/panier' },
   { key: 'checkout', label: 'Checkout', route: '/checkout' },
   { key: 'account', label: 'Compte', route: '/compte' },
-  { key: 'legal', label: 'Légal', route: '/legal/cgv' },
+  { key: 'legal:cgv', label: 'CGV', route: '/cgv' },
+  { key: 'legal:mentions', label: 'Mentions légales', route: '/mentions-legales' },
+  { key: 'legal:confidentialite', label: 'Confidentialité', route: '/confidentialite' },
+  { key: 'legal:cookies', label: 'Cookies', route: '/cookies' },
+  { key: 'legal:retours', label: 'Retours & Échanges', route: '/retours' },
 ];
 
 export function PageSwitcher() {
