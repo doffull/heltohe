@@ -50,50 +50,207 @@ function s(id: string, heading: string, body: string): LegalSection {
 
 export const DEFAULT_LEGAL_CONTENT: Record<LegalPageKey, LegalPageContent> = {
   cgv: {
-    title: 'Conditions Générales de Vente',
-    lastUpdated: 'Mars 2026',
+    title: 'Conditions Générales de Vente — HELVETICA-MP',
+    lastUpdated: 'Août 2026',
     sections: [
-      s('art1', 'Article 1 — Objet', `
-Les présentes Conditions Générales de Vente (CGV) régissent les ventes de produits effectuées sur ce site entre {{societe}} (ci-après "le Vendeur") et tout client non professionnel (ci-après "le Client"). Toute commande passée sur ce site implique l'acceptation pleine et entière des présentes CGV.`),
-      s('art2', 'Article 2 — Produits', `
-Les produits proposés à la vente sont ceux figurant sur le site au moment de la consultation par le Client. Les photographies et descriptions des produits sont fournies à titre indicatif et ne sont pas contractuelles. Des variations mineures de couleur peuvent apparaître en raison des paramètres d'affichage de l'écran.`),
-      s('art3', 'Article 3 — Prix', `
-Les prix sont indiqués en euros (€) toutes taxes comprises (TTC). Le Vendeur se réserve le droit de modifier ses prix à tout moment, étant entendu que le prix applicable à la commande est celui en vigueur au moment de la validation de celle-ci. Les frais de livraison sont indiqués séparément lors du passage de commande.`),
-      s('art4', 'Article 4 — Commande', `
-Pour passer une commande, le Client doit :
+      s('art1', 'Article 1 — Acceptation des Conditions Générales de Vente', `
+### 1.1 Portée des CGV
+Les présentes Conditions Générales de Vente (ci-après « CGV ») s’appliquent à toutes les ventes de produits (ci-après : les « produits ») réalisées à travers le site Internet de HELVETICA-MP, accessible à l’adresse www.helvetica-mp.com (ci-après désigné le « Site »). Elles définissent les droits et obligations des parties dans le cadre de la vente de produits par HELVETICA-MP à des consommateurs (« Client » ou « Vous » ou « Acheteur »). Les présentes conditions générales constituent l’unique document régissant la relation contractuelle entre HELVETICA-MP et les Clients, définissent les modalités d’accès et d’utilisation du Site et déterminent les droits et obligations des parties. Elles sont accessibles et imprimables à tout moment par un lien direct en bas de page du Site. La version applicable des conditions générales est celle consultable en ligne sur le Site à la date de la commande de l’Acheteur, dont un exemplaire lui est adressé avec sa confirmation de commande. Les présentes conditions générales de vente prévalent sur toutes autres conditions générales ou particulières non expressément agréées par HELVETICA-MP. Elles peuvent être complétées le cas échéant par des conditions d’utilisation particulières à certains services offerts sur le Site, lesquelles complètent les présentes conditions générales et, en cas de contradiction, prévalent sur ces dernières.
 
-- Sélectionner les produits souhaités et les ajouter au panier
-- Valider le panier et renseigner ses coordonnées de livraison
-- Choisir son mode de livraison
-- Procéder au paiement sécurisé
-- Recevoir une confirmation de commande par email
+### 1.2 Identité du vendeur et contact
+Les services sont proposés par la société Le Corner des Accessoires, SAS dont le siège social se situe au 24, rue René Boulanger – 75010 Paris, inscrite au Registre du Commerce et des Sociétés de Paris sous le numéro 882 205 685. HELVETICA-MP peut être contactée à l'adresse email suivante : shop@helvetica-mp.com
 
-Le Vendeur se réserve le droit de refuser ou d'annuler toute commande pour des raisons légitimes, notamment en cas de rupture de stock, d'erreur de prix ou de suspicion de fraude.`),
-      s('art5', 'Article 5 — Paiement', `
-Le paiement s'effectue en ligne par carte bancaire (Visa, Mastercard, American Express) via un système sécurisé. Les données bancaires sont cryptées et ne transitent pas sur nos serveurs. La commande n'est validée qu'après confirmation du paiement.`),
-      s('art6', 'Article 6 — Livraison', `
-Les commandes sont expédiées dans un délai de 2 à 5 jours ouvrés après confirmation du paiement. Les délais de livraison indicatifs sont :
+### 1.3 Acceptation des CGV
+L’acceptation de ces CGV est une condition sine qua non de tout achat sur le Site. Cette acceptation est pleinement reconnue par le Client, qui s’engage à lire attentivement les CGV avant de procéder à un achat. La validation de la commande par le Client constitue une acceptation sans réserve des CGV en vigueur au jour de la commande, dont la conservation et la reproduction sont assurées par HELVETICA-MP.
 
-- France métropolitaine : 2 à 4 jours ouvrés
-- DOM-TOM : 5 à 10 jours ouvrés
-- Europe : 3 à 7 jours ouvrés
-- International : 7 à 15 jours ouvrés
+### 1.4 Acceptation et opposabilité
+L’acceptation des présentes conditions générales par l’Acheteur est matérialisée par une case à cocher lors de l’inscription sur le Site ou lors de la passation de commande. Cette acceptation ne peut être que pleine et entière. Toute acceptation sous réserve est considérée comme nulle et non avenue. L’Acheteur qui n’accepte pas d’être lié par les présentes conditions générales ne doit pas passer de commande sur le Site.
 
-En cas de retard de livraison, le Client sera informé par email. Le Vendeur ne peut être tenu responsable des retards dus aux transporteurs ou aux événements de force majeure.`),
-      s('art7', 'Article 7 — Droit de rétractation', `
-Conformément à l'article L221-18 du Code de la consommation, le Client dispose d'un délai de 14 jours calendaires à compter de la réception de la commande pour exercer son droit de rétractation, sans avoir à justifier de motif ni à payer de pénalités.
+### 1.5 Preuve de la Transaction
+Les registres informatisés, conservés dans les systèmes informatiques de HELVETICA-MP dans des conditions raisonnables de sécurité, seront considérés comme les preuves de communications, des commandes et des paiements intervenus entre les parties. L’archivage des bons de commande et des factures est effectué sur un support fiable et durable pouvant être produit à titre de preuve.`),
 
-Pour exercer ce droit, le Client doit notifier sa décision de rétractation par email à {{email_retours}} ou via le formulaire de contact, puis retourner les articles dans leur état d'origine. Les frais de retour sont à la charge du Client.
+      s('art2', 'Article 2 — Processus de Commande et Responsabilités', `
+### 2.1 Création et Validation de la Commande
+Le Client remplit avec soin le formulaire de commande en ligne, en indiquant précisément les références des produits sélectionnés ainsi que les quantités désirées. Il est également requis de fournir toutes les informations nécessaires à la livraison (nom, adresse de livraison, etc.). Le Client est invité à communiquer toute information pertinente susceptible d’affecter la livraison de sa commande. Une fois la commande saisie sur le Site, le Client aura la possibilité de vérifier le détail de sa commande, son prix total, et de corriger d’éventuelles erreurs avant de confirmer sa commande, ce qui implique l’acceptation des présentes CGV, le prix des produits et la description des produits disponibles à la vente.
 
-Les articles soldés, personnalisés ou portés ne peuvent être ni repris ni échangés, sauf vice de fabrication.`),
-      s('art8', 'Article 8 — Garanties', `
-Tous les produits vendus bénéficient de la garantie légale de conformité (articles L217-4 et suivants du Code de la consommation) et de la garantie contre les vices cachés (articles 1641 et suivants du Code civil). En cas de défaut de conformité, le Client peut demander la réparation, le remplacement ou le remboursement du produit.`),
-      s('art9', 'Article 9 — Service client', `
-Pour toute question ou réclamation, notre service client est joignable à : {{email_contact}}. Nous nous engageons à répondre dans un délai de 48 heures ouvrées.`),
-      s('art10', 'Article 10 — Droit applicable', `
-Les présentes CGV sont soumises au droit français. En cas de litige, les parties s'efforceront de trouver une solution amiable avant tout recours judiciaire. Le Client peut également recourir au service de médiation de la consommation.`),
+### 2.2 Conséquences des erreurs de saisie
+HELVETICA-MP ne peut être tenu pour responsable des erreurs de saisie par le Client ni des conséquences en termes de retard ou d’erreur de livraison. Dans ce contexte, tous les frais engendrés par une éventuelle réexpédition seront à la charge exclusive du Client. Le Client est donc encouragé à vérifier l’exactitude des informations fournies avant de valider sa commande en ligne.
+
+### 2.3 Modification ou Annulation de la Commande
+Le Client dispose de la possibilité de modifier ou d’annuler sa commande jusqu’à sa validation finale. Après confirmation de la commande, toute demande d'annulation effectuée avant 12h00 (midi) est acceptée sans frais. Toutefois, si la commande a déjà été préparée et expédiée entre-temps, l'annulation ne pourra plus être prise en compte avant l'acheminement : l'ensemble des frais d'expédition et de retour demeureront à la charge exclusive du Client. Passé ce délai ou après expédition, la commande est considérée comme définitive, sous réserve de l’exercice ultérieur du droit de rétractation ou en cas d’indisponibilité des produits conformément à l’article 3. L’Acheteur doit s’assurer que les coordonnées renseignées dans son Compte ou communiquées lors de sa commande sont correctes et qu’elles lui permettent de recevoir l’email de confirmation de sa commande. À défaut de réception de celui-ci, l’Acheteur doit contacter HELVETICA-MP aux coordonnées mentionnées ci-dessus. HELVETICA-MP recommande à l’Acheteur de conserver les informations contenues dans la confirmation de commande. La confirmation de commande est réputée reçue par l’Acheteur lorsqu’il peut y avoir accès.
+
+### 2.4 Refus de Commande
+HELVETICA-MP se réserve le droit de refuser toute commande d’un Client avec lequel existe un litige relatif au paiement d’une commande précédente ou pour tout autre motif légitime lié notamment à la suspicion d’une fraude sur la commande.`),
+
+      s('art3', 'Article 3 — Disponibilité des Produits et gestion des indisponibilités', `
+### 3.1 Disponibilité des offres
+Les offres de produits et les prix affichés sur le site HELVETICA-MP.COM sont proposés dans la limite des stocks disponibles et pour la durée pendant laquelle ils sont visibles sur le Site. Les informations sur la disponibilité des produits sont fournies au moment de la commande. En cas de modification de cette disponibilité après la validation de la commande, le Client en sera informé par les moyens les plus rapides (courrier électronique ou téléphone) en utilisant les coordonnées fournies lors de la passation de la commande.
+
+### 3.2 Gestion de l’indisponibilité des produits après commande
+En cas d’indisponibilité du produit commandé, HELVETICA-MP informera immédiatement le Client de cette indisponibilité et du délai prévisible de livraison d’un produit de remplacement. Le Client aura alors la possibilité :
+- D’accepter la livraison d’un produit de substitution d’une qualité et d’un prix équivalent à celui initialement commandé, conformément aux articles L. 216-1 et L. 216-2 du Code de la consommation ;
+- D’annuler sa commande, entraînant le remboursement intégral des sommes versées dans un délai maximum de quatorze (14) jours suivant la date à laquelle le contrat a été dénoncé, conformément à l’article L. 216-3 du Code de la consommation.
+
+### 3.3 Modalités de Remboursement
+Le remboursement sera effectué par le même moyen de paiement que celui utilisé pour la transaction initiale.
+
+### 3.4 Information du Consommateur, caractéristiques des Produits
+Conformément à l’article L. 111-1 du Code de la consommation, HELVETICA-MP s’engage à fournir au consommateur, avant la conclusion du contrat de vente, les informations relatives aux caractéristiques essentielles du bien, au prix du bien et à la date ou au délai auquel le vendeur s’engage à livrer le bien. Ainsi, avant toute Commande, l’Acheteur peut prendre connaissance, sur le Site, des caractéristiques de chaque Produit qu’il désire commander. Les Produits sont proposés à la vente en ligne dans la limite des stocks disponibles, ou sous réserve de la possibilité de les commander le cas échéant. Les photographies et les descriptions des Produits proposés à la vente en ligne sont le plus précis possibles. Elles n’engagent HELVETICA-MP que pour ce qui est indiqué précisément. L’Acheteur est toutefois informé et accepte que certaines caractéristiques des Produits, notamment leur couleur, peuvent ne pas correspondre exactement aux photographies présentées sur le Site en raison de contraintes techniques.`),
+
+      s('art4', 'Article 4 — Politique de Tarification et Conditions de Paiement', `
+### 4.1 Affichage des Prix
+Les prix des produits proposés sur le site HELVETICA-MP sont indiqués en euros (€) et comprennent toutes les taxes applicables (TTC), à l’exception des frais de traitement, d’expédition et de livraison, qui sont facturés en supplément. Ces frais supplémentaires sont indiqués et communiqués au Client avant la finalisation de la commande.
+Attention : En dehors de l’Union Européenne ainsi que dans les DOM-TOM, des droits de douane ou taxes locales sont susceptibles d’être exigibles et peuvent être facturés à réception du colis par l’Acheteur, en sus du prix payé à HELVETICA-MP. Ces droits et taxes restent à la charge exclusive de l’Acheteur.
+L’Acheteur garantit à HELVETICA-MP qu’il dispose des autorisations nécessaires pour utiliser le mode de paiement choisi. HELVETICA-MP se réserve le droit de suspendre ou d’annuler toute commande et/ou livraison en cas de non-paiement de toute somme due par l’Acheteur, d'incident de paiement ou de suspicion de fraude. Des pénalités d’un montant égal à 1,5 fois le taux d’intérêt légal français seront applicables de plein droit aux montants impayés dès la première présentation d’une mise en demeure par lettre recommandée AR.
+
+### 4.2 Modification des Prix
+HELVETICA-MP se réserve le droit de modifier les prix de ses produits à tout moment et sans préavis. Cependant, les produits seront facturés sur la base des tarifs en vigueur au moment de la validation de la commande par le Client, sous réserve de la disponibilité desdits Produits.
+
+### 4.3 Information sur la livraison et les frais
+Le Client est informé de façon claire et précise des frais de livraison applicables à sa commande avant la conclusion du contrat. Par défaut, les Produits peuvent être livrés en France et dans l’Union Européenne. La livraison est effectuée dans le délai indiqué dans l’email de confirmation de commande. À défaut de livraison dans le délai convenu, l’Acheteur peut résoudre la commande par lettre recommandée AR ou écrit sur support durable après avoir mis en demeure HELVETICA-MP d'effectuer la livraison dans un délai supplémentaire raisonnable. En cas de résolution, l’Acheteur est remboursé de l’intégralité des sommes versées au plus tard dans les 14 jours suivant la date de dénonciation.
+
+### 4.4 Modalités de Paiement
+Le paiement du prix total de la commande est dû dès la validation de la commande.
+
+### 4.5 Clause de Réserve de Propriété
+Les Produits commandés demeurent la propriété de HELVETICA-MP jusqu’à l’encaissement complet et définitif du prix. Cette clause ne fait pas obstacle au transfert à l'Acheteur, dès la livraison physique, des risques de perte et de détérioration des produits.`),
+
+      s('art5', 'Article 5 — Vérification des colis à la livraison', `
+Le Vendeur rappelle qu’au moment où le Client prend possession physiquement du colis, les risques de perte ou d’endommagement des produits lui sont transférés. HELVETICA-MP encourage vivement le Client à vérifier l’état du colis en présence du transporteur.
+
+En cas de dommages apparents (colis endommagé, bande de garantie ouverte, produits manquants), le Client a la possibilité de refuser le colis ou de l’accepter en formulant des réserves précises, complètes et motivées sur le bordereau de livraison.
+
+Toute réclamation ou anomalie doit être signalée dans les plus brefs délais par email à : shop@helvetica-mp.com.`),
+
+      s('art6', 'Article 6 — Modalités de Paiement et Sécurité', `
+### 6.1 Généralités
+Le règlement des achats s'effectue au choix du Client par : Carte bancaire sécurisée, PayPal (option 4 fois sans frais disponible), Apple Pay ou Google Pay.
+
+### 6.2 Paiement par Carte Bancaire
+Le Site accepte les cartes Visa, MasterCard et Carte Bleue. Le processus est sécurisé via Payplug. Le débit de la carte bancaire est effectué immédiatement après validation de la commande.
+
+### 6.3 Sécurité des Transactions
+Toutes les transactions sont protégées par des technologies de cryptage avancées (protocole SSL) garantissant la confidentialité absolue des données bancaires transmises.`),
+
+      s('art7', 'Article 7 — Droit de rétractation, Échanges et Conditions de retour', `
+### 7.1 Frais et conditions générales de retour
+Les retours de produits sont systématiquement et intégralement à la charge de l'Acheteur, sauf en cas d'erreur avérée imputable à HELVETICA-MP (erreur de référence, produit défectueux ou non conforme à la commande).
+
+### 7.2 Exercice du droit de rétractation
+Conformément aux dispositions légales, l’Acheteur dispose d’un délai de 14 (quatorze) jours à compter de la date de réception des Produits pour exercer son droit de rétractation ou demander un échange sans pénalités. L’Acheteur doit adresser sa demande par écrit à HELVETICA-MP (via le formulaire de rétractation ou par mail à shop@helvetica-mp.com) en précisant obligatoirement son numéro de commande.
+
+### 7.3 Modalités et état impératif des produits retournés
+Les Produits doivent être retournés au plus tard dans les 14 jours suivant la notification de rétractation. Pour être acceptés, les articles doivent obligatoirement être retournés :
+- Neufs, non portés et non lavés ;
+- Strictement exempts de toute odeur, notamment sans trace de parfum ni odeur de cigarette / tabac ;
+- Dans leur emballage d’origine complet et intact (boîte, packaging ou polybag d'origine) avec l’ensemble des accessoires et étiquettes attachées ;
+- Emballés dans un carton de transport adapté, accompagnés d'une copie de la facture d’achat et du Formulaire de retour et d'échange dûment complété (disponible en Annexe 3).
+
+Tout article retourné incomplet, endommagé, sali ou présentant une odeur (parfum, tabac) ne pourra faire l'objet d'un remboursement ni d'un échange et sera retourné au Client à ses frais.
+
+### 7.4 Adresse d'expédition des retours
+Tous les retours doivent être expédiés par voie postale affranchie à l'adresse suivante :
+HELVETICA-MP – Entrepôt
+22 Avenue Paul Langevin
+95220 Herblay
+(Attention : Notre entrepôt ne prend en charge aucun dépôt de colis en mains propres).
+
+### 7.5 Délais de traitement et Remboursement
+Dès réception du colis conforme, HELVETICA-MP traite la demande (échange ou remboursement) sous un délai moyen de 4 jours ouvrés. Le remboursement s'effectue au plus tard sous 14 jours via le mode de paiement initial, déduction faite des frais de retour qui restent à la charge du Client (sauf en cas d'erreur imputable à HELVETICA-MP). HELVETICA-MP se réserve le droit de différer le remboursement jusqu'à parfaite réception et vérification de l'état des Produits.
+
+### 7.6 Exceptions légales
+Le droit de rétractation ne peut être exercé pour les articles descellés par le Client après livraison ne pouvant être renvoyés pour des raisons d’hygiène ou de protection de la santé, ainsi que pour les produits nettement personnalisés (art. L. 221-28 du Code de la consommation).`),
+
+      s('art8', 'Article 8 — Droits de Propriété Intellectuelle', `
+Tous les textes, visuels, marques, logos et éléments graphiques figurant sur le Site sont la propriété exclusive de HELVETICA-MP ou de ses concédants. Toute reproduction, copie ou extraction, totale ou partielle, est strictement interdite sans autorisation expresse et préalable.`),
+
+      s('art9', 'Article 9 — Sécurité et Protection des Données Personnelles', `
+HELVETICA-MP respecte les exigences du RGPD et garantit la confidentialité des données personnelles de ses Clients.
+
+Conformément à l’article L. 223-2 du Code de la consommation, le Client est informé de son droit à s'inscrire gratuitement sur la liste d'opposition au démarchage téléphonique accessible sur www.bloctel.gouv.fr.`),
+
+      s('art10', 'Article 10 — Sécurité des Comptes et Gestion des Mots de Passe', `
+L'Acheteur est seul responsable de la protection et de la confidentialité du mot de passe associé à son Compte client. Toute action effectuée depuis son espace personnel est réputée avoir été réalisée par lui-même.`),
+
+      s('art11', 'Article 11 — Responsabilité', `
+HELVETICA-MP ne saurait être tenue pour responsable des dommages indirects subis par le Client du fait de l'utilisation des Produits ou des désagréments inhérents à l'usage des réseaux de télécommunication et d'Internet.`),
+
+      s('art12', 'Article 12 — Force Majeure', `
+HELVETICA-MP ne pourra être tenue pour responsable de l’inexécution ou du retard dans l’exécution de ses obligations contractuelles en cas de survenance d’un événement qualifié de force majeure par la jurisprudence française (intempéries exceptionnelles, grèves de transporteurs, incendies, pannes informatiques majeures, etc.).`),
+
+      s('art13', 'Article 13 — Garanties légales', `
+L’Acheteur bénéficie de plein droit de la garantie légale de conformité (art. L. 217-4 et suivants du Code de la consommation) et de la garantie des vices cachés (art. 1641 et suivants du Code civil).
+- Erreur de préparation, non-conformité ou vice caché : Si le produit reçu présente un défaut avéré ou ne correspond pas à la commande par erreur de notre part, HELVETICA-MP organise et prend intégralement à sa charge les frais de retour et de réexpédition du produit de remplacement, ou procède au remboursement complet si le remplacement est impossible.
+- Retour pour convenance (taille, préférence) hors rétractation : Toute demande d'échange ou de retour pour convenance personnelle formulée dans un délai de 3 jours suivant la livraison reste soumise à l'accord préalable de HELVETICA-MP et s'effectue aux frais exclusifs de l'Acheteur.`),
+
+      s('art14', 'Article 14 — Droit Applicable et Médiation des Litiges', `
+Les présentes CGV sont régies par la législation française.
+
+En cas de litige, l’Acheteur consommateur a le droit de recourir gratuitement au service du médiateur suivant en vue d'une résolution amiable :
+AME MÉDIATION DE LA CONSOMMATION
+197 boulevard Saint-Germain, 75007 Paris
+Téléphone : 09 53 01 02 69
+Site internet : https://www.mediationconso-ame.com`),
+
+      s('art15', 'Article 15 — Constatation de Livraison', `
+En cas de contestation relative à la livraison d’un colis marqué livré par le transporteur, le Client doit faire parvenir à shop@helvetica-mp.com :
+- Une déclaration sur l’honneur signée attestant de la non-réception ;
+- Une copie de sa pièce d’identité en cours de validité.
+
+Une enquête interne et transporteur sera immédiatement déclenchée pour régulariser le dossier.`),
+
+      s('annexe1', 'Annexe 1 — Formulaire de rétractation', `
+(À compléter et renvoyer uniquement en cas de volonté de vous rétracter du contrat.)
+
+À l'attention de :
+Le Corner des Accessoires (HELVETICA-MP)
+24, rue René Boulanger – 75010 Paris
+Email : shop@helvetica-mp.com
+
+Je vous notifie par la présente ma rétractation du contrat portant sur la vente du bien ci-dessous :
+- Numéro de commande : __________________________________
+- Commandé le : _________________ / Reçu le : _________________
+- Nom du (des) Acheteur(s) : __________________________________
+- Adresse de l'Acheteur : __________________________________
+- Signature de l'Acheteur (si envoi sur papier) :
+- Date : _________________`),
+
+      s('annexe2', 'Annexe 2 — Textes légaux (Code de la consommation et Code civil)', `
+- Article L. 217-4 du Code de la consommation : Le vendeur est tenu de livrer un bien conforme au contrat et répond des défauts de conformité existant lors de la délivrance.
+- Article L. 217-5 du Code de la consommation : Le bien est conforme au contrat s’il est propre à l’usage habituellement attendu d’un bien semblable [...].
+- Article L. 217-12 du Code de la consommation : L’action résultant du défaut de conformité se prescrit par deux ans à compter de la délivrance du bien.
+- Article 1641 du Code civil : Le vendeur est tenu de la garantie à raison des défauts cachés de la chose vendue qui la rendent impropre à l’usage auquel on la destine.
+- Article 1648 alinéa 1er du Code civil : L’action résultant des vices rédhibitoires doit être intentée par l’acquéreur dans un délai de deux ans à compter de la découverte du vice.`),
+
+      s('annexe3', 'Annexe 3 — Formulaire de retour et d\'échange', `
+Merci pour votre commande passée sur www.helvetica-mp.com. Vous disposez d'un délai de 14 jours après réception pour retourner/échanger votre article. Les frais de retour sont à la charge du client (non remboursables, sauf erreur de notre part).
+
+### 1. Informations commande & client
+Nom & Prénom : _________________________________________
+Adresse : ______________________________________________
+Code Postal : ______________ Ville : ___________________
+Téléphone : ________________ Email : ___________________
+N° de commande : ___________ Date de commande : _________
+Date de réception : ________ Date de retour : ___________
+
+### 2. Conditions de retour (contrôle qualité)
+Les produits doivent être retournés NON PORTÉS, NON LAVÉS, STRICTEMENT SANS ODEUR (ni parfum, ni tabac / cigarette), avec leurs étiquettes d'origine et dans leur emballage d'origine, le tout placé dans un carton de transport protecteur.
+
+### 3. Détail du retour / échange
+Pour chaque article, indiquez : Référence / Taille & couleur / Demande (échange ou remboursement) / Échange souhaité / Motif.
+- Exemple : Silver | M - NOIR | ÉCHANGE | L - NOIR | Motif 2
+- Motifs de retour : 1 = Trop grand ; 2 = Trop petit ; 3 = Ne me convient pas ; 4 = Défectueux / Erreur de préparation
+- Signature du client : ______________________
+
+### 4. Adresse de retour & expédition
+- Imprimez et insérez ce formulaire complété dans le carton d'expédition.
+- Assurez-vous du parfait état du produit (état neuf, sans odeur).
+- Affranchissez votre colis à la Poste et expédiez-le à l'adresse suivante : HELVETICA-MP – Entrepôt, 22 Avenue Paul Langevin, 95220 Herblay.
+
+Note : Notre entrepôt ne prend en charge aucun colis remis en mains propres. Traitement du retour sous 4 jours ouvrés dès réception du colis. Service client : shop@helvetica-mp.com`),
     ],
   },
+
 
   mentionsLegales: {
     title: 'Mentions Légales',
