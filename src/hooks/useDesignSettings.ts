@@ -112,6 +112,7 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     homeCustomSections: ((db.home_custom_sections as any) ?? []) as any,
     homePageBlocks: ((db.home_page_blocks as any) ?? []) as any,
     homeTexts: ((db.home_texts as any) ?? {}) as any,
+    legalPages: (((db as any).legal_pages as any) ?? {}) as any,
     presets: (db.presets as typeof base.presets) || base.presets,
     schedules: (db.schedules as typeof base.schedules) || base.schedules,
     pages: (db.pages as typeof base.pages) || base.pages,
