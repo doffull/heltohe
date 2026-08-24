@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 
 interface LegalLayoutProps {
-  title: string;
-  lastUpdated?: string;
+  title: ReactNode;
+  lastUpdated?: ReactNode;
   children: ReactNode;
 }
 
