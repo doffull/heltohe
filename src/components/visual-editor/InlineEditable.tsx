@@ -165,8 +165,8 @@ export function InlineEditable({
         'hover:ring-2 hover:ring-primary/50 hover:ring-offset-1 rounded-sm transition-all duration-150',
       )}
       style={style}
-      onDoubleClick={handleActivate}
-      title="Double-clic pour modifier"
+      onClick={handleActivate}
+      title="Cliquez pour modifier"
     >
       {children ?? value}
       <span className="absolute -top-5 left-0 z-[200] hidden group-hover/editable:flex items-center gap-1 text-[9px] font-bold bg-primary text-primary-foreground px-1.5 py-0.5 rounded whitespace-nowrap pointer-events-none">
