@@ -143,7 +143,9 @@ export default function ProductDetail() {
   if (activeTemplate) {
     return (
       <>
+        <ProductSeo product={product} />
         <ProductTemplateRenderer template={activeTemplate} product={product} />
+
         <div className="container mx-auto px-4 pb-10">
           <ColorVariantsStrip product={product} className="mb-6" />
           <ProductStrip eyebrow="RECOMMANDÉ POUR VOUS" title="Sélection basée sur vos visites" products={recommended} />
