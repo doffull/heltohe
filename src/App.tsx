@@ -132,7 +132,7 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
         {logo ? (
           <img
             src={logo}
-            alt="Logo"
+            alt="Helvetica Mountain Pioneers"
             className="h-16 w-auto object-contain"
           />
         ) : (

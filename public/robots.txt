@@ -17,4 +17,4 @@ Disallow: /checkout
 Disallow: /panier
 Disallow: /compte
 
-Sitemap: https://helvetica-mp.helvetica-mp.net/sitemap.xml
+Sitemap: https://helvetica-mp.net/sitemap.xml

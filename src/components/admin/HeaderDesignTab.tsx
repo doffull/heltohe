@@ -208,7 +208,7 @@ export function HeaderDesignTab() {
             {currentPreset === 'centered' ? (
               <div className="w-full flex flex-col items-center justify-center gap-1">
                 {designSettings.hudLogo ? (
-                  <img src={designSettings.hudLogo} alt="logo" className="h-5 w-auto object-contain max-w-[80px]" />
+                  <img src={designSettings.hudLogo} alt="Logo Helvetica Mountain Pioneers" className="h-5 w-auto object-contain max-w-[80px]" />
                 ) : (
                   <span className="text-xs font-bold uppercase tracking-widest opacity-80">
                     {designSettings.siteName || 'MARQUE'}
@@ -224,7 +224,7 @@ export function HeaderDesignTab() {
               <div className="w-full flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   {designSettings.hudLogo ? (
-                    <img src={designSettings.hudLogo} alt="logo" className="h-7 w-auto object-contain max-w-[80px]" />
+                    <img src={designSettings.hudLogo} alt="Logo Helvetica Mountain Pioneers" className="h-7 w-auto object-contain max-w-[80px]" />
                   ) : (
                     <span className="text-xs font-bold uppercase tracking-widest opacity-80">
                       {designSettings.siteName || 'MARQUE'}
