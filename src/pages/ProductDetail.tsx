@@ -25,6 +25,7 @@ import ProductReviews from '@/components/product/ProductReviews';
 import ColorVariantsStrip from '@/components/product/ColorVariantsStrip';
 import ProductStrip from '@/components/product/ProductStrip';
 import { useTrackProductView, useRecommendedProducts } from '@/hooks/useRecentlyViewed';
+import { ProductSeo } from '@/components/seo/SeoHead';
 
 export default function ProductDetail() {
   const { slugOrId, id } = useParams<{ slugOrId?: string; id?: string }>();
@@ -174,6 +175,7 @@ export default function ProductDetail() {
 
   return (
     <div className="min-h-screen bg-background">
+      <ProductSeo product={product} />
       <div className="container mx-auto px-3 sm:px-4 py-3 md:py-8 max-w-[1500px]">
 
         {/* "Freshly imported" banner */}
