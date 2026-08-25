@@ -9,17 +9,71 @@ const COLISSIMO_RELAY_API = 'https://ws.colissimo.fr/pointretrait-ws-cxf/PointRe
 const COLISSIMO_LABEL_API = 'https://ws.colissimo.fr/sls-ws/SlsServiceWS/2.0';
 const RELAY_NS = 'http://v2.pointretrait.geopost.com/';
 
+/**
+ * Vrai si le jeton est une clé publique de CE projet Supabase (clé anon héritée ou
+ * clé `sb_publishable_…`). C'est ce que le navigateur envoie quand l'utilisateur
+ * n'est pas connecté.
+ *
+ * On compare d'abord à la variable injectée par la plateforme. Si elle ne
+ * correspond pas — les projets migrés vers les nouvelles clés n'exposent pas
+ * forcément la même valeur que celle utilisée par le front — on demande à
+ * l'API Auth du projet de trancher : elle n'accepte que ses propres clés.
+ */
+async function isProjectPublicKey(token: string): Promise<boolean> {
+  if (!token) return false;
+
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
+  if (anonKey && token === anonKey) return true;
+
+  // Tout le reste (jeton de session JWT `eyJ…`, jeton invalide) est laissé à
+  // `getClaims` : inutile d'un aller-retour réseau pour ces cas-là.
+  if (!token.startsWith('sb_publishable_')) return false;
+
+  try {
+    // `/auth/v1/settings` accepte les clés publiques et renvoie 401 pour toute clé
+    // étrangère au projet. (`/rest/v1/` ne convient pas : il exige une clé secrète.)
+    const res = await fetch(`${Deno.env.get('SUPABASE_URL')}/auth/v1/settings`, {
+      headers: { apikey: token },
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+  const unauthorized = () =>
+    new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+
+  // Actions ouvertes aux visiteurs non connectés. `getRelayPoints` est la recherche
+  // de points relais du checkout, qui est accessible sans compte : exiger une session
+  // ici renvoyait un 401 à tous les invités.
+  const PUBLIC_ACTIONS = ['getRelayPoints'];
+
+  // Le corps est lu AVANT l'authentification : c'est lui qui porte l'action, donc ce
+  // qui détermine le niveau d'accès exigé.
+  let body: Record<string, any>;
+  try {
+    body = await req.json();
+  } catch {
+    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+  const action = body?.action as string | undefined;
+  const isPublicAction = !!action && PUBLIC_ACTIONS.includes(action);
+
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return unauthorized();
   }
 
   const supabase = createClient(
@@ -28,13 +82,25 @@ Deno.serve(async (req) => {
     { global: { headers: { Authorization: authHeader } } }
   );
 
-  const token = authHeader.replace('Bearer ', '');
-  const { data: claimsData, error: authError } = await supabase.auth.getClaims(token);
-  if (authError || !claimsData?.claims) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+  const token = authHeader.replace('Bearer ', '').trim();
+
+  // Une clé publique de projet (anon ou `sb_publishable_…`) n'est PAS un jeton de
+  // session : `getClaims` la rejette, quel que soit son format. On la reconnaît donc
+  // séparément, pour n'autoriser que les actions publiques.
+  const isProjectKey = await isProjectPublicKey(token);
+
+  let claims: Record<string, any> | null = null;
+  if (!isProjectKey) {
+    const { data: claimsData, error: authError } = await supabase.auth.getClaims(token);
+    if (authError || !claimsData?.claims) {
+      return unauthorized();
+    }
+    claims = claimsData.claims;
+  }
+
+  // Hors actions publiques, une clé de projet ne suffit pas : il faut une vraie session.
+  if (!isPublicAction && !claims) {
+    return unauthorized();
   }
 
   const COLISSIMO_LOGIN = Deno.env.get('COLISSIMO_LOGIN');
@@ -48,13 +114,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
-    const { action } = body;
-
     // Admin role required for everything except the public relay-point lookup used by checkout.
-    if (action !== 'getRelayPoints') {
+    if (!isPublicAction) {
       const { data: isAdmin } = await supabase.rpc('has_role', {
-        _user_id: claimsData.claims.sub,
+        _user_id: claims!.sub,
         _role: 'admin',
       });
       if (!isAdmin) {
