@@ -12,8 +12,7 @@ import { MediaLibraryDialog } from '@/components/visual-editor/MediaLibraryDialo
 import { MaintenancePage } from '@/components/maintenance/MaintenancePage';
 import { Globe, EyeOff, Save, Loader2, Wrench, Image as ImageIcon, ExternalLink, Search, Cookie } from 'lucide-react';
 import { toast } from 'sonner';
-
-const SITE_URL = 'https://helvetica-mp.helvetica-mp.net';
+import { SITE_URL } from '@/lib/site';
 
 export default function AdminSeo() {
   const { designSettings, updateDesignSettings, flushDesignSettings } = useApp();

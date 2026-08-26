@@ -4,13 +4,18 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "seo:files": "node scripts/generate-seo-files.mjs",
+    "predev": "npm run seo:files",
     "dev": "vite",
+    "prebuild": "npm run seo:files",
     "build": "vite build",
+    "prebuild:dev": "npm run seo:files",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "prebuild:protected": "npm run seo:files",
     "build:protected": "PROTECT=1 vite build"
   },
   "dependencies": {

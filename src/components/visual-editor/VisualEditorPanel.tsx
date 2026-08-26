@@ -12,13 +12,12 @@ import { LayoutEditorTab } from './tabs/LayoutEditorTab';
 import { HeroCtaEditorTab } from './tabs/HeroCtaEditorTab';
 import { PageSwitcher } from './PageSwitcher';
 import { useDesignHistory } from '@/hooks/useDesignHistory';
-
-const DEFAULT_PUBLISHED_ORIGIN = 'https://helvetica-mp.helvetica-mp.net';
+import { SITE_URL } from '@/lib/site';
 
 function getPublishedOrigin() {
   const origin = window.location.origin;
   if (!origin.includes('id-preview--') && !origin.includes('localhost')) return origin;
-  return DEFAULT_PUBLISHED_ORIGIN;
+  return SITE_URL;
 }
 
 function collectImageUrls(value: unknown, found = new Set<string>()) {

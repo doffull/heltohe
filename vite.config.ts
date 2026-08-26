@@ -41,6 +41,24 @@ const protectPlugin = () => ({
   },
 });
 
+/**
+ * Injecte le domaine du site dans index.html à la place de `%VITE_SITE_URL%`.
+ *
+ * Vite sait déjà substituer les `%VITE_*%`, mais laisse le marqueur brut dans la
+ * page — avec un simple avertissement — quand la variable n'est pas définie. Or
+ * `.env` est ignoré par git : un clone neuf ou une CI sans variable produirait un
+ * `og:url` valant littéralement `%VITE_SITE_URL%/`. Ce plugin passe avant le cœur
+ * de Vite et applique le même repli que `src/lib/site.ts`.
+ */
+const siteUrlHtmlPlugin = () => ({
+  name: "lvtk-site-url-html",
+  enforce: "pre" as const,
+  transformIndexHtml(html: string) {
+    const siteUrl = (process.env.VITE_SITE_URL || "https://helvetica-mp.com").replace(/\/+$/, "");
+    return html.replaceAll("%VITE_SITE_URL%", siteUrl);
+  },
+});
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
@@ -51,6 +69,7 @@ export default defineConfig(({ mode }) => ({
     },
   },
   plugins: [
+    siteUrlHtmlPlugin(),
     react(),
     mode === "development" && componentTagger(),
     mcpPlugin(),

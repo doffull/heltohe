@@ -2,8 +2,7 @@ import { Helmet } from 'react-helmet-async';
 import { useLocation } from 'react-router-dom';
 import { useDesignSettings } from '@/hooks/useDesignSettings';
 import { useReviewStats } from '@/hooks/useProductReviews';
-
-const SITE_URL = 'https://helvetica-mp.net';
+import { SITE_URL, absoluteUrl } from '@/lib/site';
 
 interface SeoHeadProps {
   forceNoIndex?: boolean;
@@ -34,7 +33,7 @@ export function SeoHead({ forceNoIndex = false, title, description, image, type 
   const siteName = (s.seoDefaultTitle || s.siteName || 'HELVETICA MOUNTAIN PIONEERS').trim();
   const finalTitle = (title || siteName).trim();
   const finalDescription = (description || s.seoDefaultDescription || s.siteTagline || '').trim();
-  const canonical = `${SITE_URL}${pathname === '/' ? '/' : pathname.replace(/\/+$/, '')}`;
+  const canonical = absoluteUrl(pathname);
   const ogImage = image || s.seoOgImage || '';
 
   return (
@@ -101,7 +100,7 @@ export function ProductSeo({ product }: { product: any }) {
     plainText(product.description) ||
     `${name} — pièce technique ${brand}. Livraison et retours simplifiés.`;
   const title = `${name} — ${brand}`;
-  const canonical = `${SITE_URL}${pathname.replace(/\/+$/, '') || '/'}`;
+  const canonical = absoluteUrl(pathname);
   const images = [product.image, ...(Array.isArray(product.galleryImages) ? product.galleryImages : [])]
     .filter(Boolean)
     .slice(0, 6);
