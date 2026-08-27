@@ -11,6 +11,7 @@ import { FileDropZone } from '@/components/admin/FileDropZone';
 import { useApp } from '@/context/AppContext';
 import { AiTextButton } from '@/components/admin/AiTextButton';
 import { LimitedEditionBadge, BADGE_POSITIONS } from '@/components/product/LimitedEditionBadge';
+import { GlossyBadge } from '@/components/product/ProductStatusBadges';
 import { GifBuilderDialog } from '@/components/admin/GifBuilderDialog';
 
 
