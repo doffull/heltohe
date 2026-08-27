@@ -82,10 +82,12 @@ export function InlineEditable({
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     setLocalVal(e.target.value);
+    if (multiline) autoGrow(e.target as HTMLTextAreaElement);
     // Legacy: some callers rely on live updates.
     onChange?.(e.target.value);
     setIsDirty(true);
   }
+
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Enter' && !multiline) {
