@@ -23,6 +23,8 @@ import { resolveTopBanner } from '@/lib/bannerIcons';
 // SidebarNewsletter retiré du panneau latéral
 import { MiniNavbar } from '@/components/ui/mini-navbar';
 import { PopupHost } from '@/components/popups/PopupHost';
+import AddToCartDialog from '@/components/cart/AddToCartDialog';
+
 import { CookieConsentBanner } from '@/components/legal/CookieConsentBanner';
 import { useCookieConsent } from '@/context/CookieConsentContext';
 import { InstallAppBanner } from '@/components/pwa/InstallAppBanner';
