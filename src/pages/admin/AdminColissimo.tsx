@@ -31,6 +31,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useDesignSettings, useSaveDesignSettings } from '@/hooks/useDesignSettings';
 import { useAdminConfig, useSaveAdminConfig } from '@/hooks/useAdminConfig';
 import { Order } from '@/types';
+import TrackingApiCard from '@/components/admin/TrackingApiCard';
+
 
 // Leaflet
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
@@ -1567,6 +1569,8 @@ function ConfigurationTab() {
 
   return (
     <div className="max-w-2xl space-y-6">
+      <TrackingApiCard />
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">

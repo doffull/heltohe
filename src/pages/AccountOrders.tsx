@@ -13,6 +13,8 @@ import {
   type MyOrder,
   type TrackingEvent,
 } from '@/hooks/useMyOrders';
+import TrackingNotifications from '@/components/account/TrackingNotifications';
+
 
 
 function StatusBadge({ order }: { order: MyOrder }) {
@@ -166,8 +168,12 @@ export default function AccountOrders() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl sm:text-3xl font-bold hud-text mb-2">MES COMMANDES</h1>
+        <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
+          <h1 className="text-2xl sm:text-3xl font-bold hud-text">MES COMMANDES</h1>
+          <TrackingNotifications orders={orders || []} eventsByOrder={eventsByOrder || {}} />
+        </div>
         <p className="text-sm text-muted-foreground mb-6 sm:mb-8">Suivez en direct l'avancement de vos colis.</p>
+
 
         {isLoading ? (
           <div className="chamfer-hud bg-card/50 p-12 flex justify-center">

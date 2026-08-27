@@ -32,12 +32,12 @@ function normalizeCode(raw: string): string {
 
 /**
  * Suivi La Poste / Colissimo.
- * Nécessite le secret LAPOSTE_TRACKING_API_KEY (API « Suivi v2 » de La Poste).
+ * La clé « Suivi v2 » est lue en base (saisie dans l'admin) ou dans le secret LAPOSTE_TRACKING_API_KEY.
  * Sans clé, la fonction renvoie une liste vide (mode dégradé) sans échouer.
  */
-async function fetchLaPosteEvents(tracking: string): Promise<TrackingEvent[]> {
-  const key = Deno.env.get('LAPOSTE_TRACKING_API_KEY');
+async function fetchLaPosteEvents(tracking: string, key: string | null): Promise<TrackingEvent[]> {
   if (!key) return [];
+
 
   const res = await fetch(
     `https://api.laposte.fr/suivi/v2/idships/${encodeURIComponent(tracking)}?lang=fr_FR`,
@@ -102,13 +102,21 @@ Deno.serve(async (req) => {
     if (error) return json({ error: error.message }, 400);
 
     const report: Array<Record<string, unknown>> = [];
-    const noKey = !Deno.env.get('LAPOSTE_TRACKING_API_KEY');
+
+    const { data: keyRow } = await admin
+      .from('payment_gateway_secrets')
+      .select('secret_key')
+      .eq('gateway', 'laposte_tracking')
+      .maybeSingle();
+    const apiKey = keyRow?.secret_key || Deno.env.get('LAPOSTE_TRACKING_API_KEY') || null;
+    const noKey = !apiKey;
 
     for (const order of orders || []) {
       const tracking = String(order.tracking_number || '').trim();
       if (!tracking) continue;
 
-      const events = await fetchLaPosteEvents(tracking);
+      const events = await fetchLaPosteEvents(tracking, apiKey);
+
       if (events.length === 0) {
         report.push({ order: order.order_number, events: 0, degraded: noKey });
         continue;
