@@ -48,12 +48,20 @@ export function InlineEditable({
     if (!isEditing) setLocalVal(value);
   }, [value, isEditing]);
 
+  function autoGrow(el: HTMLTextAreaElement | null) {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.max(el.scrollHeight, 72)}px`;
+  }
+
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
       inputRef.current.select();
+      if (multiline) autoGrow(inputRef.current);
     }
-  }, [isEditing]);
+  }, [isEditing, multiline]);
+
 
   function handleActivate(e: React.MouseEvent) {
     if (!isActive) return;
@@ -74,10 +82,12 @@ export function InlineEditable({
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     setLocalVal(e.target.value);
+    if (multiline) autoGrow(e.target as HTMLTextAreaElement);
     // Legacy: some callers rely on live updates.
     onChange?.(e.target.value);
     setIsDirty(true);
   }
+
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Enter' && !multiline) {
@@ -114,9 +124,10 @@ export function InlineEditable({
             value={localVal}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
-            className={cn(sharedInputClass, 'resize-none overflow-hidden')}
-            style={{ ...style, caretColor: 'hsl(var(--primary))' }}
+            className={cn(sharedInputClass, 'resize-y overflow-auto block')}
+            style={{ ...style, caretColor: 'hsl(var(--primary))', minHeight: '4.5rem', maxHeight: '70vh' }}
             rows={3}
+
             placeholder={placeholder}
           />
         ) : (
