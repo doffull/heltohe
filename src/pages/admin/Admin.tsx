@@ -70,6 +70,7 @@ import AdminChatbot from './AdminChatbot';
 import AdminColissimo from './AdminColissimo';
 import AdminCheckout from './AdminCheckout';
 import AdminNotifications from './AdminNotifications';
+import AdminAuthEmails from './AdminAuthEmails';
 import AdminPreparations from './AdminPreparations';
 import AdminRoulette from './AdminRoulette';
 import AdminHomeIcons from './AdminHomeIcons';
@@ -121,6 +122,7 @@ export const DEFAULT_SECTION_COLORS: Record<string, string> = {
   '/admin/stock': '#D97706',
   '/admin/colissimo': '#EAB308',
   '/admin/notifications': '#F97316',
+  '/admin/emails-auth': '#0EA5E9',
   '/admin/preparations': '#22C55E',
   '/admin/chatbot': '#14B8A6',
   '/admin/woocommerce': '#7C3AED',
@@ -173,6 +175,7 @@ const SIDEBAR_ITEMS = [
   { icon: Store, label: 'Boutiques', href: '/admin/boutiques' },
   { icon: Users, label: "Mannequins d'essai", href: '/admin/mannequins' },
   { icon: Bell, label: 'Notifications', href: '/admin/notifications' },
+  { icon: Mail, label: "E-mails d'authentification", href: '/admin/emails-auth' },
   { icon: Bot, label: 'Chatbot', href: '/admin/chatbot' },
   { icon: Star, label: 'Avis clients', href: '/admin/avis' },
   { icon: Plug, label: 'Agent integrations', href: '/admin/agent-integrations' },
@@ -388,6 +391,7 @@ export default function Admin() {
             <Route path="boutiques/*" element={<AdminBoutiques />} />
             <Route path="mannequins" element={<AdminMannequins />} />
             <Route path="notifications/*" element={<AdminNotifications />} />
+            <Route path="emails-auth" element={<AdminAuthEmails />} />
             <Route path="chatbot/*" element={<AdminChatbot />} />
             <Route path="woocommerce/*" element={<AdminWooCommerce />} />
             <Route path="audit/*" element={<AdminAudit />} />
