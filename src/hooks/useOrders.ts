@@ -110,6 +110,7 @@ export function useUpdatePaymentStatus() {
         .single();
       
       if (error) throw error;
+      if (paymentStatus === 'Paid') await triggerOrderEmail(id, 'paid');
       return dbToAppOrder(data as Record<string, unknown>);
     },
     onSuccess: () => {
@@ -117,6 +118,23 @@ export function useUpdatePaymentStatus() {
     },
   });
 }
+
+/** Passe la commande en expédiée avec transporteur + suivi et envoie l'e-mail de suivi. */
+export function useShipOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, carrier, trackingNumber }: { id: string; carrier: string; trackingNumber: string }) => {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: 'Shipped', shipping_carrier: carrier, tracking_number: trackingNumber })
+        .eq('id', id);
+      if (error) throw error;
+      await triggerOrderEmail(id, 'shipped');
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['orders'] }),
+  });
+}
+
 
 export function useUpdateOrder() {
   const queryClient = useQueryClient();
