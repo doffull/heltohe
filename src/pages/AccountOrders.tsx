@@ -1,15 +1,19 @@
-import { Package, Truck, Copy, ExternalLink, Check } from 'lucide-react';
+import { Package, Truck, Copy, ExternalLink, Check, Radio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import {
   useMyOrders,
+  useMyTrackingEvents,
+  useOrdersRealtime,
   TRACKING_STEPS,
   trackingStepIndex,
   carrierTrackingUrl,
   type MyOrder,
+  type TrackingEvent,
 } from '@/hooks/useMyOrders';
+
 
 function StatusBadge({ order }: { order: MyOrder }) {
   const step = trackingStepIndex(order);
@@ -46,8 +50,9 @@ function TrackingTimeline({ order }: { order: MyOrder }) {
   );
 }
 
-function OrderCard({ order }: { order: MyOrder }) {
+function OrderCard({ order, events = [] }: { order: MyOrder; events?: TrackingEvent[] }) {
   const url = carrierTrackingUrl(order.shippingCarrier, order.trackingNumber);
+
   return (
     <article className="chamfer-hud bg-card/50 p-5 sm:p-6 space-y-5">
       <header className="flex flex-wrap items-center justify-between gap-3">
@@ -123,12 +128,40 @@ function OrderCard({ order }: { order: MyOrder }) {
           Livraison : {order.address}, {order.zip} {order.city} {order.country}
         </p>
       </div>
+
+      {events.length > 0 && (
+        <div className="border-t border-border pt-4">
+          <h3 className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground mb-3 flex items-center gap-2">
+            <Radio className="h-3 w-3" aria-hidden="true" /> Historique du colis
+          </h3>
+          <ol className="space-y-3">
+            {events.map((ev, i) => (
+              <li key={ev.id} className="flex gap-3">
+                <span
+                  className={`mt-1 h-2 w-2 shrink-0 rounded-full ${i === 0 ? 'bg-foreground' : 'bg-border'}`}
+                  aria-hidden="true"
+                />
+                <div className="min-w-0">
+                  <p className={`text-sm ${i === 0 ? 'font-medium' : 'text-muted-foreground'}`}>{ev.label}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {new Date(ev.eventAt).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}
+                    {ev.location ? ` · ${ev.location}` : ''}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
     </article>
   );
 }
 
 export default function AccountOrders() {
   const { data: orders, isLoading } = useMyOrders();
+  useOrdersRealtime();
+  const { data: eventsByOrder } = useMyTrackingEvents((orders || []).map((o) => o.id));
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -151,7 +184,7 @@ export default function AccountOrders() {
         ) : (
           <div className="space-y-5">
             {orders.map((o) => (
-              <OrderCard key={o.id} order={o} />
+              <OrderCard key={o.id} order={o} events={eventsByOrder?.[o.id] || []} />
             ))}
           </div>
         )}

@@ -1,6 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
+
 
 export interface MyOrderItem {
   name: string;
@@ -94,3 +96,67 @@ export function useMyOrders() {
     },
   });
 }
+
+export interface TrackingEvent {
+  id: string;
+  orderId: string;
+  statusCode: string;
+  label: string;
+  location?: string | null;
+  carrier?: string | null;
+  eventAt: string;
+}
+
+/** Historique des événements transporteur pour les commandes du client. */
+export function useMyTrackingEvents(orderIds: string[]) {
+  const key = [...orderIds].sort().join(',');
+  return useQuery({
+    queryKey: ['my-tracking-events', key],
+    enabled: orderIds.length > 0,
+    queryFn: async (): Promise<Record<string, TrackingEvent[]>> => {
+      const { data, error } = await supabase
+        .from('order_tracking_events')
+        .select('id, order_id, status_code, label, location, carrier, event_at')
+        .in('order_id', orderIds)
+        .order('event_at', { ascending: false });
+      if (error) throw error;
+      const grouped: Record<string, TrackingEvent[]> = {};
+      (data || []).forEach((r: Record<string, unknown>) => {
+        const ev: TrackingEvent = {
+          id: r.id as string,
+          orderId: r.order_id as string,
+          statusCode: r.status_code as string,
+          label: r.label as string,
+          location: (r.location as string) || null,
+          carrier: (r.carrier as string) || null,
+          eventAt: r.event_at as string,
+        };
+        (grouped[ev.orderId] ||= []).push(ev);
+      });
+      return grouped;
+    },
+  });
+}
+
+/** Abonnement temps réel : commandes + événements de suivi. */
+export function useOrdersRealtime() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const refresh = () => {
+      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['my-tracking-events'] });
+    };
+    const channel = supabase
+      .channel('my-orders-tracking')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'order_tracking_events' }, refresh)
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, queryClient]);
+}
+

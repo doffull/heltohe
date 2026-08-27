@@ -131,12 +131,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const tax = total * TAX_RATE / (1 + TAX_RATE);
 
   const addItem = useCallback(async (newItem: Omit<CartItem, 'id'>) => {
-    // Signal global : utilisé par les pop-ups (déclencheur « ajout au panier »).
+    // Signal global : pop-up de confirmation + déclencheur « ajout au panier ».
     try {
-      window.dispatchEvent(new CustomEvent('lvtk:add-to-cart', { detail: { productId: newItem.productId } }));
+      window.dispatchEvent(
+        new CustomEvent('lvtk:add-to-cart', {
+          detail: {
+            productId: newItem.productId,
+            name: newItem.name,
+            image: newItem.image,
+            size: newItem.size,
+            color: newItem.color,
+            quantity: newItem.quantity,
+            price: newItem.salePrice ?? newItem.price,
+          },
+        }),
+      );
     } catch {
       /* ignore */
     }
+
 
     const existingItem = items.find(
       item => 
