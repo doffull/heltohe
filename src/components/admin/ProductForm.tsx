@@ -105,6 +105,8 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
     limitedEditionColor: '',
     limitedEditionTextColor: '',
     limitedEditionPosition: 'bottom-right' as 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right',
+    soldOutBadge: (designSettings as any)?.soldOutBadgeDefault !== false,
+    soldOutLabel: '',
     status: 'published' as 'draft' | 'published',
 
   });
@@ -333,6 +335,8 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         limitedEditionColor: product.limitedEditionColor || '',
         limitedEditionTextColor: product.limitedEditionTextColor || '',
         limitedEditionPosition: product.limitedEditionPosition || 'bottom-right',
+        soldOutBadge: product.soldOutBadge !== false,
+        soldOutLabel: product.soldOutLabel || '',
         status: product.status === 'draft' ? 'draft' : 'published',
 
       });
