@@ -13,6 +13,8 @@ import {
   type MyOrder,
   type TrackingEvent,
 } from '@/hooks/useMyOrders';
+import TrackingNotifications from '@/components/account/TrackingNotifications';
+
 
 
 function StatusBadge({ order }: { order: MyOrder }) {
