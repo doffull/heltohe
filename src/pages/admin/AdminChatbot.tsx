@@ -463,6 +463,38 @@ export default function AdminChatbot() {
               </div>
             )}
 
+            <div className="border-t border-border/40 pt-4 space-y-2">
+              <h4 className="text-xs font-bold hud-text">DERNIERS TESTS</h4>
+              {Object.keys(AI_TEST_SCOPE_LABELS).map((scope) => {
+                const rec = testHistory[scope];
+                return (
+                  <div
+                    key={scope}
+                    className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs p-2 chamfer-hud-sm bg-muted/30"
+                  >
+                    <span className="font-bold w-40 flex-shrink-0">{AI_TEST_SCOPE_LABELS[scope]}</span>
+                    {!rec ? (
+                      <span className="text-muted-foreground">Jamais testé</span>
+                    ) : (
+                      <>
+                        <span className={`flex items-center gap-1 flex-shrink-0 ${rec.ok ? 'text-primary' : 'text-destructive'}`}>
+                          {rec.ok ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
+                          {rec.ok ? 'OK' : 'Échec'}
+                        </span>
+                        <span className="text-muted-foreground flex-shrink-0">{formatAiTestDate(rec.at)}</span>
+                        <span className="font-mono text-[11px] text-muted-foreground flex-shrink-0">{rec.model}</span>
+                        <span className={`sm:truncate ${rec.ok ? 'text-muted-foreground' : 'text-destructive'}`} title={rec.message}>
+                          {rec.message}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+
+
             <p className="text-xs text-muted-foreground border-t border-border/40 pt-4">
               Astuce : Flash pour la rapidité et le coût, Pro pour les tâches complexes (extraction de catalogues,
               analyse d'images). Le bouton « Sauvegarder » en haut de page enregistre ces réglages.
