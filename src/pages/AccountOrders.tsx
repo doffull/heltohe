@@ -184,7 +184,7 @@ export default function AccountOrders() {
         ) : (
           <div className="space-y-5">
             {orders.map((o) => (
-              <OrderCard key={o.id} order={o} />
+              <OrderCard key={o.id} order={o} events={eventsByOrder?.[o.id] || []} />
             ))}
           </div>
         )}
