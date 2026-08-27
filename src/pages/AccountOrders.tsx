@@ -37,12 +37,6 @@ function TrackingTimeline({ order }: { order: MyOrder }) {
               >
                 {done ? <Check className="h-3.5 w-3.5" /> : i + 1}
               </span>
-              {i < TRACKING_STEPS.length - 1 && (
-                <span
-                  className={`hidden sm:block absolute translate-x-0 h-px w-full ${done ? 'bg-foreground' : 'bg-border'}`}
-                  aria-hidden
-                />
-              )}
             </div>
             <span className={`text-xs ${done ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>{s.label}</span>
           </li>
