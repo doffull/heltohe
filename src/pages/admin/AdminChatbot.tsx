@@ -23,12 +23,19 @@ const GEMINI_MODELS: { id: string; label: string; hint: string }[] = [
 ];
 
 function ModelSelect({
-  label, description, value, onChange,
-}: { label: string; description: string; value: string; onChange: (v: string) => void }) {
+  label, description, value, onChange, onTest,
+}: { label: string; description: string; value: string; onChange: (v: string) => void; onTest?: (model: string) => void }) {
   const known = GEMINI_MODELS.some(m => m.id === value);
   return (
     <div className="space-y-2">
-      <Label className="hud-text text-xs">{label}</Label>
+      <div className="flex items-center justify-between gap-2">
+        <Label className="hud-text text-xs">{label}</Label>
+        {onTest && (
+          <Button type="button" size="sm" variant="outline" className="h-7 text-[11px] px-2" onClick={() => onTest(value)}>
+            Tester
+          </Button>
+        )}
+      </div>
       <p className="text-xs text-muted-foreground">{description}</p>
       <select
         value={known ? value : '__custom'}
