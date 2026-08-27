@@ -139,6 +139,30 @@ export type Database = {
         }
         Relationships: []
       }
+      auth_email_templates: {
+        Row: {
+          draft: Json
+          key: string
+          published: Json | null
+          published_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          draft?: Json
+          key: string
+          published?: Json | null
+          published_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          draft?: Json
+          key?: string
+          published?: Json | null
+          published_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       banner_analytics: {
         Row: {
           banner_id: string
