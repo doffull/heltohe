@@ -196,6 +196,7 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     gifPresets: ((db.settings_json as any)?.gifPresets) ?? [],
     showProductStatusBadges: ((db.settings_json as any)?.showProductStatusBadges) ?? false,
     soldOutBadgeDefault: ((db.settings_json as any)?.soldOutBadgeDefault) ?? true,
+    soldOutBadgeLabel: ((db.settings_json as any)?.soldOutBadgeLabel) ?? 'Coming soon',
 
   } as DesignSettings;
 }
@@ -361,6 +362,7 @@ function settingsToDb(s: DesignSettings) {
       gifPresets: (s as any).gifPresets ?? [],
       showProductStatusBadges: (s as any).showProductStatusBadges === true,
       soldOutBadgeDefault: (s as any).soldOutBadgeDefault !== false,
+      soldOutBadgeLabel: ((s as any).soldOutBadgeLabel || '').trim() || 'Coming soon',
 
 
     } as unknown as Json,

@@ -758,7 +758,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
                   value={formData.soldOutLabel}
                   onChange={(e) => setFormData(prev => ({ ...prev, soldOutLabel: e.target.value }))}
                   className="bg-secondary/50 border-border/30"
-                  placeholder="Épuisé"
+                  placeholder="Coming soon"
                 />
               </div>
               <div className="flex items-center gap-2">

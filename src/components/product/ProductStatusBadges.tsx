@@ -20,7 +20,7 @@ const BADGE_DEFS: Record<BadgeKind, BadgeDef> = {
   top: { kind: 'top', label: 'Top vente', icon: Flame, token: '--badge-top' },
   trending: { kind: 'trending', label: 'Tendance', icon: TrendingUp, token: '--badge-trending' },
   stock: { kind: 'stock', label: 'Stock limité', icon: AlertTriangle, token: '--badge-stock' },
-  soldout: { kind: 'soldout', label: 'Épuisé', icon: PackageX, token: '--badge-soldout' },
+  soldout: { kind: 'soldout', label: 'Coming soon', icon: PackageX, token: '--badge-soldout' },
   exclusive: { kind: 'exclusive', label: 'Exclusivité', icon: Crown, token: '--badge-limited' },
 };
 
@@ -90,9 +90,11 @@ interface Props {
 export function ProductStatusBadges({ product, compact = false, animated = true, max = 3, className }: Props) {
   const { designSettings } = useApp();
   const enabled = (designSettings as any)?.showProductStatusBadges === true;
+  const globalSoldOutLabel = ((designSettings as any)?.soldOutBadgeLabel || '').trim();
   const badges = getProductBadges(product).slice(0, max);
   if (!enabled || badges.length === 0) return null;
   const pct = product ? discountLabel(product) : null;
+  const soldOutLabel = product?.soldOutLabel?.trim() || globalSoldOutLabel || undefined;
 
   return (
     <div className={cn('flex flex-wrap gap-1.5', className)}>
@@ -105,8 +107,8 @@ export function ProductStatusBadges({ product, compact = false, animated = true,
           label={
             b.kind === 'promo' && pct
               ? `Promo ${pct}`
-              : b.kind === 'soldout' && product?.soldOutLabel?.trim()
-                ? product.soldOutLabel.trim()
+              : b.kind === 'soldout'
+                ? soldOutLabel
                 : undefined
           }
         />

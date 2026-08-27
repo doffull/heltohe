@@ -508,7 +508,7 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
                     <div className="flex gap-2 sm:gap-3">
                       <Button variant="outline" size="icon" className="h-10 w-10 sm:h-12 sm:w-12" aria-label="Ajouter aux favoris"><Heart className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" /></Button>
                       <Button className="h-10 sm:h-12 px-4 sm:px-8 uppercase tracking-wider text-xs sm:text-sm" onClick={() => handleAddToCart(product)} disabled={product.stock === 0}>
-                        {product.stock === 0 ? 'Épuisé' : 'Ajouter'}
+                        {product.stock === 0 ? 'Coming soon' : 'Ajouter'}
                       </Button>
                     </div>
                   </div>
