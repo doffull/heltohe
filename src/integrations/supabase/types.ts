@@ -2778,6 +2778,8 @@ export type Database = {
           sale_price: number | null
           sizes: string[] | null
           sku: string
+          sold_out_badge: boolean
+          sold_out_label: string | null
           status: string
           stock: number
           subtitle: string | null
@@ -2819,6 +2821,8 @@ export type Database = {
           sale_price?: number | null
           sizes?: string[] | null
           sku: string
+          sold_out_badge?: boolean
+          sold_out_label?: string | null
           status?: string
           stock?: number
           subtitle?: string | null
@@ -2860,6 +2864,8 @@ export type Database = {
           sale_price?: number | null
           sizes?: string[] | null
           sku?: string
+          sold_out_badge?: boolean
+          sold_out_label?: string | null
           status?: string
           stock?: number
           subtitle?: string | null
