@@ -47,11 +47,83 @@ function pickModel(m?: string): string {
   return DEFAULT_MODEL;
 }
 
+// ── Clé Gemini directe (optionnelle, configurée depuis l'admin) ────────────
+// Si une clé Gemini est enregistrée (table payment_gateway_secrets, ligne
+// gateway = 'gemini_api') ou présente dans l'env GEMINI_API_KEY, tous les
+// appels de modèles `google/*` passent en direct par l'API Google
+// (endpoint compatible OpenAI). Sinon → passerelle Lovable AI.
+const GOOGLE_OAI_URL =
+  "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+
+let geminiKeyCache: { at: number; key: string | null } | null = null;
+const KEY_CACHE_MS = 60_000;
+
+export async function getGeminiApiKey(force = false): Promise<string | null> {
+  if (!force && geminiKeyCache && Date.now() - geminiKeyCache.at < KEY_CACHE_MS) {
+    return geminiKeyCache.key;
+  }
+  let key: string | null = null;
+  try {
+    const url = Deno.env.get("SUPABASE_URL");
+    const svc = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (url && svc) {
+      const res = await fetch(
+        `${url}/rest/v1/payment_gateway_secrets?gateway=eq.gemini_api&select=secret_key&limit=1`,
+        { headers: { apikey: svc, Authorization: `Bearer ${svc}` } },
+      );
+      if (res.ok) {
+        const rows = await res.json();
+        const v = rows?.[0]?.secret_key;
+        if (typeof v === "string" && v.trim()) key = v.trim();
+      }
+    }
+  } catch (e) {
+    console.warn("getGeminiApiKey lookup failed:", e);
+  }
+  if (!key) {
+    const env = Deno.env.get("GEMINI_API_KEY");
+    if (env && env.trim()) key = env.trim();
+  }
+  geminiKeyCache = { at: Date.now(), key };
+  return key;
+}
+
 export async function callGemini(body: OAIBody): Promise<Response> {
+  const model = pickModel(body.model);
+  const payload = { ...body, model };
+
+  // 1) Clé Gemini fournie par l'admin → appel direct à Google (modèles google/*)
+  if (model.startsWith("google/")) {
+    const geminiKey = await getGeminiApiKey();
+    if (geminiKey) {
+      const direct = await fetch(GOOGLE_OAI_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${geminiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ...payload, model: model.replace(/^google\//, "") }),
+      });
+      if (direct.ok) {
+        const h = new Headers(direct.headers);
+        Object.entries(CORS_PASSTHROUGH).forEach(([k, v]) => h.set(k, v));
+        return new Response(direct.body, { status: direct.status, headers: h });
+      }
+      const errText = await direct.text();
+      console.error("Gemini direct API error:", direct.status, errText.slice(0, 500));
+      if (direct.status === 401 || direct.status === 403) {
+        return jsonResponse(direct.status, {
+          error: "Clé Gemini refusée par Google. Vérifiez-la dans Admin → Chatbot → Modèles IA.",
+        });
+      }
+      // Autres erreurs (429, 5xx, modèle indisponible) → repli passerelle Lovable.
+      console.warn("Falling back to Lovable AI Gateway after Gemini direct failure");
+    }
+  }
+
+  // 2) Passerelle Lovable AI (par défaut)
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
   if (!apiKey) return jsonResponse(500, { error: "LOVABLE_API_KEY is not configured" });
-
-  const payload = { ...body, model: pickModel(body.model) };
 
   const upstream = await fetch(GATEWAY_URL, {
     method: "POST",
