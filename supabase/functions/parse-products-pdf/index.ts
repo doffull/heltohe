@@ -4,6 +4,7 @@ import { extractText, getDocumentProxy, renderPageAsImage } from "https://esm.sh
 // Pure-JS image codec (no native deps) used to downscale & re-encode
 // rendered PDF pages as JPEG before shipping them to the AI.
 import { Image } from "https://deno.land/x/imagescript@1.2.17/mod.ts";
+import { getAiModel } from "../_shared/gemini.ts";
 import { extractEmbeddedImages, type EmbeddedImage, type EmbeddedKind } from "./embeddedImages.ts";
 
 const corsHeaders = {
@@ -23,7 +24,7 @@ const CHUNK_CHARS = 12000;
 const MAX_CHUNKS = 20;
 const MAX_IMAGES_PER_PRODUCT = 5;
 const STORAGE_BUCKET = "media";
-const AI_MODEL = await getAiModel("vision");
+
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 const SYSTEM_PROMPT = `Tu es un extracteur de catalogues produits. À partir d'un extrait texte de PDF/tableur, retourne UNIQUEMENT un JSON valide de la forme:
@@ -155,7 +156,7 @@ async function callLovableAI(messages: any[], apiKey: string): Promise<{ ok: tru
       "Authorization": `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: AI_MODEL,
+      model: await getAiModel("vision"),
       messages,
       response_format: { type: "json_object" },
     }),

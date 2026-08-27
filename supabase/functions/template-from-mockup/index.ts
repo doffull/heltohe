@@ -1,4 +1,5 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { getAiModel } from '../_shared/gemini.ts';
 
 const SYSTEM_PROMPT = `Tu es un expert UI qui convertit des maquettes de pages produit e-commerce en JSON structuré.
 Tu dois retourner un template avec un thème (couleurs) et une disposition (blocs sur grille 12 colonnes).
