@@ -185,7 +185,12 @@ export function useUpdateOrder() {
         .single();
       
       if (error) throw error;
-      return dbToAppOrder(data as Record<string, unknown>);
+      const updated = dbToAppOrder(data as Record<string, unknown>);
+      // E-mails automatiques (best-effort)
+      if (fields.paymentStatus === 'Paid') await triggerOrderEmail(id, 'paid');
+      if (fields.status === 'Shipped' && updated.trackingNumber) await triggerOrderEmail(id, 'shipped');
+      return updated;
+
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });

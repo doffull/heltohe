@@ -8,6 +8,10 @@ export interface CustomerRecord {
   firstName: string;
   lastName: string;
   phone?: string;
+  address?: string;
+  city?: string;
+  zip?: string;
+  country?: string;
   loyaltyPoints: number;
   loyaltyTier: string;
   totalSpent: number;
@@ -22,6 +26,10 @@ function dbToCustomer(db: Record<string, unknown>): CustomerRecord {
     firstName: (db.first_name as string) || '',
     lastName: (db.last_name as string) || '',
     phone: (db.phone as string) || undefined,
+    address: (db.address as string) || undefined,
+    city: (db.city as string) || undefined,
+    zip: (db.zip as string) || undefined,
+    country: (db.country as string) || undefined,
     loyaltyPoints: (db.loyalty_points as number) || 0,
     loyaltyTier: (db.loyalty_tier as string) || 'bronze',
     totalSpent: Number(db.total_spent) || 0,
@@ -45,16 +53,49 @@ export function useCustomers() {
 
 type LoyaltyTier = 'bronze' | 'silver' | 'gold' | 'platinum';
 
+export interface CustomerUpdate {
+  id: string;
+  loyalty_points?: number;
+  loyalty_tier?: LoyaltyTier;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string | null;
+  address?: string | null;
+  city?: string | null;
+  zip?: string | null;
+  country?: string | null;
+}
+
 export function useUpdateCustomer() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; loyalty_points?: number; loyalty_tier?: LoyaltyTier }) => {
+    mutationFn: async ({ id, ...updates }: CustomerUpdate) => {
       const { error } = await supabase.from('customers').update(updates).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-customers'] }),
   });
 }
+
+/** Historique des e-mails transactionnels envoyés à un client. */
+export function useCustomerEmailLog(email?: string) {
+  return useQuery({
+    queryKey: ['customer-email-log', email],
+    enabled: !!email,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('customer_email_log')
+        .select('*')
+        .eq('customer_email', email!)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+}
+
 
 export function useDeleteCustomer() {
   const qc = useQueryClient();

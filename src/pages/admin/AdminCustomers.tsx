@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useCustomers, useUpdateCustomer, useBulkDeleteCustomers, CustomerRecord } from '@/hooks/useCustomers';
+import { useCustomers, useUpdateCustomer, useBulkDeleteCustomers, useCustomerEmailLog, CustomerRecord } from '@/hooks/useCustomers';
 import { supabase } from '@/integrations/supabase/client';
 import { Shield } from 'lucide-react';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
 import { 
-  Users, Search, Mail, Phone, Crown, TrendingUp, Eye, Trash2, Filter, ArrowUpDown, RefreshCw
+  Users, Search, Mail, Phone, Crown, TrendingUp, Eye, Trash2, Filter, ArrowUpDown, RefreshCw, Save, History
 } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -90,6 +90,96 @@ function RoleManager({ userId, customerEmail, customerName }: { userId: string; 
               <Checkbox checked={roles.includes(r.value)} onCheckedChange={(c) => toggleRole(r.value, !!c)} />
               <span>{r.label}</span>
             </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CustomerEditForm({ customer, onSaved }: { customer: CustomerRecord; onSaved: (c: CustomerRecord) => void }) {
+  const { toast } = useToast();
+  const update = useUpdateCustomer();
+  const [form, setForm] = useState(customer);
+
+  useEffect(() => { setForm(customer); }, [customer.id]);
+
+  const dirty = JSON.stringify(form) !== JSON.stringify(customer);
+
+  const save = async () => {
+    try {
+      await update.mutateAsync({
+        id: form.id,
+        first_name: form.firstName,
+        last_name: form.lastName,
+        email: form.email,
+        phone: form.phone || null,
+        address: form.address || null,
+        city: form.city || null,
+        zip: form.zip || null,
+        country: form.country || null,
+      });
+      toast({ title: 'Fiche client enregistrée' });
+      onSaved(form);
+    } catch (e: any) {
+      toast({ title: 'Erreur', description: e?.message, variant: 'destructive' });
+    }
+  };
+
+  const field = (label: string, key: keyof CustomerRecord, placeholder?: string) => (
+    <div>
+      <Label className="hud-text text-xs">{label}</Label>
+      <Input value={(form[key] as string) || ''} placeholder={placeholder} onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
+    </div>
+  );
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        {field('Prénom', 'firstName')}
+        {field('Nom', 'lastName')}
+        {field('Email', 'email')}
+        {field('Téléphone', 'phone', '+33...')}
+      </div>
+      {field('Adresse', 'address', 'N° et rue')}
+      <div className="grid grid-cols-3 gap-3">
+        {field('Code postal', 'zip')}
+        {field('Ville', 'city')}
+        {field('Pays', 'country', 'France')}
+      </div>
+      <Button size="sm" className="w-full" disabled={!dirty || update.isPending} onClick={save}>
+        <Save className="h-4 w-4 mr-2" /> {update.isPending ? 'Enregistrement...' : 'Enregistrer la fiche'}
+      </Button>
+    </div>
+  );
+}
+
+const EMAIL_TYPE_LABELS: Record<string, string> = {
+  paid: 'Paiement confirmé',
+  shipped: 'Commande expédiée',
+  role_assigned: 'Attribution de rôle',
+};
+
+function CustomerEmailHistory({ email }: { email: string }) {
+  const { data: logs = [], isLoading } = useCustomerEmailLog(email);
+  return (
+    <div className="space-y-2 pt-2 border-t border-border">
+      <Label className="hud-text text-xs flex items-center gap-1"><History className="h-3 w-3" /> E-mails envoyés</Label>
+      {isLoading ? (
+        <p className="text-xs text-muted-foreground">Chargement...</p>
+      ) : logs.length === 0 ? (
+        <p className="text-xs text-muted-foreground">Aucun e-mail envoyé à ce client.</p>
+      ) : (
+        <div className="space-y-1 max-h-48 overflow-y-auto">
+          {logs.map((l: any) => (
+            <div key={l.id} className="flex items-start justify-between gap-2 text-xs border border-border rounded px-2 py-1.5">
+              <div className="min-w-0">
+                <p className="font-medium truncate">{l.subject}</p>
+                <p className="text-muted-foreground">{EMAIL_TYPE_LABELS[l.email_type] || l.email_type} · {new Date(l.created_at).toLocaleString('fr-FR')}</p>
+                {l.error && <p className="text-destructive truncate">{l.error}</p>}
+              </div>
+              <span className={`shrink-0 px-1.5 py-0.5 rounded uppercase font-bold text-[10px] ${l.status === 'sent' ? 'bg-green-500/20 text-green-500' : 'bg-destructive/20 text-destructive'}`}>{l.status}</span>
+            </div>
           ))}
         </div>
       )}
@@ -278,13 +368,8 @@ export default function AdminCustomers() {
             {selectedCustomer && <RoleBadges roles={rolesByUser?.get(selectedCustomer.userId) || []} />}
           </DialogHeader>
           {selectedCustomer && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div><Label className="hud-text text-xs">Nom</Label><p className="text-sm">{selectedCustomer.firstName} {selectedCustomer.lastName}</p></div>
-                <div><Label className="hud-text text-xs">Email</Label><p className="text-sm flex items-center gap-1"><Mail className="h-3 w-3" />{selectedCustomer.email}</p></div>
-                {selectedCustomer.phone && <div><Label className="hud-text text-xs">Téléphone</Label><p className="text-sm flex items-center gap-1"><Phone className="h-3 w-3" />{selectedCustomer.phone}</p></div>}
-                <div><Label className="hud-text text-xs">Total dépensé</Label><p className="text-sm font-bold flex items-center gap-1"><TrendingUp className="h-3 w-3" />{selectedCustomer.totalSpent.toFixed(2)}€</p></div>
-              </div>
+            <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+              <CustomerEditForm customer={selectedCustomer} onSaved={(c) => setSelectedCustomer(c)} />
               <div className="space-y-2">
                 <Label className="hud-text text-xs">Niveau de fidélité</Label>
                 <Select value={selectedCustomer.loyaltyTier} onValueChange={(v) => { handleUpdateTier(selectedCustomer.id, v); setSelectedCustomer({ ...selectedCustomer, loyaltyTier: v }); }}>
@@ -297,8 +382,12 @@ export default function AdminCustomers() {
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label className="hud-text text-xs">Points de fidélité</Label><p className="text-2xl font-bold">{selectedCustomer.loyaltyPoints} pts</p></div>
+              <div className="flex items-center justify-between">
+                <div><Label className="hud-text text-xs">Points de fidélité</Label><p className="text-2xl font-bold">{selectedCustomer.loyaltyPoints} pts</p></div>
+                <div className="text-right"><Label className="hud-text text-xs">Total dépensé</Label><p className="text-xl font-bold flex items-center gap-1 justify-end"><TrendingUp className="h-4 w-4" />{selectedCustomer.totalSpent.toFixed(2)}€</p></div>
+              </div>
               <RoleManager userId={selectedCustomer.userId} customerEmail={selectedCustomer.email} customerName={`${selectedCustomer.firstName} ${selectedCustomer.lastName}`.trim()} />
+              <CustomerEmailHistory email={selectedCustomer.email} />
 
               <div className="pt-2 border-t border-border">
                 <Button variant="outline" className="w-full" onClick={() => window.location.href = `mailto:${selectedCustomer.email}`}>
@@ -307,6 +396,7 @@ export default function AdminCustomers() {
               </div>
             </div>
           )}
+
         </DialogContent>
       </Dialog>
     </div>
