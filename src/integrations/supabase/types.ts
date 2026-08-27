@@ -841,8 +841,55 @@ export type Database = {
           },
         ]
       }
+      customer_email_log: {
+        Row: {
+          created_at: string
+          customer_email: string
+          email_type: string
+          error: string | null
+          id: string
+          order_id: string | null
+          provider_id: string | null
+          status: string
+          subject: string
+        }
+        Insert: {
+          created_at?: string
+          customer_email: string
+          email_type: string
+          error?: string | null
+          id?: string
+          order_id?: string | null
+          provider_id?: string | null
+          status?: string
+          subject: string
+        }
+        Update: {
+          created_at?: string
+          customer_email?: string
+          email_type?: string
+          error?: string | null
+          id?: string
+          order_id?: string | null
+          provider_id?: string | null
+          status?: string
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_email_log_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
+          address: string | null
+          city: string | null
+          country: string | null
           created_at: string
           email: string
           first_name: string | null
@@ -854,8 +901,12 @@ export type Database = {
           total_spent: number | null
           updated_at: string
           user_id: string
+          zip: string | null
         }
         Insert: {
+          address?: string | null
+          city?: string | null
+          country?: string | null
           created_at?: string
           email: string
           first_name?: string | null
@@ -867,8 +918,12 @@ export type Database = {
           total_spent?: number | null
           updated_at?: string
           user_id: string
+          zip?: string | null
         }
         Update: {
+          address?: string | null
+          city?: string | null
+          country?: string | null
           created_at?: string
           email?: string
           first_name?: string | null
@@ -880,6 +935,7 @@ export type Database = {
           total_spent?: number | null
           updated_at?: string
           user_id?: string
+          zip?: string | null
         }
         Relationships: []
       }
