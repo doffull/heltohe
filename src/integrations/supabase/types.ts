@@ -1931,6 +1931,50 @@ export type Database = {
         }
         Relationships: []
       }
+      order_tracking_events: {
+        Row: {
+          carrier: string | null
+          created_at: string
+          event_at: string
+          id: string
+          label: string
+          location: string | null
+          notified_at: string | null
+          order_id: string
+          status_code: string
+        }
+        Insert: {
+          carrier?: string | null
+          created_at?: string
+          event_at?: string
+          id?: string
+          label: string
+          location?: string | null
+          notified_at?: string | null
+          order_id: string
+          status_code: string
+        }
+        Update: {
+          carrier?: string | null
+          created_at?: string
+          event_at?: string
+          id?: string
+          label?: string
+          location?: string | null
+          notified_at?: string | null
+          order_id?: string
+          status_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_tracking_events_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           created_at: string
