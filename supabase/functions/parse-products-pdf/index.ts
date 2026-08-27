@@ -23,7 +23,7 @@ const CHUNK_CHARS = 12000;
 const MAX_CHUNKS = 20;
 const MAX_IMAGES_PER_PRODUCT = 5;
 const STORAGE_BUCKET = "media";
-const AI_MODEL = "openai/gpt-5-mini";
+const AI_MODEL = await getAiModel("vision");
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 const SYSTEM_PROMPT = `Tu es un extracteur de catalogues produits. À partir d'un extrait texte de PDF/tableur, retourne UNIQUEMENT un JSON valide de la forme:

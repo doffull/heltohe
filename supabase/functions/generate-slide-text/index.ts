@@ -1,4 +1,4 @@
-import { callGemini } from "../_shared/gemini.ts";
+import { callGemini , getAiModel } from "../_shared/gemini.ts";
 // Generate hero slide text (title/subtitle/description/CTA) using Lovable AI
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -40,7 +40,7 @@ Réponds uniquement via l'outil "return_text", avec le texte final seul.`;
     const user = `Contexte/brief: ${context || "Slide hero du site e-commerce mode."}\nGénère uniquement le champ "${field}" en respectant strictement le format imposé.`;
 
     const resp = await callGemini({
-        model: "google/gemini-3.6-flash",
+        model: await getAiModel("default"),
 
         messages: [{ role: "system", content: sys }, { role: "user", content: user }],
         tools: [{

@@ -1,6 +1,6 @@
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
 
-import { callGemini } from "../_shared/gemini.ts";
+import { callGemini , getAiModel } from "../_shared/gemini.ts";
 interface RequestBody {
   category: 'homme' | 'femme' | 'enfant';
   height?: number;
@@ -57,7 +57,7 @@ ${sizeTable}
 Recommande LA taille la plus adaptée parmi les tailles disponibles (si fournies). Si une mensuration est entre deux tailles, prends en compte la coupe préférée. Donne une alternative si pertinente. Sois bref et précis en français.`;
 
     const response = await callGemini({
-        model: "openai/gpt-5-mini",
+        model: await getAiModel("default"),
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userInfo },

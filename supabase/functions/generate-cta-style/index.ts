@@ -1,4 +1,4 @@
-import { callGemini } from "../_shared/gemini.ts";
+import { callGemini , getAiModel } from "../_shared/gemini.ts";
 // Generate a CTA style preset (variant + colors + size + position) using Lovable AI
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,7 +18,7 @@ Choisis des combinaisons audacieuses mais lisibles. Réponds uniquement via l'ou
     const user = `Brief: ${context || "slide hero techwear"}. Propose un preset visuel.`;
 
     const resp = await callGemini({
-        model: "openai/gpt-5-mini",
+        model: await getAiModel("default"),
         messages: [{ role: "system", content: sys }, { role: "user", content: user }],
         tools: [{
           type: "function",

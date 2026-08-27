@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-import { callGemini } from "../_shared/gemini.ts";
+import { callGemini , getAiModel } from "../_shared/gemini.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
@@ -69,7 +69,7 @@ Vérifie :
 5. L'adresse semble-t-elle complète et cohérente`;
 
     const response = await callGemini({
-        model: "openai/gpt-5-mini",
+        model: await getAiModel("default"),
         messages: [
           { role: "system", content: "Tu es un expert en vérification d'identité client pour un e-commerce. Tu analyses les informations et détectes les incohérences." },
           { role: "user", content: prompt },
