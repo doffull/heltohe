@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-import { callGemini } from "../_shared/gemini.ts";
+import { callGemini, getAiModel } from "../_shared/gemini.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -115,8 +115,10 @@ serve(async (req) => {
       console.warn("Could not fetch bot_config, using default prompt:", e);
     }
 
+    const chatModel = await getAiModel("chat");
+
     const response = await callGemini({
-      model: "google/gemini-2.5-flash",
+      model: chatModel,
       messages: [
         { role: "system", content: systemPrompt },
         ...safeMessages,

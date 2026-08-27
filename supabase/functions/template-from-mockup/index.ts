@@ -1,4 +1,5 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { getAiModel } from '../_shared/gemini.ts';
 
 const SYSTEM_PROMPT = `Tu es un expert UI qui convertit des maquettes de pages produit e-commerce en JSON structuré.
 Tu dois retourner un template avec un thème (couleurs) et une disposition (blocs sur grille 12 colonnes).
@@ -104,7 +105,7 @@ Deno.serve(async (req) => {
       method: 'POST',
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'openai/gpt-5-mini',
+        model: await getAiModel("vision"),
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: userContent },

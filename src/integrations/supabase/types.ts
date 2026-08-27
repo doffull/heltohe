@@ -255,36 +255,48 @@ export type Database = {
       }
       bot_config: {
         Row: {
+          ai_default_model: string
+          ai_vision_model: string
           bot_avatar: string | null
           bot_name: string | null
+          chat_model: string
           created_at: string | null
           id: string
           is_active: boolean | null
           suggestions: Json | null
           system_prompt: string
           updated_at: string | null
+          voice_model: string
           welcome_message: string | null
         }
         Insert: {
+          ai_default_model?: string
+          ai_vision_model?: string
           bot_avatar?: string | null
           bot_name?: string | null
+          chat_model?: string
           created_at?: string | null
           id?: string
           is_active?: boolean | null
           suggestions?: Json | null
           system_prompt?: string
           updated_at?: string | null
+          voice_model?: string
           welcome_message?: string | null
         }
         Update: {
+          ai_default_model?: string
+          ai_vision_model?: string
           bot_avatar?: string | null
           bot_name?: string | null
+          chat_model?: string
           created_at?: string | null
           id?: string
           is_active?: boolean | null
           suggestions?: Json | null
           system_prompt?: string
           updated_at?: string | null
+          voice_model?: string
           welcome_message?: string | null
         }
         Relationships: []
