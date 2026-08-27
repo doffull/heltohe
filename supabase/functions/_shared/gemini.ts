@@ -78,3 +78,48 @@ export async function callGemini(body: OAIBody): Promise<Response> {
   Object.entries(CORS_PASSTHROUGH).forEach(([k, v]) => headers.set(k, v));
   return new Response(upstream.body, { status: upstream.status, headers });
 }
+
+// ── Modèles configurables depuis l'admin (table bot_config) ────────────────
+// Permet de régler, sans redéployer, le modèle Gemini utilisé par le chatbot,
+// la commande vocale, les générateurs de texte et les analyses d'images.
+export type AiModelKind = "chat" | "voice" | "default" | "vision";
+
+const MODEL_FALLBACKS: Record<AiModelKind, string> = {
+  chat: DEFAULT_MODEL,
+  voice: DEFAULT_MODEL,
+  default: DEFAULT_MODEL,
+  vision: "google/gemini-2.5-pro",
+};
+
+const MODEL_COLUMNS: Record<AiModelKind, string> = {
+  chat: "chat_model",
+  voice: "voice_model",
+  default: "ai_default_model",
+  vision: "ai_vision_model",
+};
+
+let modelCache: { at: number; row: Record<string, string> } | null = null;
+const MODEL_CACHE_MS = 60_000;
+
+/** Lit le modèle configuré pour un usage donné (fallback = Gemini par défaut). */
+export async function getAiModel(kind: AiModelKind): Promise<string> {
+  try {
+    if (!modelCache || Date.now() - modelCache.at > MODEL_CACHE_MS) {
+      const url = Deno.env.get("SUPABASE_URL");
+      const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      if (!url || !key) return MODEL_FALLBACKS[kind];
+      const res = await fetch(
+        `${url}/rest/v1/bot_config?select=chat_model,voice_model,ai_default_model,ai_vision_model&limit=1`,
+        { headers: { apikey: key, Authorization: `Bearer ${key}` } },
+      );
+      if (!res.ok) return MODEL_FALLBACKS[kind];
+      const rows = await res.json();
+      modelCache = { at: Date.now(), row: rows?.[0] ?? {} };
+    }
+    const value = modelCache.row?.[MODEL_COLUMNS[kind]];
+    return typeof value === "string" && value.trim() ? value.trim() : MODEL_FALLBACKS[kind];
+  } catch (e) {
+    console.warn("getAiModel fallback:", e);
+    return MODEL_FALLBACKS[kind];
+  }
+}
