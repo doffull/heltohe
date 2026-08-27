@@ -732,6 +732,47 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
           )}
         </div>
 
+        {/* Badge rupture de stock */}
+        <div className="space-y-3 border border-border/40 bg-secondary/30 px-3 py-2.5">
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={formData.soldOutBadge}
+              onChange={(e) => setFormData(prev => ({ ...prev, soldOutBadge: e.target.checked }))}
+              className="h-4 w-4 accent-primary"
+            />
+            <span className="flex flex-col">
+              <span className="hud-text text-xs">Badge « Rupture de stock »</span>
+              <span className="text-[10px] text-muted-foreground">
+                Affiche une pastille « Épuisé » sur la vignette et la fiche produit dès que le stock atteint 0.
+              </span>
+            </span>
+          </label>
+
+          {formData.soldOutBadge && (
+            <div className="space-y-3 border-t border-border/40 pt-3">
+              <div className="space-y-1.5">
+                <Label className="hud-text text-[10px]">Texte du badge</Label>
+                <Input
+                  value={formData.soldOutLabel}
+                  onChange={(e) => setFormData(prev => ({ ...prev, soldOutLabel: e.target.value }))}
+                  className="bg-secondary/50 border-border/30"
+                  placeholder="Épuisé"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-muted-foreground">Aperçu :</span>
+                <GlossyBadge kind="soldout" animated={false} label={formData.soldOutLabel.trim() || undefined} />
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                Les badges d'état doivent rester activés globalement (Admin → Badges produit).
+              </p>
+            </div>
+          )}
+        </div>
+
+
+
 
 
 
