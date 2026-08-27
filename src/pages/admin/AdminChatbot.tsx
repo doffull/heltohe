@@ -327,13 +327,84 @@ export default function AdminChatbot() {
 
         {/* MODELES IA */}
         <TabsContent value="ai" className="space-y-4 mt-4">
+          {/* CLÉ GEMINI */}
+          <div className="chamfer-hud bg-card/50 p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <KeyRound className="h-5 w-5 text-primary mt-0.5" />
+              <div className="flex-1">
+                <h3 className="text-sm font-bold hud-text mb-1">CLÉ API GEMINI</h3>
+                <p className="text-xs text-muted-foreground">
+                  Facultatif : saisissez votre propre clé Google AI Studio. Dès qu'elle est enregistrée, elle est
+                  utilisée automatiquement pour <strong>toutes</strong> les fonctionnalités IA du site (chatbot,
+                  commande vocale, textes produit, vision/PDF). Sans clé, la passerelle IA intégrée est utilisée.
+                </p>
+              </div>
+            </div>
+
+            <div className="text-xs">
+              {keyStatus.isLoading ? (
+                <span className="text-muted-foreground">Vérification…</span>
+              ) : keyStatus.data?.configured ? (
+                <span className="text-primary">
+                  ● Clé active (••••{keyStatus.data.last4 || '????'})
+                  {keyStatus.data.source === 'env' ? ' — variable serveur' : ''}
+                  {keyStatus.data.updatedAt ? ` — maj ${new Date(keyStatus.data.updatedAt).toLocaleString('fr-FR')}` : ''}
+                </span>
+              ) : (
+                <span className="text-muted-foreground">○ Aucune clé enregistrée — passerelle IA intégrée utilisée</span>
+              )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="relative flex-1">
+                <Input
+                  type={showKey ? 'text' : 'password'}
+                  value={geminiKey}
+                  onChange={e => setGeminiKey(e.target.value)}
+                  placeholder="AIza..."
+                  autoComplete="off"
+                  className="bg-secondary/50 border-border/30 font-mono text-xs pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowKey(v => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label={showKey ? 'Masquer la clé' : 'Afficher la clé'}
+                >
+                  {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <Button onClick={handleSaveKey} disabled={geminiKey.trim().length < 20 || saveKey.isPending} size="sm">
+                {saveKey.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
+                Vérifier & enregistrer
+              </Button>
+              {keyStatus.data?.source === 'database' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => deleteKey.mutate(undefined, {
+                    onSuccess: () => toast({ title: 'Clé supprimée' }),
+                    onError: (e: Error) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
+                  })}
+                  disabled={deleteKey.isPending}
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />Supprimer
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              La clé est validée auprès de Google avant d'être stockée de façon chiffrée côté serveur ; elle n'est
+              jamais renvoyée au navigateur. Les boutons « Tester » ci-dessous utilisent la clé saisie si le champ
+              est rempli, sinon la clé enregistrée.
+            </p>
+          </div>
+
           <div className="chamfer-hud bg-card/50 p-6 space-y-6">
             <div>
               <h3 className="text-sm font-bold hud-text mb-1">MODÈLES GEMINI DU SITE</h3>
               <p className="text-xs text-muted-foreground">
-                Toute l'IA du site (chatbot, commande vocale, descriptions produit, analyse d'images et de PDF)
-                passe par la passerelle IA intégrée : aucune clé API à saisir. Choisissez simplement le modèle
-                Gemini utilisé pour chaque usage. La modification est prise en compte en moins d'une minute.
+                Choisissez le modèle Gemini utilisé pour chaque usage, puis vérifiez-le avec « Tester » avant
+                d'enregistrer. La modification est prise en compte en moins d'une minute.
               </p>
             </div>
 
@@ -343,26 +414,42 @@ export default function AdminChatbot() {
                 description="Assistant conversationnel du site (widget de chat)."
                 value={chatModel}
                 onChange={setChatModel}
+                onTest={m => runTest('chat', m)}
               />
               <ModelSelect
                 label="COMMANDE VOCALE"
                 description="Recherche vocale, recommandations et actions panier."
                 value={voiceModel}
                 onChange={setVoiceModel}
+                onTest={m => runTest('voice', m)}
               />
               <ModelSelect
                 label="TEXTES & GÉNÉRATEURS IA"
                 description="Descriptions produit, titres, CTA, conseils de taille, vérifications."
                 value={aiDefaultModel}
                 onChange={setAiDefaultModel}
+                onTest={m => runTest('default', m)}
               />
               <ModelSelect
                 label="VISION (IMAGES, PDF, MAQUETTES)"
                 description="Import de catalogues PDF/Excel, analyse d'images et de maquettes."
                 value={aiVisionModel}
                 onChange={setAiVisionModel}
+                onTest={m => runTest('vision', m)}
               />
             </div>
+
+            {testingScope && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />Test en cours…
+              </div>
+            )}
+            {testResult && !testingScope && (
+              <div className={`flex items-start gap-2 text-xs p-3 chamfer-hud-sm ${testResult.ok ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>
+                {testResult.ok ? <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" /> : <XCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />}
+                <span>{testResult.message}</span>
+              </div>
+            )}
 
             <p className="text-xs text-muted-foreground border-t border-border/40 pt-4">
               Astuce : Flash pour la rapidité et le coût, Pro pour les tâches complexes (extraction de catalogues,
