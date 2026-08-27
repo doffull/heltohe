@@ -105,19 +105,29 @@ export default function AdminChatbot() {
   const [showKey, setShowKey] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string; scope: string } | null>(null);
   const [testingScope, setTestingScope] = useState<string | null>(null);
+  const [testHistory, setTestHistory] = useState<Record<string, AiTestRecord>>({});
+
+  useEffect(() => {
+    setTestHistory(readAiTests());
+  }, []);
 
   const runTest = (scope: string, model: string) => {
     setTestingScope(scope);
     setTestResult(null);
+    const record = (ok: boolean, message: string) => {
+      setTestResult({ ok, message, scope });
+      setTestHistory(saveAiTest({ scope, model, ok, message, at: new Date().toISOString() }));
+    };
     testModel.mutate(
       { model, apiKey: geminiKey.trim() || undefined },
       {
-        onSuccess: (res) => setTestResult({ ok: true, message: res.message, scope }),
-        onError: (e: Error) => setTestResult({ ok: false, message: e.message, scope }),
+        onSuccess: (res) => record(true, res.message),
+        onError: (e: Error) => record(false, e.message),
         onSettled: () => setTestingScope(null),
       },
     );
   };
+
 
   const handleSaveKey = () => {
     saveKey.mutate(
