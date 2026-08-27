@@ -72,6 +72,9 @@ serve(async (req) => {
     }
 
     // Gemini API key checked inside callGemini()
+    // Modèle Gemini configurable depuis Admin → Chatbot → Modèles IA
+    const voiceModel = await getAiModel("voice");
+
 
 
     // ─── Mode "search"/"recommend": product retrieval ───
