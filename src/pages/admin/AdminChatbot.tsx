@@ -6,8 +6,50 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Bot, MessageSquare, Save, Plus, Trash2, BarChart2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Bot, MessageSquare, Save, Plus, Trash2, BarChart2, ToggleLeft, ToggleRight, Sparkles } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+const DEFAULT_MODEL = 'google/gemini-2.5-flash';
+const DEFAULT_VISION_MODEL = 'google/gemini-2.5-pro';
+
+/** Modèles Gemini disponibles via la passerelle IA intégrée (aucune clé à saisir). */
+const GEMINI_MODELS: { id: string; label: string; hint: string }[] = [
+  { id: 'google/gemini-3.7-flash', label: 'Gemini 3.7 Flash', hint: 'Dernière génération, rapide et très bon en raisonnement' },
+  { id: 'google/gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro', hint: 'Qualité maximale, plus lent et plus coûteux' },
+  { id: 'google/gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash Lite', hint: 'Le plus économique, pour les tâches simples' },
+  { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash', hint: 'Équilibré (valeur par défaut historique)' },
+  { id: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro', hint: 'Multimodal robuste (images, PDF, catalogues)' },
+];
+
+function ModelSelect({
+  label, description, value, onChange,
+}: { label: string; description: string; value: string; onChange: (v: string) => void }) {
+  const known = GEMINI_MODELS.some(m => m.id === value);
+  return (
+    <div className="space-y-2">
+      <Label className="hud-text text-xs">{label}</Label>
+      <p className="text-xs text-muted-foreground">{description}</p>
+      <select
+        value={known ? value : '__custom'}
+        onChange={e => onChange(e.target.value === '__custom' ? value : e.target.value)}
+        className="w-full h-10 px-3 bg-secondary/50 border border-border/30 rounded-md text-sm"
+      >
+        {GEMINI_MODELS.map(m => (
+          <option key={m.id} value={m.id}>{m.label} — {m.hint}</option>
+        ))}
+        <option value="__custom">Autre modèle (saisie manuelle)</option>
+      </select>
+      {!known && (
+        <Input
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder="google/gemini-2.5-flash"
+          className="bg-secondary/50 border-border/30 font-mono text-xs"
+        />
+      )}
+    </div>
+  );
+}
 
 export default function AdminChatbot() {
   const { toast } = useToast();
@@ -41,6 +83,10 @@ export default function AdminChatbot() {
   const [isActive, setIsActive] = useState(true);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [newSuggestion, setNewSuggestion] = useState('');
+  const [chatModel, setChatModel] = useState(DEFAULT_MODEL);
+  const [voiceModel, setVoiceModel] = useState(DEFAULT_MODEL);
+  const [aiDefaultModel, setAiDefaultModel] = useState(DEFAULT_MODEL);
+  const [aiVisionModel, setAiVisionModel] = useState(DEFAULT_VISION_MODEL);
 
   useEffect(() => {
     if (config) {
@@ -50,6 +96,10 @@ export default function AdminChatbot() {
       setIsActive(config.is_active ?? true);
       const sug = config.suggestions;
       setSuggestions(Array.isArray(sug) ? sug as string[] : []);
+      setChatModel((config as any).chat_model || DEFAULT_MODEL);
+      setVoiceModel((config as any).voice_model || DEFAULT_MODEL);
+      setAiDefaultModel((config as any).ai_default_model || DEFAULT_MODEL);
+      setAiVisionModel((config as any).ai_vision_model || DEFAULT_VISION_MODEL);
     }
   }, [config]);
 
@@ -63,7 +113,11 @@ export default function AdminChatbot() {
           welcome_message: welcomeMessage,
           is_active: isActive,
           suggestions: suggestions,
-        })
+          chat_model: chatModel,
+          voice_model: voiceModel,
+          ai_default_model: aiDefaultModel,
+          ai_vision_model: aiVisionModel,
+        } as any)
         .eq('id', config!.id);
       if (error) throw error;
     },
@@ -130,6 +184,7 @@ export default function AdminChatbot() {
         <TabsList className="bg-muted/50 admin-tabs-scroll w-full h-auto">
           <TabsTrigger value="personality" className="gap-2 text-xs sm:text-sm"><Bot className="h-4 w-4" />Personnalité</TabsTrigger>
           <TabsTrigger value="suggestions" className="gap-2 text-xs sm:text-sm"><MessageSquare className="h-4 w-4" />Suggestions</TabsTrigger>
+          <TabsTrigger value="ai" className="gap-2 text-xs sm:text-sm"><Sparkles className="h-4 w-4" />Modèles IA</TabsTrigger>
           <TabsTrigger value="stats" className="gap-2 text-xs sm:text-sm"><BarChart2 className="h-4 w-4" />Statistiques</TabsTrigger>
         </TabsList>
 
@@ -223,6 +278,52 @@ export default function AdminChatbot() {
                 ))
               )}
             </div>
+          </div>
+        </TabsContent>
+
+        {/* MODELES IA */}
+        <TabsContent value="ai" className="space-y-4 mt-4">
+          <div className="chamfer-hud bg-card/50 p-6 space-y-6">
+            <div>
+              <h3 className="text-sm font-bold hud-text mb-1">MODÈLES GEMINI DU SITE</h3>
+              <p className="text-xs text-muted-foreground">
+                Toute l'IA du site (chatbot, commande vocale, descriptions produit, analyse d'images et de PDF)
+                passe par la passerelle IA intégrée : aucune clé API à saisir. Choisissez simplement le modèle
+                Gemini utilisé pour chaque usage. La modification est prise en compte en moins d'une minute.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <ModelSelect
+                label="CHATBOT (IGRA)"
+                description="Assistant conversationnel du site (widget de chat)."
+                value={chatModel}
+                onChange={setChatModel}
+              />
+              <ModelSelect
+                label="COMMANDE VOCALE"
+                description="Recherche vocale, recommandations et actions panier."
+                value={voiceModel}
+                onChange={setVoiceModel}
+              />
+              <ModelSelect
+                label="TEXTES & GÉNÉRATEURS IA"
+                description="Descriptions produit, titres, CTA, conseils de taille, vérifications."
+                value={aiDefaultModel}
+                onChange={setAiDefaultModel}
+              />
+              <ModelSelect
+                label="VISION (IMAGES, PDF, MAQUETTES)"
+                description="Import de catalogues PDF/Excel, analyse d'images et de maquettes."
+                value={aiVisionModel}
+                onChange={setAiVisionModel}
+              />
+            </div>
+
+            <p className="text-xs text-muted-foreground border-t border-border/40 pt-4">
+              Astuce : Flash pour la rapidité et le coût, Pro pour les tâches complexes (extraction de catalogues,
+              analyse d'images). Le bouton « Sauvegarder » en haut de page enregistre ces réglages.
+            </p>
           </div>
         </TabsContent>
 
