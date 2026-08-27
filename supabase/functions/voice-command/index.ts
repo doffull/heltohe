@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-import { callGemini } from "../_shared/gemini.ts";
+import { callGemini, getAiModel } from "../_shared/gemini.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -96,7 +96,7 @@ Réponds via la fonction search_results.`;
       let searchResp: Response;
       try {
         searchResp = await callGemini({
-            model: "google/gemini-2.5-flash",
+            model: voiceModel,
             messages: [
               { role: "system", content: searchPrompt },
               { role: "user", content: q },
@@ -215,7 +215,7 @@ Règles: search_products pour rechercher, recommend pour conseiller, select_resu
     let resp: Response;
     try {
       resp = await callGemini({
-          model: "google/gemini-2.5-flash",
+          model: voiceModel,
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: transcript },
