@@ -278,13 +278,8 @@ export default function AdminCustomers() {
             {selectedCustomer && <RoleBadges roles={rolesByUser?.get(selectedCustomer.userId) || []} />}
           </DialogHeader>
           {selectedCustomer && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div><Label className="hud-text text-xs">Nom</Label><p className="text-sm">{selectedCustomer.firstName} {selectedCustomer.lastName}</p></div>
-                <div><Label className="hud-text text-xs">Email</Label><p className="text-sm flex items-center gap-1"><Mail className="h-3 w-3" />{selectedCustomer.email}</p></div>
-                {selectedCustomer.phone && <div><Label className="hud-text text-xs">Téléphone</Label><p className="text-sm flex items-center gap-1"><Phone className="h-3 w-3" />{selectedCustomer.phone}</p></div>}
-                <div><Label className="hud-text text-xs">Total dépensé</Label><p className="text-sm font-bold flex items-center gap-1"><TrendingUp className="h-3 w-3" />{selectedCustomer.totalSpent.toFixed(2)}€</p></div>
-              </div>
+            <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+              <CustomerEditForm customer={selectedCustomer} onSaved={(c) => setSelectedCustomer(c)} />
               <div className="space-y-2">
                 <Label className="hud-text text-xs">Niveau de fidélité</Label>
                 <Select value={selectedCustomer.loyaltyTier} onValueChange={(v) => { handleUpdateTier(selectedCustomer.id, v); setSelectedCustomer({ ...selectedCustomer, loyaltyTier: v }); }}>
@@ -297,8 +292,12 @@ export default function AdminCustomers() {
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label className="hud-text text-xs">Points de fidélité</Label><p className="text-2xl font-bold">{selectedCustomer.loyaltyPoints} pts</p></div>
+              <div className="flex items-center justify-between">
+                <div><Label className="hud-text text-xs">Points de fidélité</Label><p className="text-2xl font-bold">{selectedCustomer.loyaltyPoints} pts</p></div>
+                <div className="text-right"><Label className="hud-text text-xs">Total dépensé</Label><p className="text-xl font-bold flex items-center gap-1 justify-end"><TrendingUp className="h-4 w-4" />{selectedCustomer.totalSpent.toFixed(2)}€</p></div>
+              </div>
               <RoleManager userId={selectedCustomer.userId} customerEmail={selectedCustomer.email} customerName={`${selectedCustomer.firstName} ${selectedCustomer.lastName}`.trim()} />
+              <CustomerEmailHistory email={selectedCustomer.email} />
 
               <div className="pt-2 border-t border-border">
                 <Button variant="outline" className="w-full" onClick={() => window.location.href = `mailto:${selectedCustomer.email}`}>
@@ -307,6 +306,7 @@ export default function AdminCustomers() {
               </div>
             </div>
           )}
+
         </DialogContent>
       </Dialog>
     </div>
