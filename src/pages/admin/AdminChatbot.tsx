@@ -96,6 +96,42 @@ export default function AdminChatbot() {
   const [aiDefaultModel, setAiDefaultModel] = useState(DEFAULT_MODEL);
   const [aiVisionModel, setAiVisionModel] = useState(DEFAULT_VISION_MODEL);
 
+  // Clé Gemini + tests
+  const keyStatus = useGeminiKeyStatus();
+  const saveKey = useSaveGeminiKey();
+  const deleteKey = useDeleteGeminiKey();
+  const testModel = useTestAiModel();
+  const [geminiKey, setGeminiKey] = useState('');
+  const [showKey, setShowKey] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string; scope: string } | null>(null);
+  const [testingScope, setTestingScope] = useState<string | null>(null);
+
+  const runTest = (scope: string, model: string) => {
+    setTestingScope(scope);
+    setTestResult(null);
+    testModel.mutate(
+      { model, apiKey: geminiKey.trim() || undefined },
+      {
+        onSuccess: (res) => setTestResult({ ok: true, message: res.message, scope }),
+        onError: (e: Error) => setTestResult({ ok: false, message: e.message, scope }),
+        onSettled: () => setTestingScope(null),
+      },
+    );
+  };
+
+  const handleSaveKey = () => {
+    saveKey.mutate(
+      { apiKey: geminiKey.trim(), model: aiDefaultModel },
+      {
+        onSuccess: (res) => {
+          setGeminiKey('');
+          toast({ title: 'Clé Gemini enregistrée ✓', description: res.message });
+        },
+        onError: (e: Error) => toast({ title: 'Clé refusée', description: e.message, variant: 'destructive' }),
+      },
+    );
+  };
+
   useEffect(() => {
     if (config) {
       setSystemPrompt(config.system_prompt || '');
