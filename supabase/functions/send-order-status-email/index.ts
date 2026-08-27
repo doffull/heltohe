@@ -112,6 +112,41 @@ function shippedHtml(o: Record<string, any>): string {
   return shell(`Commande ${o.order_number} expédiée`, inner, o.customer_email);
 }
 
+const EVENT_TITLES: Record<string, string> = {
+  taken_in_charge: 'Votre colis a été pris en charge',
+  in_transit: 'Votre colis est en transit',
+  out_for_delivery: 'Votre colis est en cours de livraison',
+  delivered: 'Votre colis a été livré',
+  exception: 'Information sur votre colis',
+};
+
+function trackingUpdateHtml(o: Record<string, any>, ev: { status_code: string; label: string; event_at?: string }): string {
+  const firstName = String(o.customer_name || '').split(' ')[0] || 'client';
+  const carrier = o.shipping_carrier || 'Colissimo';
+  const tracking = String(o.tracking_number || '');
+  const url = tracking ? trackingUrl(carrier, tracking) : null;
+  const title = EVENT_TITLES[ev.status_code] || 'Mise à jour de votre colis';
+  const when = ev.event_at
+    ? new Date(ev.event_at).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })
+    : '';
+  const inner = `
+<tr><td style="padding:36px 32px 0;">
+  <h2 style="margin:0 0 8px;font-size:20px;color:#111;">${title}</h2>
+  <p style="margin:0 0 20px;color:#555;font-size:15px;line-height:1.6;">Bonjour <strong>${firstName}</strong>,<br>Nouvelle information sur votre commande <strong>${o.order_number}</strong>.</p>
+  <div style="background:#f9f9f9;border:1px solid #e5e5e5;border-left:4px solid #111;border-radius:4px;padding:20px;">
+    <p style="margin:0;font-size:15px;color:#111;font-weight:700;">${ev.label}</p>
+    ${when ? `<p style="margin:6px 0 0;font-size:12px;color:#888;">${when}</p>` : ''}
+    ${tracking ? `<p style="margin:14px 0 0;font-size:13px;color:#888;">Transporteur : <strong style="color:#111;">${carrier}</strong> — Suivi : <strong style="color:#111;font-family:'Courier New',monospace;">${tracking}</strong></p>` : ''}
+  </div>
+  ${
+    url
+      ? `<p style="margin:24px 0 0;text-align:center;"><a href="${url}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:14px 28px;border-radius:4px;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Suivre mon colis</a></p>`
+      : ''
+  }
+</td></tr>`;
+  return shell(`${title} — ${o.order_number}`, inner, o.customer_email);
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -122,8 +157,8 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const orderId = String(body?.order_id || '').trim();
     const type = String(body?.type || '').trim();
-    if (!orderId || !['paid', 'shipped'].includes(type)) {
-      return json({ error: 'Paramètres invalides (order_id, type: paid|shipped).' }, 400);
+    if (!orderId || !['paid', 'shipped', 'tracking_update'].includes(type)) {
+      return json({ error: 'Paramètres invalides (order_id, type: paid|shipped|tracking_update).' }, 400);
     }
 
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
@@ -138,11 +173,25 @@ Deno.serve(async (req) => {
       return json({ error: 'Numéro de suivi manquant' }, 400);
     }
 
+    const trackingEvent = {
+      status_code: String(body?.event?.status_code || 'in_transit'),
+      label: String(body?.event?.label || 'Mise à jour du suivi'),
+      event_at: body?.event?.event_at ? String(body.event.event_at) : undefined,
+    };
+
     const subject =
       type === 'paid'
         ? `Paiement confirmé — commande ${order.order_number}`
-        : `Votre commande ${order.order_number} est en route`;
-    const html = type === 'paid' ? paidHtml(order) : shippedHtml(order);
+        : type === 'shipped'
+          ? `Votre commande ${order.order_number} est en route`
+          : `${EVENT_TITLES[trackingEvent.status_code] || 'Mise à jour de votre colis'} — ${order.order_number}`;
+    const html =
+      type === 'paid'
+        ? paidHtml(order)
+        : type === 'shipped'
+          ? shippedHtml(order)
+          : trackingUpdateHtml(order, trackingEvent);
+
 
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
