@@ -2,6 +2,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Order, OrderStatus, PaymentStatus, OrderItem } from '@/types';
 
+/** Envoi automatique (best-effort) des e-mails transactionnels Resend. */
+export async function triggerOrderEmail(orderId: string, type: 'paid' | 'shipped') {
+  try {
+    const { error } = await supabase.functions.invoke('send-order-status-email', {
+      body: { order_id: orderId, type },
+    });
+    if (error) console.error('send-order-status-email', error);
+  } catch (e) {
+    console.error('send-order-status-email', e);
+  }
+}
+
+
 // Transform DB order to app order
 function dbToAppOrder(db: Record<string, unknown>): Order {
   return {
