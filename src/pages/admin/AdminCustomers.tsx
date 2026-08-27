@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useCustomers, useUpdateCustomer, useBulkDeleteCustomers, CustomerRecord } from '@/hooks/useCustomers';
+import { useCustomers, useUpdateCustomer, useBulkDeleteCustomers, useCustomerEmailLog, CustomerRecord } from '@/hooks/useCustomers';
 import { supabase } from '@/integrations/supabase/client';
 import { Shield } from 'lucide-react';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
 import { 
-  Users, Search, Mail, Phone, Crown, TrendingUp, Eye, Trash2, Filter, ArrowUpDown, RefreshCw
+  Users, Search, Mail, Phone, Crown, TrendingUp, Eye, Trash2, Filter, ArrowUpDown, RefreshCw, Save, History
 } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
