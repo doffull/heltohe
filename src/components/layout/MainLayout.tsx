@@ -748,8 +748,12 @@ export function MainLayout({ children }: MainLayoutProps) {
       {/* Global search */}
       <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
 
+      {/* Confirmation animée d'ajout au panier + redirection */}
+      <AddToCartDialog />
+
       {/* Newsletter Popup Host */}
       {!isAdmin && cookieDecided && <PopupHost />}
+
 
       {/* Consentement cookies (RGPD/CNIL) */}
       <CookieConsentBanner />
