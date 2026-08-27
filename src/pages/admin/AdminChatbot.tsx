@@ -9,6 +9,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Bot, MessageSquare, Save, Plus, Trash2, BarChart2, ToggleLeft, ToggleRight, Sparkles, KeyRound, Loader2, CheckCircle2, XCircle, Eye, EyeOff } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGeminiKeyStatus, useSaveGeminiKey, useDeleteGeminiKey, useTestAiModel } from '@/hooks/useAiKeys';
+import { AI_TEST_SCOPE_LABELS, formatAiTestDate, readAiTests, saveAiTest, type AiTestRecord } from '@/lib/aiTestHistory';
+
 
 const DEFAULT_MODEL = 'google/gemini-2.5-flash';
 const DEFAULT_VISION_MODEL = 'google/gemini-2.5-pro';
@@ -105,19 +107,29 @@ export default function AdminChatbot() {
   const [showKey, setShowKey] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string; scope: string } | null>(null);
   const [testingScope, setTestingScope] = useState<string | null>(null);
+  const [testHistory, setTestHistory] = useState<Record<string, AiTestRecord>>({});
+
+  useEffect(() => {
+    setTestHistory(readAiTests());
+  }, []);
 
   const runTest = (scope: string, model: string) => {
     setTestingScope(scope);
     setTestResult(null);
+    const record = (ok: boolean, message: string) => {
+      setTestResult({ ok, message, scope });
+      setTestHistory(saveAiTest({ scope, model, ok, message, at: new Date().toISOString() }));
+    };
     testModel.mutate(
       { model, apiKey: geminiKey.trim() || undefined },
       {
-        onSuccess: (res) => setTestResult({ ok: true, message: res.message, scope }),
-        onError: (e: Error) => setTestResult({ ok: false, message: e.message, scope }),
+        onSuccess: (res) => record(true, res.message),
+        onError: (e: Error) => record(false, e.message),
         onSettled: () => setTestingScope(null),
       },
     );
   };
+
 
   const handleSaveKey = () => {
     saveKey.mutate(
@@ -450,6 +462,38 @@ export default function AdminChatbot() {
                 <span>{testResult.message}</span>
               </div>
             )}
+
+            <div className="border-t border-border/40 pt-4 space-y-2">
+              <h4 className="text-xs font-bold hud-text">DERNIERS TESTS</h4>
+              {Object.keys(AI_TEST_SCOPE_LABELS).map((scope) => {
+                const rec = testHistory[scope];
+                return (
+                  <div
+                    key={scope}
+                    className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs p-2 chamfer-hud-sm bg-muted/30"
+                  >
+                    <span className="font-bold w-40 flex-shrink-0">{AI_TEST_SCOPE_LABELS[scope]}</span>
+                    {!rec ? (
+                      <span className="text-muted-foreground">Jamais testé</span>
+                    ) : (
+                      <>
+                        <span className={`flex items-center gap-1 flex-shrink-0 ${rec.ok ? 'text-primary' : 'text-destructive'}`}>
+                          {rec.ok ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
+                          {rec.ok ? 'OK' : 'Échec'}
+                        </span>
+                        <span className="text-muted-foreground flex-shrink-0">{formatAiTestDate(rec.at)}</span>
+                        <span className="font-mono text-[11px] text-muted-foreground flex-shrink-0">{rec.model}</span>
+                        <span className={`sm:truncate ${rec.ok ? 'text-muted-foreground' : 'text-destructive'}`} title={rec.message}>
+                          {rec.message}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+
 
             <p className="text-xs text-muted-foreground border-t border-border/40 pt-4">
               Astuce : Flash pour la rapidité et le coût, Pro pour les tâches complexes (extraction de catalogues,
