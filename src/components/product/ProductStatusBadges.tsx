@@ -33,7 +33,7 @@ export function getProductBadges(product: Partial<Product> | null | undefined): 
   const stock = typeof product.stock === 'number' ? product.stock : undefined;
   const hasDiscount = Boolean(product.salePrice && product.price && product.salePrice < product.price);
 
-  if (stock === 0) out.push('soldout');
+  if (stock === 0 && product.soldOutBadge !== false) out.push('soldout');
   if (hasDiscount || tags.includes('promo')) out.push('promo');
   if (tags.includes('new') || tags.includes('nouveau')) out.push('new');
   if (tags.includes('top')) out.push('top');
@@ -102,7 +102,13 @@ export function ProductStatusBadges({ product, compact = false, animated = true,
           kind={b.kind}
           compact={compact}
           animated={animated}
-          label={b.kind === 'promo' && pct ? `Promo ${pct}` : undefined}
+          label={
+            b.kind === 'promo' && pct
+              ? `Promo ${pct}`
+              : b.kind === 'soldout' && product?.soldOutLabel?.trim()
+                ? product.soldOutLabel.trim()
+                : undefined
+          }
         />
       ))}
     </div>

@@ -71,6 +71,7 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
   const [activeOp, setActiveOp] = useState<BoolOp>('unchanged');
   const [subtitleOp, setSubtitleOp] = useState<SubtitleOp>('unchanged');
   const [subtitleArg, setSubtitleArg] = useState('');
+  const [soldOutOp, setSoldOutOp] = useState<BoolOp>('unchanged');
 
   const computeUpdates = (p: Product) => {
     const upd: Partial<Product> & { isActive?: boolean } = {};
@@ -133,6 +134,11 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
 
     if (activeOp !== 'unchanged') upd.isActive = activeOp === 'true';
 
+    if (soldOutOp !== 'unchanged') {
+      const next = soldOutOp === 'true';
+      if (next !== (p.soldOutBadge !== false)) upd.soldOutBadge = next;
+    }
+
     if (subtitleOp !== 'unchanged') {
       const next =
         subtitleOp === 'clear' ? '' :
@@ -149,7 +155,7 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
   const allDiff = useMemo(
     () => products.map(p => ({ p, upd: computeUpdates(p) })).filter(x => Object.keys(x.upd).length > 0),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [products, priceOp, priceArg, saleOp, saleArg, stockOp, stockArg, skuOp, skuArg, skuFind, category, extraCatOp, extraCat, tagsOp, tagsArg, activeOp, subtitleOp, subtitleArg],
+    [products, priceOp, priceArg, saleOp, saleArg, stockOp, stockArg, skuOp, skuArg, skuFind, category, extraCatOp, extraCat, tagsOp, tagsArg, activeOp, subtitleOp, subtitleArg, soldOutOp],
 
   );
 
@@ -351,6 +357,18 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
                   <SelectItem value="unchanged">Inchangé</SelectItem>
                   <SelectItem value="true">Activer</SelectItem>
                   <SelectItem value="false">Désactiver</SelectItem>
+                </SelectContent>
+              </Select>
+            </FieldRow>
+
+            {/* Badge rupture de stock */}
+            <FieldRow label="Badge rupture">
+              <Select value={soldOutOp} onValueChange={(v) => setSoldOutOp(v as BoolOp)}>
+                <SelectTrigger className="w-[220px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unchanged">Inchangé</SelectItem>
+                  <SelectItem value="true">Afficher « Épuisé »</SelectItem>
+                  <SelectItem value="false">Masquer « Épuisé »</SelectItem>
                 </SelectContent>
               </Select>
             </FieldRow>

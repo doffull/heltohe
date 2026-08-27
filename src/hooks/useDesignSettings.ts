@@ -195,6 +195,7 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     homeFeedSections: ((db.settings_json as any)?.homeFeedSections) ?? [],
     gifPresets: ((db.settings_json as any)?.gifPresets) ?? [],
     showProductStatusBadges: ((db.settings_json as any)?.showProductStatusBadges) ?? false,
+    soldOutBadgeDefault: ((db.settings_json as any)?.soldOutBadgeDefault) ?? true,
 
   } as DesignSettings;
 }
@@ -359,6 +360,7 @@ function settingsToDb(s: DesignSettings) {
       homeFeedSections: (s as any).homeFeedSections ?? [],
       gifPresets: (s as any).gifPresets ?? [],
       showProductStatusBadges: (s as any).showProductStatusBadges === true,
+      soldOutBadgeDefault: (s as any).soldOutBadgeDefault !== false,
 
 
     } as unknown as Json,
