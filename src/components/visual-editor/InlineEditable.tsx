@@ -48,12 +48,20 @@ export function InlineEditable({
     if (!isEditing) setLocalVal(value);
   }, [value, isEditing]);
 
+  function autoGrow(el: HTMLTextAreaElement | null) {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.max(el.scrollHeight, 72)}px`;
+  }
+
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
       inputRef.current.select();
+      if (multiline) autoGrow(inputRef.current);
     }
-  }, [isEditing]);
+  }, [isEditing, multiline]);
+
 
   function handleActivate(e: React.MouseEvent) {
     if (!isActive) return;
