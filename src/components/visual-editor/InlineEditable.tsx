@@ -124,9 +124,10 @@ export function InlineEditable({
             value={localVal}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
-            className={cn(sharedInputClass, 'resize-none overflow-hidden')}
-            style={{ ...style, caretColor: 'hsl(var(--primary))' }}
+            className={cn(sharedInputClass, 'resize-y overflow-auto block')}
+            style={{ ...style, caretColor: 'hsl(var(--primary))', minHeight: '4.5rem', maxHeight: '70vh' }}
             rows={3}
+
             placeholder={placeholder}
           />
         ) : (
