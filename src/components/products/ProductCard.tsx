@@ -299,7 +299,7 @@ export function ProductCard({
             onAddToCart();
           }}
         >
-          {isOutOfStock ? 'Épuisé' : 'Ajouter au panier'}
+          {isOutOfStock ? 'Coming soon' : 'Ajouter au panier'}
         </button>
       )}
     </div>
