@@ -50,8 +50,9 @@ function TrackingTimeline({ order }: { order: MyOrder }) {
   );
 }
 
-function OrderCard({ order }: { order: MyOrder }) {
+function OrderCard({ order, events = [] }: { order: MyOrder; events?: TrackingEvent[] }) {
   const url = carrierTrackingUrl(order.shippingCarrier, order.trackingNumber);
+
   return (
     <article className="chamfer-hud bg-card/50 p-5 sm:p-6 space-y-5">
       <header className="flex flex-wrap items-center justify-between gap-3">
