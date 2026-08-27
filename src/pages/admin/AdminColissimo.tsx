@@ -1567,6 +1567,8 @@ function ConfigurationTab() {
 
   return (
     <div className="max-w-2xl space-y-6">
+      <TrackingApiCard />
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
