@@ -357,6 +357,17 @@ export default function AdminProductBadges() {
                   <Label className="text-sm">{soldOutDefaultOn ? 'Activé par défaut' : 'Désactivé par défaut'}</Label>
                 </div>
               </div>
+              <div className="mt-4 border-t border-border/60 pt-4 space-y-2 max-w-sm">
+                <Label className="text-sm font-semibold">Texte du badge de rupture</Label>
+                <Input
+                  value={(designSettings as any).soldOutBadgeLabel ?? 'Coming soon'}
+                  onChange={(e) => updateDesignSettings({ soldOutBadgeLabel: e.target.value } as any)}
+                  placeholder="Coming soon"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Utilisé pour tous les produits en rupture de stock qui n'ont pas de texte personnalisé.
+                </p>
+              </div>
             </CardContent>
           </Card>
 
