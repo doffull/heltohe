@@ -6,8 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Bot, MessageSquare, Save, Plus, Trash2, BarChart2, ToggleLeft, ToggleRight, Sparkles } from 'lucide-react';
+import { Bot, MessageSquare, Save, Plus, Trash2, BarChart2, ToggleLeft, ToggleRight, Sparkles, KeyRound, Loader2, CheckCircle2, XCircle, Eye, EyeOff } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useGeminiKeyStatus, useSaveGeminiKey, useDeleteGeminiKey, useTestAiModel } from '@/hooks/useAiKeys';
 
 const DEFAULT_MODEL = 'google/gemini-2.5-flash';
 const DEFAULT_VISION_MODEL = 'google/gemini-2.5-pro';
