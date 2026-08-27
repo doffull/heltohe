@@ -9,6 +9,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Bot, MessageSquare, Save, Plus, Trash2, BarChart2, ToggleLeft, ToggleRight, Sparkles, KeyRound, Loader2, CheckCircle2, XCircle, Eye, EyeOff } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGeminiKeyStatus, useSaveGeminiKey, useDeleteGeminiKey, useTestAiModel } from '@/hooks/useAiKeys';
+import { AI_TEST_SCOPE_LABELS, formatAiTestDate, readAiTests, saveAiTest, type AiTestRecord } from '@/lib/aiTestHistory';
+
 
 const DEFAULT_MODEL = 'google/gemini-2.5-flash';
 const DEFAULT_VISION_MODEL = 'google/gemini-2.5-pro';
