@@ -9,6 +9,12 @@ import { MagicLinkEmail } from '../_shared/email-templates/magic-link.tsx'
 import { RecoveryEmail } from '../_shared/email-templates/recovery.tsx'
 import { EmailChangeEmail } from '../_shared/email-templates/email-change.tsx'
 import { ReauthenticationEmail } from '../_shared/email-templates/reauthentication.tsx'
+import {
+  renderAuthEmailHtml,
+  renderAuthEmailText,
+  type AuthEmailContent,
+} from '../_shared/auth-email-custom.ts'
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -237,17 +243,42 @@ async function handleWebhook(req: Request): Promise<Response> {
     newEmail: payload.data.new_email,
   }
 
-  // Render React Email to HTML and plain text
-  const html = await renderAsync(React.createElement(EmailTemplate, templateProps))
-  const text = await renderAsync(React.createElement(EmailTemplate, templateProps), {
-    plainText: true,
-  })
-
-  // Enqueue email for async processing by the dispatcher (process-email-queue).
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   )
+
+  // Admin-published customization (optional) overrides the built-in template.
+  let custom: AuthEmailContent | null = null
+  try {
+    const { data } = await supabase
+      .from('auth_email_templates')
+      .select('published')
+      .eq('key', emailType)
+      .maybeSingle()
+    if (data?.published && typeof data.published === 'object') {
+      custom = data.published as AuthEmailContent
+    }
+  } catch (error) {
+    console.error('Failed to load custom auth email template', { emailType, run_id })
+  }
+
+  let html: string
+  let text: string
+  let subject = EMAIL_SUBJECTS[emailType] || 'Notification'
+
+  if (custom?.heading || custom?.body) {
+    html = renderAuthEmailHtml(custom, templateProps)
+    text = renderAuthEmailText(custom, templateProps)
+    if (custom.subject) subject = custom.subject
+  } else {
+    // Render React Email to HTML and plain text
+    html = await renderAsync(React.createElement(EmailTemplate, templateProps))
+    text = await renderAsync(React.createElement(EmailTemplate, templateProps), {
+      plainText: true,
+    })
+  }
+
 
   const messageId = crypto.randomUUID()
 
@@ -267,7 +298,7 @@ async function handleWebhook(req: Request): Promise<Response> {
       to: payload.data.email,
       from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
       sender_domain: SENDER_DOMAIN,
-      subject: EMAIL_SUBJECTS[emailType] || 'Notification',
+      subject,
       html,
       text,
       purpose: 'transactional',
