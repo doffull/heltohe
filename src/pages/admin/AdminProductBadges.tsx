@@ -170,6 +170,7 @@ function BadgePreview({
 export default function AdminProductBadges() {
   const { designSettings, updateDesignSettings, products } = useApp();
   const statusBadgesOn = (designSettings as any).showProductStatusBadges === true;
+  const soldOutDefaultOn = (designSettings as any).soldOutBadgeDefault !== false;
 
   const remoteCfg: ProductTrustBadgesConfig = useMemo(() => {
     return (
@@ -339,6 +340,24 @@ export default function AdminProductBadges() {
                 <Label className="text-sm">{statusBadgesOn ? 'Affichés' : 'Masqués partout'}</Label>
               </div>
             </CardHeader>
+            <CardContent className="border-t border-border/60 pt-4">
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                  <p className="text-sm font-semibold">Badge « Rupture de stock » — valeur par défaut</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    S'applique aux nouveaux produits. Chaque fiche produit possède sa propre case
+                    « Badge Rupture de stock » (avec texte personnalisable) pour l'activer ou la désactiver.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Switch
+                    checked={soldOutDefaultOn}
+                    onCheckedChange={(v) => updateDesignSettings({ soldOutBadgeDefault: v } as any)}
+                  />
+                  <Label className="text-sm">{soldOutDefaultOn ? 'Activé par défaut' : 'Désactivé par défaut'}</Label>
+                </div>
+              </div>
+            </CardContent>
           </Card>
 
 

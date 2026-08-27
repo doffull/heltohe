@@ -71,6 +71,7 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
   const [activeOp, setActiveOp] = useState<BoolOp>('unchanged');
   const [subtitleOp, setSubtitleOp] = useState<SubtitleOp>('unchanged');
   const [subtitleArg, setSubtitleArg] = useState('');
+  const [soldOutOp, setSoldOutOp] = useState<BoolOp>('unchanged');
 
   const computeUpdates = (p: Product) => {
     const upd: Partial<Product> & { isActive?: boolean } = {};
@@ -132,6 +133,11 @@ export function BulkEditDialog({ open, onOpenChange, products, categories, onDon
     }
 
     if (activeOp !== 'unchanged') upd.isActive = activeOp === 'true';
+
+    if (soldOutOp !== 'unchanged') {
+      const next = soldOutOp === 'true';
+      if (next !== (p.soldOutBadge !== false)) upd.soldOutBadge = next;
+    }
 
     if (subtitleOp !== 'unchanged') {
       const next =
