@@ -70,6 +70,11 @@ export interface Product {
   /** Position du badge sur l'image. */
   limitedEditionPosition?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
+  /** Affiche le badge d'état « Épuisé » quand le stock est à 0 (défaut : true). */
+  soldOutBadge?: boolean;
+  /** Libellé personnalisé du badge de rupture (défaut : « Épuisé »). */
+  soldOutLabel?: string;
+
   /** Statut de publication : brouillon (invisible côté client) ou publié. */
   status?: 'draft' | 'published';
   /** Date de mise à la corbeille (null = non supprimé). */

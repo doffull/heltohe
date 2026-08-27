@@ -42,6 +42,8 @@ function dbToAppProduct(db: Record<string, unknown>): Product {
     limitedEditionColor: (db.limited_edition_color as string) || undefined,
     limitedEditionTextColor: (db.limited_edition_text_color as string) || undefined,
     limitedEditionPosition: ((db.limited_edition_position as string) || undefined) as Product['limitedEditionPosition'],
+    soldOutBadge: (db as any).sold_out_badge === undefined || (db as any).sold_out_badge === null ? true : Boolean((db as any).sold_out_badge),
+    soldOutLabel: ((db as any).sold_out_label as string) || undefined,
     status: ((db.status as string) === 'draft' ? 'draft' : 'published') as Product['status'],
     deletedAt: (db.deleted_at as string) || null,
   };
@@ -85,6 +87,8 @@ const FIELD_MAP: Record<string, { col: string; transform: (v: any) => any }> = {
   limitedEditionColor: { col: 'limited_edition_color', transform: (v) => v || null },
   limitedEditionTextColor: { col: 'limited_edition_text_color', transform: (v) => v || null },
   limitedEditionPosition: { col: 'limited_edition_position', transform: (v) => v || null },
+  soldOutBadge: { col: 'sold_out_badge', transform: (v) => v !== false },
+  soldOutLabel: { col: 'sold_out_label', transform: (v) => (v ? String(v) : null) },
   status: { col: 'status', transform: (v) => (v === 'draft' ? 'draft' : 'published') },
 };
 
