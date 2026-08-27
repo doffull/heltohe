@@ -32,12 +32,12 @@ function normalizeCode(raw: string): string {
 
 /**
  * Suivi La Poste / Colissimo.
- * Nécessite le secret LAPOSTE_TRACKING_API_KEY (API « Suivi v2 » de La Poste).
+ * La clé « Suivi v2 » est lue en base (saisie dans l'admin) ou dans le secret LAPOSTE_TRACKING_API_KEY.
  * Sans clé, la fonction renvoie une liste vide (mode dégradé) sans échouer.
  */
-async function fetchLaPosteEvents(tracking: string): Promise<TrackingEvent[]> {
-  const key = Deno.env.get('LAPOSTE_TRACKING_API_KEY');
+async function fetchLaPosteEvents(tracking: string, key: string | null): Promise<TrackingEvent[]> {
   if (!key) return [];
+
 
   const res = await fetch(
     `https://api.laposte.fr/suivi/v2/idships/${encodeURIComponent(tracking)}?lang=fr_FR`,
