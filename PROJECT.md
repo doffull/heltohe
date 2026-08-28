@@ -160,7 +160,8 @@ résultat**, pas les valeurs locales, qui part dans l'e-mail de confirmation.
 
 **Numéro de commande** : `HMP-<timestamp base36>`, généré côté client puis passé au serveur.
 
-**E-mail de confirmation** : `send-order-confirmation`, en *fire and forget* — l'échec d'envoi
+**E-mail de confirmation** : `send-order-confirmation` (détail des 5 canaux d'envoi : §17),
+en *fire and forget* — l'échec d'envoi
 n'annule pas la commande. Conséquence : une commande peut exister sans e-mail parti, sans trace
 visible. À garder en tête en cas de réclamation client.
 
@@ -527,3 +528,55 @@ Maps doit être restreinte par référent HTTP, ou remplacée.
 `npm test` : **10 échecs sur 11**, déjà présents sur le commit livré par le dev
 (`2cafa2d3`) — vérifié en rejouant la suite sur la base non modifiée. Rien à voir
 avec la reprise, mais la suite ne sert pour l'instant à rien comme garde-fou.
+
+---
+
+## 17. Envoi d'e-mails — 5 méthodes, 3 transports
+
+**Aucun SMTP nulle part** : tout part en HTTPS via des API REST. Les edge functions tournent
+sur Deno et ne parlent jamais SMTP — ce sont Resend et Brevo qui remettent les messages.
+
+⚠️ Piège de lecture : l'URL `…/brevo/smtp/email` est le nom d'un **endpoint REST** de Brevo
+(leur API historique s'appelait « SMTP API »), pas une connexion SMTP.
+
+| # | Fonction | Circonstance | Transport | Expéditeur |
+|---|---|---|---|---|
+| 1 | `send-order-confirmation` | commande passée · paiement reçu · renvoi manuel (`emailType`) + copie admin | **Resend direct** `api.resend.com` | `onboarding@resend.dev` 🔴 |
+| 2 | `send-order-status-email` | statut : payée · expédiée (exige un n° de suivi) · livrée | **Resend direct** | `onboarding@resend.dev` 🔴 |
+| 3 | `send-order-notification` | réservation de stock · rôle admin attribué · gabarits de `notification_config` | Resend **via passerelle Lovable** | selon config |
+| 4 | `crm-send-message` | message CRM envoyé à la main depuis le back-office | **Brevo ou Resend** via passerelle, au choix (`messaging_config.provider`) | `messaging_config.default_from_email` |
+| 5 | `auth-email-hook` | inscription · mot de passe oublié · magic link · changement d'e-mail · invitation · réauthentification | **file Supabase** (`enqueue_email` → queue `auth_emails`), gabarits React Email | `noreply@helvetica-mp.com` ✅ |
+
+### 🔴 Les deux e-mails les plus envoyés partent d'un domaine de test
+
+`send-order-confirmation` et `send-order-status-email` expédient depuis
+`onboarding@resend.dev`, le bac-à-sable de Resend : **aucune signature DKIM au nom du
+domaine**, réputation partagée, et un expéditeur qui n'inspire pas confiance sur une
+confirmation de commande. Le hook d'authentification, lui, est correctement configuré.
+
+Correction : vérifier `helvetica-mp.com` dans Resend, puis changer les deux constantes
+`FROM`. C'est l'affaire de quelques minutes une fois le DNS validé.
+
+### Deux chemins vers Resend, deux exigences de clés
+
+- **En direct** (`api.resend.com`) : `RESEND_API_KEY` suffit.
+- **Via la passerelle** (`connector-gateway.lovable.dev/resend/emails`) : il faut
+  `LOVABLE_API_KEY` **et** `RESEND_API_KEY` (envoyée en `X-Connection-Api-Key`). Si la
+  première manque, l'envoi échoue **silencieusement** — le message est enregistré en base
+  avec un simple avertissement.
+
+### Dette
+
+**4 transports pour 5 usages, sans module partagé** : chaque fonction refait son appel dans
+son coin, avec son propre expéditeur et sa propre gestion d'erreur. Ajouter un canal (SMTP,
+autre fournisseur) suppose aujourd'hui de toucher **8 points d'appel** dans 4 fichiers. Un
+`_shared/mailer.ts` réglerait le sujet et rendrait `messaging_config.provider` réellement
+universel — il ne pilote pour l'instant que le CRM.
+
+### Et si on voulait du SMTP ?
+
+C'est possible depuis les edge functions (`denomailer`, exemple officiel Supabase), mais
+**les ports sont restreints** : 25 et 587 sont bloqués, 465 en TLS fonctionne, 2587 est
+recommandé (AWS SES). Vérifier le port du serveur SMTP visé **avant** de s'engager. À
+peser : plus de reprise automatique, plus de retour de bounces, latence du handshake TLS
+dans le chemin d'une commande, et réputation d'IP à construire.
