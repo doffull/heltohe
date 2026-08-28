@@ -129,7 +129,7 @@ export default function AdminPaymentTest() {
         p_order_data: {
           order_number: orderNumber,
           user_id: user?.id || '',
-          customer_email: user?.email || 'test@helvetica-mp.net',
+          customer_email: user?.email || 'test@helvetica-mp.com',
           customer_name: 'Commande de test',
           customer_phone: '0600000000',
           customer_address: '1 rue du Test',
