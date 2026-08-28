@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { prepareImageForUpload } from '@/lib/iosImage';
 
 interface UseFileUploadOptions {
   bucket?: string;
@@ -13,7 +14,10 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const upload = async (file: File): Promise<string | null> => {
+  const upload = async (rawFile: File): Promise<string | null> => {
+    // iPhone photos arrive in HEIC and can be huge → convert + downscale first,
+    // otherwise they render blank on Android/Chrome or blow WebKit's memory cap.
+    const file = rawFile.type.startsWith('video/') ? rawFile : await prepareImageForUpload(rawFile);
     // Per-type size guard: videos are limited stricter
     const isVideo = file.type.startsWith('video/');
     const effectiveMax = isVideo ? Math.min(maxSizeMB, 30) : maxSizeMB;

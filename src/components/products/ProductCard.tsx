@@ -11,6 +11,7 @@ import ProductTitleLogo from '@/components/product/ProductTitleLogo';
 import KidsNoReturnNotice from '@/components/product/KidsNoReturnNotice';
 import { isKidsProduct } from '@/lib/productFamily';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { ResilientImage } from '@/components/media/ResilientImage';
 
 
 
@@ -106,12 +107,11 @@ export function ProductCard({
           }
         }}
       >
-        <img
+        <ResilientImage
           key={`${product.id}-${selectedColorIndex ?? 'default'}`}
           src={displayImage}
           alt={product.name}
-          loading="lazy"
-          decoding="async"
+          fade={false}
           className={cn(
             "w-full h-full object-cover transition-all animate-fade-in",
             canSwap && hovered
@@ -127,11 +127,10 @@ export function ProductCard({
 
         {/* Image de survol (swap) */}
         {canSwap && (
-          <img
+          <ResilientImage
             src={hoverImage}
             alt={`${product.name} — vue alternative`}
-            loading="lazy"
-            decoding="async"
+            fade={false}
             aria-hidden="true"
             className={cn(
               "absolute inset-0 w-full h-full object-cover transition-all pointer-events-none",

@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ResilientImage } from '@/components/media/ResilientImage';
 import { cn } from '@/lib/utils';
 import type { Product } from '@/types';
 
@@ -57,11 +58,10 @@ export default function ProductStrip({ products, eyebrow, title, compact, classN
               className={cn(cardWidth, 'shrink-0 text-left group')}
             >
               <div className="relative overflow-hidden bg-muted/30 aspect-[3/4] mb-2">
-                <img
+                <ResilientImage
                   src={product.image}
                   alt={product.name}
                   loading="lazy"
-                  decoding="async"
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
                 {hasDiscount && (
