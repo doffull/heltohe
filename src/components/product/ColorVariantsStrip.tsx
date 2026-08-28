@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import type { Product } from '@/types';
 import { useProducts } from '@/hooks/useProducts';
 import { getFamilyVariants } from '@/lib/productFamily';
+import { ResilientImage } from '@/components/media/ResilientImage';
 import { getSwatchStyle } from '@/lib/swatch';
 import { isMarketplaceCategory } from '@/lib/shopVisibility';
 
@@ -45,7 +46,7 @@ export default function ColorVariantsStrip({ product, className }: ColorVariants
               title={`${v.name}${v.subtitle ? ` — ${v.subtitle}` : ''}`}
             >
               <div className="relative w-20 h-24 overflow-hidden bg-muted/30 mb-1">
-                <img
+                <ResilientImage
                   src={v.colorOptions?.[0]?.image || v.image}
                   alt={v.name}
                   loading="lazy"

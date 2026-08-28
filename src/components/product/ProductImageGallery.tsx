@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ZoomIn, ZoomOut, Play, Image as ImageIcon, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ColorOption, Product } from '@/types';
@@ -6,6 +6,10 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { EditableProductImage } from '@/components/visual-editor/EditableProductImage';
 import { cn } from '@/lib/utils';
 import { LimitedEditionBadge, badgeCornerClasses, getBadgePosition } from '@/components/product/LimitedEditionBadge';
+import { ResilientImage } from '@/components/media/ResilientImage';
+
+/** iOS-hardened image usable with framer-motion animations. */
+const MotionImage = motion.create(ResilientImage);
 
 
 interface ProductImageGalleryProps {
@@ -66,6 +70,19 @@ export default function ProductImageGallery({
     return Array.from(new Set(all));
   }, [image, galleryImages]);
   const hasMultipleImages = imageList.length > 1;
+
+  // Précharge les images voisines : sur iOS, le swipe affichait un cadre vide
+  // le temps du téléchargement puisque WebKit ne décode rien à l'avance.
+  useEffect(() => {
+    const neighbours = [activeImageIndex + 1, activeImageIndex - 1]
+      .map((i) => imageList[(i + imageList.length) % imageList.length])
+      .filter(Boolean) as string[];
+    neighbours.forEach((src) => {
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = src;
+    });
+  }, [activeImageIndex, imageList]);
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!containerRef.current || !isZoomed || activeMedia !== 'image') return;
@@ -149,10 +166,13 @@ export default function ProductImageGallery({
       >
         <AnimatePresence mode="wait">
           {activeMedia === 'image' ? (
-            <motion.img
+            <MotionImage
               key={`image-${displayImage}-${selectedColor}`}
               src={displayImage}
               alt={name}
+              loading="eager"
+              fetchPriority="high"
+              fade={false}
               className="w-full h-full object-cover"
               initial={{ opacity: 0, scale: 1.03 }}
               animate={{ opacity: 1, scale: isZoomed ? 3.5 : 1 }}
@@ -364,9 +384,10 @@ export default function ProductImageGallery({
               style={{ touchAction: 'manipulation' }}
               onClick={(e) => e.stopPropagation()}
             >
-              <img
+              <ResilientImage
                 src={displayImage}
                 alt={name}
+                loading="eager"
                 className="w-full min-h-full object-contain"
                 style={{ touchAction: 'pinch-zoom', maxWidth: 'none', width: '200%', marginLeft: '-50%' }}
               />
@@ -404,7 +425,7 @@ export default function ProductImageGallery({
               whileTap={{ scale: 0.95 }}
             >
               {co.image ? (
-                <img src={co.image} alt={co.label} className="w-full h-full object-cover" />
+                <ResilientImage src={co.image} alt={co.label} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: co.color }}>
                   {selectedColor === co.color && (
@@ -424,7 +445,7 @@ export default function ProductImageGallery({
                   onClick={() => { switchToImage(); setActiveImageIndex(i); }}
                   className={`w-20 h-20 chamfer-hud-sm overflow-hidden border-2 bg-card/30 relative transition-colors ${activeMedia === 'image' && activeImageIndex === i ? 'border-primary' : 'border-border/30 opacity-60 hover:opacity-100'}`}
                 >
-                  <img src={img} alt={`${name} ${i + 1}`} className="w-full h-full object-cover" />
+                  <ResilientImage src={img} alt={`${name} ${i + 1}`} className="w-full h-full object-cover" />
                   {i === 0 && videoUrl && (
                     <div className="absolute bottom-1 left-1">
                       <ImageIcon className="h-3 w-3 text-foreground drop-shadow-md" />
@@ -453,7 +474,7 @@ export default function ProductImageGallery({
             onClick={switchToVideo}
             className={`w-14 h-14 chamfer-hud-sm overflow-hidden border-2 bg-card/30 relative transition-colors ${activeMedia === 'video' ? 'border-primary' : 'border-border/30 opacity-60 hover:opacity-100'}`}
           >
-            <img src={image} alt={`${name} video`} className="w-full h-full object-cover grayscale" />
+            <ResilientImage src={image} alt={`${name} video`} className="w-full h-full object-cover grayscale" />
             <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
               <Play className="h-5 w-5 text-foreground fill-foreground" />
             </div>
