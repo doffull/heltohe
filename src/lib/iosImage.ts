@@ -83,7 +83,6 @@ export async function prepareImageForUpload(file: File): Promise<File> {
   canvas.height = height;
   const ctx = canvas.getContext('2d');
   if (!ctx) return file;
-  ctx.drawImage as unknown;
   bitmap.draw(ctx, width, height);
 
   const blob = await new Promise<Blob | null>((resolve) =>
