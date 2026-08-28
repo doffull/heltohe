@@ -170,8 +170,7 @@ export default function ProductImageGallery({
               key={`image-${displayImage}-${selectedColor}`}
               src={displayImage}
               alt={name}
-              loading="eager"
-              fetchPriority="high"
+              priority
               fade={false}
               className="w-full h-full object-cover"
               initial={{ opacity: 0, scale: 1.03 }}
