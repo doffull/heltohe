@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ZoomIn, ZoomOut, Play, Image as ImageIcon, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ColorOption, Product } from '@/types';
@@ -70,6 +70,19 @@ export default function ProductImageGallery({
     return Array.from(new Set(all));
   }, [image, galleryImages]);
   const hasMultipleImages = imageList.length > 1;
+
+  // Précharge les images voisines : sur iOS, le swipe affichait un cadre vide
+  // le temps du téléchargement puisque WebKit ne décode rien à l'avance.
+  useEffect(() => {
+    const neighbours = [activeImageIndex + 1, activeImageIndex - 1]
+      .map((i) => imageList[(i + imageList.length) % imageList.length])
+      .filter(Boolean) as string[];
+    neighbours.forEach((src) => {
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = src;
+    });
+  }, [activeImageIndex, imageList]);
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!containerRef.current || !isZoomed || activeMedia !== 'image') return;
