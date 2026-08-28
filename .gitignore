@@ -1,24 +1,95 @@
+# ──────────────────────────────────────────────
+# Dépendances
+# ──────────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+
+# ──────────────────────────────────────────────
+# Build / sortie
+# ──────────────────────────────────────────────
+dist/
+dist-ssr/
+build/
+out/
+*.tsbuildinfo
+
+# ──────────────────────────────────────────────
+# Variables d'environnement & secrets
+# (on garde uniquement .env.example comme modèle)
+# ──────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.local
+*.pem
+*.key
+
+# ──────────────────────────────────────────────
+# Supabase (CLI / local dev)
+# ──────────────────────────────────────────────
+supabase/.temp/
+supabase/.branches/
+supabase/.env
+.supabase/
+
+# ──────────────────────────────────────────────
+# Tests & couverture
+# ──────────────────────────────────────────────
+coverage/
+.nyc_output/
+*.lcov
+test-results/
+playwright-report/
+
+# ──────────────────────────────────────────────
+# Caches outils
+# ──────────────────────────────────────────────
+.vite/
+.eslintcache
+.stylelintcache
+.cache/
+.parcel-cache/
+.turbo/
+*.tgz
+
+# ──────────────────────────────────────────────
 # Logs
-logs
+# ──────────────────────────────────────────────
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+bun-debug.log*
 lerna-debug.log*
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
+# ──────────────────────────────────────────────
+# Éditeurs & IDE
+# ──────────────────────────────────────────────
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
+!.vscode/settings.json
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+*~
+
+# Claude Code (paramètres locaux uniquement)
+.claude/settings.local.json
+
+# ──────────────────────────────────────────────
+# OS
+# ──────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini

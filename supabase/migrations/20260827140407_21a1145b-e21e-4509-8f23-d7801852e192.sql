@@ -67,9 +67,24 @@ SELECT cron.schedule(
   '7 * * * *',
   $$
   SELECT net.http_post(
-    url := 'https://bumfyrfmormisyjletpb.supabase.co/functions/v1/poll-carrier-tracking',
-    headers := '{"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1bWZ5cmZtb3JtaXN5amxldHBiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAyMTY3NjgsImV4cCI6MjA4NTc5Mjc2OH0.n145vusBgfNPvGXSCacoSxwJDujFR9zNEUB2twBovVI"}'::jsonb,
+    url := 'https://hzjzqdlyehclnpeqkier.supabase.co/functions/v1/poll-carrier-tracking',
+    headers := '{"Content-Type": "application/json", "Authorization": "Bearer __ANON_KEY__"}'::jsonb,
     body := '{"source": "cron"}'::jsonb
   );
   $$
 );
+
+-- ⚠️ Le jeton ci-dessous doit être la clé anon DE CE projet Supabase.
+-- La migration d'origine embarquait celle d'un autre projet : le cron aurait
+-- été rejeté en 401 sans que rien ne le signale. Le garde-fou qui suit fait
+-- échouer le déploiement tant que la valeur n'a pas été renseignée — un échec
+-- bruyant vaut mieux qu'un suivi de colis silencieusement mort.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM cron.job
+    WHERE jobname = 'poll-carrier-tracking-hourly' AND command LIKE '%__ANON_KEY__%'
+  ) THEN
+    RAISE EXCEPTION 'poll-carrier-tracking : remplacer __ANON_KEY__ par la clé anon du projet avant de déployer';
+  END IF;
+END $$;
