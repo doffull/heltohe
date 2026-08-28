@@ -1,166 +1,153 @@
 # VARIABLES — Helvetica MP
 
-> Inventaire **exhaustif** des variables du projet : le nom, où la renseigner, à quoi elle sert,
-> et ce qui casse si elle manque.
+> **Inventaire complet des variables du projet** : ce que chacune fait, et **où on la
+> renseigne**. Réécrit le 28/08/2026 par relecture du code (`7d0af17d`), après le changement
+> de dépôt (PROJECT.md §16) qui a ajouté le suivi de colis, les e-mails d'authentification et
+> la gestion des clés IA.
 >
-> Établi par analyse du dépôt (`8cb2c82`) : `import.meta.env` et `process.env` dans `src/`,
-> `Deno.env.get()` dans `supabase/functions/`, tables de configuration dans `supabase/migrations/`.
-> **Toute variable listée ici est réellement lue par le code** — les variables mortes sont
-> isolées en §6.
+> La question à se poser n'est jamais « quelle est la valeur ? » mais **« quel emplacement
+> gagne ? »** : plusieurs clés existent à deux endroits, et c'est presque toujours la base de
+> données qui l'emporte sur les secrets.
+>
+> Pour vérifier que cet inventaire est encore exact après une évolution, voir le §7.
 
 ---
 
 ## 1. Les quatre emplacements
 
-Une variable de ce projet vit à l'un de ces quatre endroits. Les confondre est l'erreur la plus
-fréquente et la plus coûteuse à diagnostiquer.
-
-| # | Emplacement | Quoi | Visibilité |
+| # | Emplacement | Qui le lit | Comment on le renseigne |
 |---|---|---|---|
-| **1** | Fichier `.env` à la racine | variables `VITE_*` du front | **PUBLIQUES** — embarquées dans le bundle |
-| **2** | Supabase → Edge Functions → Secrets | secrets serveur (Deno) | privées, jamais exposées au navigateur |
-| **3** | Base de données (tables `*_config`, `*_secrets`) | réglages pilotés depuis `/admin` | selon RLS |
-| **4** | Saisi à la volée dans l'UI | identifiants WooCommerce | non persisté (§5) |
+| 1 | **`.env`** à la racine | le front, au **build** (Vite) | fichier local, **jamais commité** — `.env.example` sert de modèle |
+| 2 | **Environnement du shell** | les scripts hors bundle (SEO, MCP, build protégé) | variables exportées, ou lues dans le `.env` par le script lui-même |
+| 3 | **Secrets Supabase** | les 36 edge functions | *Dashboard → Edge Functions → Secrets*, ou `supabase secrets set` |
+| 4 | **Base de données** | le front **et** les edge functions | écrans `/admin/*`, sans intervention technique |
 
-> ⚠️ **Jamais de secret dans le `.env`.** Tout `VITE_*` finit en clair dans le JavaScript livré
-> au navigateur. La `service_role key` n'a rien à y faire.
+⚠️ **Un `VITE_*` n'est pas un secret.** Tout ce qui porte ce préfixe est inscrit en clair dans
+le JavaScript livré au navigateur. N'y mettre que du public : clé *publishable* Supabase,
+client ID PayPal, clé Maps **restreinte par référent**. Une clé secrète va en emplacement 3.
 
 ---
 
 ## 2. Front — fichier `.env` (variables `VITE_*`)
 
-À copier depuis `.env.example`. Toutes sont publiques.
-
-| Variable | Requis | Rôle | Si absente |
+| Variable | Obligatoire | Rôle | Si absente |
 |---|---|---|---|
-| `VITE_SUPABASE_URL` | **oui** | URL du projet Supabase | l'app ne démarre pas |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | **oui** | clé anon (protégée par RLS) | l'app ne démarre pas |
-| `VITE_SUPABASE_PROJECT_ID` | oui | identifiant projet | dysfonctionnements ponctuels |
-| `VITE_PAYPAL_CLIENT_ID` | non | client ID PayPal — **repli sandbox uniquement** | voir l'encadré ci-dessous |
-| `VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY` | non | carte du localisateur de boutiques | `/trouver-une-boutique` dégradé |
-| `VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_TRACKING_ID` | non | tracking associé à la carte | — |
-| `VITE_LICENSE_DOMAINS` | non | domaines autorisés pour `build:protected` | **le verrou est inactif** (§6) |
+| `VITE_SUPABASE_URL` | **oui** | URL du projet Supabase | l'application ne démarre pas |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | **oui** | clé publique (anon) du projet | l'application ne démarre pas |
+| `VITE_SUPABASE_PROJECT_ID` | non | identifiant du projet, à titre indicatif | — |
+| `VITE_SITE_URL` | recommandé | **domaine public du site** : source unique des URLs absolues — canonical, Open Graph, `sitemap.xml`, `robots.txt`, aperçu de l'éditeur visuel | repli sur `https://helvetica-mp.com` (`src/lib/site.ts`) |
+| `VITE_PAYPAL_CLIENT_ID` | non | client ID PayPal public — **repli** si l'admin n'en a pas saisi en base | repli sur `"test"` : boutons PayPal en mode démo |
+| `VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY` | non | carte du localisateur de boutiques | `/trouver-une-boutique` en mode dégradé |
+| `VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_TRACKING_ID` | non | identifiant de suivi associé à la carte | — |
+| `VITE_LICENSE_DOMAINS` | non | domaines autorisés à exécuter l'application (`src/lib/licenseGuard.ts`) | garde-fou inactif, tous les domaines passent |
 
-Où les trouver : Dashboard Supabase → *Project Settings → API*.
+### ⚠️ PayPal : la base gagne sur le `.env`
 
-### ⚠️ PayPal : la base gagne toujours sur le `.env`
+`VITE_PAYPAL_CLIENT_ID` n'est qu'un **repli**. Le client ID réellement utilisé vient de la
+table `paypal_config` (`client_id_sandbox` / `client_id_live` selon `environment`), pilotée
+depuis **`/admin/paypal`**. Modifier le `.env` sans vider ce champ en base ne change rien.
 
-`src/hooks/usePayPalConfig.ts` applique cette règle :
-
-```ts
-const fromDb = environment === 'live' ? clientIdLive : clientIdSandbox;
-return fromDb || (environment === 'live' ? '' : ENV_PAYPAL_CLIENT_ID);
-```
-
-**En live il n'y a aucun repli.** Si `client_id_live` est vide dans la table `paypal_config`, le
-client ID vaut `""` et le bouton PayPal ne se charge pas — même avec `VITE_PAYPAL_CLIENT_ID`
-parfaitement renseigné. En production, tout se règle dans `/admin/paypal`, jamais ici.
+Côté **serveur**, c'est l'inverse : les identifiants qui signent réellement les paiements
+(`PAYPAL_*_CLIENT_SECRET`) sont lus **uniquement** dans les secrets Supabase, jamais en base.
+La table ne décide que de l'environnement (`sandbox` / `live`) et des options d'affichage.
 
 ---
 
 ## 3. Front — variables **sans** préfixe `VITE_`
 
-Ces deux-là ne sont **pas** dans `.env.example` et ne sont **pas** des variables Vite : elles sont
-lues par `process.env` dans `src/lib/mcp/tools/*` (serveur MCP exécuté par Node, hors bundle).
+Elles ne partent pas dans le bundle : elles servent aux outils qui tournent **avant ou autour**
+du build.
 
-| Variable | Où | Rôle |
+| Variable | Lue par | Rôle |
 |---|---|---|
-| `SUPABASE_URL` | environnement du process Node qui lance le serveur MCP | client Supabase des outils MCP |
-| `SUPABASE_PUBLISHABLE_KEY` | idem | idem |
+| `VITE_SITE_URL` | `scripts/generate-seo-files.mjs`, `vite.config.ts` | même variable qu'au §2, mais lue ici côté **Node**. Le script la cherche dans l'environnement, puis dans `.env.local`, puis dans `.env` |
+| `SUPABASE_URL` | `supabase/functions/mcp/index.ts` (serveur MCP local) | projet ciblé par l'outillage MCP |
+| `SUPABASE_PUBLISHABLE_KEY` | idem | clé publique pour le même usage |
+| `PROTECT` | `vite.config.ts` | `PROTECT=1` active l'obfuscation du JavaScript émis (`npm run build:protected`) |
 
-Consommée par : `add-to-wishlist`, `remove-from-wishlist`, `list-wishlist`, `list-products`,
-`list-boutiques`. Le code les déréférence avec `!` (non-null assertion) : si elles manquent, l'outil
-plante à l'exécution, sans message clair.
+### Le domaine de repli est écrit à deux endroits
 
-### Variable de build
-
-| Variable | Où | Rôle |
-|---|---|---|
-| `PROTECT` | ligne de commande | `PROTECT=1` active l'obfuscation du JS (`vite.config.ts:57`). Déjà positionnée par le script `bun run build:protected`. |
+`https://helvetica-mp.com` figure dans `src/lib/site.ts` **et** dans
+`scripts/generate-seo-files.mjs` — le second s'exécute hors du bundle Vite et ne peut donc pas
+importer le premier. **Garder les deux valeurs alignées.**
 
 ---
 
 ## 4. Edge Functions — secrets Supabase
 
-À déclarer dans **Supabase → Edge Functions → Secrets**, ou :
+### 4.1 Injectés par la plateforme — rien à faire
 
-```bash
-supabase secrets set NOM=valeur
-```
-
-En développement local : fichier `supabase/functions/.env` (chargé par `supabase start`).
-
-**Ne jamais les mettre dans le `.env` de la racine — ils n'y seraient pas lus.**
-
-### 4.1 Injectés automatiquement par la plateforme — rien à faire
-
-| Variable | Note |
+| Variable | Rôle |
 |---|---|
-| `SUPABASE_URL` | utilisée par 25 occurrences |
-| `SUPABASE_ANON_KEY` | clé legacy, respecte RLS |
-| `SUPABASE_SERVICE_ROLE_KEY` | **contourne RLS** — ne jamais exposer côté navigateur |
+| `SUPABASE_URL` | URL du projet |
+| `SUPABASE_ANON_KEY` | clé publique, pour agir **au nom de l'appelant** (RLS appliquée) |
+| `SUPABASE_SERVICE_ROLE_KEY` | clé d'administration : **contourne la RLS**. À réserver aux fonctions qui ont déjà vérifié les droits |
 
 ### 4.2 À déclarer manuellement
 
 | Variable | Fonctions consommatrices | Rôle |
 |---|---|---|
-| `LOVABLE_API_KEY` | **19 fonctions** (dont `_shared/gemini.ts`) | passerelle IA `ai.gateway.lovable.dev` (Gemini/GPT) |
-| `SUPABASE_JWT_SECRET` | `spin-roulette` | signature/vérification de jeton. **N'est pas** un secret par défaut Supabase : à récupérer dans *Project Settings → API → JWT Secret* |
-| `PAYPAL_LIVE_CLIENT_ID` | `paypal`, `paypal-webhook` | PayPal production |
-| `PAYPAL_LIVE_CLIENT_SECRET` | `paypal`, `paypal-webhook` | PayPal production |
-| `PAYPAL_SANDBOX_CLIENT_ID` | `paypal`, `paypal-webhook` | PayPal test |
-| `PAYPAL_SANDBOX_CLIENT_SECRET` | `paypal`, `paypal-webhook` | PayPal test |
-| `COLISSIMO_LOGIN` | `colissimo-proxy`, `create-colissimo-label` | compte contrat Colissimo |
-| `COLISSIMO_PASSWORD` | `colissimo-proxy`, `create-colissimo-label` | idem |
-| `LAPOSTE_API_KEY` | `colissimo-proxy` | API points relais La Poste |
-| `RESEND_API_KEY` | `send-order-confirmation`, `send-order-notification`, `crm-send-message` | e-mail transactionnel |
+| `LOVABLE_API_KEY` | **21 fonctions sur 36** — 11 directement, 12 via `_shared/gemini.ts` | passerelle IA `ai.gateway.lovable.dev`. Sert **aussi** de secret de signature au webhook d'e-mails d'authentification (`auth-email-hook`) |
+| `GEMINI_API_KEY` | `_shared/gemini.ts`, `ai-keys` | clé Google Gemini en accès direct. Repli : **la base gagne** (§5) |
+| `SUPABASE_JWT_SECRET` | `spin-roulette` | signature de jeton. **N'est pas** injecté par défaut : à récupérer dans *Project Settings → API → JWT Secret* |
+| `PAYPAL_LIVE_CLIENT_ID` · `PAYPAL_LIVE_CLIENT_SECRET` | `paypal`, `paypal-webhook` | PayPal production |
+| `PAYPAL_SANDBOX_CLIENT_ID` · `PAYPAL_SANDBOX_CLIENT_SECRET` | `paypal`, `paypal-webhook` | PayPal test |
+| `COLISSIMO_LOGIN` · `COLISSIMO_PASSWORD` | `colissimo-proxy`, `create-colissimo-label` | compte contrat Colissimo : points relais et bordereaux |
+| `LAPOSTE_API_KEY` | `colissimo-proxy` | API **points relais** La Poste |
+| `LAPOSTE_TRACKING_API_KEY` | `poll-carrier-tracking`, `tracking-key` | API **suivi de colis** La Poste — **différente** de la précédente. Repli : la base gagne (§5) |
+| `CARRIER_WEBHOOK_TOKEN` | `carrier-tracking-webhook` | jeton partagé authentifiant les appels entrants du transporteur. Sans lui, l'endpoint accepterait n'importe quel statut de livraison. Repli : la base gagne (§5) |
+| `RESEND_API_KEY` | `send-order-confirmation`, `send-order-notification`, `send-order-status-email`, `crm-send-message` | e-mail transactionnel |
 | `BREVO_API_KEY` | `crm-send-message` | second canal e-mail |
-| `TWILIO_API_KEY` | `send-order-notification` | SMS — **passe par le connecteur Lovable**, donc `LOVABLE_API_KEY` est aussi requise, et le numéro d'envoi vient de `notification_config.sms_from_number` (base) |
+| `TWILIO_API_KEY` | `send-order-notification` | SMS — passe par le connecteur Lovable, donc `LOVABLE_API_KEY` est **aussi** requise ; le numéro d'expédition vient de `notification_config.sms_from_number` |
 | `GOOGLE_MAPS_API_KEY` | `boutique-lookup` | clé **serveur**, distincte de la clé navigateur du §2 |
-| `LAPOSTE_TRACKING_API_KEY` | `poll-carrier-tracking` | suivi de colis La Poste — **distincte** de `LAPOSTE_API_KEY`, qui sert aux points relais |
-| `CARRIER_WEBHOOK_TOKEN` | `carrier-tracking-webhook` | jeton partagé qui authentifie les appels entrants du transporteur. Sans lui, l'endpoint accepterait n'importe quel statut de livraison |
 
-Depuis le 27/08/2026, `RESEND_API_KEY` est également lue par `send-order-status-email`
-(notification de changement de statut) et `auth-email-hook` (e-mails d'authentification
-personnalisés), et `LOVABLE_API_KEY` par `ai-keys`.
-
-> 💰 **`LOVABLE_API_KEY` est le premier poste de facture.** 19 des 31 fonctions l'utilisent, dont la
-> génération d'images et de vidéos, et 21 fonctions sont publiques (`verify_jwt = false`) sans
-> limitation de débit. Voir PROJECT.md §9.
+> 💰 **`LOVABLE_API_KEY` est le premier poste de facture** : génération d'images et de vidéos
+> comprises, et **22 fonctions sur 36 sont publiques** (`verify_jwt = false`) sans limitation
+> de débit. Voir PROJECT.md §9.
 
 ---
 
-## 5. Base de données — réglages pilotés depuis `/admin`
+## 5. Base de données — le coffre `payment_gateway_secrets`
 
-Ce ne sont pas des variables d'environnement mais des **lignes en base**. Elles se renseignent
-exclusivement depuis le back-office, jamais dans un fichier.
+Malgré son nom, cette table ne sert plus qu'aux paiements : c'est le **coffre à clés générique**
+du projet. Une ligne = une clé, identifiée par la colonne `gateway`.
 
-| Table | Écran | Contenu |
+| `gateway` | Contenu | Écran de saisie | Repli si la ligne est absente |
+|---|---|---|---|
+| `payplug` | clé secrète PayPlug | `/admin/checkout` | aucun — PayPlug est désactivé |
+| `gemini_api` | clé Google Gemini | `/admin/chatbot` | secret `GEMINI_API_KEY`, puis la passerelle Lovable |
+| `laposte_tracking` | clé API de suivi de colis | `/admin/colissimo` | secret `LAPOSTE_TRACKING_API_KEY` |
+| `carrier_webhook` | jeton du webhook transporteur | `/admin/colissimo` | secret `CARRIER_WEBHOOK_TOKEN` |
+
+**Règle constante : la base d'abord, le secret Supabase en repli.** Le code lit
+`secret_key || Deno.env.get(...)`. Conséquence pratique : **changer un secret Supabase reste
+sans effet tant que la ligne existe en base.** Les écrans d'admin affichent d'ailleurs la
+source réellement retenue (`database` ou `env`).
+
+---
+
+## 6. Base de données — réglages pilotés depuis `/admin`
+
+Ce ne sont pas des variables d'environnement, mais elles en jouent le rôle : elles changent le
+comportement du site **sans redéploiement**. Ces tables utilisent une ligne unique identifiée
+par `config_key = 'main'`.
+
+| Table | Écran | Ce qu'elle pilote |
 |---|---|---|
-| `paypal_config` | `/admin/paypal` | `environment` (sandbox/live), `client_id_sandbox`, `client_id_live`, `webhook_id`, `currency`, `locale`, `intent`, boutons et placements |
-| `payment_gateway_secrets` | Admin → Paiement & Livraison | `gateway` + `secret_key`. Passerelles acceptées : `stripe`, `payplug`, `mollie`, `klarna`, `paypal` (`payment-keys/index.ts:16`) — **seul `payplug` a une edge function implémentée** |
-| `messaging_config` | Admin → Messagerie | `default_from_email`, `default_from_name`, `provider` (resend/brevo), `signature` |
-| `notification_config` | Admin → Notifications | déclencheurs, canaux email/SMS, `sms_from_number`, gabarits e-mail et SMS |
-| `admin_config`, `bot_config`, `checkout_config`, `design_settings`, `roulette_config`, `category_hero_settings` | écrans `/admin/*` dédiés | réglages fonctionnels (voir PROJECT.md) |
+| `design_settings` | `/admin/design`, `/admin/seo` | identité du site (`site_name`, `site_tagline`), **tout le SEO** (`seo_default_title`, `seo_default_description`, `seo_og_image`, `seo_keywords`, `seo_indexable`, `seo_noimageindex`, `seo_redirects`), mode maintenance |
+| `checkout_config` | `/admin/checkout` | prix livraison domicile / relais, seuil de franco, modes activés, message du tunnel |
+| `paypal_config` | `/admin/paypal` | environnement PayPal, client IDs publics, boutons affichés (Pay Later, wallets, Venmo, messaging) |
+| `notification_config` | `/admin/notifications` | déclencheurs de notification, canaux, gabarits e-mail et SMS, numéro d'expédition SMS |
+| `messaging_config` | `/admin/messagerie` | expéditeur par défaut (adresse, nom), fournisseur, signature |
+| `admin_config` | `/admin/parametres` | e-mail de notification admin, **adresse d'expédition Colissimo** (nom, rue, code postal, ville) |
+| `bot_config` | `/admin/chatbot` | prompt système, nom et avatar du bot, suggestions — et les **modèles IA** (`chat_model`, `voice_model`, `ai_default_model`, `ai_vision_model`), lus par `_shared/gemini.ts` avec repli codé en dur |
+| `roulette_config` | `/admin/roulette` | activation, textes, délai de réapparition, validité des lots |
+| `category_hero_settings` | `/admin/design` | visuels d'en-tête par catégorie |
 
-> 🔐 `payment_gateway_secrets` est en RLS avec `REVOKE ALL ... FROM anon, authenticated` : seul le
-> `service_role` y accède, via l'edge function `payment-keys`. Le front ne lit jamais que `last4`.
-
-### WooCommerce — le quatrième emplacement
-
-Les identifiants d'import (`storeUrl`, `consumerKey`, `consumerSecret`) **ne sont stockés nulle
-part** : ils sont saisis dans le formulaire `/admin/woocommerce` (simples `useState`) et transmis
-dans le corps de la requête à `woocommerce-import`. Ils sont donc à ressaisir à chaque import.
-
----
-
-## 6. Variables mortes et pièges
-
-| Variable | Statut |
-|---|---|
-| `VITE_LICENSE_KEY` | **jamais lue par le code.** Mentionnée dans l'en-tête de `licenseGuard.ts`, la renseigner n'a aucun effet |
-| `VITE_LICENSE_DOMAINS` vide | **le verrou de licence ne protège rien** : un `build:protected` sans cette variable démarre partout. Toujours autorisés quoi qu'il arrive : `localhost`, `127.0.0.1`, `0.0.0.0`, `*.lovable.app`, `*.lovableproject.com`, `*.lovable.dev` |
-| Clés `lvtk:` | l'ancien nom du projet (`LVTK6`) survit dans les clés `localStorage` et les événements DOM. **Ne pas renommer sans migration** : ça déconnecte les sessions et vide les paniers en cours |
+> Les vues `*_public` (`design_settings_public`, `bot_config_public`, `checkout_config_public`,
+> `paypal_config_public`, `roulette_config_public`) exposent au visiteur non connecté un
+> sous-ensemble **sans secrets**. Ajouter une colonne sensible à une table de config sans
+> vérifier sa vue publique, c'est la publier.
 
 ---
 
@@ -168,25 +155,47 @@ dans le corps de la requête à `woocommerce-import`. Ils sont donc à ressaisir
 
 ```bash
 # Front — variables Vite réellement consommées
-grep -rhoE "import\.meta\.env\.[A-Za-z_]+" src | sort -u
+grep -rhno "import\.meta\.env\.[A-Za-z_]*" src/ | sed 's/.*env\.//' | sort -u
 
-# Front — variables Node hors bundle (serveur MCP)
-grep -rhoE "process\.env\.[A-Za-z_]+" src vite.config.ts | sort -u
+# Hors bundle — scripts Node, build, serveur MCP
+grep -rn "process\.env\.[A-Za-z_]*" src/ scripts/ vite.config.ts supabase/functions/mcp/index.ts
 
-# Edge functions — secrets réellement lus
-grep -rhoE "Deno\.env\.get\(['\"][A-Z_]+['\"]\)" supabase/functions | sort -u
+# Edge functions — quel secret, lu par quelle fonction
+for d in supabase/functions/*/; do
+  for v in $(grep -rhoE "Deno\.env\.get\(['\"][A-Z0-9_]+" "$d" | sed -E "s/.*['\"]//" | sort -u); do
+    echo "$v <- $(basename "$d")"
+  done
+done | sort
 
-# Quelles fonctions consomment un secret donné
-grep -rl "LOVABLE_API_KEY" supabase/functions | cut -d/ -f3 | sort -u
+# Coffre à clés — quelles passerelles sont stockées en base
+grep -rhoE "gateway['\"]?\s*[:,=]\s*['\"][a-z_]+" src/ supabase/functions/ | sort -u
 ```
 
 ---
 
 ## 8. Mise en route rapide
 
-1. `cp .env.example .env`, puis renseigner les trois `VITE_SUPABASE_*` — sans elles, rien ne démarre.
-2. Déclarer les secrets du §4.2 dans Supabase (au minimum `LOVABLE_API_KEY`, sinon toutes les
-   fonctionnalités IA renvoient une erreur).
-3. Configurer les paiements **en base**, depuis `/admin/paypal` et Admin → Paiement & Livraison —
-   pas dans le `.env`.
-4. Pour un build protégé : `VITE_LICENSE_DOMAINS=mondomaine.fr bun run build:protected`.
+1. `cp .env.example .env`, puis renseigner `VITE_SUPABASE_URL` et
+   `VITE_SUPABASE_PUBLISHABLE_KEY` (*Dashboard → Project Settings → API*).
+2. Ajouter `VITE_SITE_URL=https://helvetica-mp.com` — sinon sitemap et canonical partent sur
+   le domaine de repli, ce qui passe inaperçu jusqu'à ce que Google s'en mêle.
+3. Déclarer les secrets du §4.2 utiles à ce que vous testez. **Rien n'est requis pour faire
+   tourner la boutique en lecture** ; les paiements, l'IA, les e-mails et Colissimo, si.
+4. Le reste se règle dans `/admin`, sans toucher au code.
+
+---
+
+## 9. Pièges connus
+
+- **Un secret Supabase modifié qui « ne fait rien »** → la base gagne. Vérifier
+  `payment_gateway_secrets` (§5) avant de chercher ailleurs.
+- **`LAPOSTE_API_KEY` et `LAPOSTE_TRACKING_API_KEY` sont deux clés différentes** chez le même
+  fournisseur : points relais d'un côté, suivi de colis de l'autre. Les intervertir donne un
+  403 difficile à lire.
+- **Le domaine de repli est dupliqué** (§3). Il l'a déjà été de travers : en août 2026, le
+  dépôt portait trois domaines différents, dont un `helvetica-mp.helvetica-mp.net`. Tout doit
+  passer par `src/lib/site.ts` ou par `VITE_SITE_URL`.
+- **`.env` ne doit jamais être commité.** Il l'a été une fois, exposant une clé Google Maps :
+  une clé navigateur reste visible côté client, mais sans restriction par référent, elle est
+  facturable par n'importe qui.
+- **Une variable `VITE_*` est publique par construction.** Dans le doute, elle va au §4.
