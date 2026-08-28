@@ -23,6 +23,90 @@ export function normalizeMediaSrc(src: unknown): string | undefined {
   return url;
 }
 
+/* ------------------------------------------------------------------ *
+ * Détection iOS / WebKit et stratégie de chargement des images
+ * ------------------------------------------------------------------ */
+
+let cachedIsIOS: boolean | null = null;
+
+/**
+ * `true` sur iPhone/iPad (y compris iPadOS qui se déclare « Macintosh ») et
+ * sur tout Safari de bureau, qui partage le même décodeur WebKit.
+ */
+export function isAppleWebKit(): boolean {
+  if (cachedIsIOS !== null) return cachedIsIOS;
+  if (typeof navigator === 'undefined') return (cachedIsIOS = false);
+  const ua = navigator.userAgent || '';
+  const touch = (navigator as any).maxTouchPoints || 0;
+  const iOS = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && touch > 1);
+  const desktopSafari = /Safari\//.test(ua) && !/Chrome|Chromium|Edg\/|OPR\//.test(ua);
+  return (cachedIsIOS = iOS || desktopSafari);
+}
+
+export interface ImageLoadStrategy {
+  loading: 'eager' | 'lazy';
+  decoding: 'sync' | 'async' | 'auto';
+  fetchPriority: 'high' | 'low' | 'auto';
+  /** Décoder hors du thread de rendu avant l'affichage (img.decode()). */
+  preDecode: boolean;
+  /** Nombre de décodages simultanés autorisés. */
+  concurrency: number;
+}
+
+/**
+ * WebKit abandonne les décodages quand trop d'images arrivent en parallèle
+ * (« decode failed », image blanche). Sur Safari on limite la concurrence,
+ * on décode explicitement avant l'affichage et on évite `decoding="sync"`
+ * qui bloque le thread principal.
+ */
+export function getImageLoadStrategy(opts: { priority?: boolean } = {}): ImageLoadStrategy {
+  const apple = isAppleWebKit();
+  const priority = !!opts.priority;
+  return {
+    loading: priority ? 'eager' : 'lazy',
+    decoding: 'async',
+    fetchPriority: priority ? 'high' : apple ? 'low' : 'auto',
+    preDecode: apple,
+    concurrency: apple ? 3 : 8,
+  };
+}
+
+/** File d'attente de décodage — sérialise les `img.decode()` sur WebKit. */
+let active = 0;
+const queue: Array<() => void> = [];
+
+function release() {
+  active = Math.max(0, active - 1);
+  const next = queue.shift();
+  if (next) {
+    active += 1;
+    next();
+  }
+}
+
+/**
+ * Décode l'image de façon contrôlée. Résout `true` si le décodage a réussi,
+ * `false` si WebKit l'a refusé (l'appelant peut alors réessayer).
+ */
+export function decodeWhenIdle(img: HTMLImageElement, concurrency: number): Promise<boolean> {
+  if (typeof img.decode !== 'function') return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const run = () => {
+      img
+        .decode()
+        .then(() => resolve(true))
+        .catch(() => resolve(false))
+        .finally(release);
+    };
+    if (active < concurrency) {
+      active += 1;
+      run();
+    } else {
+      queue.push(run);
+    }
+  });
+}
+
 function isHeic(file: File) {
   return /heic|heif/i.test(file.type) || /\.(heic|heif)$/i.test(file.name);
 }
