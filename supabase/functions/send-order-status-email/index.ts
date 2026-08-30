@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { sendMail } from '../_shared/mailer.ts';
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -14,8 +15,6 @@ interface OrderItem {
   size?: string;
   color?: string;
 }
-
-const FROM = 'HELVETICA-MP <onboarding@resend.dev>';
 
 function trackingUrl(carrier: string, tracking: string): string {
   const c = (carrier || '').toLowerCase();
@@ -151,8 +150,7 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-    if (!RESEND_API_KEY) return json({ error: 'RESEND_API_KEY manquante' }, 500);
+    if (!Deno.env.get('RESEND_API_KEY')) return json({ error: 'RESEND_API_KEY manquante' }, 500);
 
     const body = await req.json().catch(() => ({}));
     const orderId = String(body?.order_id || '').trim();
@@ -193,31 +191,23 @@ Deno.serve(async (req) => {
           : trackingUpdateHtml(order, trackingEvent);
 
 
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${RESEND_API_KEY}` },
-      body: JSON.stringify({ from: FROM, to: [order.customer_email], subject, html }),
-    });
-    const payload = await res.text();
-    if (!res.ok) {
-      console.error(`Resend [${res.status}]: ${payload}`);
+    const sent = await sendMail({ to: order.customer_email, subject, html });
+    if (!sent.ok) {
       await admin.from('customer_email_log').insert({
         customer_email: order.customer_email,
         order_id: order.id,
         email_type: type,
         subject,
         status: 'failed',
-        error: payload.slice(0, 500),
+        error: (sent.error || '').slice(0, 500),
       });
-      return json({ error: 'Envoi refusé par Resend', status: res.status, details: payload }, res.status);
+      return json(
+        { error: 'Envoi refusé par Resend', status: sent.status, details: sent.error },
+        sent.status || 500,
+      );
     }
 
-    let providerId: string | null = null;
-    try {
-      providerId = JSON.parse(payload)?.id ?? null;
-    } catch {
-      providerId = null;
-    }
+    const providerId = sent.id ?? null;
 
     await admin.from('customer_email_log').insert({
       customer_email: order.customer_email,

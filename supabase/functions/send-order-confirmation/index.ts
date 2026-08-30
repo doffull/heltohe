@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { sendMail } from '../_shared/mailer.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -458,8 +459,7 @@ serve(async (req) => {
   }
 
   try {
-    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-    if (!RESEND_API_KEY) {
+    if (!Deno.env.get('RESEND_API_KEY')) {
       throw new Error('RESEND_API_KEY is not configured');
     }
 
@@ -505,24 +505,9 @@ serve(async (req) => {
     }
 
     // Send customer email
-    const resendResponse = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: 'HELVETICA-MP Concept <onboarding@resend.dev>',
-        to: [customerEmail],
-        subject,
-        html,
-      }),
-    });
+    const customerMail = await sendMail({ to: customerEmail, subject, html });
 
-    const resendData = await resendResponse.json();
-
-    if (!resendResponse.ok) {
-      console.error('Resend API error:', resendData);
+    if (!customerMail.ok) {
       return new Response(
         JSON.stringify({ error: 'EMAIL_SEND_FAILED' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -531,28 +516,18 @@ serve(async (req) => {
 
     // Send admin notification email if configured (only for new orders)
     if (adminEmail && emailType === 'order_confirmation') {
-      const adminHtml = buildAdminEmailHtml(payload);
-      const adminRes = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${RESEND_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: 'HELVETICA-MP Boutique <onboarding@resend.dev>',
-          to: [adminEmail],
-          subject: `🛍️ Nouvelle commande ${orderNumber} — ${customerName}`,
-          html: adminHtml,
-        }),
+      const adminMail = await sendMail({
+        to: adminEmail,
+        subject: `🛍️ Nouvelle commande ${orderNumber} — ${customerName}`,
+        html: buildAdminEmailHtml(payload),
       });
-      if (!adminRes.ok) {
-        const adminErr = await adminRes.json();
-        console.error('Admin notification email error:', adminErr);
+      if (!adminMail.ok) {
+        console.error('Admin notification email error:', adminMail.error);
       }
     }
 
     return new Response(
-      JSON.stringify({ success: true, id: resendData.id }),
+      JSON.stringify({ success: true, id: customerMail.id }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

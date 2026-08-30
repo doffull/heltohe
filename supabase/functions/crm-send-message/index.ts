@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { mailFromAddress, mailFromName, mailReplyTo, sendMail } from '../_shared/mailer.ts';
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -44,8 +45,10 @@ Deno.serve(async (req) => {
       .eq('config_key', 'main')
       .maybeSingle();
 
-    const fromEmail = (config?.default_from_email || '').trim();
-    const fromName = (config?.default_from_name || 'Support').trim();
+    // La messagerie CRM garde son expéditeur propre (une adresse de support n'est pas
+    // l'adresse des commandes) ; à défaut, elle retombe sur l'expéditeur global.
+    const fromEmail = (config?.default_from_email || '').trim() || mailFromAddress();
+    const fromName = (config?.default_from_name || '').trim() || mailFromName();
     const provider = (config?.provider || 'resend').trim();
     const signature = (config?.signature || '').trim();
     const html = `<div>${content.replace(/\n/g, '<br/>')}${signature ? `<br/><br/>${signature.replace(/\n/g, '<br/>')}` : ''}</div>`;
@@ -69,6 +72,7 @@ Deno.serve(async (req) => {
         },
         body: JSON.stringify({
           sender: { name: fromName, email: fromEmail },
+          replyTo: { email: mailReplyTo() },
           to: [{ email: to }],
           subject,
           htmlContent: html,
@@ -76,18 +80,10 @@ Deno.serve(async (req) => {
       });
       if (res.ok) sent = true;
       else warning = `Brevo [${res.status}]: ${await res.text()}`;
-    } else if (provider === 'resend' && RESEND_API_KEY && LOVABLE_API_KEY) {
-      const res = await fetch('https://connector-gateway.lovable.dev/resend/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          'X-Connection-Api-Key': RESEND_API_KEY,
-        },
-        body: JSON.stringify({ from: `${fromName} <${fromEmail}>`, to: [to], subject, html }),
-      });
+    } else if (provider === 'resend' && RESEND_API_KEY) {
+      const res = await sendMail({ from: `${fromName} <${fromEmail}>`, to, subject, html });
       if (res.ok) sent = true;
-      else warning = `Resend [${res.status}]: ${await res.text()}`;
+      else warning = `Resend [${res.status}]: ${res.error}`;
     } else {
       warning = `Aucune clé API ${provider} configurée : message enregistré sans envoi.`;
     }

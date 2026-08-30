@@ -541,37 +541,55 @@ sur Deno et ne parlent jamais SMTP — ce sont Resend et Brevo qui remettent les
 
 | # | Fonction | Circonstance | Transport | Expéditeur |
 |---|---|---|---|---|
-| 1 | `send-order-confirmation` | commande passée · paiement reçu · renvoi manuel (`emailType`) + copie admin | **Resend direct** `api.resend.com` | `onboarding@resend.dev` 🔴 |
-| 2 | `send-order-status-email` | statut : payée · expédiée (exige un n° de suivi) · livrée | **Resend direct** | `onboarding@resend.dev` 🔴 |
-| 3 | `send-order-notification` | réservation de stock · rôle admin attribué · gabarits de `notification_config` | Resend **via passerelle Lovable** | selon config |
-| 4 | `crm-send-message` | message CRM envoyé à la main depuis le back-office | **Brevo ou Resend** via passerelle, au choix (`messaging_config.provider`) | `messaging_config.default_from_email` |
+| 1 | `send-order-confirmation` | commande passée · paiement reçu · renvoi manuel (`emailType`) + copie admin | **Resend direct** `api.resend.com` | `MAIL_FROM` ✅ |
+| 2 | `send-order-status-email` | statut : payée · expédiée (exige un n° de suivi) · mise à jour de suivi | **Resend direct** | `MAIL_FROM` ✅ |
+| 3 | `send-order-notification` | réservation de stock · préparation assignée · rôle attribué · gabarits de `notification_config` | **Resend direct** | `MAIL_FROM` ✅ |
+| 4 | `crm-send-message` | message CRM envoyé à la main depuis le back-office | **Resend direct**, ou Brevo via passerelle (`messaging_config.provider`) | `messaging_config.default_from_email`, à défaut `MAIL_FROM` |
 | 5 | `auth-email-hook` | inscription · mot de passe oublié · magic link · changement d'e-mail · invitation · réauthentification | **file Supabase** (`enqueue_email` → queue `auth_emails`), gabarits React Email | `noreply@helvetica-mp.com` ✅ |
 
-### 🔴 Les deux e-mails les plus envoyés partent d'un domaine de test
+### L'expéditeur est centralisé (30/08/2026)
 
-`send-order-confirmation` et `send-order-status-email` expédient depuis
-`onboarding@resend.dev`, le bac-à-sable de Resend : **aucune signature DKIM au nom du
-domaine**, réputation partagée, et un expéditeur qui n'inspire pas confiance sur une
-confirmation de commande. Le hook d'authentification, lui, est correctement configuré.
+`supabase/functions/_shared/mailer.ts` est le **seul** endroit où un expéditeur est défini.
+Il lit trois secrets Edge Functions et expose `sendMail()` :
 
-Correction : vérifier `helvetica-mp.com` dans Resend, puis changer les deux constantes
-`FROM`. C'est l'affaire de quelques minutes une fois le DNS validé.
+| Secret | Rôle | Absent ? |
+|---|---|---|
+| `MAIL_FROM` | adresse d'expédition | repli `onboarding@resend.dev` + `console.warn` |
+| `MAIL_FROM_NAME` | nom affiché | repli `HELVETICA-MP` |
+| `MAIL_REPLY_TO` | adresse de réponse | repli sur `MAIL_FROM` |
 
-### Deux chemins vers Resend, deux exigences de clés
+⚠️ **Le domaine de `MAIL_FROM` doit être vérifié dans Resend** (SPF + DKIM), sinon l'envoi
+est refusé. Le domaine de `MAIL_REPLY_TO` n'a rien à prouver : c'est une boîte de réception.
+Le sous-domaine retenu est `site.helvetica-mp.com` — le domaine racine porte déjà la
+messagerie pro (MX `mail.helvetica-mp.com`, SPF `spf.jabatus.fr`), on isole la réputation
+du transactionnel.
 
-- **En direct** (`api.resend.com`) : `RESEND_API_KEY` suffit.
-- **Via la passerelle** (`connector-gateway.lovable.dev/resend/emails`) : il faut
-  `LOVABLE_API_KEY` **et** `RESEND_API_KEY` (envoyée en `X-Connection-Api-Key`). Si la
-  première manque, l'envoi échoue **silencieusement** — le message est enregistré en base
-  avec un simple avertissement.
+Ne jamais réécrire un `from:` en dur dans une fonction : passer par `sendMail()`, qui pose
+aussi le `reply_to` — absent de tout le projet avant cette date, un client qui répondait à
+sa confirmation de commande écrivait dans le vide.
 
-### Dette
+### Un seul chemin vers Resend
 
-**4 transports pour 5 usages, sans module partagé** : chaque fonction refait son appel dans
-son coin, avec son propre expéditeur et sa propre gestion d'erreur. Ajouter un canal (SMTP,
-autre fournisseur) suppose aujourd'hui de toucher **8 points d'appel** dans 4 fichiers. Un
-`_shared/mailer.ts` réglerait le sujet et rendrait `messaging_config.provider` réellement
-universel — il ne pilote pour l'instant que le CRM.
+Les 4 fonctions attaquent **`api.resend.com` en direct** : `RESEND_API_KEY` suffit, plus
+aucune dépendance à `LOVABLE_API_KEY` côté e-mail. Seuls subsistent sur la passerelle
+Lovable le SMS Twilio et le canal Brevo du CRM.
+
+> Historique : jusqu'au 30/08/2026, `send-order-notification` et le CRM passaient par
+> `connector-gateway.lovable.dev` et exigeaient **les deux** clés. Si `LOVABLE_API_KEY`
+> manquait, l'envoi échouait **silencieusement**. Ce piège n'existe plus.
+
+### Dette restante
+
+**`auth-email-hook` ne passe toujours pas par Resend** : il empile dans la queue Supabase
+`auth_emails` et c'est l'infra Lovable qui dépile et remet. Pour du 100 % Resend il faut le
+réécrire en `sendMail()` — mais alors `helvetica-mp.com` doit être vérifié dans Resend,
+sinon inscriptions et mots de passe oubliés cassent net.
+
+⚠️ **`notify.helvetica-mp.com` (le `SENDER_DOMAIN` codé dans `auth-email-hook`) n'existe pas
+en DNS** — constaté le 30/08/2026. À vérifier côté Resend.
+
+`messaging_config.provider` ne pilote toujours que le CRM ; les autres fonctions sont
+Resend en dur.
 
 ### Et si on voulait du SMTP ?
 

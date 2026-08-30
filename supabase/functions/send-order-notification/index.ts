@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendMail } from "../_shared/mailer.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -84,32 +85,16 @@ serve(async (req) => {
         preparator: "Préparateur",
       };
       const label = roleLabels[role] || role;
-      const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
       let status = "skipped";
       let errMsg: string | null = null;
-      if (RESEND_API_KEY && LOVABLE_API_KEY) {
-        try {
-          const res = await fetch("https://connector-gateway.lovable.dev/resend/emails", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${LOVABLE_API_KEY}`,
-              "X-Connection-Api-Key": RESEND_API_KEY,
-            },
-            body: JSON.stringify({
-              from: "HELVETICA-MP <onboarding@resend.dev>",
-              to: [recipient],
-              subject: `HELVETICA-MP — Nouveau rôle attribué : ${label}`,
-              html: `<div style="font-family:Arial,sans-serif;padding:20px;max-width:600px;margin:0 auto"><h2>Bienvenue dans l'équipe HELVETICA-MP</h2><p>Bonjour ${customerName || ""},</p><p>Le rôle <strong>${label}</strong> vient de vous être attribué sur la plateforme HELVETICA-MP.</p><p>Vous pouvez désormais accéder à votre espace de gestion en vous connectant à votre compte.</p><p style="color:#666;font-size:12px;margin-top:24px">Si vous n'avez pas demandé cet accès, contactez l'administrateur.</p></div>`,
-            }),
-          });
-          status = res.ok ? "sent" : "failed";
-          if (!res.ok) errMsg = await res.text();
-        } catch (e) {
-          status = "failed";
-          errMsg = String(e);
-        }
+      if (Deno.env.get("RESEND_API_KEY")) {
+        const sent = await sendMail({
+          to: recipient,
+          subject: `HELVETICA-MP — Nouveau rôle attribué : ${label}`,
+          html: `<div style="font-family:Arial,sans-serif;padding:20px;max-width:600px;margin:0 auto"><h2>Bienvenue dans l'équipe HELVETICA-MP</h2><p>Bonjour ${customerName || ""},</p><p>Le rôle <strong>${label}</strong> vient de vous être attribué sur la plateforme HELVETICA-MP.</p><p>Vous pouvez désormais accéder à votre espace de gestion en vous connectant à votre compte.</p><p style="color:#666;font-size:12px;margin-top:24px">Si vous n'avez pas demandé cet accès, contactez l'administrateur.</p></div>`,
+        });
+        status = sent.ok ? "sent" : "failed";
+        errMsg = sent.error ?? null;
       }
       return new Response(JSON.stringify({ status, recipient }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -140,7 +125,6 @@ serve(async (req) => {
     const internalTypes = ["stock_reservation_created", "preparation_assigned"];
     if (internalTypes.includes(notificationType)) {
       const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
       const results: any[] = [];
 
       // Determine recipients
@@ -176,31 +160,18 @@ serve(async (req) => {
         ? `Une nouvelle commande #${orderNumber} (${customerName}) vient d'être payée et le stock a été réservé.\n\nConnectez-vous au tableau de bord Préparations pour l'assigner à un préparateur.`
         : `La commande #${orderNumber} vient de vous être assignée pour préparation.\n\nConnectez-vous au tableau de bord Préparations pour la préparer.`;
 
-      if (RESEND_API_KEY && LOVABLE_API_KEY && recipients.length > 0) {
+      if (RESEND_API_KEY && recipients.length > 0) {
         for (const to of recipients) {
-          try {
-            const res = await fetch("https://connector-gateway.lovable.dev/resend/emails", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${LOVABLE_API_KEY}`,
-                "X-Connection-Api-Key": RESEND_API_KEY,
-              },
-              body: JSON.stringify({
-                from: "HELVETICA-MP <onboarding@resend.dev>",
-                to: [to],
-                subject,
-                html: `<div style="font-family:Arial,sans-serif;padding:20px;max-width:600px;margin:0 auto"><h2>HELVETICA-MP — Préparation</h2><div style="white-space:pre-line;color:#333">${body}</div></div>`,
-              }),
-            });
-            results.push({ to, status: res.ok ? "sent" : "failed" });
-            await supabase.from("notification_log").insert({
-              order_id: orderId, channel: "email", notification_type: notificationType,
-              status: res.ok ? "sent" : "failed", recipient: to,
-            });
-          } catch (e) {
-            results.push({ to, status: "failed", error: String(e) });
-          }
+          const sent = await sendMail({
+            to,
+            subject,
+            html: `<div style="font-family:Arial,sans-serif;padding:20px;max-width:600px;margin:0 auto"><h2>HELVETICA-MP — Préparation</h2><div style="white-space:pre-line;color:#333">${body}</div></div>`,
+          });
+          results.push(sent.ok ? { to, status: "sent" } : { to, status: "failed", error: sent.error });
+          await supabase.from("notification_log").insert({
+            order_id: orderId, channel: "email", notification_type: notificationType,
+            status: sent.ok ? "sent" : "failed", recipient: to,
+          });
         }
       }
       return new Response(JSON.stringify({ results, recipients }), {
@@ -218,37 +189,19 @@ serve(async (req) => {
       const template = emailTemplates[notificationType];
       
       if (template) {
-        try {
-          const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-          const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-          
-          if (RESEND_API_KEY && LOVABLE_API_KEY) {
-            const res = await fetch("https://connector-gateway.lovable.dev/resend/emails", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${LOVABLE_API_KEY}`,
-                "X-Connection-Api-Key": RESEND_API_KEY,
-              },
-              body: JSON.stringify({
-                from: "HELVETICA-MP <onboarding@resend.dev>",
-                to: [customerEmail],
-                subject: applyTemplate(template.subject, templateVars),
-                html: `<div style="font-family:Arial,sans-serif;padding:20px;max-width:600px;margin:0 auto"><h2 style="color:#333">HELVETICA-MP</h2><div style="white-space:pre-line;color:#555">${applyTemplate(template.body, templateVars)}</div></div>`,
-              }),
-            });
-            
-            if (res.ok) {
-              results.push({ channel: "email", status: "sent" });
-            } else {
-              const err = await res.text();
-              results.push({ channel: "email", status: "failed", error: err });
-            }
-          } else {
-            results.push({ channel: "email", status: "failed", error: "Missing API keys" });
-          }
-        } catch (e) {
-          results.push({ channel: "email", status: "failed", error: String(e) });
+        if (Deno.env.get("RESEND_API_KEY")) {
+          const sent = await sendMail({
+            to: customerEmail,
+            subject: applyTemplate(template.subject, templateVars),
+            html: `<div style="font-family:Arial,sans-serif;padding:20px;max-width:600px;margin:0 auto"><h2 style="color:#333">HELVETICA-MP</h2><div style="white-space:pre-line;color:#555">${applyTemplate(template.body, templateVars)}</div></div>`,
+          });
+          results.push(
+            sent.ok
+              ? { channel: "email", status: "sent" }
+              : { channel: "email", status: "failed", error: sent.error },
+          );
+        } else {
+          results.push({ channel: "email", status: "failed", error: "Missing API keys" });
         }
       }
     }
