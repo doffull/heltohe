@@ -5,12 +5,17 @@
 > et la dette connue.
 >
 > Rédigé le 20/08/2026 par analyse du dépôt (`39e844c`), mis à jour le 28/08/2026 après le
-> changement de dépôt (§16).
+> changement de dépôt (§16), puis le 30/08/2026 après la première confrontation au projet
+> Supabase réel (§17, §18).
 >
 > ⚠️ **Le dépôt a changé le 28/08/2026** : le projet vit désormais dans
 > `doffull/warltkfr`, recréé depuis Lovable. `gafsou20/Helvetica-MP` est une archive.
 > Lire le §16 AVANT toute chose : il explique ce qui a été perdu, repris, et ce qui
 > reste à vérifier.
+>
+> ⚠️ **Le dépôt n'est pas le déploiement.** Le 30/08/2026, 6 edge functions sur 36
+> n'avaient jamais été mises en ligne et le registre des migrations distant était vide.
+> Avant de conclure qu'une fonctionnalité « existe », vérifier qu'elle est déployée : §18.
 
 ---
 
@@ -26,9 +31,9 @@ composants, 1,6 Mo de pages) sert le back-office, pas la boutique.
 
 | | |
 |---|---|
-| Origine | projet **Lovable**, synchronisé avec ce dépôt. Projet Supabase : `hzjzqdlyehclnpeqkier` (cf. §16, ⚠️ à confirmer) |
+| Origine | projet **Lovable**, synchronisé avec ce dépôt. Projet Supabase : `hzjzqdlyehclnpeqkier` — **confirmé le 30/08/2026** (§16) |
 | Volume | **88 200 lignes** TS/TSX · 412 fichiers · 205 composants · 52 hooks |
-| Back | Supabase : **66 tables**, 7 vues, 21 RPC, **165 migrations**, **30 edge functions** |
+| Back | Supabase : **66 tables**, 7 vues, 21 RPC, **171 migrations**, **36 edge functions** (dont 5 non déployées, §18) |
 | Front | 23 routes déclarées, dont `/admin/*` (46 pages) et `/compte/*` |
 | Branches | `main` uniquement · 2 commits |
 
@@ -496,24 +501,68 @@ recopiées à la main.
 `src/lib/site.ts`. C'est exactement le genre de dérive que cette centralisation
 existe pour empêcher : ne pas réintroduire de domaine en dur.
 
-### ⚠️ Le projet Supabase — à confirmer
+### ✅ Le projet Supabase — tranché le 30/08/2026
 
 Le dépôt recréé pointait vers `bumfyrfmormisyjletpb`, l'ancien vers
-`hzjzqdlyehclnpeqkier`. Décision : retour sur **`hzjzqdlyehclnpeqkier`**, valeur
-portée par trois fichiers générés par la plateforme (`supabase/config.toml`,
-`.lovable/mcp/manifest.json`, `supabase/functions/mcp/index.ts`).
+`hzjzqdlyehclnpeqkier`. Décision retenue : **`hzjzqdlyehclnpeqkier`**, valeur portée par
+`supabase/config.toml`, `.lovable/mcp/manifest.json` et `supabase/functions/mcp/index.ts`.
 
-**Cette doc affirmait pourtant l'inverse** (`bumfyrfmormisyjletpb`, §1 et §2 avant
-correction) : la contradiction n'est pas tranchée par les fichiers. À vérifier dans
-le dashboard Supabase — **le bon projet est celui qui contient les commandes
-récentes**. Si c'est l'autre, un seul commit à inverser.
+**C'est confirmé.** Un `db push` lancé sur ce projet s'est arrêté sur la toute première
+migration avec `ERROR: type "app_role" already exists`. Autrement dit le schéma y est
+complet : c'est bien la base du site. La preuve est venue d'un échec, mais elle vaut.
 
-Conséquence directe : les **6 migrations du 24-27/08 n'ont jamais tourné** sur
-`hzjzqdlyehclnpeqkier`. Elles s'appliqueront au prochain déploiement — dont celle
-qui programme le cron de suivi de colis, qui embarquait en dur l'URL **et la clé
-anon** de l'autre projet. La clé est remplacée par `__ANON_KEY__` et un garde-fou
-SQL fait échouer le déploiement tant qu'elle n'est pas renseignée : un échec
-bruyant vaut mieux qu'un cron silencieusement rejeté en 401.
+Le lien se fait avec un jeton personnel (`SUPABASE_ACCESS_TOKEN`, ou `supabase login`) :
+
+```bash
+npx supabase link --project-ref hzjzqdlyehclnpeqkier
+```
+
+⚠️ **La clé anon du `.env` versionné est refusée** par l'API (`Invalid API key`) —
+constaté le 30/08/2026. Elle appartient probablement à `bumfyrfmormisyjletpb` ou a été
+révoquée. Toute sonde REST montée avec cette valeur échouera en 401 sans que la table
+soit en cause.
+
+### ⚠️ Le registre des migrations était vide — et ce qu'on en a fait
+
+Au 30/08/2026, `migration list --linked` affichait **171 migrations locales, zéro côté
+distant**, alors que le schéma était complet. Signature d'un projet piloté par Lovable :
+la plateforme applique le SQL directement sans écrire dans
+`supabase_migrations.schema_migrations`.
+
+Le registre a été réparé **sans exécuter aucun SQL** :
+
+```bash
+npx supabase migration repair --status applied $(ls supabase/migrations | sed 's/_.*//' | tr '\n' ' ')
+```
+
+`db push --dry-run` répond désormais `Remote database is up to date.`
+
+🔴 **Le point ouvert qu'il faut connaître.** Le §16 affirmait que les 6 migrations du
+24-27/08 n'avaient jamais tourné sur ce projet. Elles viennent d'être marquées
+« appliquées » avec toutes les autres : **si elles n'avaient effectivement pas tourné,
+elles ne s'appliqueront jamais.** Sont concernées :
+
+| Migration | Crée | Qui s'en sert |
+|---|---|---|
+| `20260827100317` | `customer_email_log` | `send-order-status-email` (insert non vérifié → échec muet) |
+| `20260827131015` | `auth_email_templates` | `auth-email-hook` (dans un `try/catch` → repli silencieux sur le gabarit livré) |
+| `20260827140407` | `order_tracking_events` + `cron.schedule` | suivi de colis |
+| `20260824112441` | vue `design_settings_public` | front public |
+
+Les deux premières sont lues dans du code tolérant aux erreurs : **leur absence ne se
+voit pas**. À vérifier explicitement :
+
+```bash
+npx supabase inspect db table-record-counts --linked | grep -E "customer_email_log|auth_email_templates|order_tracking_events"
+```
+
+Si une table manque, rejouer **uniquement** son fichier via le SQL Editor du dashboard —
+surtout pas un `db push` global.
+
+*(Note : la migration du cron de suivi embarquait en dur l'URL et la clé anon de l'autre
+projet. La clé est remplacée par `__ANON_KEY__` et un garde-fou SQL fait échouer le
+déploiement tant qu'elle n'est pas renseignée : un échec bruyant vaut mieux qu'un cron
+rejeté en 401.)*
 
 ### `.env` versionné
 
@@ -615,3 +664,82 @@ C'est possible depuis les edge functions (`denomailer`, exemple officiel Supabas
 recommandé (AWS SES). Vérifier le port du serveur SMTP visé **avant** de s'engager. À
 peser : plus de reprise automatique, plus de retour de bounces, latence du handshake TLS
 dans le chemin d'une commande, et réputation d'IP à construire.
+
+---
+
+## 18. Ce qui tourne vraiment — l'écart dépôt / déploiement
+
+> État constaté le 30/08/2026, premier alignement du projet Supabase avec le dépôt.
+
+Le dépôt contient **36 edge functions**. Le projet Supabase n'en servait que **30**, toutes
+figées à la **version 14 du 21/08** (sauf `colissimo-proxy`, v15 du 26/08). Le dev
+travaillait vraisemblablement sur un autre projet Supabase.
+
+**Lire le dépôt ne dit pas ce qui est en ligne.** Le contrôle :
+
+```bash
+npx supabase functions list      # comparer UPDATED_AT au dernier commit touchant la fonction
+```
+
+### Les 6 qui n'avaient jamais été déployées
+
+| Fonction | Ce que son absence impliquait | Au 30/08 |
+|---|---|---|
+| `send-order-status-email` | 🔴 aucun e-mail « payée / expédiée / suivi » n'a jamais été envoyé | ✅ déployée |
+| `auth-email-hook` | gabarits d'authentification inutilisables | ✅ déployée et branchée |
+| `poll-carrier-tracking` | le cron de suivi n'a rien à appeler | ❌ toujours absente |
+| `carrier-tracking-webhook` | les statuts transporteur entrants tombent dans le vide | ❌ toujours absente |
+| `tracking-key` | l'admin ne peut pas gérer la clé de suivi La Poste | ❌ toujours absente |
+| `ai-keys` | gestion des clés IA absente | ❌ toujours absente |
+
+**Le suivi de colis n'a jamais fonctionné** : 3 des 4 fonctions du domaine ne sont pas en
+ligne, et les clés La Poste ne sont pas configurées. Ce qui est décrit ailleurs dans cette
+doc décrit le *code*, pas un service rendu.
+
+### Secrets réellement configurés
+
+`supabase secrets list` au 30/08/2026 :
+
+**Présents** — `RESEND_API_KEY`, `MAIL_FROM`, `MAIL_FROM_NAME`, `MAIL_REPLY_TO`,
+`SEND_EMAIL_HOOK_SECRET`, `COLISSIMO_LOGIN`/`_PASSWORD`, les 4 `PAYPAL_*`, et les
+`SUPABASE_*` injectés par la plateforme.
+
+**Absents** :
+
+| Secret | Conséquence |
+|---|---|
+| `LOVABLE_API_KEY` | plus aucune, côté e-mail (tout est passé en Resend direct, §17) |
+| `GEMINI_API_KEY` | 🔴 **avec le précédent : toute l'IA est morte** — chatbot, essayage virtuel, reco de taille, générations |
+| `LAPOSTE_API_KEY` | recherche de points relais |
+| `LAPOSTE_TRACKING_API_KEY` | suivi de colis (repli possible en base, §5) |
+| `CARRIER_WEBHOOK_TOKEN` | webhook transporteur (repli possible en base, §5) |
+| `BREVO_API_KEY` · `TWILIO_API_KEY` · `GOOGLE_MAPS_API_KEY` | second canal e-mail · SMS · géocodage serveur |
+
+⚠️ **Nuance sur l'IA** : `_shared/gemini.ts` sait basculer sur Gemini en direct, via
+`GEMINI_API_KEY` ou la ligne `gemini_api` de `payment_gateway_secrets` (Admin → Chatbot).
+Une seule clé Google ranimerait donc les fonctions texte et vision. Mais **7 fonctions
+appellent `ai.gateway.lovable.dev` en dur** et resteront mortes sans réécriture :
+`virtual-tryon`, `image-pose-edit`, `generate-product-video`, `generate-slide-image`,
+`parse-products-pdf`, `template-from-mockup`, `ai-keys`.
+
+### Hook d'authentification : activé
+
+Créé le 30/08/2026, en mode HTTPS vers
+`https://hzjzqdlyehclnpeqkier.supabase.co/functions/v1/auth-email-hook`, secret
+`SEND_EMAIL_HOOK_SECRET` posé. Testé sur une inscription réelle : e-mail reçu, lien de
+confirmation fonctionnel.
+
+Avant ce jour, les e-mails d'authentification partaient avec les gabarits Supabase par
+défaut, via son SMTP intégré **plafonné à quelques envois par heure**.
+
+### Reste à faire, par ordre d'impact
+
+1. **Déployer les 4 fonctions manquantes** et configurer les clés La Poste → remettre le
+   suivi de colis en service
+2. **Vérifier les 4 tables des migrations du 24-27/08** (§16) — leur absence est
+   silencieuse
+3. **Une clé Gemini** → ranimer la majorité de l'IA ; décider du sort des 7 fonctions
+   liées en dur à la passerelle Lovable
+4. **Vérifier `Site URL` et `Redirect URLs`** dans la configuration Auth : une URL non
+   listée est ignorée, l'utilisateur retombe sur l'accueil après confirmation
+5. **Remplacer la clé anon du `.env`**, refusée par l'API
