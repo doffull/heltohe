@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
@@ -59,25 +59,41 @@ const siteUrlHtmlPlugin = () => ({
   },
 });
 
+const BACKEND_PUBLIC_FALLBACKS = {
+  VITE_SUPABASE_URL: "https://bumfyrfmormisyjletpb.supabase.co",
+  VITE_SUPABASE_PUBLISHABLE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1bWZ5cmZtb3JtaXN5amxldHBiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAyMTY3NjgsImV4cCI6MjA4NTc5Mjc2OH0.n145vusBgfNPvGXSCacoSxwJDujFR9zNEUB2twBovVI",
+  VITE_SUPABASE_PROJECT_ID: "bumfyrfmormisyjletpb",
+} as const;
+
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
-  server: {
-    host: "::",
-    port: 8080,
-    hmr: {
-      overlay: false,
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "");
+
+  return {
+    define: Object.fromEntries(
+      Object.entries(BACKEND_PUBLIC_FALLBACKS).map(([key, fallback]) => [
+        `import.meta.env.${key}`,
+        JSON.stringify(env[key] || fallback),
+      ]),
+    ),
+    server: {
+      host: "::",
+      port: 8080,
+      hmr: {
+        overlay: false,
+      },
     },
-  },
-  plugins: [
-    siteUrlHtmlPlugin(),
-    react(),
-    mode === "development" && componentTagger(),
-    mcpPlugin(),
-    process.env.PROTECT === "1" && protectPlugin(),
-  ].filter(Boolean),
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
+    plugins: [
+      siteUrlHtmlPlugin(),
+      react(),
+      mode === "development" && componentTagger(),
+      mcpPlugin(),
+      process.env.PROTECT === "1" && protectPlugin(),
+    ].filter(Boolean),
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
     },
-  },
-}));
+  };
+});

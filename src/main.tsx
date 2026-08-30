@@ -1,6 +1,5 @@
 import { createRoot } from "react-dom/client";
 import { HelmetProvider } from "react-helmet-async";
-import App from "./App.tsx";
 import "./index.css";
 import { installConsoleRingBuffer } from "./lib/clientErrorLogger";
 import { enforceLicense } from "./lib/licenseGuard";
@@ -22,7 +21,18 @@ try {
   /* origine média indisponible : rien à précharger */
 }
 
-const container = document.getElementById("root")!;
+const container = document.getElementById("root");
+
+function renderStartupError(title: string, detail: string) {
+  if (!container) return;
+  container.innerHTML = `
+    <div role="alert" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:Helvetica,Arial,sans-serif;text-align:center">
+      <div>
+        <h1 style="font-size:14px;letter-spacing:.2em;text-transform:uppercase;margin:0 0 12px">${title}</h1>
+        <p style="font-size:13px;opacity:.7;margin:0">${detail}</p>
+      </div>
+    </div>`;
+}
 
 /**
  * Garde-fou de configuration : sans URL/clé backend, le client lève
@@ -33,19 +43,26 @@ const missingEnv = ["VITE_SUPABASE_URL", "VITE_SUPABASE_PUBLISHABLE_KEY"].filter
   (key) => !(import.meta.env as Record<string, string | undefined>)[key],
 );
 
-if (missingEnv.length > 0) {
-  container.innerHTML = `
-    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:Helvetica,Arial,sans-serif;text-align:center">
-      <div>
-        <h1 style="font-size:14px;letter-spacing:.2em;text-transform:uppercase;margin:0 0 12px">Configuration incomplète</h1>
-        <p style="font-size:13px;opacity:.7;margin:0">Variables manquantes : ${missingEnv.join(", ")}.</p>
-      </div>
-    </div>`;
+if (!container) {
+  console.error("Élément #root introuvable : montage de l'application impossible.");
+} else if (missingEnv.length > 0) {
+  renderStartupError("Configuration incomplète", `Variables manquantes : ${missingEnv.join(", ")}.`);
 } else if (enforceLicense(container)) {
-  // Verrou de domaine : bloque le montage si le déploiement n'est pas licencié.
-  createRoot(container).render(
-    <HelmetProvider>
-      <App />
-    </HelmetProvider>,
-  );
+  // App est chargée seulement après la validation de la configuration : un client
+  // backend mal configuré ne peut plus interrompre le garde-fou avant son rendu.
+  import("./App.tsx")
+    .then(({ default: App }) => {
+      createRoot(container).render(
+        <HelmetProvider>
+          <App />
+        </HelmetProvider>,
+      );
+    })
+    .catch((error: unknown) => {
+      console.error("Échec du démarrage de l'application :", error);
+      renderStartupError(
+        "Chargement indisponible",
+        "Le site n’a pas pu démarrer. Actualisez la page dans quelques instants.",
+      );
+    });
 }
