@@ -344,7 +344,7 @@ var list_addresses_default = defineTool10({
 });
 
 // src/lib/mcp/index.ts
-var projectRef = "bumfyrfmormisyjletpb";
+var projectRef = "hzjzqdlyehclnpeqkier";
 var mcp_default = defineMcp({
   name: "helvetica-mp-mcp",
   title: "HELVETICA-MP Store MCP",
