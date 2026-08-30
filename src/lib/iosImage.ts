@@ -169,11 +169,17 @@ export async function prepareImageForUpload(file: File): Promise<File> {
   if (!ctx) return file;
   bitmap.draw(ctx, width, height);
 
+  // PNG/WebP peuvent contenir de la transparence (logos, détourages) : JPEG
+  // n'a pas de canal alpha et aplatirait le fond en noir. On reste en PNG,
+  // sauf pour HEIC (toujours opaque, photo iPhone) où JPEG suffit.
+  const keepAlpha = !heic && /image\/(png|webp)/i.test(file.type);
+  const mime = keepAlpha ? 'image/png' : 'image/jpeg';
   const blob = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob(resolve, 'image/jpeg', JPEG_QUALITY),
+    canvas.toBlob(resolve, mime, JPEG_QUALITY),
   );
   if (!blob) return file;
 
-  const name = file.name.replace(/\.(heic|heif|png|webp|jpe?g)$/i, '') + '.jpg';
-  return new File([blob], name, { type: 'image/jpeg', lastModified: Date.now() });
+  const ext = keepAlpha ? 'png' : 'jpg';
+  const name = file.name.replace(/\.(heic|heif|png|webp|jpe?g)$/i, '') + '.' + ext;
+  return new File([blob], name, { type: mime, lastModified: Date.now() });
 }
