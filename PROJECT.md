@@ -545,7 +545,7 @@ sur Deno et ne parlent jamais SMTP — ce sont Resend et Brevo qui remettent les
 | 2 | `send-order-status-email` | statut : payée · expédiée (exige un n° de suivi) · mise à jour de suivi | **Resend direct** | `MAIL_FROM` ✅ |
 | 3 | `send-order-notification` | réservation de stock · préparation assignée · rôle attribué · gabarits de `notification_config` | **Resend direct** | `MAIL_FROM` ✅ |
 | 4 | `crm-send-message` | message CRM envoyé à la main depuis le back-office | **Resend direct**, ou Brevo via passerelle (`messaging_config.provider`) | `messaging_config.default_from_email`, à défaut `MAIL_FROM` |
-| 5 | `auth-email-hook` | inscription · mot de passe oublié · magic link · changement d'e-mail · invitation · réauthentification | **file Supabase** (`enqueue_email` → queue `auth_emails`), gabarits React Email | `noreply@helvetica-mp.com` ✅ |
+| 5 | `auth-email-hook` | inscription · mot de passe oublié · magic link · changement d'e-mail · invitation · réauthentification | **Resend direct**, gabarits React Email | `MAIL_FROM` ✅ |
 
 ### L'expéditeur est centralisé (30/08/2026)
 
@@ -578,18 +578,35 @@ Lovable le SMS Twilio et le canal Brevo du CRM.
 > `connector-gateway.lovable.dev` et exigeaient **les deux** clés. Si `LOVABLE_API_KEY`
 > manquait, l'envoi échouait **silencieusement**. Ce piège n'existe plus.
 
+### `auth-email-hook` — le hook doit être activé à la main
+
+Réécrit le 30/08/2026 : il vérifiait une signature *Lovable* (`LOVABLE_API_KEY`) et empilait
+dans la queue `auth_emails` dépilée par l'infra Lovable. Il vérifie désormais la signature
+**Standard Webhooks** de Supabase (`SEND_EMAIL_HOOK_SECRET`) et envoie par `sendMail()`.
+
+⚠️ **Il ne s'exécute que si le hook est activé** dans *Authentication → Hooks → Send Email
+Hook*. Au 30/08/2026 il ne l'est pas : les e-mails d'authentification partent donc avec les
+gabarits Supabase par défaut, via son SMTP intégré **plafonné à quelques envois/heure**.
+Les gabarits de `/admin/emails-auth` ne sont lus par personne tant que le hook est éteint.
+
+Deux pièges pour qui rebranche ça :
+1. **Supabase ne transmet pas d'URL de confirmation**, seulement un `token_hash`. La
+   fonction reconstruit `…/auth/v1/verify?token=…&type=…&redirect_to=…`. Une erreur ici
+   n'échoue pas l'envoi : elle produit des liens morts.
+2. **Le changement d'adresse émet deux messages** (`email_change_current` et
+   `email_change_new`) si « Secure email change » est actif. Le second vise `new_email`
+   avec le jeton `token_hash_new`.
+
+Désactiver le hook rend la main à Supabase instantanément — c'est le retour arrière.
+
 ### Dette restante
-
-**`auth-email-hook` ne passe toujours pas par Resend** : il empile dans la queue Supabase
-`auth_emails` et c'est l'infra Lovable qui dépile et remet. Pour du 100 % Resend il faut le
-réécrire en `sendMail()` — mais alors `helvetica-mp.com` doit être vérifié dans Resend,
-sinon inscriptions et mots de passe oubliés cassent net.
-
-⚠️ **`notify.helvetica-mp.com` (le `SENDER_DOMAIN` codé dans `auth-email-hook`) n'existe pas
-en DNS** — constaté le 30/08/2026. À vérifier côté Resend.
 
 `messaging_config.provider` ne pilote toujours que le CRM ; les autres fonctions sont
 Resend en dur.
+
+⚠️ **`notify.helvetica-mp.com` n'existe pas en DNS** (constaté le 30/08/2026). C'était le
+`SENDER_DOMAIN` de l'ancien hook ; la valeur a disparu du code mais reste à nettoyer côté
+Resend si elle y figure.
 
 ### Et si on voulait du SMTP ?
 
