@@ -160,7 +160,6 @@ export default function Checkout() {
   const shippingCost = deliveryMode === 'relay' ? relayCost : homeCost;
 
   const orderTotal = subtotal - promoDiscount + shippingCost;
-  const tax = orderTotal * 0.2 / 1.2;
 
   const updateForm = (field: string, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }));
