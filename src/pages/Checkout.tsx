@@ -829,7 +829,7 @@ export default function Checkout() {
 
               <div className="space-y-2 text-sm pt-3 border-t border-border">
                 <div className="flex justify-between text-muted-foreground">
-                  <span>Sous-total</span>
+                  <span>Sous-total TTC</span>
                   <span>{subtotal.toFixed(2)}€</span>
                 </div>
                 {promoDiscount > 0 && (
