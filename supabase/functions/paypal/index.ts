@@ -329,9 +329,15 @@ Deno.serve(async (req) => {
     if (action === "test-credentials") {
       const target = body.environment === "live" ? "live" : "sandbox";
       const c = credsFor(target);
-      await accessToken(c);
+      try {
+        await accessToken(c);
+      } catch (e) {
+        // Échec d'identifiants = erreur de configuration, pas un plantage serveur.
+        return json({ ok: false, environment: target, error: e instanceof Error ? e.message : "Test échoué" }, 400);
+      }
       return json({ ok: true, environment: target });
     }
+
 
     if (action === "refund") {
       const txId = String(body.transactionId || "");
