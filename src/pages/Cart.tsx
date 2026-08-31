@@ -303,7 +303,7 @@ export default function Cart() {
 
                 
                 <div className="flex justify-between text-lg font-bold pt-3 border-t border-border">
-                  <span>TOTAL</span>
+                  <span>TOTAL TTC</span>
                   <span className="text-primary">{total.toFixed(2)}€</span>
                 </div>
               </div>
