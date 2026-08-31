@@ -705,38 +705,30 @@ Deno.serve(async (req) => {
             tags: m.tags,
             is_active: m.is_active,
             status: p.status === 'publish' ? 'published' : 'draft',
-            wc_id: p.id,
-            source: 'woocommerce',
           };
-          if (syncStock) row.stock = p.manage_stock ? (p.stock_quantity ?? 0) : (p.stock_status === 'instock' ? 99 : 0);
-          const { error } = await supabase.from('products').upsert(row, { onConflict: 'sku' });
-          if (error) out.errors.push(`Produit ${m.sku}: ${error.message}`);
-          else out.products++;
 
-          // Variations : stocks par taille/couleur
+          // Variations : le stock total est la somme des variations
+          let variationStock: number | null = null;
           if (syncStock && p.type === 'variable') {
             try {
               const variations = await wcFetchAll(`products/${p.id}/variations`);
               out.variations += variations.length;
-              const { data: prod } = await supabase.from('products').select('id').eq('sku', m.sku).maybeSingle();
-              if (prod?.id) {
-                for (const v of variations) {
-                  const attrs: Record<string, string> = {};
-                  (v.attributes || []).forEach((a: any) => { if (a.name) attrs[String(a.name).toLowerCase()] = a.option; });
-                  const size = attrs['taille'] || attrs['size'] || null;
-                  const color = attrs['couleur'] || attrs['color'] || null;
-                  const qty = v.manage_stock ? (v.stock_quantity ?? 0) : (v.stock_status === 'instock' ? 99 : 0);
-                  const { error: sErr } = await supabase.from('stock_levels').upsert(
-                    { product_id: prod.id, size, color, quantity: qty },
-                    { onConflict: 'product_id,size,color' },
-                  );
-                  if (sErr) out.errors.push(`Stock ${m.sku} ${size || ''}/${color || ''}: ${sErr.message}`);
-                }
-              }
+              variationStock = variations.reduce((sum: number, v: any) => {
+                const q = v.manage_stock ? (v.stock_quantity ?? 0) : (v.stock_status === 'instock' ? 10 : 0);
+                return sum + q;
+              }, 0);
             } catch (e: any) {
               out.errors.push(`Variations ${m.sku}: ${e.message}`);
             }
           }
+          if (syncStock) {
+            row.stock = variationStock ?? (p.manage_stock ? (p.stock_quantity ?? 0) : (p.stock_status === 'instock' ? 99 : 0));
+          }
+
+          const { error } = await supabase.from('products').upsert(row, { onConflict: 'sku' });
+          if (error) out.errors.push(`Produit ${m.sku}: ${error.message}`);
+          else out.products++;
+
           await sleep(60);
         }
       } catch (e: any) {
