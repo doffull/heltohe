@@ -65,7 +65,7 @@ export default function AdminSecurity() {
 
   const patch = (updates: Record<string, unknown>) => {
     dirtyRef.current = true;
-    patch({ ...updates });
+    setOverlay((o: any) => ({ ...o, ...updates }));
   };
 
   const saveOverlay = async () => {
