@@ -279,7 +279,7 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-[min(94vw,440px)] max-w-none p-0 bg-background border-2 border-primary/20 gap-0 overflow-hidden">
+        <DialogContent hideClose className="w-[min(94vw,440px)] max-w-none p-0 bg-background border-2 border-primary/20 gap-0 overflow-hidden">
           <DialogTitle className="sr-only">{config.title}</DialogTitle>
 
           {/* Header */}
