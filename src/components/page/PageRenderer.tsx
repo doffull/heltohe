@@ -1,5 +1,55 @@
-import { useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
+import { InlineEditable } from '@/components/visual-editor/InlineEditable';
 import { Link, useNavigate } from 'react-router-dom';
+
+/** Live page-edit context (Elementor-like inline editing for super admins). */
+interface PageEditCtx {
+  editable: boolean;
+  update: (sectionId: string, field: string, value: string) => void;
+}
+const PageEditContext = createContext<PageEditCtx>({ editable: false, update: () => {} });
+export function usePageEdit() {
+  return useContext(PageEditContext);
+}
+
+/** Renders a text field of a section: plain when read-only, inline-editable in live mode. */
+function EditableField({
+  sectionId,
+  field,
+  value,
+  as: Tag = 'span',
+  className,
+  style,
+  multiline,
+}: {
+  sectionId: string;
+  field: string;
+  value?: string;
+  as?: 'span' | 'h1' | 'h2' | 'h3' | 'p' | 'div';
+  className?: string;
+  style?: React.CSSProperties;
+  multiline?: boolean;
+}) {
+  const { editable, update } = usePageEdit();
+  if (!editable) {
+    if (!value) return null;
+    return <Tag className={className} style={style}>{value}</Tag>;
+  }
+  return (
+    <InlineEditable
+      fieldKey={`page:${sectionId}:${field}`}
+      value={value || ''}
+      as={Tag}
+      className={className}
+      style={style}
+      multiline={multiline}
+      placeholder="Cliquez pour éditer…"
+      onCommit={(v) => update(sectionId, field, v)}
+    />
+  );
+}
+
 import { useProducts } from '@/hooks/useProducts';
 import { productInCategory } from '@/lib/productCategories';
 import { useCategories } from '@/hooks/useCategories';
