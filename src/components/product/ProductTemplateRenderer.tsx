@@ -159,6 +159,7 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
             ) : (
               <span className="font-extrabold" style={{ fontSize: b.props?.size || 32 }}>{product?.price}€</span>
             )}
+            <span className="text-xs" style={{ color: t.colors.muted }}>TTC</span>
           </div>
         );
       }
