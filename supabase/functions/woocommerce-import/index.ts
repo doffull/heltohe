@@ -388,7 +388,23 @@ Deno.serve(async (req) => {
         );
       }
       await res.json().catch(() => null);
-      return new Response(JSON.stringify({ success: true, diag: lastDiagHeaders }), {
+      let storeInfo: Record<string, unknown> | null = null;
+      try {
+        const sys = await wcFetch('system_status', 1);
+        const env: any = (sys.data as any)?.environment || {};
+        storeInfo = {
+          store_name: env.site_title || null,
+          store_url: env.site_url || cleanUrl,
+          wc_version: env.version || null,
+          wp_version: env.wp_version || null,
+          currency: (sys.data as any)?.settings?.currency || null,
+        };
+        await supabase.from('woocommerce_config').upsert(
+          { config_key: 'main', store_info: storeInfo },
+          { onConflict: 'config_key' },
+        );
+      } catch (_) { /* system_status optionnel */ }
+      return new Response(JSON.stringify({ success: true, diag: lastDiagHeaders, storeInfo }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } catch (e: any) {
