@@ -122,12 +122,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, 0);
   
   // Align with Checkout: default to home-delivery pricing (Cart doesn't know
-  // the delivery mode yet). Prices are TTC, so tax is derived from the total.
+  // the delivery mode yet). Prices are TTC : aucune TVA n'est calculée.
   const shippingCost = computeShippingCost(checkoutConfig, subtotal, 'home');
 
   const subtotalAfterPromo = Math.max(0, subtotal - promoDiscount);
   const total = Math.max(0, subtotalAfterPromo + shippingCost);
-  const tax = total * TAX_RATE / (1 + TAX_RATE);
+  const tax = 0;
 
   const addItem = useCallback(async (newItem: Omit<CartItem, 'id'>) => {
     // Signal global : pop-up de confirmation + déclencheur « ajout au panier ».
