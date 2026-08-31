@@ -188,18 +188,16 @@ const SIDEBAR_ITEMS = [
   { icon: Settings, label: 'Paramètres', href: '/admin/parametres' },
 ];
 
-// Routes accessibles selon les rôles non-admin
-const STOCK_MANAGER_ROUTES = new Set(['/admin', '/admin/commandes', '/admin/preparations', '/admin/stock']);
-const PREPARATOR_ROUTES = new Set(['/admin/preparations']);
+// Routes accessibles selon les rôles non-admin (périmètre strictement métier)
+const STOCK_MANAGER_ROUTES = new Set(['/admin', '/admin/stock', '/admin/preparations']);
+const PREPARATOR_ROUTES = new Set(['/admin/preparations', '/admin/colissimo']);
+// Auditeur : lecture / diagnostics uniquement, aucun accès sécurité ni rôles
 const AUDITOR_ROUTES = new Set([
-  '/admin', '/admin/live', '/admin/produits', '/admin/commandes', '/admin/preparations',
-  '/admin/checkout', '/admin/clients', '/admin/media', '/admin/stock', '/admin/colissimo',
-  '/admin/notifications', '/admin/chatbot', '/admin/woocommerce', '/admin/audit',
-  '/admin/errors', '/admin/security', '/admin/bannieres-analytics', '/admin/roles',
+  '/admin', '/admin/audit', '/admin/media-audit', '/admin/errors',
+  '/admin/bannieres-analytics',
 ]);
 const ORDER_VALIDATOR_ROUTES = new Set([
-  '/admin', '/admin/produits', '/admin/commandes', '/admin/preparations',
-  '/admin/checkout', '/admin/clients', '/admin/stock', '/admin/colissimo', '/admin/chatbot',
+  '/admin', '/admin/commandes', '/admin/preparations', '/admin/colissimo', '/admin/clients',
 ]);
 
 function getActiveHref(pathname: string): string {
