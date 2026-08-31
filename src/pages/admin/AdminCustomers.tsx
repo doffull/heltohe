@@ -250,10 +250,18 @@ export default function AdminCustomers() {
           <h1 className="text-xl lg:text-3xl font-bold hud-text">CLIENTS</h1>
           <p className="text-muted-foreground text-xs lg:text-sm mt-1">{customers.length} clients enregistrés</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setSyncOpen(true)} className="w-full sm:w-auto gap-2">
-          <RefreshCw className="h-4 w-4" /> Sync WordPress
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="w-full sm:w-auto gap-2">
+            <Upload className="h-4 w-4" /> Importer des clients
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setSyncOpen(true)} className="w-full sm:w-auto gap-2">
+            <RefreshCw className="h-4 w-4" /> Sync WordPress
+          </Button>
+        </div>
       </div>
+
+      <CustomerImportDialog open={importOpen} onOpenChange={setImportOpen} />
+
 
       {/* Filters */}
       <div className="chamfer-hud bg-card/50 p-3 lg:p-4 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 lg:gap-3">
