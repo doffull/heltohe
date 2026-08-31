@@ -52,10 +52,69 @@ Deno.serve(async (req) => {
   }
 
   const body = await req.json();
-  const { storeUrl, consumerKey, consumerSecret, importProducts, importOrders, importCustomers, importStock, mode } = body;
+  const { importProducts, importOrders, importCustomers, importStock, mode } = body;
+
+  // ─── Stored configuration (credentials never leave the server) ─────
+  const loadConfig = async () => {
+    const { data } = await supabase
+      .from('woocommerce_config')
+      .select('*')
+      .eq('config_key', 'main')
+      .maybeSingle();
+    return data as any | null;
+  };
+
+  if (mode === 'get-config') {
+    const cfg = await loadConfig();
+    return new Response(
+      JSON.stringify({
+        store_url: cfg?.store_url || '',
+        consumer_key: cfg?.consumer_key || '',
+        has_secret: !!cfg?.consumer_secret,
+        sync_customers: cfg?.sync_customers ?? true,
+        sync_orders: cfg?.sync_orders ?? true,
+        sync_stats: cfg?.sync_stats ?? true,
+        last_sync_at: cfg?.last_sync_at || null,
+        last_sync_status: cfg?.last_sync_status || null,
+        store_info: cfg?.store_info || null,
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    );
+  }
+
+  if (mode === 'save-config') {
+    const existing = await loadConfig();
+    const payload: Record<string, unknown> = {
+      config_key: 'main',
+      store_url: String(body.storeUrl || existing?.store_url || '').trim().replace(/\/+$/, ''),
+      consumer_key: String(body.consumerKey || existing?.consumer_key || '').trim(),
+      sync_customers: body.syncCustomers ?? existing?.sync_customers ?? true,
+      sync_orders: body.syncOrders ?? existing?.sync_orders ?? true,
+      sync_stats: body.syncStats ?? existing?.sync_stats ?? true,
+    };
+    if (body.consumerSecret) payload.consumer_secret = String(body.consumerSecret).trim();
+    const { error } = await supabase.from('woocommerce_config').upsert(payload, { onConflict: 'config_key' });
+    if (error) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    return new Response(JSON.stringify({ saved: true }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const storedConfig = await loadConfig();
+  const storeUrl = body.storeUrl || storedConfig?.store_url;
+  const consumerKey = body.consumerKey || storedConfig?.consumer_key;
+  const consumerSecret = body.consumerSecret || storedConfig?.consumer_secret;
 
   if (!storeUrl || !consumerKey || !consumerSecret) {
-    return new Response(JSON.stringify({ error: 'Missing credentials' }), { status: 400, headers: corsHeaders });
+    return new Response(
+      JSON.stringify({ error: 'Identifiants WooCommerce manquants — enregistre l’URL, la clé et le secret dans Admin → WooCommerce.' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    );
   }
 
   const startedAt = Date.now();
