@@ -3,6 +3,8 @@ import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useDesignSettings } from '@/hooks/useDesignSettings';
+import { useRolePermissions, DEFAULT_ROLE_ROUTES } from '@/hooks/useRolePermissions';
+
 import { 
   LayoutDashboard, 
   Package, 
@@ -188,17 +190,9 @@ const SIDEBAR_ITEMS = [
   { icon: Settings, label: 'Paramètres', href: '/admin/parametres' },
 ];
 
-// Routes accessibles selon les rôles non-admin (périmètre strictement métier)
-const STOCK_MANAGER_ROUTES = new Set(['/admin', '/admin/stock', '/admin/preparations']);
-const PREPARATOR_ROUTES = new Set(['/admin/preparations', '/admin/colissimo']);
-// Auditeur : lecture / diagnostics uniquement, aucun accès sécurité ni rôles
-const AUDITOR_ROUTES = new Set([
-  '/admin', '/admin/audit', '/admin/media-audit', '/admin/errors',
-  '/admin/bannieres-analytics',
-]);
-const ORDER_VALIDATOR_ROUTES = new Set([
-  '/admin', '/admin/commandes', '/admin/preparations', '/admin/colissimo', '/admin/clients',
-]);
+// (les périmètres sont désormais réglables depuis Admin → Rôles, voir useRolePermissions)
+
+
 
 function getActiveHref(pathname: string): string {
   if (pathname === '/admin') return '/admin';
@@ -275,6 +269,8 @@ export default function Admin() {
   const location = useLocation();
   const { user, isAdmin, isStockManager, isPreparator, isAuditor, isOrderValidator, hasAdminPanelAccess, isLoading, signOut } = useAuth();
   const { data: designSettings } = useDesignSettings();
+  const { data: rolePerms } = useRolePermissions();
+
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Log admin panel access (audit trail) — fires once per session per route group
@@ -296,17 +292,24 @@ export default function Admin() {
     ...((designSettings as any)?.admin_section_colors || {}),
   };
 
+  // Périmètre par rôle : réglé en base (Admin → Rôles), avec repli sur les
+  // valeurs par défaut si la table n'est pas encore chargée.
+  const roleRoutes = (role: keyof typeof DEFAULT_ROLE_ROUTES): Set<string> =>
+    new Set<string>(rolePerms?.[role]?.length ? rolePerms[role] : DEFAULT_ROLE_ROUTES[role]);
+
   const allowedHrefs: Set<string> = isAdmin
-    ? new Set(SIDEBAR_ITEMS.map(i => i.href))
+    ? new Set<string>(SIDEBAR_ITEMS.map(i => i.href))
     : isAuditor
-      ? AUDITOR_ROUTES
+      ? roleRoutes('auditor')
       : isOrderValidator
-        ? ORDER_VALIDATOR_ROUTES
+        ? roleRoutes('order_validator')
         : isStockManager
-          ? STOCK_MANAGER_ROUTES
+          ? roleRoutes('stock_manager')
           : isPreparator
-            ? PREPARATOR_ROUTES
-            : new Set();
+            ? roleRoutes('preparator')
+            : new Set<string>();
+
+
 
   const activeHref = getActiveHref(location.pathname);
   const activeColor = sectionColors[activeHref] || '#6B7280';
