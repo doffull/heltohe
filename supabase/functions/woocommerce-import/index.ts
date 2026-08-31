@@ -605,12 +605,16 @@ Deno.serve(async (req) => {
     const syncCustomers = body.syncCustomers ?? storedConfig?.sync_customers ?? true;
     const syncOrders = body.syncOrders ?? storedConfig?.sync_orders ?? true;
     const syncStats = body.syncStats ?? storedConfig?.sync_stats ?? true;
+    const syncProducts = body.syncProducts ?? storedConfig?.sync_products ?? true;
+    const syncStock = body.syncStock ?? storedConfig?.sync_stock ?? true;
+    const syncCategories = body.syncCategories ?? storedConfig?.sync_categories ?? true;
     const incremental = !!body.incremental && !!storedConfig?.last_sync_at;
     const since = incremental ? new Date(storedConfig.last_sync_at).toISOString().replace(/\.\d+Z$/, '') : null;
     const out: {
       customers: number; orders: number; ordersInProgress: number;
+      products: number; variations: number; categories: number;
       stats: string[]; errors: string[]; incremental: boolean; since: string | null;
-    } = { customers: 0, orders: 0, ordersInProgress: 0, stats: [], errors: [], incremental, since };
+    } = { customers: 0, orders: 0, ordersInProgress: 0, products: 0, variations: 0, categories: 0, stats: [], errors: [], incremental, since };
 
     if (syncCustomers) {
       try {
@@ -645,6 +649,93 @@ Deno.serve(async (req) => {
       }
     }
 
+    if (syncCategories) {
+      try {
+        const wcCats = await wcFetchAll('products/categories?orderby=name&order=asc');
+        const { data: localCats } = await supabase.from('categories').select('id, title, slug');
+        const bySlug = new Map((localCats || []).map((c: any) => [String(c.slug || '').toLowerCase(), c]));
+        const byTitle = new Map((localCats || []).map((c: any) => [String(c.title || '').toLowerCase(), c]));
+        for (const c of wcCats) {
+          const slug = String(c.slug || '').toLowerCase();
+          const title = String(c.name || '').trim();
+          if (!title) continue;
+          const found = bySlug.get(slug) || byTitle.get(title.toLowerCase());
+          if (found) {
+            const { error } = await supabase.from('categories')
+              .update({ image: c.image?.src || undefined, slug: slug || undefined })
+              .eq('id', found.id);
+            if (error) out.errors.push(`Catégorie ${title}: ${error.message}`);
+            else out.categories++;
+          } else {
+            const { error } = await supabase.from('categories')
+              .insert({ title, slug: slug || null, image: c.image?.src || null });
+            if (error) out.errors.push(`Catégorie ${title}: ${error.message}`);
+            else out.categories++;
+          }
+          await sleep(40);
+        }
+      } catch (e: any) {
+        out.errors.push(`Catégories: ${e.message}`);
+      }
+    }
+
+    if (syncProducts) {
+      try {
+        const path = since
+          ? `products?status=any&orderby=id&order=asc&modified_after=${encodeURIComponent(since)}`
+          : 'products?status=any&orderby=id&order=asc';
+        const wcProducts = await wcFetchAll(path);
+        for (const p of wcProducts) {
+          const m = mapWcProduct(p);
+          const gallery: string[] = (m.images || []).slice(1);
+          const categoryNames: string[] = (p.categories || []).map((c: any) => c.name).filter(Boolean);
+          const row: Record<string, unknown> = {
+            name: m.name,
+            sku: m.sku,
+            price: m.price,
+            sale_price: m.sale_price,
+            image: m.image,
+            gallery_images: gallery,
+            category: categoryNames[0] || 'Divers',
+            categories: categoryNames,
+            description: m.description,
+            sizes: m.sizes,
+            colors: m.colors,
+            attributes: m.attributes,
+            tags: m.tags,
+            is_active: m.is_active,
+            status: p.status === 'publish' ? 'published' : 'draft',
+          };
+
+          // Variations : le stock total est la somme des variations
+          let variationStock: number | null = null;
+          if (syncStock && p.type === 'variable') {
+            try {
+              const variations = await wcFetchAll(`products/${p.id}/variations`);
+              out.variations += variations.length;
+              variationStock = variations.reduce((sum: number, v: any) => {
+                const q = v.manage_stock ? (v.stock_quantity ?? 0) : (v.stock_status === 'instock' ? 10 : 0);
+                return sum + q;
+              }, 0);
+            } catch (e: any) {
+              out.errors.push(`Variations ${m.sku}: ${e.message}`);
+            }
+          }
+          if (syncStock) {
+            row.stock = variationStock ?? (p.manage_stock ? (p.stock_quantity ?? 0) : (p.stock_status === 'instock' ? 99 : 0));
+          }
+
+          const { error } = await supabase.from('products').upsert(row, { onConflict: 'sku' });
+          if (error) out.errors.push(`Produit ${m.sku}: ${error.message}`);
+          else out.products++;
+
+          await sleep(60);
+        }
+      } catch (e: any) {
+        out.errors.push(`Produits: ${e.message}`);
+      }
+    }
+
     if (syncStats) {
       try {
         const { collected, errors } = await fetchStats();
@@ -655,7 +746,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const done = out.customers + out.orders + out.stats.length;
+    const done = out.customers + out.orders + out.products + out.categories + out.stats.length;
     const syncStatus: 'success' | 'partial' | 'failed' =
       out.errors.length === 0 ? 'success' : done > 0 ? 'partial' : 'failed';
     await writeSyncLog(syncStatus, {

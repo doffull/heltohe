@@ -22,6 +22,9 @@ export interface WooSyncResult {
   customers: number;
   orders: number;
   ordersInProgress: number;
+  products: number;
+  variations: number;
+  categories: number;
   stats: string[];
   errors: string[];
   incremental: boolean;
@@ -55,6 +58,9 @@ export function useSaveWooConfig() {
       syncCustomers?: boolean;
       syncOrders?: boolean;
       syncStats?: boolean;
+      syncProducts?: boolean;
+      syncStock?: boolean;
+      syncCategories?: boolean;
     }) => callWoo<{ saved: boolean }>({ mode: 'save-config', ...input }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['woo-config'] }),
   });
@@ -78,6 +84,9 @@ export function useWooSync() {
       syncCustomers?: boolean;
       syncOrders?: boolean;
       syncStats?: boolean;
+      syncProducts?: boolean;
+      syncStock?: boolean;
+      syncCategories?: boolean;
       statsPeriod?: string;
     }) => callWoo<WooSyncResult>({ mode: 'sync', ...input }),
     onSuccess: () => {
@@ -86,6 +95,8 @@ export function useWooSync() {
       qc.invalidateQueries({ queryKey: ['orders'] });
       qc.invalidateQueries({ queryKey: ['admin-customers'] });
       qc.invalidateQueries({ queryKey: ['wp-sync-logs'] });
+      qc.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: ['categories'] });
     },
   });
 }
