@@ -37,7 +37,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 // NOTE: product prices are stored TTC (VAT included). Tax is derived from the
 // final TTC total to stay consistent with checkout and the server-side
 // validate_and_create_order RPC (see src/pages/Checkout.tsx).
-const TAX_RATE = 0.20; // 20% TVA
+// Les prix produits sont TTC : aucune TVA n'est calculée ni affichée.
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
