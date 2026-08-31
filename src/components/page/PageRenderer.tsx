@@ -137,17 +137,16 @@ function BannerSection({ content, sectionId }: { content: Record<string, any>; s
     <div className="absolute inset-0 pointer-events-none" style={{ backgroundColor: `rgba(0,0,0,${overlay})` }} />
   ) : null;
 
-  const textLayer = (content.title || content.subtitle || content.buttonLabel) ? (
+  const textLayer = (content.title || content.subtitle || content.buttonLabel || isEditable) ? (
     <div className={cn('relative z-10 h-full w-full p-6 md:p-10 flex flex-col gap-3', posClass)} style={{ color: textColor }}>
-      {content.title && <h2 className="text-2xl md:text-4xl font-bold uppercase tracking-tight drop-shadow">{content.title}</h2>}
-      {content.subtitle && <p className="text-sm md:text-lg drop-shadow max-w-2xl">{content.subtitle}</p>}
-      {content.buttonLabel && (
-        <span className="inline-flex items-center px-5 py-2 mt-2 bg-white text-black text-sm font-bold uppercase tracking-wider hover:bg-white/90 transition pointer-events-none">
-          {content.buttonLabel}
-        </span>
-      )}
+      <EditableField sectionId={sectionId} field="title" value={content.title} as="h2" className="text-2xl md:text-4xl font-bold uppercase tracking-tight drop-shadow" />
+      <EditableField sectionId={sectionId} field="subtitle" value={content.subtitle} as="p" className="text-sm md:text-lg drop-shadow max-w-2xl" />
+      {content.buttonLabel || isEditable ? (
+        <EditableField sectionId={sectionId} field="buttonLabel" value={content.buttonLabel} as="span" className="inline-flex items-center px-5 py-2 mt-2 bg-white text-black text-sm font-bold uppercase tracking-wider self-start" />
+      ) : null}
     </div>
   ) : null;
+
 
   const inner = (
     <div className={cn('relative w-full overflow-hidden group', heightClass)}>
