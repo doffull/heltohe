@@ -271,7 +271,7 @@ export default function Cart() {
               {/* Totals */}
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Sous-total</span>
+                  <span className="text-muted-foreground">Sous-total TTC</span>
                   <span>{subtotal.toFixed(2)}€</span>
                 </div>
                 
