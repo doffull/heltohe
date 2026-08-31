@@ -1229,7 +1229,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label className="hud-text text-xs">Prix TTC (€) *</Label>
+            <Label className="hud-text text-xs">Prix (€) *</Label>
             <Input
               type="number"
               value={formData.price}
@@ -1242,7 +1242,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
           </div>
           
           <div className="space-y-2">
-            <Label className="hud-text text-xs">Prix soldé TTC (€)</Label>
+            <Label className="hud-text text-xs">Prix soldé (€)</Label>
             <Input
               type="number"
               value={formData.salePrice || ''}

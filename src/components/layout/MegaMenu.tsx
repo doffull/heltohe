@@ -290,7 +290,7 @@ export function MegaMenu() {
                         <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-background/95 to-transparent">
                           <p className="text-[10px] uppercase tracking-wider text-muted-foreground truncate">{p.category}</p>
                           <h4 className="text-xs lg:text-sm font-bold uppercase truncate">{p.name}</h4>
-                          <p className="text-xs font-bold mt-0.5">{p.salePrice || p.price}€ <span className="text-[10px] font-normal text-muted-foreground">TTC</span></p>
+                          <p className="text-xs font-bold mt-0.5">{p.salePrice || p.price}€</p>
                         </div>
                       </Link>
                     ))}

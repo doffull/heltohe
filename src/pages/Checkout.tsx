@@ -829,7 +829,7 @@ export default function Checkout() {
 
               <div className="space-y-2 text-sm pt-3 border-t border-border">
                 <div className="flex justify-between text-muted-foreground">
-                  <span>Sous-total TTC</span>
+                  <span>Sous-total</span>
                   <span>{subtotal.toFixed(2)}€</span>
                 </div>
                 {promoDiscount > 0 && (
@@ -843,7 +843,7 @@ export default function Checkout() {
                   <span>{shippingCost === 0 ? <span className="text-primary">GRATUIT</span> : `${shippingCost.toFixed(2)}€`}</span>
                 </div>
                 <div className="flex justify-between font-bold text-base pt-2 border-t border-border">
-                  <span>TOTAL TTC</span>
+                  <span>TOTAL</span>
                   <span className="text-primary">{orderTotal.toFixed(2)}€</span>
                 </div>
               </div>

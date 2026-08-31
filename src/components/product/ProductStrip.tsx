@@ -78,14 +78,10 @@ export default function ProductStrip({ products, eyebrow, title, compact, classN
                 {hasDiscount ? (
                   <>
                     <span className="text-sm font-bold text-primary">{product.salePrice}€</span>
-                    <span className="text-[10px] text-muted-foreground">TTC</span>
                     <span className="text-xs text-muted-foreground line-through">{product.price}€</span>
                   </>
                 ) : (
-                  <>
-                    <span className="text-sm font-bold text-primary">{product.price}€</span>
-                    <span className="text-[10px] text-muted-foreground">TTC</span>
-                  </>
+                  <span className="text-sm font-bold text-primary">{product.price}€</span>
                 )}
               </div>
             </button>

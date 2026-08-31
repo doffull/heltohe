@@ -467,7 +467,7 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
           {/* Price + Category */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">Prix TTC (€)</Label>
+              <Label className="text-xs">Prix (€)</Label>
               <Input type="number" value={form.price} onChange={e => setForm(p => ({ ...p, price: Number(e.target.value) }))} min={0} step={0.01} />
             </div>
             <div className="space-y-1.5">
