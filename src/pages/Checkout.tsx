@@ -196,10 +196,18 @@ export default function Checkout() {
       } else {
         toast({ title: 'Aucun point relais trouvé', description: 'Essayez un autre code postal', variant: 'destructive' });
       }
-    } catch (err) {
-      console.error('Relay search error:', err);
-      toast({ title: 'Erreur lors de la recherche', description: 'Impossible de récupérer les points relais', variant: 'destructive' });
+    } catch (err: any) {
+      // `invoke` masque le corps des réponses non-2xx : on le relit pour afficher
+      // le vrai motif renvoyé par La Poste (code postal, date, indisponibilité…).
+      let details = err?.message || 'Impossible de récupérer les points relais';
+      try {
+        const raw = await err?.context?.text?.();
+        if (raw) details = JSON.parse(raw)?.details || JSON.parse(raw)?.error || raw.slice(0, 200);
+      } catch { /* corps illisible : on garde le message générique */ }
+      console.error('Relay search error:', details);
+      toast({ title: 'Erreur lors de la recherche', description: details, variant: 'destructive' });
     } finally {
+
       setIsSearchingRelays(false);
     }
   };

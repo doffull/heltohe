@@ -837,16 +837,28 @@ Deno.serve(async (req) => {
   if (importCustomers) {
     try {
       const wcCustomers = await wcFetchAll('customers');
+      const skipExisting = body.skipExistingCustomers === true;
+      // Fiches déjà présentes : nécessaires pour l'option « ne pas écraser ».
+      const existing = new Set<string>();
+      if (skipExisting) {
+        const { data: rows } = await supabase.from('customers').select('email');
+        (rows || []).forEach((r: any) => existing.add(String(r.email).toLowerCase()));
+      }
       let count = 0;
       for (const c of wcCustomers) {
         if (!c.email) continue;
-        const fakeUserId = `00000000-0000-0000-${String(c.id).padStart(4, '0')}-000000000000`;
-        const payload = {
+        if (skipExisting && existing.has(String(c.email).toLowerCase())) continue;
+        const payload: Record<string, unknown> = {
           email: c.email,
           first_name: c.first_name || null,
           last_name: c.last_name || null,
           phone: c.billing?.phone || null,
-          user_id: fakeUserId,
+          address: c.billing?.address_1 || null,
+          city: c.billing?.city || null,
+          zip: c.billing?.postcode || null,
+          country: c.billing?.country || null,
+          wc_id: c.id ?? null,
+          source: 'woocommerce',
           total_spent: parseFloat(c.total_spent || '0'),
         };
         const { error } = await supabase.from('customers').upsert(payload, { onConflict: 'email' });
@@ -858,6 +870,7 @@ Deno.serve(async (req) => {
       result.errors.push(`Clients: ${e.message}`);
     }
   }
+
 
   if (importStock) {
     try {

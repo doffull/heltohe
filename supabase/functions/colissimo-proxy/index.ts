@@ -213,9 +213,22 @@ Deno.serve(async (req) => {
       }
 
 
-      const now = new Date();
-      const shippingDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
-      const soapBody = `<?xml version="1.0" encoding="UTF-8"?>
+      // La Poste refuse certaines dates d'expédition (dimanche / jour férié) avec un
+      // code d'erreur. On tente le jour courant puis, en cas d'échec, les jours
+      // ouvrés suivants.
+      const fmt = (d: Date) =>
+        `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+      const candidates: string[] = [];
+      const cursor = new Date();
+      while (candidates.length < 3) {
+        if (cursor.getDay() !== 0) candidates.push(fmt(cursor));
+        cursor.setDate(cursor.getDate() + 1);
+      }
+
+      let lastError: { error: string; details: string; status: number } | null = null;
+
+      for (const shippingDate of candidates) {
+        const soapBody = `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="${RELAY_NS}">
   <soapenv:Header/>
   <soapenv:Body>
@@ -236,38 +249,49 @@ Deno.serve(async (req) => {
   </soapenv:Body>
 </soapenv:Envelope>`;
 
-      const response = await fetch(COLISSIMO_RELAY_API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/xml; charset=UTF-8', 'SOAPAction': '' },
-        body: soapBody,
-      });
+        const response = await fetch(COLISSIMO_RELAY_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/xml; charset=UTF-8', 'SOAPAction': '' },
+          body: soapBody,
+        });
 
-      const xmlText = await response.text();
-      if (!response.ok || xmlText.includes('<faultcode>')) {
-        const faultMatch = xmlText.match(/<faultstring>([^<]+)<\/faultstring>/);
-        const fault = faultMatch ? faultMatch[1] : xmlText.slice(0, 300);
-        return new Response(JSON.stringify({ error: 'Colissimo SOAP fault', details: fault }), {
-          status: 502,
+        const xmlText = await response.text();
+
+        if (!response.ok || xmlText.includes('<faultcode>')) {
+          const faultMatch = xmlText.match(/<faultstring>([^<]+)<\/faultstring>/);
+          lastError = {
+            error: 'Service La Poste indisponible',
+            details: faultMatch ? faultMatch[1] : xmlText.slice(0, 300),
+            status: 502,
+          };
+          continue;
+        }
+
+        const errorCodeMatch = xmlText.match(/<errorCode>([^<]+)<\/errorCode>/);
+        const errorCode = errorCodeMatch ? parseInt(errorCodeMatch[1]) : 0;
+        if (errorCode !== 0) {
+          const errorMsgMatch = xmlText.match(/<errorMessage>([^<]+)<\/errorMessage>/);
+          lastError = {
+            error: 'Recherche refusée par La Poste',
+            details: `Code ${errorCode}${errorMsgMatch?.[1] ? ` — ${errorMsgMatch[1]}` : ''} (date ${shippingDate})`,
+            status: 422,
+          };
+          continue;
+        }
+
+        const points = parseRelayPointsFromXml(xmlText);
+        return new Response(JSON.stringify({ success: true, points, shippingDate }), {
+          status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      const errorCodeMatch = xmlText.match(/<errorCode>([^<]+)<\/errorCode>/);
-      const errorCode = errorCodeMatch ? parseInt(errorCodeMatch[1]) : 0;
-      if (errorCode !== 0) {
-        const errorMsgMatch = xmlText.match(/<errorMessage>([^<]+)<\/errorMessage>/);
-        return new Response(JSON.stringify({ error: `Colissimo error ${errorCode}`, details: errorMsgMatch?.[1] || '' }), {
-          status: 422,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      const points = parseRelayPointsFromXml(xmlText);
-      return new Response(JSON.stringify({ success: true, points }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({ error: lastError?.error || 'Recherche impossible', details: lastError?.details || '' }),
+        { status: lastError?.status ?? 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
     }
+
 
     // ─── ACTION: GENERATE LABEL ───────────────────────────────────────────────
     if (action === 'generateLabel') {

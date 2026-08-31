@@ -11,8 +11,124 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ShieldCheck, ShieldOff, Search, Loader2 } from 'lucide-react';
+import { ShieldCheck, ShieldOff, Search, Loader2, Save } from 'lucide-react';
 import { ROLE_LABELS, ROLE_COLORS, useRoleAuditLog, type AppRole } from '@/hooks/useUserRoles';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ADMIN_SECTIONS } from '@/config/adminSections';
+import { useRolePermissions, useSaveRolePermissions, DEFAULT_ROLE_ROUTES } from '@/hooks/useRolePermissions';
+
+const MANAGED_ROLES: Exclude<AppRole, 'admin'>[] = ['stock_manager', 'preparator', 'order_validator', 'auditor'];
+
+/** Liste des comptes porteurs d'un rôle (via RPC sécurisée). */
+function RoleMembersCard() {
+  const { data, isLoading } = useQuery({
+    queryKey: ['role-members'],
+    queryFn: async () => {
+      const out: { role: AppRole; users: { user_id: string; email: string }[] }[] = [];
+      for (const role of ['admin', ...MANAGED_ROLES] as AppRole[]) {
+        const { data, error } = await supabase.rpc('list_users_by_role', { p_role: role });
+        if (error) throw error;
+        out.push({ role, users: (data as any[]) || [] });
+      }
+      return out;
+    },
+  });
+
+  return (
+    <Card className="p-4 sm:p-6 space-y-4">
+      <div>
+        <h2 className="text-lg font-bold">Administrateurs & membres</h2>
+        <p className="text-xs text-muted-foreground">Comptes ayant un rôle attribué</p>
+      </div>
+      {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+      <div className="space-y-4">
+        {(data || []).map(({ role, users }) => (
+          <div key={role} className="space-y-1">
+            <Badge variant="outline" className={ROLE_COLORS[role]}>{ROLE_LABELS[role]}</Badge>
+            {users.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic">Aucun compte</p>
+            ) : (
+              <ul className="text-sm font-mono space-y-0.5">
+                {users.map((u) => <li key={u.user_id} className="break-all">{u.email}</li>)}
+              </ul>
+            )}
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+/** Grille de permissions : quelles sections du tableau de bord chaque rôle voit. */
+function RolePermissionsCard() {
+  const { data: perms, isLoading } = useRolePermissions();
+  const save = useSaveRolePermissions();
+  const [role, setRole] = useState<Exclude<AppRole, 'admin'>>('preparator');
+  const [draft, setDraft] = useState<string[] | null>(null);
+
+  const current = draft ?? perms?.[role] ?? DEFAULT_ROLE_ROUTES[role];
+  const checked = new Set(current);
+
+  const toggle = (href: string) => {
+    const next = new Set(checked);
+    if (next.has(href)) next.delete(href); else next.add(href);
+    next.add('/admin'); // le tableau de bord reste toujours accessible
+    setDraft(Array.from(next));
+  };
+
+  const persist = async () => {
+    try {
+      await save.mutateAsync({ role, routes: Array.from(checked) });
+      setDraft(null);
+      toast({ title: 'Permissions enregistrées', description: ROLE_LABELS[role] });
+    } catch (e: any) {
+      toast({ title: 'Erreur', description: e.message, variant: 'destructive' });
+    }
+  };
+
+  return (
+    <Card className="p-4 sm:p-6 space-y-4">
+      <div>
+        <h2 className="text-lg font-bold">Permissions par rôle</h2>
+        <p className="text-xs text-muted-foreground">
+          Cochez les sections visibles pour ce rôle. Le Super Admin voit tout et n'est pas modifiable.
+        </p>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+        <select
+          value={role}
+          onChange={(e) => { setRole(e.target.value as any); setDraft(null); }}
+          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+        >
+          {MANAGED_ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+        </select>
+        <Button onClick={persist} disabled={!draft || save.isPending} className="gap-2">
+          {save.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          Enregistrer
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 max-h-96 overflow-y-auto pr-1">
+          {ADMIN_SECTIONS.map((s) => (
+            <label key={s.href} className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={checked.has(s.href)}
+                disabled={s.href === '/admin'}
+                onCheckedChange={() => toggle(s.href)}
+              />
+              <span className={s.href === '/admin' ? 'text-muted-foreground' : ''}>{s.label}</span>
+            </label>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 
 type FoundUser = { user_id: string; email: string; roles: AppRole[] };
 
@@ -162,7 +278,12 @@ export default function AdminRoles() {
         )}
       </Card>
 
+      <RoleMembersCard />
+
+      <RolePermissionsCard />
+
       <Card className="p-4 sm:p-6">
+
         <h2 className="text-lg font-bold mb-3">Activité récente</h2>
         <div className="space-y-1 max-h-80 overflow-y-auto">
           {(audit || []).slice(0, 30).map((row: any) => (
