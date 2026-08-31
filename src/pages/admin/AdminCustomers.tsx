@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
 import { CustomerImportDialog } from '@/components/admin/CustomerImportDialog';
+import { CustomerEmailDialog } from '@/components/admin/CustomerEmailDialog';
+import { UserPasswordManager } from '@/components/admin/UserPasswordManager';
 
 import { 
   Users, Search, Mail, Phone, Crown, TrendingUp, Eye, Trash2, Filter, ArrowUpDown, RefreshCw, Save, History, Upload
