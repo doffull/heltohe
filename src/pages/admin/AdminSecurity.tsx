@@ -65,7 +65,7 @@ export default function AdminSecurity() {
 
   const patch = (updates: Record<string, unknown>) => {
     dirtyRef.current = true;
-    setOverlay((o: any) => ({ ...o, ...updates }));
+    patch({ ...updates });
   };
 
   const saveOverlay = async () => {
@@ -133,28 +133,28 @@ export default function AdminSecurity() {
               <Label className="text-sm">Filigrane visible</Label>
               <p className="text-[11px] text-muted-foreground">Overlay diagonal traçable sur tout le site public.</p>
             </div>
-            <Switch checked={!!overlay.enabled} onCheckedChange={v => setOverlay((o: any) => ({ ...o, enabled: v }))} />
+            <Switch checked={!!overlay.enabled} onCheckedChange={v => patch({ enabled: v })} />
           </div>
           <div className="flex items-center justify-between rounded border p-3">
             <div>
               <Label className="text-sm">Inclure l'email visiteur</Label>
               <p className="text-[11px] text-muted-foreground">Marque le filigrane avec l'email connecté (traçabilité).</p>
             </div>
-            <Switch checked={overlay.showEmail !== false} onCheckedChange={v => setOverlay((o: any) => ({ ...o, showEmail: v }))} />
+            <Switch checked={overlay.showEmail !== false} onCheckedChange={v => patch({ showEmail: v })} />
           </div>
           <div className="flex items-center justify-between rounded border p-3">
             <div>
               <Label className="text-sm">Bloquer PrintScreen</Label>
               <p className="text-[11px] text-muted-foreground">Floute la page et vide le presse-papier à l'appui.</p>
             </div>
-            <Switch checked={overlay.blockPrintScreen !== false} onCheckedChange={v => setOverlay((o: any) => ({ ...o, blockPrintScreen: v }))} />
+            <Switch checked={overlay.blockPrintScreen !== false} onCheckedChange={v => patch({ blockPrintScreen: v })} />
           </div>
           <div className="flex items-center justify-between rounded border p-3">
             <div>
               <Label className="text-sm">Désactiver clic droit / sélection</Label>
               <p className="text-[11px] text-muted-foreground">Empêche la copie d'images et texte hors champs.</p>
             </div>
-            <Switch checked={overlay.disableRightClick !== false} onCheckedChange={v => setOverlay((o: any) => ({ ...o, disableRightClick: v }))} />
+            <Switch checked={overlay.disableRightClick !== false} onCheckedChange={v => patch({ disableRightClick: v })} />
           </div>
         </div>
 
@@ -163,7 +163,7 @@ export default function AdminSecurity() {
             <Label className="text-xs">Texte personnalisé du filigrane</Label>
             <Input
               value={overlay.text ?? ''}
-              onChange={e => setOverlay((o: any) => ({ ...o, text: e.target.value }))}
+              onChange={e => patch({ text: e.target.value })}
               placeholder="Ex : © HELVETICA-MP — Propriété — Ne pas diffuser"
             />
             <p className="text-[11px] text-muted-foreground">Laissez vide pour n'afficher que l'email et le timestamp.</p>
@@ -177,7 +177,7 @@ export default function AdminSecurity() {
                 min={1}
                 max={30}
                 step={1}
-                onValueChange={([v]) => setOverlay((o: any) => ({ ...o, opacity: v / 100 }))}
+                onValueChange={([v]) => patch({ opacity: v / 100 })}
               />
             </div>
             <div className="space-y-2">
@@ -187,7 +187,7 @@ export default function AdminSecurity() {
                 min={-90}
                 max={90}
                 step={5}
-                onValueChange={([v]) => setOverlay((o: any) => ({ ...o, angle: v }))}
+                onValueChange={([v]) => patch({ angle: v })}
               />
             </div>
             <div className="space-y-2">
@@ -197,7 +197,7 @@ export default function AdminSecurity() {
                 min={20}
                 max={150}
                 step={5}
-                onValueChange={([v]) => setOverlay((o: any) => ({ ...o, density: v }))}
+                onValueChange={([v]) => patch({ density: v })}
               />
             </div>
           </div>
@@ -208,14 +208,14 @@ export default function AdminSecurity() {
               <Input
                 type="text"
                 value={overlay.color ?? 'currentColor'}
-                onChange={e => setOverlay((o: any) => ({ ...o, color: e.target.value }))}
+                onChange={e => patch({ color: e.target.value })}
                 placeholder="currentColor, #ff0000, rgba(0,0,0,0.3)…"
                 className="flex-1"
               />
               <input
                 type="color"
                 value={/^#[0-9a-f]{6}$/i.test(overlay.color ?? '') ? overlay.color : '#000000'}
-                onChange={e => setOverlay((o: any) => ({ ...o, color: e.target.value }))}
+                onChange={e => patch({ color: e.target.value })}
                 className="h-9 w-12 rounded border cursor-pointer"
               />
             </div>
