@@ -188,15 +188,13 @@ Deno.serve(async (req) => {
               amount: { currency_code: currency, value: total },
             },
           ],
-          payment_source: {
-            paypal: {
-              experience_context: {
-                brand_name: String(config.brand_name || "Boutique"),
-                locale: String(config.locale || "fr_FR"),
-                shipping_preference: "NO_SHIPPING",
-                user_action: "PAY_NOW",
-              },
-            },
+          // `application_context` (et non `payment_source.paypal`) : garde tous les
+          // moyens de paiement disponibles (compte PayPal, carte invité, 3x/4x).
+          application_context: {
+            brand_name: String(config.brand_name || "Boutique"),
+            locale: String(config.locale || "fr_FR"),
+            shipping_preference: "NO_SHIPPING",
+            user_action: "PAY_NOW",
           },
         }),
       });
@@ -238,39 +236,90 @@ Deno.serve(async (req) => {
       if (!tx) return json({ error: "Transaction inconnue" }, 404);
 
       const token = await accessToken(creds);
-      const capture = await paypalFetch(
-        creds,
-        token,
-        `/v2/checkout/orders/${paypalOrderId}/capture`,
-        { method: "POST", body: JSON.stringify({}) },
-      );
+      let capture: Record<string, unknown>;
+      try {
+        capture = await paypalFetch(
+          creds,
+          token,
+          `/v2/checkout/orders/${paypalOrderId}/capture`,
+          { method: "POST", body: JSON.stringify({}) },
+        );
+      } catch (err) {
+        // Capture déjà effectuée (double clic, retry réseau) : on relit la commande
+        // au lieu d'échouer, pour ne jamais perdre un paiement déjà encaissé.
+        const msg = err instanceof Error ? err.message : String(err);
+        if (/already|captured|ORDER_ALREADY/i.test(msg)) {
+          capture = await paypalFetch(creds, token, `/v2/checkout/orders/${paypalOrderId}`);
+        } else {
+          throw err;
+        }
+      }
 
-      const unit = capture?.purchase_units?.[0];
-      const cap = unit?.payments?.captures?.[0];
-      const paid = capture?.status === "COMPLETED" || cap?.status === "COMPLETED";
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const c = capture as any;
+      const cap = c?.purchase_units?.[0]?.payments?.captures?.[0];
+      const paid = c?.status === "COMPLETED" || cap?.status === "COMPLETED";
 
       await db
         .from("paypal_transactions")
         .update({
           capture_id: cap?.id ?? null,
-          status: paid ? "completed" : String(capture?.status || "pending").toLowerCase(),
-          payer_email: capture?.payer?.email_address ?? null,
-          payer_name: [capture?.payer?.name?.given_name, capture?.payer?.name?.surname]
+          status: paid ? "completed" : String(c?.status || "pending").toLowerCase(),
+          payer_email: c?.payer?.email_address ?? null,
+          payer_name: [c?.payer?.name?.given_name, c?.payer?.name?.surname]
             .filter(Boolean)
             .join(" ") || null,
-          funding_source: capture?.payment_source ? Object.keys(capture.payment_source)[0] : null,
+          funding_source: c?.payment_source ? Object.keys(c.payment_source)[0] : null,
           raw: capture,
         })
         .eq("id", tx.id);
 
       if (paid && tx.order_id) {
+        const { data: order } = await db
+          .from("orders")
+          .select("*")
+          .eq("id", tx.order_id)
+          .maybeSingle();
+
+        const alreadyPaid = String(order?.payment_status || "").toLowerCase() === "paid";
+
         await db
           .from("orders")
           .update({ payment_status: "paid", payment_method: "paypal", status: "processing" })
           .eq("id", tx.order_id);
+
+        if (!alreadyPaid) {
+          // Déstockage réel (une seule fois) puis e-mail de confirmation.
+          await db.rpc("consume_order_stock", { p_order_id: tx.order_id }).catch(() => undefined);
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const o = order as any;
+          if (o?.customer_email) {
+            try {
+              await fetch(`${SUPABASE_URL}/functions/v1/send-order-confirmation`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${SERVICE_KEY}`,
+                },
+                body: JSON.stringify({
+                  orderNumber: o.order_number,
+                  customerName: o.customer_name || "",
+                  customerEmail: o.customer_email,
+                  items: o.items ?? [],
+                  subtotal: Number(o.subtotal ?? 0),
+                  shippingCost: Number(o.shipping_cost ?? 0),
+                  total: Number(o.total ?? tx.amount),
+                  deliveryMode: o.delivery_mode || "relay",
+                  emailType: "payment_received",
+                }),
+              });
+            } catch { /* e-mail non bloquant */ }
+          }
+        }
       }
 
-      return json({ success: paid, status: capture?.status, captureId: cap?.id ?? null });
+      return json({ success: paid, status: c?.status, captureId: cap?.id ?? null });
     }
 
     // ---------- ADMIN ONLY ----------

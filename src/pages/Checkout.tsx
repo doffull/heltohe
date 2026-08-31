@@ -73,6 +73,19 @@ export default function Checkout() {
   const payplugEnabled = Boolean(
     checkoutConfig?.paymentMethods?.find(pm => pm.key === 'payplug')?.enabled,
   );
+  // PayPlug n'est proposé qu'avec une clé « live » : en mode test aucun paiement réel
+  // n'est encaissé, on masque donc le bouton pour éviter les commandes fictives.
+  const [payplugLive, setPayplugLive] = useState(false);
+  useEffect(() => {
+    if (!payplugEnabled) return;
+    let alive = true;
+    supabase.functions
+      .invoke('payplug', { body: { action: 'status' } })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .then(({ data }) => { if (alive) setPayplugLive((data as any)?.mode === 'live'); })
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, [payplugEnabled]);
   const [paidMethod, setPaidMethod] = useState<string | null>(null);
   const paidWithPaypal = paidMethod !== null;
 
@@ -266,83 +279,6 @@ export default function Checkout() {
     };
   };
 
-
-  const handlePlaceOrder = async () => {
-    if (deliveryMode === 'relay' && !selectedRelay) {
-      toast({ title: 'Point relais requis', description: 'Veuillez sélectionner un point relais', variant: 'destructive' });
-      return;
-    }
-    setIsProcessing(true);
-    try {
-      const num = `HMP-${Date.now().toString(36).toUpperCase()}`;
-
-      // Build minimal item list — server will re-fetch prices from DB
-      const orderItemsPayload = items.map(item => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        size: item.size,
-        color: item.color,
-      }));
-
-      const customerAddress = deliveryMode === 'relay' && form.relayInfo
-        ? `Point Relais: ${form.relayInfo} — ${form.address}`
-        : form.address;
-
-      // Server-side RPC: validates prices, promo code, calculates totals, inserts order
-      const { data: rpcResult, error: rpcError } = await supabase.rpc('validate_and_create_order', {
-        p_items: orderItemsPayload,
-        p_promo_code: promoCode || '',
-        p_delivery_mode: deliveryMode,
-        p_order_data: {
-          order_number: num,
-          user_id: user?.id || '',
-          customer_email: form.email,
-          customer_name: `${form.firstName} ${form.lastName}`,
-          customer_phone: form.phone || '',
-          customer_address: customerAddress,
-          customer_city: form.city,
-          customer_zip: form.zip,
-          customer_country: form.country,
-        },
-      });
-
-      if (rpcError) throw rpcError;
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = rpcResult as any;
-      if (result?.error) {
-        throw new Error(result.error);
-      }
-
-      // Send confirmation email (fire and forget) using server-verified values
-      supabase.functions.invoke('send-order-confirmation', {
-        body: {
-          orderNumber: num,
-          customerName: `${form.firstName} ${form.lastName}`,
-          customerEmail: form.email,
-          items: result.items,
-          subtotal: result.subtotal,
-          shippingCost: result.shippingCost,
-          total: result.total,
-          deliveryMode,
-          adminEmail: adminConfig?.adminNotificationEmail || undefined,
-        },
-      }).catch(() => {/* non-blocking, swallow silently */});
-
-      setOrderNumber(num);
-      clearCart();
-      setStep('confirmation');
-    } catch (err) {
-      toast({
-        title: 'Erreur lors de la commande',
-        description: 'Veuillez réessayer ou contacter le support.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   if (items.length === 0 && step !== 'confirmation') {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -394,15 +330,14 @@ export default function Checkout() {
             ) : (
               <>
                 <p className="text-[11px] sm:text-xs text-muted-foreground break-words">
-                  Votre commande est en attente de paiement. Veuillez effectuer un virement bancaire avec la référence <span className="font-bold text-foreground break-all">{orderNumber}</span>.
+                  Votre paiement est en cours de confirmation (référence <span className="font-bold text-foreground break-all">{orderNumber}</span>).
                 </p>
                 <div className="border border-border chamfer-hud-sm p-3 text-[11px] sm:text-xs space-y-1 font-mono">
-                  <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Bénéficiaire :</span><span className="text-right break-words">HELVETICA-MP Concept</span></div>
                   <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Montant :</span><span className="font-bold" style={{ color: `hsl(var(--step-confirm))` }}>{orderTotal.toFixed(2)} €</span></div>
                   <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Référence :</span><span className="text-right break-all">{orderNumber}</span></div>
                 </div>
                 <p className="text-[11px] sm:text-xs text-muted-foreground break-words">
-                  Une confirmation vous sera envoyée à <span className="font-medium text-foreground break-all">{form.email}</span> dès réception du paiement.
+                  Une confirmation vous sera envoyée à <span className="font-medium text-foreground break-all">{form.email}</span> dès validation du paiement.
                 </p>
               </>
             )}
@@ -772,8 +707,8 @@ export default function Checkout() {
                   />
                 </div>
 
-                {/* PayPlug : carte bancaire (page de paiement sécurisée) */}
-                {payplugEnabled && (
+                {/* PayPlug : carte bancaire (uniquement en mode live) */}
+                {payplugEnabled && payplugLive && (
                   <PayPlugCheckout
                     buildPayload={buildPaypalPayload}
                     amount={orderTotal}
@@ -781,23 +716,14 @@ export default function Checkout() {
                   />
                 )}
 
+                <p className="text-[11px] text-muted-foreground">
+                  La commande est enregistrée uniquement après le paiement effectif.
+                </p>
 
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                  <Button variant="outline" onClick={() => setStep('address')} className="sm:flex-1 h-11">
+                <div className="flex">
+                  <Button variant="outline" onClick={() => setStep('address')} className="flex-1 h-11">
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Retour
-                  </Button>
-                  <Button
-                    className="sm:flex-1 chamfer-hud-sm h-12 text-sm sm:text-base font-bold text-white hover:opacity-90"
-                    style={{ backgroundColor: `hsl(var(--step-delivery))` }}
-                    onClick={handlePlaceOrder}
-                    disabled={isProcessing || (deliveryMode === 'relay' && !selectedRelay)}
-                  >
-                    {isProcessing ? (
-                      <><Loader2 className="h-5 w-5 mr-2 animate-spin" />Traitement...</>
-                    ) : (
-                      <><CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 mr-2 shrink-0" /><span className="truncate">CONFIRMER {orderTotal.toFixed(2)}€</span></>
-                    )}
                   </Button>
                 </div>
               </div>
@@ -849,7 +775,7 @@ export default function Checkout() {
 
               <div className="mt-4 pt-4 border-t border-border flex items-center gap-2 text-xs text-muted-foreground">
                 <Shield className="h-3 w-3" />
-                <span>Paiement sécurisé par virement bancaire</span>
+                <span>Paiement sécurisé — PayPal, carte bancaire, 3x/4x</span>
               </div>
             </div>
           </div>
