@@ -26,7 +26,7 @@ export default function Cart() {
     items, 
     itemCount, 
     subtotal, 
-    tax, 
+     
     shippingCost, 
     total,
     updateQuantity, 
@@ -296,10 +296,8 @@ export default function Cart() {
                   </span>
                 </div>
                 
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>dont TVA (20%)</span>
-                  <span>{tax.toFixed(2)}€</span>
-                </div>
+
+
 
                 
                 <div className="flex justify-between text-lg font-bold pt-3 border-t border-border">
