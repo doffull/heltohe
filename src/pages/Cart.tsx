@@ -283,28 +283,16 @@ export default function Cart() {
                   </div>
                 )}
                 
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    <Truck className="h-3 w-3" />
-                    Livraison
-                  </span>
-                  <span>
-                    {shippingCost === 0 ? (
-                      <span className="text-primary">GRATUIT</span>
-                    ) : (
-                      `${shippingCost.toFixed(2)}€`
-                    )}
-                  </span>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Truck className="h-3 w-3" />
+                  Livraison calculée à l'étape suivante
                 </div>
-                
 
-
-
-                
                 <div className="flex justify-between text-lg font-bold pt-3 border-t border-border">
                   <span>TOTAL</span>
-                  <span className="text-primary">{total.toFixed(2)}€</span>
+                  <span className="text-primary">{cartTotal.toFixed(2)}€</span>
                 </div>
+
               </div>
 
               {/* Checkout Button */}
