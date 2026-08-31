@@ -26,6 +26,7 @@ import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
 import { useNotificationConfig } from '@/hooks/useNotificationConfig';
+import { OrderHistoryPanel } from '@/components/admin/OrderHistoryPanel';
 
 const STATUS_OPTIONS: { value: OrderStatus; label: string; icon: typeof Clock; color: string }[] = [
   { value: 'Pending', label: 'En attente', icon: Clock, color: 'text-yellow-500' },
@@ -851,6 +852,8 @@ export default function AdminOrders() {
               </div>
 
               <div className="space-y-2"><Label className="hud-text text-xs">Notes</Label><Textarea value={editForm.notes} onChange={e => setEditForm({ ...editForm, notes: e.target.value })} rows={3} placeholder="Notes internes..." /></div>
+
+              <OrderHistoryPanel orderId={selectedOrder.id} createdAt={selectedOrder.date} />
 
               <div className="flex flex-wrap gap-2 justify-end pt-4 border-t border-border">
                 <Button variant="outline" size="sm" onClick={() => selectedOrder && openPrintWindow(generateDeliverySlipHTML(selectedOrder))}><FileDown className="h-4 w-4 mr-1" />Bon de livraison</Button>
