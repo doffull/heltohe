@@ -61,10 +61,14 @@ const ProductSlide = forwardRef<HTMLDivElement, { product: Product; designSettin
             {product.salePrice && product.salePrice < product.price ? (
               <>
                 <span className="font-bold text-sm text-primary">{product.salePrice}€</span>
+                <span className="text-[10px] text-foreground/40">TTC</span>
                 <span className="text-xs text-foreground/40 line-through">{product.price}€</span>
               </>
             ) : (
-              <span className="font-bold text-sm text-foreground">{product.price}€</span>
+              <>
+                <span className="font-bold text-sm text-foreground">{product.price}€</span>
+                <span className="text-[10px] text-foreground/40">TTC</span>
+              </>
             )}
           </div>
         </div>
