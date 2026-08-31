@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
+import { CustomerImportDialog } from '@/components/admin/CustomerImportDialog';
+
 import { 
   Users, Search, Mail, Phone, Crown, TrendingUp, Eye, Trash2, Filter, ArrowUpDown, RefreshCw, Save, History
 } from 'lucide-react';
