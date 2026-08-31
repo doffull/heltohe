@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Loader2, ShieldCheck } from 'lucide-react';
-import { loadPayPalSdk } from '@/lib/paypal';
+import { AlertCircle, Loader2, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { loadPayPalSdk, resetPayPalSdk, PAYPAL_MISSING_CLIENT_ID } from '@/lib/paypal';
 import { supabase } from '@/integrations/supabase/client';
 import { activeClientId, usePayPalConfig } from '@/hooks/usePayPalConfig';
 import { useToast } from '@/hooks/use-toast';
+
 
 export interface PayPalCheckoutPayload {
   items: Array<{ productId: string; quantity: number; size?: string | null; color?: string | null }>;
