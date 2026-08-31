@@ -25,21 +25,21 @@ async function isProjectPublicKey(token: string): Promise<boolean> {
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
   if (anonKey && token === anonKey) return true;
 
-  // Tout le reste (jeton de session JWT `eyJ…`, jeton invalide) est laissé à
-  // `getClaims` : inutile d'un aller-retour réseau pour ces cas-là.
-  if (!token.startsWith('sb_publishable_')) return false;
-
+  // Le front peut envoyer une clé publique héritée (`eyJ…` role anon) DIFFÉRENTE de
+  // celle injectée ici, ou une clé `sb_publishable_…`. Dans les deux cas seule l'API
+  // Auth du projet peut trancher : elle rejette toute clé étrangère.
   try {
     // `/auth/v1/settings` accepte les clés publiques et renvoie 401 pour toute clé
     // étrangère au projet. (`/rest/v1/` ne convient pas : il exige une clé secrète.)
     const res = await fetch(`${Deno.env.get('SUPABASE_URL')}/auth/v1/settings`, {
-      headers: { apikey: token },
+      headers: { apikey: token, Authorization: `Bearer ${token}` },
     });
     return res.ok;
   } catch {
     return false;
   }
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
