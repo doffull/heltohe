@@ -933,10 +933,14 @@ export type Database = {
           last_name: string | null
           loyalty_points: number | null
           loyalty_tier: Database["public"]["Enums"]["loyalty_tier"] | null
+          orders_count: number
           phone: string | null
+          source: string
           total_spent: number | null
           updated_at: string
-          user_id: string
+          user_id: string | null
+          wc_created_at: string | null
+          wc_id: number | null
           zip: string | null
         }
         Insert: {
@@ -950,10 +954,14 @@ export type Database = {
           last_name?: string | null
           loyalty_points?: number | null
           loyalty_tier?: Database["public"]["Enums"]["loyalty_tier"] | null
+          orders_count?: number
           phone?: string | null
+          source?: string
           total_spent?: number | null
           updated_at?: string
-          user_id: string
+          user_id?: string | null
+          wc_created_at?: string | null
+          wc_id?: number | null
           zip?: string | null
         }
         Update: {
@@ -967,10 +975,14 @@ export type Database = {
           last_name?: string | null
           loyalty_points?: number | null
           loyalty_tier?: Database["public"]["Enums"]["loyalty_tier"] | null
+          orders_count?: number
           phone?: string | null
+          source?: string
           total_spent?: number | null
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
+          wc_created_at?: string | null
+          wc_id?: number | null
           zip?: string | null
         }
         Relationships: []
@@ -2010,6 +2022,7 @@ export type Database = {
           payment_status: string
           shipping_carrier: string | null
           shipping_cost: number
+          source: string
           status: string
           stock_consumed_at: string | null
           stock_reserved_at: string | null
@@ -2020,6 +2033,8 @@ export type Database = {
           updated_at: string
           user_id: string | null
           validation_flags: Json
+          wc_created_at: string | null
+          wc_id: number | null
         }
         Insert: {
           created_at?: string
@@ -2043,6 +2058,7 @@ export type Database = {
           payment_status?: string
           shipping_carrier?: string | null
           shipping_cost?: number
+          source?: string
           status?: string
           stock_consumed_at?: string | null
           stock_reserved_at?: string | null
@@ -2053,6 +2069,8 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
           validation_flags?: Json
+          wc_created_at?: string | null
+          wc_id?: number | null
         }
         Update: {
           created_at?: string
@@ -2076,6 +2094,7 @@ export type Database = {
           payment_status?: string
           shipping_carrier?: string | null
           shipping_cost?: number
+          source?: string
           status?: string
           stock_consumed_at?: string | null
           stock_reserved_at?: string | null
@@ -2086,6 +2105,8 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
           validation_flags?: Json
+          wc_created_at?: string | null
+          wc_id?: number | null
         }
         Relationships: []
       }
@@ -3500,6 +3521,84 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      woocommerce_config: {
+        Row: {
+          config_key: string
+          consumer_key: string | null
+          consumer_secret: string | null
+          created_at: string
+          id: string
+          last_sync_at: string | null
+          last_sync_status: string | null
+          store_info: Json | null
+          store_url: string | null
+          sync_customers: boolean
+          sync_orders: boolean
+          sync_stats: boolean
+          updated_at: string
+        }
+        Insert: {
+          config_key?: string
+          consumer_key?: string | null
+          consumer_secret?: string | null
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          last_sync_status?: string | null
+          store_info?: Json | null
+          store_url?: string | null
+          sync_customers?: boolean
+          sync_orders?: boolean
+          sync_stats?: boolean
+          updated_at?: string
+        }
+        Update: {
+          config_key?: string
+          consumer_key?: string | null
+          consumer_secret?: string | null
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          last_sync_status?: string | null
+          store_info?: Json | null
+          store_url?: string | null
+          sync_customers?: boolean
+          sync_orders?: boolean
+          sync_stats?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      woocommerce_stats: {
+        Row: {
+          created_at: string
+          data: Json
+          fetched_at: string
+          id: string
+          period: string
+          report: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          fetched_at?: string
+          id?: string
+          period?: string
+          report: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          fetched_at?: string
+          id?: string
+          period?: string
+          report?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       wp_sync_logs: {
         Row: {

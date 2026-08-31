@@ -52,10 +52,69 @@ Deno.serve(async (req) => {
   }
 
   const body = await req.json();
-  const { storeUrl, consumerKey, consumerSecret, importProducts, importOrders, importCustomers, importStock, mode } = body;
+  const { importProducts, importOrders, importCustomers, importStock, mode } = body;
+
+  // ─── Stored configuration (credentials never leave the server) ─────
+  const loadConfig = async () => {
+    const { data } = await supabase
+      .from('woocommerce_config')
+      .select('*')
+      .eq('config_key', 'main')
+      .maybeSingle();
+    return data as any | null;
+  };
+
+  if (mode === 'get-config') {
+    const cfg = await loadConfig();
+    return new Response(
+      JSON.stringify({
+        store_url: cfg?.store_url || '',
+        consumer_key: cfg?.consumer_key || '',
+        has_secret: !!cfg?.consumer_secret,
+        sync_customers: cfg?.sync_customers ?? true,
+        sync_orders: cfg?.sync_orders ?? true,
+        sync_stats: cfg?.sync_stats ?? true,
+        last_sync_at: cfg?.last_sync_at || null,
+        last_sync_status: cfg?.last_sync_status || null,
+        store_info: cfg?.store_info || null,
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    );
+  }
+
+  if (mode === 'save-config') {
+    const existing = await loadConfig();
+    const payload: Record<string, unknown> = {
+      config_key: 'main',
+      store_url: String(body.storeUrl || existing?.store_url || '').trim().replace(/\/+$/, ''),
+      consumer_key: String(body.consumerKey || existing?.consumer_key || '').trim(),
+      sync_customers: body.syncCustomers ?? existing?.sync_customers ?? true,
+      sync_orders: body.syncOrders ?? existing?.sync_orders ?? true,
+      sync_stats: body.syncStats ?? existing?.sync_stats ?? true,
+    };
+    if (body.consumerSecret) payload.consumer_secret = String(body.consumerSecret).trim();
+    const { error } = await supabase.from('woocommerce_config').upsert(payload, { onConflict: 'config_key' });
+    if (error) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    return new Response(JSON.stringify({ saved: true }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const storedConfig = await loadConfig();
+  const storeUrl = body.storeUrl || storedConfig?.store_url;
+  const consumerKey = body.consumerKey || storedConfig?.consumer_key;
+  const consumerSecret = body.consumerSecret || storedConfig?.consumer_secret;
 
   if (!storeUrl || !consumerKey || !consumerSecret) {
-    return new Response(JSON.stringify({ error: 'Missing credentials' }), { status: 400, headers: corsHeaders });
+    return new Response(
+      JSON.stringify({ error: 'Identifiants WooCommerce manquants — enregistre l’URL, la clé et le secret dans Admin → WooCommerce.' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    );
   }
 
   const startedAt = Date.now();
@@ -116,9 +175,12 @@ Deno.serve(async (req) => {
   //   strategy 'header'  -> URL without auth, send Authorization header
   //   strategy 'query'   -> URL with auth query-string (legacy WP fallback)
   const buildUrl = (path: string, page: number, perPage: number, strategy: 'header' | 'query') => {
-    const qp = `per_page=${perPage}&page=${page}`;
-    if (strategy === 'query') return `${cleanUrl}/wp-json/wc/v3/${path}?${qp}&${authParam}`;
-    return `${cleanUrl}/wp-json/wc/v3/${path}?${qp}`;
+    // `path` may already carry its own query-string (e.g. "orders?status=any")
+    const [base, extra] = String(path).split('?');
+    const parts = [`per_page=${perPage}`, `page=${page}`];
+    if (extra) parts.push(extra);
+    if (strategy === 'query') parts.push(authParam);
+    return `${cleanUrl}/wp-json/wc/v3/${base}?${parts.join('&')}`;
   };
 
   const doFetch = async (url: string, strategy: 'header' | 'query', uaIdx: number) => {
@@ -326,7 +388,23 @@ Deno.serve(async (req) => {
         );
       }
       await res.json().catch(() => null);
-      return new Response(JSON.stringify({ success: true, diag: lastDiagHeaders }), {
+      let storeInfo: Record<string, unknown> | null = null;
+      try {
+        const sys = await wcFetch('system_status', 1);
+        const env: any = (sys.data as any)?.environment || {};
+        storeInfo = {
+          store_name: env.site_title || null,
+          store_url: env.site_url || cleanUrl,
+          wc_version: env.version || null,
+          wp_version: env.wp_version || null,
+          currency: (sys.data as any)?.settings?.currency || null,
+        };
+        await supabase.from('woocommerce_config').upsert(
+          { config_key: 'main', store_info: storeInfo },
+          { onConflict: 'config_key' },
+        );
+      } catch (_) { /* system_status optionnel */ }
+      return new Response(JSON.stringify({ success: true, diag: lastDiagHeaders, storeInfo }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } catch (e: any) {
@@ -429,6 +507,176 @@ Deno.serve(async (req) => {
       return errorResponse(e);
     }
   }
+
+  // ─── SYNC : CLIENTS + COMMANDES + STATISTIQUES (produits exclus) ───
+  const IN_PROGRESS = new Set(['Pending', 'Processing', 'On Hold']);
+
+  const mapOrderRow = (o: any) => {
+    const ship = o.shipping || {};
+    const bill = o.billing || {};
+    const hasShip = !!(ship.address_1 || ship.city);
+    return {
+      order_number: `WC-${o.number || o.id}`,
+      customer_name: `${bill.first_name || ship.first_name || ''} ${bill.last_name || ship.last_name || ''}`.trim() || 'Client WooCommerce',
+      customer_email: bill.email || '',
+      customer_phone: bill.phone || null,
+      customer_address: (hasShip ? [ship.address_1, ship.address_2] : [bill.address_1, bill.address_2]).filter(Boolean).join(' '),
+      customer_city: (hasShip ? ship.city : bill.city) || '',
+      customer_zip: (hasShip ? ship.postcode : bill.postcode) || '',
+      customer_country: (hasShip ? ship.country : bill.country) || 'FR',
+      subtotal: (o.line_items || []).reduce((s: number, li: any) => s + parseFloat(li.subtotal || '0'), 0),
+      tax: parseFloat(o.total_tax || '0'),
+      shipping_cost: parseFloat(o.shipping_total || '0'),
+      total: parseFloat(o.total || '0'),
+      status: mapWcStatus(o.status),
+      payment_status: o.date_paid ? 'Paid' : (o.status === 'refunded' ? 'Refunded' : 'Pending'),
+      payment_method: o.payment_method_title || o.payment_method || null,
+      notes: [o.customer_note, o.coupon_lines?.length ? `Codes promo : ${o.coupon_lines.map((c: any) => c.code).join(', ')}` : null]
+        .filter(Boolean).join(' — ') || null,
+      items: (o.line_items || []).map((li: any) => ({
+        productId: li.product_id?.toString(),
+        sku: li.sku || null,
+        name: li.name,
+        price: parseFloat(li.price || '0'),
+        quantity: li.quantity,
+        total: parseFloat(li.total || '0'),
+      })),
+      wc_id: o.id,
+      source: 'woocommerce',
+      wc_created_at: o.date_created_gmt ? `${o.date_created_gmt}Z` : (o.date_created || null),
+    };
+  };
+
+  const mapCustomerRow = (c: any) => ({
+    email: String(c.email).toLowerCase(),
+    first_name: c.first_name || c.billing?.first_name || null,
+    last_name: c.last_name || c.billing?.last_name || null,
+    phone: c.billing?.phone || null,
+    address: [c.shipping?.address_1 || c.billing?.address_1, c.shipping?.address_2 || c.billing?.address_2].filter(Boolean).join(' ') || null,
+    city: c.shipping?.city || c.billing?.city || null,
+    zip: c.shipping?.postcode || c.billing?.postcode || null,
+    country: c.shipping?.country || c.billing?.country || null,
+    total_spent: parseFloat(c.total_spent || '0'),
+    orders_count: c.orders_count || 0,
+    wc_id: c.id,
+    source: 'woocommerce',
+    wc_created_at: c.date_created_gmt ? `${c.date_created_gmt}Z` : (c.date_created || null),
+  });
+
+  const fetchStats = async () => {
+    const period = String(body.statsPeriod || 'month');
+    const reports: Array<{ report: string; path: string }> = [
+      { report: 'sales', path: `reports/sales?period=${period}` },
+      { report: 'orders_totals', path: 'reports/orders/totals' },
+      { report: 'customers_totals', path: 'reports/customers/totals' },
+      { report: 'coupons_totals', path: 'reports/coupons/totals' },
+      { report: 'top_sellers', path: `reports/top_sellers?period=${period}` },
+    ];
+    const collected: Record<string, unknown> = {};
+    const errors: string[] = [];
+    for (const r of reports) {
+      try {
+        const { data } = await wcFetch(r.path, 1);
+        collected[r.report] = data;
+        await supabase.from('woocommerce_stats').upsert(
+          { report: r.report, period, data: { value: data }, fetched_at: new Date().toISOString() },
+          { onConflict: 'report,period' },
+        );
+      } catch (e: any) {
+        errors.push(`Statistiques ${r.report}: ${e.message}`);
+      }
+      await sleep(120);
+    }
+    return { period, collected, errors };
+  };
+
+  if (mode === 'stats') {
+    try {
+      const { period, collected, errors } = await fetchStats();
+      return new Response(JSON.stringify({ period, stats: collected, errors }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    } catch (e: any) {
+      return errorResponse(e);
+    }
+  }
+
+  if (mode === 'sync') {
+    const syncCustomers = body.syncCustomers ?? storedConfig?.sync_customers ?? true;
+    const syncOrders = body.syncOrders ?? storedConfig?.sync_orders ?? true;
+    const syncStats = body.syncStats ?? storedConfig?.sync_stats ?? true;
+    const incremental = !!body.incremental && !!storedConfig?.last_sync_at;
+    const since = incremental ? new Date(storedConfig.last_sync_at).toISOString().replace(/\.\d+Z$/, '') : null;
+    const out: {
+      customers: number; orders: number; ordersInProgress: number;
+      stats: string[]; errors: string[]; incremental: boolean; since: string | null;
+    } = { customers: 0, orders: 0, ordersInProgress: 0, stats: [], errors: [], incremental, since };
+
+    if (syncCustomers) {
+      try {
+        const path = since ? `customers?role=all&orderby=id&order=asc&modified_after=${encodeURIComponent(since)}` : 'customers?role=all&orderby=id&order=asc';
+        const wcCustomers = await wcFetchAll(path);
+        for (const c of wcCustomers) {
+          if (!c.email) continue;
+          const { error } = await supabase.from('customers').upsert(mapCustomerRow(c), { onConflict: 'email' });
+          if (error) out.errors.push(`Client ${c.email}: ${error.message}`);
+          else out.customers++;
+        }
+      } catch (e: any) {
+        out.errors.push(`Clients: ${e.message}`);
+      }
+    }
+
+    if (syncOrders) {
+      try {
+        const path = since
+          ? `orders?status=any&orderby=date&order=desc&modified_after=${encodeURIComponent(since)}`
+          : 'orders?status=any&orderby=date&order=desc';
+        const wcOrders = await wcFetchAll(path);
+        for (const o of wcOrders) {
+          const row = mapOrderRow(o);
+          if (IN_PROGRESS.has(row.status)) out.ordersInProgress++;
+          const { error } = await supabase.from('orders').upsert(row, { onConflict: 'order_number' });
+          if (error) out.errors.push(`Commande ${row.order_number}: ${error.message}`);
+          else out.orders++;
+        }
+      } catch (e: any) {
+        out.errors.push(`Commandes: ${e.message}`);
+      }
+    }
+
+    if (syncStats) {
+      try {
+        const { collected, errors } = await fetchStats();
+        out.stats = Object.keys(collected);
+        out.errors.push(...errors);
+      } catch (e: any) {
+        out.errors.push(`Statistiques: ${e.message}`);
+      }
+    }
+
+    const done = out.customers + out.orders + out.stats.length;
+    const syncStatus: 'success' | 'partial' | 'failed' =
+      out.errors.length === 0 ? 'success' : done > 0 ? 'partial' : 'failed';
+    await writeSyncLog(syncStatus, {
+      total: done + out.errors.length,
+      succeeded: done,
+      failed: out.errors.length,
+      message: syncStatus === 'success'
+        ? `Sync OK — ${out.customers} client(s), ${out.orders} commande(s), ${out.stats.length} rapport(s)`
+        : out.errors[0],
+      details: { ...out, mode: 'sync' },
+    });
+    await supabase.from('woocommerce_config').upsert(
+      { config_key: 'main', last_sync_at: new Date().toISOString(), last_sync_status: syncStatus },
+      { onConflict: 'config_key' },
+    );
+
+    return new Response(JSON.stringify({ ...out, status: syncStatus, correlationId }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
 
   // ─── IMPORT MODE ──────────────────────────────────────────────────
   const result: { products?: number; orders?: number; customers?: number; stock?: number; errors: string[] } = { errors: [] };
