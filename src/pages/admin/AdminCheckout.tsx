@@ -81,17 +81,30 @@ export default function AdminCheckout() {
     }
   };
 
+  const [dirty, setDirty] = useState(false);
+
+  // Ne jamais écraser une saisie en cours : on ne réinitialise que si
+  // le formulaire n'a pas de modification non enregistrée.
   useEffect(() => {
-    if (config) setForm(config);
-  }, [config]);
+    if (config && !dirty) setForm(config);
+  }, [config, dirty]);
+
+  const patch = (updates: Partial<CheckoutConfig>) => {
+    setDirty(true);
+    setForm(prev => ({ ...prev, ...updates }));
+  };
 
 
   const handleSave = async () => {
     try {
       await saveConfig.mutateAsync(form);
-      toast({ title: 'Configuration sauvegardée' });
-    } catch {
-      toast({ title: 'Erreur lors de la sauvegarde', variant: 'destructive' });
+      setDirty(false);
+      toast({
+        title: 'Configuration sauvegardée',
+        description: `Domicile ${form.shippingHomePrice.toFixed(2)}€ · Relais ${form.shippingRelayPrice.toFixed(2)}€ · Gratuit dès ${form.freeShippingThreshold}€${form.freeShippingRelayOnly ? ' (point relais uniquement)' : ''}`,
+      });
+    } catch (e: any) {
+      toast({ title: 'Erreur lors de la sauvegarde', description: e?.message ?? 'Erreur inconnue', variant: 'destructive' });
     }
   };
 
@@ -153,28 +166,38 @@ export default function AdminCheckout() {
               <div className="space-y-4 p-4 border border-border rounded-lg">
                 <div className="flex items-center justify-between">
                   <Label className="font-medium">Livraison à domicile</Label>
-                  <Switch checked={form.homeDeliveryEnabled} onCheckedChange={v => setForm(prev => ({ ...prev, homeDeliveryEnabled: v }))} />
+                  <Switch checked={form.homeDeliveryEnabled} onCheckedChange={v => patch({ homeDeliveryEnabled: v })} />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">Prix (€)</Label>
-                  <Input type="number" step="0.01" min="0" value={form.shippingHomePrice} onChange={e => setForm(prev => ({ ...prev, shippingHomePrice: parseFloat(e.target.value) || 0 }))} disabled={!form.homeDeliveryEnabled} />
+                  <Input type="number" step="0.01" min="0" value={form.shippingHomePrice} onChange={e => patch({ shippingHomePrice: parseFloat(e.target.value) || 0 })} disabled={!form.homeDeliveryEnabled} />
                 </div>
               </div>
               <div className="space-y-4 p-4 border border-border rounded-lg">
                 <div className="flex items-center justify-between">
                   <Label className="font-medium">Livraison en point relais</Label>
-                  <Switch checked={form.relayEnabled} onCheckedChange={v => setForm(prev => ({ ...prev, relayEnabled: v }))} />
+                  <Switch checked={form.relayEnabled} onCheckedChange={v => patch({ relayEnabled: v })} />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">Prix (€)</Label>
-                  <Input type="number" step="0.01" min="0" value={form.shippingRelayPrice} onChange={e => setForm(prev => ({ ...prev, shippingRelayPrice: parseFloat(e.target.value) || 0 }))} disabled={!form.relayEnabled} />
+                  <Input type="number" step="0.01" min="0" value={form.shippingRelayPrice} onChange={e => patch({ shippingRelayPrice: parseFloat(e.target.value) || 0 })} disabled={!form.relayEnabled} />
                 </div>
               </div>
             </div>
             <div className="space-y-2 max-w-sm">
               <Label className="font-medium">Seuil de livraison gratuite (€)</Label>
-              <Input type="number" step="1" min="0" value={form.freeShippingThreshold} onChange={e => setForm(prev => ({ ...prev, freeShippingThreshold: parseFloat(e.target.value) || 0 }))} />
+              <Input type="number" step="1" min="0" value={form.freeShippingThreshold} onChange={e => patch({ freeShippingThreshold: parseFloat(e.target.value) || 0 })} />
               <p className="text-xs text-muted-foreground">Au-dessus de ce montant, la livraison est offerte. Mettez 0 pour toujours offrir la livraison.</p>
+            </div>
+            <div className="flex items-start justify-between gap-4 p-4 border border-border rounded-lg max-w-2xl">
+              <div>
+                <Label className="font-medium">Livraison gratuite uniquement en point relais</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Si activé : au-dessus du seuil, seul le point relais devient gratuit ; la livraison à domicile reste facturée
+                  {' '}{form.shippingHomePrice.toFixed(2)}€.
+                </p>
+              </div>
+              <Switch checked={form.freeShippingRelayOnly} onCheckedChange={v => patch({ freeShippingRelayOnly: v })} />
             </div>
           </div>
         </TabsContent>
@@ -322,7 +345,7 @@ export default function AdminCheckout() {
                 <p className="font-medium">Activer les points relais</p>
                 <p className="text-xs text-muted-foreground">Les clients pourront choisir un point relais Colissimo lors du checkout</p>
               </div>
-              <Switch checked={form.relayEnabled} onCheckedChange={v => setForm(prev => ({ ...prev, relayEnabled: v }))} />
+              <Switch checked={form.relayEnabled} onCheckedChange={v => patch({ relayEnabled: v })} />
             </div>
 
             <div className="p-4 bg-secondary/30 rounded-lg space-y-3">
