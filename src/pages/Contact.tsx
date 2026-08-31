@@ -8,6 +8,9 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useFaq } from '@/hooks/useFaq';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Helmet } from 'react-helmet-async';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 
@@ -172,8 +175,27 @@ export default function Contact() {
     });
   };
 
+  const { data: faqItems = [] } = useFaq();
+
+  const faqJsonLd = faqItems.length
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: faqItems.map((f) => ({
+          '@type': 'Question',
+          name: f.question,
+          acceptedAnswer: { '@type': 'Answer', text: f.answer },
+        })),
+      }
+    : null;
+
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>Contact & FAQ — Helvetica Mountain Pioneers</title>
+        <meta name="description" content="Contactez l'équipe Helvetica Mountain Pioneers : formulaire, assistant IA et réponses aux questions fréquentes (livraison, retours, tailles, paiement)." />
+        {faqJsonLd && <script type="application/ld+json">{JSON.stringify(faqJsonLd)}</script>}
+      </Helmet>
       <div className="container mx-auto px-4 py-12 max-w-6xl">
         {/* Header */}
         <motion.div
@@ -409,6 +431,32 @@ export default function Contact() {
             </div>
           </motion.div>
         </div>
+
+        {/* FAQ */}
+        {faqItems.length > 0 && (
+          <motion.section
+            className="mt-16"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="text-center mb-8">
+              <p className="text-[10px] hud-text text-primary uppercase tracking-[0.3em] mb-3">// FAQ</p>
+              <h2 className="text-2xl lg:text-3xl font-bold tracking-tight">Questions fréquentes</h2>
+            </div>
+            <Accordion type="single" collapsible className="max-w-3xl mx-auto border border-border/60">
+              {faqItems.map((f) => (
+                <AccordionItem key={f.id} value={f.id} className="px-4">
+                  <AccordionTrigger className="text-left text-sm font-medium">{f.question}</AccordionTrigger>
+                  <AccordionContent className="text-sm text-muted-foreground whitespace-pre-line">
+                    {f.answer}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </motion.section>
+        )}
       </div>
     </div>
   );
