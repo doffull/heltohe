@@ -193,19 +193,18 @@ Deno.serve(async (req) => {
 
     const sent = await sendMail({ to: order.customer_email, subject, html });
     if (!sent.ok) {
+      const reason = explainSendFailure(sent);
       await admin.from('customer_email_log').insert({
         customer_email: order.customer_email,
         order_id: order.id,
         email_type: type,
         subject,
         status: 'failed',
-        error: (sent.error || '').slice(0, 500),
+        error: reason.slice(0, 500),
       });
-      return json(
-        { error: 'Envoi refusé par Resend', status: sent.status, details: sent.error },
-        sent.status || 500,
-      );
+      return json({ error: reason, status: sent.status, details: sent.error }, 400);
     }
+
 
     const providerId = sent.id ?? null;
 
