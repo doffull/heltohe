@@ -154,12 +154,8 @@ export default function Checkout() {
     relayInfo: '',
   });
 
-  const rates = {
-    home: checkoutConfig?.shippingHomePrice ?? 6.5,
-    relay: checkoutConfig?.shippingRelayPrice ?? 4.5,
-    free_threshold: checkoutConfig?.freeShippingThreshold ?? 200,
-  };
-  const shippingCost = subtotal >= rates.free_threshold ? 0 : rates[deliveryMode];
+  const shippingCost = computeShippingCost(checkoutConfig, subtotal, deliveryMode);
+
   const orderTotal = subtotal - promoDiscount + shippingCost;
   const tax = orderTotal * 0.2 / 1.2;
 
