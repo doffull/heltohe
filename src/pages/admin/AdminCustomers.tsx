@@ -407,7 +407,11 @@ export default function AdminCustomers() {
               <CustomerEmailHistory email={selectedCustomer.email} />
 
               <div className="pt-2 border-t border-border">
-                <Button variant="outline" className="w-full" onClick={() => window.location.href = `mailto:${selectedCustomer.email}`}>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setEmailTarget({ email: selectedCustomer.email, name: `${selectedCustomer.firstName} ${selectedCustomer.lastName}`.trim() })}
+                >
                   <Mail className="h-4 w-4 mr-2" /> Envoyer un email
                 </Button>
               </div>
@@ -416,6 +420,14 @@ export default function AdminCustomers() {
 
         </DialogContent>
       </Dialog>
+
+      <CustomerEmailDialog
+        open={!!emailTarget}
+        onOpenChange={(v) => { if (!v) setEmailTarget(null); }}
+        email={emailTarget?.email || ''}
+        customerName={emailTarget?.name}
+      />
     </div>
+
   );
 }
