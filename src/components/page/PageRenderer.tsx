@@ -94,7 +94,9 @@ const POSITION_CLASS: Record<string, string> = {
 };
 
 function BannerSection({ content, sectionId }: { content: Record<string, any>; sectionId: string }) {
+  const { editable: isEditable } = usePageEdit();
   const parallax = useParallax<HTMLDivElement>(content.parallaxSpeed ?? 0.25);
+
   const mediaType = content.mediaType || 'image';
   const link: string = content.link || '';
   const hoverClass = HOVER_CLASSES[content.hoverEffect as string] || '';
