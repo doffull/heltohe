@@ -11,7 +11,7 @@ import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
 import { CustomerImportDialog } from '@/components/admin/CustomerImportDialog';
 
 import { 
-  Users, Search, Mail, Phone, Crown, TrendingUp, Eye, Trash2, Filter, ArrowUpDown, RefreshCw, Save, History
+  Users, Search, Mail, Phone, Crown, TrendingUp, Eye, Trash2, Filter, ArrowUpDown, RefreshCw, Save, History, Upload
 } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
