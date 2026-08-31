@@ -139,7 +139,9 @@ export default function Boutiques() {
                   <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
                   <span>{b.address}<br/>{b.postalCode ? `${b.postalCode} ` : ''}{b.city}</span>
                 </div>
+                <BoutiqueMiniMap boutique={b} className="mt-3" />
               </div>
+
             </div>
           ))}
         </div>
