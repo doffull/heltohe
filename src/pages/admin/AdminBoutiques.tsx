@@ -291,6 +291,15 @@ export default function AdminBoutiques() {
               <div><Label>Latitude</Label><Input type="number" step="0.000001" value={form.latitude ?? ''} onChange={(e) => setForm({ ...form, latitude: parseFloat(e.target.value) })} /></div>
               <div><Label>Longitude</Label><Input type="number" step="0.000001" value={form.longitude ?? ''} onChange={(e) => setForm({ ...form, longitude: parseFloat(e.target.value) })} /></div>
             </div>
+            <div className="space-y-1">
+              <Label>Position sur la carte</Label>
+              <BoutiqueMapPicker
+                lat={form.latitude}
+                lng={form.longitude}
+                onChange={({ lat, lng }) => setForm((f) => ({ ...f, latitude: lat, longitude: lng }))}
+              />
+              <p className="text-[11px] text-muted-foreground">Déplacez le marqueur ou cliquez sur la carte pour ajuster la position.</p>
+            </div>
             <div><Label>Image (URL)</Label><Input value={form.image || ''} onChange={(e) => setForm({ ...form, image: e.target.value })} placeholder="https://..." /></div>
             <div className="grid grid-cols-2 gap-2 items-end">
               <div><Label>Ordre</Label><Input type="number" value={form.sortOrder ?? 0} onChange={(e) => setForm({ ...form, sortOrder: parseInt(e.target.value) || 0 })} /></div>
