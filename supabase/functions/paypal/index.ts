@@ -204,7 +204,7 @@ Deno.serve(async (req) => {
             paypal: {
               experience_context: {
                 brand_name: String(config.brand_name || "Boutique"),
-                locale: String(config.locale || "fr_FR"),
+                locale: String(config.locale || "fr-FR").replace("_", "-"),
                 shipping_preference: "NO_SHIPPING",
                 user_action: "PAY_NOW",
               },
