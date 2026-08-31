@@ -1,11 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { AlertCircle, Loader2, RefreshCw, ShieldCheck } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { loadPayPalSdk, resetPayPalSdk, PAYPAL_MISSING_CLIENT_ID } from '@/lib/paypal';
+import { Loader2, ShieldCheck } from 'lucide-react';
+import { loadPayPalSdk } from '@/lib/paypal';
 import { supabase } from '@/integrations/supabase/client';
 import { activeClientId, usePayPalConfig } from '@/hooks/usePayPalConfig';
 import { useToast } from '@/hooks/use-toast';
-
 
 export interface PayPalCheckoutPayload {
   items: Array<{ productId: string; quantity: number; size?: string | null; color?: string | null }>;
@@ -31,7 +29,6 @@ export function PayPalCheckout({ buildPayload, onPaid, disabled }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [attempt, setAttempt] = useState(0);
   const contextRef = useRef<{ orderNumber: string; total: number } | null>(null);
   const payloadRef = useRef(buildPayload);
   payloadRef.current = buildPayload;
@@ -41,20 +38,12 @@ export function PayPalCheckout({ buildPayload, onPaid, disabled }: Props) {
   const clientId = activeClientId(config);
 
   useEffect(() => {
-    if (!config?.enabled) return;
-    if (!containerRef.current) return;
+    if (!config?.enabled || !clientId || !containerRef.current) return;
     let cancelled = false;
     const node = containerRef.current;
     node.innerHTML = '';
     setReady(false);
     setError(null);
-
-    if (!clientId) {
-      setError(PAYPAL_MISSING_CLIENT_ID);
-      return;
-    }
-
-
 
     loadPayPalSdk({
       clientId,
@@ -123,14 +112,9 @@ export function PayPalCheckout({ buildPayload, onPaid, disabled }: Props) {
       cancelled = true;
       node.innerHTML = '';
     };
-  }, [clientId, config, toast, attempt]);
+  }, [clientId, config, toast]);
 
-  if (!config?.enabled || !config.enablePaypalButton) return null;
-
-  const retry = () => {
-    resetPayPalSdk();
-    setAttempt((a) => a + 1);
-  };
+  if (!config?.enabled || !clientId || !config.enablePaypalButton) return null;
 
   return (
     <div className="space-y-2">
@@ -143,21 +127,7 @@ export function PayPalCheckout({ buildPayload, onPaid, disabled }: Props) {
           </div>
         )}
       </div>
-
-      {error && (
-        <div className="flex flex-col items-start gap-2 border border-destructive/40 bg-destructive/5 p-3">
-          <p className="flex items-start gap-2 text-xs text-destructive">
-            <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-            {error}
-          </p>
-          {clientId && (
-            <Button type="button" size="sm" variant="outline" className="gap-2" onClick={retry}>
-              <RefreshCw className="h-3.5 w-3.5" /> Réessayer
-            </Button>
-          )}
-        </div>
-      )}
-
+      {error && <p className="text-xs text-destructive">{error}</p>}
       <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
         <ShieldCheck className="h-3 w-3" />
         Paiement sécurisé PayPal — protection des achats incluse
@@ -165,7 +135,6 @@ export function PayPalCheckout({ buildPayload, onPaid, disabled }: Props) {
       </p>
     </div>
   );
-
 }
 
 export default PayPalCheckout;
