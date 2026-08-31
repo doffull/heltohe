@@ -158,9 +158,10 @@ function BannerSection({ content, sectionId }: { content: Record<string, any>; s
     </div>
   );
 
-  if (!link) {
+  if (!link || isEditable) {
     return <div data-banner-id={sectionId}>{inner}</div>;
   }
+
 
   const isExternal = /^https?:\/\//i.test(link);
   if (isExternal || content.newTab) {
