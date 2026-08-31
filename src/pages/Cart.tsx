@@ -26,7 +26,7 @@ export default function Cart() {
     items, 
     itemCount, 
     subtotal, 
-    tax, 
+     
     shippingCost, 
     total,
     updateQuantity, 
