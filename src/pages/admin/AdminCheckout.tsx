@@ -33,7 +33,8 @@ export default function AdminCheckout() {
   const [form, setForm] = useState<CheckoutConfig>({
     shippingHomePrice: 6.5,
     shippingRelayPrice: 4.5,
-    freeShippingThreshold: 200,
+    freeShippingThreshold: 99,
+    freeShippingRelayOnly: true,
     homeDeliveryEnabled: true,
     relayEnabled: true,
     paymentMethods: PAYMENT_GATEWAYS,
