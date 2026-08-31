@@ -200,6 +200,8 @@ export default function AdminCustomers() {
   const [sortBy, setSortBy] = useState<string>('name');
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerRecord | null>(null);
   const [syncOpen, setSyncOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+
 
   let filtered = customers.filter(c => {
     if (searchQuery) {
