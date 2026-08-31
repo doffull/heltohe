@@ -26,6 +26,7 @@ import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
 import { useNotificationConfig } from '@/hooks/useNotificationConfig';
+import { OrderHistoryPanel } from '@/components/admin/OrderHistoryPanel';
 
 const STATUS_OPTIONS: { value: OrderStatus; label: string; icon: typeof Clock; color: string }[] = [
   { value: 'Pending', label: 'En attente', icon: Clock, color: 'text-yellow-500' },
