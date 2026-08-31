@@ -175,9 +175,12 @@ Deno.serve(async (req) => {
   //   strategy 'header'  -> URL without auth, send Authorization header
   //   strategy 'query'   -> URL with auth query-string (legacy WP fallback)
   const buildUrl = (path: string, page: number, perPage: number, strategy: 'header' | 'query') => {
-    const qp = `per_page=${perPage}&page=${page}`;
-    if (strategy === 'query') return `${cleanUrl}/wp-json/wc/v3/${path}?${qp}&${authParam}`;
-    return `${cleanUrl}/wp-json/wc/v3/${path}?${qp}`;
+    // `path` may already carry its own query-string (e.g. "orders?status=any")
+    const [base, extra] = String(path).split('?');
+    const parts = [`per_page=${perPage}`, `page=${page}`];
+    if (extra) parts.push(extra);
+    if (strategy === 'query') parts.push(authParam);
+    return `${cleanUrl}/wp-json/wc/v3/${base}?${parts.join('&')}`;
   };
 
   const doFetch = async (url: string, strategy: 'header' | 'query', uaIdx: number) => {
