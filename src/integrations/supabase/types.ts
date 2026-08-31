@@ -577,6 +577,7 @@ export type Database = {
           checkout_message: string | null
           config_key: string
           created_at: string
+          free_shipping_relay_only: boolean
           free_shipping_threshold: number
           home_delivery_enabled: boolean
           id: string
@@ -591,6 +592,7 @@ export type Database = {
           checkout_message?: string | null
           config_key?: string
           created_at?: string
+          free_shipping_relay_only?: boolean
           free_shipping_threshold?: number
           home_delivery_enabled?: boolean
           id?: string
@@ -605,6 +607,7 @@ export type Database = {
           checkout_message?: string | null
           config_key?: string
           created_at?: string
+          free_shipping_relay_only?: boolean
           free_shipping_threshold?: number
           home_delivery_enabled?: boolean
           id?: string
@@ -1392,6 +1395,39 @@ export type Database = {
         }
         Relationships: []
       }
+      faq_items: {
+        Row: {
+          answer: string
+          category: string
+          created_at: string
+          id: string
+          is_active: boolean
+          question: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          answer: string
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          question: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          answer?: string
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          question?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       home_fab_buttons: {
         Row: {
           action_type: string
@@ -1651,6 +1687,8 @@ export type Database = {
       }
       messages: {
         Row: {
+          auto_replied_at: string | null
+          auto_reply: string | null
           created_at: string
           email: string
           id: string
@@ -1659,6 +1697,8 @@ export type Database = {
           name: string
         }
         Insert: {
+          auto_replied_at?: string | null
+          auto_reply?: string | null
           created_at?: string
           email: string
           id?: string
@@ -1667,6 +1707,8 @@ export type Database = {
           name: string
         }
         Update: {
+          auto_replied_at?: string | null
+          auto_reply?: string | null
           created_at?: string
           email?: string
           id?: string
@@ -3675,6 +3717,7 @@ export type Database = {
         Row: {
           checkout_message: string | null
           config_key: string | null
+          free_shipping_relay_only: boolean | null
           free_shipping_threshold: number | null
           home_delivery_enabled: boolean | null
           id: string | null
@@ -3687,6 +3730,7 @@ export type Database = {
         Insert: {
           checkout_message?: string | null
           config_key?: string | null
+          free_shipping_relay_only?: boolean | null
           free_shipping_threshold?: number | null
           home_delivery_enabled?: boolean | null
           id?: string | null
@@ -3699,6 +3743,7 @@ export type Database = {
         Update: {
           checkout_message?: string | null
           config_key?: string | null
+          free_shipping_relay_only?: boolean | null
           free_shipping_threshold?: number | null
           home_delivery_enabled?: boolean | null
           id?: string | null
@@ -4252,6 +4297,7 @@ export type Database = {
       award_loyalty_points: { Args: { p_order_id: string }; Returns: Json }
       can_user_review_product: { Args: { p_product_id: string }; Returns: Json }
       consume_order_stock: { Args: { p_order_id: string }; Returns: Json }
+      ensure_customer_profile: { Args: never; Returns: Json }
       find_user_by_email: {
         Args: { p_email: string }
         Returns: {

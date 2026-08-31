@@ -42,6 +42,8 @@ export interface CheckoutConfig {
   shippingHomePrice: number;
   shippingRelayPrice: number;
   freeShippingThreshold: number;
+  /** Si vrai : la livraison gratuite ne s'applique qu'en point relais (domicile toujours payant). */
+  freeShippingRelayOnly: boolean;
   homeDeliveryEnabled: boolean;
   relayEnabled: boolean;
   paymentMethods: PaymentMethod[];
@@ -50,15 +52,33 @@ export interface CheckoutConfig {
 }
 
 const DEFAULT_CONFIG: CheckoutConfig = {
-  shippingHomePrice: 6.5,
+  shippingHomePrice: 15,
   shippingRelayPrice: 4.5,
-  freeShippingThreshold: 200,
+  freeShippingThreshold: 99,
+  freeShippingRelayOnly: true,
   homeDeliveryEnabled: true,
   relayEnabled: true,
   paymentMethods: PAYMENT_GATEWAYS,
   checkoutMessage: '',
   relayMapSettings: DEFAULT_RELAY_MAP_SETTINGS,
 };
+
+/**
+ * Frais de port appliqués partout (panier, checkout) — miroir de la RPC
+ * `validate_and_create_order` côté serveur.
+ */
+export function computeShippingCost(
+  config: CheckoutConfig | undefined,
+  subtotal: number,
+  mode: 'home' | 'relay',
+): number {
+  const cfg = config ?? DEFAULT_CONFIG;
+  const base = mode === 'relay' ? cfg.shippingRelayPrice : cfg.shippingHomePrice;
+  const eligible = subtotal >= cfg.freeShippingThreshold;
+  if (!eligible) return base;
+  if (cfg.freeShippingRelayOnly && mode === 'home') return base;
+  return 0;
+}
 
 function mergePaymentMethods(saved: PaymentMethod[] | null): PaymentMethod[] {
   const base = PAYMENT_GATEWAYS.map(gw => ({ ...gw }));
@@ -74,9 +94,10 @@ function mergePaymentMethods(saved: PaymentMethod[] | null): PaymentMethod[] {
 function dbToConfig(db: Record<string, unknown>): CheckoutConfig {
   return {
     id: db.id as string,
-    shippingHomePrice: Number(db.shipping_home_price) || 6.5,
+    shippingHomePrice: Number(db.shipping_home_price) || 15,
     shippingRelayPrice: Number(db.shipping_relay_price) || 4.5,
-    freeShippingThreshold: Number(db.free_shipping_threshold) || 200,
+    freeShippingThreshold: Number(db.free_shipping_threshold) || 99,
+    freeShippingRelayOnly: db.free_shipping_relay_only as boolean ?? true,
     homeDeliveryEnabled: db.home_delivery_enabled as boolean ?? true,
     relayEnabled: db.relay_enabled as boolean ?? true,
     paymentMethods: mergePaymentMethods(db.payment_methods as PaymentMethod[] | null),
@@ -84,6 +105,7 @@ function dbToConfig(db: Record<string, unknown>): CheckoutConfig {
     relayMapSettings: (db.relay_map_settings as RelayMapSettings) || DEFAULT_RELAY_MAP_SETTINGS,
   };
 }
+
 
 export function useCheckoutConfig() {
   return useQuery({
