@@ -126,16 +126,20 @@ Deno.serve(async (req) => {
         .eq("gateway", "payplug")
         .maybeSingle();
       let mode: "test" | "live" | null = null;
-      if (data) {
-        try {
-          const key = await secretKey();
-          mode = key.startsWith("sk_test_") ? "test" : "live";
-        } catch {
-          mode = null;
-        }
+      let key = "";
+      try {
+        key = await secretKey();
+        mode = key.startsWith("sk_test_") ? "test" : "live";
+      } catch {
+        mode = null;
       }
-      return json({ configured: Boolean(data), last4: data?.last4 ?? null, mode });
+      return json({
+        configured: Boolean(key),
+        last4: key ? key.slice(-4) : (data?.last4 ?? null),
+        mode,
+      });
     }
+
 
     // ---------- PUBLIC : créer un paiement hébergé ----------
     if (action === "create-payment") {
