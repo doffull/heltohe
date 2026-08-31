@@ -121,3 +121,27 @@ export async function sendMail(input: SendMailInput): Promise<SendMailResult> {
     return { ok: false, status: 0, error };
   }
 }
+
+/**
+ * Traduit un échec Resend en message actionnable pour l'admin.
+ * Le cas le plus fréquent : aucun domaine vérifié dans Resend, donc l'API
+ * n'autorise l'envoi qu'à l'adresse du propriétaire du compte.
+ */
+export function explainSendFailure(result: SendMailResult): string {
+  const raw = result.error || '';
+  if (result.status === 0 && /RESEND_API_KEY/.test(raw)) {
+    return "Clé Resend absente : impossible d'envoyer des e-mails.";
+  }
+  if (result.status === 403 && /your own email address|verify a domain/i.test(raw)) {
+    return (
+      "Aucun domaine d'expédition vérifié : Resend n'accepte que l'adresse du " +
+      "propriétaire du compte. Vérifiez un domaine sur resend.com/domains " +
+      "(ex. mail.helvetica-mp.com), puis renseignez le secret MAIL_FROM " +
+      "(ex. commandes@mail.helvetica-mp.com)."
+    );
+  }
+  if (result.status === 422) {
+    return "Adresse d'expédition refusée : le domaine de MAIL_FROM n'est pas vérifié dans Resend.";
+  }
+  return raw || "Envoi e-mail refusé par Resend.";
+}
