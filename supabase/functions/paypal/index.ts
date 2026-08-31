@@ -72,7 +72,8 @@ async function accessToken(creds: PayPalCreds): Promise<string> {
     if (/authentication/i.test(raw)) {
       throw new Error(
         `PayPal a refusé les identifiants ${creds.env} (Client Authentication failed). ` +
-          `Vérifiez que le Client ID et le Secret proviennent bien d'une application ${creds.env === "sandbox" ? "Sandbox" : "Live"} du même compte PayPal Developer, sans espace ni retour à la ligne.`,
+          `Vérifiez que le Client ID et le Secret proviennent bien d'une application ${creds.env === "sandbox" ? "Sandbox" : "Live"} du même compte PayPal Developer, sans espace ni retour à la ligne. ` +
+          `Diagnostic : Client ID ${creds.clientId.length} caractères (préfixe « ${creds.clientId.slice(0, 2)} »), Secret ${creds.secret.length} caractères.`,
       );
     }
     throw new Error(raw);
