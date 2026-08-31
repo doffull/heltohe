@@ -88,6 +88,18 @@ export async function getGeminiApiKey(force = false): Promise<string | null> {
   return key;
 }
 
+// Délai max par appel IA (l'edge function coupe à 150s → on répond avant).
+const AI_TIMEOUT_MS = 45_000;
+
+function timeoutSignal(ms = AI_TIMEOUT_MS): AbortSignal {
+  return AbortSignal.timeout(ms);
+}
+
+function isAbort(e: unknown): boolean {
+  const n = (e as Error)?.name;
+  return n === "TimeoutError" || n === "AbortError";
+}
+
 export async function callGemini(body: OAIBody): Promise<Response> {
   const model = pickModel(body.model);
   const payload = { ...body, model };
@@ -96,27 +108,32 @@ export async function callGemini(body: OAIBody): Promise<Response> {
   if (model.startsWith("google/")) {
     const geminiKey = await getGeminiApiKey();
     if (geminiKey) {
-      const direct = await fetch(GOOGLE_OAI_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${geminiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ ...payload, model: model.replace(/^google\//, "") }),
-      });
-      if (direct.ok) {
-        const h = new Headers(direct.headers);
-        Object.entries(CORS_PASSTHROUGH).forEach(([k, v]) => h.set(k, v));
-        return new Response(direct.body, { status: direct.status, headers: h });
-      }
-      const errText = await direct.text();
-      console.error("Gemini direct API error:", direct.status, errText.slice(0, 500));
-      if (direct.status === 401 || direct.status === 403) {
-        return jsonResponse(direct.status, {
-          error: "Clé Gemini refusée par Google. Vérifiez-la dans Admin → Chatbot → Modèles IA.",
+      try {
+        const direct = await fetch(GOOGLE_OAI_URL, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${geminiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ ...payload, model: model.replace(/^google\//, "") }),
+          signal: timeoutSignal(),
         });
+        if (direct.ok) {
+          const h = new Headers(direct.headers);
+          Object.entries(CORS_PASSTHROUGH).forEach(([k, v]) => h.set(k, v));
+          return new Response(direct.body, { status: direct.status, headers: h });
+        }
+        const errText = await direct.text();
+        console.error("Gemini direct API error:", direct.status, errText.slice(0, 500));
+        if (direct.status === 401 || direct.status === 403) {
+          return jsonResponse(direct.status, {
+            error: "Clé Gemini refusée par Google. Vérifiez-la dans Admin → Chatbot → Modèles IA.",
+          });
+        }
+      } catch (e) {
+        console.error("Gemini direct call failed:", (e as Error)?.name, (e as Error)?.message);
       }
-      // Autres erreurs (429, 5xx, modèle indisponible) → repli passerelle Lovable.
+      // Autres erreurs (429, 5xx, timeout) → repli passerelle Lovable.
       console.warn("Falling back to Lovable AI Gateway after Gemini direct failure");
     }
   }
@@ -125,14 +142,25 @@ export async function callGemini(body: OAIBody): Promise<Response> {
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
   if (!apiKey) return jsonResponse(500, { error: "LOVABLE_API_KEY is not configured" });
 
-  const upstream = await fetch(GATEWAY_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+  let upstream: Response;
+  try {
+    upstream = await fetch(GATEWAY_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+      signal: timeoutSignal(),
+    });
+  } catch (e) {
+    console.error("AI gateway call failed:", (e as Error)?.name, (e as Error)?.message);
+    return jsonResponse(504, {
+      error: isAbort(e)
+        ? "Le service IA n'a pas répondu à temps. Réessayez."
+        : "Service IA injoignable. Réessayez.",
+    });
+  }
 
   if (!upstream.ok) {
     const text = await upstream.text();
@@ -150,6 +178,7 @@ export async function callGemini(body: OAIBody): Promise<Response> {
   Object.entries(CORS_PASSTHROUGH).forEach(([k, v]) => headers.set(k, v));
   return new Response(upstream.body, { status: upstream.status, headers });
 }
+
 
 // ── Modèles configurables depuis l'admin (table bot_config) ────────────────
 // Permet de régler, sans redéployer, le modèle Gemini utilisé par le chatbot,
