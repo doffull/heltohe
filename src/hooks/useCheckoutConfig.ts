@@ -140,7 +140,9 @@ export function useCheckoutConfigAdmin() {
       return dbToConfig(data as Record<string, unknown>);
     },
     staleTime: 0,
+    refetchOnWindowFocus: false,
   });
+
 }
 
 
