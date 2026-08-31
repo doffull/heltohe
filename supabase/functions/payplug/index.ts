@@ -26,13 +26,18 @@ const admin = () =>
   });
 
 async function secretKey(): Promise<string> {
+  // 1) Secret projet (prioritaire) : PAYPLUG_SECRET_KEY
+  const envKey = (Deno.env.get("PAYPLUG_SECRET_KEY") ?? "").trim();
+  if (envKey) return envKey;
+
+  // 2) Repli : clé saisie dans Admin → Paiement & Livraison
   const { data, error } = await admin()
     .from("payment_gateway_secrets")
     .select("secret_key")
     .eq("gateway", "payplug")
     .maybeSingle();
   if (error) throw new Error(error.message);
-  const key = String(data?.secret_key || "");
+  const key = String(data?.secret_key || "").trim();
   if (!key) {
     throw new Error(
       "Clé secrète PayPlug manquante. Renseignez-la dans Admin → Paiement & Livraison.",
@@ -40,6 +45,7 @@ async function secretKey(): Promise<string> {
   }
   return key;
 }
+
 
 async function payplugFetch(key: string, path: string, init: RequestInit = {}) {
   const res = await fetch(`${PAYPLUG_API}${path}`, {
@@ -120,16 +126,20 @@ Deno.serve(async (req) => {
         .eq("gateway", "payplug")
         .maybeSingle();
       let mode: "test" | "live" | null = null;
-      if (data) {
-        try {
-          const key = await secretKey();
-          mode = key.startsWith("sk_test_") ? "test" : "live";
-        } catch {
-          mode = null;
-        }
+      let key = "";
+      try {
+        key = await secretKey();
+        mode = key.startsWith("sk_test_") ? "test" : "live";
+      } catch {
+        mode = null;
       }
-      return json({ configured: Boolean(data), last4: data?.last4 ?? null, mode });
+      return json({
+        configured: Boolean(key),
+        last4: key ? key.slice(-4) : (data?.last4 ?? null),
+        mode,
+      });
     }
+
 
     // ---------- PUBLIC : créer un paiement hébergé ----------
     if (action === "create-payment") {
