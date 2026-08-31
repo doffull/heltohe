@@ -50,3 +50,5 @@ project_id = "hzjzqdlyehclnpeqkier"
     verify_jwt = false
   [functions.voice-command]
     verify_jwt = false
+  [functions.process-email-queue]
+    verify_jwt = true
