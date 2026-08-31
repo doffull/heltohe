@@ -99,9 +99,17 @@ async function paypalFetch(
   const text = await res.text();
   const body = text ? JSON.parse(text) : {};
   if (!res.ok) {
-    const detail = body?.details?.[0]?.description || body?.message || "Erreur PayPal";
+    const issues = Array.isArray(body?.details)
+      ? body.details
+          .map((d: Record<string, unknown>) =>
+            [d?.issue, d?.field, d?.description].filter(Boolean).join(" "),
+          )
+          .join(" | ")
+      : "";
+    const detail = [body?.message, issues].filter(Boolean).join(" — ") || "Erreur PayPal";
     throw new Error(detail);
   }
+
   return body;
 }
 
@@ -196,7 +204,7 @@ Deno.serve(async (req) => {
             paypal: {
               experience_context: {
                 brand_name: String(config.brand_name || "Boutique"),
-                locale: String(config.locale || "fr_FR"),
+                locale: String(config.locale || "fr-FR").replace("_", "-"),
                 shipping_preference: "NO_SHIPPING",
                 user_action: "PAY_NOW",
               },
