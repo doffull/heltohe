@@ -35,6 +35,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [rolesLoaded, setRolesLoaded] = useState(false);
 
   useEffect(() => {
+    // Crée/relie la fiche client côté serveur : l'insertion depuis le navigateur
+    // juste après l'inscription échoue tant que l'e-mail n'est pas confirmé
+    // (aucune session), ce qui laissait des inscrits absents de la liste admin.
+    const ensureCustomerProfile = () => {
+      supabase.rpc('ensure_customer_profile').then(({ error }) => {
+        if (error) console.warn('ensure_customer_profile:', error.message);
+      });
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
@@ -42,6 +51,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session?.user) {
           setRolesLoaded(false);
           setTimeout(() => { loadRoles(session.user.id); }, 0);
+          if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+            setTimeout(ensureCustomerProfile, 0);
+          }
         } else {
           setIsAdmin(false);
           setRoles([]);
@@ -55,6 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.user) {
         await loadRoles(session.user.id);
+        ensureCustomerProfile();
       } else {
         setRolesLoaded(true);
       }
@@ -63,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
 
   // Only mark loading complete once both session is checked AND roles are loaded
   useEffect(() => {
