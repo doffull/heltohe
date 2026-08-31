@@ -84,24 +84,23 @@ Deno.serve(async (req) => {
 
   const token = authHeader.replace('Bearer ', '').trim();
 
-  // Une clé publique de projet (anon ou `sb_publishable_…`) n'est PAS un jeton de
-  // session : `getClaims` la rejette, quel que soit son format. On la reconnaît donc
-  // séparément, pour n'autoriser que les actions publiques.
-  const isProjectKey = await isProjectPublicKey(token);
-
+  // On tente d'abord la session utilisateur : un vrai jeton de session porte des
+  // claims (`sub`), indispensables aux actions admin.
   let claims: Record<string, any> | null = null;
-  if (!isProjectKey) {
-    const { data: claimsData, error: authError } = await supabase.auth.getClaims(token);
-    if (authError || !claimsData?.claims) {
-      return unauthorized();
-    }
-    claims = claimsData.claims;
+  const { data: claimsData } = await supabase.auth.getClaims(token);
+  if (claimsData?.claims?.sub) {
+    claims = claimsData.claims as Record<string, any>;
   }
 
-  // Hors actions publiques, une clé de projet ne suffit pas : il faut une vraie session.
-  if (!isPublicAction && !claims) {
-    return unauthorized();
+  // Pas de session : ce peut être la clé publique du projet (anon héritée `eyJ…` ou
+  // `sb_publishable_…`) envoyée par un visiteur non connecté. Elle n'ouvre que les
+  // actions publiques.
+  if (!claims) {
+    const isProjectKey = await isProjectPublicKey(token);
+    if (!isProjectKey) return unauthorized();
+    if (!isPublicAction) return unauthorized();
   }
+
 
   const COLISSIMO_LOGIN = Deno.env.get('COLISSIMO_LOGIN');
   const COLISSIMO_PASSWORD = Deno.env.get('COLISSIMO_PASSWORD');
