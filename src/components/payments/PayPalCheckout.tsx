@@ -31,6 +31,7 @@ export function PayPalCheckout({ buildPayload, onPaid, disabled }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const contextRef = useRef<{ orderNumber: string; total: number } | null>(null);
   const payloadRef = useRef(buildPayload);
   payloadRef.current = buildPayload;
@@ -40,12 +41,20 @@ export function PayPalCheckout({ buildPayload, onPaid, disabled }: Props) {
   const clientId = activeClientId(config);
 
   useEffect(() => {
-    if (!config?.enabled || !clientId || !containerRef.current) return;
+    if (!config?.enabled) return;
+    if (!containerRef.current) return;
     let cancelled = false;
     const node = containerRef.current;
     node.innerHTML = '';
     setReady(false);
     setError(null);
+
+    if (!clientId) {
+      setError(PAYPAL_MISSING_CLIENT_ID);
+      return;
+    }
+
+
 
     loadPayPalSdk({
       clientId,
