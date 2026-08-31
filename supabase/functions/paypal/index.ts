@@ -188,15 +188,13 @@ Deno.serve(async (req) => {
               amount: { currency_code: currency, value: total },
             },
           ],
-          payment_source: {
-            paypal: {
-              experience_context: {
-                brand_name: String(config.brand_name || "Boutique"),
-                locale: String(config.locale || "fr_FR"),
-                shipping_preference: "NO_SHIPPING",
-                user_action: "PAY_NOW",
-              },
-            },
+          // `application_context` (et non `payment_source.paypal`) : garde tous les
+          // moyens de paiement disponibles (compte PayPal, carte invité, 3x/4x).
+          application_context: {
+            brand_name: String(config.brand_name || "Boutique"),
+            locale: String(config.locale || "fr_FR"),
+            shipping_preference: "NO_SHIPPING",
+            user_action: "PAY_NOW",
           },
         }),
       });
