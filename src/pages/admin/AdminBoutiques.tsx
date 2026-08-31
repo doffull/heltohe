@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Edit, Trash2, MapPin, Loader2, Search, Sparkles, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { BoutiqueMapPicker } from '@/components/admin/BoutiqueMapPicker';
 
 interface AICandidate {
   placeId: string;
@@ -33,14 +34,26 @@ const emptyBoutique: Partial<Boutique> = {
 // Session-level cache: { "type|query" -> candidates }
 const aiCache = new Map<string, AICandidate[]>();
 
-async function geocode(address: string): Promise<{ lat: number; lng: number } | null> {
-  try {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`;
-    const r = await fetch(url, { headers: { 'Accept-Language': 'fr' } });
-    const j = await r.json();
-    if (Array.isArray(j) && j[0]) return { lat: Number(j[0].lat), lng: Number(j[0].lon) };
-  } catch { /* noop */ }
-  return null;
+/** Géocodage via Google (passerelle connecteur). Renvoie une erreur explicite. */
+async function geocode(address: string): Promise<{ lat: number; lng: number }> {
+  const { data, error } = await supabase.functions.invoke('boutique-lookup', {
+    body: { action: 'geocode', query: address },
+  });
+  if (error) {
+    let detail = error.message;
+    const ctx = (error as any)?.context;
+    if (ctx?.text) {
+      try {
+        const parsed = JSON.parse(await ctx.text());
+        detail = parsed?.error || detail;
+      } catch { /* garde le message d'origine */ }
+    }
+    throw new Error(detail);
+  }
+  if (typeof data?.lat !== 'number' || typeof data?.lng !== 'number') {
+    throw new Error(data?.error || 'Adresse introuvable');
+  }
+  return { lat: data.lat, lng: data.lng };
 }
 
 export default function AdminBoutiques() {
