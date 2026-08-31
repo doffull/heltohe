@@ -852,6 +852,8 @@ export default function AdminOrders() {
 
               <div className="space-y-2"><Label className="hud-text text-xs">Notes</Label><Textarea value={editForm.notes} onChange={e => setEditForm({ ...editForm, notes: e.target.value })} rows={3} placeholder="Notes internes..." /></div>
 
+              <OrderHistoryPanel orderId={selectedOrder.id} createdAt={selectedOrder.date} />
+
               <div className="flex flex-wrap gap-2 justify-end pt-4 border-t border-border">
                 <Button variant="outline" size="sm" onClick={() => selectedOrder && openPrintWindow(generateDeliverySlipHTML(selectedOrder))}><FileDown className="h-4 w-4 mr-1" />Bon de livraison</Button>
                 <Button variant="outline" size="sm" onClick={() => selectedOrder && openPrintWindow(generateShippingLabelHTML(selectedOrder))}><Tag className="h-4 w-4 mr-1" />Étiquette aller</Button>
