@@ -365,7 +365,12 @@ export default function AdminCustomers() {
                     <td className="p-4 text-right font-bold text-sm">{customer.totalSpent.toFixed(2)}€</td>
                     <td className="p-4 text-right flex gap-1 justify-end">
                       <Button variant="ghost" size="icon" onClick={() => setSelectedCustomer(customer)} title="Voir"><Eye className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => window.location.href = `mailto:${customer.email}`} title="Contacter">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setEmailTarget({ email: customer.email, name: `${customer.firstName} ${customer.lastName}`.trim() })}
+                        title="Envoyer un e-mail"
+                      >
                         <Mail className="h-4 w-4" />
                       </Button>
                     </td>
