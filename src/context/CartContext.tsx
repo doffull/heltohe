@@ -123,9 +123,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   
   // Align with Checkout: default to home-delivery pricing (Cart doesn't know
   // the delivery mode yet). Prices are TTC, so tax is derived from the total.
-  const freeShippingThreshold = checkoutConfig?.freeShippingThreshold ?? 200;
-  const homeShipping = checkoutConfig?.shippingHomePrice ?? 6.5;
-  const shippingCost = subtotal >= freeShippingThreshold ? 0 : homeShipping;
+  const shippingCost = computeShippingCost(checkoutConfig, subtotal, 'home');
+
   const subtotalAfterPromo = Math.max(0, subtotal - promoDiscount);
   const total = Math.max(0, subtotalAfterPromo + shippingCost);
   const tax = total * TAX_RATE / (1 + TAX_RATE);
