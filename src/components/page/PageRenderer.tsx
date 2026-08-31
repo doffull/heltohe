@@ -456,27 +456,113 @@ function PopupButtonSection({ content }: { content: Record<string, any> }) {
 
 interface PageRendererProps {
   sections: PageSection[];
+  /** Live edit mode (super admin) */
+  editable?: boolean;
+  onUpdate?: (sectionId: string, field: string, value: string) => void;
+  onMove?: (sectionId: string, dir: -1 | 1) => void;
+  onDelete?: (sectionId: string) => void;
 }
 
-export default function PageRenderer({ sections }: PageRendererProps) {
+function SectionFrame({
+  children,
+  index,
+  total,
+  onMove,
+  onDelete,
+  label,
+}: {
+  children: React.ReactNode;
+  index: number;
+  total: number;
+  onMove?: (dir: -1 | 1) => void;
+  onDelete?: () => void;
+  label: string;
+}) {
   return (
-    <div className="space-y-8">
-      {sections.map(section => {
-        switch (section.type) {
-          case 'hero': return <HeroSection key={section.id} content={section.content} />;
-          case 'image': return <ImageSection key={section.id} content={section.content} />;
-          case 'video': return <VideoSection key={section.id} content={section.content} />;
-          case 'slider': return <SliderSection key={section.id} content={section.content} />;
-          case 'title': return <h2 key={section.id} className="text-3xl md:text-4xl font-bold uppercase tracking-tight px-6">{section.content.text}</h2>;
-          case 'subtitle': return <h3 key={section.id} className="text-xl text-muted-foreground px-6">{section.content.text}</h3>;
-          case 'text': return <div key={section.id} className="prose prose-invert max-w-3xl mx-auto px-6 whitespace-pre-wrap">{section.content.text}</div>;
-          case 'products': return <div key={section.id} className="px-6"><ProductsSection content={section.content} /></div>;
-          case 'categories': return <CategoriesSection key={section.id} content={section.content} />;
-          case 'popup_button': return <PopupButtonSection key={section.id} content={{ ...section.content, _id: section.id }} />;
-          case 'banner': return <BannerSection key={section.id} content={section.content} sectionId={section.id} />;
-          default: return null;
-        }
-      })}
+    <div className="relative group/section outline-dashed outline-1 outline-primary/30 rounded-sm">
+      <div className="absolute -top-3 left-2 z-[120] hidden group-hover/section:flex items-center gap-1 rounded border border-border bg-background/95 backdrop-blur px-1 py-0.5 shadow">
+        <span className="text-[9px] font-bold uppercase tracking-wider px-1 text-muted-foreground">{label}</span>
+        <button
+          type="button"
+          title="Monter"
+          disabled={index === 0}
+          onClick={() => onMove?.(-1)}
+          className="h-5 w-5 inline-flex items-center justify-center rounded hover:bg-muted disabled:opacity-30"
+        >
+          <ArrowUp className="h-3 w-3" />
+        </button>
+        <button
+          type="button"
+          title="Descendre"
+          disabled={index === total - 1}
+          onClick={() => onMove?.(1)}
+          className="h-5 w-5 inline-flex items-center justify-center rounded hover:bg-muted disabled:opacity-30"
+        >
+          <ArrowDown className="h-3 w-3" />
+        </button>
+        <button
+          type="button"
+          title="Supprimer la section"
+          onClick={() => onDelete?.()}
+          className="h-5 w-5 inline-flex items-center justify-center rounded text-destructive hover:bg-destructive/10"
+        >
+          <Trash2 className="h-3 w-3" />
+        </button>
+      </div>
+      {children}
     </div>
   );
 }
+
+export default function PageRenderer({ sections, editable = false, onUpdate, onMove, onDelete }: PageRendererProps) {
+  const ctx = useMemo(
+    () => ({ editable, update: (id: string, field: string, value: string) => onUpdate?.(id, field, value) }),
+    [editable, onUpdate],
+  );
+
+  return (
+    <PageEditContext.Provider value={ctx}>
+      <div className="space-y-8">
+        {sections.map((section, index) => {
+          const node = (() => {
+            switch (section.type) {
+              case 'hero': return <HeroSection key={section.id} content={section.content} sectionId={section.id} />;
+              case 'image': return <ImageSection key={section.id} content={section.content} />;
+              case 'video': return <VideoSection key={section.id} content={section.content} />;
+              case 'slider': return <SliderSection key={section.id} content={section.content} />;
+              case 'title': return (
+                <EditableField key={section.id} sectionId={section.id} field="text" value={section.content.text} as="h2" className="text-3xl md:text-4xl font-bold uppercase tracking-tight px-6" />
+              );
+              case 'subtitle': return (
+                <EditableField key={section.id} sectionId={section.id} field="text" value={section.content.text} as="h3" className="text-xl text-muted-foreground px-6" />
+              );
+              case 'text': return (
+                <EditableField key={section.id} sectionId={section.id} field="text" value={section.content.text} as="div" multiline className="prose prose-invert max-w-3xl mx-auto px-6 whitespace-pre-wrap" />
+              );
+              case 'products': return <div key={section.id} className="px-6"><ProductsSection content={section.content} /></div>;
+              case 'categories': return <CategoriesSection key={section.id} content={section.content} />;
+              case 'popup_button': return <PopupButtonSection key={section.id} content={{ ...section.content, _id: section.id }} />;
+              case 'banner': return <BannerSection key={section.id} content={section.content} sectionId={section.id} />;
+              default: return null;
+            }
+          })();
+
+          if (!editable || !node) return node;
+          return (
+            <SectionFrame
+              key={section.id}
+              index={index}
+              total={sections.length}
+              label={section.type}
+              onMove={(dir) => onMove?.(section.id, dir)}
+              onDelete={() => onDelete?.(section.id)}
+            >
+              {node}
+            </SectionFrame>
+          );
+        })}
+      </div>
+    </PageEditContext.Provider>
+  );
+}
+
