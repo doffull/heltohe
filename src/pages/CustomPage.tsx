@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { usePage } from '@/hooks/usePages';
-import PageRenderer from '@/components/page/PageRenderer';
+import LivePageEditor from '@/components/page/LivePageEditor';
 import Shop from './Shop';
 
 export default function CustomPage() {
@@ -37,7 +37,8 @@ export default function CustomPage() {
 
   return (
     <div className="min-h-screen">
-      <PageRenderer sections={page.sections} />
+      <LivePageEditor page={page} />
     </div>
   );
+
 }

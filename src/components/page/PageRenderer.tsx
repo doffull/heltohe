@@ -1,5 +1,55 @@
-import { useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
+import { InlineEditable } from '@/components/visual-editor/InlineEditable';
 import { Link, useNavigate } from 'react-router-dom';
+
+/** Live page-edit context (Elementor-like inline editing for super admins). */
+interface PageEditCtx {
+  editable: boolean;
+  update: (sectionId: string, field: string, value: string) => void;
+}
+const PageEditContext = createContext<PageEditCtx>({ editable: false, update: () => {} });
+export function usePageEdit() {
+  return useContext(PageEditContext);
+}
+
+/** Renders a text field of a section: plain when read-only, inline-editable in live mode. */
+function EditableField({
+  sectionId,
+  field,
+  value,
+  as: Tag = 'span',
+  className,
+  style,
+  multiline,
+}: {
+  sectionId: string;
+  field: string;
+  value?: string;
+  as?: 'span' | 'h1' | 'h2' | 'h3' | 'p' | 'div';
+  className?: string;
+  style?: React.CSSProperties;
+  multiline?: boolean;
+}) {
+  const { editable, update } = usePageEdit();
+  if (!editable) {
+    if (!value) return null;
+    return <Tag className={className} style={style}>{value}</Tag>;
+  }
+  return (
+    <InlineEditable
+      fieldKey={`page:${sectionId}:${field}`}
+      value={value || ''}
+      as={Tag}
+      className={className}
+      style={style}
+      multiline={multiline}
+      placeholder="Cliquez pour éditer…"
+      onCommit={(v) => update(sectionId, field, v)}
+    />
+  );
+}
+
 import { useProducts } from '@/hooks/useProducts';
 import { productInCategory } from '@/lib/productCategories';
 import { useCategories } from '@/hooks/useCategories';
@@ -44,7 +94,9 @@ const POSITION_CLASS: Record<string, string> = {
 };
 
 function BannerSection({ content, sectionId }: { content: Record<string, any>; sectionId: string }) {
+  const { editable: isEditable } = usePageEdit();
   const parallax = useParallax<HTMLDivElement>(content.parallaxSpeed ?? 0.25);
+
   const mediaType = content.mediaType || 'image';
   const link: string = content.link || '';
   const hoverClass = HOVER_CLASSES[content.hoverEffect as string] || '';
@@ -87,17 +139,16 @@ function BannerSection({ content, sectionId }: { content: Record<string, any>; s
     <div className="absolute inset-0 pointer-events-none" style={{ backgroundColor: `rgba(0,0,0,${overlay})` }} />
   ) : null;
 
-  const textLayer = (content.title || content.subtitle || content.buttonLabel) ? (
+  const textLayer = (content.title || content.subtitle || content.buttonLabel || isEditable) ? (
     <div className={cn('relative z-10 h-full w-full p-6 md:p-10 flex flex-col gap-3', posClass)} style={{ color: textColor }}>
-      {content.title && <h2 className="text-2xl md:text-4xl font-bold uppercase tracking-tight drop-shadow">{content.title}</h2>}
-      {content.subtitle && <p className="text-sm md:text-lg drop-shadow max-w-2xl">{content.subtitle}</p>}
-      {content.buttonLabel && (
-        <span className="inline-flex items-center px-5 py-2 mt-2 bg-white text-black text-sm font-bold uppercase tracking-wider hover:bg-white/90 transition pointer-events-none">
-          {content.buttonLabel}
-        </span>
-      )}
+      <EditableField sectionId={sectionId} field="title" value={content.title} as="h2" className="text-2xl md:text-4xl font-bold uppercase tracking-tight drop-shadow" />
+      <EditableField sectionId={sectionId} field="subtitle" value={content.subtitle} as="p" className="text-sm md:text-lg drop-shadow max-w-2xl" />
+      {content.buttonLabel || isEditable ? (
+        <EditableField sectionId={sectionId} field="buttonLabel" value={content.buttonLabel} as="span" className="inline-flex items-center px-5 py-2 mt-2 bg-white text-black text-sm font-bold uppercase tracking-wider self-start" />
+      ) : null}
     </div>
   ) : null;
+
 
   const inner = (
     <div className={cn('relative w-full overflow-hidden group', heightClass)}>
@@ -107,9 +158,10 @@ function BannerSection({ content, sectionId }: { content: Record<string, any>; s
     </div>
   );
 
-  if (!link) {
+  if (!link || isEditable) {
     return <div data-banner-id={sectionId}>{inner}</div>;
   }
+
 
   const isExternal = /^https?:\/\//i.test(link);
   if (isExternal || content.newTab) {
@@ -134,7 +186,8 @@ function BannerSection({ content, sectionId }: { content: Record<string, any>; s
 
 
 
-function HeroSection({ content }: { content: Record<string, any> }) {
+function HeroSection({ content, sectionId }: { content: Record<string, any>; sectionId: string }) {
+  const { editable } = usePageEdit();
   return (
     <div
       className="relative w-full min-h-[50vh] flex items-center justify-center bg-cover bg-center"
@@ -142,17 +195,20 @@ function HeroSection({ content }: { content: Record<string, any> }) {
     >
       <div className="absolute inset-0 bg-background/60" />
       <div className="relative z-10 text-center px-6 py-16">
-        {content.title && <h1 className="text-4xl md:text-6xl font-bold uppercase tracking-tight mb-4">{content.title}</h1>}
-        {content.subtitle && <p className="text-lg md:text-xl text-muted-foreground mb-6">{content.subtitle}</p>}
-        {content.ctaText && (
+        <EditableField sectionId={sectionId} field="title" value={content.title} as="h1" className="text-4xl md:text-6xl font-bold uppercase tracking-tight mb-4" />
+        <EditableField sectionId={sectionId} field="subtitle" value={content.subtitle} as="p" className="text-lg md:text-xl text-muted-foreground mb-6" />
+        {editable ? (
+          <EditableField sectionId={sectionId} field="ctaText" value={content.ctaText} as="span" className="inline-flex items-center px-5 py-2 border border-primary text-sm font-bold uppercase tracking-wider" />
+        ) : content.ctaText ? (
           <a href={content.ctaUrl || '#'}>
             <Button size="lg" className="uppercase tracking-wider">{content.ctaText}</Button>
           </a>
-        )}
+        ) : null}
       </div>
     </div>
   );
 }
+
 
 function ImageSection({ content }: { content: Record<string, any> }) {
   const sizeClass = content.size === 'small' ? 'max-w-md' : content.size === 'medium' ? 'max-w-2xl' : 'w-full';
@@ -456,27 +512,113 @@ function PopupButtonSection({ content }: { content: Record<string, any> }) {
 
 interface PageRendererProps {
   sections: PageSection[];
+  /** Live edit mode (super admin) */
+  editable?: boolean;
+  onUpdate?: (sectionId: string, field: string, value: string) => void;
+  onMove?: (sectionId: string, dir: -1 | 1) => void;
+  onDelete?: (sectionId: string) => void;
 }
 
-export default function PageRenderer({ sections }: PageRendererProps) {
+function SectionFrame({
+  children,
+  index,
+  total,
+  onMove,
+  onDelete,
+  label,
+}: {
+  children: React.ReactNode;
+  index: number;
+  total: number;
+  onMove?: (dir: -1 | 1) => void;
+  onDelete?: () => void;
+  label: string;
+}) {
   return (
-    <div className="space-y-8">
-      {sections.map(section => {
-        switch (section.type) {
-          case 'hero': return <HeroSection key={section.id} content={section.content} />;
-          case 'image': return <ImageSection key={section.id} content={section.content} />;
-          case 'video': return <VideoSection key={section.id} content={section.content} />;
-          case 'slider': return <SliderSection key={section.id} content={section.content} />;
-          case 'title': return <h2 key={section.id} className="text-3xl md:text-4xl font-bold uppercase tracking-tight px-6">{section.content.text}</h2>;
-          case 'subtitle': return <h3 key={section.id} className="text-xl text-muted-foreground px-6">{section.content.text}</h3>;
-          case 'text': return <div key={section.id} className="prose prose-invert max-w-3xl mx-auto px-6 whitespace-pre-wrap">{section.content.text}</div>;
-          case 'products': return <div key={section.id} className="px-6"><ProductsSection content={section.content} /></div>;
-          case 'categories': return <CategoriesSection key={section.id} content={section.content} />;
-          case 'popup_button': return <PopupButtonSection key={section.id} content={{ ...section.content, _id: section.id }} />;
-          case 'banner': return <BannerSection key={section.id} content={section.content} sectionId={section.id} />;
-          default: return null;
-        }
-      })}
+    <div className="relative group/section outline-dashed outline-1 outline-primary/30 rounded-sm">
+      <div className="absolute -top-3 left-2 z-[120] hidden group-hover/section:flex items-center gap-1 rounded border border-border bg-background/95 backdrop-blur px-1 py-0.5 shadow">
+        <span className="text-[9px] font-bold uppercase tracking-wider px-1 text-muted-foreground">{label}</span>
+        <button
+          type="button"
+          title="Monter"
+          disabled={index === 0}
+          onClick={() => onMove?.(-1)}
+          className="h-5 w-5 inline-flex items-center justify-center rounded hover:bg-muted disabled:opacity-30"
+        >
+          <ArrowUp className="h-3 w-3" />
+        </button>
+        <button
+          type="button"
+          title="Descendre"
+          disabled={index === total - 1}
+          onClick={() => onMove?.(1)}
+          className="h-5 w-5 inline-flex items-center justify-center rounded hover:bg-muted disabled:opacity-30"
+        >
+          <ArrowDown className="h-3 w-3" />
+        </button>
+        <button
+          type="button"
+          title="Supprimer la section"
+          onClick={() => onDelete?.()}
+          className="h-5 w-5 inline-flex items-center justify-center rounded text-destructive hover:bg-destructive/10"
+        >
+          <Trash2 className="h-3 w-3" />
+        </button>
+      </div>
+      {children}
     </div>
   );
 }
+
+export default function PageRenderer({ sections, editable = false, onUpdate, onMove, onDelete }: PageRendererProps) {
+  const ctx = useMemo(
+    () => ({ editable, update: (id: string, field: string, value: string) => onUpdate?.(id, field, value) }),
+    [editable, onUpdate],
+  );
+
+  return (
+    <PageEditContext.Provider value={ctx}>
+      <div className="space-y-8">
+        {sections.map((section, index) => {
+          const node = (() => {
+            switch (section.type) {
+              case 'hero': return <HeroSection key={section.id} content={section.content} sectionId={section.id} />;
+              case 'image': return <ImageSection key={section.id} content={section.content} />;
+              case 'video': return <VideoSection key={section.id} content={section.content} />;
+              case 'slider': return <SliderSection key={section.id} content={section.content} />;
+              case 'title': return (
+                <EditableField key={section.id} sectionId={section.id} field="text" value={section.content.text} as="h2" className="text-3xl md:text-4xl font-bold uppercase tracking-tight px-6" />
+              );
+              case 'subtitle': return (
+                <EditableField key={section.id} sectionId={section.id} field="text" value={section.content.text} as="h3" className="text-xl text-muted-foreground px-6" />
+              );
+              case 'text': return (
+                <EditableField key={section.id} sectionId={section.id} field="text" value={section.content.text} as="div" multiline className="prose prose-invert max-w-3xl mx-auto px-6 whitespace-pre-wrap" />
+              );
+              case 'products': return <div key={section.id} className="px-6"><ProductsSection content={section.content} /></div>;
+              case 'categories': return <CategoriesSection key={section.id} content={section.content} />;
+              case 'popup_button': return <PopupButtonSection key={section.id} content={{ ...section.content, _id: section.id }} />;
+              case 'banner': return <BannerSection key={section.id} content={section.content} sectionId={section.id} />;
+              default: return null;
+            }
+          })();
+
+          if (!editable || !node) return node;
+          return (
+            <SectionFrame
+              key={section.id}
+              index={index}
+              total={sections.length}
+              label={section.type}
+              onMove={(dir) => onMove?.(section.id, dir)}
+              onDelete={() => onDelete?.(section.id)}
+            >
+              {node}
+            </SectionFrame>
+          );
+        })}
+      </div>
+    </PageEditContext.Provider>
+  );
+}
+

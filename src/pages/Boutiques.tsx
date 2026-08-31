@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useBoutiques } from '@/hooks/useBoutiques';
 import { MapPin, Store, AlertCircle } from 'lucide-react';
+import { BoutiqueMiniMap } from '@/components/boutiques/BoutiqueMiniMap';
+
 
 function useDocTitle(title: string, description?: string) {
   useEffect(() => {
@@ -139,7 +141,9 @@ export default function Boutiques() {
                   <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
                   <span>{b.address}<br/>{b.postalCode ? `${b.postalCode} ` : ''}{b.city}</span>
                 </div>
+                <BoutiqueMiniMap boutique={b} className="mt-3" />
               </div>
+
             </div>
           ))}
         </div>
