@@ -107,6 +107,7 @@ export function NewsletterPopupHost() {
   return (
     <Dialog open={!!active} onOpenChange={(v) => !v && close()}>
       <DialogContent
+        hideClose
         className="max-w-md p-0 overflow-hidden border-0"
         style={{ background: active.bg_color || '#000', color: active.text_color || '#fff' }}
       >

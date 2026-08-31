@@ -135,7 +135,7 @@ export function GameScratchFab({ open: openProp, onOpenChange, hideTrigger }: Pr
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-[min(94vw,440px)] max-w-none p-0 bg-background border-2 border-foreground/20 gap-0 overflow-hidden">
+        <DialogContent hideClose className="w-[min(94vw,440px)] max-w-none p-0 bg-background border-2 border-foreground/20 gap-0 overflow-hidden">
           <DialogTitle className="sr-only">{config.title}</DialogTitle>
 
           <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-foreground/10">

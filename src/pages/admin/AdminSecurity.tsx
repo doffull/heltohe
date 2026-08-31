@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
-import { useDesignSettings, useSaveDesignSettings } from '@/hooks/useDesignSettings';
+import { useApp } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import { ShieldCheck, ShieldAlert, RefreshCw, AlertTriangle, CheckCircle2, XCircle, Save, Eye } from 'lucide-react';
 
@@ -45,23 +45,44 @@ export default function AdminSecurity() {
     refetchOnWindowFocus: false,
   });
 
-  const { data: settings } = useDesignSettings();
-  const save = useSaveDesignSettings();
+  const { designSettings, flushDesignSettings } = useApp();
   const { toast } = useToast();
   const [overlay, setOverlay] = useState<any>(DEFAULT_OVERLAY);
   const [preview, setPreview] = useState(false);
+  const [saving, setSaving] = useState(false);
+  // Une fois que l'admin a touché un réglage, on n'écrase plus le formulaire
+  // avec les rafraîchissements automatiques du backend (toutes les 15 s).
+  const dirtyRef = useRef(false);
+  const hydratedRef = useRef(false);
 
   useEffect(() => {
-    if (settings) setOverlay({ ...DEFAULT_OVERLAY, ...((settings as any).securityOverlay ?? {}) });
-  }, [settings]);
+    if (!designSettings) return;
+    if (dirtyRef.current) return;
+    if (hydratedRef.current && !(designSettings as any).securityOverlay) return;
+    hydratedRef.current = true;
+    setOverlay({ ...DEFAULT_OVERLAY, ...((designSettings as any).securityOverlay ?? {}) });
+  }, [designSettings]);
+
+  const patch = (updates: Record<string, unknown>) => {
+    dirtyRef.current = true;
+    setOverlay((o: any) => ({ ...o, ...updates }));
+  };
 
   const saveOverlay = async () => {
-    if (!settings) return;
+    setSaving(true);
     try {
-      await save.mutateAsync({ ...(settings as any), securityOverlay: overlay });
-      toast({ title: 'Protection mise à jour' });
+      // Passe par le contexte pour que la copie en mémoire (utilisée par tous
+      // les autres écrans) contienne immédiatement la nouvelle valeur.
+      await flushDesignSettings({ securityOverlay: overlay } as any);
+      dirtyRef.current = false;
+      toast({
+        title: overlay.enabled ? 'Protection activée' : 'Protection désactivée',
+        description: 'Réglages enregistrés.',
+      });
     } catch (e: any) {
       toast({ title: 'Erreur', description: e?.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -99,7 +120,7 @@ export default function AdminSecurity() {
               <Eye className="h-3.5 w-3.5" />
               {preview ? 'Masquer aperçu' : 'Aperçu'}
             </Button>
-            <Button size="sm" onClick={saveOverlay} disabled={save.isPending} className="gap-1.5">
+            <Button size="sm" onClick={saveOverlay} disabled={saving} className="gap-1.5">
               <Save className="h-3.5 w-3.5" />
               Enregistrer
             </Button>
@@ -112,28 +133,28 @@ export default function AdminSecurity() {
               <Label className="text-sm">Filigrane visible</Label>
               <p className="text-[11px] text-muted-foreground">Overlay diagonal traçable sur tout le site public.</p>
             </div>
-            <Switch checked={!!overlay.enabled} onCheckedChange={v => setOverlay((o: any) => ({ ...o, enabled: v }))} />
+            <Switch checked={!!overlay.enabled} onCheckedChange={v => patch({ enabled: v })} />
           </div>
           <div className="flex items-center justify-between rounded border p-3">
             <div>
               <Label className="text-sm">Inclure l'email visiteur</Label>
               <p className="text-[11px] text-muted-foreground">Marque le filigrane avec l'email connecté (traçabilité).</p>
             </div>
-            <Switch checked={overlay.showEmail !== false} onCheckedChange={v => setOverlay((o: any) => ({ ...o, showEmail: v }))} />
+            <Switch checked={overlay.showEmail !== false} onCheckedChange={v => patch({ showEmail: v })} />
           </div>
           <div className="flex items-center justify-between rounded border p-3">
             <div>
               <Label className="text-sm">Bloquer PrintScreen</Label>
               <p className="text-[11px] text-muted-foreground">Floute la page et vide le presse-papier à l'appui.</p>
             </div>
-            <Switch checked={overlay.blockPrintScreen !== false} onCheckedChange={v => setOverlay((o: any) => ({ ...o, blockPrintScreen: v }))} />
+            <Switch checked={overlay.blockPrintScreen !== false} onCheckedChange={v => patch({ blockPrintScreen: v })} />
           </div>
           <div className="flex items-center justify-between rounded border p-3">
             <div>
               <Label className="text-sm">Désactiver clic droit / sélection</Label>
               <p className="text-[11px] text-muted-foreground">Empêche la copie d'images et texte hors champs.</p>
             </div>
-            <Switch checked={overlay.disableRightClick !== false} onCheckedChange={v => setOverlay((o: any) => ({ ...o, disableRightClick: v }))} />
+            <Switch checked={overlay.disableRightClick !== false} onCheckedChange={v => patch({ disableRightClick: v })} />
           </div>
         </div>
 
@@ -142,7 +163,7 @@ export default function AdminSecurity() {
             <Label className="text-xs">Texte personnalisé du filigrane</Label>
             <Input
               value={overlay.text ?? ''}
-              onChange={e => setOverlay((o: any) => ({ ...o, text: e.target.value }))}
+              onChange={e => patch({ text: e.target.value })}
               placeholder="Ex : © HELVETICA-MP — Propriété — Ne pas diffuser"
             />
             <p className="text-[11px] text-muted-foreground">Laissez vide pour n'afficher que l'email et le timestamp.</p>
@@ -156,7 +177,7 @@ export default function AdminSecurity() {
                 min={1}
                 max={30}
                 step={1}
-                onValueChange={([v]) => setOverlay((o: any) => ({ ...o, opacity: v / 100 }))}
+                onValueChange={([v]) => patch({ opacity: v / 100 })}
               />
             </div>
             <div className="space-y-2">
@@ -166,7 +187,7 @@ export default function AdminSecurity() {
                 min={-90}
                 max={90}
                 step={5}
-                onValueChange={([v]) => setOverlay((o: any) => ({ ...o, angle: v }))}
+                onValueChange={([v]) => patch({ angle: v })}
               />
             </div>
             <div className="space-y-2">
@@ -176,7 +197,7 @@ export default function AdminSecurity() {
                 min={20}
                 max={150}
                 step={5}
-                onValueChange={([v]) => setOverlay((o: any) => ({ ...o, density: v }))}
+                onValueChange={([v]) => patch({ density: v })}
               />
             </div>
           </div>
@@ -187,14 +208,14 @@ export default function AdminSecurity() {
               <Input
                 type="text"
                 value={overlay.color ?? 'currentColor'}
-                onChange={e => setOverlay((o: any) => ({ ...o, color: e.target.value }))}
+                onChange={e => patch({ color: e.target.value })}
                 placeholder="currentColor, #ff0000, rgba(0,0,0,0.3)…"
                 className="flex-1"
               />
               <input
                 type="color"
                 value={/^#[0-9a-f]{6}$/i.test(overlay.color ?? '') ? overlay.color : '#000000'}
-                onChange={e => setOverlay((o: any) => ({ ...o, color: e.target.value }))}
+                onChange={e => patch({ color: e.target.value })}
                 className="h-9 w-12 rounded border cursor-pointer"
               />
             </div>
