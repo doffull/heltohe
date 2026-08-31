@@ -141,6 +141,7 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
             {product.price}€
           </EditableProductField>
         )}
+        <span className="text-xs text-muted-foreground self-end pb-1">TTC</span>
       </motion.div>
 
       {/* Stock */}

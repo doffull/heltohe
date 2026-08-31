@@ -234,10 +234,14 @@ export function ProductCard({
           {hasDiscount ? (
             <>
               <span className="text-base font-bold">{product.salePrice}€</span>
+              <span className="text-[10px] text-muted-foreground">TTC</span>
               <span className="text-xs text-muted-foreground line-through">{product.price}€</span>
             </>
           ) : (
-            <span className="text-base font-bold">{product.price}€</span>
+            <>
+              <span className="text-base font-bold">{product.price}€</span>
+              <span className="text-[10px] text-muted-foreground">TTC</span>
+            </>
           )}
         </div>
 

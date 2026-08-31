@@ -134,6 +134,7 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
           return (
             <div className="flex items-center gap-3 mb-3">
               <span className="font-extrabold" style={{ fontSize: b.props?.size || 32, color: t.colors.accent }}>{product.salePrice}€</span>
+              <span className="text-xs" style={{ color: t.colors.muted }}>TTC</span>
               <span className="line-through" style={{ color: t.colors.muted }}>{product.price}€</span>
               <span className="px-2 py-1 text-xs font-bold rounded" style={{ background: t.colors.accent, color: t.colors.card }}>-{pct}%</span>
             </div>
@@ -143,7 +144,7 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
           const each = ((product?.salePrice || product?.price || 0) / 4).toFixed(2);
           return (
             <div className="mb-3">
-              <div className="font-extrabold" style={{ fontSize: b.props?.size || 32 }}>{product?.salePrice || product?.price}€</div>
+              <div className="font-extrabold" style={{ fontSize: b.props?.size || 32 }}>{product?.salePrice || product?.price}€ <span className="text-xs font-normal" style={{ color: t.colors.muted }}>TTC</span></div>
               <div className="text-xs" style={{ color: t.colors.muted }}>ou 4× {each}€ sans frais</div>
             </div>
           );
@@ -159,6 +160,7 @@ export default function ProductTemplateRenderer({ template, product }: Props) {
             ) : (
               <span className="font-extrabold" style={{ fontSize: b.props?.size || 32 }}>{product?.price}€</span>
             )}
+            <span className="text-xs" style={{ color: t.colors.muted }}>TTC</span>
           </div>
         );
       }
