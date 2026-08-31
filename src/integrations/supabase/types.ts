@@ -3717,6 +3717,7 @@ export type Database = {
         Row: {
           checkout_message: string | null
           config_key: string | null
+          free_shipping_relay_only: boolean | null
           free_shipping_threshold: number | null
           home_delivery_enabled: boolean | null
           id: string | null
@@ -3729,6 +3730,7 @@ export type Database = {
         Insert: {
           checkout_message?: string | null
           config_key?: string | null
+          free_shipping_relay_only?: boolean | null
           free_shipping_threshold?: number | null
           home_delivery_enabled?: boolean | null
           id?: string | null
@@ -3741,6 +3743,7 @@ export type Database = {
         Update: {
           checkout_message?: string | null
           config_key?: string | null
+          free_shipping_relay_only?: boolean | null
           free_shipping_threshold?: number | null
           home_delivery_enabled?: boolean | null
           id?: string | null
