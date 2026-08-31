@@ -776,7 +776,7 @@ export default function Checkout() {
 
               <div className="mt-4 pt-4 border-t border-border flex items-center gap-2 text-xs text-muted-foreground">
                 <Shield className="h-3 w-3" />
-                <span>Paiement sécurisé par virement bancaire</span>
+                <span>Paiement sécurisé — PayPal, carte bancaire, 3x/4x</span>
               </div>
             </div>
           </div>
