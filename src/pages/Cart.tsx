@@ -26,9 +26,6 @@ export default function Cart() {
     items, 
     itemCount, 
     subtotal, 
-     
-    shippingCost, 
-    total,
     updateQuantity, 
     removeItem, 
     clearCart,
@@ -36,6 +33,10 @@ export default function Cart() {
     promoDiscount,
     promoCode
   } = useCart();
+
+  /** Le panier n'affiche pas les frais de port : ils sont choisis au checkout. */
+  const cartTotal = Math.max(0, subtotal - promoDiscount);
+
 
   const { data: catalog = [] } = useProducts();
   const [promoInput, setPromoInput] = useState('');
