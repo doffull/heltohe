@@ -330,15 +330,14 @@ export default function Checkout() {
             ) : (
               <>
                 <p className="text-[11px] sm:text-xs text-muted-foreground break-words">
-                  Votre commande est en attente de paiement. Veuillez effectuer un virement bancaire avec la référence <span className="font-bold text-foreground break-all">{orderNumber}</span>.
+                  Votre paiement est en cours de confirmation (référence <span className="font-bold text-foreground break-all">{orderNumber}</span>).
                 </p>
                 <div className="border border-border chamfer-hud-sm p-3 text-[11px] sm:text-xs space-y-1 font-mono">
-                  <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Bénéficiaire :</span><span className="text-right break-words">HELVETICA-MP Concept</span></div>
                   <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Montant :</span><span className="font-bold" style={{ color: `hsl(var(--step-confirm))` }}>{orderTotal.toFixed(2)} €</span></div>
                   <div className="flex justify-between gap-2"><span className="text-muted-foreground shrink-0">Référence :</span><span className="text-right break-all">{orderNumber}</span></div>
                 </div>
                 <p className="text-[11px] sm:text-xs text-muted-foreground break-words">
-                  Une confirmation vous sera envoyée à <span className="font-medium text-foreground break-all">{form.email}</span> dès réception du paiement.
+                  Une confirmation vous sera envoyée à <span className="font-medium text-foreground break-all">{form.email}</span> dès validation du paiement.
                 </p>
               </>
             )}
