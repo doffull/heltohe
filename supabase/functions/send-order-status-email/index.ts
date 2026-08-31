@@ -202,7 +202,8 @@ Deno.serve(async (req) => {
         status: 'failed',
         error: reason.slice(0, 500),
       });
-      return json({ error: reason, status: sent.status, details: sent.error }, 400);
+      // Non bloquant : la commande reste manipulable côté admin, seul l'e-mail échoue.
+      return json({ sent: false, warning: reason, status: sent.status, details: sent.error });
     }
 
 
