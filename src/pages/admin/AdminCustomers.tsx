@@ -95,9 +95,11 @@ function RoleManager({ userId, customerEmail, customerName }: { userId: string; 
           ))}
         </div>
       )}
+      {!loading && roles.length > 0 && <UserPasswordManager userId={userId} email={customerEmail} />}
     </div>
   );
 }
+
 
 function CustomerEditForm({ customer, onSaved }: { customer: CustomerRecord; onSaved: (c: CustomerRecord) => void }) {
   const { toast } = useToast();
