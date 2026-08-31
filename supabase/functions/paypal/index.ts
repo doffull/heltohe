@@ -138,6 +138,8 @@ Deno.serve(async (req) => {
     if (action === "status") {
       return json({
         environment: envName,
+        // Le Client ID est public par nature (il est visible dans l'URL du SDK JS).
+        clientId: creds.clientId,
         sandboxConfigured: Boolean(
           Deno.env.get("PAYPAL_SANDBOX_CLIENT_ID") && Deno.env.get("PAYPAL_SANDBOX_CLIENT_SECRET"),
         ),
@@ -146,6 +148,7 @@ Deno.serve(async (req) => {
         ),
       });
     }
+
 
     // ---------- PUBLIC: create a PayPal order for the current cart ----------
     if (action === "create-order") {
