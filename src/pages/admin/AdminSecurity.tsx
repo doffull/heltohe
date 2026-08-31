@@ -45,23 +45,44 @@ export default function AdminSecurity() {
     refetchOnWindowFocus: false,
   });
 
-  const { data: settings } = useDesignSettings();
-  const save = useSaveDesignSettings();
+  const { designSettings, flushDesignSettings } = useApp();
   const { toast } = useToast();
   const [overlay, setOverlay] = useState<any>(DEFAULT_OVERLAY);
   const [preview, setPreview] = useState(false);
+  const [saving, setSaving] = useState(false);
+  // Une fois que l'admin a touché un réglage, on n'écrase plus le formulaire
+  // avec les rafraîchissements automatiques du backend (toutes les 15 s).
+  const dirtyRef = useRef(false);
+  const hydratedRef = useRef(false);
 
   useEffect(() => {
-    if (settings) setOverlay({ ...DEFAULT_OVERLAY, ...((settings as any).securityOverlay ?? {}) });
-  }, [settings]);
+    if (!designSettings) return;
+    if (dirtyRef.current) return;
+    if (hydratedRef.current && !(designSettings as any).securityOverlay) return;
+    hydratedRef.current = true;
+    setOverlay({ ...DEFAULT_OVERLAY, ...((designSettings as any).securityOverlay ?? {}) });
+  }, [designSettings]);
+
+  const patch = (updates: Record<string, unknown>) => {
+    dirtyRef.current = true;
+    setOverlay((o: any) => ({ ...o, ...updates }));
+  };
 
   const saveOverlay = async () => {
-    if (!settings) return;
+    setSaving(true);
     try {
-      await save.mutateAsync({ ...(settings as any), securityOverlay: overlay });
-      toast({ title: 'Protection mise à jour' });
+      // Passe par le contexte pour que la copie en mémoire (utilisée par tous
+      // les autres écrans) contienne immédiatement la nouvelle valeur.
+      await flushDesignSettings({ securityOverlay: overlay } as any);
+      dirtyRef.current = false;
+      toast({
+        title: overlay.enabled ? 'Protection activée' : 'Protection désactivée',
+        description: 'Réglages enregistrés.',
+      });
     } catch (e: any) {
       toast({ title: 'Erreur', description: e?.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
     }
   };
 
