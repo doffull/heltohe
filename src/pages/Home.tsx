@@ -20,7 +20,6 @@ import { TechwearHero } from "@/components/home/TechwearHero";
 import { HeroSlider } from "@/components/home/HeroSlider";
 import { HeroErrorBoundary } from "@/components/home/HeroErrorBoundary";
 import PageRenderer from "@/components/page/PageRenderer";
-import { VoiceAssistantBanner } from "@/components/home/VoiceAssistantBanner";
 import { StoreFinderSection } from "@/components/home/StoreFinderSection";
 import { ProductFeedSection } from "@/components/home/ProductFeedSection";
 import { resolveFeedSections, feedBlockId } from "@/config/homeFeedSections";
@@ -232,7 +231,6 @@ export default function Home() {
     { id: "flash", visible: true },
     { id: "newArrivals", visible: true },
     ...feedSections.map((f) => ({ id: feedBlockId(f.id), visible: true })),
-    { id: "voiceBanner", visible: true },
     { id: "loyalty", visible: true },
     { id: "newsletter", visible: true },
   ] as Array<{ id: string; visible: boolean }>;
@@ -527,7 +525,6 @@ export default function Home() {
         </div>
       </section>
     ),
-    voiceBanner: () => <VoiceAssistantBanner />,
     loyalty: () => <LoyaltyBanner />,
     newsletter: () => (
       <RevealSection>
