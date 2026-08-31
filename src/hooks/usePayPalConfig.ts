@@ -104,8 +104,26 @@ export function usePayPalConfig() {
         .maybeSingle();
       if (error) throw error;
       if (!data) return DEFAULTS;
-      return dbToConfig(data);
+      const config = dbToConfig(data);
+
+      // Source de vérité : le Client ID réellement utilisé côté serveur.
+      // Évite que le SDK se charge avec un identifiant obsolète/erroné en base.
+      try {
+        const { data: status } = await supabase.functions.invoke('paypal', {
+          body: { action: 'status' },
+        });
+        const serverClientId = String(status?.clientId || '').trim();
+        if (serverClientId) {
+          if (config.environment === 'live') config.clientIdLive = serverClientId;
+          else config.clientIdSandbox = serverClientId;
+        }
+      } catch {
+        /* on garde la valeur en base en cas d'indisponibilité */
+      }
+
+      return config;
     },
+
     staleTime: 1000 * 60 * 5,
   });
 }
