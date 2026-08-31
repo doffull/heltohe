@@ -73,6 +73,19 @@ export default function Checkout() {
   const payplugEnabled = Boolean(
     checkoutConfig?.paymentMethods?.find(pm => pm.key === 'payplug')?.enabled,
   );
+  // PayPlug n'est proposé qu'avec une clé « live » : en mode test aucun paiement réel
+  // n'est encaissé, on masque donc le bouton pour éviter les commandes fictives.
+  const [payplugLive, setPayplugLive] = useState(false);
+  useEffect(() => {
+    if (!payplugEnabled) return;
+    let alive = true;
+    supabase.functions
+      .invoke('payplug', { body: { action: 'status' } })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .then(({ data }) => { if (alive) setPayplugLive((data as any)?.mode === 'live'); })
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, [payplugEnabled]);
   const [paidMethod, setPaidMethod] = useState<string | null>(null);
   const paidWithPaypal = paidMethod !== null;
 
