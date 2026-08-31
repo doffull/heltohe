@@ -69,7 +69,7 @@ export async function getGeminiApiKey(force = false): Promise<string | null> {
     if (url && svc) {
       const res = await fetch(
         `${url}/rest/v1/payment_gateway_secrets?gateway=eq.gemini_api&select=secret_key&limit=1`,
-        { headers: { apikey: svc, Authorization: `Bearer ${svc}` } },
+        { headers: { apikey: svc, Authorization: `Bearer ${svc}` }, signal: AbortSignal.timeout(5000) },
       );
       if (res.ok) {
         const rows = await res.json();
@@ -211,7 +211,7 @@ export async function getAiModel(kind: AiModelKind): Promise<string> {
       if (!url || !key) return MODEL_FALLBACKS[kind];
       const res = await fetch(
         `${url}/rest/v1/bot_config?select=chat_model,voice_model,ai_default_model,ai_vision_model&limit=1`,
-        { headers: { apikey: key, Authorization: `Bearer ${key}` } },
+        { headers: { apikey: key, Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(5000) },
       );
       if (!res.ok) return MODEL_FALLBACKS[kind];
       const rows = await res.json();
