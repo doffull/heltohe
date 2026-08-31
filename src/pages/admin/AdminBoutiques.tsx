@@ -143,13 +143,14 @@ export default function AdminBoutiques() {
       return;
     }
     setGeocoding(true);
-    const r = await geocode(`${form.address}, ${form.postalCode || ''} ${form.city}, ${form.country || 'France'}`);
-    setGeocoding(false);
-    if (r) {
+    try {
+      const r = await geocode(`${form.address}, ${form.postalCode || ''} ${form.city}, ${form.country || 'France'}`);
       setForm((f) => ({ ...f, latitude: r.lat, longitude: r.lng }));
       toast.success('Coordonnées GPS trouvées');
-    } else {
-      toast.error('Adresse introuvable — saisissez lat/lng à la main');
+    } catch (e: any) {
+      toast.error('Géocodage impossible', { description: e?.message || 'Saisissez lat/lng à la main' });
+    } finally {
+      setGeocoding(false);
     }
   }
 
