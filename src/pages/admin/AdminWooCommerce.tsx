@@ -30,7 +30,11 @@ import {
   BarChart3,
   Save,
   TrendingUp,
+  Package,
+  Boxes,
+  FolderTree,
 } from 'lucide-react';
+
 
 const PERIODS = [
   { value: 'week', label: 'Cette semaine' },
