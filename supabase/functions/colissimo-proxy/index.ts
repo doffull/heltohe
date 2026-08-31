@@ -25,21 +25,21 @@ async function isProjectPublicKey(token: string): Promise<boolean> {
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
   if (anonKey && token === anonKey) return true;
 
-  // Tout le reste (jeton de session JWT `eyJ…`, jeton invalide) est laissé à
-  // `getClaims` : inutile d'un aller-retour réseau pour ces cas-là.
-  if (!token.startsWith('sb_publishable_')) return false;
-
+  // Le front peut envoyer une clé publique héritée (`eyJ…` role anon) DIFFÉRENTE de
+  // celle injectée ici, ou une clé `sb_publishable_…`. Dans les deux cas seule l'API
+  // Auth du projet peut trancher : elle rejette toute clé étrangère.
   try {
     // `/auth/v1/settings` accepte les clés publiques et renvoie 401 pour toute clé
     // étrangère au projet. (`/rest/v1/` ne convient pas : il exige une clé secrète.)
     const res = await fetch(`${Deno.env.get('SUPABASE_URL')}/auth/v1/settings`, {
-      headers: { apikey: token },
+      headers: { apikey: token, Authorization: `Bearer ${token}` },
     });
     return res.ok;
   } catch {
     return false;
   }
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -84,24 +84,23 @@ Deno.serve(async (req) => {
 
   const token = authHeader.replace('Bearer ', '').trim();
 
-  // Une clé publique de projet (anon ou `sb_publishable_…`) n'est PAS un jeton de
-  // session : `getClaims` la rejette, quel que soit son format. On la reconnaît donc
-  // séparément, pour n'autoriser que les actions publiques.
-  const isProjectKey = await isProjectPublicKey(token);
-
+  // On tente d'abord la session utilisateur : un vrai jeton de session porte des
+  // claims (`sub`), indispensables aux actions admin.
   let claims: Record<string, any> | null = null;
-  if (!isProjectKey) {
-    const { data: claimsData, error: authError } = await supabase.auth.getClaims(token);
-    if (authError || !claimsData?.claims) {
-      return unauthorized();
-    }
-    claims = claimsData.claims;
+  const { data: claimsData } = await supabase.auth.getClaims(token);
+  if (claimsData?.claims?.sub) {
+    claims = claimsData.claims as Record<string, any>;
   }
 
-  // Hors actions publiques, une clé de projet ne suffit pas : il faut une vraie session.
-  if (!isPublicAction && !claims) {
-    return unauthorized();
+  // Pas de session : ce peut être la clé publique du projet (anon héritée `eyJ…` ou
+  // `sb_publishable_…`) envoyée par un visiteur non connecté. Elle n'ouvre que les
+  // actions publiques.
+  if (!claims) {
+    const isProjectKey = await isProjectPublicKey(token);
+    if (!isProjectKey) return unauthorized();
+    if (!isPublicAction) return unauthorized();
   }
+
 
   const COLISSIMO_LOGIN = Deno.env.get('COLISSIMO_LOGIN');
   const COLISSIMO_PASSWORD = Deno.env.get('COLISSIMO_PASSWORD');
