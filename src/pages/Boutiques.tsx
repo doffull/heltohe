@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useBoutiques } from '@/hooks/useBoutiques';
 import { MapPin, Store, AlertCircle } from 'lucide-react';
+import { BoutiqueMiniMap } from '@/components/boutiques/BoutiqueMiniMap';
+
 
 function useDocTitle(title: string, description?: string) {
   useEffect(() => {
