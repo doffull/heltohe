@@ -109,6 +109,7 @@ export default function AdminCheckout() {
   };
 
   const updateGateway = (key: string, updates: Partial<PaymentMethod>) => {
+    setDirty(true);
     setForm(prev => ({
       ...prev,
       paymentMethods: prev.paymentMethods.map(pm =>
@@ -136,10 +137,15 @@ export default function AdminCheckout() {
           <h1 className="text-xl lg:text-2xl font-bold hud-text">Commandes & Livraison</h1>
           <p className="text-xs lg:text-sm text-muted-foreground">Gérez les tarifs, passerelles de paiement et le tunnel de commande</p>
         </div>
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          {dirty && (
+            <span className="text-xs text-amber-500 font-medium whitespace-nowrap">Modifications non enregistrées</span>
+          )}
         <Button onClick={handleSave} disabled={saveConfig.isPending} className="w-full sm:w-auto">
           {saveConfig.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
           Sauvegarder
         </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="shipping" className="space-y-4">
@@ -374,7 +380,7 @@ export default function AdminCheckout() {
                 className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[100px] resize-y"
                 placeholder="Message affiché sur la page de confirmation de commande (optionnel)"
                 value={form.checkoutMessage}
-                onChange={e => setForm(prev => ({ ...prev, checkoutMessage: e.target.value }))}
+                onChange={e => patch({ checkoutMessage: e.target.value })}
               />
               <p className="text-xs text-muted-foreground">Ce message sera affiché sur la page de confirmation après la commande.</p>
             </div>
