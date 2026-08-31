@@ -172,9 +172,12 @@ export default function Checkout() {
     return required.every(f => form[f as keyof typeof form].trim());
   };
 
-  const searchRelayPoints = async (zip: string) => {
-    if (!zip || zip.length < 5) {
-      toast({ title: 'Code postal invalide', description: 'Saisissez un code postal valide (5 chiffres)', variant: 'destructive' });
+  const searchRelayPoints = async (rawZip: string) => {
+    const zip = (rawZip || '').replace(/\s+/g, '');
+    const dept = parseInt(zip.slice(0, 2), 10);
+    const isValidZip = /^\d{5}$/.test(zip) && ((dept >= 1 && dept <= 95) || zip.startsWith('980'));
+    if (!isValidZip) {
+      toast({ title: 'Code postal invalide', description: 'Saisissez un code postal français valide (01000 à 95999)', variant: 'destructive' });
       return;
     }
     setIsSearchingRelays(true);
@@ -184,7 +187,11 @@ export default function Checkout() {
       const { data, error } = await supabase.functions.invoke('colissimo-proxy', {
         body: { action: 'getRelayPoints', zipCode: zip, city: form.city || '', countryCode: 'FR' },
       });
-      if (error) throw error;
+      if (error && !data) throw error;
+      if (data?.error) {
+        toast({ title: data.error, description: data.details || undefined, variant: 'destructive' });
+        return;
+      }
       if (data?.success && data.points?.length > 0) {
         setRelayPoints(data.points.slice(0, 5));
       } else {
@@ -197,6 +204,7 @@ export default function Checkout() {
       setIsSearchingRelays(false);
     }
   };
+
 
   const selectRelay = (point: RelayPoint) => {
     setSelectedRelay(point);

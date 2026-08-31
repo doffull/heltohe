@@ -184,8 +184,11 @@ Deno.serve(async (req) => {
 
     // ─── ACTION: GET RELAY POINTS ─────────────────────────────────────────────
     if (action === 'getRelayPoints') {
-      const { zipCode, city = '-', countryCode = 'FR' } = body;
-      const safeCity = city.trim() || '-';
+      const { city = '-', countryCode = 'FR' } = body;
+      const safeCity = String(city ?? '').trim() || '-';
+      // Colissimo refuse tout code postal hors métropole (01000-95999) ou DOM 980xx
+      // avec l'erreur 125. On le filtre ici pour renvoyer un message clair (400).
+      const zipCode = String(body.zipCode ?? '').replace(/\s+/g, '');
 
       if (!zipCode) {
         return new Response(JSON.stringify({ error: 'zipCode is required' }), {
@@ -193,6 +196,22 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+
+      const isValidFrZip =
+        /^\d{5}$/.test(zipCode) &&
+        ((parseInt(zipCode.slice(0, 2), 10) >= 1 && parseInt(zipCode.slice(0, 2), 10) <= 95) ||
+          zipCode.startsWith('980'));
+
+      if (countryCode === 'FR' && !isValidFrZip) {
+        return new Response(
+          JSON.stringify({
+            error: 'Code postal invalide',
+            details: 'Saisissez un code postal français valide (01000 à 95999, ou 980XX pour Monaco).',
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
 
       const now = new Date();
       const shippingDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
