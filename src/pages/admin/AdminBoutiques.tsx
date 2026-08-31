@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Edit, Trash2, MapPin, Loader2, Search, Sparkles, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { BoutiqueMapPicker } from '@/components/admin/BoutiqueMapPicker';
 
 interface AICandidate {
   placeId: string;
@@ -33,14 +34,26 @@ const emptyBoutique: Partial<Boutique> = {
 // Session-level cache: { "type|query" -> candidates }
 const aiCache = new Map<string, AICandidate[]>();
 
-async function geocode(address: string): Promise<{ lat: number; lng: number } | null> {
-  try {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`;
-    const r = await fetch(url, { headers: { 'Accept-Language': 'fr' } });
-    const j = await r.json();
-    if (Array.isArray(j) && j[0]) return { lat: Number(j[0].lat), lng: Number(j[0].lon) };
-  } catch { /* noop */ }
-  return null;
+/** Géocodage via Google (passerelle connecteur). Renvoie une erreur explicite. */
+async function geocode(address: string): Promise<{ lat: number; lng: number }> {
+  const { data, error } = await supabase.functions.invoke('boutique-lookup', {
+    body: { action: 'geocode', query: address },
+  });
+  if (error) {
+    let detail = error.message;
+    const ctx = (error as any)?.context;
+    if (ctx?.text) {
+      try {
+        const parsed = JSON.parse(await ctx.text());
+        detail = parsed?.error || detail;
+      } catch { /* garde le message d'origine */ }
+    }
+    throw new Error(detail);
+  }
+  if (typeof data?.lat !== 'number' || typeof data?.lng !== 'number') {
+    throw new Error(data?.error || 'Adresse introuvable');
+  }
+  return { lat: data.lat, lng: data.lng };
 }
 
 export default function AdminBoutiques() {
@@ -130,13 +143,14 @@ export default function AdminBoutiques() {
       return;
     }
     setGeocoding(true);
-    const r = await geocode(`${form.address}, ${form.postalCode || ''} ${form.city}, ${form.country || 'France'}`);
-    setGeocoding(false);
-    if (r) {
+    try {
+      const r = await geocode(`${form.address}, ${form.postalCode || ''} ${form.city}, ${form.country || 'France'}`);
       setForm((f) => ({ ...f, latitude: r.lat, longitude: r.lng }));
       toast.success('Coordonnées GPS trouvées');
-    } else {
-      toast.error('Adresse introuvable — saisissez lat/lng à la main');
+    } catch (e: any) {
+      toast.error('Géocodage impossible', { description: e?.message || 'Saisissez lat/lng à la main' });
+    } finally {
+      setGeocoding(false);
     }
   }
 
@@ -276,6 +290,15 @@ export default function AdminBoutiques() {
             <div className="grid grid-cols-2 gap-2">
               <div><Label>Latitude</Label><Input type="number" step="0.000001" value={form.latitude ?? ''} onChange={(e) => setForm({ ...form, latitude: parseFloat(e.target.value) })} /></div>
               <div><Label>Longitude</Label><Input type="number" step="0.000001" value={form.longitude ?? ''} onChange={(e) => setForm({ ...form, longitude: parseFloat(e.target.value) })} /></div>
+            </div>
+            <div className="space-y-1">
+              <Label>Position sur la carte</Label>
+              <BoutiqueMapPicker
+                lat={form.latitude}
+                lng={form.longitude}
+                onChange={({ lat, lng }) => setForm((f) => ({ ...f, latitude: lat, longitude: lng }))}
+              />
+              <p className="text-[11px] text-muted-foreground">Déplacez le marqueur ou cliquez sur la carte pour ajuster la position.</p>
             </div>
             <div><Label>Image (URL)</Label><Input value={form.image || ''} onChange={(e) => setForm({ ...form, image: e.target.value })} placeholder="https://..." /></div>
             <div className="grid grid-cols-2 gap-2 items-end">

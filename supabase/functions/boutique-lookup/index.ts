@@ -51,11 +51,53 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { query, type } = await req.json().catch(() => ({}));
+    const { query, type, action } = await req.json().catch(() => ({}));
     if (!query || typeof query !== 'string' || query.trim().length < 3) {
       return new Response(JSON.stringify({ error: 'query (min 3 chars) required' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // Géocodage d'une adresse → coordonnées GPS (Google Geocoding via la passerelle).
+    if (action === 'geocode') {
+      const geoRes = await fetch(
+        `${GATEWAY_URL}/maps/api/geocode/json?language=fr&region=fr&address=${encodeURIComponent(query.trim())}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'X-Connection-Api-Key': GOOGLE_MAPS_API_KEY,
+          },
+        },
+      );
+
+      if (geoRes.status === 403) {
+        const detail = await geoRes.text();
+        console.error('Geocoding denied', detail);
+        return new Response(JSON.stringify({
+          error: "Clé Google Maps refusée (403). Vérifiez les restrictions de la clé serveur dans Google Cloud Console.",
+          detail,
+        }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      if (!geoRes.ok) {
+        const detail = await geoRes.text();
+        console.error('Geocoding failed', geoRes.status, detail);
+        return new Response(JSON.stringify({ error: 'Géocodage indisponible', detail }), {
+          status: geoRes.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const geo = await geoRes.json();
+      const first = geo?.results?.[0];
+      if (!first) {
+        return new Response(JSON.stringify({ error: 'Adresse introuvable', status: geo?.status }), {
+          status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(JSON.stringify({
+        lat: first.geometry?.location?.lat,
+        lng: first.geometry?.location?.lng,
+        formattedAddress: first.formatted_address,
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     const body: any = {

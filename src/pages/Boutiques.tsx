@@ -16,33 +16,8 @@ function useDocTitle(title: string, description?: string) {
   }, [title, description]);
 }
 
-const GMAPS_KEY = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY as string | undefined;
-const GMAPS_CHANNEL = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_TRACKING_ID as string | undefined;
+import { loadGoogleMaps } from '@/lib/loadGoogleMaps';
 
-let gmapsLoaderPromise: Promise<void> | null = null;
-function loadGoogleMaps(): Promise<void> {
-  if (typeof window === 'undefined') return Promise.reject(new Error('SSR'));
-  if ((window as any).google?.maps) return Promise.resolve();
-  if (gmapsLoaderPromise) return gmapsLoaderPromise;
-  if (!GMAPS_KEY) return Promise.reject(new Error('Google Maps key missing'));
-
-  gmapsLoaderPromise = new Promise((resolve, reject) => {
-    (window as any).__lvtkGmapsInit = () => resolve();
-    const params = new URLSearchParams({
-      key: GMAPS_KEY!,
-      loading: 'async',
-      callback: '__lvtkGmapsInit',
-    });
-    if (GMAPS_CHANNEL) params.set('channel', GMAPS_CHANNEL);
-    const s = document.createElement('script');
-    s.src = `https://maps.googleapis.com/maps/api/js?${params.toString()}`;
-    s.async = true;
-    s.defer = true;
-    s.onerror = () => reject(new Error('Failed to load Google Maps'));
-    document.head.appendChild(s);
-  });
-  return gmapsLoaderPromise;
-}
 
 export default function Boutiques() {
   const { data: boutiques = [], isLoading } = useBoutiques();
