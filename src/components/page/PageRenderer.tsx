@@ -184,7 +184,8 @@ function BannerSection({ content, sectionId }: { content: Record<string, any>; s
 
 
 
-function HeroSection({ content }: { content: Record<string, any> }) {
+function HeroSection({ content, sectionId }: { content: Record<string, any>; sectionId: string }) {
+  const { editable } = usePageEdit();
   return (
     <div
       className="relative w-full min-h-[50vh] flex items-center justify-center bg-cover bg-center"
@@ -192,17 +193,20 @@ function HeroSection({ content }: { content: Record<string, any> }) {
     >
       <div className="absolute inset-0 bg-background/60" />
       <div className="relative z-10 text-center px-6 py-16">
-        {content.title && <h1 className="text-4xl md:text-6xl font-bold uppercase tracking-tight mb-4">{content.title}</h1>}
-        {content.subtitle && <p className="text-lg md:text-xl text-muted-foreground mb-6">{content.subtitle}</p>}
-        {content.ctaText && (
+        <EditableField sectionId={sectionId} field="title" value={content.title} as="h1" className="text-4xl md:text-6xl font-bold uppercase tracking-tight mb-4" />
+        <EditableField sectionId={sectionId} field="subtitle" value={content.subtitle} as="p" className="text-lg md:text-xl text-muted-foreground mb-6" />
+        {editable ? (
+          <EditableField sectionId={sectionId} field="ctaText" value={content.ctaText} as="span" className="inline-flex items-center px-5 py-2 border border-primary text-sm font-bold uppercase tracking-wider" />
+        ) : content.ctaText ? (
           <a href={content.ctaUrl || '#'}>
             <Button size="lg" className="uppercase tracking-wider">{content.ctaText}</Button>
           </a>
-        )}
+        ) : null}
       </div>
     </div>
   );
 }
+
 
 function ImageSection({ content }: { content: Record<string, any> }) {
   const sizeClass = content.size === 'small' ? 'max-w-md' : content.size === 'medium' ? 'max-w-2xl' : 'w-full';
