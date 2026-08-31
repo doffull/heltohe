@@ -708,8 +708,8 @@ export default function Checkout() {
                   />
                 </div>
 
-                {/* PayPlug : carte bancaire (page de paiement sécurisée) */}
-                {payplugEnabled && (
+                {/* PayPlug : carte bancaire (uniquement en mode live) */}
+                {payplugEnabled && payplugLive && (
                   <PayPlugCheckout
                     buildPayload={buildPaypalPayload}
                     amount={orderTotal}
@@ -717,23 +717,14 @@ export default function Checkout() {
                   />
                 )}
 
+                <p className="text-[11px] text-muted-foreground">
+                  La commande est enregistrée uniquement après le paiement effectif.
+                </p>
 
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                  <Button variant="outline" onClick={() => setStep('address')} className="sm:flex-1 h-11">
+                <div className="flex">
+                  <Button variant="outline" onClick={() => setStep('address')} className="flex-1 h-11">
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Retour
-                  </Button>
-                  <Button
-                    className="sm:flex-1 chamfer-hud-sm h-12 text-sm sm:text-base font-bold text-white hover:opacity-90"
-                    style={{ backgroundColor: `hsl(var(--step-delivery))` }}
-                    onClick={handlePlaceOrder}
-                    disabled={isProcessing || (deliveryMode === 'relay' && !selectedRelay)}
-                  >
-                    {isProcessing ? (
-                      <><Loader2 className="h-5 w-5 mr-2 animate-spin" />Traitement...</>
-                    ) : (
-                      <><CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 mr-2 shrink-0" /><span className="truncate">CONFIRMER {orderTotal.toFixed(2)}€</span></>
-                    )}
                   </Button>
                 </div>
               </div>
