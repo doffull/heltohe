@@ -226,7 +226,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
                       </span>
                     </span>
                     <span className="text-sm tabular-nums">
-                      {(p.salePrice ?? p.price).toFixed(2)} €
+                      {(p.salePrice ?? p.price).toFixed(2)} € <span className="text-[10px] text-muted-foreground">TTC</span>
                     </span>
                   </button>
                 );
