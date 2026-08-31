@@ -112,9 +112,18 @@ export default function AdminPayPal() {
       const { data, error } = await supabase.functions.invoke('paypal', {
         body: { action: 'test-credentials', environment },
       });
-      if (error) throw error;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if ((data as any)?.error) throw new Error((data as any).error);
+      // Un 400 = identifiants refusés : on lit le message renvoyé par la fonction
+      // au lieu de laisser remonter une erreur HTTP générique.
+      let payload = data as { ok?: boolean; error?: string } | null;
+      if (error) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const ctx = (error as any)?.context;
+        if (ctx && typeof ctx.json === 'function') {
+          payload = await ctx.json().catch(() => null);
+        }
+        if (!payload?.error) throw error;
+      }
+      if (payload?.error) throw new Error(payload.error);
       toast({ title: `Connexion ${environment} réussie` });
       refetchCreds();
     } catch (e) {
@@ -127,6 +136,7 @@ export default function AdminPayPal() {
       setTesting(null);
     }
   };
+
 
   const handleRefund = async (id: string, max: number) => {
     const input = window.prompt(`Montant à rembourser (max ${max.toFixed(2)} €)`, max.toFixed(2));
