@@ -37,6 +37,7 @@ const CategoryPageRouter = lazy(() => import("./pages/CategoryPageRouter"));
 const Cart = lazy(() => import("./pages/Cart"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 const Auth = lazy(() => import("./pages/Auth"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Account = lazy(() => import("./pages/Account"));
 const Admin = lazy(() => import("./pages/admin/Admin"));
 const PrintShippingLabel = lazy(() => import("./pages/admin/PrintShippingLabel"));
