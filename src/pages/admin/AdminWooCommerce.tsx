@@ -57,6 +57,9 @@ export default function AdminWooCommerce() {
   const [syncCustomers, setSyncCustomers] = useState(true);
   const [syncOrders, setSyncOrders] = useState(true);
   const [syncStats, setSyncStats] = useState(true);
+  const [syncProducts, setSyncProducts] = useState(true);
+  const [syncStock, setSyncStock] = useState(true);
+  const [syncCategories, setSyncCategories] = useState(true);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'ok' | 'error'>('idle');
   const [result, setResult] = useState<WooSyncResult | null>(null);
   const [period, setPeriod] = useState('month');
@@ -102,7 +105,7 @@ export default function AdminWooCommerce() {
       return;
     }
     try {
-      await saveConfig.mutateAsync({ storeUrl, consumerKey, consumerSecret: consumerSecret || undefined, syncCustomers, syncOrders, syncStats });
+      await saveConfig.mutateAsync({ storeUrl, consumerKey, consumerSecret: consumerSecret || undefined, syncCustomers, syncOrders, syncStats, syncProducts, syncStock, syncCategories });
       setConsumerSecret('');
       toast({ title: 'Configuration enregistrée ✓', description: 'Les identifiants sont conservés côté serveur.' });
     } catch (e: any) {
@@ -136,13 +139,13 @@ export default function AdminWooCommerce() {
   };
 
   const runSync = async (incremental: boolean) => {
-    if (!syncCustomers && !syncOrders && !syncStats) {
+    if (!syncCustomers && !syncOrders && !syncStats && !syncProducts && !syncCategories) {
       toast({ title: 'Rien à synchroniser', description: 'Coche au moins une section.', variant: 'destructive' });
       return;
     }
     setResult(null);
     try {
-      const data = await sync.mutateAsync({ incremental, syncCustomers, syncOrders, syncStats, statsPeriod: period });
+      const data = await sync.mutateAsync({ incremental, syncCustomers, syncOrders, syncStats, syncProducts, syncStock, syncCategories, statsPeriod: period });
       if ((data as any)?.error && !(data as any)?.status) {
         toast({ title: 'Serveur WooCommerce indisponible', description: (data as any).error, variant: 'destructive' });
         return;
@@ -263,6 +266,33 @@ export default function AdminWooCommerce() {
                   </label>
 
                   <label className="flex items-center gap-4 p-4 border border-border cursor-pointer hover:bg-secondary/30 transition-colors">
+                    <Checkbox checked={syncProducts} onCheckedChange={(v) => setSyncProducts(!!v)} />
+                    <Package className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="font-medium text-sm">Produits</p>
+                      <p className="text-xs text-muted-foreground">Nom, prix, promos, galerie photos complète, tailles/couleurs, catégories</p>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-4 p-4 border border-border cursor-pointer hover:bg-secondary/30 transition-colors">
+                    <Checkbox checked={syncStock} onCheckedChange={(v) => setSyncStock(!!v)} />
+                    <Boxes className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="font-medium text-sm">Stocks</p>
+                      <p className="text-xs text-muted-foreground">Quantités disponibles, somme des variations</p>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-4 p-4 border border-border cursor-pointer hover:bg-secondary/30 transition-colors">
+                    <Checkbox checked={syncCategories} onCheckedChange={(v) => setSyncCategories(!!v)} />
+                    <FolderTree className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="font-medium text-sm">Catégories</p>
+                      <p className="text-xs text-muted-foreground">Création/mise à jour des catégories et de leurs visuels</p>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-4 p-4 border border-border cursor-pointer hover:bg-secondary/30 transition-colors">
                     <Checkbox checked={syncStats} onCheckedChange={(v) => setSyncStats(!!v)} />
                     <BarChart3 className="h-5 w-5 text-primary" />
                     <div>
@@ -298,6 +328,18 @@ export default function AdminWooCommerce() {
                 <div className="bg-card border border-border p-6 space-y-3">
                   <h3 className="font-bold uppercase tracking-wider text-sm">Résultat</h3>
                   <div className="grid grid-cols-3 gap-3 text-center">
+                    <div className="border border-border p-3">
+                      <p className="text-2xl font-bold">{result.products ?? 0}</p>
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Produits</p>
+                    </div>
+                    <div className="border border-border p-3">
+                      <p className="text-2xl font-bold">{result.categories ?? 0}</p>
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Catégories</p>
+                    </div>
+                    <div className="border border-border p-3">
+                      <p className="text-2xl font-bold">{result.variations ?? 0}</p>
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Variations</p>
+                    </div>
                     <div className="border border-border p-3">
                       <p className="text-2xl font-bold">{result.customers}</p>
                       <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Clients</p>
