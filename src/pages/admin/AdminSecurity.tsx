@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
-import { useDesignSettings, useSaveDesignSettings } from '@/hooks/useDesignSettings';
+import { useApp } from '@/context/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import { ShieldCheck, ShieldAlert, RefreshCw, AlertTriangle, CheckCircle2, XCircle, Save, Eye } from 'lucide-react';
 
@@ -120,7 +120,7 @@ export default function AdminSecurity() {
               <Eye className="h-3.5 w-3.5" />
               {preview ? 'Masquer aperçu' : 'Aperçu'}
             </Button>
-            <Button size="sm" onClick={saveOverlay} disabled={save.isPending} className="gap-1.5">
+            <Button size="sm" onClick={saveOverlay} disabled={saving} className="gap-1.5">
               <Save className="h-3.5 w-3.5" />
               Enregistrer
             </Button>
