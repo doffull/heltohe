@@ -4,7 +4,7 @@ import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
 import { useAdminConfig } from '@/hooks/useAdminConfig';
-import { useCheckoutConfig } from '@/hooks/useCheckoutConfig';
+import { useCheckoutConfig, computeShippingCost } from '@/hooks/useCheckoutConfig';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -154,7 +154,10 @@ export default function Checkout() {
     relayInfo: '',
   });
 
-  const shippingCost = computeShippingCost(checkoutConfig, subtotal, deliveryMode);
+  const relayCost = computeShippingCost(checkoutConfig, subtotal, 'relay');
+  const homeCost = computeShippingCost(checkoutConfig, subtotal, 'home');
+  const freeThreshold = checkoutConfig?.freeShippingThreshold ?? 99;
+  const shippingCost = deliveryMode === 'relay' ? relayCost : homeCost;
 
   const orderTotal = subtotal - promoDiscount + shippingCost;
   const tax = orderTotal * 0.2 / 1.2;
@@ -603,7 +606,7 @@ export default function Checkout() {
                           </div>
                         </div>
                         <span className="font-bold text-sm whitespace-nowrap shrink-0">
-                          {subtotal >= rates.free_threshold ? <span style={{ color: `hsl(var(--step-delivery))` }}>GRATUIT</span> : `${rates.relay.toFixed(2)}€`}
+                          {relayCost === 0 ? <span style={{ color: `hsl(var(--step-delivery))` }}>GRATUIT</span> : `${relayCost.toFixed(2)}€`}
                         </span>
                       </div>
                     </button>
@@ -721,20 +724,20 @@ export default function Checkout() {
                         </div>
                       </div>
                       <span className="font-bold text-sm whitespace-nowrap shrink-0">
-                        {subtotal >= rates.free_threshold ? <span style={{ color: `hsl(var(--step-delivery))` }}>GRATUIT</span> : `${rates.home.toFixed(2)}€`}
+                        {homeCost === 0 ? <span style={{ color: `hsl(var(--step-delivery))` }}>GRATUIT</span> : `${homeCost.toFixed(2)}€`}
                       </span>
                     </div>
                   </button>
                 </div>
 
-                {subtotal < rates.free_threshold && (
+                {subtotal < freeThreshold && (
                   <div
                     className="px-3 py-2.5 chamfer-hud-sm border"
                     style={{ borderColor: `hsl(var(--step-delivery)/0.3)`, backgroundColor: `hsl(var(--step-delivery)/0.1)` }}
                   >
                     <p className="text-[11px] sm:text-xs" style={{ color: `hsl(var(--step-delivery))` }}>
                       <Truck className="h-3 w-3 inline mr-1" />
-                      Plus que {(rates.free_threshold - subtotal).toFixed(2)}€ pour la livraison gratuite !
+                      Plus que {(freeThreshold - subtotal).toFixed(2)}€ pour la livraison gratuite en point relais — domicile {(checkoutConfig?.shippingHomePrice ?? 15).toFixed(2)}€
                     </p>
                   </div>
                 )}
