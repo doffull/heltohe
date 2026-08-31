@@ -152,6 +152,8 @@ export function useSaveCheckoutConfig() {
         config_key: 'main',
         shipping_home_price: config.shippingHomePrice,
         shipping_relay_price: config.shippingRelayPrice,
+        free_shipping_relay_only: config.freeShippingRelayOnly,
+
         free_shipping_threshold: config.freeShippingThreshold,
         home_delivery_enabled: config.homeDeliveryEnabled,
         relay_enabled: config.relayEnabled,
