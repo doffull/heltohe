@@ -37,7 +37,8 @@ export default function CustomPage() {
 
   return (
     <div className="min-h-screen">
-      <PageRenderer sections={page.sections} />
+      <LivePageEditor page={page} />
     </div>
   );
+
 }
