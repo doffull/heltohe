@@ -59,30 +59,34 @@ export default function Auth() {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: redirectOrigin,
+      // Direct Supabase OAuth — uses the project's own Google provider
+      // credentials (configured in backend Auth settings), so the Google
+      // consent screen shows HELVETICA-MP branding instead of the managed
+      // Lovable flow.
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectOrigin,
+          queryParams: {
+            // Force account selection so returning users still pick an account.
+            prompt: 'select_account',
+          },
+        },
       });
 
-      if (result.error) {
+      if (error) {
         toast({
           title: 'Erreur',
-          description: 'Impossible de se connecter avec Google',
+          description: error.message || 'Impossible de se connecter avec Google',
           variant: 'destructive',
         });
         setGoogleLoading(false);
         return;
       }
 
-      if (result.redirected) {
-        return;
-      }
-
-      toast({
-        title: 'Connexion réussie',
-        description: 'Bienvenue !',
-      });
-      navigate(nextPath);
-    } catch {
+      // signInWithOAuth performs a full-page redirect to Google; if we reach
+      // here the redirect is pending.
+    } catch (e) {
       toast({
         title: 'Erreur',
         description: 'Une erreur est survenue avec Google',
