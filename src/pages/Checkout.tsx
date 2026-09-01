@@ -102,8 +102,9 @@ export default function Checkout() {
           setPaidMethod('PayPlug (carte bancaire)');
           setOrderNumber(num);
           clearCart();
-          setStep('confirmation');
+          navigate(`/commande/${num}`);
         } else {
+
           toast({
             title: 'Paiement non confirmé',
             description: 'Le paiement PayPlug n’a pas été validé. Veuillez réessayer.',
@@ -337,7 +338,10 @@ export default function Checkout() {
 
       setOrderNumber(num);
       clearCart();
-      setStep('confirmation');
+      try { sessionStorage.setItem(`order_email_${num}`, form.email); } catch { /* ignore */ }
+      navigate(`/commande/${num}`, { state: { email: form.email } });
+      return;
+
     } catch (err) {
       toast({
         title: 'Erreur lors de la commande',
@@ -773,8 +777,10 @@ export default function Checkout() {
                       setPaidMethod('PayPal');
                       setOrderNumber(num);
                       clearCart();
-                      setStep('confirmation');
+                      try { sessionStorage.setItem(`order_email_${num}`, form.email); } catch { /* ignore */ }
+                      navigate(`/commande/${num}`, { state: { email: form.email } });
                     }}
+
                   />
                 </div>
 

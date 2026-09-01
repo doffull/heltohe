@@ -4451,6 +4451,10 @@ export type Database = {
         }[]
       }
       get_newsletter_stats: { Args: never; Returns: Json }
+      get_order_receipt: {
+        Args: { p_email?: string; p_order_number: string }
+        Returns: Json
+      }
       get_product_review_stats: {
         Args: { p_product_id: string }
         Returns: Json

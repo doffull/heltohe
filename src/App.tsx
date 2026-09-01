@@ -38,6 +38,8 @@ const BoutiqueRouter = lazy(() => import("./pages/BoutiqueRouter"));
 const CategoryPageRouter = lazy(() => import("./pages/CategoryPageRouter"));
 const Cart = lazy(() => import("./pages/Cart"));
 const Checkout = lazy(() => import("./pages/Checkout"));
+const OrderConfirmation = lazy(() => import("./pages/OrderConfirmation"));
+
 const Auth = lazy(() => import("./pages/Auth"));
 const Account = lazy(() => import("./pages/Account"));
 const Admin = lazy(() => import("./pages/admin/Admin"));
@@ -188,6 +190,8 @@ function AnimatedRoutes() {
           <Route path="/boutique/:slugOrId" element={<MainLayout><BoutiqueRouter /></MainLayout>} />
           <Route path="/panier" element={<MainLayout><Cart /></MainLayout>} />
           <Route path="/checkout" element={<MainLayout><Checkout /></MainLayout>} />
+          <Route path="/commande/:orderNumber" element={<MainLayout><OrderConfirmation /></MainLayout>} />
+
           <Route path="/a-propos" element={<MainLayout><About /></MainLayout>} />
           <Route path="/contact" element={<MainLayout><Contact /></MainLayout>} />
           <Route path="/auth" element={<Auth />} />
