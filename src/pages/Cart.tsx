@@ -18,8 +18,10 @@ import {
 import { useProducts } from '@/hooks/useProducts';
 import { isKidsProduct } from '@/lib/productFamily';
 import KidsNoReturnNotice from '@/components/product/KidsNoReturnNotice';
+import { useCurrency } from '@/context/CurrencyContext';
 
 export default function Cart() {
+  const { format, isConverted } = useCurrency();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { 
@@ -213,15 +215,15 @@ export default function Cart() {
                       {item.salePrice ? (
                         <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
                           <span className="text-[11px] sm:text-sm line-through text-muted-foreground">
-                            {(item.price * item.quantity).toFixed(2)}€
+                            {format(item.price * item.quantity)}
                           </span>
                           <span className="font-bold text-sm sm:text-base text-primary">
-                            {(item.salePrice * item.quantity).toFixed(2)}€
+                            {format(item.salePrice * item.quantity)}
                           </span>
                         </div>
                       ) : (
                         <span className="font-bold text-sm sm:text-base">
-                          {(item.price * item.quantity).toFixed(2)}€
+                          {format(item.price * item.quantity)}
                         </span>
                       )}
                     </div>
@@ -247,7 +249,7 @@ export default function Cart() {
                 {promoCode ? (
                   <div className="flex items-center justify-between bg-primary/10 p-3 rounded">
                     <span className="text-sm font-bold text-primary">{promoCode}</span>
-                    <span className="text-sm">-{promoDiscount.toFixed(2)}€</span>
+                    <span className="text-sm">-{format(promoDiscount)}</span>
                   </div>
                 ) : (
                   <div className="flex gap-2">
@@ -273,13 +275,13 @@ export default function Cart() {
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Sous-total</span>
-                  <span>{subtotal.toFixed(2)}€</span>
+                  <span>{format(subtotal)}</span>
                 </div>
                 
                 {promoDiscount > 0 && (
                   <div className="flex justify-between text-primary">
                     <span>Réduction</span>
-                    <span>-{promoDiscount.toFixed(2)}€</span>
+                    <span>-{format(promoDiscount)}</span>
                   </div>
                 )}
                 
@@ -290,9 +292,14 @@ export default function Cart() {
 
                 <div className="flex justify-between text-lg font-bold pt-3 border-t border-border">
                   <span>TOTAL</span>
-                  <span className="text-primary">{cartTotal.toFixed(2)}€</span>
+                  <span className="text-primary">{format(cartTotal)}</span>
                 </div>
 
+                {isConverted && (
+                  <p className="text-[10px] text-muted-foreground">
+                    Prix convertis à titre indicatif — facturation en EUR.
+                  </p>
+                )}
               </div>
 
               {/* Checkout Button */}
