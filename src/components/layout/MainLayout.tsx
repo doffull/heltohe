@@ -41,7 +41,6 @@ import {
   Shield,
   Bell,
   Check,
-  Bot,
   Mail as MailIcon
 } from 'lucide-react';
 import {
@@ -95,7 +94,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [sidebarClosedByUser, setSidebarClosedByUser] = useState(false);
   const [mobileSidebarClosedByUser, setMobileSidebarClosedByUser] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
+  
   const queryClient = useQueryClient();
   const { consent: cookieConsent, decided: cookieDecided } = useCookieConsent();
   // Le suivi d'audience ne démarre qu'avec le consentement « statistiques ».
@@ -367,18 +366,6 @@ export function MainLayout({ children }: MainLayoutProps) {
               </div>
 
 
-              {/* Chatbot trigger - desktop only */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setChatOpen(true)}
-                className="gap-1.5 px-2 lg:px-3 hidden lg:inline-flex"
-                title="Assistant"
-                aria-label="Ouvrir l'assistant"
-              >
-                <Bot className="h-5 w-5" aria-hidden="true" />
-                <span className="hidden xl:inline text-xs font-medium uppercase tracking-wider">Aide</span>
-              </Button>
 
               {/* Cart */}
               <Link
@@ -619,13 +606,6 @@ export function MainLayout({ children }: MainLayoutProps) {
                           </Link>
                         </>
                       )}
-                      <button
-                        onClick={() => setChatOpen(true)}
-                        className="flex items-center justify-between py-3 w-full"
-                      >
-                        <span className="text-lg font-medium">Aide</span>
-                        <Bot className="h-5 w-5" />
-                      </button>
                       <div className="flex items-center justify-between py-3 w-full">
                         <span className="text-lg font-medium">Langue &amp; devise</span>
                         <LocaleSwitcher compact className="text-sm" />
