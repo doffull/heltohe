@@ -198,6 +198,16 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
     showProductStatusBadges: ((db.settings_json as any)?.showProductStatusBadges) ?? false,
     soldOutBadgeDefault: ((db.settings_json as any)?.soldOutBadgeDefault) ?? true,
     soldOutBadgeLabel: ((db.settings_json as any)?.soldOutBadgeLabel) ?? 'Coming soon',
+    socialDisplay: ((db.settings_json as any)?.socialDisplay) ?? {
+      showInHeader: false,
+      showInMobileMenu: true,
+      showOnContact: true,
+      showOnMaintenance: true,
+      newTab: true,
+      iconSize: 18,
+      shape: 'square',
+      color: '',
+    },
 
   } as DesignSettings;
 }
