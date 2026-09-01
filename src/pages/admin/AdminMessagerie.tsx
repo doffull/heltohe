@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import {
   Inbox, Send, Users, Settings as SettingsIcon, Plus, Search, Mail, Phone,
   Pencil, Trash2, MessageSquare, Package, ArrowLeft, Eye, FileText, AlertTriangle,
+  UserPlus, RefreshCw, Loader2,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,13 +25,14 @@ import {
   useCrmContacts, useSaveCrmContact, useDeleteCrmContact,
   useCrmConversations, useCrmMessages, useCreateConversation, useUpdateConversation,
   useSendCrmMessage, useMessagingConfig, useSaveMessagingConfig, useCrmMessageTemplates,
+  useCrmCustomers, useImportCustomersToCrm,
   type CrmContact, type CrmConversation, type MessagingConfig,
 } from '@/hooks/useCrm';
 import { CrmTemplatesManager } from '@/components/admin/CrmTemplatesManager';
 import { renderTemplate, missingVars, TEMPLATE_VARS, type TemplateContext } from '@/lib/crmTemplateVars';
 
 
-type View = 'inbox' | 'sent' | 'contacts' | 'settings';
+type View = 'inbox' | 'sent' | 'contacts' | 'clients' | 'settings';
 
 const STATUS_LABEL: Record<string, string> = {
   open: 'Ouverte',
@@ -235,6 +237,8 @@ export default function AdminMessagerie() {
   const deleteContact = useDeleteCrmContact();
   const updateConv = useUpdateConversation();
   const sendMessage = useSendCrmMessage();
+  const { data: crmCustomers = [], isLoading: loadingCustomers, refetch: refetchCustomers } = useCrmCustomers();
+  const importCustomers = useImportCustomersToCrm();
   const { data: config } = useMessagingConfig();
   const saveConfig = useSaveMessagingConfig();
 
@@ -337,6 +341,7 @@ export default function AdminMessagerie() {
     { key: 'inbox', label: 'Boîte de réception', icon: Inbox, count: conversations.filter((c) => c.status !== 'closed').length },
     { key: 'sent', label: 'Messages envoyés', icon: Send },
     { key: 'contacts', label: 'Contacts', icon: Users, count: contacts.length },
+    { key: 'clients', label: 'Clients du site', icon: UserPlus, count: crmCustomers.length },
     { key: 'settings', label: 'Paramètres', icon: SettingsIcon },
   ];
 
@@ -426,6 +431,91 @@ export default function AdminMessagerie() {
             </div>
           </Card>
         )}
+
+        {/* Clients view */}
+        {view === 'clients' && (() => {
+          const q = search.trim().toLowerCase();
+          const rows = crmCustomers.filter(
+            (c) => !q || c.email.includes(q) || (c.name || '').toLowerCase().includes(q),
+          );
+          const missing = crmCustomers.filter((c) => !c.inCrm);
+          return (
+            <Card className="p-4 lg:col-span-2 space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input className="pl-9" placeholder="Rechercher un client…" value={search} onChange={(e) => setSearch(e.target.value)} />
+                </div>
+                <Button variant="outline" size="sm" onClick={() => refetchCustomers()} disabled={loadingCustomers}>
+                  <RefreshCw className={cn('h-4 w-4 mr-1.5', loadingCustomers && 'animate-spin')} /> Actualiser
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={!missing.length || importCustomers.isPending}
+                  onClick={async () => {
+                    try {
+                      const n = await importCustomers.mutateAsync(missing);
+                      toast({ title: `${n} client(s) ajouté(s) aux contacts` });
+                    } catch (e: any) {
+                      toast({ title: 'Import impossible', description: e.message, variant: 'destructive' });
+                    }
+                  }}
+                >
+                  {importCustomers.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <UserPlus className="h-4 w-4 mr-1.5" />}
+                  Ajouter tous les clients ({missing.length})
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Clients inscrits sur le site et clients importés de WooCommerce. Ajoutez-les à vos contacts pour leur écrire.
+              </p>
+              <div className="divide-y divide-border">
+                {rows.map((c) => (
+                  <div key={c.email} className="flex items-center gap-3 py-3">
+                    <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-xs font-semibold shrink-0">
+                      {(c.name || c.email).slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{c.name || '—'}</p>
+                      <p className="text-xs text-muted-foreground truncate flex items-center gap-2">
+                        <Mail className="h-3 w-3" />{c.email}
+                        {c.phone && (<><Phone className="h-3 w-3 ml-2" />{c.phone}</>)}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="hidden sm:inline-flex text-[10px] uppercase">
+                      {c.source === 'woocommerce' ? 'WooCommerce' : 'Site'}
+                    </Badge>
+                    <span className="hidden md:block text-xs text-muted-foreground w-24 text-right">
+                      {c.total_orders || 0} cmd · {Number(c.total_spent || 0).toFixed(0)}€
+                    </span>
+                    {c.inCrm ? (
+                      <Badge className="text-[10px]">Dans le CRM</Badge>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            await importCustomers.mutateAsync([c]);
+                            toast({ title: 'Contact ajouté' });
+                          } catch (e: any) {
+                            toast({ title: 'Erreur', description: e.message, variant: 'destructive' });
+                          }
+                        }}
+                      >
+                        <UserPlus className="h-4 w-4 sm:mr-1.5" /><span className="hidden sm:inline">Ajouter</span>
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                {!rows.length && (
+                  <p className="text-sm text-muted-foreground py-6 text-center">
+                    {loadingCustomers ? 'Chargement…' : 'Aucun client trouvé. Lancez une synchronisation WooCommerce (Clients & commandes) ou attendez de nouvelles inscriptions.'}
+                  </p>
+                )}
+              </div>
+            </Card>
+          );
+        })()}
 
         {/* Settings view */}
         {view === 'settings' && (
