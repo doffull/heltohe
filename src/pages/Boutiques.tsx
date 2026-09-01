@@ -95,6 +95,26 @@ export default function Boutiques() {
           </p>
         </div>
 
+        {/* Téléphone — information boutiques & centres commerciaux */}
+        <div className="px-6 lg:px-12 pt-2 pb-4">
+          <a
+            href="tel:+33651513377"
+            className="chamfer-hud flex items-center gap-3 border border-border bg-card px-4 py-3 transition-colors hover:border-primary sm:gap-4"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Phone className="h-5 w-5" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Information boutiques & centres commerciaux
+              </span>
+              <span className="hud-text block text-xl font-bold uppercase tracking-wider text-foreground sm:text-2xl">
+                06 51 51 33 77
+              </span>
+            </span>
+          </a>
+        </div>
+
         {/* Map */}
         <div className="px-6 lg:px-12">
           <div className="relative w-full h-[420px] md:h-[560px] bg-muted overflow-hidden chamfer-hud border border-border">
