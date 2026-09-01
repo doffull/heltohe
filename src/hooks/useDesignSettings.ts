@@ -375,6 +375,7 @@ function settingsToDb(s: DesignSettings) {
       showProductStatusBadges: (s as any).showProductStatusBadges === true,
       soldOutBadgeDefault: (s as any).soldOutBadgeDefault !== false,
       soldOutBadgeLabel: ((s as any).soldOutBadgeLabel || '').trim() || 'Coming soon',
+      socialDisplay: (s as any).socialDisplay ?? null,
 
 
     } as unknown as Json,
