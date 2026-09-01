@@ -45,6 +45,7 @@ import {
   FileUp,
   Globe,
   PanelBottom,
+  Share2,
 
   PackageSearch,
 } from 'lucide-react';
@@ -85,6 +86,7 @@ import AdminTransitions from './AdminTransitions';
 import AdminSeo from './AdminSeo';
 import AdminSeoRedirects from './AdminSeoRedirects';
 import AdminFooter from './AdminFooter';
+import AdminSocials from './AdminSocials';
 import AdminTopBanner from './AdminTopBanner';
 import AdminFeedSections from './AdminFeedSections';
 import AdminCollab from './AdminCollab';
@@ -165,6 +167,7 @@ const SIDEBAR_ITEMS = [
   { icon: Gift, label: 'Roulette', href: '/admin/roulette' },
   { icon: Palette, label: 'Design', href: '/admin/design' },
   { icon: PanelBottom, label: 'Footer', href: '/admin/footer' },
+  { icon: Share2, label: 'Réseaux sociaux', href: '/admin/reseaux-sociaux' },
   { icon: Globe, label: 'SEO & Visibilité', href: '/admin/seo' },
   { icon: Globe, label: 'Redirections SEO', href: '/admin/redirections' },
   { icon: Sparkles, label: 'Espace Collab', href: '/admin/collab' },
@@ -409,6 +412,7 @@ export default function Admin() {
             <Route path="seo/*" element={<AdminSeo />} />
             <Route path="redirections/*" element={<AdminSeoRedirects />} />
             <Route path="footer/*" element={<AdminFooter />} />
+            <Route path="reseaux-sociaux" element={<AdminSocials />} />
             <Route path="top-banner" element={<AdminTopBanner />} />
             <Route path="feed-sections" element={<AdminFeedSections />} />
             <Route path="collab/*" element={<AdminCollab />} />

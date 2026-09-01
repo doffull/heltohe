@@ -23,6 +23,7 @@ export const ADMIN_SECTIONS: { label: string; href: string }[] = [
   { label: 'Roulette', href: '/admin/roulette' },
   { label: 'Design', href: '/admin/design' },
   { label: 'Footer', href: '/admin/footer' },
+  { label: 'Réseaux sociaux', href: '/admin/reseaux-sociaux' },
   { label: 'SEO & Visibilité', href: '/admin/seo' },
   { label: 'Redirections SEO', href: '/admin/redirections' },
   { label: 'Espace Collab', href: '/admin/collab' },

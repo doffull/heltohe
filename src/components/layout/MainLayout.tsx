@@ -17,6 +17,7 @@ import { UnifiedFab } from './UnifiedFab';
 import { BrandLogo } from './BrandLogo';
 import { Footer } from './Footer';
 import { MegaMenuTrigger } from './MegaMenuTrigger';
+import SocialLinksRow from './SocialLinksRow';
 import { SearchDialog } from './SearchDialog';
 import { TopBanner } from './TopBanner';
 import { resolveTopBanner } from '@/lib/bannerIcons';
@@ -500,6 +501,9 @@ export function MainLayout({ children }: MainLayoutProps) {
                 <Search className="h-4 w-4" aria-hidden="true" />
               </Button>
 
+              {/* Réseaux sociaux (desktop, activable dans Admin → Réseaux sociaux) */}
+              <SocialLinksRow placement="header" mode="icons" size={16} className="hidden lg:flex gap-1" />
+
               {/* MegaMenu trigger — visible toutes tailles */}
               <MegaMenuTrigger className="border border-foreground/20 hover:border-foreground" />
 
@@ -522,6 +526,9 @@ export function MainLayout({ children }: MainLayoutProps) {
                       Rechercher...
                     </button>
 
+
+                    {/* Réseaux sociaux */}
+                    <SocialLinksRow placement="mobileMenu" mode="icons" />
 
                     {/* Nav Links */}
                     <Link to="/" className="flex items-center justify-between py-3 text-lg font-medium uppercase tracking-wider border-b border-border text-muted-foreground">
