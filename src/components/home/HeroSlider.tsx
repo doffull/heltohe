@@ -109,6 +109,8 @@ export function HeroSlider() {
             alt={currentSlide.title}
             className="w-full h-full"
             style={{ objectFit: objectFit as any, objectPosition }}
+            loading="eager"
+            decoding="async"
             {...({ fetchpriority: 'high' } as any)}
             onError={(e) => { e.currentTarget.src = HERO_PLACEHOLDER; }}
           />
@@ -124,6 +126,8 @@ export function HeroSlider() {
           <img
             src={currentSlide.midgroundMedia}
             alt=""
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover mix-blend-overlay opacity-60"
             onError={(e) => { e.currentTarget.style.display = 'none'; }}
           />
@@ -139,6 +143,8 @@ export function HeroSlider() {
           <img
             src={currentSlide.foregroundMedia}
             alt=""
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-contain"
             onError={(e) => { e.currentTarget.style.display = 'none'; }}
           />
@@ -170,7 +176,7 @@ export function HeroSlider() {
           )}
 
           {/* Big bold title */}
-          <h1
+          <h2
             className="font-bold uppercase tracking-tight text-white leading-[0.92]"
             style={{ fontSize: 'clamp(2.25rem, 9vw, 5.5rem)' }}
           >
@@ -185,7 +191,7 @@ export function HeroSlider() {
                 {currentSlide.title}
               </span>
             </InlineEditable>
-          </h1>
+          </h2>
 
           {/* CTA */}
           {currentSlide.ctaText && (currentSlide as any).ctaVisible !== false && (
