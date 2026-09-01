@@ -518,22 +518,27 @@ export default function AdminOrders() {
     }
   };
 
-  const handleGenerateColissimoLabel = async () => {
-    if (!selectedOrder) return;
+  /**
+   * Génère l'étiquette Colissimo d'une commande, enregistre le n° de suivi,
+   * passe la commande en « Expédiée » et déclenche l'e-mail d'expédition
+   * (qui reprend automatiquement le n° de suivi enregistré).
+   */
+  const generateLabelForOrder = async (order: Order, form?: typeof editForm) => {
+    setLabelOrderId(order.id);
     setIsGeneratingLabel(true);
     try {
       const { data, error } = await supabase.functions.invoke('colissimo-proxy', {
         body: {
           action: 'generateLabel',
           order: {
-            orderNumber: selectedOrder.orderNumber,
+            orderNumber: order.orderNumber,
             customer: {
-              name: editForm?.customerName || selectedOrder.customer.name,
-              email: editForm?.customerEmail || selectedOrder.customer.email,
-              phone: editForm?.customerPhone || selectedOrder.customer.phone,
-              address: editForm?.customerAddress || selectedOrder.customer.address,
-              city: editForm?.customerCity || selectedOrder.customer.city,
-              zip: editForm?.customerZip || selectedOrder.customer.zip,
+              name: form?.customerName || order.customer.name,
+              email: form?.customerEmail || order.customer.email,
+              phone: form?.customerPhone || order.customer.phone,
+              address: form?.customerAddress || order.customer.address,
+              city: form?.customerCity || order.customer.city,
+              zip: form?.customerZip || order.customer.zip,
             },
           },
         },
@@ -541,14 +546,17 @@ export default function AdminOrders() {
 
       if (error) throw error;
 
-      if (data?.trackingNumber && editForm) {
-        setEditForm({ ...editForm, trackingNumber: data.trackingNumber, shippingCarrier: 'Colissimo' });
+      if (data?.trackingNumber) {
+        if (form) setEditForm({ ...form, trackingNumber: data.trackingNumber, shippingCarrier: 'Colissimo', status: 'Shipped' });
+        // L'e-mail d'expédition est envoyé par useUpdateOrder dès que
+        // statut = Shipped et qu'un n° de suivi est présent.
         await updateOrder.mutateAsync({
-          id: selectedOrder.id,
+          id: order.id,
           trackingNumber: data.trackingNumber,
           shippingCarrier: 'Colissimo',
+          status: 'Shipped',
         });
-        toast({ title: 'Numéro de suivi enregistré', description: data.trackingNumber });
+        toast({ title: 'Étiquette générée', description: `Suivi ${data.trackingNumber} — e-mail d'expédition envoyé` });
       }
 
       if (data?.pdfBase64) {
@@ -559,14 +567,14 @@ export default function AdminOrders() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `colissimo-${selectedOrder.orderNumber}.pdf`;
+        a.download = `colissimo-${order.orderNumber}.pdf`;
         a.click();
         URL.revokeObjectURL(url);
-        toast({ title: 'Étiquette Colissimo téléchargée' });
-      } else {
+      } else if (!data?.trackingNumber) {
         toast({
-          title: 'Étiquette générée',
-          description: data?.trackingNumber ? `N° suivi: ${data.trackingNumber}` : 'Vérifiez vos identifiants Colissimo',
+          title: 'Étiquette indisponible',
+          description: 'Vérifiez vos identifiants Colissimo',
+          variant: 'destructive',
         });
       }
     } catch (err) {
@@ -574,8 +582,15 @@ export default function AdminOrders() {
       toast({ title: 'Erreur génération étiquette', description: String(err), variant: 'destructive' });
     } finally {
       setIsGeneratingLabel(false);
+      setLabelOrderId(null);
     }
   };
+
+  const handleGenerateColissimoLabel = async () => {
+    if (!selectedOrder) return;
+    await generateLabelForOrder(selectedOrder, editForm);
+  };
+
 
   const getStatusInfo = (status: OrderStatus) => STATUS_OPTIONS.find(o => o.value === status) || STATUS_OPTIONS[0];
 
