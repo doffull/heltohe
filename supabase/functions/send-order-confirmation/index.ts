@@ -35,10 +35,12 @@ function buildEmailHtml(payload: EmailPayload): string {
 
   const itemsRows = items.map(item => `
     <tr>
+      ${item.image ? `<td width="54" style="padding:10px 8px 10px 0;border-bottom:1px solid #f0f0f0;"><img src="${item.image}" alt="" width="54" style="width:54px;height:54px;object-fit:cover;border-radius:2px;display:block" /></td>` : ''}
       <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; color: #111;">
         <strong>${item.name}</strong>
         ${item.size ? `<br><span style="color: #888; font-size: 12px;">Taille: ${item.size}</span>` : ''}
-        ${item.color ? `<span style="color: #888; font-size: 12px;"> / ${item.color}</span>` : ''}
+        ${item.color ? `<span style="color: #888; font-size: 12px;"> / Couleur: ${item.color}</span>` : ''}
+        <br><span style="color: #888; font-size: 12px;">Prix unitaire: ${item.price.toFixed(2)} €</span>
       </td>
       <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; text-align: center; font-size: 14px; color: #555;">
         ×${item.quantity}
@@ -188,10 +190,12 @@ function buildPaymentConfirmationHtml(payload: EmailPayload): string {
 
   const itemsRows = items.map(item => `
     <tr>
+      ${item.image ? `<td width="54" style="padding:10px 8px 10px 0;border-bottom:1px solid #f0f0f0;"><img src="${item.image}" alt="" width="54" style="width:54px;height:54px;object-fit:cover;border-radius:2px;display:block" /></td>` : ''}
       <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; color: #111;">
         <strong>${item.name}</strong>
         ${item.size ? `<br><span style="color: #888; font-size: 12px;">Taille: ${item.size}</span>` : ''}
-        ${item.color ? `<span style="color: #888; font-size: 12px;"> / ${item.color}</span>` : ''}
+        ${item.color ? `<span style="color: #888; font-size: 12px;"> / Couleur: ${item.color}</span>` : ''}
+        <br><span style="color: #888; font-size: 12px;">Prix unitaire: ${item.price.toFixed(2)} €</span>
       </td>
       <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; text-align: center; font-size: 14px; color: #555;">×${item.quantity}</td>
       <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; text-align: right; font-size: 14px; font-weight: bold; color: #111;">
@@ -307,10 +311,12 @@ function buildAdminEmailHtml(payload: EmailPayload): string {
 
   const itemsRows = items.map(item => `
     <tr>
+      ${item.image ? `<td width="46" style="padding:10px 8px 10px 0;border-bottom:1px solid #222;"><img src="${item.image}" alt="" width="46" style="width:46px;height:46px;object-fit:cover;border-radius:2px;display:block" /></td>` : ''}
       <td style="padding: 8px 0; border-bottom: 1px solid #222; font-size: 13px; color: #eee;">
         <strong>${item.name}</strong>
         ${item.size ? `<br><span style="color: #888; font-size: 11px;">Taille: ${item.size}</span>` : ''}
-        ${item.color ? `<span style="color: #888; font-size: 11px;"> / ${item.color}</span>` : ''}
+        ${item.color ? `<span style="color: #888; font-size: 11px;"> / Couleur: ${item.color}</span>` : ''}
+        <br><span style="color: #888; font-size: 11px;">Prix unitaire: ${item.price.toFixed(2)} €</span>
       </td>
       <td style="padding: 8px 0; border-bottom: 1px solid #222; text-align: center; font-size: 13px; color: #aaa;">×${item.quantity}</td>
       <td style="padding: 8px 0; border-bottom: 1px solid #222; text-align: right; font-size: 13px; font-weight: bold; color: #eee;">${(item.price * item.quantity).toFixed(2)} €</td>

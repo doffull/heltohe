@@ -14,6 +14,7 @@ interface OrderItem {
   quantity: number;
   size?: string;
   color?: string;
+  image?: string;
 }
 
 function trackingUrl(carrier: string, tracking: string): string {
@@ -49,9 +50,10 @@ function itemRows(items: OrderItem[]): string {
   return items
     .map(
       (i) => `<tr>
+    ${i.image ? `<td width="54" style="padding:10px 8px 10px 0;border-bottom:1px solid #f0f0f0;"><img src="${i.image}" alt="" width="54" style="width:54px;height:54px;object-fit:cover;border-radius:2px;display:block" /></td>` : ''}
     <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:#111;"><strong>${i.name}</strong>${
         i.size ? `<br><span style="color:#888;font-size:12px;">Taille: ${i.size}</span>` : ''
-      }${i.color ? `<span style="color:#888;font-size:12px;"> / ${i.color}</span>` : ''}</td>
+      }${i.color ? `<span style="color:#888;font-size:12px;"> / Couleur: ${i.color}</span>` : ''}<br><span style="color:#888;font-size:12px;">Prix unitaire: ${Number(i.price).toFixed(2)} €</span></td>
     <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;text-align:center;font-size:14px;color:#555;">×${i.quantity}</td>
     <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;text-align:right;font-size:14px;font-weight:bold;color:#111;">${(
       Number(i.price) * Number(i.quantity)
