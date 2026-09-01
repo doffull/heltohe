@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useBoutiques } from '@/hooks/useBoutiques';
-import { MapPin, Store, AlertCircle } from 'lucide-react';
+import { MapPin, Store, AlertCircle, Phone } from 'lucide-react';
 import { BoutiqueMiniMap } from '@/components/boutiques/BoutiqueMiniMap';
 
 
@@ -93,6 +93,26 @@ export default function Boutiques() {
           <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
             Magasins permanents et boutiques éphémères dans toute la France.
           </p>
+        </div>
+
+        {/* Téléphone — information boutiques & centres commerciaux */}
+        <div className="px-6 lg:px-12 pt-2 pb-4">
+          <a
+            href="tel:+33651513377"
+            className="chamfer-hud flex items-center gap-3 border border-border bg-card px-4 py-3 transition-colors hover:border-primary sm:gap-4"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Phone className="h-5 w-5" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Information boutiques & centres commerciaux
+              </span>
+              <span className="hud-text block text-xl font-bold uppercase tracking-wider text-foreground sm:text-2xl">
+                06 51 51 33 77
+              </span>
+            </span>
+          </a>
         </div>
 
         {/* Map */}
