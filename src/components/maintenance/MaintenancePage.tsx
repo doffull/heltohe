@@ -114,7 +114,7 @@ export function MaintenancePage({ preview = false, overrides }: Props) {
           </div>
         )}
 
-        {social.length > 0 && (
+        {social.length > 0 && (s as any)?.socialDisplay?.showOnMaintenance !== false && (
           <div className="mt-12 flex flex-wrap items-center justify-center gap-4 text-[11px] tracking-[0.2em] uppercase opacity-60">
             {social.filter((l) => l?.url).map((l, i) => (
               <a
