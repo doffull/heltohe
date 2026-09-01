@@ -934,6 +934,14 @@ Deno.serve(async (req) => {
         else count++;
       }
       result.customers = count;
+      await upsertCrmContacts(
+        wcCustomers.map((c: any) => ({
+          email: c.email,
+          name: [c.first_name, c.last_name].filter(Boolean).join(' '),
+          phone: c.billing?.phone || null,
+        })),
+        result.errors,
+      );
     } catch (e: any) {
       result.errors.push(`Clients: ${e.message}`);
     }
