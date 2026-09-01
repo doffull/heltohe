@@ -20,6 +20,34 @@ export default function ResetPassword() {
   const [confirm, setConfirm] = useState('');
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
+  const [resendEmail, setResendEmail] = useState('');
+  const [resending, setResending] = useState(false);
+
+  const resendLink = async () => {
+    const email = resendEmail.trim();
+    if (!/^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(email)) {
+      toast({ title: 'Adresse invalide', description: 'Saisissez une adresse e-mail valide.', variant: 'destructive' });
+      return;
+    }
+    setResending(true);
+    const { data, error } = await supabase.functions.invoke('password-reset-request', {
+      body: { email, elapsedMs: 5000, origin: window.location.origin },
+    });
+    setResending(false);
+    const message = (data as { error?: string } | null)?.error;
+    if (error || message) {
+      toast({
+        title: 'Envoi impossible',
+        description: message || 'Réessayez dans quelques minutes.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    toast({
+      title: 'Vérifiez votre boîte e-mail',
+      description: "Si un compte existe pour cette adresse, un nouveau lien vient d'être envoyé.",
+    });
+  };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
