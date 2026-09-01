@@ -4,10 +4,14 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 
 interface Garment {
-  image: string;       // public URL or data URL
+  image: string;       // public URL or data URL (main reference)
+  /** Additional reference views (back, detail, flat lay…) for better fidelity. */
+  images?: string[];
   name?: string;
   category?: string;
   color?: string;
+  material?: string;
+  size?: string;
 }
 
 interface Body {
