@@ -49,6 +49,7 @@ import { PayPlugCheckout } from '@/components/payments/PayPlugCheckout';
 import { useCurrency } from '@/context/CurrencyContext';
 
 export default function Checkout() {
+  const { format, isConverted } = useCurrency();
 
   const navigate = useNavigate();
   const { toast } = useToast();
