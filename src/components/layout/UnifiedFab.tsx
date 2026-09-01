@@ -476,13 +476,13 @@ function SocleStack({ posCfg, isAdmin, isMobile, accent, open, setOpen, visibleI
           'relative w-14 h-14 rounded-full backdrop-blur-xl border-2 transition-all flex items-center justify-center',
           open
             ? 'bg-foreground text-background border-foreground rotate-45'
-            : 'bg-background/80 text-foreground border-foreground/40 hover:scale-110',
+            : 'bg-background/80 text-foreground border-foreground/40 hover:scale-110 animate-fab-float',
           isAdmin && 'ring-2 ring-primary/60 cursor-grab active:cursor-grabbing'
         )}
         style={{ boxShadow: `0 8px 32px ${accent}55, 0 0 0 4px ${accent}11, inset 0 0 20px ${accent}22`, touchAction: isAdmin ? 'none' : undefined }}
       >
-        <span className="absolute inset-0 rounded-full animate-pulse pointer-events-none" style={{ boxShadow: `0 0 20px ${accent}66`, opacity: 0.6 }} />
-        {open ? <X className="h-5 w-5 relative -rotate-45" /> : <Sparkles className="h-5 w-5 relative" />}
+        <span className="absolute -inset-1 rounded-full pointer-events-none animate-fab-ring" style={{ background: `conic-gradient(from 0deg, transparent, ${accent}55, transparent)`, maskImage: 'radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px))', WebkitMaskImage: 'radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px))', opacity: 0.8 }} />
+        {open ? <X className="h-5 w-5 relative -rotate-45" /> : <Sparkles className="h-5 w-5 relative animate-pulse" />}
       </button>
     </div>
   );
