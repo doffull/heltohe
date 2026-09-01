@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart } from 'lucide-react';
 import { Product } from '@/types';
 import { Button } from '@/components/ui/button';
+import { useCurrency } from '@/context/CurrencyContext';
 
 interface MobileBuyBarProps {
   product: Product;
@@ -15,6 +16,7 @@ interface MobileBuyBarProps {
 /** Barre d'achat collante mobile : prix + taille + ajout au panier. */
 export default function MobileBuyBar({ product, selectedSize, onAddToCart, anchorRef }: MobileBuyBarProps) {
   const [visible, setVisible] = useState(false);
+  const { format } = useCurrency();
 
   useEffect(() => {
     const el = anchorRef.current;
@@ -46,9 +48,9 @@ export default function MobileBuyBar({ product, selectedSize, onAddToCart, ancho
                 {selectedSize ? `Taille ${selectedSize}` : 'Choisir une taille'}
               </p>
               <p className="text-lg font-bold leading-none">
-                {price}€
+                {format(price)}
                 {product.salePrice && (
-                  <span className="ml-2 text-xs line-through text-muted-foreground font-normal">{product.price}€</span>
+                  <span className="ml-2 text-xs line-through text-muted-foreground font-normal">{format(product.price)}</span>
                 )}
               </p>
             </div>

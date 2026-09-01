@@ -11,6 +11,7 @@ import { EditableProductField } from '@/components/visual-editor/EditableProduct
 import { EditableBadgeLabel } from '@/components/visual-editor/EditableBadgeLabel';
 import { useAuth } from '@/context/AuthContext';
 import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
+import { useCurrency } from '@/context/CurrencyContext';
 
 
 interface ProductInfoProps {
@@ -29,6 +30,7 @@ const fadeUp = {
 
 export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }: ProductInfoProps) {
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
+  const { format, isConverted } = useCurrency();
   const { designSettings } = useApp();
   const { isAdmin } = useAuth();
   const { isOpen: editorOpen } = useVisualEditor();
@@ -108,7 +110,7 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
               parse={(v) => (v === '' ? null : Number(v))}
               format={(v) => (v == null ? '' : String(v))}
             >
-              {product.salePrice}€
+              {isConverted ? format(product.salePrice) : `${product.salePrice}€`}
             </EditableProductField>
             <EditableProductField
               product={product}
@@ -118,7 +120,7 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
               parse={(v) => Number(v)}
               format={(v) => String(v ?? '')}
             >
-              {product.price}€
+              {isConverted ? format(product.price) : `${product.price}€`}
             </EditableProductField>
             <motion.span
               className="bg-destructive text-destructive-foreground px-3 py-1 text-sm font-bold"
@@ -138,7 +140,7 @@ export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }:
             parse={(v) => Number(v)}
             format={(v) => String(v ?? '')}
           >
-            {product.price}€
+            {isConverted ? format(product.price) : `${product.price}€`}
           </EditableProductField>
         )}
       </motion.div>

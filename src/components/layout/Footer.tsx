@@ -22,6 +22,7 @@ import {
 } from '@/lib/footerBuilder';
 
 import { toast } from 'sonner';
+import LocaleSwitcher from '@/components/layout/LocaleSwitcher';
 
 const IMAGE_FALLBACK = '/placeholder.svg';
 const withImageFallback = (event: SyntheticEvent<HTMLImageElement>) => {
@@ -493,15 +494,12 @@ export function Footer({ offsetClassName }: FooterProps) {
       <p>{copyright}</p>
       {(on(cfg.showLanguageSwitch) || on(cfg.showCurrency)) && (
         <div className="flex items-center gap-4">
-          {on(cfg.showLanguageSwitch) && (
-            <button
-              onClick={() => setLanguage(language === 'FR' ? 'EN' : 'FR')}
-              className="footer-link text-xs font-bold tracking-wider transition-colors"
-            >
-              {language === 'FR' ? '🇫🇷 FR' : '🇬🇧 EN'}
-            </button>
-          )}
-          {on(cfg.showCurrency) && <span className="font-mono text-xs tracking-widest">EUR €</span>}
+          <LocaleSwitcher
+            compact
+            showLanguage={on(cfg.showLanguageSwitch)}
+            showCurrency={on(cfg.showCurrency)}
+            className="footer-link"
+          />
         </div>
       )}
     </div>

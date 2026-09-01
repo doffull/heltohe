@@ -12,6 +12,7 @@ import KidsNoReturnNotice from '@/components/product/KidsNoReturnNotice';
 import { isKidsProduct } from '@/lib/productFamily';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ResilientImage } from '@/components/media/ResilientImage';
+import { useCurrency } from '@/context/CurrencyContext';
 
 
 
@@ -42,6 +43,7 @@ export function ProductCard({
   hoverDuration = 500,
   showSizes = true,
 }: ProductCardProps) {
+  const { format } = useCurrency();
   const [selectedColorIndex, setSelectedColorIndex] = useState<number | null>(null);
   const [hovered, setHovered] = useState(false);
   const { data: reviewStats } = useReviewStats(product.id);
@@ -233,11 +235,11 @@ export function ProductCard({
         <div className="flex items-center gap-2 pt-1">
           {hasDiscount ? (
             <>
-              <span className="text-base font-bold">{product.salePrice}€</span>
-              <span className="text-xs text-muted-foreground line-through">{product.price}€</span>
+              <span className="text-base font-bold">{format(product.salePrice!)}</span>
+              <span className="text-xs text-muted-foreground line-through">{format(product.price)}</span>
             </>
           ) : (
-            <span className="text-base font-bold">{product.price}€</span>
+            <span className="text-base font-bold">{format(product.price)}</span>
           )}
         </div>
 
