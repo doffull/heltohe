@@ -81,6 +81,9 @@ export default function PrintShippingLabel() {
       if (error) throw error;
       if (data?.error) throw new Error(data.details || data.error);
       toast({ title: 'Étiquette Colissimo générée', description: data?.trackingNumber ? `Suivi : ${data.trackingNumber}` : undefined });
+      // E-mail d'expédition au client (suivi Colissimo) — best-effort
+      await triggerOrderEmail(id, 'shipped');
+
       await load();
     } catch (e) {
       toast({ title: 'Échec de la génération', description: e instanceof Error ? e.message : String(e), variant: 'destructive' });
