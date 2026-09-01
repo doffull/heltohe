@@ -57,11 +57,32 @@ export interface SendMailInput {
   to: string | string[];
   subject: string;
   html: string;
+  /** Version texte brut. Fortement recommandée : son absence pénalise la délivrabilité. */
+  text?: string;
   /** Surcharge ponctuelle du `From` complet (`Nom <adresse>`). Rare. */
   from?: string;
   /** Surcharge ponctuelle de l'adresse de réponse. Rare. */
   replyTo?: string;
+  /** En-têtes additionnels (List-Unsubscribe, etc.). */
+  headers?: Record<string, string>;
 }
+
+/** Version texte brut dérivée du HTML : évite les e-mails « HTML seul » filtrés en spam. */
+export function htmlToText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<head[\s\S]*?<\/head>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|tr|h1|h2|h3|li)>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&#39;|&rsquo;/g, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .split('\n').map((l) => l.trim()).filter(Boolean).join('\n')
+    .trim();
+}
+
 
 export interface SendMailResult {
   ok: boolean;
