@@ -205,7 +205,18 @@ export default function AdminCheckout() {
               </div>
               <Switch checked={form.freeShippingRelayOnly} onCheckedChange={v => patch({ freeShippingRelayOnly: v })} />
             </div>
+            <div className="flex items-start justify-between gap-4 p-4 border border-border rounded-lg max-w-2xl">
+              <div>
+                <Label className="font-medium">Étiquette Colissimo automatique</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Dès qu'une commande est payée, l'étiquette est générée, le numéro de suivi enregistré et l'e-mail
+                  d'expédition envoyé au client. En cas d'échec, la commande reste en préparation.
+                </p>
+              </div>
+              <Switch checked={form.autoColissimoLabel} onCheckedChange={v => patch({ autoColissimoLabel: v })} />
+            </div>
           </div>
+
         </TabsContent>
 
         {/* ── PAIEMENT ── */}
