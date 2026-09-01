@@ -42,6 +42,49 @@ export default function Auth() {
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
 
+  // Mot de passe oublié
+  const [forgotMode, setForgotMode] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotHoneypot, setForgotHoneypot] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotOpenedAt, setForgotOpenedAt] = useState(Date.now());
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      emailSchema.parse(forgotEmail.trim());
+    } catch {
+      toast({ title: 'Adresse invalide', description: 'Saisissez une adresse e-mail valide.', variant: 'destructive' });
+      return;
+    }
+    setForgotLoading(true);
+    const { data, error } = await supabase.functions.invoke('password-reset-request', {
+      body: {
+        email: forgotEmail.trim(),
+        honeypot: forgotHoneypot,
+        elapsedMs: Date.now() - forgotOpenedAt,
+        origin: window.location.origin,
+      },
+    });
+    setForgotLoading(false);
+
+    const message = (data as { error?: string; message?: string } | null)?.error;
+    if (error || message) {
+      toast({
+        title: 'Envoi impossible',
+        description: message || "Le lien n'a pas pu être envoyé. Réessayez dans quelques minutes.",
+        variant: 'destructive',
+      });
+      return;
+    }
+    toast({
+      title: 'Vérifiez votre boîte e-mail',
+      description: "Si un compte existe pour cette adresse, un lien de réinitialisation vient d'être envoyé.",
+    });
+    setForgotMode(false);
+  };
+
+
   // Signup form
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
