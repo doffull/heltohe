@@ -3,7 +3,7 @@ import { Mail, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '@/integrations/supabase/client';
+import { subscribeToNewsletter } from '@/hooks/useNewsletterPopups';
 import { toast } from 'sonner';
 
 export function SubscribeFab() {
@@ -17,11 +17,10 @@ export function SubscribeFab() {
     if (!email) return;
     setLoading(true);
     try {
-      const { error } = await supabase.from('newsletters').insert({ email });
-      if (error && !error.message.includes('duplicate')) throw error;
+      await subscribeToNewsletter(email, undefined, { source: 'sidebar' });
       setDone(true);
       setEmail('');
-      toast.success('Merci, vous êtes abonné !');
+      toast.success('Vérifiez votre boîte mail pour confirmer votre inscription.');
       setTimeout(() => { setOpen(false); setDone(false); }, 1500);
     } catch (err: any) {
       toast.error(err.message || 'Erreur');

@@ -2,7 +2,8 @@ import { Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
 import { useCurrency } from '@/context/CurrencyContext';
-import { LANGUAGES, Language } from '@/types';
+import { Language } from '@/types';
+import { normalizeLocaleSettings, resolveLanguages } from '@/lib/locales';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,11 +28,14 @@ export default function LocaleSwitcher({
   showLanguage = true,
   showCurrency = true,
 }: LocaleSwitcherProps) {
-  const { language, setLanguage } = useApp();
+  const { language, setLanguage, designSettings } = useApp();
   const { currency, currencies, setCurrency } = useCurrency();
-  const activeLang = LANGUAGES.find(l => l.code === language) ?? LANGUAGES[0];
+  const locales = normalizeLocaleSettings((designSettings as any)?.locales);
+  const languages = resolveLanguages(locales);
+  const activeLang = languages.find(l => l.code === language) ?? languages[0];
 
   if (!showLanguage && !showCurrency) return null;
+  if (!locales.showSwitcher) return null;
 
   return (
     <DropdownMenu>
@@ -56,7 +60,7 @@ export default function LocaleSwitcher({
             <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-muted-foreground">
               Langue
             </DropdownMenuLabel>
-            {LANGUAGES.map(l => (
+            {languages.map(l => (
               <DropdownMenuItem
                 key={l.code}
                 onClick={() => setLanguage(l.code as Language)}
