@@ -197,6 +197,8 @@ function AnimatedRoutes() {
           <Route path="/a-propos" element={<MainLayout><About /></MainLayout>} />
           <Route path="/contact" element={<MainLayout><Contact /></MainLayout>} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+
           <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
           <Route path="/compte/*" element={<MainLayout><Account /></MainLayout>} />
           <Route path="/admin/bordereau/:id" element={<PrintShippingLabel />} />
