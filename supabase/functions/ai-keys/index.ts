@@ -12,6 +12,23 @@ const ROW = 'gemini_api';
 const GOOGLE_OAI_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 const GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions';
 
+/** Vérifie uniquement la validité de la clé Google (indépendamment d'un modèle). */
+async function verifyKey(key: string): Promise<{ ok: boolean; message: string }> {
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}&pageSize=1`,
+    );
+    if (res.ok) return { ok: true, message: 'Clé Gemini valide.' };
+    const text = (await res.text()).slice(0, 300);
+    if (res.status === 400 || res.status === 401 || res.status === 403) {
+      return { ok: false, message: 'Clé Gemini refusée par Google. Vérifiez la clé et que l\'API « Generative Language » est activée sur le projet.' };
+    }
+    return { ok: false, message: `Google a renvoyé une erreur (${res.status}). ${text}` };
+  } catch (e) {
+    return { ok: false, message: `Impossible de joindre Google : ${e instanceof Error ? e.message : 'erreur réseau'}` };
+  }
+}
+
 /** Envoie un mini prompt pour vérifier clé + modèle. */
 async function probe(model: string, key: string | null): Promise<{ ok: boolean; message: string; via: string }> {
   const messages = [{ role: 'user', content: 'Réponds uniquement par: OK' }];
@@ -108,8 +125,11 @@ Deno.serve(async (req) => {
         return json({ error: 'Clé invalide (20 à 512 caractères).' }, 400);
       }
       const model = String((body as { model?: string }).model || 'google/gemini-2.5-flash');
-      const check = await probe(model, key);
-      if (!check.ok) return json({ error: check.message }, 400);
+
+      // 1) On valide la CLÉ (et non un modèle précis) : un modèle absent du compte
+      //    ne doit jamais empêcher l'enregistrement de la clé.
+      const keyCheck = await verifyKey(key);
+      if (!keyCheck.ok) return json({ error: keyCheck.message }, 400);
 
       const { error } = await admin.from('payment_gateway_secrets').upsert(
         {
@@ -122,7 +142,15 @@ Deno.serve(async (req) => {
         { onConflict: 'gateway' },
       );
       if (error) return json({ error: error.message }, 500);
-      return json({ ok: true, last4: key.slice(-4), message: check.message });
+
+      // 2) Test facultatif du modèle sélectionné : purement informatif.
+      let message = 'Clé Gemini valide et enregistrée.';
+      const modelCheck = await probe(model, key);
+      message = modelCheck.ok
+        ? `Clé Gemini enregistrée. ${modelCheck.message}`
+        : `Clé Gemini enregistrée. Note : le modèle « ${model} » n'est pas accessible avec cette clé (${modelCheck.message}). La passerelle IA intégrée sera utilisée en secours.`;
+
+      return json({ ok: true, last4: key.slice(-4), message, modelOk: modelCheck.ok });
     }
 
     if (action === 'delete') {
