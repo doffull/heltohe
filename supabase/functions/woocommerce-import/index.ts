@@ -407,10 +407,12 @@ Deno.serve(async (req) => {
             statusCode,
           );
         }
+        const probe = await probeSite();
         throw new WcServiceError(
-          `Le serveur WooCommerce ne répond pas (HTTP ${statusCode}) après ${MAX_ATTEMPTS} tentatives.${formatDiag()} Vérifie ton hébergeur ou ton WAF (Cloudflare / Sucuri / Wordfence).`,
+          `Le serveur WooCommerce ne répond pas (HTTP ${statusCode}) après ${MAX_ATTEMPTS} tentatives.${formatDiag()} Diagnostic — ${probe}. Si la page d’accueil répond 200 mais pas l’API, c’est ton WAF / mod_security (o2switch, Cloudflare, Sucuri, Wordfence) qui bloque /wp-json : demande la mise en liste blanche de /wp-json/wc/v3.`,
           statusCode,
         );
+
       }
       await res.json().catch(() => null);
       let storeInfo: Record<string, unknown> | null = null;
