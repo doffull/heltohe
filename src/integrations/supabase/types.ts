@@ -2462,6 +2462,33 @@ export type Database = {
           },
         ]
       }
+      password_reset_attempts: {
+        Row: {
+          created_at: string
+          email: string
+          error_message: string | null
+          id: string
+          ip_hash: string | null
+          succeeded: boolean
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          error_message?: string | null
+          id?: string
+          ip_hash?: string | null
+          succeeded?: boolean
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          error_message?: string | null
+          id?: string
+          ip_hash?: string | null
+          succeeded?: boolean
+        }
+        Relationships: []
+      }
       payment_gateway_secrets: {
         Row: {
           gateway: string
