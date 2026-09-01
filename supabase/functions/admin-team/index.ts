@@ -189,9 +189,12 @@ Deno.serve(async (req) => {
 
         let mailId: string | undefined;
         let mailError: string | undefined;
+        let resetLink: string | undefined;
         if (body.sendLink !== false) {
-          try { mailId = await sendResetLink(!existing); }
-          catch (e) { mailError = e instanceof Error ? e.message : String(e); }
+          try {
+            const r = await sendResetLink(!existing);
+            mailId = r.mailId; mailError = r.mailError; resetLink = r.link;
+          } catch (e) { mailError = e instanceof Error ? e.message : String(e); }
         }
 
         return json({
@@ -201,6 +204,7 @@ Deno.serve(async (req) => {
           hasPassword: !!password,
           mailId,
           mailError,
+          resetLink,
         });
       }
 
@@ -221,21 +225,25 @@ Deno.serve(async (req) => {
         });
         if (error) return json({ error: error.message }, 400);
         let mailError: string | undefined;
-        try { await sendResetLink(false); }
-        catch (e) { mailError = e instanceof Error ? e.message : String(e); }
-        return json({ ok: true, userId: u.id, mailError });
+        let resetLink: string | undefined;
+        try {
+          const r = await sendResetLink(false);
+          mailError = r.mailError; resetLink = r.link;
+        } catch (e) { mailError = e instanceof Error ? e.message : String(e); }
+        return json({ ok: true, userId: u.id, mailError, resetLink });
       }
 
       case 'send_link': {
         const u = await findUser();
         if (!u) return json({ error: 'Compte introuvable' }, 404);
         try {
-          const mailId = await sendResetLink(false);
-          return json({ ok: true, mailId });
+          const r = await sendResetLink(false);
+          return json({ ok: true, mailId: r.mailId, mailError: r.mailError, resetLink: r.link });
         } catch (e) {
           return json({ error: e instanceof Error ? e.message : String(e) }, 502);
         }
       }
+
 
       case 'delete_user': {
         const u = await findUser();
