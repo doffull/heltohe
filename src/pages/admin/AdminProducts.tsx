@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCategories } from '@/hooks/useCategories';
 import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, useBulkDeleteProducts, useBulkUpdateProducts, useTrashedProducts, useRestoreProducts, useHardDeleteProducts, useBulkSetProductStatus } from '@/hooks/useProducts';
 import { BulkEditDialog } from '@/components/admin/BulkEditDialog';
+import { BulkShippingDialog } from '@/components/admin/BulkShippingDialog';
 import { QuickPriceStockImportDialog } from '@/components/admin/QuickPriceStockImportDialog';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
 import { generateSwatchForProduct } from '@/lib/generateSwatch';
@@ -21,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Plus, Search, Pencil, Trash2, MoreHorizontal, Package, Upload, Download, FileText, X, Check, Filter, Wand2, Copy, Tag, DollarSign, Archive, Layers2, Boxes, RefreshCw, Images, LayoutGrid, ArrowUpDown, Film, RotateCcw, FileEdit, Send, AlertTriangle
 } from 'lucide-react';
+
 import { AdminCategoryOrdering } from '@/components/admin/AdminCategoryOrdering';
 import { ImportMockupDialog } from '@/components/admin/ImportMockupDialog';
 import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
@@ -128,6 +130,7 @@ export default function AdminProducts() {
   const [isBulkGifOpen, setIsBulkGifOpen] = useState(false);
   const [swatchProgress, setSwatchProgress] = useState<{ done: number; total: number } | null>(null);
   const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
+  const [isBulkShippingOpen, setIsBulkShippingOpen] = useState(false);
   const [isQuickCsvOpen, setIsQuickCsvOpen] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [extractedProducts, setExtractedProducts] = useState<ExtractedProduct[]>([]);
@@ -777,6 +780,9 @@ export default function AdminProducts() {
             <Button size="sm" onClick={() => setIsBulkEditOpen(true)} className="h-8 text-xs chamfer-hud-sm">
               <Wand2 className="h-3 w-3 mr-1" />Édition en masse
             </Button>
+            <Button size="sm" variant="outline" onClick={() => setIsBulkShippingOpen(true)} className="h-8 text-xs chamfer-hud-sm">
+              <Package className="h-3 w-3 mr-1" />Expédition Colissimo
+            </Button>
             <Button size="sm" variant="outline" onClick={() => handleBulkStatus('published')} disabled={bulkSetStatus.isPending} className="h-8 text-xs chamfer-hud-sm">
               <Send className="h-3 w-3 mr-1" />Publier
             </Button>
@@ -1416,6 +1422,12 @@ export default function AdminProducts() {
         categories={categories}
         onDone={clear}
       />
+      <BulkShippingDialog
+        open={isBulkShippingOpen}
+        onOpenChange={setIsBulkShippingOpen}
+        productIds={ids}
+      />
+
       <QuickPriceStockImportDialog
         open={isQuickCsvOpen}
         onOpenChange={setIsQuickCsvOpen}

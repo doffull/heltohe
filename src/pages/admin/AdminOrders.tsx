@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
+import { normalizeInvoiceBrand } from '@/lib/invoiceSettings';
 import { 
   Package, Clock, Truck, CheckCircle, XCircle, Eye, FileText, Save, Printer, Mail, ExternalLink, Trash2,
   CreditCard, Banknote, MapPin, FileDown, Tag, Search, Filter, Loader2, RefreshCw, CheckSquare, ArrowUpDown,
@@ -27,6 +28,8 @@ import {
 } from "@/components/ui/popover";
 import { useNotificationConfig } from '@/hooks/useNotificationConfig';
 import { OrderHistoryPanel } from '@/components/admin/OrderHistoryPanel';
+import { SendEmailDialog, type SendEmailTarget } from '@/components/admin/SendEmailDialog';
+
 
 const STATUS_OPTIONS: { value: OrderStatus; label: string; icon: typeof Clock; color: string }[] = [
   { value: 'Pending', label: 'En attente', icon: Clock, color: 'text-yellow-500' },
@@ -93,7 +96,8 @@ function generateShippingLabelHTML(order: Order, isReturn = false): string {
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Étiquette ${isReturn ? 'retour' : 'aller'} ${order.orderNumber}</title><style>body{font-family:Arial,sans-serif;padding:20px}.label{border:3px solid #000;padding:25px;max-width:400px;margin:auto}.from,.to{margin-bottom:15px}h3{margin:0 0 5px;text-transform:uppercase;font-size:11px;letter-spacing:2px;color:#666}p{margin:3px 0;font-size:14px}.barcode{text-align:center;margin:15px 0;font-family:monospace;font-size:18px;letter-spacing:4px}@media print{body{padding:0}}</style></head><body><div class="label"><div class="from"><h3>${isReturn ? 'Destinataire (retour)' : 'Expéditeur'}</h3><p><strong>HELVETICA-MP Concept Store</strong></p><p>Paris, France</p></div><hr/><div class="to"><h3>${isReturn ? 'Expéditeur (client)' : 'Destinataire'}</h3><p><strong>${order.customer.name}</strong></p><p>${order.customer.address}</p><p>${order.customer.zip} ${order.customer.city}</p><p>${order.customer.country}</p>${order.customer.phone ? `<p>Tél: ${order.customer.phone}</p>` : ''}</div><hr/><div class="barcode">${order.trackingNumber || order.orderNumber}</div><p style="text-align:center;font-size:11px;color:#666">${order.orderNumber} · ${order.shippingCarrier || 'Standard'}</p></div></body></html>`;
 }
 
-function generateInvoiceHTML(order: Order): string {
+function generateInvoiceHTML(order: Order, brandRaw?: unknown): string {
+  const brand = normalizeInvoiceBrand(brandRaw);
   const itemsRows = order.items.map((item: OrderItem) => {
     const variant = [item.color ? `Couleur: ${item.color}` : '', item.size ? `Taille: ${item.size}` : ''].filter(Boolean).join(' · ');
     const img = item.image
@@ -101,8 +105,17 @@ function generateInvoiceHTML(order: Order): string {
       : `<div style="width:54px;height:54px;border:1px solid #eee;border-radius:2px"></div>`;
     return `<tr><td style="padding:8px;border-bottom:1px solid #eee;width:64px;">${img}</td><td style="padding:8px;border-bottom:1px solid #eee;"><strong>${item.name || item.productId}</strong>${variant ? `<br><span style="font-size:11px;color:#777">${variant}</span>` : ''}</td><td style="padding:8px;border-bottom:1px solid #eee;text-align:center;">${item.quantity}</td><td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">${(item.price || 0).toFixed(2)}€</td><td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">${((item.price || 0) * item.quantity).toFixed(2)}€</td></tr>`;
   }).join('');
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Facture ${order.orderNumber}</title><style>body{font-family:Arial,sans-serif;padding:40px;color:#333}h1{font-size:24px}table{width:100%;border-collapse:collapse;margin:20px 0}.header{display:flex;justify-content:space-between;margin-bottom:40px}.total-section{text-align:right;margin-top:20px}@media print{body{padding:20px}}</style></head><body><div class="header"><div><h1>FACTURE</h1><p><strong>${order.orderNumber}</strong></p><p>Date: ${new Date(order.date).toLocaleDateString('fr-FR')}</p></div><div style="text-align:right"><h2>HELVETICA-MP</h2><p>Concept Store</p></div></div><div style="margin-bottom:30px"><h3>Client</h3><p>${order.customer.name}<br>${order.customer.email}<br>${order.customer.address}<br>${order.customer.zip} ${order.customer.city}<br>${order.customer.country}</p>${order.customer.phone ? `<p>Tél: ${order.customer.phone}</p>` : ''}</div><table><thead><tr><th style="padding:8px;border-bottom:2px solid #333;text-align:left">Photo</th><th style="padding:8px;border-bottom:2px solid #333;text-align:left">Article</th><th style="padding:8px;border-bottom:2px solid #333;text-align:center">Qté</th><th style="padding:8px;border-bottom:2px solid #333;text-align:right">Prix unit.</th><th style="padding:8px;border-bottom:2px solid #333;text-align:right">Total</th></tr></thead><tbody>${itemsRows}</tbody></table><div class="total-section"><p>Sous-total: ${order.subtotal.toFixed(2)}€</p><p>TVA: ${order.tax.toFixed(2)}€</p><p>Livraison: ${order.shippingCost.toFixed(2)}€</p><p style="font-size:18px;font-weight:bold;margin-top:10px">Total: ${order.total.toFixed(2)}€</p></div><div style="margin-top:40px;padding-top:20px;border-top:1px solid #eee;font-size:12px;color:#999;text-align:center">Facture générée automatiquement - HELVETICA-MP Concept Store</div></body></html>`;
+  const seller = [
+    brand.logoUrl ? `<img src="${brand.logoUrl}" alt="${brand.companyName}" style="max-height:52px;margin-bottom:6px" />` : '',
+    `<h2 style="margin:0">${brand.companyName}</h2>`,
+    brand.tagline ? `<p style="margin:2px 0">${brand.tagline}</p>` : '',
+    brand.addressLines ? `<p style="margin:2px 0;font-size:12px;color:#666">${brand.addressLines.replace(/\n/g, '<br>')}</p>` : '',
+    brand.siret ? `<p style="margin:2px 0;font-size:11px;color:#888">SIRET : ${brand.siret}</p>` : '',
+    brand.vatNumber ? `<p style="margin:2px 0;font-size:11px;color:#888">TVA : ${brand.vatNumber}</p>` : '',
+  ].join('');
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Facture ${order.orderNumber}</title><style>body{font-family:Arial,sans-serif;padding:40px;color:#333}h1{font-size:24px}table{width:100%;border-collapse:collapse;margin:20px 0}.header{display:flex;justify-content:space-between;margin-bottom:40px}.total-section{text-align:right;margin-top:20px}@media print{body{padding:20px}}</style></head><body><div class="header"><div><h1>FACTURE</h1><p><strong>${order.orderNumber}</strong></p><p>Date: ${new Date(order.date).toLocaleDateString('fr-FR')}</p></div><div style="text-align:right">${seller}</div></div><div style="margin-bottom:30px"><h3>Client</h3><p>${order.customer.name}<br>${order.customer.email}<br>${order.customer.address}<br>${order.customer.zip} ${order.customer.city}<br>${order.customer.country}</p>${order.customer.phone ? `<p>Tél: ${order.customer.phone}</p>` : ''}</div><table><thead><tr><th style="padding:8px;border-bottom:2px solid #333;text-align:left">Photo</th><th style="padding:8px;border-bottom:2px solid #333;text-align:left">Article</th><th style="padding:8px;border-bottom:2px solid #333;text-align:center">Qté</th><th style="padding:8px;border-bottom:2px solid #333;text-align:right">Prix unit.</th><th style="padding:8px;border-bottom:2px solid #333;text-align:right">Total</th></tr></thead><tbody>${itemsRows}</tbody></table><div class="total-section"><p>Sous-total: ${order.subtotal.toFixed(2)}€</p>${brand.showVat ? `<p>TVA: ${order.tax.toFixed(2)}€</p>` : ''}<p>Livraison: ${order.shippingCost.toFixed(2)}€</p><p style="font-size:18px;font-weight:bold;margin-top:10px">Total: ${order.total.toFixed(2)}€</p></div><div style="margin-top:40px;padding-top:20px;border-top:1px solid #eee;font-size:12px;color:#999;text-align:center">${brand.footerNote}</div></body></html>`;
 }
+
 
 function openPrintWindow(html: string) {
   const blob = new Blob([html], { type: 'text/html' });
@@ -134,13 +147,19 @@ interface EditForm {
 
 export default function AdminOrders() {
   const { toast } = useToast();
-  const { data: orders = [], isLoading } = useOrders();
+  // Les commandes dont le paiement n'a jamais abouti sont masquées par défaut.
+  const [scope, setScope] = useState<'paid' | 'abandoned'>('paid');
+  const { data: orders = [], isLoading } = useOrders(scope);
   const { data: designSettings } = useDesignSettings();
   const updateOrder = useUpdateOrder();
   const bulkDelete = useBulkDeleteOrders();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [bulkProcessing, setBulkProcessing] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditForm | null>(null);
+  const [mailTargets, setMailTargets] = useState<SendEmailTarget[] | null>(null);
+  const [bulkTrackingOpen, setBulkTrackingOpen] = useState(false);
+  const [bulkTrackingText, setBulkTrackingText] = useState('');
+
   const [searchQuery, setSearchQuery] = useState(
     () => new URLSearchParams(window.location.search).get('q') ?? '',
   );
@@ -418,6 +437,108 @@ export default function AdminOrders() {
     clear();
   };
 
+  /** Génère les étiquettes Colissimo de toutes les commandes sélectionnées. */
+  const handleBulkLabels = async () => {
+    const selected = filteredOrders.filter(o => selectedIds.has(o.id));
+    setBulkProcessing('labels');
+    let ok = 0, fail = 0;
+    for (const order of selected) {
+      if (order.trackingNumber) continue;
+      try {
+        await generateLabelForOrder(order);
+        ok++;
+      } catch {
+        fail++;
+      }
+    }
+    setBulkProcessing(null);
+    toast({ title: `Étiquettes : ${ok} générée(s)`, description: fail ? `${fail} échec(s).` : undefined });
+    clear();
+  };
+
+  /** Saisie/import en masse des numéros de suivi (une ligne « N°commande;suivi »). */
+  const handleBulkTracking = async () => {
+    const map = new Map<string, string>();
+    bulkTrackingText.split(/\r?\n/).forEach(line => {
+      const [num, track] = line.split(/[;,\t]/).map(s => (s || '').trim());
+      if (num && track) map.set(num.toUpperCase(), track);
+    });
+    if (map.size === 0) {
+      toast({ title: 'Aucune ligne valide', description: 'Format attendu : N°commande;numéro de suivi', variant: 'destructive' });
+      return;
+    }
+    setBulkProcessing('tracking');
+    let ok = 0;
+    for (const order of orders) {
+      const track = map.get(order.orderNumber.toUpperCase());
+      if (!track) continue;
+      try {
+        await updateOrder.mutateAsync({
+          id: order.id,
+          trackingNumber: track,
+          shippingCarrier: order.shippingCarrier || 'Colissimo',
+          status: 'Shipped',
+        });
+        ok++;
+      } catch { /* ligne ignorée */ }
+    }
+    setBulkProcessing(null);
+    setBulkTrackingOpen(false);
+    setBulkTrackingText('');
+    toast({ title: `${ok} suivi(s) enregistré(s)`, description: "E-mails d'expédition envoyés." });
+  };
+
+  /** Actualise le statut de suivi des commandes sélectionnées. */
+  const handleBulkRefreshTracking = async () => {
+    const selected = filteredOrders.filter(o => selectedIds.has(o.id) && o.trackingNumber);
+    setBulkProcessing('refresh');
+    let ok = 0;
+    for (const order of selected) {
+      const { error } = await supabase.functions.invoke('poll-carrier-tracking', {
+        body: { order_id: order.id },
+      });
+      if (!error) ok++;
+    }
+    setBulkProcessing(null);
+    toast({ title: `Suivi actualisé pour ${ok} commande(s)` });
+  };
+
+  /** Ouvre la fenêtre d'e-mail pour tous les clients sélectionnés. */
+  /** Supprime les paniers abandonnés de plus de 24 h. */
+  const handlePurgeAbandoned = async () => {
+    setBulkProcessing('purge');
+    const cutoff = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const { error, count } = await supabase
+      .from('orders')
+      .delete({ count: 'exact' })
+      .neq('payment_status', 'Paid')
+      .lt('created_at', cutoff);
+    setBulkProcessing(null);
+    if (error) {
+      toast({ title: 'Purge impossible', description: error.message, variant: 'destructive' });
+      return;
+    }
+    toast({ title: `${count ?? 0} panier(s) abandonné(s) supprimé(s)` });
+    clear();
+  };
+
+  const openBulkEmail = () => {
+
+    const selected = filteredOrders.filter(o => selectedIds.has(o.id));
+    setMailTargets(
+      selected.map(o => ({
+        email: o.customer.email,
+        firstName: o.customer.name?.split(' ')[0],
+        orderNumber: o.orderNumber,
+        total: o.total.toFixed(2),
+        trackingNumber: o.trackingNumber,
+        orderId: o.id,
+      })),
+    );
+  };
+
+
+
   const openDetail = (order: Order) => {
     setSelectedOrder(order);
     setEditForm({
@@ -607,11 +728,22 @@ export default function AdminOrders() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h1 className="text-xl lg:text-3xl font-bold hud-text">COMMANDES</h1>
-          <p className="text-muted-foreground text-xs lg:text-sm mt-1">{orders.length} commandes au total</p>
+          <p className="text-muted-foreground text-xs lg:text-sm mt-1">
+            {orders.length} {scope === 'abandoned' ? 'panier(s) abandonné(s)' : 'commande(s) payée(s)'}
+          </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setSyncOpen(true)} className="w-full sm:w-auto gap-2">
-          <RefreshCw className="h-4 w-4" /> Sync WordPress
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          {scope === 'abandoned' && (
+            <Button variant="outline" size="sm" onClick={handlePurgeAbandoned} disabled={bulkProcessing === 'purge'} className="w-full sm:w-auto gap-2">
+              {bulkProcessing === 'purge' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              Purger (+24 h)
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={() => setSyncOpen(true)} className="w-full sm:w-auto gap-2">
+            <RefreshCw className="h-4 w-4" /> Sync WordPress
+          </Button>
+        </div>
+
       </div>
 
       {/* Filters */}
@@ -621,6 +753,14 @@ export default function AdminOrders() {
           <Input placeholder="N° commande, client..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" />
         </div>
         <div className="flex flex-wrap gap-2">
+          <Select value={scope} onValueChange={(v) => { setScope(v as 'paid' | 'abandoned'); clear(); }}>
+            <SelectTrigger className="w-full sm:w-[190px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="paid">Commandes payées</SelectItem>
+              <SelectItem value="abandoned">Paniers abandonnés</SelectItem>
+            </SelectContent>
+          </Select>
+
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-full sm:w-[140px]"><Filter className="h-3 w-3 mr-1" /><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -664,7 +804,20 @@ export default function AdminOrders() {
           <Button variant="destructive" size="sm" onClick={handleBulkDelete} disabled={bulkDelete.isPending || !!bulkProcessing}>
             <Trash2 className="h-3 w-3 mr-2" />Supprimer
           </Button>
+          <Button variant="outline" size="sm" onClick={handleBulkLabels} disabled={!!bulkProcessing}>
+            {bulkProcessing === 'labels' ? <Loader2 className="h-3 w-3 mr-2 animate-spin" /> : <Truck className="h-3 w-3 mr-2" />}Étiquettes Colissimo
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setBulkTrackingOpen(true)} disabled={!!bulkProcessing}>
+            <Tag className="h-3 w-3 mr-2" />Suivis en masse
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleBulkRefreshTracking} disabled={!!bulkProcessing}>
+            {bulkProcessing === 'refresh' ? <Loader2 className="h-3 w-3 mr-2 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-2" />}Actualiser suivi
+          </Button>
+          <Button variant="outline" size="sm" onClick={openBulkEmail} disabled={!!bulkProcessing}>
+            <Mail className="h-3 w-3 mr-2" />Envoyer un e-mail
+          </Button>
           <Button variant="ghost" size="sm" onClick={clear}>Désélectionner</Button>
+
         </div>
       )}
 
@@ -773,7 +926,7 @@ export default function AdminOrders() {
                       <td className="p-3 text-right">
                         <div className="flex gap-0.5 justify-end">
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openDetail(order)} title="Voir"><Eye className="h-3.5 w-3.5" /></Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openPrintWindow(generateInvoiceHTML(order))} title="Facture"><FileText className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openPrintWindow(generateInvoiceHTML(order, (designSettings as any)?.invoiceBrand))} title="Facture"><FileText className="h-3.5 w-3.5" /></Button>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -785,7 +938,7 @@ export default function AdminOrders() {
                             {labelOrderId === order.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Truck className="h-3.5 w-3.5" />}
                           </Button>
 
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.location.href = `mailto:${order.customer.email}`} title="Email"><Mail className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setMailTargets([{ email: order.customer.email, firstName: order.customer.name?.split(' ')[0], orderNumber: order.orderNumber, total: order.total.toFixed(2), trackingNumber: order.trackingNumber, orderId: order.id }])} title="Écrire au client"><Mail className="h-3.5 w-3.5" /></Button>
                         </div>
                       </td>
                     </tr>
@@ -805,7 +958,7 @@ export default function AdminOrders() {
               COMMANDE {selectedOrder?.orderNumber}
               {selectedOrder && (
                 <button
-                  onClick={() => window.location.href = `mailto:${selectedOrder.customer.email}?subject=Commande ${selectedOrder.orderNumber}`}
+                  onClick={() => setMailTargets([{ email: selectedOrder.customer.email, firstName: selectedOrder.customer.name?.split(' ')[0], orderNumber: selectedOrder.orderNumber, total: selectedOrder.total.toFixed(2), trackingNumber: selectedOrder.trackingNumber, orderId: selectedOrder.id }])}
                   className="text-sm font-normal text-primary hover:underline flex items-center gap-1"
                 >
                   <Mail className="h-3 w-3" /> Contacter
@@ -893,7 +1046,7 @@ export default function AdminOrders() {
                 <Button variant="outline" size="sm" onClick={() => selectedOrder && openPrintWindow(generateDeliverySlipHTML(selectedOrder))}><FileDown className="h-4 w-4 mr-1" />Bon de livraison</Button>
                 <Button variant="outline" size="sm" onClick={() => selectedOrder && openPrintWindow(generateShippingLabelHTML(selectedOrder))}><Tag className="h-4 w-4 mr-1" />Étiquette aller</Button>
                 <Button variant="outline" size="sm" onClick={() => selectedOrder && openPrintWindow(generateShippingLabelHTML(selectedOrder, true))}><Tag className="h-4 w-4 mr-1" />Étiquette retour</Button>
-                <Button variant="outline" size="sm" onClick={() => selectedOrder && openPrintWindow(generateInvoiceHTML(selectedOrder))}><Printer className="h-4 w-4 mr-1" />Facture</Button>
+                <Button variant="outline" size="sm" onClick={() => selectedOrder && openPrintWindow(generateInvoiceHTML(selectedOrder, (designSettings as any)?.invoiceBrand))}><Printer className="h-4 w-4 mr-1" />Facture</Button>
                 {/* Resend confirmation */}
                 <Button
                   variant="outline"
@@ -945,6 +1098,35 @@ export default function AdminOrders() {
       </Dialog>
 
       <WordPressSyncDialog open={syncOpen} onOpenChange={setSyncOpen} syncType="orders" />
+
+      <SendEmailDialog
+        open={!!mailTargets}
+        onOpenChange={(v) => { if (!v) setMailTargets(null); }}
+        targets={mailTargets || []}
+      />
+
+      <Dialog open={bulkTrackingOpen} onOpenChange={setBulkTrackingOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle className="hud-text">SUIVIS EN MASSE</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <Label className="text-xs">Une ligne par commande : <code>N°commande;numéro de suivi</code></Label>
+            <Textarea
+              rows={8}
+              value={bulkTrackingText}
+              onChange={e => setBulkTrackingText(e.target.value)}
+              placeholder={'HMP-XXXX;6A123456789\nHMP-YYYY;6A987654321'}
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Chaque commande trouvée passe en « Expédiée » et l'e-mail d'expédition part automatiquement.
+            </p>
+            <Button onClick={handleBulkTracking} disabled={bulkProcessing === 'tracking'} className="w-full">
+              {bulkProcessing === 'tracking' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />}
+              Enregistrer les suivis
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

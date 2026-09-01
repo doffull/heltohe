@@ -4,6 +4,8 @@ import { DesignSettings } from '@/types';
 import { INITIAL_DESIGN_SETTINGS } from '@/data/initialData';
 import { Json } from '@/integrations/supabase/types';
 import { normalizeLocaleSettings } from '@/lib/locales';
+import { normalizeInvoiceBrand } from '@/lib/invoiceSettings';
+
 
 // Map DB row → DesignSettings
 function dbToSettings(db: Record<string, unknown>): DesignSettings {
@@ -210,6 +212,8 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
       color: '',
     },
     locales: normalizeLocaleSettings((db.settings_json as any)?.locales),
+    invoiceBrand: normalizeInvoiceBrand((db.settings_json as any)?.invoiceBrand),
+
 
   } as DesignSettings;
 }
@@ -379,6 +383,8 @@ function settingsToDb(s: DesignSettings) {
       soldOutBadgeLabel: ((s as any).soldOutBadgeLabel || '').trim() || 'Coming soon',
       socialDisplay: (s as any).socialDisplay ?? null,
       locales: (s as any).locales ?? null,
+      invoiceBrand: (s as any).invoiceBrand ?? null,
+
 
 
     } as unknown as Json,
