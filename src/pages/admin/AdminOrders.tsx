@@ -768,6 +768,17 @@ export default function AdminOrders() {
                         <div className="flex gap-0.5 justify-end">
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openDetail(order)} title="Voir"><Eye className="h-3.5 w-3.5" /></Button>
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openPrintWindow(generateInvoiceHTML(order))} title="Facture"><FileText className="h-3.5 w-3.5" /></Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-purple-500"
+                            disabled={isGeneratingLabel}
+                            onClick={() => generateLabelForOrder(order)}
+                            title="Générer l'étiquette Colissimo et envoyer l'e-mail d'expédition"
+                          >
+                            {labelOrderId === order.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Truck className="h-3.5 w-3.5" />}
+                          </Button>
+
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.location.href = `mailto:${order.customer.email}`} title="Email"><Mail className="h-3.5 w-3.5" /></Button>
                         </div>
                       </td>
