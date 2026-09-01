@@ -20,7 +20,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..');
 
 // Doit rester aligné avec FALLBACK_SITE_URL dans src/lib/site.ts.
-const FALLBACK_SITE_URL = 'https://helvetica-mp.com';
+const FALLBACK_SITE_URL = 'https://helvetica-mp.net';
 
 /** Lit VITE_SITE_URL depuis l'environnement, sinon depuis un fichier .env local. */
 function resolveSiteUrl() {
