@@ -218,7 +218,9 @@ function TeamAccessCard() {
     setConfirmClear(false);
     const res = await call('clear_password');
     if (res) {
+      setManualLink(res.mailError ? res.resetLink || null : null);
       toast({
+
         title: 'Mot de passe supprimé',
         description: res.mailError
           ? `Le compte ne peut plus se connecter. E-mail non envoyé : ${res.mailError}`
