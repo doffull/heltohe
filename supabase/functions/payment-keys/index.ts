@@ -63,6 +63,15 @@ serve(async (req) => {
       if (secret.length < 12 || secret.length > 512) {
         return json({ error: "Clé secrète invalide (12 à 512 caractères)." }, 400);
       }
+      if (gateway === "payplug" && !/^sk_(test|live)_[A-Za-z0-9]{8,}$/.test(secret)) {
+        return json(
+          {
+            error:
+              "Clé PayPlug invalide : elle doit commencer par sk_live_ (production) ou sk_test_ (test).",
+          },
+          400,
+        );
+      }
       const { error } = await admin.from("payment_gateway_secrets").upsert(
         {
           gateway,
