@@ -11,7 +11,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ShieldCheck, ShieldOff, Search, Loader2, Save } from 'lucide-react';
+import { ShieldCheck, ShieldOff, Search, Loader2, Save, UserPlus, KeyRound, Mail, Trash2 } from 'lucide-react';
 import { ROLE_LABELS, ROLE_COLORS, useRoleAuditLog, type AppRole } from '@/hooks/useUserRoles';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ADMIN_SECTIONS } from '@/config/adminSections';
