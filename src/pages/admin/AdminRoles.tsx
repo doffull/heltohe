@@ -445,7 +445,10 @@ export default function AdminRoles() {
         )}
       </Card>
 
+      <TeamAccessCard />
+
       <RoleMembersCard />
+
 
       <RolePermissionsCard />
 
