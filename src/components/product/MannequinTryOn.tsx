@@ -122,8 +122,10 @@ export default function MannequinTryOn({ product, selectedColor, selectedSize }:
             name: l.name,
             category: l.family || undefined,
             color: l.color || undefined,
+            size: (l as any).size || undefined,
           })),
           framing: 'full',
+          highFidelity: true,
         },
       });
       if (error) throw error;
