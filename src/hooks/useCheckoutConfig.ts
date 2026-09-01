@@ -49,6 +49,8 @@ export interface CheckoutConfig {
   paymentMethods: PaymentMethod[];
   checkoutMessage: string;
   relayMapSettings: RelayMapSettings;
+  /** Génère l'étiquette Colissimo automatiquement dès que la commande est payée. */
+  autoColissimoLabel: boolean;
 }
 
 const DEFAULT_CONFIG: CheckoutConfig = {
@@ -61,6 +63,7 @@ const DEFAULT_CONFIG: CheckoutConfig = {
   paymentMethods: PAYMENT_GATEWAYS,
   checkoutMessage: '',
   relayMapSettings: DEFAULT_RELAY_MAP_SETTINGS,
+  autoColissimoLabel: true,
 };
 
 /**
@@ -103,6 +106,7 @@ function dbToConfig(db: Record<string, unknown>): CheckoutConfig {
     paymentMethods: mergePaymentMethods(db.payment_methods as PaymentMethod[] | null),
     checkoutMessage: (db.checkout_message as string) || '',
     relayMapSettings: (db.relay_map_settings as RelayMapSettings) || DEFAULT_RELAY_MAP_SETTINGS,
+    autoColissimoLabel: db.auto_colissimo_label as boolean ?? true,
   };
 }
 
@@ -162,6 +166,7 @@ export function useSaveCheckoutConfig() {
         payment_methods: config.paymentMethods as unknown,
         checkout_message: config.checkoutMessage,
         relay_map_settings: config.relayMapSettings as unknown,
+        auto_colissimo_label: config.autoColissimoLabel,
       };
       const { error } = await supabase
         .from('checkout_config')
