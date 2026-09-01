@@ -213,6 +213,19 @@ function TeamAccessCard() {
     toast({ title: 'Lien envoyé', description: email.trim() });
   };
 
+  // Contrôle de délivrabilité : envoie le gabarit réel sans toucher au compte.
+  const testEmail = async () => {
+    const res = await call('test_email');
+    if (!res) return;
+    toast({
+      title: res.mailError ? 'Envoi de test refusé' : 'E-mail de test envoyé',
+      description: res.mailError || `Vérifiez la boîte de ${email.trim()} (et les indésirables).`,
+      variant: res.mailError ? 'destructive' : undefined,
+    });
+  };
+
+
+
 
   const clearPwd = async () => {
     setConfirmClear(false);
