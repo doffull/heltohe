@@ -9,9 +9,9 @@
  * Le même repli est dupliqué dans `scripts/generate-seo-files.mjs`, qui s'exécute
  * hors du bundle Vite : garder les deux valeurs alignées.
  */
-const FALLBACK_SITE_URL = 'https://helvetica-mp.com';
+const FALLBACK_SITE_URL = 'https://helvetica-mp.net';
 
-/** Domaine sans slash final, ex. `https://helvetica-mp.com`. */
+/** Domaine sans slash final, ex. `https://helvetica-mp.net`. */
 export const SITE_URL = (
   import.meta.env.VITE_SITE_URL || FALLBACK_SITE_URL
 ).replace(/\/+$/, '');
