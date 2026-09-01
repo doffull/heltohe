@@ -140,6 +140,8 @@ export default function AdminOrders() {
   );
 
   const [isGeneratingLabel, setIsGeneratingLabel] = useState(false);
+  const [labelOrderId, setLabelOrderId] = useState<string | null>(null);
+
   const [isResending, setIsResending] = useState(false);
   const [isMarkingPaid, setIsMarkingPaid] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -518,22 +520,27 @@ export default function AdminOrders() {
     }
   };
 
-  const handleGenerateColissimoLabel = async () => {
-    if (!selectedOrder) return;
+  /**
+   * Génère l'étiquette Colissimo d'une commande, enregistre le n° de suivi,
+   * passe la commande en « Expédiée » et déclenche l'e-mail d'expédition
+   * (qui reprend automatiquement le n° de suivi enregistré).
+   */
+  const generateLabelForOrder = async (order: Order, form?: typeof editForm) => {
+    setLabelOrderId(order.id);
     setIsGeneratingLabel(true);
     try {
       const { data, error } = await supabase.functions.invoke('colissimo-proxy', {
         body: {
           action: 'generateLabel',
           order: {
-            orderNumber: selectedOrder.orderNumber,
+            orderNumber: order.orderNumber,
             customer: {
-              name: editForm?.customerName || selectedOrder.customer.name,
-              email: editForm?.customerEmail || selectedOrder.customer.email,
-              phone: editForm?.customerPhone || selectedOrder.customer.phone,
-              address: editForm?.customerAddress || selectedOrder.customer.address,
-              city: editForm?.customerCity || selectedOrder.customer.city,
-              zip: editForm?.customerZip || selectedOrder.customer.zip,
+              name: form?.customerName || order.customer.name,
+              email: form?.customerEmail || order.customer.email,
+              phone: form?.customerPhone || order.customer.phone,
+              address: form?.customerAddress || order.customer.address,
+              city: form?.customerCity || order.customer.city,
+              zip: form?.customerZip || order.customer.zip,
             },
           },
         },
@@ -541,14 +548,17 @@ export default function AdminOrders() {
 
       if (error) throw error;
 
-      if (data?.trackingNumber && editForm) {
-        setEditForm({ ...editForm, trackingNumber: data.trackingNumber, shippingCarrier: 'Colissimo' });
+      if (data?.trackingNumber) {
+        if (form) setEditForm({ ...form, trackingNumber: data.trackingNumber, shippingCarrier: 'Colissimo', status: 'Shipped' });
+        // L'e-mail d'expédition est envoyé par useUpdateOrder dès que
+        // statut = Shipped et qu'un n° de suivi est présent.
         await updateOrder.mutateAsync({
-          id: selectedOrder.id,
+          id: order.id,
           trackingNumber: data.trackingNumber,
           shippingCarrier: 'Colissimo',
+          status: 'Shipped',
         });
-        toast({ title: 'Numéro de suivi enregistré', description: data.trackingNumber });
+        toast({ title: 'Étiquette générée', description: `Suivi ${data.trackingNumber} — e-mail d'expédition envoyé` });
       }
 
       if (data?.pdfBase64) {
@@ -559,14 +569,14 @@ export default function AdminOrders() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `colissimo-${selectedOrder.orderNumber}.pdf`;
+        a.download = `colissimo-${order.orderNumber}.pdf`;
         a.click();
         URL.revokeObjectURL(url);
-        toast({ title: 'Étiquette Colissimo téléchargée' });
-      } else {
+      } else if (!data?.trackingNumber) {
         toast({
-          title: 'Étiquette générée',
-          description: data?.trackingNumber ? `N° suivi: ${data.trackingNumber}` : 'Vérifiez vos identifiants Colissimo',
+          title: 'Étiquette indisponible',
+          description: 'Vérifiez vos identifiants Colissimo',
+          variant: 'destructive',
         });
       }
     } catch (err) {
@@ -574,8 +584,15 @@ export default function AdminOrders() {
       toast({ title: 'Erreur génération étiquette', description: String(err), variant: 'destructive' });
     } finally {
       setIsGeneratingLabel(false);
+      setLabelOrderId(null);
     }
   };
+
+  const handleGenerateColissimoLabel = async () => {
+    if (!selectedOrder) return;
+    await generateLabelForOrder(selectedOrder, editForm);
+  };
+
 
   const getStatusInfo = (status: OrderStatus) => STATUS_OPTIONS.find(o => o.value === status) || STATUS_OPTIONS[0];
 
@@ -751,6 +768,17 @@ export default function AdminOrders() {
                         <div className="flex gap-0.5 justify-end">
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openDetail(order)} title="Voir"><Eye className="h-3.5 w-3.5" /></Button>
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openPrintWindow(generateInvoiceHTML(order))} title="Facture"><FileText className="h-3.5 w-3.5" /></Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-purple-500"
+                            disabled={isGeneratingLabel}
+                            onClick={() => generateLabelForOrder(order)}
+                            title="Générer l'étiquette Colissimo et envoyer l'e-mail d'expédition"
+                          >
+                            {labelOrderId === order.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Truck className="h-3.5 w-3.5" />}
+                          </Button>
+
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.location.href = `mailto:${order.customer.email}`} title="Email"><Mail className="h-3.5 w-3.5" /></Button>
                         </div>
                       </td>
