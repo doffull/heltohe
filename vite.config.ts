@@ -54,7 +54,7 @@ const siteUrlHtmlPlugin = () => ({
   name: "lvtk-site-url-html",
   enforce: "pre" as const,
   transformIndexHtml(html: string) {
-    const siteUrl = (process.env.VITE_SITE_URL || "https://helvetica-mp.net").replace(/\/+$/, "");
+    const siteUrl = (process.env.VITE_SITE_URL || "https://helvetica-mp.com").replace(/\/+$/, "");
     return html.replaceAll("%VITE_SITE_URL%", siteUrl);
   },
 });

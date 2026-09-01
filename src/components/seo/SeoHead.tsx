@@ -56,42 +56,20 @@ export function SeoHead({ forceNoIndex = false, title, description, image, type 
   );
 }
 
-/** JSON-LD Organization + WebSite — posé une seule fois sur l'accueil. */
+/** JSON-LD Organization — posé une seule fois sur l'accueil. */
 export function OrganizationJsonLd() {
   const { data: settings } = useDesignSettings();
   const s = (settings as any) || {};
-  const name = s.siteName || 'Helvetica Mountain Pioneers';
   const data = {
     '@context': 'https://schema.org',
-    '@graph': [
-      {
-        '@type': 'Organization',
-        '@id': `${SITE_URL}/#organization`,
-        name,
-        url: SITE_URL,
-        ...(s.hudLogo ? { logo: s.hudLogo } : {}),
-        ...(s.contactEmail ? { email: s.contactEmail } : {}),
-        ...(Array.isArray(s.socialLinks) && s.socialLinks.length
-          ? { sameAs: s.socialLinks.map((l: any) => l?.url).filter(Boolean) }
-          : {}),
-      },
-      {
-        '@type': 'WebSite',
-        '@id': `${SITE_URL}/#website`,
-        name,
-        url: SITE_URL,
-        inLanguage: 'fr-FR',
-        publisher: { '@id': `${SITE_URL}/#organization` },
-        potentialAction: {
-          '@type': 'SearchAction',
-          target: {
-            '@type': 'EntryPoint',
-            urlTemplate: `${SITE_URL}/boutique?q={search_term_string}`,
-          },
-          'query-input': 'required name=search_term_string',
-        },
-      },
-    ],
+    '@type': 'Organization',
+    name: s.siteName || 'Helvetica Mountain Pioneers',
+    url: SITE_URL,
+    ...(s.hudLogo ? { logo: s.hudLogo } : {}),
+    ...(s.contactEmail ? { email: s.contactEmail } : {}),
+    ...(Array.isArray(s.socialLinks) && s.socialLinks.length
+      ? { sameAs: s.socialLinks.map((l: any) => l?.url).filter(Boolean) }
+      : {}),
   };
   return (
     <Helmet>

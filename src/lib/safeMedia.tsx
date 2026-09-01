@@ -24,7 +24,6 @@ export const SafeImage = forwardRef<HTMLImageElement, ImgHTMLAttributes<HTMLImag
         src={src || MEDIA_FALLBACK}
         loading={loading}
         decoding={decoding}
-        alt=""
         onError={(e) => {
           handleImageFallback(e);
           onError?.(e);
