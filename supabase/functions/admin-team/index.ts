@@ -200,6 +200,20 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Envoi de contrôle : vérifie la configuration SMTP et la délivrabilité
+      // du gabarit « accès & mot de passe » sans toucher à un vrai compte.
+      case 'test_email': {
+        const mail = linkEmail({
+          email,
+          link: `${siteUrl}/reset-password#test`,
+          isNew: false,
+          siteUrl,
+        });
+        const res = await sendMail({ to: email, ...mail });
+        if (!res.ok) return json({ ok: false, mailError: explainSendFailure(res) });
+        return json({ ok: true, mailId: res.id });
+      }
+
 
       case 'delete_user': {
         const u = await findUser();
