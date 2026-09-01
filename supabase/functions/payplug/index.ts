@@ -139,8 +139,59 @@ Deno.serve(async (req) => {
           mode = null;
         }
       }
-      return json({ configured: Boolean(data), last4: data?.last4 ?? null, mode });
+      return json({
+        configured: Boolean(data),
+        last4: data?.last4 ?? null,
+        updatedAt: data?.updated_at ?? null,
+        mode,
+      });
     }
+
+    // ---------- ADMIN : vérifier la clé auprès de PayPlug ----------
+    if (action === "verify") {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
+      const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(
+        authHeader.replace("Bearer ", ""),
+      );
+      if (claimsError || !claimsData?.claims) return json({ error: "Unauthorized" }, 401);
+      const { data: isAdmin } = await userClient.rpc("has_role", {
+        _user_id: claimsData.claims.sub as string,
+        _role: "admin",
+      });
+      if (!isAdmin) return json({ error: "Forbidden: admin role required" }, 403);
+
+      let key: string;
+      try {
+        key = await secretKey();
+      } catch (e) {
+        return json({ valid: false, message: e instanceof Error ? e.message : "Clé absente" });
+      }
+      const mode = key.startsWith("sk_test_") ? "test" : "live";
+      try {
+        // Endpoint léger et non destructif : liste des paiements (limitée à 1).
+        await payplugFetch(key, "/payments?per_page=1");
+        return json({
+          valid: true,
+          mode,
+          last4: key.slice(-4),
+          message:
+            mode === "live"
+              ? "Clé LIVE valide : les paiements réels par carte sont actifs."
+              : "Clé de TEST valide : aucun paiement réel ne sera encaissé.",
+        });
+      } catch (e) {
+        return json({
+          valid: false,
+          mode,
+          message: e instanceof Error ? e.message : "Clé refusée par PayPlug",
+        });
+      }
+    }
+
 
     // ---------- PUBLIC : créer un paiement hébergé ----------
     if (action === "create-payment") {
