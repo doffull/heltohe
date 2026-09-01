@@ -195,8 +195,20 @@ function TeamAccessCard() {
 
   const sendLink = async () => {
     const res = await call('send_link');
-    if (res) toast({ title: 'Lien envoyé', description: email.trim() });
+    if (!res) return;
+    if (res.mailError) {
+      setManualLink(res.resetLink || null);
+      toast({
+        title: "E-mail non envoyé",
+        description: `${res.mailError} — Le lien est affiché ci-dessous, vous pouvez le transmettre manuellement.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+    setManualLink(null);
+    toast({ title: 'Lien envoyé', description: email.trim() });
   };
+
 
   const clearPwd = async () => {
     setConfirmClear(false);
