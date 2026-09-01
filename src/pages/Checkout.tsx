@@ -154,8 +154,12 @@ export default function Checkout() {
     relayInfo: '',
   });
 
-  const relayCost = computeShippingCost(checkoutConfig, subtotal, 'relay');
-  const homeCost = computeShippingCost(checkoutConfig, subtotal, 'home');
+  // Le serveur (validate_and_create_order) évalue le seuil de franco sur le
+  // sous-total APRÈS remise : on applique la même règle ici pour éviter tout
+  // écart entre le montant affiché et la commande enregistrée.
+  const shippingBase = Math.max(0, subtotal - promoDiscount);
+  const relayCost = computeShippingCost(checkoutConfig, shippingBase, 'relay');
+  const homeCost = computeShippingCost(checkoutConfig, shippingBase, 'home');
   const freeThreshold = checkoutConfig?.freeShippingThreshold ?? 99;
   const shippingCost = deliveryMode === 'relay' ? relayCost : homeCost;
 
