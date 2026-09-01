@@ -174,6 +174,7 @@ function TeamAccessCard() {
     const res = await call('create', { role, password: password || undefined });
     if (!res) return;
     setPassword('');
+    setManualLink(res.mailError ? res.resetLink || null : null);
     toast({
       title: res.created ? 'Compte créé' : 'Compte mis à jour',
       description: res.mailError
@@ -182,6 +183,7 @@ function TeamAccessCard() {
       variant: res.mailError ? 'destructive' : undefined,
     });
   };
+
 
   const setPwd = async () => {
     if (password.length < 8) {
