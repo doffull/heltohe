@@ -59,6 +59,7 @@ import AdminMediaAudit from './AdminMediaAudit';
 import AdminErrorLogs from './AdminErrorLogs';
 import AdminProducts from './AdminProducts';
 import AdminOrders from './AdminOrders';
+import AdminOrderTracking from './AdminOrderTracking';
 import AdminCustomers from './AdminCustomers';
 import AdminMarketing from './AdminMarketing';
 import AdminSettings from './AdminSettings';
@@ -147,6 +148,7 @@ const SIDEBAR_ITEMS = [
   { icon: Shield, label: 'Badges produit', href: '/admin/product-badges' },
 
   { icon: ShoppingCart, label: 'Commandes', href: '/admin/commandes' },
+  { icon: PackageSearch, label: 'Suivi des commandes', href: '/admin/suivi-commandes' },
   { icon: ClipboardCheck, label: 'Préparations', href: '/admin/preparations' },
   { icon: CreditCard, label: 'Checkout', href: '/admin/checkout' },
   { icon: CreditCard, label: 'PayPal', href: '/admin/paypal' },
@@ -371,6 +373,7 @@ export default function Admin() {
             <Route path="produits/*" element={<AdminProducts />} />
             <Route path="products/*" element={<AdminProducts />} />
             <Route path="commandes/*" element={<AdminOrders />} />
+            <Route path="suivi-commandes/*" element={<AdminOrderTracking />} />
             <Route path="preparations/*" element={<AdminPreparations />} />
             <Route path="checkout/*" element={<AdminCheckout />} />
             <Route path="paypal/*" element={<AdminPayPal />} />
