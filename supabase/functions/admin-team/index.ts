@@ -143,6 +143,7 @@ Deno.serve(async (req) => {
       return null;
     };
 
+    /** Génère le lien, tente l'envoi. N'échoue jamais : renvoie le lien + l'erreur d'envoi. */
     const sendResetLink = async (isNew: boolean) => {
       const { data, error } = await admin.auth.admin.generateLink({
         type: 'recovery',
@@ -153,10 +154,15 @@ Deno.serve(async (req) => {
       const link = data.properties?.action_link;
       if (!link) throw new Error("Lien de réinitialisation indisponible");
       const mail = linkEmail({ email, link, role, isNew, siteUrl });
-      const res = await sendMail({ to: email, ...mail });
-      if (!res.ok) throw new Error(explainSendFailure(res));
-      return res.id;
+      try {
+        const res = await sendMail({ to: email, ...mail });
+        if (!res.ok) return { link, mailError: explainSendFailure(res) };
+        return { link, mailId: res.id };
+      } catch (e) {
+        return { link, mailError: e instanceof Error ? e.message : String(e) };
+      }
     };
+
 
     switch (action) {
       case 'create': {
@@ -183,9 +189,12 @@ Deno.serve(async (req) => {
 
         let mailId: string | undefined;
         let mailError: string | undefined;
+        let resetLink: string | undefined;
         if (body.sendLink !== false) {
-          try { mailId = await sendResetLink(!existing); }
-          catch (e) { mailError = e instanceof Error ? e.message : String(e); }
+          try {
+            const r = await sendResetLink(!existing);
+            mailId = r.mailId; mailError = r.mailError; resetLink = r.link;
+          } catch (e) { mailError = e instanceof Error ? e.message : String(e); }
         }
 
         return json({
@@ -195,6 +204,7 @@ Deno.serve(async (req) => {
           hasPassword: !!password,
           mailId,
           mailError,
+          resetLink,
         });
       }
 
@@ -215,21 +225,25 @@ Deno.serve(async (req) => {
         });
         if (error) return json({ error: error.message }, 400);
         let mailError: string | undefined;
-        try { await sendResetLink(false); }
-        catch (e) { mailError = e instanceof Error ? e.message : String(e); }
-        return json({ ok: true, userId: u.id, mailError });
+        let resetLink: string | undefined;
+        try {
+          const r = await sendResetLink(false);
+          mailError = r.mailError; resetLink = r.link;
+        } catch (e) { mailError = e instanceof Error ? e.message : String(e); }
+        return json({ ok: true, userId: u.id, mailError, resetLink });
       }
 
       case 'send_link': {
         const u = await findUser();
         if (!u) return json({ error: 'Compte introuvable' }, 404);
         try {
-          const mailId = await sendResetLink(false);
-          return json({ ok: true, mailId });
+          const r = await sendResetLink(false);
+          return json({ ok: true, mailId: r.mailId, mailError: r.mailError, resetLink: r.link });
         } catch (e) {
           return json({ error: e instanceof Error ? e.message : String(e) }, 502);
         }
       }
+
 
       case 'delete_user': {
         const u = await findUser();

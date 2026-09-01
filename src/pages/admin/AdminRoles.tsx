@@ -138,6 +138,8 @@ function TeamAccessCard() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [manualLink, setManualLink] = useState<string | null>(null);
+
 
   const call = async (action: string, payload: Record<string, unknown> = {}) => {
     const mail = email.trim().toLowerCase();
@@ -172,6 +174,7 @@ function TeamAccessCard() {
     const res = await call('create', { role, password: password || undefined });
     if (!res) return;
     setPassword('');
+    setManualLink(res.mailError ? res.resetLink || null : null);
     toast({
       title: res.created ? 'Compte créé' : 'Compte mis à jour',
       description: res.mailError
@@ -180,6 +183,7 @@ function TeamAccessCard() {
       variant: res.mailError ? 'destructive' : undefined,
     });
   };
+
 
   const setPwd = async () => {
     if (password.length < 8) {
@@ -195,14 +199,28 @@ function TeamAccessCard() {
 
   const sendLink = async () => {
     const res = await call('send_link');
-    if (res) toast({ title: 'Lien envoyé', description: email.trim() });
+    if (!res) return;
+    if (res.mailError) {
+      setManualLink(res.resetLink || null);
+      toast({
+        title: "E-mail non envoyé",
+        description: `${res.mailError} — Le lien est affiché ci-dessous, vous pouvez le transmettre manuellement.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+    setManualLink(null);
+    toast({ title: 'Lien envoyé', description: email.trim() });
   };
+
 
   const clearPwd = async () => {
     setConfirmClear(false);
     const res = await call('clear_password');
     if (res) {
+      setManualLink(res.mailError ? res.resetLink || null : null);
       toast({
+
         title: 'Mot de passe supprimé',
         description: res.mailError
           ? `Le compte ne peut plus se connecter. E-mail non envoyé : ${res.mailError}`
@@ -223,6 +241,30 @@ function TeamAccessCard() {
           lien pour le choisir lui-même (valable 24 h, usage unique).
         </p>
       </div>
+
+      {manualLink && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 space-y-2">
+          <p className="text-xs font-medium">
+            L'envoi automatique a échoué (domaine d'expédition non encore vérifié). Transmettez ce
+            lien au membre — valable 24 h, usage unique :
+          </p>
+          <div className="flex gap-2">
+            <Input readOnly value={manualLink} className="text-xs" onFocus={(e) => e.currentTarget.select()} />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                navigator.clipboard.writeText(manualLink);
+                toast({ title: 'Lien copié' });
+              }}
+            >
+              Copier
+            </Button>
+          </div>
+        </div>
+      )}
+
+
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
