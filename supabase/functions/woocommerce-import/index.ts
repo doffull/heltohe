@@ -250,6 +250,31 @@ Deno.serve(async (req) => {
     return parts.length ? ` [${parts.join(' • ')}]` : '';
   };
 
+  /**
+   * Sonde le site hors API WooCommerce pour distinguer :
+   *  - site entièrement KO (hébergeur / WAF)
+   *  - REST WordPress bloqué
+   *  - seul /wc/v3 bloqué (clés, plugin, permaliens)
+   */
+  const probeSite = async (): Promise<string> => {
+    const targets: Array<[string, string]> = [
+      ['page d’accueil', cleanUrl],
+      ['REST WordPress', `${cleanUrl}/wp-json`],
+    ];
+    const out: string[] = [];
+    for (const [label, url] of targets) {
+      try {
+        const res = await doFetch(url, 'query', 0);
+        await res.body?.cancel().catch(() => {});
+        out.push(`${label}: HTTP ${res.status}`);
+      } catch (e: any) {
+        out.push(`${label}: injoignable (${e?.message || 'erreur réseau'})`);
+      }
+    }
+    return out.join(' • ');
+  };
+
+
   const wcFetch = async (path: string, page = 1) => {
     const res = await fetchWithRetry(path, page, 50);
     if (!res.ok) {
