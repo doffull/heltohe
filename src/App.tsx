@@ -41,6 +41,8 @@ const Checkout = lazy(() => import("./pages/Checkout"));
 const OrderConfirmation = lazy(() => import("./pages/OrderConfirmation"));
 
 const Auth = lazy(() => import("./pages/Auth"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+
 const Account = lazy(() => import("./pages/Account"));
 const Admin = lazy(() => import("./pages/admin/Admin"));
 const PrintShippingLabel = lazy(() => import("./pages/admin/PrintShippingLabel"));
