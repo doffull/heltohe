@@ -110,8 +110,12 @@ export async function sendMail(input: SendMailInput): Promise<SendMailResult> {
     to: Array.isArray(input.to) ? input.to : [input.to],
     subject: input.subject,
     html: input.html,
+    // Un e-mail multipart (texte + HTML) passe beaucoup mieux les filtres anti-spam.
+    text: input.text || htmlToText(input.html),
     reply_to: input.replyTo || mailReplyTo(),
+    ...(input.headers ? { headers: input.headers } : {}),
   };
+
 
   try {
     const res = await fetch('https://api.resend.com/emails', {
