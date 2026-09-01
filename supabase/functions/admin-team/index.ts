@@ -143,6 +143,7 @@ Deno.serve(async (req) => {
       return null;
     };
 
+    /** Génère le lien, tente l'envoi. N'échoue jamais : renvoie le lien + l'erreur d'envoi. */
     const sendResetLink = async (isNew: boolean) => {
       const { data, error } = await admin.auth.admin.generateLink({
         type: 'recovery',
@@ -153,10 +154,15 @@ Deno.serve(async (req) => {
       const link = data.properties?.action_link;
       if (!link) throw new Error("Lien de réinitialisation indisponible");
       const mail = linkEmail({ email, link, role, isNew, siteUrl });
-      const res = await sendMail({ to: email, ...mail });
-      if (!res.ok) throw new Error(explainSendFailure(res));
-      return res.id;
+      try {
+        const res = await sendMail({ to: email, ...mail });
+        if (!res.ok) return { link, mailError: explainSendFailure(res) };
+        return { link, mailId: res.id };
+      } catch (e) {
+        return { link, mailError: e instanceof Error ? e.message : String(e) };
+      }
     };
+
 
     switch (action) {
       case 'create': {
