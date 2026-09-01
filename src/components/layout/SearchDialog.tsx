@@ -44,6 +44,7 @@ interface SearchDialogProps {
 
 export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
   const navigate = useNavigate();
+  const { format } = useCurrency();
   const { data: allProducts = [] } = useProducts();
   const products = useMemo(() => excludeMarketplaceProducts(allProducts), [allProducts]);
   const { data: categories = [] } = useCategories();

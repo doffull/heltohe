@@ -16,6 +16,7 @@ interface MobileBuyBarProps {
 /** Barre d'achat collante mobile : prix + taille + ajout au panier. */
 export default function MobileBuyBar({ product, selectedSize, onAddToCart, anchorRef }: MobileBuyBarProps) {
   const [visible, setVisible] = useState(false);
+  const { format } = useCurrency();
 
   useEffect(() => {
     const el = anchorRef.current;

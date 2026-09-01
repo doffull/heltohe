@@ -30,6 +30,7 @@ const fadeUp = {
 
 export default function ProductInfo({ product, isNew, headerOnly, detailsOnly }: ProductInfoProps) {
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
+  const { format, isConverted } = useCurrency();
   const { designSettings } = useApp();
   const { isAdmin } = useAuth();
   const { isOpen: editorOpen } = useVisualEditor();

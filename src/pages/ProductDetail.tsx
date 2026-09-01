@@ -313,6 +313,7 @@ export default function ProductDetail() {
 /* ------------------------------------------------------------------ */
 function CompleteLook({ productId, onAddToCart }: { productId: string; onAddToCart: (item: any) => Promise<void> }) {
   const { data: looks = [] } = useProductLooks();
+  const { format } = useCurrency();
   const { data: allProducts = [] } = useProducts();
   const { toast } = useToast();
 

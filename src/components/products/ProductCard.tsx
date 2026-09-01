@@ -43,6 +43,7 @@ export function ProductCard({
   hoverDuration = 500,
   showSizes = true,
 }: ProductCardProps) {
+  const { format } = useCurrency();
   const [selectedColorIndex, setSelectedColorIndex] = useState<number | null>(null);
   const [hovered, setHovered] = useState(false);
   const { data: reviewStats } = useReviewStats(product.id);
