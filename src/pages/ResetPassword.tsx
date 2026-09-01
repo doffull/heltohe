@@ -70,14 +70,25 @@ export default function ResetPassword() {
             <p className="text-sm">Mot de passe enregistré. Redirection…</p>
           </div>
         ) : !hasSession ? (
-          <div className="space-y-4 text-center">
-            <p className="text-sm text-muted-foreground">
-              Ce lien est invalide ou a expiré. Demandez un nouveau lien à un administrateur.
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground text-center">
+              Ce lien a expiré ou a déjà été utilisé. Saisissez votre adresse e-mail pour
+              recevoir un nouveau lien.
             </p>
+            <div className="space-y-2">
+              <Label htmlFor="resend-email">Votre e-mail</Label>
+              <Input id="resend-email" type="email" autoComplete="email" value={resendEmail}
+                onChange={(e) => setResendEmail(e.target.value)} placeholder="vous@exemple.com" />
+            </div>
+            <Button onClick={resendLink} className="w-full gap-2" disabled={resending}>
+              {resending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+              Recevoir un nouveau lien
+            </Button>
             <Button variant="outline" onClick={() => navigate('/auth')} className="w-full">
               Retour à la connexion
             </Button>
           </div>
+
         ) : (
           <form onSubmit={submit} className="space-y-4">
             <div className="space-y-2">
