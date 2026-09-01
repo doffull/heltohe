@@ -140,6 +140,8 @@ export default function AdminOrders() {
   );
 
   const [isGeneratingLabel, setIsGeneratingLabel] = useState(false);
+  const [labelOrderId, setLabelOrderId] = useState<string | null>(null);
+
   const [isResending, setIsResending] = useState(false);
   const [isMarkingPaid, setIsMarkingPaid] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('all');
