@@ -4,6 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Printer, Loader2, Scissors, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { triggerOrderEmail } from '@/hooks/useOrders';
+
 
 interface SlipItem {
   name?: string;
@@ -81,6 +83,9 @@ export default function PrintShippingLabel() {
       if (error) throw error;
       if (data?.error) throw new Error(data.details || data.error);
       toast({ title: 'Étiquette Colissimo générée', description: data?.trackingNumber ? `Suivi : ${data.trackingNumber}` : undefined });
+      // E-mail d'expédition au client (suivi Colissimo) — best-effort
+      await triggerOrderEmail(id, 'shipped');
+
       await load();
     } catch (e) {
       toast({ title: 'Échec de la génération', description: e instanceof Error ? e.message : String(e), variant: 'destructive' });

@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { sendMail } from '../_shared/mailer.ts';
+import { sendMail, adminEmailAddress } from '../_shared/mailer.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -459,8 +459,8 @@ serve(async (req) => {
   }
 
   try {
-    if (!Deno.env.get('RESEND_API_KEY')) {
-      throw new Error('RESEND_API_KEY is not configured');
+    if (!Deno.env.get('SMTP_HOST')) {
+      throw new Error('SMTP is not configured (SMTP_HOST)');
     }
 
     const payload: EmailPayload = await req.json();
@@ -514,17 +514,21 @@ serve(async (req) => {
       );
     }
 
-    // Send admin notification email if configured (only for new orders)
-    if (adminEmail && emailType === 'order_confirmation') {
+    // Alerte administrateur : nouvelle commande / paiement validé à préparer
+    const adminRecipient = adminEmail || adminEmailAddress();
+    if (adminRecipient && emailType !== 'resend_confirmation') {
       const adminMail = await sendMail({
-        to: adminEmail,
-        subject: `🛍️ Nouvelle commande ${orderNumber} — ${customerName}`,
+        to: adminRecipient,
+        subject: emailType === 'payment_confirmation'
+          ? `💳 Commande payée ${orderNumber} — à préparer (${customerName})`
+          : `🛍️ Nouvelle commande ${orderNumber} — ${customerName}`,
         html: buildAdminEmailHtml(payload),
       });
       if (!adminMail.ok) {
         console.error('Admin notification email error:', adminMail.error);
       }
     }
+
 
     return new Response(
       JSON.stringify({ success: true, id: customerMail.id }),
