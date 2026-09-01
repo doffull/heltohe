@@ -170,7 +170,7 @@ export function HeroSlider() {
           )}
 
           {/* Big bold title */}
-          <h1
+          <h2
             className="font-bold uppercase tracking-tight text-white leading-[0.92]"
             style={{ fontSize: 'clamp(2.25rem, 9vw, 5.5rem)' }}
           >
@@ -185,7 +185,7 @@ export function HeroSlider() {
                 {currentSlide.title}
               </span>
             </InlineEditable>
-          </h1>
+          </h2>
 
           {/* CTA */}
           {currentSlide.ctaText && (currentSlide as any).ctaVisible !== false && (
