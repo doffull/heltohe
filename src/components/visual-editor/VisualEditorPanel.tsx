@@ -13,6 +13,7 @@ import { HeroCtaEditorTab } from './tabs/HeroCtaEditorTab';
 import { PageSwitcher } from './PageSwitcher';
 import { useDesignHistory } from '@/hooks/useDesignHistory';
 import { SITE_URL } from '@/lib/site';
+import { countEdits, routeKey } from '@/lib/pageOverrides';
 
 function getPublishedOrigin() {
   const origin = window.location.origin;
@@ -93,6 +94,9 @@ export function VisualEditorPanel() {
   }
 
   const isHome = currentPageKey === 'home';
+  const pageEditCount = countEdits(
+    (((designSettings as any).pageOverrides || {}) as Record<string, any>)[routeKey(window.location.pathname)],
+  );
 
   return (
     <AnimatePresence>
@@ -181,11 +185,20 @@ export function VisualEditorPanel() {
             </Tabs>
           ) : (
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              <div className="p-3 border border-dashed border-border rounded bg-muted/20">
-                <p className="text-xs font-semibold mb-1">Édition de page</p>
-                <p className="text-[11px] text-muted-foreground">
-                  Vous éditez actuellement la page sélectionnée. Les contrôles d'image, de texte et de boutons sont disponibles directement sur la page (survolez les éléments).
+              <div className="p-3 border border-dashed border-primary/40 rounded bg-primary/5">
+                <p className="text-xs font-semibold mb-1">Édition inline active</p>
+                <ul className="text-[11px] text-muted-foreground space-y-1 list-disc pl-4">
+                  <li>Cliquez un <strong>texte</strong> pour le modifier (Entrée pour valider, Échap pour annuler).</li>
+                  <li>Cliquez une <strong>image</strong> pour la remplacer via la médiathèque.</li>
+                  <li>Sélectionnez un bloc puis <strong>Masquer</strong> pour le retirer de la page.</li>
+                </ul>
+                <p className="text-[11px] text-muted-foreground mt-2">
+                  Chaque modification est enregistrée immédiatement, pour mobile et ordinateur.
                 </p>
+              </div>
+              <div className="p-3 border border-border rounded">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Modifications sur cette page</p>
+                <p className="text-2xl font-bold">{pageEditCount}</p>
               </div>
               <div className="p-3 border border-border rounded">
                 <p className="text-[11px] text-muted-foreground">
