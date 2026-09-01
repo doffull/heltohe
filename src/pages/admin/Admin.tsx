@@ -45,6 +45,7 @@ import {
   FileUp,
   Globe,
   PanelBottom,
+  Share2,
 
   PackageSearch,
 } from 'lucide-react';
