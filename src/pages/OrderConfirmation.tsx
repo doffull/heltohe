@@ -132,8 +132,9 @@ export default function OrderConfirmation() {
 
   if (!receipt) return null;
 
-  const isPaid = receipt.payment_status === 'paid' || receipt.status === 'paid';
-  const statusLabel = STATUS_LABELS[receipt.status || ''] || receipt.status || '—';
+  const isPaid = receipt.payment_status?.toLowerCase() === 'paid' || receipt.status?.toLowerCase() === 'paid';
+  const statusLabel = STATUS_LABELS[(receipt.status || '').toLowerCase()] || receipt.status || '—';
+
 
   return (
     <div className="min-h-screen bg-background py-8 px-3 sm:px-4 print:py-0">
