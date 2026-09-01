@@ -13,7 +13,7 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-const ALLOWED_GATEWAYS = ["stripe", "payplug", "mollie", "klarna", "paypal"];
+const ALLOWED_GATEWAYS = ["payplug", "paypal"];
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
