@@ -40,6 +40,7 @@ export default function AdminCheckout() {
     paymentMethods: PAYMENT_GATEWAYS,
     checkoutMessage: '',
     relayMapSettings: DEFAULT_RELAY_MAP_SETTINGS,
+    autoColissimoLabel: true,
   });
 
   const [visibleKeys, setVisibleKeys] = useState<Record<string, boolean>>({});
