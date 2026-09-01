@@ -82,9 +82,14 @@ async function urlToBase64(url: string): Promise<{ b64: string; mime: string }> 
 
 const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
+type Img = { b64: string; mime: string };
+
+/**
+ * One image-generation call. `images` are sent in order: the first one is the
+ * base (person / mannequin), the following ones are garment references.
+ */
 async function composite(
-  base: { b64: string; mime: string },
-  garment: { b64: string; mime: string },
+  images: Img[],
   prompt: string,
 ): Promise<{ image?: string; status?: number; detail?: string }> {
   const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -101,8 +106,10 @@ async function composite(
           role: 'user',
           content: [
             { type: 'text', text: prompt },
-            { type: 'image_url', image_url: { url: `data:${base.mime};base64,${base.b64}` } },
-            { type: 'image_url', image_url: { url: `data:${garment.mime};base64,${garment.b64}` } },
+            ...images.map((im) => ({
+              type: 'image_url' as const,
+              image_url: { url: `data:${im.mime};base64,${im.b64}` },
+            })),
           ],
         },
       ],
