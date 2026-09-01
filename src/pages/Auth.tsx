@@ -471,7 +471,7 @@ export default function Auth() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => { setForgotEmail(loginEmail); setForgotMode(true); }}
+                    onClick={() => { setForgotEmail(loginEmail); setForgotOpenedAt(Date.now()); setForgotMode(true); }}
                     className="text-xs text-muted-foreground hover:text-foreground underline"
                   >
                     Mot de passe oublié ?
