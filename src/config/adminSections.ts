@@ -6,6 +6,7 @@
 export const ADMIN_SECTIONS: { label: string; href: string }[] = [
   { label: 'Dashboard', href: '/admin' },
   { label: 'Live', href: '/admin/live' },
+  { label: 'Analytics & Stats', href: '/admin/analytics' },
   { label: 'Produits', href: '/admin/produits' },
   { label: 'Badges produit', href: '/admin/product-badges' },
   { label: 'Commandes', href: '/admin/commandes' },

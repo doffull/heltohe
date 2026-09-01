@@ -96,6 +96,7 @@ import AdminFeedSections from './AdminFeedSections';
 import AdminCollab from './AdminCollab';
 
 import AdminBannersAnalytics from './AdminBannersAnalytics';
+import AdminAnalytics from './AdminAnalytics';
 import AdminBoutiques from './AdminBoutiques';
 import AdminMannequins from './AdminMannequins';
 import AdminPageTemplates from './AdminPageTemplates';
@@ -152,6 +153,7 @@ export const DEFAULT_SECTION_COLORS: Record<string, string> = {
 const SIDEBAR_ITEMS = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/admin' },
   { icon: Activity, label: 'Live', href: '/admin/live' },
+  { icon: BarChart3, label: 'Analytics & Stats', href: '/admin/analytics' },
   { icon: Package, label: 'Produits', href: '/admin/produits' },
   { icon: Shield, label: 'Badges produit', href: '/admin/product-badges' },
 
@@ -382,6 +384,7 @@ export default function Admin() {
           <Routes>
             <Route index element={<AdminDashboard />} />
             <Route path="live/*" element={<AdminLive />} />
+            <Route path="analytics/*" element={<AdminAnalytics />} />
             <Route path="produits/*" element={<AdminProducts />} />
             <Route path="products/*" element={<AdminProducts />} />
             <Route path="commandes/*" element={<AdminOrders />} />

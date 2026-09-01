@@ -1059,3 +1059,9 @@ body.lve-active .lve-editing {
   to { transform: rotate(360deg); }
 }
 .animate-fab-ring { animation: fab-ring-spin 6s linear infinite; }
+
+/* Bandeau « ventes en direct » — Analytics & Stats */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
