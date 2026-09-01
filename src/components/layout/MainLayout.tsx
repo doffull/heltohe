@@ -51,6 +51,7 @@ import {
 } from "@/components/ui/sheet";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import LocaleSwitcher from '@/components/layout/LocaleSwitcher';
 
 const IMAGE_FALLBACK = '/placeholder.svg';
 
@@ -495,18 +496,10 @@ export function MainLayout({ children }: MainLayoutProps) {
                 </Sheet>
               )}
 
-              {/* Language selector */}
-              <button
-                onClick={() => setLanguage(language === 'FR' ? 'EN' : 'FR')}
-                aria-label={`Changer la langue (actuellement ${language})`}
-                title={`Changer la langue (actuellement ${language})`}
-                className={cn(
-                  "text-xs font-bold tracking-wider text-muted-foreground hover:text-foreground transition-colors",
-                  sidebarActive ? "hidden xl:block" : "hidden md:block"
-                )}
-              >
-                {language}
-              </button>
+              {/* Langue + devise */}
+              <LocaleSwitcher
+                className={cn(sidebarActive ? "hidden xl:flex" : "hidden md:flex")}
+              />
 
               {/* Mobile search trigger */}
               <Button
@@ -633,13 +626,10 @@ export function MainLayout({ children }: MainLayoutProps) {
                         <span className="text-lg font-medium">Aide</span>
                         <Bot className="h-5 w-5" />
                       </button>
-                      <button
-                        onClick={() => setLanguage(language === 'FR' ? 'EN' : 'FR')}
-                        className="flex items-center justify-between py-3 w-full"
-                      >
-                        <span className="text-lg font-medium">Langue</span>
-                        <span className="text-muted-foreground">{language}</span>
-                      </button>
+                      <div className="flex items-center justify-between py-3 w-full">
+                        <span className="text-lg font-medium">Langue &amp; devise</span>
+                        <LocaleSwitcher compact className="text-sm" />
+                      </div>
                     </div>
                   </div>
                 </SheetContent>
