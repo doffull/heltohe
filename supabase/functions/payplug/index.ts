@@ -32,7 +32,9 @@ async function secretKey(): Promise<string> {
     .eq("gateway", "payplug")
     .maybeSingle();
   if (error) throw new Error(error.message);
-  const key = String(data?.secret_key || "");
+  const key =
+    String(data?.secret_key || "") ||
+    String(Deno.env.get("PAYPLUG_SECRET_KEY") || Deno.env.get("payplug_api_secret") || "");
   if (!key) {
     throw new Error(
       "Clé secrète PayPlug manquante. Renseignez-la dans Admin → Paiement & Livraison.",
