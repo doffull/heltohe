@@ -42,6 +42,49 @@ export default function Auth() {
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
 
+  // Mot de passe oublié
+  const [forgotMode, setForgotMode] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotHoneypot, setForgotHoneypot] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotOpenedAt, setForgotOpenedAt] = useState(Date.now());
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      emailSchema.parse(forgotEmail.trim());
+    } catch {
+      toast({ title: 'Adresse invalide', description: 'Saisissez une adresse e-mail valide.', variant: 'destructive' });
+      return;
+    }
+    setForgotLoading(true);
+    const { data, error } = await supabase.functions.invoke('password-reset-request', {
+      body: {
+        email: forgotEmail.trim(),
+        honeypot: forgotHoneypot,
+        elapsedMs: Date.now() - forgotOpenedAt,
+        origin: window.location.origin,
+      },
+    });
+    setForgotLoading(false);
+
+    const message = (data as { error?: string; message?: string } | null)?.error;
+    if (error || message) {
+      toast({
+        title: 'Envoi impossible',
+        description: message || "Le lien n'a pas pu être envoyé. Réessayez dans quelques minutes.",
+        variant: 'destructive',
+      });
+      return;
+    }
+    toast({
+      title: 'Vérifiez votre boîte e-mail',
+      description: "Si un compte existe pour cette adresse, un lien de réinitialisation vient d'être envoyé.",
+    });
+    setForgotMode(false);
+  };
+
+
   // Signup form
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
@@ -341,6 +384,51 @@ export default function Auth() {
             </TabsList>
 
             <TabsContent value="login">
+              {forgotMode ? (
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Saisissez l'adresse e-mail de votre compte : vous recevrez un lien pour
+                    choisir un nouveau mot de passe.
+                  </p>
+                  <div className="space-y-2">
+                    <Label htmlFor="forgot-email" className="text-xs hud-text flex items-center gap-2">
+                      <Mail className="h-3 w-3" />
+                      EMAIL
+                    </Label>
+                    <Input
+                      id="forgot-email"
+                      type="email"
+                      autoComplete="email"
+                      placeholder="vous@exemple.com"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      className="bg-background/50"
+                      required
+                    />
+                  </div>
+                  {/* Champ piège anti-robot : invisible pour les humains. */}
+                  <input
+                    type="text"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    value={forgotHoneypot}
+                    onChange={(e) => setForgotHoneypot(e.target.value)}
+                    className="hidden"
+                    aria-hidden="true"
+                  />
+                  <Button type="submit" className="w-full chamfer-hud-sm gap-2" disabled={forgotLoading}>
+                    <KeyRound className="h-4 w-4" />
+                    {forgotLoading ? 'ENVOI...' : 'RECEVOIR LE LIEN'}
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => setForgotMode(false)}
+                    className="w-full text-xs text-muted-foreground hover:text-foreground underline"
+                  >
+                    Retour à la connexion
+                  </button>
+                </form>
+              ) : (
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="login-email" className="text-xs hud-text flex items-center gap-2">
@@ -381,6 +469,13 @@ export default function Auth() {
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => { setForgotEmail(loginEmail); setForgotOpenedAt(Date.now()); setForgotMode(true); }}
+                    className="text-xs text-muted-foreground hover:text-foreground underline"
+                  >
+                    Mot de passe oublié ?
+                  </button>
                 </div>
 
                 <Button 
@@ -398,7 +493,9 @@ export default function Auth() {
                   )}
                 </Button>
               </form>
+              )}
             </TabsContent>
+
 
             <TabsContent value="phone">
               {!otpSent ? (

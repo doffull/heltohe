@@ -213,6 +213,19 @@ function TeamAccessCard() {
     toast({ title: 'Lien envoyé', description: email.trim() });
   };
 
+  // Contrôle de délivrabilité : envoie le gabarit réel sans toucher au compte.
+  const testEmail = async () => {
+    const res = await call('test_email');
+    if (!res) return;
+    toast({
+      title: res.mailError ? 'Envoi de test refusé' : 'E-mail de test envoyé',
+      description: res.mailError || `Vérifiez la boîte de ${email.trim()} (et les indésirables).`,
+      variant: res.mailError ? 'destructive' : undefined,
+    });
+  };
+
+
+
 
   const clearPwd = async () => {
     setConfirmClear(false);
@@ -308,6 +321,11 @@ function TeamAccessCard() {
           {spin('send_link') ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
           Envoyer un lien
         </Button>
+        <Button variant="ghost" onClick={testEmail} disabled={!!busy || !email.trim()} className="gap-2">
+          {spin('test_email') ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+          Tester l'e-mail
+        </Button>
+
         <Button variant="destructive" onClick={() => setConfirmClear(true)} disabled={!!busy || !email.trim()} className="gap-2">
           {spin('clear_password') ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
           Supprimer le mot de passe

@@ -15,6 +15,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { sendMail, explainSendFailure } from '../_shared/mailer.ts';
+import { accessEmail } from '../_shared/access-email.ts';
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -23,13 +24,6 @@ const json = (body: unknown, status = 200) =>
   });
 
 const ROLES = ['admin', 'stock_manager', 'preparator', 'auditor', 'order_validator'];
-const ROLE_LABELS: Record<string, string> = {
-  admin: 'Administrateur',
-  stock_manager: 'Responsable stock',
-  preparator: 'Préparateur',
-  auditor: 'Auditeur',
-  order_validator: 'Valideur commandes',
-};
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -44,54 +38,16 @@ function linkEmail(opts: {
   role?: string;
   isNew: boolean;
   siteUrl: string;
-}): { subject: string; html: string; text: string } {
-  const roleLine = opts.role
-    ? `<p style="margin:0 0 16px;font-size:14px;color:#555;">Rôle attribué : <strong>${ROLE_LABELS[opts.role] || opts.role}</strong></p>`
-    : '';
-  const intro = opts.isNew
-    ? "Un accès à l'espace d'administration HELVETICA-MP a été créé pour vous. Définissez votre mot de passe pour l'activer."
-    : 'Vous pouvez définir un nouveau mot de passe pour votre accès HELVETICA-MP.';
-  const subject = opts.isNew
-    ? 'Activez votre accès HELVETICA-MP'
-    : 'Définir un nouveau mot de passe HELVETICA-MP';
-
-  const html = `<!DOCTYPE html>
-<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${subject}</title></head>
-<body style="margin:0;padding:0;background:#f5f5f5;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:32px 0;"><tr><td align="center">
-<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border-radius:4px;overflow:hidden;">
-<tr><td style="background:#111;padding:28px 32px;text-align:center;">
-  <h1 style="margin:0;color:#fff;font-size:20px;font-weight:900;letter-spacing:4px;text-transform:uppercase;">HELVETICA-MP</h1>
-</td></tr>
-<tr><td style="padding:32px;">
-  <h2 style="margin:0 0 12px;font-size:18px;color:#111;">${opts.isNew ? 'Votre accès est prêt' : 'Nouveau mot de passe'}</h2>
-  <p style="margin:0 0 16px;font-size:14px;color:#555;line-height:1.7;">${intro}</p>
-  ${roleLine}
-  <p style="margin:24px 0;text-align:center;">
-    <a href="${opts.link}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:14px 28px;font-size:13px;letter-spacing:2px;text-transform:uppercase;border-radius:2px;">Définir mon mot de passe</a>
-  </p>
-  <p style="margin:0;font-size:12px;color:#888;line-height:1.7;">Ce lien est valable 24 heures et à usage unique. Si le bouton ne fonctionne pas, copiez cette adresse dans votre navigateur :<br>
-  <span style="word-break:break-all;color:#555;">${opts.link}</span></p>
-</td></tr>
-<tr><td style="padding:24px 32px;border-top:1px solid #f0f0f0;">
-  <p style="margin:0;font-size:12px;color:#aaa;text-align:center;line-height:1.8;">Cet e-mail a été envoyé à <strong>${opts.email}</strong> à la demande d'un administrateur de ${opts.siteUrl}.</p>
-</td></tr>
-</table></td></tr></table></body></html>`;
-
-  const text = [
-    opts.isNew ? 'Votre accès HELVETICA-MP est prêt' : 'Nouveau mot de passe HELVETICA-MP',
-    '',
-    intro,
-    opts.role ? `Rôle attribué : ${ROLE_LABELS[opts.role] || opts.role}` : '',
-    '',
-    'Définissez votre mot de passe ici (lien valable 24 h, usage unique) :',
-    opts.link,
-    '',
-    `E-mail envoyé à ${opts.email} à la demande d'un administrateur de ${opts.siteUrl}.`,
-  ].filter(Boolean).join('\n');
-
-  return { subject, html, text };
+}) {
+  return accessEmail({
+    email: opts.email,
+    link: opts.link,
+    role: opts.role,
+    kind: opts.isNew ? 'new_access' : 'reset',
+    siteUrl: opts.siteUrl,
+  });
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -242,6 +198,20 @@ Deno.serve(async (req) => {
         } catch (e) {
           return json({ error: e instanceof Error ? e.message : String(e) }, 502);
         }
+      }
+
+      // Envoi de contrôle : vérifie la configuration SMTP et la délivrabilité
+      // du gabarit « accès & mot de passe » sans toucher à un vrai compte.
+      case 'test_email': {
+        const mail = linkEmail({
+          email,
+          link: `${siteUrl}/reset-password#test`,
+          isNew: false,
+          siteUrl,
+        });
+        const res = await sendMail({ to: email, ...mail });
+        if (!res.ok) return json({ ok: false, mailError: explainSendFailure(res) });
+        return json({ ok: true, mailId: res.id });
       }
 
 

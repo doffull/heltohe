@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, KeyRound, CheckCircle2 } from 'lucide-react';
+import { Loader2, KeyRound, CheckCircle2, Mail } from 'lucide-react';
 
 /**
  * Page publique de définition d'un nouveau mot de passe.
@@ -20,6 +20,34 @@ export default function ResetPassword() {
   const [confirm, setConfirm] = useState('');
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
+  const [resendEmail, setResendEmail] = useState('');
+  const [resending, setResending] = useState(false);
+
+  const resendLink = async () => {
+    const email = resendEmail.trim();
+    if (!/^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(email)) {
+      toast({ title: 'Adresse invalide', description: 'Saisissez une adresse e-mail valide.', variant: 'destructive' });
+      return;
+    }
+    setResending(true);
+    const { data, error } = await supabase.functions.invoke('password-reset-request', {
+      body: { email, elapsedMs: 5000, origin: window.location.origin },
+    });
+    setResending(false);
+    const message = (data as { error?: string } | null)?.error;
+    if (error || message) {
+      toast({
+        title: 'Envoi impossible',
+        description: message || 'Réessayez dans quelques minutes.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    toast({
+      title: 'Vérifiez votre boîte e-mail',
+      description: "Si un compte existe pour cette adresse, un nouveau lien vient d'être envoyé.",
+    });
+  };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
@@ -70,14 +98,25 @@ export default function ResetPassword() {
             <p className="text-sm">Mot de passe enregistré. Redirection…</p>
           </div>
         ) : !hasSession ? (
-          <div className="space-y-4 text-center">
-            <p className="text-sm text-muted-foreground">
-              Ce lien est invalide ou a expiré. Demandez un nouveau lien à un administrateur.
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground text-center">
+              Ce lien a expiré ou a déjà été utilisé. Saisissez votre adresse e-mail pour
+              recevoir un nouveau lien.
             </p>
+            <div className="space-y-2">
+              <Label htmlFor="resend-email">Votre e-mail</Label>
+              <Input id="resend-email" type="email" autoComplete="email" value={resendEmail}
+                onChange={(e) => setResendEmail(e.target.value)} placeholder="vous@exemple.com" />
+            </div>
+            <Button onClick={resendLink} className="w-full gap-2" disabled={resending}>
+              {resending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+              Recevoir un nouveau lien
+            </Button>
             <Button variant="outline" onClick={() => navigate('/auth')} className="w-full">
               Retour à la connexion
             </Button>
           </div>
+
         ) : (
           <form onSubmit={submit} className="space-y-4">
             <div className="space-y-2">
