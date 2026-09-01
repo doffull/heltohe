@@ -8,6 +8,7 @@ import { useApp } from '@/context/AppContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
+import { subscribeToNewsletter } from '@/hooks/useNewsletterPopups';
 import TrustpilotWidget from '@/components/TrustpilotWidget';
 import { resolveBrand } from '@/components/icons/BrandIcons';
 import InstallAppButton from '@/components/pwa/InstallAppButton';
@@ -159,11 +160,10 @@ export function Footer({ offsetClassName }: FooterProps) {
 
     setNlState('sending');
     try {
-      const { error } = await supabase.from('newsletters').insert({ email });
-      if (error && !String(error.message || '').toLowerCase().includes('duplicate')) throw error;
+      await subscribeToNewsletter(email, undefined, { source: 'footer' });
       if (emailInput) emailInput.value = '';
       setNlState('done');
-      toast.success('Inscription enregistrée');
+      toast.success('Vérifiez votre boîte mail pour confirmer votre inscription.');
     } catch {
       setNlState('idle');
       setNlError("L'inscription a échoué, réessayez.");

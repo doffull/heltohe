@@ -87,6 +87,8 @@ import AdminSeo from './AdminSeo';
 import AdminSeoRedirects from './AdminSeoRedirects';
 import AdminFooter from './AdminFooter';
 import AdminSocials from './AdminSocials';
+import AdminLocales from './AdminLocales';
+import AdminNewsletters from './AdminNewsletters';
 import AdminTopBanner from './AdminTopBanner';
 import AdminFeedSections from './AdminFeedSections';
 import AdminCollab from './AdminCollab';
@@ -168,6 +170,8 @@ const SIDEBAR_ITEMS = [
   { icon: Palette, label: 'Design', href: '/admin/design' },
   { icon: PanelBottom, label: 'Footer', href: '/admin/footer' },
   { icon: Share2, label: 'Réseaux sociaux', href: '/admin/reseaux-sociaux' },
+  { icon: Globe, label: 'Devises & Langues', href: '/admin/devises-langues' },
+  { icon: Mail, label: 'Newsletters', href: '/admin/newsletters' },
   { icon: Globe, label: 'SEO & Visibilité', href: '/admin/seo' },
   { icon: Globe, label: 'Redirections SEO', href: '/admin/redirections' },
   { icon: Sparkles, label: 'Espace Collab', href: '/admin/collab' },
@@ -413,6 +417,8 @@ export default function Admin() {
             <Route path="redirections/*" element={<AdminSeoRedirects />} />
             <Route path="footer/*" element={<AdminFooter />} />
             <Route path="reseaux-sociaux" element={<AdminSocials />} />
+            <Route path="devises-langues" element={<AdminLocales />} />
+            <Route path="newsletters" element={<AdminNewsletters />} />
             <Route path="top-banner" element={<AdminTopBanner />} />
             <Route path="feed-sections" element={<AdminFeedSections />} />
             <Route path="collab/*" element={<AdminCollab />} />

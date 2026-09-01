@@ -82,14 +82,19 @@ export interface SubscribeOpts {
 }
 
 export async function subscribeToNewsletter(email: string, firstName?: string, opts: SubscribeOpts = {}) {
-  const { error } = await supabase.from('newsletters').insert({
-    email,
-    first_name: firstName || null,
-    source: opts.source || null,
-    popup_id: opts.popupId || null,
-    referrer_path: opts.referrerPath || (typeof window !== 'undefined' ? window.location.pathname : null),
-  } as any);
+  // Double opt-in : la fonction serveur enregistre le contact et envoie l'e-mail de confirmation.
+  const { data, error } = await supabase.functions.invoke('newsletter-subscribe', {
+    body: {
+      email,
+      firstName: firstName || undefined,
+      source: opts.source || 'site',
+      popupId: opts.popupId || undefined,
+      referrerPath: opts.referrerPath || (typeof window !== 'undefined' ? window.location.pathname : undefined),
+      origin: typeof window !== 'undefined' ? window.location.origin : undefined,
+    },
+  });
   if (error) throw error;
+  if ((data as any)?.error) throw new Error((data as any).error);
   // Mark popup view as converted if applicable
   if (opts.popupId && opts.sessionId) {
     await supabase.rpc('mark_popup_converted' as any, {

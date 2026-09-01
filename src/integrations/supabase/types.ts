@@ -574,6 +574,7 @@ export type Database = {
       }
       checkout_config: {
         Row: {
+          auto_colissimo_label: boolean
           checkout_message: string | null
           config_key: string
           created_at: string
@@ -589,6 +590,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auto_colissimo_label?: boolean
           checkout_message?: string | null
           config_key?: string
           created_at?: string
@@ -604,6 +606,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auto_colissimo_label?: boolean
           checkout_message?: string | null
           config_key?: string
           created_at?: string
@@ -1841,6 +1844,92 @@ export type Database = {
         }
         Relationships: []
       }
+      newsletter_campaign_sends: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          email: string
+          error_message: string | null
+          id: string
+          status: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          email: string
+          error_message?: string | null
+          id?: string
+          status?: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          email?: string
+          error_message?: string | null
+          id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "newsletter_campaign_sends_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "newsletter_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      newsletter_campaigns: {
+        Row: {
+          content: string
+          created_at: string
+          cta_label: string | null
+          cta_url: string | null
+          failed_count: number
+          id: string
+          image_url: string | null
+          preheader: string | null
+          sent_at: string | null
+          sent_count: number
+          status: string
+          subject: string
+          unsubscribed_count: number
+          updated_at: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          cta_label?: string | null
+          cta_url?: string | null
+          failed_count?: number
+          id?: string
+          image_url?: string | null
+          preheader?: string | null
+          sent_at?: string | null
+          sent_count?: number
+          status?: string
+          subject: string
+          unsubscribed_count?: number
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          cta_label?: string | null
+          cta_url?: string | null
+          failed_count?: number
+          id?: string
+          image_url?: string | null
+          preheader?: string | null
+          sent_at?: string | null
+          sent_count?: number
+          status?: string
+          subject?: string
+          unsubscribed_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       newsletter_popup_views: {
         Row: {
           converted: boolean
@@ -1930,6 +2019,8 @@ export type Database = {
       }
       newsletters: {
         Row: {
+          confirm_token: string
+          confirmed_at: string | null
           created_at: string
           email: string
           first_name: string | null
@@ -1940,9 +2031,12 @@ export type Database = {
           referrer_path: string | null
           source: string | null
           subscribed_at: string
+          unsubscribe_token: string
           unsubscribed_at: string | null
         }
         Insert: {
+          confirm_token?: string
+          confirmed_at?: string | null
           created_at?: string
           email: string
           first_name?: string | null
@@ -1953,9 +2047,12 @@ export type Database = {
           referrer_path?: string | null
           source?: string | null
           subscribed_at?: string
+          unsubscribe_token?: string
           unsubscribed_at?: string | null
         }
         Update: {
+          confirm_token?: string
+          confirmed_at?: string | null
           created_at?: string
           email?: string
           first_name?: string | null
@@ -1966,6 +2063,7 @@ export type Database = {
           referrer_path?: string | null
           source?: string | null
           subscribed_at?: string
+          unsubscribe_token?: string
           unsubscribed_at?: string | null
         }
         Relationships: []

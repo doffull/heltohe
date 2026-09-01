@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import AccountDashboard from './AccountDashboard';
 import AccountOrders from './AccountOrders';
+import AccountOrderTracking from './AccountOrderTracking';
 import AccountProfile from './AccountProfile';
 import AccountAddresses from './AccountAddresses';
 import AccountLoyalty from './AccountLoyalty';
@@ -29,6 +30,7 @@ export default function Account() {
     <Routes>
       <Route index element={<AccountDashboard />} />
       <Route path="commandes" element={<AccountOrders />} />
+      <Route path="suivi" element={<AccountOrderTracking />} />
       <Route path="profil" element={<AccountProfile />} />
       <Route path="adresses" element={<AccountAddresses />} />
       <Route path="fidelite" element={<AccountLoyalty />} />

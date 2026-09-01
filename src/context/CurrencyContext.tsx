@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useMemo, useState, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
 import {
   CurrencyCode,
   CURRENCIES,
@@ -9,6 +9,8 @@ import {
   readStoredCurrency,
   storeCurrency,
 } from '@/lib/currency';
+import { useApp } from '@/context/AppContext';
+import { normalizeLocaleSettings, resolveCurrencies } from '@/lib/locales';
 
 interface CurrencyContextType {
   currency: CurrencyCode;
@@ -23,21 +25,36 @@ interface CurrencyContextType {
 const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined);
 
 export function CurrencyProvider({ children }: { children: ReactNode }) {
+  const { designSettings } = useApp();
+  const locales = useMemo(() => normalizeLocaleSettings((designSettings as any)?.locales), [designSettings]);
+  const currencies = useMemo(() => resolveCurrencies(locales), [locales]);
+
   const [currency, setCurrencyState] = useState<CurrencyCode>(() => readStoredCurrency());
+
+  // Si la devise mémorisée n'est plus activée dans l'admin, on retombe sur la devise par défaut.
+  useEffect(() => {
+    if (!currencies.some(c => c.code === currency)) {
+      setCurrencyState(locales.defaultCurrency);
+      storeCurrency(locales.defaultCurrency);
+    }
+  }, [currencies, currency, locales.defaultCurrency]);
 
   const setCurrency = useCallback((code: CurrencyCode) => {
     setCurrencyState(code);
     storeCurrency(code);
   }, []);
 
-  const value = useMemo<CurrencyContextType>(() => ({
-    currency,
-    currencyDef: getCurrencyDef(currency),
-    currencies: CURRENCIES,
-    setCurrency,
-    format: (amountEur, options) => formatMoney(amountEur, currency, options),
-    isConverted: currency !== DEFAULT_CURRENCY,
-  }), [currency, setCurrency]);
+  const value = useMemo<CurrencyContextType>(() => {
+    const def = currencies.find(c => c.code === currency) ?? currencies[0];
+    return {
+      currency: def.code,
+      currencyDef: def,
+      currencies,
+      setCurrency,
+      format: (amountEur, options) => formatMoney(amountEur, def.code, options, def),
+      isConverted: def.code !== DEFAULT_CURRENCY,
+    };
+  }, [currency, currencies, setCurrency]);
 
   return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>;
 }

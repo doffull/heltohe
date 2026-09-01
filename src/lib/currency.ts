@@ -46,8 +46,8 @@ export function storeCurrency(code: CurrencyCode) {
 }
 
 /** Convertit un montant EUR vers la devise cible. */
-export function convertFromEur(amountEur: number, code: CurrencyCode): number {
-  const def = getCurrencyDef(code);
+export function convertFromEur(amountEur: number, code: CurrencyCode, override?: CurrencyDef): number {
+  const def = override ?? getCurrencyDef(code);
   return amountEur * def.rate;
 }
 
@@ -56,9 +56,11 @@ export function formatMoney(
   amountEur: number,
   code: CurrencyCode = DEFAULT_CURRENCY,
   options?: { decimals?: number },
+  /** Définition de devise personnalisée (taux réglé dans l'admin). */
+  override?: CurrencyDef,
 ): string {
-  const def = getCurrencyDef(code);
-  const value = convertFromEur(Number(amountEur) || 0, code);
+  const def = override ?? getCurrencyDef(code);
+  const value = convertFromEur(Number(amountEur) || 0, code, def);
   const decimals = options?.decimals ?? 2;
   const num = value.toLocaleString(def.locale, {
     minimumFractionDigits: decimals,

@@ -709,6 +709,8 @@ export interface DesignSettings {
   socialDisplayMode: 'icons' | 'text' | 'both';
   /** Où et comment afficher les réseaux sociaux sur tout le site. */
   socialDisplay?: SocialDisplaySettings;
+  /** Réglages devises & langues (Admin → Devises & Langues). */
+  locales?: import('@/lib/locales').LocaleSettings;
   
   // Categories and sections
   categories: Category[];

@@ -39,6 +39,7 @@ const CategoryPageRouter = lazy(() => import("./pages/CategoryPageRouter"));
 const Cart = lazy(() => import("./pages/Cart"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 const OrderConfirmation = lazy(() => import("./pages/OrderConfirmation"));
+const NewsletterConfirm = lazy(() => import("./pages/NewsletterConfirm"));
 
 const Auth = lazy(() => import("./pages/Auth"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
@@ -200,6 +201,8 @@ function AnimatedRoutes() {
           <Route path="/reset-password" element={<ResetPassword />} />
 
           <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+          <Route path="/newsletter/confirmation" element={<MainLayout><NewsletterConfirm mode="confirm" /></MainLayout>} />
+          <Route path="/newsletter/desabonnement" element={<MainLayout><NewsletterConfirm mode="unsubscribe" /></MainLayout>} />
           <Route path="/compte/*" element={<MainLayout><Account /></MainLayout>} />
           <Route path="/admin/bordereau/:id" element={<PrintShippingLabel />} />
           <Route path="/admin/*" element={<Admin />} />

@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { DesignSettings } from '@/types';
 import { INITIAL_DESIGN_SETTINGS } from '@/data/initialData';
 import { Json } from '@/integrations/supabase/types';
+import { normalizeLocaleSettings } from '@/lib/locales';
 
 // Map DB row → DesignSettings
 function dbToSettings(db: Record<string, unknown>): DesignSettings {
@@ -208,6 +209,7 @@ function dbToSettings(db: Record<string, unknown>): DesignSettings {
       shape: 'square',
       color: '',
     },
+    locales: normalizeLocaleSettings((db.settings_json as any)?.locales),
 
   } as DesignSettings;
 }
@@ -376,6 +378,7 @@ function settingsToDb(s: DesignSettings) {
       soldOutBadgeDefault: (s as any).soldOutBadgeDefault !== false,
       soldOutBadgeLabel: ((s as any).soldOutBadgeLabel || '').trim() || 'Coming soon',
       socialDisplay: (s as any).socialDisplay ?? null,
+      locales: (s as any).locales ?? null,
 
 
     } as unknown as Json,

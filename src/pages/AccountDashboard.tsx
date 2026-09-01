@@ -11,6 +11,7 @@ import {
   LogOut,
   ChevronRight,
   ShoppingBag,
+  Truck,
 } from 'lucide-react';
 
 export default function AccountDashboard() {
@@ -23,6 +24,12 @@ export default function AccountDashboard() {
       label: 'Mes Commandes', 
       description: 'Suivre vos commandes et historique',
       href: '/compte/commandes' 
+    },
+    { 
+      icon: Truck, 
+      label: 'Suivi des commandes', 
+      description: 'Date, statut et numéro de suivi en temps réel',
+      href: '/compte/suivi' 
     },
     { 
       icon: User, 
