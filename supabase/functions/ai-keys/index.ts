@@ -108,8 +108,11 @@ Deno.serve(async (req) => {
         return json({ error: 'Clé invalide (20 à 512 caractères).' }, 400);
       }
       const model = String((body as { model?: string }).model || 'google/gemini-2.5-flash');
-      const check = await probe(model, key);
-      if (!check.ok) return json({ error: check.message }, 400);
+
+      // 1) On valide la CLÉ (et non un modèle précis) : un modèle absent du compte
+      //    ne doit jamais empêcher l'enregistrement de la clé.
+      const keyCheck = await verifyKey(key);
+      if (!keyCheck.ok) return json({ error: keyCheck.message }, 400);
 
       const { error } = await admin.from('payment_gateway_secrets').upsert(
         {
@@ -122,7 +125,15 @@ Deno.serve(async (req) => {
         { onConflict: 'gateway' },
       );
       if (error) return json({ error: error.message }, 500);
-      return json({ ok: true, last4: key.slice(-4), message: check.message });
+
+      // 2) Test facultatif du modèle sélectionné : purement informatif.
+      let message = 'Clé Gemini valide et enregistrée.';
+      const modelCheck = await probe(model, key);
+      message = modelCheck.ok
+        ? `Clé Gemini enregistrée. ${modelCheck.message}`
+        : `Clé Gemini enregistrée. Note : le modèle « ${model} » n'est pas accessible avec cette clé (${modelCheck.message}). La passerelle IA intégrée sera utilisée en secours.`;
+
+      return json({ ok: true, last4: key.slice(-4), message, modelOk: modelCheck.ok });
     }
 
     if (action === 'delete') {
