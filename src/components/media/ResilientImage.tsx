@@ -86,6 +86,7 @@ export const ResilientImage = forwardRef<HTMLImageElement, Props>(function Resil
         fallback();
         onError?.(e);
       }}
+      alt=""
       {...rest}
     />
   );
