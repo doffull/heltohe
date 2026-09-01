@@ -314,6 +314,8 @@ export interface SocialLink {
   label: string;
   url: string;
   icon?: string;
+  /** Lien masqué partout sans être supprimé. */
+  enabled?: boolean;
   /** Image personnalisée utilisée à la place de l'icône vectorielle */
   iconUrl?: string;
 }
