@@ -41,6 +41,7 @@ export const ADMIN_SECTIONS: { label: string; href: string }[] = [
   { label: "Mannequins d'essai", href: '/admin/mannequins' },
   { label: 'Notifications', href: '/admin/notifications' },
   { label: "E-mails d'authentification", href: '/admin/emails-auth' },
+  { label: 'E-mails & Factures', href: '/admin/emails-factures' },
   { label: 'Chatbot', href: '/admin/chatbot' },
   { label: 'Avis clients', href: '/admin/avis' },
   { label: 'Agent integrations', href: '/admin/agent-integrations' },

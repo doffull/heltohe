@@ -44,20 +44,32 @@ function dbToAppOrder(db: Record<string, unknown>): Order {
   };
 }
 
-export function useOrders() {
+/**
+ * Commandes de l'admin.
+ * `scope` :
+ *  - `paid` (défaut) : uniquement les commandes dont le paiement a abouti.
+ *  - `abandoned` : paniers abandonnés (paiement jamais confirmé).
+ *  - `all` : tout.
+ */
+export function useOrders(scope: 'paid' | 'abandoned' | 'all' = 'paid') {
   return useQuery({
-    queryKey: ['orders'],
+    queryKey: ['orders', 'scope', scope],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('orders')
         .select('*')
         .order('created_at', { ascending: false });
-      
+
+      if (scope === 'paid') query = query.eq('payment_status', 'Paid');
+      if (scope === 'abandoned') query = query.neq('payment_status', 'Paid');
+
+      const { data, error } = await query;
       if (error) throw error;
       return (data || []).map(dbToAppOrder);
     },
   });
 }
+
 
 export function useOrder(id: string) {
   return useQuery({

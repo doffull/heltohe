@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { WordPressSyncDialog } from '@/components/admin/WordPressSyncDialog';
 import { CustomerImportDialog } from '@/components/admin/CustomerImportDialog';
+import { SendEmailDialog, type SendEmailTarget } from '@/components/admin/SendEmailDialog';
+
 
 import { 
   Users, Search, Mail, Phone, Crown, TrendingUp, Eye, Trash2, Filter, ArrowUpDown, RefreshCw, Save, History, Upload
@@ -199,6 +201,8 @@ export default function AdminCustomers() {
   const [tierFilter, setTierFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('name');
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerRecord | null>(null);
+  const [mailTargets, setMailTargets] = useState<SendEmailTarget[] | null>(null);
+
   const [syncOpen, setSyncOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
 
@@ -360,7 +364,7 @@ export default function AdminCustomers() {
                     <td className="p-4 text-right font-bold text-sm">{customer.totalSpent.toFixed(2)}€</td>
                     <td className="p-4 text-right flex gap-1 justify-end">
                       <Button variant="ghost" size="icon" onClick={() => setSelectedCustomer(customer)} title="Voir"><Eye className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => window.location.href = `mailto:${customer.email}`} title="Contacter">
+                      <Button variant="ghost" size="icon" onClick={() => setMailTargets([{ email: customer.email, firstName: customer.firstName }])} title="Écrire au client">
                         <Mail className="h-4 w-4" />
                       </Button>
                     </td>
@@ -402,7 +406,7 @@ export default function AdminCustomers() {
               <CustomerEmailHistory email={selectedCustomer.email} />
 
               <div className="pt-2 border-t border-border">
-                <Button variant="outline" className="w-full" onClick={() => window.location.href = `mailto:${selectedCustomer.email}`}>
+                <Button variant="outline" className="w-full" onClick={() => setMailTargets([{ email: selectedCustomer.email, firstName: selectedCustomer.firstName }])}>
                   <Mail className="h-4 w-4 mr-2" /> Envoyer un email
                 </Button>
               </div>
@@ -411,6 +415,13 @@ export default function AdminCustomers() {
 
         </DialogContent>
       </Dialog>
+
+      <SendEmailDialog
+        open={!!mailTargets}
+        onOpenChange={(v) => { if (!v) setMailTargets(null); }}
+        targets={mailTargets || []}
+      />
+
     </div>
   );
 }

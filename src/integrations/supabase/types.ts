@@ -1464,6 +1464,42 @@ export type Database = {
         }
         Relationships: []
       }
+      email_templates: {
+        Row: {
+          created_at: string
+          html_body: string
+          id: string
+          is_active: boolean
+          name: string
+          subject: string
+          template_key: string
+          text_body: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          html_body?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          subject?: string
+          template_key: string
+          text_body?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          html_body?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          subject?: string
+          template_key?: string
+          text_body?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_unsubscribe_tokens: {
         Row: {
           created_at: string
@@ -2231,6 +2267,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          abandoned_at: string | null
           created_at: string
           customer_address: string
           customer_city: string
@@ -2240,6 +2277,7 @@ export type Database = {
           customer_phone: string | null
           customer_zip: string
           id: string
+          is_draft: boolean
           is_test: boolean
           items: Json
           label_generated_at: string | null
@@ -2267,6 +2305,7 @@ export type Database = {
           wc_id: number | null
         }
         Insert: {
+          abandoned_at?: string | null
           created_at?: string
           customer_address: string
           customer_city: string
@@ -2276,6 +2315,7 @@ export type Database = {
           customer_phone?: string | null
           customer_zip: string
           id?: string
+          is_draft?: boolean
           is_test?: boolean
           items?: Json
           label_generated_at?: string | null
@@ -2303,6 +2343,7 @@ export type Database = {
           wc_id?: number | null
         }
         Update: {
+          abandoned_at?: string | null
           created_at?: string
           customer_address?: string
           customer_city?: string
@@ -2312,6 +2353,7 @@ export type Database = {
           customer_phone?: string | null
           customer_zip?: string
           id?: string
+          is_draft?: boolean
           is_test?: boolean
           items?: Json
           label_generated_at?: string | null
@@ -3042,12 +3084,16 @@ export type Database = {
           care_instructions: string | null
           categories: string[]
           category: string
+          colissimo_product_code: string | null
           color_options: Json | null
           colors: string[] | null
           created_at: string
           deleted_at: string | null
           deleted_by: string | null
           description: string | null
+          dim_height_cm: number | null
+          dim_length_cm: number | null
+          dim_width_cm: number | null
           gallery_images: string[]
           hover_image: string | null
           id: string
@@ -3079,18 +3125,23 @@ export type Database = {
           tryon_mode: string
           updated_at: string
           video_url: string | null
+          weight_grams: number | null
         }
         Insert: {
           attributes?: Json | null
           care_instructions?: string | null
           categories?: string[]
           category: string
+          colissimo_product_code?: string | null
           color_options?: Json | null
           colors?: string[] | null
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
           description?: string | null
+          dim_height_cm?: number | null
+          dim_length_cm?: number | null
+          dim_width_cm?: number | null
           gallery_images?: string[]
           hover_image?: string | null
           id?: string
@@ -3122,18 +3173,23 @@ export type Database = {
           tryon_mode?: string
           updated_at?: string
           video_url?: string | null
+          weight_grams?: number | null
         }
         Update: {
           attributes?: Json | null
           care_instructions?: string | null
           categories?: string[]
           category?: string
+          colissimo_product_code?: string | null
           color_options?: Json | null
           colors?: string[] | null
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
           description?: string | null
+          dim_height_cm?: number | null
+          dim_length_cm?: number | null
+          dim_width_cm?: number | null
           gallery_images?: string[]
           hover_image?: string | null
           id?: string
@@ -3165,6 +3221,7 @@ export type Database = {
           tryon_mode?: string
           updated_at?: string
           video_url?: string | null
+          weight_grams?: number | null
         }
         Relationships: [
           {
