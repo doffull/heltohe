@@ -1046,3 +1046,16 @@ body.lve-active .lve-editing {
   background: hsl(var(--primary) / 0.06);
   cursor: text;
 }
+
+/* ── FAB socle : animation flottante ──────────────────────────────── */
+@keyframes fab-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.animate-fab-float { animation: fab-float 3s ease-in-out infinite; }
+
+@keyframes fab-ring-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-fab-ring { animation: fab-ring-spin 6s linear infinite; }
