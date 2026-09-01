@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { PayPlugKeyCard } from '@/components/admin/PayPlugKeyCard';
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
 import {
