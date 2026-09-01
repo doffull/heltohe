@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { useFaq } from '@/hooks/useFaq';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Helmet } from 'react-helmet-async';
+import SocialLinksRow from '@/components/layout/SocialLinksRow';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 
@@ -457,6 +458,12 @@ export default function Contact() {
             </Accordion>
           </motion.section>
         )}
+
+        {/* Réseaux sociaux (Admin → Réseaux sociaux) */}
+        <div className="mt-16 text-center">
+          <p className="text-[10px] hud-text text-primary uppercase tracking-[0.3em] mb-4">// Suivez-nous</p>
+          <SocialLinksRow placement="contact" mode="icons" className="justify-center" />
+        </div>
       </div>
     </div>
   );
