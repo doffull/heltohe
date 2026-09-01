@@ -28,6 +28,16 @@ function credsFor(env: string) {
   };
 }
 
+/** Déclenche l'étiquette Colissimo automatique (best-effort, sans bloquer le paiement). */
+async function triggerAutoLabel(db: any, orderId: string) {
+  try {
+    const { error } = await db.functions.invoke("auto-colissimo-label", { body: { orderId } });
+    if (error) console.error("[auto-colissimo-label]", error.message);
+  } catch (e) {
+    console.error("[auto-colissimo-label]", e);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -116,6 +126,7 @@ Deno.serve(async (req) => {
               .from("orders")
               .update({ payment_status: "paid", status: "processing" })
               .eq("id", tx.order_id);
+            await triggerAutoLabel(supabase, tx.order_id);
           } else if (eventType === "PAYMENT.CAPTURE.REFUNDED") {
             await supabase.from("orders").update({ payment_status: "refunded" }).eq("id", tx.order_id);
           } else if (eventType === "PAYMENT.CAPTURE.DENIED") {

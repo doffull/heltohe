@@ -130,6 +130,16 @@ async function requireAdmin(req: Request) {
   return isAdmin ? userId : null;
 }
 
+/** Déclenche l'étiquette Colissimo automatique (best-effort, sans bloquer le paiement). */
+async function triggerAutoLabel(db: any, orderId: string) {
+  try {
+    const { error } = await db.functions.invoke("auto-colissimo-label", { body: { orderId } });
+    if (error) console.error("[auto-colissimo-label]", error.message);
+  } catch (e) {
+    console.error("[auto-colissimo-label]", e);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -280,6 +290,7 @@ Deno.serve(async (req) => {
           .from("orders")
           .update({ payment_status: "paid", payment_method: "paypal", status: "processing" })
           .eq("id", tx.order_id);
+        await triggerAutoLabel(db, tx.order_id);
       }
 
       return json({ success: paid, status: capture?.status, captureId: cap?.id ?? null });
