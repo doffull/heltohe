@@ -21,6 +21,7 @@ interface Props {
 type Step = 'photo' | 'body' | 'result';
 type Morphology = 'slim' | 'regular' | 'athletic' | 'curvy';
 type Framing = 'full' | 'hips' | 'bust';
+type FitPreference = 'ajusté' | 'normal' | 'ample';
 
 const STORAGE_KEY = 'lvtk:vto-state';
 
@@ -32,6 +33,31 @@ interface PersistedState {
   morphology: Morphology;
   gender: 'femme' | 'homme' | 'autre';
   framing: Framing;
+  shoulders?: string;
+  bust?: string;
+  waist?: string;
+  hips?: string;
+  fitPreference?: FitPreference;
+  highFidelity?: boolean;
+}
+
+/**
+ * Collecte jusqu'à 3 visuels de référence supplémentaires du produit (galerie,
+ * images de la couleur sélectionnée) pour améliorer la fidélité du rendu IA.
+ */
+function productReferenceImages(product: any, selectedColor?: string | null): string[] {
+  const urls: string[] = [];
+  const push = (u?: string) => {
+    if (u && typeof u === 'string' && !urls.includes(u) && u !== product?.image) urls.push(u);
+  };
+  const variant = (product?.variants || product?.colorVariants || []).find?.(
+    (v: any) => !selectedColor || v?.color === selectedColor || v?.name === selectedColor,
+  );
+  (variant?.images || []).forEach?.(push);
+  (product?.gallery || product?.images || []).forEach?.((g: any) =>
+    push(typeof g === 'string' ? g : g?.url),
+  );
+  return urls.slice(0, 3);
 }
 
 export default function VirtualTryOnButton({ product, selectedColor, selectedSize, className, variant = 'floating' }: Props) {
@@ -47,6 +73,12 @@ export default function VirtualTryOnButton({ product, selectedColor, selectedSiz
   const [morphology, setMorphology] = useState<Morphology>('regular');
   const [gender, setGender] = useState<'femme' | 'homme' | 'autre'>('femme');
   const [framing, setFraming] = useState<Framing>('full');
+  const [shoulders, setShoulders] = useState('');
+  const [bust, setBust] = useState('');
+  const [waist, setWaist] = useState('');
+  const [hips, setHips] = useState('');
+  const [fitPreference, setFitPreference] = useState<FitPreference>('normal');
+  const [highFidelity, setHighFidelity] = useState(true);
   const [loading, setLoading] = useState(false);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -63,6 +95,10 @@ export default function VirtualTryOnButton({ product, selectedColor, selectedSiz
         setStep(s.step); setUserPhoto(s.userPhoto);
         setHeightCm(s.heightCm); setWeightKg(s.weightKg);
         setMorphology(s.morphology); setGender(s.gender); setFraming(s.framing);
+        setShoulders(s.shoulders || ''); setBust(s.bust || '');
+        setWaist(s.waist || ''); setHips(s.hips || '');
+        setFitPreference(s.fitPreference || 'normal');
+        setHighFidelity(s.highFidelity !== false);
         if (s.userPhoto) setOpen(true);
       }
     } catch {}
@@ -72,10 +108,13 @@ export default function VirtualTryOnButton({ product, selectedColor, selectedSiz
   useEffect(() => {
     if (!open) return;
     try {
-      const s: PersistedState = { step, userPhoto, heightCm, weightKg, morphology, gender, framing };
+      const s: PersistedState = {
+        step, userPhoto, heightCm, weightKg, morphology, gender, framing,
+        shoulders, bust, waist, hips, fitPreference, highFidelity,
+      };
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(s));
     } catch {}
-  }, [open, step, userPhoto, heightCm, weightKg, morphology, gender, framing]);
+  }, [open, step, userPhoto, heightCm, weightKg, morphology, gender, framing, shoulders, bust, waist, hips, fitPreference, highFidelity]);
 
   const reset = () => {
     setStep('photo'); setUserPhoto(null); setResultImage(null); setLoading(false);
@@ -105,14 +144,23 @@ export default function VirtualTryOnButton({ product, selectedColor, selectedSiz
         body: {
           userPhoto,
           productImage: product.image,
+          productImages: productReferenceImages(product, selectedColor),
           productName: product.name,
           productCategory: product.category,
+          productMaterial: product.material,
           selectedColor,
+          selectedSize,
           morphology,
           heightCm: heightCm ? Number(heightCm) : undefined,
           weightKg: weightKg ? Number(weightKg) : undefined,
           gender,
           framing,
+          shoulders: shoulders || undefined,
+          bust: bust || undefined,
+          waist: waist || undefined,
+          hips: hips || undefined,
+          fitPreference,
+          highFidelity,
         },
       });
       if (error) throw error;
@@ -358,6 +406,58 @@ export default function VirtualTryOnButton({ product, selectedColor, selectedSiz
                       ))}
                     </div>
                   </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                    <div>
+                      <Label className="text-xs uppercase tracking-wider">Épaules (cm)</Label>
+                      <Input inputMode="numeric" placeholder="42" value={shoulders} onChange={(e) => setShoulders(e.target.value)} className="chamfer-hud-sm" />
+                    </div>
+                    <div>
+                      <Label className="text-xs uppercase tracking-wider">Poitrine (cm)</Label>
+                      <Input inputMode="numeric" placeholder="94" value={bust} onChange={(e) => setBust(e.target.value)} className="chamfer-hud-sm" />
+                    </div>
+                    <div>
+                      <Label className="text-xs uppercase tracking-wider">Taille (cm)</Label>
+                      <Input inputMode="numeric" placeholder="78" value={waist} onChange={(e) => setWaist(e.target.value)} className="chamfer-hud-sm" />
+                    </div>
+                    <div>
+                      <Label className="text-xs uppercase tracking-wider">Hanches (cm)</Label>
+                      <Input inputMode="numeric" placeholder="98" value={hips} onChange={(e) => setHips(e.target.value)} className="chamfer-hud-sm" />
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <Label className="text-xs uppercase tracking-wider mb-2 block">Coupe souhaitée</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['ajusté','normal','ample'] as FitPreference[]).map((f) => (
+                        <button
+                          key={f}
+                          type="button"
+                          onClick={() => setFitPreference(f)}
+                          className={cn('chamfer-hud-sm py-2 text-xs font-bold uppercase tracking-wider border transition-colors',
+                            fitPreference === f ? 'bg-foreground text-background border-foreground' : 'bg-card/30 border-border hover:border-primary')}
+                        >
+                          {f}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <label className="mb-4 flex items-start gap-3 border border-border bg-card/20 p-3 chamfer-hud-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={highFidelity}
+                      onChange={(e) => setHighFidelity(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 accent-primary"
+                    />
+                    <span className="text-xs">
+                      <span className="block font-bold uppercase tracking-wider">Rendu haute fidélité</span>
+                      <span className="text-muted-foreground">
+                        Passe de correction supplémentaire : visage, morphologie et détails du produit
+                        (un peu plus lent).
+                      </span>
+                    </span>
+                  </label>
 
                   <div className="mb-4">
                     <Label className="text-xs uppercase tracking-wider mb-2 block">Cadrage</Label>
