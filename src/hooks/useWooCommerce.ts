@@ -97,6 +97,9 @@ export function useWooSync() {
       qc.invalidateQueries({ queryKey: ['wp-sync-logs'] });
       qc.invalidateQueries({ queryKey: ['products'] });
       qc.invalidateQueries({ queryKey: ['categories'] });
+      qc.invalidateQueries({ queryKey: ['customers'] });
+      qc.invalidateQueries({ queryKey: ['crm_contacts'] });
+      qc.invalidateQueries({ queryKey: ['crm_importable_customers'] });
     },
   });
 }

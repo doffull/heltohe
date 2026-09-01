@@ -601,6 +601,29 @@ Deno.serve(async (req) => {
     }
   }
 
+  /** Ajoute/actualise des contacts CRM à partir de clients synchronisés. */
+  const upsertCrmContacts = async (
+    people: Array<{ email?: string | null; name?: string | null; phone?: string | null }>,
+    errors: string[],
+  ) => {
+    const seen = new Map<string, { email: string; name: string | null; phone: string | null; source: string }>();
+    for (const p of people) {
+      const email = String(p.email || '').trim().toLowerCase();
+      if (!email || !email.includes('@')) continue;
+      if (!seen.has(email)) {
+        seen.set(email, { email, name: p.name?.trim() || null, phone: p.phone || null, source: 'woocommerce' });
+      }
+    }
+    const rows = [...seen.values()];
+    if (!rows.length) return 0;
+    const { error } = await supabase.from('crm_contacts').upsert(rows, { onConflict: 'email' });
+    if (error) {
+      errors.push(`Contacts CRM: ${error.message}`);
+      return 0;
+    }
+    return rows.length;
+  };
+
   if (mode === 'sync') {
     const syncCustomers = body.syncCustomers ?? storedConfig?.sync_customers ?? true;
     const syncOrders = body.syncOrders ?? storedConfig?.sync_orders ?? true;
@@ -626,6 +649,14 @@ Deno.serve(async (req) => {
           if (error) out.errors.push(`Client ${c.email}: ${error.message}`);
           else out.customers++;
         }
+        await upsertCrmContacts(
+          wcCustomers.map((c: any) => ({
+            email: c.email,
+            name: [c.first_name || c.billing?.first_name, c.last_name || c.billing?.last_name].filter(Boolean).join(' '),
+            phone: c.billing?.phone || null,
+          })),
+          out.errors,
+        );
       } catch (e: any) {
         out.errors.push(`Clients: ${e.message}`);
       }
@@ -643,6 +674,43 @@ Deno.serve(async (req) => {
           const { error } = await supabase.from('orders').upsert(row, { onConflict: 'order_number' });
           if (error) out.errors.push(`Commande ${row.order_number}: ${error.message}`);
           else out.orders++;
+        }
+
+        // Clients invités : présents seulement dans les commandes → fiche client + contact CRM
+        const guests = new Map<string, { email: string; name: string; phone: string | null }>();
+        for (const o of wcOrders) {
+          const email = String(o.billing?.email || '').trim().toLowerCase();
+          if (!email || !email.includes('@')) continue;
+          if (!guests.has(email)) {
+            guests.set(email, {
+              email,
+              name: `${o.billing?.first_name || ''} ${o.billing?.last_name || ''}`.trim(),
+              phone: o.billing?.phone || null,
+            });
+          }
+        }
+        if (guests.size) {
+          const emails = [...guests.keys()];
+          const { data: known } = await supabase.from('customers').select('email').in('email', emails);
+          const knownSet = new Set(((known || []) as any[]).map((k) => String(k.email).toLowerCase()));
+          const missing = emails.filter((e) => !knownSet.has(e));
+          for (const email of missing) {
+            const g = guests.get(email)!;
+            const [first, ...rest] = (g.name || '').split(' ');
+            const { error } = await supabase.from('customers').upsert(
+              {
+                email,
+                first_name: first || null,
+                last_name: rest.join(' ') || null,
+                phone: g.phone,
+                source: 'woocommerce',
+              },
+              { onConflict: 'email' },
+            );
+            if (error) out.errors.push(`Client invité ${email}: ${error.message}`);
+            else out.customers++;
+          }
+          await upsertCrmContacts([...guests.values()], out.errors);
         }
       } catch (e: any) {
         out.errors.push(`Commandes: ${e.message}`);
@@ -866,6 +934,14 @@ Deno.serve(async (req) => {
         else count++;
       }
       result.customers = count;
+      await upsertCrmContacts(
+        wcCustomers.map((c: any) => ({
+          email: c.email,
+          name: [c.first_name, c.last_name].filter(Boolean).join(' '),
+          phone: c.billing?.phone || null,
+        })),
+        result.errors,
+      );
     } catch (e: any) {
       result.errors.push(`Clients: ${e.message}`);
     }

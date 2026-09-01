@@ -7,6 +7,7 @@ export interface CrmContact {
   name: string | null;
   phone: string | null;
   notes: string | null;
+  source?: string | null;
   created_at: string;
 }
 
@@ -161,6 +162,78 @@ export function useDeleteCrmContact() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['crm_contacts'] });
       qc.invalidateQueries({ queryKey: ['crm_conversations'] });
+    },
+  });
+}
+
+/* ---------------- Clients (site + WooCommerce) ---------------- */
+
+export interface CrmImportableCustomer {
+  email: string;
+  name: string | null;
+  phone: string | null;
+  source: string;
+  total_orders: number | null;
+  total_spent: number | null;
+  inCrm: boolean;
+}
+
+/** Liste tous les clients (table customers) avec l'info « déjà présent dans le CRM ». */
+export function useCrmCustomers() {
+  return useQuery({
+    queryKey: ['crm_importable_customers'],
+    queryFn: async (): Promise<CrmImportableCustomer[]> => {
+      const [{ data: customers, error }, { data: contacts, error: cErr }] = await Promise.all([
+        db
+          .from('customers')
+          .select('email, first_name, last_name, phone, source, orders_count, total_spent, created_at')
+          .order('created_at', { ascending: false }),
+        db.from('crm_contacts').select('email'),
+      ]);
+      if (error) throw error;
+      if (cErr) throw cErr;
+      const existing = new Set(
+        ((contacts || []) as { email: string }[]).map((c) => (c.email || '').toLowerCase()),
+      );
+      return ((customers || []) as any[])
+        .filter((c) => !!c.email)
+        .map((c) => {
+          const name = [c.first_name, c.last_name].filter(Boolean).join(' ').trim();
+          return {
+            email: String(c.email).toLowerCase(),
+            name: name || null,
+            phone: c.phone || null,
+            source: c.source || 'site',
+            total_orders: c.orders_count ?? null,
+            total_spent: c.total_spent ?? null,
+            inCrm: existing.has(String(c.email).toLowerCase()),
+          };
+        });
+    },
+  });
+}
+
+/** Ajoute (ou met à jour) des clients dans le carnet de contacts CRM. */
+export function useImportCustomersToCrm() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (customers: CrmImportableCustomer[]) => {
+      const rows = customers
+        .filter((c) => !!c.email)
+        .map((c) => ({
+          email: c.email.toLowerCase(),
+          name: c.name || null,
+          phone: c.phone || null,
+          source: c.source === 'woocommerce' ? 'woocommerce' : 'customer',
+        }));
+      if (!rows.length) return 0;
+      const { error } = await db.from('crm_contacts').upsert(rows, { onConflict: 'email' });
+      if (error) throw error;
+      return rows.length;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['crm_contacts'] });
+      qc.invalidateQueries({ queryKey: ['crm_importable_customers'] });
     },
   });
 }
