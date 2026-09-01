@@ -47,10 +47,25 @@ Deno.serve(async (req) => {
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
     if (!isEmail(email)) return json({ error: 'Adresse e-mail invalide' }, 400);
 
-    const origin = typeof body.origin === 'string' && /^https?:\/\//.test(body.origin)
-      ? body.origin.replace(/\/$/, '')
-      : 'https://helvetica-mp.net';
+    // Origine strictement contrôlée : un lien de récupération ne doit jamais
+    // pouvoir être redirigé vers un domaine tiers.
+    const allowedOrigin = (raw: unknown): string | null => {
+      if (typeof raw !== 'string') return null;
+      let host: string;
+      let url: URL;
+      try { url = new URL(raw); host = url.hostname; } catch { return null; }
+      if (!/^https?:$/.test(url.protocol)) return null;
+      const ok =
+        host === 'helvetica-mp.net' ||
+        host.endsWith('.helvetica-mp.net') ||
+        host.endsWith('.lovable.app') ||
+        host === 'localhost' ||
+        host === '127.0.0.1';
+      return ok ? url.origin : null;
+    };
+    const origin = allowedOrigin(body.origin) || 'https://helvetica-mp.net';
     const redirectTo = `${origin}/reset-password`;
+
 
     const db = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
