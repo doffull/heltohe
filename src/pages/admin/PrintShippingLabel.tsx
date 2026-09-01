@@ -4,6 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Printer, Loader2, Scissors, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { triggerOrderEmail } from '@/hooks/useOrders';
+
 
 interface SlipItem {
   name?: string;
