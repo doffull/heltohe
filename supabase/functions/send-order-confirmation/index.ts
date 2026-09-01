@@ -514,17 +514,21 @@ serve(async (req) => {
       );
     }
 
-    // Send admin notification email if configured (only for new orders)
-    if (adminEmail && emailType === 'order_confirmation') {
+    // Alerte administrateur : nouvelle commande / paiement validé à préparer
+    const adminRecipient = adminEmail || adminEmailAddress();
+    if (adminRecipient && emailType !== 'resend_confirmation') {
       const adminMail = await sendMail({
-        to: adminEmail,
-        subject: `🛍️ Nouvelle commande ${orderNumber} — ${customerName}`,
+        to: adminRecipient,
+        subject: emailType === 'payment_confirmation'
+          ? `💳 Commande payée ${orderNumber} — à préparer (${customerName})`
+          : `🛍️ Nouvelle commande ${orderNumber} — ${customerName}`,
         html: buildAdminEmailHtml(payload),
       });
       if (!adminMail.ok) {
         console.error('Admin notification email error:', adminMail.error);
       }
     }
+
 
     return new Response(
       JSON.stringify({ success: true, id: customerMail.id }),
