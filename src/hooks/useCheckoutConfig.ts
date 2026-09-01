@@ -28,13 +28,10 @@ export const DEFAULT_RELAY_MAP_SETTINGS: RelayMapSettings = {
   searchRadius: 10,
 };
 
+/** Seules passerelles supportées : PayPlug (CB françaises) et PayPal. */
 export const PAYMENT_GATEWAYS: PaymentMethod[] = [
-  { key: 'stripe', label: 'Stripe', enabled: false, configured: false, publicKey: '', description: 'Cartes, Apple Pay, Google Pay', docUrl: 'https://stripe.com/docs', icon: '💳' },
-  { key: 'payplug', label: 'PayPlug', enabled: false, configured: false, publicKey: '', description: 'Solution française, cartes bancaires', docUrl: 'https://docs.payplug.com', icon: '🇫🇷' },
-  { key: 'mollie', label: 'Mollie', enabled: false, configured: false, publicKey: '', description: 'CB, iDEAL, Bancontact, etc.', docUrl: 'https://docs.mollie.com', icon: '🔄' },
-  { key: 'klarna', label: 'Klarna', enabled: false, configured: false, publicKey: '', description: 'Paiement en 3x/4x, pay later', docUrl: 'https://docs.klarna.com', icon: '🛍️' },
+  { key: 'payplug', label: 'PayPlug', enabled: false, configured: false, description: 'Cartes bancaires 3-D Secure, solution française', docUrl: 'https://docs.payplug.com', icon: '🇫🇷' },
   { key: 'paypal', label: 'PayPal', enabled: false, configured: false, publicKey: '', description: 'Paiement en ligne classique', docUrl: 'https://developer.paypal.com', icon: '🅿️' },
-  { key: 'bank_transfer', label: 'Virement bancaire', enabled: true, configured: true, publicKey: '', description: 'Paiement manuel par virement', icon: '🏦' },
 ];
 
 export interface CheckoutConfig {

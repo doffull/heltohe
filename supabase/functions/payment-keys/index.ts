@@ -13,7 +13,7 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-const ALLOWED_GATEWAYS = ["stripe", "payplug", "mollie", "klarna", "paypal"];
+const ALLOWED_GATEWAYS = ["payplug", "paypal"];
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -62,6 +62,15 @@ serve(async (req) => {
       if (!ALLOWED_GATEWAYS.includes(gateway)) return json({ error: "Passerelle inconnue" }, 400);
       if (secret.length < 12 || secret.length > 512) {
         return json({ error: "Clé secrète invalide (12 à 512 caractères)." }, 400);
+      }
+      if (gateway === "payplug" && !/^sk_(test|live)_[A-Za-z0-9]{8,}$/.test(secret)) {
+        return json(
+          {
+            error:
+              "Clé PayPlug invalide : elle doit commencer par sk_live_ (production) ou sk_test_ (test).",
+          },
+          400,
+        );
       }
       const { error } = await admin.from("payment_gateway_secrets").upsert(
         {
