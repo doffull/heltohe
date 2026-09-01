@@ -694,6 +694,8 @@ export interface DesignSettings {
   // Social links
   socialLinks: SocialLink[];
   socialDisplayMode: 'icons' | 'text' | 'both';
+  /** Où et comment afficher les réseaux sociaux sur tout le site. */
+  socialDisplay?: SocialDisplaySettings;
   
   // Categories and sections
   categories: Category[];
