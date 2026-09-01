@@ -28,15 +28,25 @@ interface Body {
     fitNotes?: string;
   };
   productImage?: string;   // main garment (photo mode / legacy)
+  productImages?: string[]; // extra reference views of the main garment
   productName?: string;
   productCategory?: string;
+  productMaterial?: string;
   selectedColor?: string;
+  selectedSize?: string;
   garments?: Garment[];    // ordered layers (mannequin mode)
   morphology?: string;
   heightCm?: number;
   weightKg?: number;
   gender?: string;
+  bust?: string;           // morphological details (optional, free text)
+  waist?: string;
+  hips?: string;
+  shoulders?: string;
+  fitPreference?: 'ajusté' | 'normal' | 'ample' | string;
   framing?: 'full' | 'hips' | 'bust';
+  /** Adds a second identity/product fidelity pass (slower, much better). */
+  highFidelity?: boolean;
 }
 
 const stripDataUrl = (s: string) => (s.includes(',') ? s.split(',')[1] : s);
