@@ -14,6 +14,7 @@ interface OrderItem {
   quantity: number;
   size?: string;
   color?: string;
+  image?: string;
 }
 
 function trackingUrl(carrier: string, tracking: string): string {
