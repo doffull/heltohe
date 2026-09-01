@@ -299,6 +299,17 @@ export interface HeroSlide {
   mobileMediaType?: 'image' | 'video';
 }
 
+export interface SocialDisplaySettings {
+  showInHeader?: boolean;
+  showInMobileMenu?: boolean;
+  showOnContact?: boolean;
+  showOnMaintenance?: boolean;
+  newTab?: boolean;
+  iconSize?: number;
+  shape?: 'square' | 'rounded' | 'circle' | 'none';
+  color?: string;
+}
+
 export interface SocialLink {
   label: string;
   url: string;
