@@ -854,7 +854,8 @@ export default function Checkout() {
                 {isConverted && (
                   <div className="text-[10px] text-muted-foreground text-right">
                     ≈ {format(orderTotal)} — facturation en EUR
-                </div>
+                  </div>
+                )}
               </div>
 
               <div className="mt-4 pt-4 border-t border-border flex items-center gap-2 text-xs text-muted-foreground">
