@@ -46,6 +46,7 @@ interface RelayPoint {
 import { PayPalCheckout, type PayPalCheckoutPayload } from '@/components/payments/PayPalCheckout';
 import { PayPalMessaging } from '@/components/payments/PayPalMessaging';
 import { PayPlugCheckout } from '@/components/payments/PayPlugCheckout';
+import { useCurrency } from '@/context/CurrencyContext';
 
 export default function Checkout() {
 
@@ -848,6 +849,10 @@ export default function Checkout() {
                 <div className="flex justify-between font-bold text-base pt-2 border-t border-border">
                   <span>TOTAL</span>
                   <span className="text-primary">{orderTotal.toFixed(2)}€</span>
+                </div>
+                {isConverted && (
+                  <div className="text-[10px] text-muted-foreground text-right">
+                    ≈ {format(orderTotal)} — facturation en EUR
                 </div>
               </div>
 
