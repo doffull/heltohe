@@ -250,6 +250,31 @@ Deno.serve(async (req) => {
     return parts.length ? ` [${parts.join(' • ')}]` : '';
   };
 
+  /**
+   * Sonde le site hors API WooCommerce pour distinguer :
+   *  - site entièrement KO (hébergeur / WAF)
+   *  - REST WordPress bloqué
+   *  - seul /wc/v3 bloqué (clés, plugin, permaliens)
+   */
+  const probeSite = async (): Promise<string> => {
+    const targets: Array<[string, string]> = [
+      ['page d’accueil', cleanUrl],
+      ['REST WordPress', `${cleanUrl}/wp-json`],
+    ];
+    const out: string[] = [];
+    for (const [label, url] of targets) {
+      try {
+        const res = await doFetch(url, 'query', 0);
+        await res.body?.cancel().catch(() => {});
+        out.push(`${label}: HTTP ${res.status}`);
+      } catch (e: any) {
+        out.push(`${label}: injoignable (${e?.message || 'erreur réseau'})`);
+      }
+    }
+    return out.join(' • ');
+  };
+
+
   const wcFetch = async (path: string, page = 1) => {
     const res = await fetchWithRetry(path, page, 50);
     if (!res.ok) {
@@ -382,10 +407,12 @@ Deno.serve(async (req) => {
             statusCode,
           );
         }
+        const probe = await probeSite();
         throw new WcServiceError(
-          `Le serveur WooCommerce ne répond pas (HTTP ${statusCode}) après ${MAX_ATTEMPTS} tentatives.${formatDiag()} Vérifie ton hébergeur ou ton WAF (Cloudflare / Sucuri / Wordfence).`,
+          `Le serveur WooCommerce ne répond pas (HTTP ${statusCode}) après ${MAX_ATTEMPTS} tentatives.${formatDiag()} Diagnostic — ${probe}. Si la page d’accueil répond 200 mais pas l’API, c’est ton WAF / mod_security (o2switch, Cloudflare, Sucuri, Wordfence) qui bloque /wp-json : demande la mise en liste blanche de /wp-json/wc/v3.`,
           statusCode,
         );
+
       }
       await res.json().catch(() => null);
       let storeInfo: Record<string, unknown> | null = null;
