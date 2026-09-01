@@ -1030,3 +1030,19 @@ body.admin-route .protected-image-wrap::after {
 .footer-dyn details[open] > summary::after {
   content: '−';
 }
+
+/* ── Éditeur live universel ─────────────────────────────────────── */
+body.lve-active [data-editor-chrome="true"] * {
+  outline: none !important;
+}
+body.lve-active .lve-hover:not([data-editor-chrome="true"]) {
+  outline: 1px dashed hsl(var(--primary) / 0.7);
+  outline-offset: 2px;
+  cursor: pointer;
+}
+body.lve-active .lve-editing {
+  outline: 2px solid hsl(var(--primary)) !important;
+  outline-offset: 2px;
+  background: hsl(var(--primary) / 0.06);
+  cursor: text;
+}

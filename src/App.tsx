@@ -15,6 +15,7 @@ import { lazyWithRetry as lazy } from "@/lib/lazyWithRetry";
 import { VisualEditorProvider } from "@/components/visual-editor/VisualEditorProvider";
 import { VisualEditorToggle } from "@/components/visual-editor/VisualEditorToggle";
 import { VisualEditorPanel } from "@/components/visual-editor/VisualEditorPanel";
+import UniversalLiveEditor from "@/components/visual-editor/UniversalLiveEditor";
 import { ImageProtection } from "@/components/security/ImageProtection";
 import { ScreenshotWatermark } from "@/components/security/ScreenshotWatermark";
 
@@ -291,6 +292,7 @@ function AppShell() {
             {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
           </AnimatePresence>
           <AnimatedRoutes />
+          <UniversalLiveEditor />
           <MegaMenu />
           <AdminVisualEditor />
           <DemoModeBadge />

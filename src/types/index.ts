@@ -695,6 +695,8 @@ export interface DesignSettings {
   homeFeedSections?: import('@/config/homeFeedSections').FeedSectionConfig[];
   /** Saved GIF builder presets (shared across admins). */
   gifPresets?: import('@/lib/gifBuilder').GifPreset[];
+  /** Modifications live par route (éditeur universel). */
+  pageOverrides?: import('@/lib/pageOverrides').PageOverridesMap;
 
   homeCustomSections?: any[];
   homePageBlocks?: Array<{ id: string; visible: boolean; label?: string; settings?: Record<string, any> }>;
