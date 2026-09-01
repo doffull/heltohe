@@ -133,17 +133,16 @@ Deno.serve(async (req) => {
         .eq("gateway", "payplug")
         .maybeSingle();
       let mode: "test" | "live" | null = null;
-      if (data) {
-        try {
-          const key = await secretKey();
-          mode = key.startsWith("sk_test_") ? "test" : "live";
-        } catch {
-          mode = null;
-        }
+      let resolved = "";
+      try {
+        resolved = await secretKey();
+        mode = resolved.startsWith("sk_test_") ? "test" : "live";
+      } catch {
+        mode = null;
       }
       return json({
-        configured: Boolean(data),
-        last4: data?.last4 ?? null,
+        configured: Boolean(resolved),
+        last4: data?.last4 ?? (resolved ? resolved.slice(-4) : null),
         updatedAt: data?.updated_at ?? null,
         mode,
       });
