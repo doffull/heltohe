@@ -238,6 +238,30 @@ function TeamAccessCard() {
         </p>
       </div>
 
+      {manualLink && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 space-y-2">
+          <p className="text-xs font-medium">
+            L'envoi automatique a échoué (domaine d'expédition non encore vérifié). Transmettez ce
+            lien au membre — valable 24 h, usage unique :
+          </p>
+          <div className="flex gap-2">
+            <Input readOnly value={manualLink} className="text-xs" onFocus={(e) => e.currentTarget.select()} />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                navigator.clipboard.writeText(manualLink);
+                toast({ title: 'Lien copié' });
+              }}
+            >
+              Copier
+            </Button>
+          </div>
+        </div>
+      )}
+
+
+
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground">E-mail du membre</label>
