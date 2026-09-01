@@ -41,7 +41,6 @@ import {
   Shield,
   Bell,
   Check,
-  Bot,
   Mail as MailIcon
 } from 'lucide-react';
 import {
@@ -95,7 +94,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [sidebarClosedByUser, setSidebarClosedByUser] = useState(false);
   const [mobileSidebarClosedByUser, setMobileSidebarClosedByUser] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
+  
   const queryClient = useQueryClient();
   const { consent: cookieConsent, decided: cookieDecided } = useCookieConsent();
   // Le suivi d'audience ne démarre qu'avec le consentement « statistiques ».
