@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, KeyRound, CheckCircle2 } from 'lucide-react';
+import { Loader2, KeyRound, CheckCircle2, Mail } from 'lucide-react';
 
 /**
  * Page publique de définition d'un nouveau mot de passe.
