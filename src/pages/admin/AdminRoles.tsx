@@ -321,6 +321,11 @@ function TeamAccessCard() {
           {spin('send_link') ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
           Envoyer un lien
         </Button>
+        <Button variant="ghost" onClick={testEmail} disabled={!!busy || !email.trim()} className="gap-2">
+          {spin('test_email') ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+          Tester l'e-mail
+        </Button>
+
         <Button variant="destructive" onClick={() => setConfirmClear(true)} disabled={!!busy || !email.trim()} className="gap-2">
           {spin('clear_password') ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
           Supprimer le mot de passe
