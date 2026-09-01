@@ -138,6 +138,8 @@ function TeamAccessCard() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [manualLink, setManualLink] = useState<string | null>(null);
+
 
   const call = async (action: string, payload: Record<string, unknown> = {}) => {
     const mail = email.trim().toLowerCase();
