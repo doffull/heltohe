@@ -1,7 +1,16 @@
 // Types for HELVETICA-MP E-commerce Platform
 
 export type ViewType = 'Home' | 'Shop' | 'About' | 'ProductDetail' | 'Dashboard';
-export type Language = 'FR' | 'EN';
+export type Language = 'FR' | 'EN' | 'ES' | 'DE' | 'IT';
+
+/** Langues disponibles côté vitrine (drapeau + libellé). */
+export const LANGUAGES: { code: Language; flag: string; label: string }[] = [
+  { code: 'FR', flag: '🇫🇷', label: 'Français' },
+  { code: 'EN', flag: '🇬🇧', label: 'English' },
+  { code: 'ES', flag: '🇪🇸', label: 'Español' },
+  { code: 'DE', flag: '🇩🇪', label: 'Deutsch' },
+  { code: 'IT', flag: '🇮🇹', label: 'Italiano' },
+];
 
 export interface ColorOption {
   color: string;
@@ -925,5 +934,74 @@ export const translations: Record<Language, TranslationStrings> = {
     waterproofing: 'WATERPROOFING',
     thermal: 'THERMAL',
     armor: 'ARMOR',
+  },
+  ES: {
+    shop: 'Tienda',
+    about: 'Nosotros',
+    dashboard: 'Panel',
+    lowStock: 'Stock Bajo',
+    acquire: 'Adquirir Unidad',
+    recalibrating: 'RECALIBRANDO IDIOMA...',
+    loading: 'CARGANDO...',
+    home: 'Inicio',
+    newArrivals: 'Novedades',
+    collections: 'Colecciones',
+    contact: 'Contacto',
+    explore: 'Explorar',
+    viewCollection: 'Ver la Colección',
+    addToCart: 'Añadir al Carrito',
+    outOfStock: 'Agotado',
+    onSale: 'En Oferta',
+    systemId: 'ID DEL SISTEMA',
+    dataFlux: 'FLUJO DE DATOS //',
+    waterproofing: 'IMPERMEABILIDAD',
+    thermal: 'TÉRMICO',
+    armor: 'ARMADURA',
+  },
+  DE: {
+    shop: 'Shop',
+    about: 'Über uns',
+    dashboard: 'Dashboard',
+    lowStock: 'Geringer Bestand',
+    acquire: 'Einheit erwerben',
+    recalibrating: 'SPRACHE WIRD NEU KALIBRIERT...',
+    loading: 'LÄDT...',
+    home: 'Startseite',
+    newArrivals: 'Neuheiten',
+    collections: 'Kollektionen',
+    contact: 'Kontakt',
+    explore: 'Entdecken',
+    viewCollection: 'Kollektion ansehen',
+    addToCart: 'In den Warenkorb',
+    outOfStock: 'Ausverkauft',
+    onSale: 'Im Angebot',
+    systemId: 'SYSTEM-ID',
+    dataFlux: 'DATENFLUSS //',
+    waterproofing: 'WASSERDICHTIGKEIT',
+    thermal: 'THERMISCH',
+    armor: 'PANZERUNG',
+  },
+  IT: {
+    shop: 'Negozio',
+    about: 'Chi siamo',
+    dashboard: 'Dashboard',
+    lowStock: 'Scorte Basse',
+    acquire: 'Acquista Unità',
+    recalibrating: 'RICALIBRAZIONE LINGUA...',
+    loading: 'CARICAMENTO...',
+    home: 'Home',
+    newArrivals: 'Novità',
+    collections: 'Collezioni',
+    contact: 'Contatti',
+    explore: 'Esplora',
+    viewCollection: 'Vedi la Collezione',
+    addToCart: 'Aggiungi al Carrello',
+    outOfStock: 'Esaurito',
+    onSale: 'In Saldo',
+    systemId: 'ID SISTEMA',
+    dataFlux: 'FLUSSO DATI //',
+    waterproofing: 'IMPERMEABILITÀ',
+    thermal: 'TERMICO',
+    armor: 'ARMATURA',
   },
 };

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/reac
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
+import { CurrencyProvider } from "@/context/CurrencyContext";
 import { SidebarProvider } from "@/context/SidebarContext";
 import { AppProvider, useApp } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
@@ -275,6 +276,7 @@ function AppShell() {
   }, [showSplash]);
   return (
     <AppProvider>
+      <CurrencyProvider>
       <CookieConsentProvider>
       <AdminViewportProvider>
       <VisualEditorProvider>
@@ -301,6 +303,7 @@ function AppShell() {
       </VisualEditorProvider>
       </AdminViewportProvider>
       </CookieConsentProvider>
+      </CurrencyProvider>
     </AppProvider>
   );
 }

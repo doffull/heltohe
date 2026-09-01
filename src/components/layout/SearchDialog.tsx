@@ -9,6 +9,7 @@ import { excludeMarketplaceProducts } from '@/lib/shopVisibility';
 import { useCategories } from '@/hooks/useCategories';
 import { Product } from '@/types';
 import { cn } from '@/lib/utils';
+import { useCurrency } from '@/context/CurrencyContext';
 
 const RECENT_KEY = 'search_recent_v1';
 const MAX_RESULTS = 8;
@@ -226,7 +227,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
                       </span>
                     </span>
                     <span className="text-sm tabular-nums">
-                      {(p.salePrice ?? p.price).toFixed(2)} €
+                      {format(p.salePrice ?? p.price)}
                     </span>
                   </button>
                 );

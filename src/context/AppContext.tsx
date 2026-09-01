@@ -52,7 +52,13 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [currentView, setCurrentView] = useState<ViewType>('Home');
   const [currentCategory, setCurrentCategory] = useState('Tout');
-  const [language, setLanguageState] = useState<Language>('FR');
+  const [language, setLanguageState] = useState<Language>(() => {
+    try {
+      const saved = localStorage.getItem('app_language') as Language | null;
+      if (saved && ['FR', 'EN', 'ES', 'DE', 'IT'].includes(saved)) return saved;
+    } catch {}
+    return 'FR';
+  });
   const [isTranslating, setIsTranslating] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   
@@ -158,11 +164,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const setLanguage = (lang: Language) => {
     if (lang === language) return;
+    try { localStorage.setItem('app_language', lang); } catch {}
     setIsTranslating(true);
     setTimeout(() => {
       setLanguageState(lang);
       setIsTranslating(false);
-    }, 1200);
+      try { document.documentElement.lang = lang.toLowerCase(); } catch {}
+    }, 700);
   };
 
   const t = (key: keyof TranslationStrings): string => {

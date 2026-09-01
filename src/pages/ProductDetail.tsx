@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import { useCurrency } from '@/context/CurrencyContext';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Sparkles, ShoppingCart, ChevronRight, Pencil } from 'lucide-react';
@@ -376,11 +377,11 @@ function CompleteLook({ productId, onAddToCart }: { productId: string; onAddToCa
               <div className="flex items-center gap-2">
                 {p.salePrice ? (
                   <>
-                    <span className="font-bold text-sm text-primary">{p.salePrice}€</span>
-                    <span className="text-xs line-through text-muted-foreground">{p.price}€</span>
+                    <span className="font-bold text-sm text-primary">{format(p.salePrice!)}</span>
+                    <span className="text-xs line-through text-muted-foreground">{format(p.price)}</span>
                   </>
                 ) : (
-                  <span className="font-bold text-sm">{p.price}€</span>
+                  <span className="font-bold text-sm">{format(p.price)}</span>
                 )}
               </div>
               <Button
