@@ -4,7 +4,7 @@ import {
   Package, Pause, Play, RefreshCw, Search, ShoppingCart, TrendingUp, Users, Wallet,
 } from 'lucide-react';
 import {
-  Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Line, Pie, PieChart,
+  Area, Bar, BarChart, ComposedChart, CartesianGrid, Cell, Legend, Line, Pie, PieChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 
@@ -387,7 +387,7 @@ export default function AdminAnalytics() {
             </CardHeader>
             <CardContent className="h-[320px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={daily}>
+                <ComposedChart data={daily}>
                   <defs>
                     <linearGradient id="caGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor={CHART_COLORS[1]} stopOpacity={0.35} />
@@ -405,7 +405,7 @@ export default function AdminAnalytics() {
                     <Line yAxisId="l" type="monotone" dataKey="ca_n1" name="CA N-1" stroke={CHART_COLORS[3]} strokeDasharray="5 4" dot={false} strokeWidth={2} />
                   )}
                   <Line yAxisId="r" type="monotone" dataKey="commandes" name="commandes" stroke={CHART_COLORS[4]} dot={false} strokeWidth={2} />
-                </AreaChart>
+                </ComposedChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
