@@ -231,7 +231,14 @@ export default function AdminCheckout() {
             </div>
 
             <div className="space-y-4">
-              {form.paymentMethods.map((pm) => (
+              {form.paymentMethods.map((pm) => pm.key === 'payplug' ? (
+                <PayPlugKeyCard
+                  key={pm.key}
+                  enabled={pm.enabled}
+                  onToggle={v => updateGateway(pm.key, { enabled: v, configured: true })}
+                  status={secretStatus.payplug}
+                />
+              ) : (
                 <div key={pm.key} className="border border-border rounded-lg overflow-hidden">
                   <div className="flex items-center justify-between p-4 bg-secondary/20">
                     <div className="flex items-center gap-3">
