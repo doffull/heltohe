@@ -102,10 +102,34 @@ Deno.serve(async (req) => {
   if (orderError) return json({ error: orderError.message }, 500);
   if (!order) return json({ error: 'Order not found' }, 404);
 
-  // Poids total : 0,5 kg par article, minimum 0,2 kg.
+  // Poids total : somme des poids réels des produits (défaut 1500 g par article), minimum 0,2 kg.
   const items = Array.isArray(order.items) ? (order.items as Array<Record<string, unknown>>) : [];
-  const totalQty = items.reduce((s, it) => s + (Number(it.quantity) || 1), 0);
-  const weight = Math.max(0.2, Number(body.weight) || totalQty * 0.5);
+  const DEFAULT_WEIGHT_G = 1500;
+  let weight = Number(body.weight) || 0;
+  if (!weight) {
+    const ids = Array.from(
+      new Set(
+        items
+          .map((it) => String(it.productId ?? it.product_id ?? ''))
+          .filter((id) => /^[0-9a-f-]{36}$/i.test(id)),
+      ),
+    );
+    const weights: Record<string, number> = {};
+    if (ids.length) {
+      const { data: prods } = await admin.from('products').select('id, weight_grams').in('id', ids);
+      for (const p of prods || []) {
+        weights[String(p.id)] = Number(p.weight_grams) > 0 ? Number(p.weight_grams) : DEFAULT_WEIGHT_G;
+      }
+    }
+    const totalGrams = items.reduce((sum, it) => {
+      const qty = Number(it.quantity) || 1;
+      const pid = String(it.productId ?? it.product_id ?? '');
+      return sum + qty * (weights[pid] || DEFAULT_WEIGHT_G);
+    }, 0);
+    weight = totalGrams / 1000;
+  }
+  weight = Math.max(0.2, Math.round(weight * 1000) / 1000);
+
 
   const nameParts = String(order.customer_name || 'Client').trim().split(/\s+/);
   const lastName = nameParts.length > 1 ? nameParts.slice(-1)[0] : String(order.customer_name || 'Client');
