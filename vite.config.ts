@@ -60,9 +60,9 @@ const siteUrlHtmlPlugin = () => ({
 });
 
 const BACKEND_PUBLIC_FALLBACKS = {
-  VITE_SUPABASE_URL: "https://bumfyrfmormisyjletpb.supabase.co",
-  VITE_SUPABASE_PUBLISHABLE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1bWZ5cmZtb3JtaXN5amxldHBiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAyMTY3NjgsImV4cCI6MjA4NTc5Mjc2OH0.n145vusBgfNPvGXSCacoSxwJDujFR9zNEUB2twBovVI",
-  VITE_SUPABASE_PROJECT_ID: "bumfyrfmormisyjletpb",
+  VITE_SUPABASE_URL: "https://hzjzqdlyehclnpeqkier.supabase.co",
+  VITE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_E7HZqc2XeZCzTCsse1l1gg_jHGHVoJl",
+  VITE_SUPABASE_PROJECT_ID: "hzjzqdlyehclnpeqkier",
 } as const;
 
 // https://vitejs.dev/config/
