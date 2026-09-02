@@ -109,6 +109,11 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
     soldOutBadge: (designSettings as any)?.soldOutBadgeDefault !== false,
     soldOutLabel: '',
     status: 'published' as 'draft' | 'published',
+    weightGrams: Number(productDefaults?.defaultWeightGrams) > 0 ? Number(productDefaults?.defaultWeightGrams) : 1500,
+    dimLengthCm: '' as number | '',
+    dimWidthCm: '' as number | '',
+    dimHeightCm: '' as number | '',
+    colissimoProductCode: '' as string,
 
   });
 
