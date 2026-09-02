@@ -371,6 +371,12 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
       videoUrl: formData.videoUrl || undefined,
       hoverImage: formData.hoverImage || undefined,
       titleLogo: formData.titleLogo || undefined,
+      weightGrams: Number(formData.weightGrams) > 0 ? Math.round(Number(formData.weightGrams)) : 1500,
+      dimLengthCm: formData.dimLengthCm === '' ? null : Number(formData.dimLengthCm),
+      dimWidthCm: formData.dimWidthCm === '' ? null : Number(formData.dimWidthCm),
+      dimHeightCm: formData.dimHeightCm === '' ? null : Number(formData.dimHeightCm),
+      colissimoProductCode: formData.colissimoProductCode || null,
+
 
       tags: formData.tags,
       categories: Array.from(
