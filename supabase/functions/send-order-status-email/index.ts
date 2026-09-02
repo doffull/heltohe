@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    if (!Deno.env.get('SMTP_HOST')) return json({ error: 'Configuration SMTP manquante (SMTP_HOST)' }, 500);
+    if (!Deno.env.get('RESEND_API_KEY')) return json({ error: 'Configuration e-mail manquante (RESEND_API_KEY)' }, 500);
 
     const body = await req.json().catch(() => ({}));
     const orderId = String(body?.order_id || '').trim();

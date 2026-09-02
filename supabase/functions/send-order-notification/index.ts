@@ -87,7 +87,7 @@ serve(async (req) => {
       const label = roleLabels[role] || role;
       let status = "skipped";
       let errMsg: string | null = null;
-      if (Deno.env.get("SMTP_HOST")) {
+      if (Deno.env.get("RESEND_API_KEY")) {
         const sent = await sendMail({
           to: recipient,
           subject: `HELVETICA-MP — Nouveau rôle attribué : ${label}`,
@@ -124,7 +124,7 @@ serve(async (req) => {
     // Special handling for internal notifications (stock_manager / preparator)
     const internalTypes = ["stock_reservation_created", "preparation_assigned"];
     if (internalTypes.includes(notificationType)) {
-      const SMTP_READY = !!Deno.env.get("SMTP_HOST");
+      const MAIL_READY = !!Deno.env.get("RESEND_API_KEY");
       const results: any[] = [];
 
       // Determine recipients
@@ -160,7 +160,7 @@ serve(async (req) => {
         ? `Une nouvelle commande #${orderNumber} (${customerName}) vient d'être payée et le stock a été réservé.\n\nConnectez-vous au tableau de bord Préparations pour l'assigner à un préparateur.`
         : `La commande #${orderNumber} vient de vous être assignée pour préparation.\n\nConnectez-vous au tableau de bord Préparations pour la préparer.`;
 
-      if (SMTP_READY && recipients.length > 0) {
+      if (MAIL_READY && recipients.length > 0) {
         for (const to of recipients) {
           const sent = await sendMail({
             to,
@@ -189,7 +189,7 @@ serve(async (req) => {
       const template = emailTemplates[notificationType];
       
       if (template) {
-        if (Deno.env.get("SMTP_HOST")) {
+        if (Deno.env.get("RESEND_API_KEY")) {
           const sent = await sendMail({
             to: customerEmail,
             subject: applyTemplate(template.subject, templateVars),

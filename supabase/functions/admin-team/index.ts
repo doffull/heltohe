@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Envoi de contrôle : vérifie la configuration SMTP et la délivrabilité
+      // Envoi de contrôle : vérifie la configuration Resend et la délivrabilité
       // du gabarit « accès & mot de passe » sans toucher à un vrai compte.
       case 'test_email': {
         const mail = linkEmail({

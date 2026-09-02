@@ -4,6 +4,7 @@
  * Supabase délègue ici les 6 e-mails d'authentification (inscription, mot de passe
  * oublié, magic link, invitation, changement d'adresse, réauthentification) plutôt
  * que de les envoyer lui-même avec ses gabarits par défaut et son SMTP bridé.
+ * L'envoi passe ensuite par Resend (cf. _shared/mailer.ts).
  *
  * ⚠️ Cette fonction n'est appelée QUE si le hook est activé dans le dashboard :
  *    Authentication → Hooks → Send Email Hook, URI

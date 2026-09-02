@@ -3,7 +3,7 @@ import { sendMail, explainSendFailure, htmlToText } from '../_shared/mailer.ts';
 
 /**
  * Envoi d'un e-mail personnalisé à un client depuis l'espace admin.
- * Réservé aux administrateurs. Utilise le SMTP configuré (o2switch).
+ * Réservé aux administrateurs. Envoie via Resend (cf. _shared/mailer.ts).
  */
 
 const corsHeaders = {

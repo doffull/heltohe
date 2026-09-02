@@ -1,7 +1,7 @@
 /**
  * Demande publique de réinitialisation de mot de passe.
  *
- * Génère le lien de récupération côté serveur et l'envoie via le SMTP maison
+ * Génère le lien de récupération côté serveur et l'envoie via Resend
  * (délivrabilité bien meilleure que l'expéditeur par défaut du système d'auth).
  *
  * Réponse toujours neutre : impossible de savoir si l'adresse existe.

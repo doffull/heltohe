@@ -1,28 +1,56 @@
 /**
- * Expéditeur e-mail centralisé — envoi direct via SMTP (o2switch).
+ * Expéditeur e-mail centralisé — envoi direct via l'API Resend.
  *
  * Secrets Edge Functions utilisés :
- *   SMTP_HOST   ex. mail.helvetica-mp.com
- *   SMTP_PORT   ex. 465 (SSL implicite, secure: true)
- *   SMTP_USER   ex. shop@helvetica-mp.com
- *   SMTP_PASS   mot de passe du compte e-mail
- *   SMTP_FROM   ex. Helvetica MP <shop@helvetica-mp.com>
- *   ADMIN_EMAIL destinataire des alertes internes
+ *   RESEND_API_KEY   la clé d'API Resend — sans elle, aucun envoi
+ *   MAIL_FROM        ex. shop@helvetica-mp.com (ou « Nom <adresse> »)
+ *   MAIL_FROM_NAME   nom affiché de l'expéditeur
+ *   MAIL_REPLY_TO    adresse de réponse, à défaut MAIL_FROM
+ *   ADMIN_EMAIL      destinataire des alertes internes
  *
- * MAIL_FROM / MAIL_FROM_NAME / MAIL_REPLY_TO restent acceptés en surcharge.
+ * ⚠️ Le domaine de `MAIL_FROM` doit être VÉRIFIÉ chez Resend (SPF + DKIM),
+ * sinon l'API refuse l'envoi avec un 403. C'est la première chose à regarder
+ * si tout part en erreur d'un coup.
+ *
+ * Historique — ce module est passé par trois transports :
+ *   1. la passerelle Lovable, retirée le 30/08 (dépendance externe inutile) ;
+ *   2. SMTP direct o2switch (denomailer), introduit par Lovable début 09 ;
+ *   3. Resend, rétabli le 02/09 — décision produit, cf. §19 de PROJECT.md.
+ * Les `SMTP_*` ne sont plus lues NULLE PART : elles peuvent être supprimées
+ * des secrets Supabase.
  */
 
-import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts';
-
+const FALLBACK_FROM_EMAIL = 'onboarding@resend.dev';
 const FALLBACK_FROM_NAME = 'HELVETICA-MP';
+
+let fallbackWarned = false;
 
 function env(name: string): string {
   return (Deno.env.get(name) || '').trim();
 }
 
-/** Adresse d'expédition nue, sans nom affiché. */
+/**
+ * Adresse d'expédition nue, sans nom affiché.
+ *
+ * `MAIL_FROM` accepte les deux formes : `adresse` ou `Nom <adresse>`.
+ *
+ * ⚠️ Absente, on retombe sur le domaine de test de Resend — l'envoi aboutit,
+ * mais sans DKIM au nom du domaine, et Resend ne le délivre qu'aux adresses du
+ * compte propriétaire. C'est un filet de dev, pas un mode de production : d'où
+ * l'avertissement en logs.
+ */
 export function mailFromAddress(): string {
-  const raw = env('MAIL_FROM') || env('SMTP_FROM') || env('SMTP_USER');
+  const raw = env('MAIL_FROM');
+  if (!raw) {
+    if (!fallbackWarned) {
+      console.warn(
+        `[mailer] MAIL_FROM absent — repli sur ${FALLBACK_FROM_EMAIL} ` +
+        `(domaine de test Resend, sans DKIM au nom du domaine).`,
+      );
+      fallbackWarned = true;
+    }
+    return FALLBACK_FROM_EMAIL;
+  }
   const match = raw.match(/<([^>]+)>/);
   return (match ? match[1] : raw).trim();
 }
@@ -31,8 +59,9 @@ export function mailFromAddress(): string {
 export function mailFromName(): string {
   const explicit = env('MAIL_FROM_NAME');
   if (explicit) return explicit;
-  const raw = env('SMTP_FROM');
-  const match = raw.match(/^\s*"?([^"<]+?)"?\s*</);
+  // `MAIL_FROM` peut porter la forme complète « Nom <adresse> » : on en tire
+  // le nom plutôt que de retomber bêtement sur la constante.
+  const match = env('MAIL_FROM').match(/^\s*"?([^"<]+?)"?\s*</);
   return (match ? match[1] : FALLBACK_FROM_NAME).trim();
 }
 
@@ -85,71 +114,90 @@ export interface SendMailResult {
   ok: boolean;
   /** Identifiant local du message (Message-ID), présent si l'envoi a réussi. */
   id?: string;
-  /** 200 en cas de succès, 0 si la connexion/authentification SMTP a échoué. */
+  /** Code HTTP renvoyé par Resend ; 0 si la requête n'a même pas abouti. */
   status: number;
   /** Message d'erreur lisible, présent seulement en cas d'échec. */
   error?: string;
 }
 
+/**
+ * Seule `RESEND_API_KEY` est indispensable : `MAIL_FROM` a son propre repli
+ * (cf. `mailFromAddress`), qui laisse l'envoi aboutir en dev.
+ */
 function missingConfig(): string | null {
-  const missing = ['SMTP_HOST', 'SMTP_USER', 'SMTP_PASS'].filter((k) => !env(k));
-  return missing.length ? `Configuration SMTP incomplète : ${missing.join(', ')}` : null;
+  return env('RESEND_API_KEY') ? null : 'Configuration e-mail incomplète : RESEND_API_KEY';
 }
 
 /**
- * Envoi via le serveur SMTP configuré (connexion SSL implicite sur le port 465).
- * Ne lève jamais : renvoie toujours un SendMailResult.
+ * Envoi via l'API Resend, en direct (`api.resend.com`).
+ * Ne lève jamais : renvoie toujours un SendMailResult, à l'appelant de décider
+ * si l'échec est bloquant ou non.
  */
 export async function sendMail(input: SendMailInput): Promise<SendMailResult> {
   const configError = missingConfig();
   if (configError) return { ok: false, status: 0, error: configError };
 
-  const port = Number(env('SMTP_PORT') || '465');
-  const client = new SMTPClient({
-    connection: {
-      hostname: env('SMTP_HOST'),
-      port,
-      tls: port === 465,
-      auth: { username: env('SMTP_USER'), password: env('SMTP_PASS') },
-    },
-  });
-
-  const recipients = Array.isArray(input.to) ? input.to : [input.to];
-  const messageId = `<${crypto.randomUUID()}@${mailFromAddress().split('@')[1] || 'localhost'}>`;
+  // `text` est fourni à chaque fois, dérivé du HTML au besoin : un e-mail
+  // « HTML seul » est nettement plus filtré en spam.
+  const body: Record<string, unknown> = {
+    from: input.from || mailFrom(),
+    to: Array.isArray(input.to) ? input.to : [input.to],
+    subject: input.subject,
+    html: input.html,
+    text: input.text || htmlToText(input.html),
+    reply_to: input.replyTo || mailReplyTo(),
+  };
+  // Resend rejette `headers: {}` — on ne l'ajoute que s'il porte quelque chose.
+  if (input.headers && Object.keys(input.headers).length > 0) {
+    body.headers = input.headers;
+  }
 
   try {
-    await client.send({
-      from: input.from || mailFrom(),
-      to: recipients,
-      replyTo: input.replyTo || mailReplyTo(),
-      subject: input.subject,
-      content: input.text || htmlToText(input.html),
-      html: input.html,
-      headers: { 'Message-ID': messageId, ...(input.headers || {}) },
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${env('RESEND_API_KEY')}`,
+      },
+      body: JSON.stringify(body),
     });
-    return { ok: true, status: 200, id: messageId };
+
+    const text = await res.text();
+    if (!res.ok) {
+      console.error(`[mailer] Resend a refusé l'envoi [${res.status}]: ${text}`);
+      return { ok: false, status: res.status, error: text };
+    }
+
+    let id: string | undefined;
+    try {
+      id = JSON.parse(text)?.id;
+    } catch {
+      // Resend renvoie du JSON ; si ce n'est pas le cas, l'envoi reste valide.
+    }
+    return { ok: true, status: res.status, id };
   } catch (e) {
     const error = e instanceof Error ? e.message : String(e);
-    console.error(`[mailer] Envoi SMTP impossible : ${error}`);
+    console.error(`[mailer] Envoi impossible : ${error}`);
     return { ok: false, status: 0, error };
-  } finally {
-    try {
-      await client.close();
-    } catch {
-      // fermeture best-effort
-    }
   }
 }
 
-/** Traduit un échec SMTP en message actionnable pour l'admin. */
+/** Traduit un échec Resend en message actionnable pour l'admin. */
 export function explainSendFailure(result: SendMailResult): string {
   const raw = result.error || '';
-  if (/Configuration SMTP incomplète/.test(raw)) return raw;
-  if (/535|authentication|auth/i.test(raw)) {
-    return "Authentification SMTP refusée : vérifiez SMTP_USER et SMTP_PASS (compte e-mail o2switch).";
+  if (/Configuration e-mail incomplète/.test(raw)) return raw;
+  if (result.status === 401 || result.status === 403) {
+    // 403 = le plus souvent un domaine non vérifié, pas une clé invalide.
+    return `Resend a refusé l'envoi [${result.status}] : vérifiez RESEND_API_KEY, et que le domaine de ${mailFromAddress() || 'MAIL_FROM'} est bien validé (SPF/DKIM) dans Resend.`;
   }
-  if (/connect|dns|timeout|refused/i.test(raw)) {
-    return `Connexion au serveur SMTP impossible (${env('SMTP_HOST')}:${env('SMTP_PORT') || '465'}).`;
+  if (result.status === 422) {
+    return `Resend a rejeté le message [422] : adresse destinataire ou expéditeur invalide. ${raw}`;
   }
-  return raw || "Envoi e-mail refusé par le serveur SMTP.";
+  if (result.status === 429) {
+    return "Resend limite le débit [429] : trop d'envois par seconde. Réessayez dans un instant.";
+  }
+  if (result.status === 0) {
+    return `Contact impossible avec Resend : ${raw || 'erreur réseau'}.`;
+  }
+  return raw || "Envoi e-mail refusé par Resend.";
 }

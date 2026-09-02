@@ -465,8 +465,8 @@ serve(async (req) => {
   }
 
   try {
-    if (!Deno.env.get('SMTP_HOST')) {
-      throw new Error('SMTP is not configured (SMTP_HOST)');
+    if (!Deno.env.get('RESEND_API_KEY')) {
+      throw new Error('Email is not configured (RESEND_API_KEY)');
     }
 
     const payload: EmailPayload = await req.json();

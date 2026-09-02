@@ -96,11 +96,12 @@ importer le premier. **Garder les deux valeurs alignées.**
 | `LAPOSTE_API_KEY` | `colissimo-proxy` | API **points relais** La Poste |
 | `LAPOSTE_TRACKING_API_KEY` | `poll-carrier-tracking`, `tracking-key` | API **suivi de colis** La Poste — **différente** de la précédente. Repli : la base gagne (§5) |
 | `CARRIER_WEBHOOK_TOKEN` | `carrier-tracking-webhook` | jeton partagé authentifiant les appels entrants du transporteur. Sans lui, l'endpoint accepterait n'importe quel statut de livraison. Repli : la base gagne (§5) |
-| `RESEND_API_KEY` | `send-order-confirmation`, `send-order-notification`, `send-order-status-email`, `crm-send-message` | e-mail transactionnel — **en direct** (`api.resend.com`), plus aucun passage par le connecteur Lovable |
+| `RESEND_API_KEY` | `_shared/mailer.ts` → **les 11 fonctions d'envoi** (commandes, newsletters, accès, réinit. mot de passe, CRM…) | e-mail transactionnel — **en direct** (`api.resend.com`), plus aucun passage par le connecteur Lovable. **Sans elle, aucun e-mail ne part** |
 | `SEND_EMAIL_HOOK_SECRET` | `auth-email-hook` | signe les requêtes du Send Email Hook (`v1,whsec_…`), donné par le dashboard à la création du hook. Sans elle la fonction répond 401 |
-| `MAIL_FROM` | `_shared/mailer.ts` → les 4 fonctions ci-dessus | adresse d'expédition unique. ⚠️ domaine à vérifier dans Resend (SPF + DKIM). Absente → repli sur `onboarding@resend.dev` + avertissement en logs |
+| `MAIL_FROM` | `_shared/mailer.ts` → les 11 fonctions ci-dessus | adresse d'expédition unique. ⚠️ domaine à vérifier dans Resend (SPF + DKIM). Absente → repli sur `onboarding@resend.dev` + avertissement en logs |
 | `MAIL_FROM_NAME` | idem | nom affiché. Défaut : `HELVETICA-MP` |
 | `MAIL_REPLY_TO` | idem | adresse de réponse. Absente → repli sur `MAIL_FROM`. Son domaine n'a pas à être vérifié |
+| `ADMIN_EMAIL` | `_shared/mailer.ts` (`adminEmailAddress()`) → `send-order-confirmation` | destinataire des alertes internes (copie admin des commandes). Absente → repli sur `MAIL_FROM` |
 | `BREVO_API_KEY` | `crm-send-message` | second canal e-mail |
 | `TWILIO_API_KEY` | `send-order-notification` | SMS — passe par le connecteur Lovable, donc `LOVABLE_API_KEY` est **aussi** requise ; le numéro d'expédition vient de `notification_config.sms_from_number` |
 | `GOOGLE_MAPS_API_KEY` | `boutique-lookup` | clé **serveur**, distincte de la clé navigateur du §2 |

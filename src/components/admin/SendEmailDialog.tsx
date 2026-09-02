@@ -25,7 +25,7 @@ interface Props {
   targets: SendEmailTarget[];
 }
 
-/** Fenêtre d'envoi d'e-mail au client depuis l'admin (SMTP interne, modèles réutilisables). */
+/** Fenêtre d'envoi d'e-mail au client depuis l'admin (envoi Resend, modèles réutilisables). */
 export function SendEmailDialog({ open, onOpenChange, targets }: Props) {
   const { toast } = useToast();
   const { data: templates = [] } = useEmailTemplates();

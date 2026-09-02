@@ -113,8 +113,10 @@ Deno.serve(async (req) => {
         status: res.ok ? "sent" : "failed",
         error_message: res.ok ? null : explainSendFailure(res),
       });
-      // Ménage la limite de débit du serveur SMTP.
-      await new Promise((r) => setTimeout(r, 300));
+      // Ménage la limite de débit de Resend : 2 requêtes/seconde, donc 500 ms
+      // minimum entre deux envois. La marge évite de frôler le plafond — un 429
+      // ici ferait échouer un abonné définitivement, la boucle ne réessaie pas.
+      await new Promise((r) => setTimeout(r, 600));
     }
 
     await db

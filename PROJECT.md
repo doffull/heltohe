@@ -743,3 +743,87 @@ défaut, via son SMTP intégré **plafonné à quelques envois par heure**.
 4. **Vérifier `Site URL` et `Redirect URLs`** dans la configuration Auth : une URL non
    listée est ignorée, l'utilisateur retombe sur l'accueil après confirmation
 5. **Remplacer la clé anon du `.env`**, refusée par l'API
+
+---
+
+## 19. Retour à Resend — 02/09/2026
+
+Le mailer est repassé de **SMTP o2switch à Resend**. Décision produit : on
+revient au transport que nous avions mis en place le 30/08 (§17).
+
+### Ce qui s'était passé
+
+Entre le 30/08 et le 01/09, Lovable a **réécrit `_shared/mailer.ts`** pour
+envoyer via SMTP direct (`denomailer`, o2switch, port 465). L'API publique du
+module a été conservée à l'identique — nos cinq exports, mêmes noms, mêmes
+signatures — si bien qu'aucune des fonctions appelantes n'a eu à changer et que
+la bascule est passée inaperçue. Seul le corps de `sendMail()` avait changé.
+
+### Ce qui a été fait
+
+- **`_shared/mailer.ts`** : corps de `sendMail()` réécrit vers `api.resend.com`.
+  Les ajouts de Lovable sont **conservés** — `text?`, `headers?`, `htmlToText()`,
+  `adminEmailAddress()`, `explainSendFailure()` — parce que `newsletter-campaign`,
+  `admin-team`, `send-order-confirmation` et `send-custom-email` en dépendent
+  désormais. Un revert brut du fichier les aurait cassées.
+- **7 gardes `SMTP_HOST`** dans `send-order-confirmation`,
+  `send-order-notification` et `send-order-status-email` : elles refusaient
+  l'envoi **avant** d'appeler `sendMail()`. Sans ce remplacement par
+  `RESEND_API_KEY`, la bascule n'aurait rien changé pour ces trois fonctions.
+  `SMTP_READY` renommée `MAIL_READY`.
+- **`explainSendFailure()`** réécrite pour les codes Resend (401/403 → domaine
+  non vérifié, 422 → adresse invalide, 429 → débit, 0 → réseau).
+- **`newsletter-campaign`** : pause portée de 300 ms à **600 ms**. Resend
+  plafonne à 2 requêtes/seconde ; à 300 ms on frôlait la limite, et un `429`
+  ici fait échouer un abonné **définitivement** — la boucle ne réessaie pas.
+- Commentaires obsolètes corrigés dans 5 fichiers.
+
+### ⚠️ Plus aucune variable `SMTP_*` n'est lue
+
+Ni dans les edge functions, ni dans le front. Les secrets `SMTP_HOST`,
+`SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` peuvent être supprimés de
+Supabase. `ADMIN_EMAIL`, elle, **reste nécessaire** : elle n'a rien à voir avec
+le transport (destinataire des alertes internes, repli sur `MAIL_FROM`).
+
+### Le repli `onboarding@resend.dev`, rétabli
+
+`mailFromAddress()` retombe sur le domaine de test de Resend quand `MAIL_FROM`
+est absente, avec un avertissement en logs émis une seule fois. C'était notre
+design d'origine et `variables.md` le documentait déjà. ⚠️ Resend ne délivre ce
+domaine qu'aux adresses du compte propriétaire : c'est un filet de dev, jamais
+un mode de production.
+
+### ⚠️ Le point de rupture à connaître
+
+**Le domaine de `MAIL_FROM` doit être vérifié chez Resend (SPF + DKIM)**, sinon
+l'API répond 403 et *tout* s'arrête d'un coup. C'est la première chose à
+regarder devant une panne d'e-mail généralisée — d'où le message explicite dans
+`explainSendFailure()`.
+
+### Vérification
+
+`deno check` sur les **12 fonctions** touchant à l'e-mail : toutes passent.
+
+⚠️ `deno check` échoue si on le lance sans `--node-modules-dir=none` : le
+`node_modules/` du front interfère avec la résolution de `@supabase/supabase-js`.
+C'est un artefact local — Supabase ne déploie pas ce dossier — mais il fait
+croire à des erreurs qui n'existent pas.
+
+`sendMail()` testée en isolation avec `fetch` bouchonné, **20 assertions** :
+formes de `MAIL_FROM` (`adresse` et `Nom <adresse>`), replis, absence de clé,
+URL et en-tête `Authorization`, `to` normalisé en tableau, `reply_to` en
+snake_case, `text` auto-dérivé du HTML, `headers` omis si vide et transmis
+sinon, codes 403/429, et exception réseau (`sendMail` ne lève jamais).
+
+**Recette réelle non faite** : aucun e-mail n'a été envoyé pour de vrai. Il faut
+une clé Resend valide et le domaine vérifié.
+
+### Reste ouvert
+
+- `crm-send-message` garde une branche **Brevo** via la passerelle Lovable,
+  intacte : ce chemin ne passe pas par `sendMail()`.
+- `process-email-queue` envoie toujours via l'**API Lovable**
+  (`LOVABLE_API_KEY`), pas via Resend. Sans objet tant que la file n'est pas
+  alimentée : `enqueue_email()` n'est appelée **nulle part** (ni fonction, ni
+  trigger, ni front). Ne pas déployer cette fonction — son cron pg_cron
+  scruterait des files vides toutes les 5 secondes.
