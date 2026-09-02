@@ -638,6 +638,54 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
           </p>
         </div>
 
+        {/* Expédition */}
+        <div className="space-y-2 border border-border/40 bg-secondary/30 px-3 py-2.5">
+          <Label className="hud-text text-xs">Expédition</Label>
+          <div className="space-y-1">
+            <Label className="text-[10px] text-muted-foreground">Poids (grammes)</Label>
+            <Input
+              type="number"
+              min={1}
+              value={formData.weightGrams}
+              onChange={(e) => setFormData(prev => ({ ...prev, weightGrams: e.target.value === '' ? '' as unknown as number : Number(e.target.value) }))}
+              className="bg-secondary/50 border-border/30"
+              placeholder="1500"
+            />
+            <p className="text-[10px] text-muted-foreground">
+              {Number(formData.weightGrams) > 0
+                ? `≈ ${(Number(formData.weightGrams) / 1000).toFixed(3).replace(/0+$/, '').replace(/\.$/, '')} kg`
+                : 'Vide = 1,5 kg (1500 g) par défaut'}
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="space-y-1">
+              <Label className="text-[10px] text-muted-foreground">Long. (cm)</Label>
+              <Input type="number" min={0} value={formData.dimLengthCm} onChange={(e) => setFormData(prev => ({ ...prev, dimLengthCm: e.target.value === '' ? '' : Number(e.target.value) }))} className="bg-secondary/50 border-border/30" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px] text-muted-foreground">Larg. (cm)</Label>
+              <Input type="number" min={0} value={formData.dimWidthCm} onChange={(e) => setFormData(prev => ({ ...prev, dimWidthCm: e.target.value === '' ? '' : Number(e.target.value) }))} className="bg-secondary/50 border-border/30" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px] text-muted-foreground">Haut. (cm)</Label>
+              <Input type="number" min={0} value={formData.dimHeightCm} onChange={(e) => setFormData(prev => ({ ...prev, dimHeightCm: e.target.value === '' ? '' : Number(e.target.value) }))} className="bg-secondary/50 border-border/30" />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[10px] text-muted-foreground">Type d'envoi Colissimo</Label>
+            <select
+              value={formData.colissimoProductCode}
+              onChange={(e) => setFormData(prev => ({ ...prev, colissimoProductCode: e.target.value }))}
+              className="w-full h-9 bg-secondary/50 border border-border/30 px-2 text-sm"
+            >
+              <option value="">Par défaut (réglages livraison)</option>
+              <option value="DOM">DOM — domicile sans signature</option>
+              <option value="DOS">DOS — domicile avec signature</option>
+              <option value="A2P">A2P — point de retrait</option>
+              <option value="COLR">COLR — retour</option>
+            </select>
+          </div>
+        </div>
 
 
         {/* Édition limitée */}
