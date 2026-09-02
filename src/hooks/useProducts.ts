@@ -95,6 +95,11 @@ const FIELD_MAP: Record<string, { col: string; transform: (v: any) => any }> = {
   soldOutBadge: { col: 'sold_out_badge', transform: (v) => v !== false },
   soldOutLabel: { col: 'sold_out_label', transform: (v) => (v ? String(v) : null) },
   status: { col: 'status', transform: (v) => (v === 'draft' ? 'draft' : 'published') },
+  weightGrams: { col: 'weight_grams', transform: (v) => (v === '' || v === null || v === undefined ? 1500 : Math.max(1, Math.round(Number(v)))) },
+  dimLengthCm: { col: 'dim_length_cm', transform: (v) => (v === '' || v === null || v === undefined ? null : Number(v)) },
+  dimWidthCm: { col: 'dim_width_cm', transform: (v) => (v === '' || v === null || v === undefined ? null : Number(v)) },
+  dimHeightCm: { col: 'dim_height_cm', transform: (v) => (v === '' || v === null || v === undefined ? null : Number(v)) },
+  colissimoProductCode: { col: 'colissimo_product_code', transform: (v) => v || null },
 };
 
 function appToDbProduct(product: Partial<Product> & { isActive?: boolean }): Record<string, unknown> {
