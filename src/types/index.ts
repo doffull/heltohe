@@ -31,6 +31,8 @@ export interface ProductDefaults {
   material?: string;
   careInstructions?: string;
   childSizes?: string[];
+  /** Poids d'expédition par défaut en grammes (défaut : 1500 g = 1,5 kg). */
+  defaultWeightGrams?: number;
 }
 
 export interface Product {
