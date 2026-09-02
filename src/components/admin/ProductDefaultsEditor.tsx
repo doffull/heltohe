@@ -17,6 +17,7 @@ export function ProductDefaultsEditor() {
   const [material, setMaterial] = useState(initial.material || '100% polyester, rembourrage synthétique, doublure polyester.');
   const [care, setCare] = useState(initial.careInstructions || 'Lavage 30°C, séchage à plat, ne pas repasser.');
   const [childSizes, setChildSizes] = useState<string[]>(initial.childSizes || ['2A','4A','6A','8A','10A','12A','14A']);
+  const [weight, setWeight] = useState<number>(initial.defaultWeightGrams && initial.defaultWeightGrams > 0 ? initial.defaultWeightGrams : 1500);
   const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -25,6 +26,7 @@ export function ProductDefaultsEditor() {
     if (cur.material) setMaterial(cur.material);
     if (cur.careInstructions) setCare(cur.careInstructions);
     if (cur.childSizes?.length) setChildSizes(cur.childSizes);
+    if (cur.defaultWeightGrams && cur.defaultWeightGrams > 0) setWeight(cur.defaultWeightGrams);
   }, [designSettings]);
 
   const addChild = () => {
