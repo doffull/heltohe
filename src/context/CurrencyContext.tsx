@@ -29,32 +29,25 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   const locales = useMemo(() => normalizeLocaleSettings((designSettings as any)?.locales), [designSettings]);
   const currencies = useMemo(() => resolveCurrencies(locales), [locales]);
 
-  const [currency, setCurrencyState] = useState<CurrencyCode>(() => readStoredCurrency());
+  const [currency, setCurrencyState] = useState<CurrencyCode>(DEFAULT_CURRENCY);
 
-  // Si la devise mémorisée n'est plus activée dans l'admin, on retombe sur la devise par défaut.
-  useEffect(() => {
-    if (!currencies.some(c => c.code === currency)) {
-      setCurrencyState(locales.defaultCurrency);
-      storeCurrency(locales.defaultCurrency);
-    }
-  }, [currencies, currency, locales.defaultCurrency]);
-
-  const setCurrency = useCallback((code: CurrencyCode) => {
-    setCurrencyState(code);
-    storeCurrency(code);
+  const setCurrency = useCallback((_code: CurrencyCode) => {
+    // Multi-devise désactivé : le site fonctionne uniquement en EUR.
+    setCurrencyState(DEFAULT_CURRENCY);
+    storeCurrency(DEFAULT_CURRENCY);
   }, []);
 
   const value = useMemo<CurrencyContextType>(() => {
-    const def = currencies.find(c => c.code === currency) ?? currencies[0];
+    const def = getCurrencyDef(DEFAULT_CURRENCY);
     return {
-      currency: def.code,
+      currency: DEFAULT_CURRENCY,
       currencyDef: def,
-      currencies,
+      currencies: [def],
       setCurrency,
-      format: (amountEur, options) => formatMoney(amountEur, def.code, options, def),
-      isConverted: def.code !== DEFAULT_CURRENCY,
+      format: (amountEur, options) => formatMoney(amountEur, DEFAULT_CURRENCY, options, def),
+      isConverted: false,
     };
-  }, [currency, currencies, setCurrency]);
+  }, [setCurrency]);
 
   return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>;
 }
@@ -66,7 +59,7 @@ export function useCurrency(): CurrencyContextType {
     return {
       currency: DEFAULT_CURRENCY,
       currencyDef: getCurrencyDef(DEFAULT_CURRENCY),
-      currencies: CURRENCIES,
+      currencies: [getCurrencyDef(DEFAULT_CURRENCY)],
       setCurrency: () => {},
       format: (a, o) => formatMoney(a, DEFAULT_CURRENCY, o),
       isConverted: false,
