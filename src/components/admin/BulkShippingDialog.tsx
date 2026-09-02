@@ -63,7 +63,7 @@ export function BulkShippingDialog({ open, onOpenChange, productIds }: Props) {
         <div className="space-y-3">
           <div>
             <Label className="text-xs">Poids (grammes)</Label>
-            <Input type="number" min={1} value={weight} onChange={e => setWeight(e.target.value)} placeholder="ex. 500" />
+            <Input type="number" min={1} value={weight} onChange={e => setWeight(e.target.value)} placeholder="1500 (défaut 1,5 kg)" />
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div>
