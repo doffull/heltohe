@@ -69,7 +69,22 @@ export function ProductDefaultsEditor() {
             <Label className="text-xs">Entretien par défaut</Label>
             <Textarea value={care} onChange={e => setCare(e.target.value)} rows={2} placeholder="Lavable à 30°C…" />
           </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Poids par défaut (grammes)</Label>
+            <Input
+              type="number"
+              min={1}
+              value={weight}
+              onChange={e => setWeight(e.target.value === '' ? 0 : Number(e.target.value))}
+              placeholder="1500"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Utilisé pour les nouveaux produits et le calcul du colis Colissimo. Défaut : 1500 g (1,5 kg).
+            </p>
+          </div>
         </div>
+
+
 
         <div className="space-y-2">
           <Label className="text-xs">Tailles enfant (2A → 14A/16A)</Label>
