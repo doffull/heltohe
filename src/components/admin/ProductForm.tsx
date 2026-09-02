@@ -344,6 +344,12 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
         soldOutBadge: product.soldOutBadge !== false,
         soldOutLabel: product.soldOutLabel || '',
         status: product.status === 'draft' ? 'draft' : 'published',
+        weightGrams: Number(product.weightGrams) > 0 ? Number(product.weightGrams) : 1500,
+        dimLengthCm: product.dimLengthCm ?? '',
+        dimWidthCm: product.dimWidthCm ?? '',
+        dimHeightCm: product.dimHeightCm ?? '',
+        colissimoProductCode: product.colissimoProductCode || '',
+
 
       });
     }
