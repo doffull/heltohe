@@ -26,10 +26,11 @@ export default function LocaleSwitcher({
   className,
   compact,
   showLanguage = true,
-  showCurrency = true,
+  showCurrency: _showCurrency = false,
 }: LocaleSwitcherProps) {
   const { language, setLanguage, designSettings } = useApp();
   const { currency, currencies, setCurrency } = useCurrency();
+  const showCurrency = false; // multi-devise désactivé : EUR uniquement
   const locales = normalizeLocaleSettings((designSettings as any)?.locales);
   const languages = resolveLanguages(locales);
   const activeLang = languages.find(l => l.code === language) ?? languages[0];
