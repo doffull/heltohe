@@ -17,6 +17,7 @@ export function ProductDefaultsEditor() {
   const [material, setMaterial] = useState(initial.material || '100% polyester, rembourrage synthétique, doublure polyester.');
   const [care, setCare] = useState(initial.careInstructions || 'Lavage 30°C, séchage à plat, ne pas repasser.');
   const [childSizes, setChildSizes] = useState<string[]>(initial.childSizes || ['2A','4A','6A','8A','10A','12A','14A']);
+  const [weight, setWeight] = useState<number>(initial.defaultWeightGrams && initial.defaultWeightGrams > 0 ? initial.defaultWeightGrams : 1500);
   const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -25,6 +26,7 @@ export function ProductDefaultsEditor() {
     if (cur.material) setMaterial(cur.material);
     if (cur.careInstructions) setCare(cur.careInstructions);
     if (cur.childSizes?.length) setChildSizes(cur.childSizes);
+    if (cur.defaultWeightGrams && cur.defaultWeightGrams > 0) setWeight(cur.defaultWeightGrams);
   }, [designSettings]);
 
   const addChild = () => {
@@ -38,7 +40,7 @@ export function ProductDefaultsEditor() {
   const save = async () => {
     setSaving(true);
     try {
-      const next: ProductDefaults = { material, careInstructions: care, childSizes };
+      const next: ProductDefaults = { material, careInstructions: care, childSizes, defaultWeightGrams: Number(weight) > 0 ? Math.round(Number(weight)) : 1500 };
       updateDesignSettings({ productDefaults: next } as any);
       await flushDesignSettings({ productDefaults: next } as any);
       toast.success('Défauts produits enregistrés');
@@ -67,7 +69,22 @@ export function ProductDefaultsEditor() {
             <Label className="text-xs">Entretien par défaut</Label>
             <Textarea value={care} onChange={e => setCare(e.target.value)} rows={2} placeholder="Lavable à 30°C…" />
           </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Poids par défaut (grammes)</Label>
+            <Input
+              type="number"
+              min={1}
+              value={weight}
+              onChange={e => setWeight(e.target.value === '' ? 0 : Number(e.target.value))}
+              placeholder="1500"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Utilisé pour les nouveaux produits et le calcul du colis Colissimo. Défaut : 1500 g (1,5 kg).
+            </p>
+          </div>
         </div>
+
+
 
         <div className="space-y-2">
           <Label className="text-xs">Tailles enfant (2A → 14A/16A)</Label>

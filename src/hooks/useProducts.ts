@@ -46,6 +46,11 @@ function dbToAppProduct(db: Record<string, unknown>): Product {
     soldOutLabel: ((db as any).sold_out_label as string) || undefined,
     status: ((db.status as string) === 'draft' ? 'draft' : 'published') as Product['status'],
     deletedAt: (db.deleted_at as string) || null,
+    weightGrams: db.weight_grams === null || db.weight_grams === undefined ? 1500 : Number(db.weight_grams),
+    dimLengthCm: db.dim_length_cm === null || db.dim_length_cm === undefined ? null : Number(db.dim_length_cm),
+    dimWidthCm: db.dim_width_cm === null || db.dim_width_cm === undefined ? null : Number(db.dim_width_cm),
+    dimHeightCm: db.dim_height_cm === null || db.dim_height_cm === undefined ? null : Number(db.dim_height_cm),
+    colissimoProductCode: (db.colissimo_product_code as string) || null,
   };
 }
 
@@ -90,6 +95,11 @@ const FIELD_MAP: Record<string, { col: string; transform: (v: any) => any }> = {
   soldOutBadge: { col: 'sold_out_badge', transform: (v) => v !== false },
   soldOutLabel: { col: 'sold_out_label', transform: (v) => (v ? String(v) : null) },
   status: { col: 'status', transform: (v) => (v === 'draft' ? 'draft' : 'published') },
+  weightGrams: { col: 'weight_grams', transform: (v) => (v === '' || v === null || v === undefined ? 1500 : Math.max(1, Math.round(Number(v)))) },
+  dimLengthCm: { col: 'dim_length_cm', transform: (v) => (v === '' || v === null || v === undefined ? null : Number(v)) },
+  dimWidthCm: { col: 'dim_width_cm', transform: (v) => (v === '' || v === null || v === undefined ? null : Number(v)) },
+  dimHeightCm: { col: 'dim_height_cm', transform: (v) => (v === '' || v === null || v === undefined ? null : Number(v)) },
+  colissimoProductCode: { col: 'colissimo_product_code', transform: (v) => v || null },
 };
 
 function appToDbProduct(product: Partial<Product> & { isActive?: boolean }): Record<string, unknown> {

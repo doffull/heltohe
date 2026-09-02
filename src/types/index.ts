@@ -31,6 +31,8 @@ export interface ProductDefaults {
   material?: string;
   careInstructions?: string;
   childSizes?: string[];
+  /** Poids d'expédition par défaut en grammes (défaut : 1500 g = 1,5 kg). */
+  defaultWeightGrams?: number;
 }
 
 export interface Product {
@@ -88,6 +90,14 @@ export interface Product {
   status?: 'draft' | 'published';
   /** Date de mise à la corbeille (null = non supprimé). */
   deletedAt?: string | null;
+
+  /** Poids d'expédition en grammes (défaut : 1500 g). */
+  weightGrams?: number | null;
+  dimLengthCm?: number | null;
+  dimWidthCm?: number | null;
+  dimHeightCm?: number | null;
+  /** Type d'envoi Colissimo (DOM, DOS, A2P, COLR). */
+  colissimoProductCode?: string | null;
 }
 
 export interface OrderItem {
