@@ -40,7 +40,7 @@ export function ProductDefaultsEditor() {
   const save = async () => {
     setSaving(true);
     try {
-      const next: ProductDefaults = { material, careInstructions: care, childSizes };
+      const next: ProductDefaults = { material, careInstructions: care, childSizes, defaultWeightGrams: Number(weight) > 0 ? Math.round(Number(weight)) : 1500 };
       updateDesignSettings({ productDefaults: next } as any);
       await flushDesignSettings({ productDefaults: next } as any);
       toast.success('Défauts produits enregistrés');
