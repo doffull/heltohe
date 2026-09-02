@@ -46,6 +46,11 @@ function dbToAppProduct(db: Record<string, unknown>): Product {
     soldOutLabel: ((db as any).sold_out_label as string) || undefined,
     status: ((db.status as string) === 'draft' ? 'draft' : 'published') as Product['status'],
     deletedAt: (db.deleted_at as string) || null,
+    weightGrams: db.weight_grams === null || db.weight_grams === undefined ? 1500 : Number(db.weight_grams),
+    dimLengthCm: db.dim_length_cm === null || db.dim_length_cm === undefined ? null : Number(db.dim_length_cm),
+    dimWidthCm: db.dim_width_cm === null || db.dim_width_cm === undefined ? null : Number(db.dim_width_cm),
+    dimHeightCm: db.dim_height_cm === null || db.dim_height_cm === undefined ? null : Number(db.dim_height_cm),
+    colissimoProductCode: (db.colissimo_product_code as string) || null,
   };
 }
 
