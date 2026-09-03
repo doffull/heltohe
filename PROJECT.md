@@ -670,6 +670,11 @@ dans le chemin d'une commande, et réputation d'IP à construire.
 ## 18. Ce qui tourne vraiment — l'écart dépôt / déploiement
 
 > État constaté le 30/08/2026, premier alignement du projet Supabase avec le dépôt.
+>
+> ⚠️ **Périmé depuis le 02/09** : les 45 edge functions sont déployées, dont les
+> 4 données ici pour absentes (`poll-carrier-tracking`, `carrier-tracking-webhook`,
+> `tracking-key`, `ai-keys`). Le tableau ci-dessous vaut comme historique, pas
+> comme état courant. Voir §20.
 
 Le dépôt contient **36 edge functions**. Le projet Supabase n'en servait que **30**, toutes
 figées à la **version 14 du 21/08** (sauf `colissimo-proxy`, v15 du 26/08). Le dev
@@ -827,3 +832,119 @@ une clé Resend valide et le domaine vérifié.
   alimentée : `enqueue_email()` n'est appelée **nulle part** (ni fonction, ni
   trigger, ni front). Ne pas déployer cette fonction — son cron pg_cron
   scruterait des files vides toutes les 5 secondes.
+
+---
+
+## 20. Rattrapage du schéma — 02/09/2026
+
+La base `hzjzqdlyehclnpeqkier` accusait **14 migrations de retard**. Le code
+déployé attendait 82 tables, la base en avait 67.
+
+### Comment on l'a découvert
+
+Par accident, en cherchant tout autre chose. Une vérification de routine
+(`SELECT … FROM cron.job`) a échoué sur `relation "cron.job" does not exist` :
+pg_cron n'était pas installé, donc `email_infra` n'avait jamais été appliquée.
+De fil en aiguille, l'écart s'est révélé bien plus large.
+
+**La cause remonte au §16** : au retour sur le projet d'origine, le registre de
+migrations n'a pas été relu. Lovable écrivait encore dans
+`bumfyrfmormisyjletpb` — d'où le commit `projectRef` du 02/09, qui a corrigé
+`vite.config.ts`, `mcp/index.ts` et le manifeste MCP. Les migrations
+manquantes remontaient au **24/08**, pas au 31.
+
+### La méthode, à réutiliser
+
+Ne pas vérifier table par table à la main : **comparer deux inventaires**.
+
+1. **Le contrat attendu** — extrait de `src/integrations/supabase/types.ts`,
+   généré depuis le schéma cible : 82 tables, 993 colonnes.
+2. **Le réel** — une introspection, renvoyée en une seule cellule :
+
+```sql
+SELECT string_agg(line, E'\n' ORDER BY line)
+FROM (
+  SELECT c.table_name || ':' || string_agg(c.column_name, ',' ORDER BY c.column_name) AS line
+  FROM information_schema.columns c
+  JOIN information_schema.tables t
+    ON t.table_schema = c.table_schema AND t.table_name = c.table_name
+   AND t.table_type = 'BASE TABLE'
+  WHERE c.table_schema = 'public'
+  GROUP BY c.table_name
+) s;
+```
+
+3. **Le diff** — 15 tables et 33 colonnes manquantes, **0 dérive inverse**. Un
+   sous-ensemble strict : rien d'orphelin, aucune colonne fantôme. C'est ce qui
+   a permis de rejouer les migrations sans réécrire quoi que ce soit.
+
+⚠️ `types.ts` décrit ce que Lovable **croit** avoir créé. En cas d'écart entre
+lui et une migration, la référence à trancher reste le SQL.
+
+### Le script
+
+`scripts/rattrapage-schema-20260902.sql` — les 14 migrations concaténées dans
+l'ordre chronologique, **en une seule transaction**. Au moindre échec, rien
+n'est appliqué : on relit l'erreur et on relance, sans état intermédiaire.
+
+**Cinq blocs volontairement écartés**, chacun annoté `ÉCARTÉ` avec son motif :
+
+- extensions `pgmq` / `pg_cron` / `pg_net` / `supabase_vault` ;
+- files pgmq et wrappers RPC (`enqueue_email`, `read_email_batch`,
+  `delete_email`, `move_to_dlq`) — personne n'appelle `enqueue_email()` ;
+- le cron horaire de suivi colis, dont le garde-fou `__ANON_KEY__` lève une
+  exception tant que la clé n'est pas renseignée — il aurait annulé toute la
+  transaction.
+
+⚠️ **Non rejouable après succès** : le second passage échoue sur
+`auth_email_templates already exists`. Assumé, le script ne sert qu'une fois.
+
+### ⚠️ Le piège de l'enum
+
+La migration `role_permissions` insère des droits pour `order_validator` et
+`auditor`. Si ces valeurs manquaient à l'enum `app_role`, **impossible de les
+ajouter dans la même transaction** : Postgres interdit d'utiliser une valeur
+d'enum créée dans la transaction courante. Il aurait fallu deux passes. Vérifié
+avant de lancer — elles venaient de migrations de mai, déjà appliquées.
+
+### Vérification
+
+Le script a été rejoué sur un **PostgreSQL 15 jetable** : base miroir
+reconstruite depuis l'introspection réelle (67 tables, 845 colonnes), script
+appliqué, schéma obtenu comparé au contrat. Puis le même diff après application
+sur la vraie base : **82/82 tables, 993/993 colonnes, 0 écart dans les deux
+sens**.
+
+### 🔴 Ce que l'épisode révèle — les erreurs avalées
+
+Un test d'envoi d'e-mail était passé **au vert** alors que `email_templates`
+n'existait pas. Pourquoi :
+
+```js
+const { data: tpl } = await admin.from('email_templates')…  // `error` jamais lu
+await admin.from('customer_email_log').insert({…})          // retour ignoré
+```
+
+Table absente → `data: null` → la fonction retombe silencieusement sur le
+contenu envoyé par le front, et ne journalise rien. **Un test vert ne prouvait
+donc rien.** C'est ce qui a masqué le problème pendant une semaine.
+
+Ce motif — `data` déstructuré sans `error`, `insert` dont le retour n'est jamais
+lu — est récurrent dans le code généré. **À corriger, sinon la prochaine panne
+sera tout aussi invisible.**
+
+### Recette passée
+
+Modèles d'e-mails, mot de passe oublié (avec son compteur anti-abus), et le
+parcours newsletter complet : inscription, double opt-in, campagne,
+désinscription. Tous fonctionnaient pour la première fois.
+
+### Reste ouvert
+
+- **`send-order-confirmation`** : commande de test non faite — seul chemin
+  d'envoi non vérifié.
+- **Cron de suivi colis** : bloc écarté, à rejouer avec la clé anon du projet
+  si le suivi La Poste automatique est voulu.
+- **`process-email-queue`** : déployée mais sans objet, aucune file alimentée.
+  Sans danger tant qu'aucun cron ne l'appelle — vérifié, `cron.job` n'existe pas.
+- **`types.ts`** : à régénérer pour confirmer (rien ne devrait bouger).
