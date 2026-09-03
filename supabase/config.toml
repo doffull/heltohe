@@ -30,9 +30,23 @@ project_id = "hzjzqdlyehclnpeqkier"
     verify_jwt = false
   [functions.image-pose-edit]
     verify_jwt = false
+  # Sert la clé Google Maps au navigateur : appelée avant toute connexion.
+  [functions.maps-config]
+    verify_jwt = false
+  # Double opt-in : le visiteur clique le lien depuis sa boîte mail, sans session.
+  [functions.newsletter-confirm]
+    verify_jwt = false
+  # Inscription newsletter depuis le site public.
+  [functions.newsletter-subscribe]
+    verify_jwt = false
   [functions.parse-products-pdf]
     verify_jwt = false
   [functions.parse-stock-pdf]
+    verify_jwt = false
+  # Mot de passe oublié : par nature appelée sans session. La fonction se
+  # protège elle-même — réponse neutre quelle que soit l'adresse, IP hachée,
+  # 3 demandes par quart d'heure.
+  [functions.password-reset-request]
     verify_jwt = false
   [functions.product-ai-helpers]
     verify_jwt = false
