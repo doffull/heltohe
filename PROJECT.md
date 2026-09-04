@@ -948,3 +948,135 @@ désinscription. Tous fonctionnaient pour la première fois.
 - **`process-email-queue`** : déployée mais sans objet, aucune file alimentée.
   Sans danger tant qu'aucun cron ne l'appelle — vérifié, `cron.job` n'existe pas.
 - **`types.ts`** : à régénérer pour confirmer (rien ne devrait bouger).
+
+---
+
+## 21. Migration vers notre Supabase — 03/09/2026
+
+Le site tournait encore sur `bumfyrfmormisyjletpb`, le projet Supabase de
+Lovable. Coût de maintien trop élevé : tout a été basculé sur
+`hzjzqdlyehclnpeqkier`.
+
+### 🔴 La découverte qui a tout déclenché
+
+En analysant une sauvegarde, un détail ne collait pas : `customer_email_log`
+contenait 29 lignes datées du 01/09, alors que **nous avions créé cette table
+vide le 02/09** (§20). Impossible sur la même base.
+
+Vérification : **164 occurrences de `bumfyrfmormisyjletpb` dans les données,
+zéro de `hzjzqdlyehclnpeqkier`**. La sauvegarde venait de l'ancien projet — et
+il était bien vivant : dernière commande le 02/09 à 23:54, accès admin le 03/09
+à 09:28.
+
+**Tout le travail des §19 et §20 avait donc été appliqué à une base que le site
+n'utilisait pas.** `hzjz…` était en retard précisément parce que personne ne
+s'en servait.
+
+⚠️ **La leçon** : ne jamais déduire l'identité d'une base de son schéma. Seules
+les **données** l'identifient — ici, une date de création incohérente.
+
+### Le point de départ, favorable
+
+Le rattrapage du §20 avait aligné `hzjz…` sur le schéma cible. Comparaison
+colonne par colonne des deux projets : **82 tables, 993 colonnes, écart nul**.
+
+La bascule n'était donc pas une migration de schéma mais un **transfert de
+données** — nettement moins risqué.
+
+### Comment les 2,4 Go ont été récupérés sans identifiants
+
+Nous n'avions pas les accès de `bumfyr…`. Mais son bucket `media` est en
+**lecture publique** : les 1 894 objets sont téléchargeables par URL, sans clé,
+et réenvoyables avec la clé service_role du nouveau projet. Vérifié sur objets
+réels avant de bâtir le script.
+
+🔴 **La règle qui en découle** : `bumfyr…` devait rester **actif** jusqu'à la fin
+du transfert. Un projet en pause coupe le stockage — les fichiers seraient
+devenus irrécupérables. Ordre imposé : *copier → vérifier → recetter → arrêter*.
+
+### Les trois pièges rencontrés
+
+**1. Les UUID de comptes ne concordaient pas.** Deux comptes existaient déjà
+dans `hzjz…` avec la même adresse mais un identifiant différent —
+`6000art@gmail.com` et `doffull@live.fr`. Choix retenu : garder ceux de la
+cible, donc **remapper** les 36 références dans les données métier et les 934
+dans l'analytique. Sans ça, le rôle admin et une commande étaient rejetés.
+
+⚠️ `6000art@gmail.com` avait **deux** identités (e-mail + Google). En exclure
+une seule faisait échouer `auth.identities`.
+
+**2. Les collisions de clés uniques, invisibles.** `hzjz…` n'était pas vierge :
+recette, lignes de configuration, `role_permissions` du §20. Ces lignes
+portaient des identifiants différents mais occupaient les mêmes clés uniques.
+`ON CONFLICT DO NOTHING` les écartait **en silence**, et l'échec ne surgissait
+que plusieurs tables plus loin, sur une clé étrangère.
+
+Cas vécu : la connexion de `6000art@gmail.com` du 03/09 avait créé une fiche
+client vide, qui a fait rejeter la vraie fiche — 785 points de fidélité, 711 €
+dépensés — puis échouer `loyalty_transactions`. **Une ligne sur 6 305.**
+
+Solution : purger les 82 tables de la cible avant l'import, plutôt que traiter
+les collisions une à une. Le script de purge porte un **garde-fou d'identité** —
+il cherche les comptes de recette qui n'existent que dans `hzjz…` et refuse de
+s'exécuter ailleurs. Testé dans les deux sens.
+
+**3. Les structures internes de Supabase divergent.**
+`supabase_migrations.schema_migrations` avait 6 colonnes côté source, 3 côté
+cible. Le fichier généré échouait sur `created_by`.
+
+⚠️ **Même angle mort deux fois** : le schéma `public` avait été comparé colonne
+par colonne, **pas les schémas internes**. Comparer les données sans comparer
+les contenants.
+
+### Ce qui a été migré, et ce qui ne l'a pas été
+
+| Migré | |
+|---|---|
+| `public` | 82 tables, 14 568 lignes |
+| `auth` | 8 comptes + 8 identités (2 conservés côté cible) |
+| `storage` | bucket `media` + 1 894 objets, 2,4 Go |
+| `supabase_migrations` | 186 entrées |
+| URLs réécrites | 164 références, 7 tables, 22 colonnes |
+
+**Volontairement écarté** : l'état de session (`sessions`, `refresh_tokens`,
+`flow_state`… 85 lignes) — signé avec le secret JWT de l'ancien projet, donc
+inutilisable ; le versionnage interne de Supabase (223 lignes) — le copier
+casserait les mises à jour de la plateforme ; les buckets privés (4 objets :
+3 bordereaux déjà imprimés, 1 export).
+
+### Méthode de validation
+
+Chaque script a été rejoué sur un **PostgreSQL 18 jetable**, sur une cible
+reconstruite depuis la sauvegarde puis piégée pour reproduire l'état réel de
+`hzjz…` — comptes préexistants et données de recette comprises.
+
+**L'erreur rencontrée en production a été reproduite à l'identique** (même
+ligne, même contrainte) avant d'être corrigée : c'est ce qui a permis
+d'identifier la vraie cause plutôt que de deviner.
+
+Contrôle final sur la base réelle : 13 tables témoins toutes `OK`, 0 URL
+résiduelle, 0 commande orpheline, tous les triggers réactivés, 1 894 objets.
+
+⚠️ **Un seul maillon n'avait pas pu être testé** : l'envoi vers le storage de
+`hzjz…`, faute de clé service_role. D'où la consigne d'essayer sur 5 fichiers
+avant les 1 894.
+
+### ⚠️ Les scripts ne sont pas dans le dépôt
+
+Ils contiennent la base en clair : 6 305 fiches clients, 10 empreintes bcrypt,
+la clé PayPlug `sk_live_…`, les identifiants PayPal et WooCommerce. Ils ont été
+livrés hors dépôt et doivent être détruits après usage.
+`scripts/migration-bumfyr-vers-hzjz/` est ignoré par Git.
+
+### Reste à faire
+
+- **Secrets Edge Functions** dans `hzjz…` : PayPal, PayPlug, Colissimo,
+  La Poste, Gemini, Google Maps, Brevo, Twilio, `SEND_EMAIL_HOOK_SECRET`.
+  (Resend et `MAIL_*` sont posés depuis le §19.)
+- **Hook d'authentification** à réactiver.
+- **Déployer le front** avec le nouveau `projectRef` (commit `6b6fdad5`).
+- **Recette** : page produit (les images d'abord), connexion, tunnel de
+  commande, e-mail transactionnel.
+- **Arrêter `bumfyr…`** — en dernier, jamais avant.
+- **Le cron `poll-carrier-tracking-hourly`** pointait sur l'ancien projet avec
+  son ancienne clé anon. À recréer proprement dans `hzjz…`, ou à abandonner.
