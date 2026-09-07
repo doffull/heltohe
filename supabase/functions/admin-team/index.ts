@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
       ? body.redirectTo
       : `${SUPABASE_URL.replace(/\/$/, '')}/`;
     const siteUrl = (() => {
-      try { return new URL(redirectTo).origin; } catch { return 'helvetica-mp.net'; }
+      try { return new URL(redirectTo).origin; } catch { return 'com'; }
     })();
 
     if (!isEmail(email)) return json({ error: 'Adresse e-mail invalide' }, 400);

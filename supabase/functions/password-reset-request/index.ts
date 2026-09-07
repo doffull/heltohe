@@ -56,14 +56,14 @@ Deno.serve(async (req) => {
       try { url = new URL(raw); host = url.hostname; } catch { return null; }
       if (!/^https?:$/.test(url.protocol)) return null;
       const ok =
-        host === 'helvetica-mp.net' ||
-        host.endsWith('.helvetica-mp.net') ||
+        host === 'helvetica-mp.com' ||
+        host.endsWith('.helvetica-mp.com') ||
         host.endsWith('.lovable.app') ||
         host === 'localhost' ||
         host === '127.0.0.1';
       return ok ? url.origin : null;
     };
-    const origin = allowedOrigin(body.origin) || 'https://helvetica-mp.net';
+    const origin = allowedOrigin(body.origin) || 'https://helvetica-mp.com';
     const redirectTo = `${origin}/reset-password`;
 
 

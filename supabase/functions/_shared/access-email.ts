@@ -35,7 +35,7 @@ export interface AccessEmailOutput {
 }
 
 export function accessEmail(input: AccessEmailInput): AccessEmailOutput {
-  const site = input.siteUrl || 'helvetica-mp.net';
+  const site = input.siteUrl || 'helvetica-mp.com';
   const isNew = input.kind === 'new_access';
 
   const subject = isNew

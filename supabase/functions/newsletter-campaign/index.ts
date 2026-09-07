@@ -10,7 +10,7 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const SITE_FALLBACK = "https://helvetica-mp.net";
+const SITE_FALLBACK = "https://helvetica-mp.com";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {

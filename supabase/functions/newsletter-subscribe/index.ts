@@ -13,7 +13,7 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-const SITE_FALLBACK = "https://helvetica-mp.net";
+const SITE_FALLBACK = "https://helvetica-mp.com";
 
 function siteUrl(req: Request, bodyOrigin?: unknown): string {
   const configured = Deno.env.get("SITE_URL");
