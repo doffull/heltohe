@@ -1080,3 +1080,120 @@ livrés hors dépôt et doivent être détruits après usage.
 - **Arrêter `bumfyr…`** — en dernier, jamais avant.
 - **Le cron `poll-carrier-tracking-hourly`** pointait sur l'ancien projet avec
   son ancienne clé anon. À recréer proprement dans `hzjz…`, ou à abandonner.
+
+---
+
+## 22. Audit du nouveau projet — 07/09/2026
+
+Contrôle en **lecture seule** de `hzjzqdlyehclnpeqkier` après la migration du
+§21. Aucune écriture. Mené avec la clé publique puis la `service_role`.
+
+### 🔴 Trois comptes admin inconnus, créés le 04/09
+
+| Compte | Créé | Dernière connexion |
+|---|---|---|
+| `preprod.helvetica-mp.com.overrule608@passmail.net` | 04/09 14:11 | **05/09 20:24** |
+| `sylvain@ackuracy.com` | 04/09 18:06 | jamais |
+| `alexis@ackuracy.com` | 04/09 18:09 | jamais |
+
+Le premier — fiche client au nom d'« **Ackuracy Pentest** » — a parcouru
+`/admin`, `/admin/commandes`, `/admin/clients`, `/admin/parametres`,
+`/admin/security`, `/admin/roles` et `/admin/audit` entre 17:36 et 18:10.
+
+Tout indique un **audit de sécurité commandité** : nom de société explicite,
+adresse jetable dédiée à `preprod`, et `6000art@gmail.com` était sur
+`/admin/roles` à 14:45, onze minutes avant le premier octroi. **À confirmer
+formellement** — à défaut, trois comptes ont les pleins droits sur la base.
+
+⚠️ **`role_audit_log` ne trace pas l'auteur** : `changed_by` est à `null` sur
+les six lignes. Le journal d'audit ne remplit donc pas son office — en cas de
+vrai incident, aucune traçabilité.
+
+*(Détail : chaque changement de rôle est journalisé **deux fois**, les triggers
+`trg_audit_role_change` et `user_roles_audit` faisant double emploi.)*
+
+### ✅ Ce qui est sain
+
+**La RLS est étanche.** Testé avec la clé publique sur 13 tables sensibles —
+`customers`, `orders`, `payment_gateway_secrets`, `paypal_config`, `user_roles`,
+`crm_contacts`… — **toutes renvoient 0 ligne**. Les 6 305 clients et les clés de
+paiement sont invisibles depuis le front.
+
+**Les données publiques répondent** : 107 produits sur 114 (les 7 autres en
+brouillon, correctement filtrés), 6 catégories, 15 boutiques, 11 pages.
+
+**Les 4 fonctions publiques sont joignables** — le `verify_jwt = false` du §20
+fait son office. Les fonctions admin refusent la clé publique (401/403), et même
+la `service_role` sur `payment-keys`, `ai-keys` et `tracking-key`, qui exigent
+un JWT d'admin réel.
+
+**Volumétrie conforme** : 14 tables témoins aux valeurs attendues.
+
+### Secrets — l'état réel
+
+Une partie des clés vit **en base**, donc déjà migrée :
+
+| | État |
+|---|---|
+| PayPal | `client_id_live` + secret en base, mode **live**, webhook enregistré |
+| PayPlug | `sk_live_…` en base |
+| WooCommerce | `ck_…` + `cs_…` en base — ⚠️ dernière synchro en **`failed`** (01/09) |
+| Colissimo / La Poste | vérifié en direct, de **vrais points relais** remontent |
+
+Manquants, identifiés par sondage des fonctions :
+
+| Secret | Symptôme |
+|---|---|
+| `GOOGLE_API_KEY` | `maps-config` → 503 « Clé Google Maps non configurée » |
+| `LOVABLE_API_KEY` et/ou `GOOGLE_MAPS_API_KEY` | `boutique-lookup` → 500 « connector not configured » |
+| `GEMINI_API_KEY` ou `LOVABLE_API_KEY` | `contact-chat` → 500 « Erreur du service IA » |
+
+⚠️ **`GOOGLE_API_KEY` et `GOOGLE_MAPS_API_KEY` sont deux clés distinctes**, tout
+comme `LAPOSTE_API_KEY` (points relais) et `LAPOSTE_TRACKING_API_KEY` (suivi).
+Les confondre donne des pannes silencieuses.
+
+### ⚠️ Lister les secrets exige un jeton de compte
+
+Ni la clé publique ni la `service_role` ne donnent accès aux secrets des Edge
+Functions : la CLI exige un jeton `sbp_…`, qui ouvre **tout le compte**
+Supabase. Vérifié — les deux autres formats sont rejetés d'office
+(`LegacyInvalidAccessTokenError`).
+
+Pour un simple inventaire, passer par le dashboard ou
+`npx supabase secrets list` : la sortie ne contient que des noms et des
+empreintes, jamais les valeurs.
+
+### 🔴 La clé Gemini ne suffira pas
+
+Clé testée directement contre l'API Google. Elle **s'authentifie** — les erreurs
+portent sur le modèle et le quota, jamais sur l'identité. Mais deux blocages :
+
+1. **Crédits épuisés** — `429 Your prepayment credits are depleted`.
+2. **Modèles indisponibles** — `404 models/gemini-2.5-flash is no longer
+   available to new users. Please update to models/gemini-3.6-flash`.
+
+Or le code demande encore `google/gemini-2.5-flash` (3 fois), `2.5-pro` (2) et
+`2.5-flash-image` (1). Ces modèles restaient accessibles **via la passerelle
+Lovable**, qui a son propre contrat Google. En passant en direct, on devient un
+« nouvel utilisateur » aux yeux de Google et ils sont refusés.
+
+**Poser `GEMINI_API_KEY` en l'état casserait six fonctions IA** qui marchaient :
+`contact-chat`, `analyze-product-image`, `product-ai-helpers`,
+`parse-products-pdf`, `parse-stock-pdf`, `virtual-tryon`.
+
+Trois options, aucune tranchée : recharger les crédits **et** migrer les modèles
+`2.5 → 3.6` ; rester sur `LOVABLE_API_KEY` (l'IA remarche aussitôt, mais la
+dépendance qu'on cherche à quitter demeure) ; ou ne rien faire — l'IA n'est pas
+critique pour vendre, la boutique et les paiements tournent sans.
+
+💡 La clé Gemini peut aussi se poser **depuis l'admin** : elle atterrit dans
+`payment_gateway_secrets` (ligne `gemini_api`), **qui prime sur la variable
+d'environnement**. Pas besoin de secret Supabase.
+
+### Reste à faire
+
+- **Confirmer l'audit Ackuracy**, ou révoquer les trois comptes.
+- **Corriger `role_audit_log`** : `changed_by` à `null` le rend inutile.
+- Poser `GOOGLE_API_KEY`, `GOOGLE_MAPS_API_KEY`, `LOVABLE_API_KEY`.
+- **Hook d'authentification** à réactiver, **front à déployer**, puis recette.
+- **Arrêter `bumfyr…`** — en dernier, jamais avant.
