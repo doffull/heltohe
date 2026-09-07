@@ -12,6 +12,11 @@ project_id = "hzjzqdlyehclnpeqkier"
     verify_jwt = false
   [functions.boutique-lookup]
     verify_jwt = false
+  # Statuts transporteur entrants : appelée par le transporteur, sans session.
+  # Se protège par un jeton partagé (payment_gateway_secrets.carrier_webhook, à
+  # défaut CARRIER_WEBHOOK_TOKEN) et refuse tout si ce jeton n'est pas défini.
+  [functions.carrier-tracking-webhook]
+    verify_jwt = false
   [functions.colissimo-proxy]
     verify_jwt = false
   [functions.contact-chat]
@@ -47,6 +52,19 @@ project_id = "hzjzqdlyehclnpeqkier"
   # protège elle-même — réponse neutre quelle que soit l'adresse, IP hachée,
   # 3 demandes par quart d'heure.
   [functions.password-reset-request]
+    verify_jwt = false
+  # Webhook PayPal : appelé par PayPal, qui ne peut présenter aucun JWT. La
+  # fonction fait vérifier la signature par PayPal lui-même
+  # (/v1/notifications/verify-webhook-signature) avant d'appliquer l'événement.
+  [functions.paypal-webhook]
+    verify_jwt = false
+  # IPN PayPlug — même adresse que la création de paiement (notification_url,
+  # index.ts:263). Sans cette ligne, Supabase répondait 401
+  # UNAUTHORIZED_NO_AUTH_HEADER avant d'atteindre le code : un paiement n'était
+  # confirmé que si le client revenait sur /checkout, onglet ouvert.
+  # Le corps reçu n'est jamais cru sur parole : le paiement est relu chez
+  # PayPlug avec la clé secrète, un faux webhook ne mène donc nulle part.
+  [functions.payplug]
     verify_jwt = false
   [functions.product-ai-helpers]
     verify_jwt = false
