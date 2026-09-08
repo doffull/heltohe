@@ -356,6 +356,9 @@ Deno.serve(async (req) => {
       const resolvedSenderZip = senderZip || '75001';
       const resolvedSenderCity = senderCity || 'Paris';
 
+      // À défaut d'être fourni, on reprend la raison sociale de l'expéditeur.
+      const commercialName = sanitizeAddressLine(body.commercialName || resolvedSenderName);
+
       const soapBody = `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://sls.ws.coliposte.fr">
   <soapenv:Header/>
@@ -370,10 +373,16 @@ Deno.serve(async (req) => {
           <outputPrintingType>PDF_10x15_300dpi</outputPrintingType>
         </outputFormat>
         <letter>
+          <!-- commercialName est le nom sous lequel le destinataire voit
+               l'expedition, sur l'etiquette comme sur l'avis de passage.
+               Colissimo l'exige en livraison hors domicile : sans lui,
+               "[30018] Le nom commercial n'a pas ete transmis". Sa place
+               dans la sequence est imposee : apres orderNumber. -->
           <service>
             <productCode>${productCode}</productCode>
             <depositDate>${depositDate}</depositDate>
             <orderNumber>${escapeXml(order.orderNumber || '')}</orderNumber>
+            <commercialName>${escapeXml(commercialName)}</commercialName>
           </service>
           <!-- ⚠️ En SOAP, pickupLocationId appartient à <parcel>, APRÈS <weight>
                — et non à <service> comme le veut l'API REST. Le placer dans
