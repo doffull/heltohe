@@ -30,9 +30,19 @@ function json(body: unknown, status = 200) {
 }
 
 // ─── Mise en page ───────────────────────────────────────────────────────────
-// A4 portrait, en points PostScript (72 dpi).
-const A4 = { w: 595.28, h: 841.89 };
+// A4 paysage, en points PostScript (72 dpi) : c'est l'orientation historique
+// du bon, et la seule qui laisse l'étiquette 10x15 tenir à sa taille réelle à
+// côté du récapitulatif, sans réduction.
+const A4 = { w: 841.89, h: 595.28 };
 const MARGIN = 36;
+// Colonne de gauche : l'étiquette. Colonne de droite : le bon.
+const LABEL_W = 330;
+const GUTTER = 24;
+const RIGHT_X = MARGIN + LABEL_W + GUTTER;
+const RIGHT_EDGE = A4.w - MARGIN;
+// Colonnes chiffrées du tableau d'articles, calées sur le bord droit.
+const COL_QTY = RIGHT_EDGE - 190;
+const COL_UNIT = RIGHT_EDGE - 95;
 const BLACK = rgb(0, 0, 0);
 const GREY = rgb(0.45, 0.45, 0.45);
 const RULE = rgb(0.8, 0.8, 0.8);
@@ -159,13 +169,14 @@ Deno.serve(async (req) => {
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
 
+  // `y` descend au fil du dessin ; chaque aide écrit à la position courante.
   let y = A4.h - MARGIN;
   const text = (
     s: unknown,
     opts: { x?: number; size?: number; bold?: boolean; color?: typeof BLACK } = {},
   ) => {
     page.drawText(win(s), {
-      x: opts.x ?? MARGIN,
+      x: opts.x ?? RIGHT_X,
       y,
       size: opts.size ?? 10,
       font: opts.bold ? bold : font,
@@ -179,25 +190,24 @@ Deno.serve(async (req) => {
   };
   const rule = (yy: number, color = RULE, thickness = 0.5) => {
     page.drawLine({
-      start: { x: MARGIN, y: yy },
-      end: { x: A4.w - MARGIN, y: yy },
+      start: { x: RIGHT_X, y: yy },
+      end: { x: RIGHT_EDGE, y: yy },
       thickness,
       color,
     });
   };
 
-  // En-tête
-  text('BON DE PREPARATION', { size: 16, bold: true });
-  rightText(`Commande ${order.order_number}`, A4.w - MARGIN, 11, true);
-  y -= 16;
+  // ── Colonne de droite : le bon ──
+  text('BON DE PREPARATION', { size: 15, bold: true });
+  rightText(order.order_number, RIGHT_EDGE, 13, true);
+  y -= 15;
   const created = order.created_at ? new Date(order.created_at).toLocaleDateString('fr-FR') : '';
   text(`Commande du ${created}`, { size: 9, color: GREY });
-  rightText(`Edite le ${new Date().toLocaleDateString('fr-FR')}`, A4.w - MARGIN, 9);
+  rightText(`Edite le ${new Date().toLocaleDateString('fr-FR')}`, RIGHT_EDGE, 9);
   y -= 10;
   rule(y, BLACK, 1);
   y -= 20;
 
-  // Destinataire
   text('DESTINATAIRE', { size: 9, bold: true, color: GREY });
   y -= 14;
   text(order.customer_name, { size: 11, bold: true });
@@ -210,44 +220,54 @@ Deno.serve(async (req) => {
     order.customer_email,
   ]) {
     if (!String(line || '').trim()) continue;
-    // Les adresses de point relais tiennent sur plus d'une ligne.
-    const chunks = String(line).match(/.{1,78}(\s|$)/g) || [String(line)];
+    // Une adresse de point relais dépasse largement la colonne : on la coupe
+    // sur les espaces plutôt que de la laisser déborder de la page.
+    const chunks = String(line).match(/.{1,58}(\s|$)/g) || [String(line)];
     for (const chunk of chunks) {
       text(chunk.trim(), { size: 9 });
       y -= 12;
     }
   }
 
-  y -= 6;
+  y -= 4;
   if (order.tracking_number) {
     text(`Suivi Colissimo : ${order.tracking_number}`, { size: 9, bold: true });
-    y -= 16;
+    y -= 18;
   }
 
-  // Articles
   rule(y + 6);
   y -= 8;
   text('PRODUIT', { size: 9, bold: true, color: GREY });
-  rightText('QTE', 400, 9, true);
-  rightText('PRIX UNIT.', 490, 9, true);
-  rightText('TOTAL', A4.w - MARGIN, 9, true);
+  rightText('QTE', COL_QTY, 9, true);
+  rightText('PRIX UNIT.', COL_UNIT, 9, true);
+  rightText('TOTAL', RIGHT_EDGE, 9, true);
   y -= 6;
   rule(y);
   y -= 14;
 
   const items = Array.isArray(order.items) ? (order.items as Record<string, unknown>[]) : [];
+  let overflow = 0;
   for (const item of items) {
+    // En paysage la colonne est plus étroite : on s'arrête avant les totaux
+    // et on annonce le reste, plutôt que d'écrire par-dessus.
+    if (y < MARGIN + 90) {
+      overflow = items.length - items.indexOf(item);
+      break;
+    }
     const label = [item.name, item.size ? `taille ${item.size}` : '', item.color]
       .filter(Boolean)
       .join(' - ');
     const qty = Number(item.quantity) || 1;
     const price = Number(item.price) || 0;
-    text(String(label).slice(0, 60), { size: 9 });
-    rightText(String(qty), 400, 9);
-    rightText(euro(price), 490, 9);
-    rightText(euro(price * qty), A4.w - MARGIN, 9);
+    text(String(label).slice(0, 46), { size: 9 });
+    rightText(String(qty), COL_QTY, 9);
+    rightText(euro(price), COL_UNIT, 9);
+    rightText(euro(price * qty), RIGHT_EDGE, 9);
     y -= 13;
-    if (y < 320) break; // on garde la place de l'étiquette
+  }
+  if (overflow > 0) {
+    text(`... et ${overflow} article(s) supplementaire(s)`, { size: 8, color: GREY });
+    y -= 13;
   }
 
   y -= 4;
@@ -258,37 +278,44 @@ Deno.serve(async (req) => {
     ['Frais de livraison', euro(order.shipping_cost), false],
     ['TOTAL', euro(order.total), true],
   ] as const) {
-    rightText(label, 490, strong ? 11 : 9, strong);
-    rightText(value, A4.w - MARGIN, strong ? 11 : 9, strong);
+    rightText(label, COL_UNIT, strong ? 11 : 9, strong);
+    rightText(value, RIGHT_EDGE, strong ? 11 : 9, strong);
     y -= strong ? 16 : 13;
   }
 
-  // ─── Étiquette incrustée ──────────────────────────────────────────────────
-  const boxTop = Math.min(y - 10, 300);
-  const boxH = 300;
-  const boxY = Math.max(MARGIN, boxTop - boxH);
+  // ── Colonne de gauche : l'étiquette ──
+  const boxTop = A4.h - MARGIN;
+  const boxY = MARGIN + 14;
   page.drawRectangle({
     x: MARGIN,
     y: boxY,
-    width: A4.w - MARGIN * 2,
+    width: LABEL_W,
     height: boxTop - boxY,
     borderColor: RULE,
     borderWidth: 0.5,
     borderDashArray: [4, 3],
+  });
+  const caption = win('Decoupez et collez sur le colis');
+  page.drawText(caption, {
+    x: MARGIN + (LABEL_W - font.widthOfTextAtSize(caption, 8)) / 2,
+    y: MARGIN + 4,
+    size: 8,
+    font,
+    color: GREY,
   });
 
   if (labelBytes) {
     try {
       const src = await PDFDocument.load(labelBytes);
       const [first] = await pdf.embedPdf(src, [0]);
-      // L'étiquette Colissimo est au format 10x15 : on l'ajuste au cadre en
-      // conservant ses proportions, sinon les codes-barres deviennent illisibles.
+      // Proportions conservées : une étiquette étirée rend ses codes-barres
+      // illisibles au scanner.
       const scale = Math.min(
-        (A4.w - MARGIN * 2 - 20) / first.width,
-        (boxTop - boxY - 20) / first.height,
+        (LABEL_W - 16) / first.width,
+        (boxTop - boxY - 16) / first.height,
       );
       page.drawPage(first, {
-        x: MARGIN + (A4.w - MARGIN * 2 - first.width * scale) / 2,
+        x: MARGIN + (LABEL_W - first.width * scale) / 2,
         y: boxY + (boxTop - boxY - first.height * scale) / 2,
         xScale: scale,
         yScale: scale,
@@ -300,12 +327,12 @@ Deno.serve(async (req) => {
 
   if (!labelBytes) {
     const msg = order.tracking_number
-      ? "Etiquette introuvable dans le stockage - a regenerer depuis l'ecran"
-      : "Aucune etiquette Colissimo - utilisez le bouton de generation";
+      ? 'Etiquette introuvable dans le stockage'
+      : 'Aucune etiquette Colissimo';
     page.drawText(win(msg), {
-      x: MARGIN + 20,
+      x: MARGIN + 14,
       y: boxY + (boxTop - boxY) / 2,
-      size: 10,
+      size: 9,
       font,
       color: GREY,
     });
