@@ -307,12 +307,49 @@ Deno.serve(async (req) => {
       const nameParts = (order.customer?.name || 'Client').split(' ');
       const lastName = nameParts.slice(-1)[0] || 'Client';
       const firstName = nameParts.slice(0, -1).join(' ') || 'Client';
-      const isRelay = (order.customer?.address || '').toLowerCase().includes('point relais');
+      const customerAddress = String(order.customer?.address || '');
+      const isRelay = customerAddress.toLowerCase().includes('point relais');
 
-      // Product code: REPA for returns, A2P for relay, DOM for home delivery
+      // ── Point de retrait ─────────────────────────────────────────────────
+      // L'identifiant peut être fourni par l'appelant (commandes futures, une
+      // fois qu'il sera stocké) ; sinon on le retrouve chez La Poste à partir
+      // du libellé, ce qui couvre toutes les commandes déjà passées.
+      let pickupLocationId = String(order.pickupLocationId || '').trim();
+      let pickupType = String(order.pickupLocationType || '').trim().toUpperCase();
+      let addresseeLine = customerAddress;
+
+      if (isRelay && !isReturn) {
+        const resolved = await resolvePickupPoint(customerAddress, COLISSIMO_LOGIN, COLISSIMO_PASSWORD);
+        if (resolved) {
+          if (!pickupLocationId) pickupLocationId = resolved.id;
+          if (!pickupType) pickupType = resolved.type;
+          // En livraison hors domicile, l'adresse du destinataire reste la
+          // sienne : c'est `pickupLocationId` qui détermine le lieu de retrait.
+          // Y recopier l'adresse du point de retrait produit une étiquette
+          // incohérente, en plus de dépasser les 35 caractères autorisés.
+          if (resolved.customerLine) addresseeLine = resolved.customerLine;
+        }
+
+        if (!pickupLocationId) {
+          return new Response(
+            JSON.stringify({
+              error: 'Point de retrait introuvable',
+              details:
+                "Impossible de retrouver ce point chez La Poste à partir de l'adresse enregistrée. " +
+                'Vérifiez le point relais de la commande, ou générez une étiquette à domicile.',
+            }),
+            { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+          );
+        }
+      }
+
+      // Code produit : REPA pour un retour, le type réel du point pour un
+      // retrait hors domicile (BPR = bureau de poste, A2P = commerçant…),
+      // DOM à domicile. Forcer A2P sur un bureau de poste — ce que faisait ce
+      // code — fait refuser l'étiquette par Colissimo.
       let productCode = 'DOM';
       if (isReturn) productCode = 'REPA';
-      else if (isRelay) productCode = 'A2P';
+      else if (isRelay) productCode = PICKUP_PRODUCT_CODES.has(pickupType) ? pickupType : 'A2P';
 
       const resolvedSenderName = senderName || 'HELVETICA-MP Concept Store';
       const resolvedSenderAddress = senderAddress || '1 Rue de la Paix';
@@ -337,14 +374,15 @@ Deno.serve(async (req) => {
             <productCode>${productCode}</productCode>
             <depositDate>${depositDate}</depositDate>
             <orderNumber>${escapeXml(order.orderNumber || '')}</orderNumber>
+            ${pickupLocationId ? `<pickupLocationId>${escapeXml(pickupLocationId)}</pickupLocationId>` : ''}
           </service>
           <parcel>
             <weight>1.0</weight>
           </parcel>
           <sender>
             <address>
-              <companyName>${escapeXml(resolvedSenderName)}</companyName>
-              <line2>${escapeXml(resolvedSenderAddress)}</line2>
+              <companyName>${escapeXml(sanitizeAddressLine(resolvedSenderName))}</companyName>
+              <line2>${escapeXml(sanitizeAddressLine(resolvedSenderAddress))}</line2>
               <countryCode>FR</countryCode>
               <city>${escapeXml(resolvedSenderCity)}</city>
               <zipCode>${escapeXml(resolvedSenderZip)}</zipCode>
@@ -354,7 +392,7 @@ Deno.serve(async (req) => {
             <address>
               <lastName>${escapeXml(lastName)}</lastName>
               <firstName>${escapeXml(firstName)}</firstName>
-              <line2>${escapeXml(order.customer?.address || '')}</line2>
+              <line2>${escapeXml(sanitizeAddressLine(addresseeLine))}</line2>
               <countryCode>FR</countryCode>
               <city>${escapeXml(order.customer?.city || '')}</city>
               <zipCode>${escapeXml(order.customer?.zip || '')}</zipCode>
@@ -533,6 +571,153 @@ Deno.serve(async (req) => {
 });
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
+
+// ─── POINTS DE RETRAIT : résolution de l'identifiant ────────────────────────
+//
+// Colissimo exige `pickupLocationId` pour tout code produit hors domicile
+// (A2P, BPR, ACP, CDI, CMT, BDP, PCS). Or le checkout ne garde du point choisi
+// qu'une phrase d'affichage : l'identifiant et le type sont perdus avant même
+// l'enregistrement de la commande. D'où 0 étiquette relais sur 16 commandes,
+// contre 4 sur 18 en livraison à domicile.
+//
+// Plutôt que d'imposer d'abord une reprise de la base et du tunnel d'achat, on
+// relit le point chez La Poste au moment de l'étiquette, à partir du nom et du
+// code postal contenus dans l'adresse. Les commandes déjà passées redeviennent
+// donc imprimables, sans migration.
+//
+// Le jour où l'identifiant sera stocké à la commande, il suffira de le passer
+// dans `pickupLocationId` : cette résolution ne servira plus que de repli.
+const PICKUP_PRODUCT_CODES = new Set(['A2P', 'BPR', 'ACP', 'CDI', 'CMT', 'BDP', 'PCS']);
+
+/** Interroge le service points de retrait. Renvoie [] en cas d'échec. */
+async function findRelayPoints(
+  zipCode: string,
+  city: string,
+  login: string,
+  password: string,
+): Promise<Record<string, string>[]> {
+  const now = new Date();
+  // Le service refuse le dimanche : on décale au lendemain le cas échéant.
+  if (now.getDay() === 0) now.setDate(now.getDate() + 1);
+  const shippingDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+
+  const soapBody = `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tns="${RELAY_NS}">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <tns:findRDVPointRetraitAcheminement>
+      <accountNumber>${escapeXml(login)}</accountNumber>
+      <password>${escapeXml(password)}</password>
+      <address></address>
+      <zipCode>${escapeXml(zipCode)}</zipCode>
+      <city>${escapeXml(city || '-')}</city>
+      <countryCode>FR</countryCode>
+      <weight>1</weight>
+      <shippingDate>${shippingDate}</shippingDate>
+      <filterRelay>0</filterRelay>
+      <requestId></requestId>
+      <lang>FR</lang>
+      <optionInter>1</optionInter>
+    </tns:findRDVPointRetraitAcheminement>
+  </soapenv:Body>
+</soapenv:Envelope>`;
+
+  try {
+    const res = await fetch(COLISSIMO_RELAY_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/xml; charset=UTF-8', 'SOAPAction': '' },
+      body: soapBody,
+    });
+    const xml = await res.text();
+    if (!res.ok || xml.includes('<faultcode>')) return [];
+    const errorCode = xml.match(/<errorCode>([^<]+)<\/errorCode>/);
+    if (errorCode && parseInt(errorCode[1]) !== 0) return [];
+    return parseRelayPointsFromXml(xml);
+  } catch {
+    return [];
+  }
+}
+
+/** Comparaison de libellés insensible à la casse, aux accents et à la ponctuation. */
+function normalizeLabel(value: string): string {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, ' ')
+    .trim();
+}
+
+/**
+ * Décompose l'adresse fabriquée par le checkout :
+ *   `Point Relais: <NOM> — <VOIE>, <CP> <VILLE> — <adresse personnelle>`
+ * Renvoie null si la chaîne ne suit pas ce format.
+ */
+function parseRelayAddress(address: string): {
+  name: string;
+  zip: string;
+  city: string;
+  customerLine: string;
+} | null {
+  const raw = String(address || '');
+  if (!/point relais\s*:/i.test(raw)) return null;
+
+  const afterPrefix = raw.replace(/^[\s\S]*?point relais\s*:\s*/i, '');
+  // Le séparateur est un tiret cadratin, mais on tolère un tiret simple.
+  const parts = afterPrefix.split(/\s+[—–-]\s+/);
+  const name = (parts[0] || '').trim();
+  const locality = (parts[1] || '').trim();
+  const customerLine = parts.slice(2).join(' ').trim();
+
+  const zipMatch = locality.match(/\b(\d{5})\b/);
+  if (!name || !zipMatch) return null;
+
+  const city = locality.slice(locality.indexOf(zipMatch[1]) + 5).trim();
+  return { name, zip: zipMatch[1], city, customerLine };
+}
+
+/**
+ * Retrouve l'identifiant et le type du point de retrait choisi.
+ * Seule une correspondance de nom exacte est acceptée : un point voisin
+ * livrerait le colis au mauvais endroit, mieux vaut échouer avec un message
+ * clair que de deviner.
+ */
+async function resolvePickupPoint(
+  address: string,
+  login: string,
+  password: string,
+): Promise<{ id: string; type: string; customerLine: string } | null> {
+  const parsed = parseRelayAddress(address);
+  if (!parsed) return null;
+
+  const points = await findRelayPoints(parsed.zip, parsed.city, login, password);
+  const wanted = normalizeLabel(parsed.name);
+  const hit = points.find((p) => normalizeLabel(p.nom) === wanted);
+  if (!hit?.identifiant) return null;
+
+  return {
+    id: hit.identifiant,
+    type: (hit.typeDePoint || '').trim().toUpperCase(),
+    customerLine: parsed.customerLine,
+  };
+}
+
+/**
+ * Colissimo plafonne chaque ligne d'adresse à 35 caractères et rejette les
+ * signes hors jeu latin de base — le tiret cadratin du libellé en fait partie.
+ */
+function sanitizeAddressLine(value: string, max = 35): string {
+  return String(value || '')
+    .replace(/[—–]/g, '-')
+    // Apostrophes et guillemets typographiques : présents dans les adresses
+    // saisies depuis un téléphone (« Sabots D’helene »), hors jeu Colissimo.
+    .replace(/[’‘‚‛]/g, "'")
+    .replace(/[“”„]/g, '"')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/[,;]+$/, '')
+    .slice(0, max);
+}
 
 function escapeXml(str: string): string {
   return String(str)
