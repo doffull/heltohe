@@ -359,7 +359,7 @@ Deno.serve(async (req) => {
       if (isReturn) productCode = 'REPA';
       else if (isRelay) productCode = PICKUP_PRODUCT_CODES.has(pickupType) ? pickupType : 'A2P';
 
-      const resolvedSenderName = senderName || 'HELVETICA-MP Concept Store';
+      const resolvedSenderName = senderName || 'HELVETICA-MP';
       const resolvedSenderAddress = senderAddress || '1 Rue de la Paix';
       const resolvedSenderZip = senderZip || '75001';
       const resolvedSenderCity = senderCity || 'Paris';

@@ -36,12 +36,12 @@ function shell(title: string, inner: string, email: string): string {
 <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border-radius:4px;overflow:hidden;">
 <tr><td style="background:#111;padding:28px 32px;text-align:center;">
   <h1 style="margin:0;color:#fff;font-size:20px;font-weight:900;letter-spacing:4px;text-transform:uppercase;">HELVETICA-MP</h1>
-  <p style="margin:6px 0 0;color:#888;font-size:11px;letter-spacing:2px;text-transform:uppercase;">Concept Store</p>
+  <p style="margin:6px 0 0;color:#888;font-size:11px;letter-spacing:2px;text-transform:uppercase;"></p>
 </td></tr>
 ${inner}
 <tr><td style="padding:32px;border-top:1px solid #f0f0f0;">
   <p style="margin:0;font-size:12px;color:#aaa;text-align:center;line-height:1.8;">Cet e-mail a été envoyé à <strong>${email}</strong>.</p>
-  <p style="margin:12px 0 0;font-size:11px;color:#ccc;text-align:center;letter-spacing:2px;text-transform:uppercase;">HELVETICA-MP Concept Store</p>
+  <p style="margin:12px 0 0;font-size:11px;color:#ccc;text-align:center;letter-spacing:2px;text-transform:uppercase;">HELVETICA-MP</p>
 </td></tr>
 </table></td></tr></table></body></html>`;
 }

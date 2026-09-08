@@ -71,7 +71,7 @@ function buildEmailHtml(payload: EmailPayload): string {
           <tr>
             <td style="background-color: #111111; padding: 32px 40px; text-align: center;">
               <h1 style="margin: 0; color: #ffffff; font-size: 22px; font-weight: 900; letter-spacing: 4px; text-transform: uppercase;">HELVETICA-MP</h1>
-              <p style="margin: 6px 0 0; color: #888; font-size: 11px; letter-spacing: 2px; text-transform: uppercase;">Concept Store</p>
+              <p style="margin: 6px 0 0; color: #888; font-size: 11px; letter-spacing: 2px; text-transform: uppercase;"></p>
             </td>
           </tr>
 
@@ -169,7 +169,7 @@ function buildEmailHtml(payload: EmailPayload): string {
                 Cet email a été envoyé à <strong>${customerEmail}</strong>.
               </p>
               <p style="margin: 16px 0 0; font-size: 11px; color: #ccc; text-align: center; letter-spacing: 2px; text-transform: uppercase;">
-                HELVETICA-MP Concept Store
+                HELVETICA-MP
               </p>
             </td>
           </tr>
@@ -222,7 +222,7 @@ function buildPaymentConfirmationHtml(payload: EmailPayload): string {
           <tr>
             <td style="background-color: #111111; padding: 32px 40px; text-align: center;">
               <h1 style="margin: 0; color: #ffffff; font-size: 22px; font-weight: 900; letter-spacing: 4px; text-transform: uppercase;">HELVETICA-MP</h1>
-              <p style="margin: 6px 0 0; color: #888; font-size: 11px; letter-spacing: 2px; text-transform: uppercase;">Concept Store</p>
+              <p style="margin: 6px 0 0; color: #888; font-size: 11px; letter-spacing: 2px; text-transform: uppercase;"></p>
             </td>
           </tr>
 
@@ -290,7 +290,7 @@ function buildPaymentConfirmationHtml(payload: EmailPayload): string {
                 Cet email a été envoyé à <strong>${customerEmail}</strong>.
               </p>
               <p style="margin: 16px 0 0; font-size: 11px; color: #ccc; text-align: center; letter-spacing: 2px; text-transform: uppercase;">
-                HELVETICA-MP Concept Store
+                HELVETICA-MP
               </p>
             </td>
           </tr>
@@ -411,7 +411,7 @@ function buildAdminEmailHtml(payload: EmailPayload): string {
                   </td>
                 </tr>
               </table>
-              <p style="margin:20px 0 0;font-size:11px;color:#444;text-align:center;letter-spacing:1px;">HELVETICA-MP Concept Store — Notification automatique</p>
+              <p style="margin:20px 0 0;font-size:11px;color:#444;text-align:center;letter-spacing:1px;">HELVETICA-MP — Notification automatique</p>
             </td>
           </tr>
 

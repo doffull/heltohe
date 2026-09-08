@@ -191,7 +191,7 @@ Deno.serve(async (req) => {
     .maybeSingle();
 
   const senderName =
-    (body.sender_name as string) || senderCfg?.colissimo_sender_name || 'HELVETICA-MP Concept Store';
+    (body.sender_name as string) || senderCfg?.colissimo_sender_name || 'HELVETICA-MP';
   const senderAddress =
     (body.sender_address as string) || senderCfg?.colissimo_sender_address || '1 Rue de la Paix';
   const senderZip = (body.sender_zip as string) || senderCfg?.colissimo_sender_zip || '75001';
