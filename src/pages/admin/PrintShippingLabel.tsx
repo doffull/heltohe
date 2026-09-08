@@ -47,6 +47,33 @@ export default function PrintShippingLabel() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [printingLabel, setPrintingLabel] = useState(false);
+  const [slipOnly, setSlipOnly] = useState(false);
+
+  /**
+   * Impression du bon de préparation.
+   *
+   * Le PDF de l'étiquette est monté dans un <object>, c'est-à-dire un plugin.
+   * Sa seule présence suffit à faire échouer `window.print()` — sans message,
+   * sans boîte de dialogue. Le masquer en CSS ne change rien : le plugin
+   * reste chargé.
+   *
+   * On le retire donc du DOM le temps de l'impression, puis on le remet. La
+   * zone n'est pas laissée vide : un encadré rappelle que l'étiquette
+   * s'imprime à part.
+   */
+  function printSlip() {
+    setSlipOnly(true);
+    // Deux images successives : la première démonte le plugin, la seconde
+    // laisse au navigateur le temps de reprendre la main avant l'impression.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          window.print();
+          setSlipOnly(false);
+        }, 200);
+      });
+    });
+  }
 
   /**
    * Impression de l'étiquette seule.
@@ -200,7 +227,7 @@ export default function PrintShippingLabel() {
             )}
             Imprimer l&rsquo;étiquette
           </Button>
-          <Button variant="outline" size="sm" onClick={() => window.print()}>
+          <Button variant="outline" size="sm" onClick={printSlip}>
             <Printer className="mr-1 h-4 w-4" />Imprimer le bon
           </Button>
         </div>
@@ -224,7 +251,15 @@ export default function PrintShippingLabel() {
                 <span className="absolute -right-[1px] top-1/2 -translate-y-1/2 rotate-90 text-[8px] uppercase tracking-widest text-neutral-500">
                   Collez ici le ruban adhésif
                 </span>
-                {labelSrc ? (
+                {labelSrc && slipOnly ? (
+                  <div
+                    className="flex h-full flex-col items-center justify-center gap-1 text-center text-xs text-neutral-500"
+                    style={{ minHeight: '146mm' }}
+                  >
+                    <p className="font-medium text-neutral-700">Étiquette Colissimo générée</p>
+                    <p>Elle s&rsquo;imprime séparément, via « Imprimer l&rsquo;étiquette ».</p>
+                  </div>
+                ) : labelSrc ? (
                   <object data={labelSrc} type="application/pdf" className="h-full w-full" style={{ minHeight: '146mm' }}>
                     <iframe src={labelSrc} title="Étiquette Colissimo" className="h-full w-full" style={{ minHeight: '146mm', border: 0 }} />
                   </object>
