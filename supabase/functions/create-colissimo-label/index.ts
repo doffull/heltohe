@@ -1,4 +1,10 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+// Briques d'étiquetage communes avec colissimo-proxy.
+import {
+  PICKUP_PRODUCT_CODES,
+  resolvePickupPoint,
+  sanitizeAddressLine,
+} from '../_shared/colissimo.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -134,13 +140,66 @@ Deno.serve(async (req) => {
   const nameParts = String(order.customer_name || 'Client').trim().split(/\s+/);
   const lastName = nameParts.length > 1 ? nameParts.slice(-1)[0] : String(order.customer_name || 'Client');
   const firstName = nameParts.length > 1 ? nameParts.slice(0, -1).join(' ') : '.';
-  const isRelay = String(order.customer_address || '').toLowerCase().includes('point relais');
-  const productCode = isReturn ? 'REPA' : isRelay ? 'A2P' : 'DOM';
+  const customerAddress = String(order.customer_address || '');
+  const isRelay = customerAddress.toLowerCase().includes('point relais');
 
-  const senderName = (body.sender_name as string) || 'HELVETICA-MP Concept Store';
-  const senderAddress = (body.sender_address as string) || '1 Rue de la Paix';
-  const senderZip = (body.sender_zip as string) || '75001';
-  const senderCity = (body.sender_city as string) || 'Paris';
+  // Point de retrait : le checkout ne conserve ni l'identifiant ni le type du
+  // point choisi, on les relit donc chez La Poste. Même mécanique que
+  // colissimo-proxy — la logique vit dans _shared/colissimo.ts.
+  let pickupLocationId = String(body.pickup_location_id || '').trim();
+  let pickupType = String(body.pickup_location_type || '').trim().toUpperCase();
+  let addresseeLine = customerAddress;
+
+  if (isRelay && !isReturn) {
+    const resolved = await resolvePickupPoint(customerAddress, login, password);
+    if (resolved) {
+      if (!pickupLocationId) pickupLocationId = resolved.id;
+      if (!pickupType) pickupType = resolved.type;
+      // Hors domicile, le destinataire garde son adresse personnelle : c'est
+      // pickupLocationId qui désigne le lieu de retrait.
+      if (resolved.customerLine) addresseeLine = resolved.customerLine;
+    }
+    if (!pickupLocationId) {
+      return json(
+        {
+          error: 'Point de retrait introuvable',
+          details:
+            "Impossible de retrouver ce point chez La Poste à partir de l'adresse enregistrée. " +
+            'Vérifiez le point relais de la commande, ou générez une étiquette à domicile.',
+        },
+        422,
+      );
+    }
+  }
+
+  // A2P vise les commerces du réseau Pickup ; un bureau de poste est un BPR.
+  // Forcer A2P — ce que faisait ce code — fait refuser l'étiquette.
+  const productCode = isReturn
+    ? 'REPA'
+    : isRelay
+      ? (PICKUP_PRODUCT_CODES.has(pickupType) ? pickupType : 'A2P')
+      : 'DOM';
+
+  // L'expéditeur imprimé vient de l'administration ; les valeurs en dur ne
+  // servent plus que de dernier recours. Sans cette lecture, l'étiquette
+  // partait au nom d'une adresse parisienne fictive, alors que l'expéditeur
+  // réel est configuré dans Admin → Paramètres.
+  const { data: senderCfg } = await admin
+    .from('admin_config')
+    .select('colissimo_sender_name, colissimo_sender_address, colissimo_sender_zip, colissimo_sender_city')
+    .eq('config_key', 'main')
+    .maybeSingle();
+
+  const senderName =
+    (body.sender_name as string) || senderCfg?.colissimo_sender_name || 'HELVETICA-MP Concept Store';
+  const senderAddress =
+    (body.sender_address as string) || senderCfg?.colissimo_sender_address || '1 Rue de la Paix';
+  const senderZip = (body.sender_zip as string) || senderCfg?.colissimo_sender_zip || '75001';
+  const senderCity = (body.sender_city as string) || senderCfg?.colissimo_sender_city || 'Paris';
+
+  // Nom sous lequel le destinataire voit l'expédition. Obligatoire hors
+  // domicile : « [30018] Le nom commercial n'a pas été transmis ».
+  const commercialName = sanitizeAddressLine((body.commercial_name as string) || senderName);
 
   const payload = {
     contractNumber: login,
@@ -156,12 +215,16 @@ Deno.serve(async (req) => {
         depositDate: new Date().toISOString().split('T')[0],
         orderNumber: String(order.order_number || ''),
         totalAmount: Math.round(Number(order.total || 0) * 100),
+        commercialName,
       },
-      parcel: { weight },
+      // `pickupLocationId` se place dans `parcel`, jamais dans `service` —
+      // l'exemple officiel de la documentation REST est formel, et le schéma
+      // SOAP dit la même chose.
+      parcel: pickupLocationId ? { weight, pickupLocationId } : { weight },
       sender: {
         address: {
-          companyName: senderName,
-          line2: senderAddress,
+          companyName: sanitizeAddressLine(senderName),
+          line2: sanitizeAddressLine(senderAddress),
           countryCode: 'FR',
           city: senderCity,
           zipCode: senderZip,
@@ -171,7 +234,7 @@ Deno.serve(async (req) => {
         address: {
           lastName,
           firstName,
-          line2: String(order.customer_address || ''),
+          line2: sanitizeAddressLine(addresseeLine),
           countryCode: 'FR',
           city: String(order.customer_city || ''),
           zipCode: String(order.customer_zip || ''),
