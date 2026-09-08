@@ -46,6 +46,69 @@ export default function PrintShippingLabel() {
   const [labelSrc, setLabelSrc] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [printingLabel, setPrintingLabel] = useState(false);
+
+  /**
+   * Impression de l'étiquette seule.
+   *
+   * `window.print()` ne peut rien pour elle : le PDF est affiché dans un
+   * <object> pointant une URL signée du stockage, donc une autre origine. Le
+   * navigateur refuse d'imprimer le contenu d'un cadre cross-origin, et le
+   * fait sans rien dire — d'où un bouton qui paraissait inerte.
+   *
+   * On rapatrie donc le PDF, on en fait une URL blob (même origine), et on
+   * l'imprime depuis un cadre caché.
+   */
+  async function printLabel() {
+    if (!labelSrc || printingLabel) return;
+    setPrintingLabel(true);
+    let blobUrl: string | null = null;
+    let frame: HTMLIFrameElement | null = null;
+    try {
+      const res = await fetch(labelSrc);
+      if (!res.ok) throw new Error(`Téléchargement de l'étiquette : HTTP ${res.status}`);
+      blobUrl = URL.createObjectURL(await res.blob());
+
+      frame = document.createElement('iframe');
+      frame.setAttribute('aria-hidden', 'true');
+      frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+      frame.src = blobUrl;
+
+      await new Promise<void>((resolve) => {
+        frame!.onload = () => resolve();
+        document.body.appendChild(frame!);
+        // Certains navigateurs ne déclenchent jamais `onload` sur un PDF :
+        // au-delà de trois secondes, on tente l'impression malgré tout.
+        setTimeout(resolve, 3000);
+      });
+
+      frame.contentWindow?.focus();
+      frame.contentWindow?.print();
+
+      // Le cadre doit survivre à la boîte de dialogue, qui est modale.
+      const doomedFrame = frame;
+      const doomedUrl = blobUrl;
+      setTimeout(() => {
+        doomedFrame.remove();
+        URL.revokeObjectURL(doomedUrl);
+      }, 60000);
+    } catch (e) {
+      frame?.remove();
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+      // Dernier recours : ouvrir le PDF dans un onglet, l'utilisateur imprime
+      // depuis la visionneuse.
+      window.open(labelSrc, '_blank', 'noopener');
+      toast({
+        title: 'Impression directe impossible',
+        description:
+          e instanceof Error
+            ? `${e.message} — étiquette ouverte dans un onglet.`
+            : "L'étiquette a été ouverte dans un onglet.",
+      });
+    } finally {
+      setPrintingLabel(false);
+    }
+  }
 
   async function load() {
     if (!id) return;
@@ -129,8 +192,16 @@ export default function PrintShippingLabel() {
             {generating ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1 h-4 w-4" />}
             {labelSrc ? 'Régénérer l\u2019étiquette' : 'Générer l\u2019étiquette Colissimo'}
           </Button>
-          <Button size="sm" onClick={() => window.print()}>
-            <Printer className="mr-1 h-4 w-4" />Imprimer
+          <Button size="sm" onClick={printLabel} disabled={!labelSrc || printingLabel}>
+            {printingLabel ? (
+              <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+            ) : (
+              <Printer className="mr-1 h-4 w-4" />
+            )}
+            Imprimer l&rsquo;étiquette
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => window.print()}>
+            <Printer className="mr-1 h-4 w-4" />Imprimer le bon
           </Button>
         </div>
       </div>
