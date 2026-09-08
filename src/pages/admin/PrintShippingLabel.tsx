@@ -1,193 +1,154 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Printer, Loader2, Scissors, RefreshCw } from 'lucide-react';
+import { Printer, Loader2, RefreshCw, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { triggerOrderEmail } from '@/hooks/useOrders';
-
-
-interface SlipItem {
-  name?: string;
-  productId?: string;
-  quantity: number;
-  price?: number;
-  size?: string;
-  color?: string;
-}
 
 interface SlipOrder {
   id: string;
   order_number: string;
-  created_at: string;
-  customer_name: string;
-  customer_email: string;
-  customer_phone: string | null;
-  customer_address: string;
-  customer_city: string;
-  customer_zip: string;
-  customer_country: string;
-  items: SlipItem[];
-  subtotal: number;
-  shipping_cost: number;
-  total: number;
-  payment_method: string | null;
   tracking_number: string | null;
   label_path: string | null;
-  label_url: string | null;
 }
 
-const euro = (n: number) => `${Number(n || 0).toFixed(2)} €`;
-
+/**
+ * Bon de préparation — aperçu et impression.
+ *
+ * L'écran assemblait autrefois le bon en HTML et confiait l'impression au
+ * navigateur. Deux obstacles l'en empêchaient : l'étiquette est un PDF servi
+ * par le stockage, donc d'une autre origine — impossible à imprimer depuis la
+ * page — et la seule présence de ce plugin faisait échouer `window.print()`
+ * sans message.
+ *
+ * Le document est désormais produit d'un bloc par la fonction `order-slip-pdf`,
+ * étiquette incluse. Cet écran n'en est que la visionneuse. C'est aussi la
+ * garantie qu'il n'existe qu'une seule mise en page : ce qui s'affiche est
+ * exactement ce qui s'imprime.
+ */
 export default function PrintShippingLabel() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
   const [order, setOrder] = useState<SlipOrder | null>(null);
-  const [labelSrc, setLabelSrc] = useState<string | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
-  const [printingLabel, setPrintingLabel] = useState(false);
-  const [slipOnly, setSlipOnly] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const objectUrlRef = useRef<string | null>(null);
+
+  /** Remplace l'aperçu courant, en libérant le précédent. */
+  const setPdfFromBase64 = useCallback((base64: string) => {
+    const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    // Une URL blob est de MÊME ORIGINE que la page : c'est ce qui rend
+    // l'impression possible, là où une URL signée du stockage la bloquait.
+    const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    objectUrlRef.current = url;
+    setPdfUrl(url);
+  }, []);
 
   /**
-   * Impression du bon de préparation.
-   *
-   * Le PDF de l'étiquette est monté dans un <object>, c'est-à-dire un plugin.
-   * Sa seule présence suffit à faire échouer `window.print()` — sans message,
-   * sans boîte de dialogue. Le masquer en CSS ne change rien : le plugin
-   * reste chargé.
-   *
-   * On le retire donc du DOM le temps de l'impression, puis on le remet. La
-   * zone n'est pas laissée vide : un encadré rappelle que l'étiquette
-   * s'imprime à part.
+   * @param allowLabelCreation n'est vrai que sur action explicite : affranchir
+   * engage un colis auprès de La Poste, jamais au simple affichage de la page.
    */
-  function printSlip() {
-    setSlipOnly(true);
-    // Deux images successives : la première démonte le plugin, la seconde
-    // laisse au navigateur le temps de reprendre la main avant l'impression.
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          window.print();
-          setSlipOnly(false);
-        }, 200);
-      });
-    });
-  }
+  const buildSlip = useCallback(
+    async (allowLabelCreation: boolean) => {
+      if (!id) return;
+      setBusy(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('order-slip-pdf', {
+          body: { order_id: id, allow_label_creation: allowLabelCreation },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.details || data.error);
+        if (!data?.pdfBase64) throw new Error('Aucun document renvoyé');
 
-  /**
-   * Impression de l'étiquette seule.
-   *
-   * `window.print()` ne peut rien pour elle : le PDF est affiché dans un
-   * <object> pointant une URL signée du stockage, donc une autre origine. Le
-   * navigateur refuse d'imprimer le contenu d'un cadre cross-origin, et le
-   * fait sans rien dire — d'où un bouton qui paraissait inerte.
-   *
-   * On rapatrie donc le PDF, on en fait une URL blob (même origine), et on
-   * l'imprime depuis un cadre caché.
-   */
-  async function printLabel() {
-    if (!labelSrc || printingLabel) return;
-    setPrintingLabel(true);
-    let blobUrl: string | null = null;
-    let frame: HTMLIFrameElement | null = null;
-    try {
-      const res = await fetch(labelSrc);
-      if (!res.ok) throw new Error(`Téléchargement de l'étiquette : HTTP ${res.status}`);
-      blobUrl = URL.createObjectURL(await res.blob());
+        setPdfFromBase64(data.pdfBase64);
+        setOrder((o) => (o ? { ...o, tracking_number: data.trackingNumber ?? o.tracking_number } : o));
 
-      frame = document.createElement('iframe');
-      frame.setAttribute('aria-hidden', 'true');
-      frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
-      frame.src = blobUrl;
-
-      await new Promise<void>((resolve) => {
-        frame!.onload = () => resolve();
-        document.body.appendChild(frame!);
-        // Certains navigateurs ne déclenchent jamais `onload` sur un PDF :
-        // au-delà de trois secondes, on tente l'impression malgré tout.
-        setTimeout(resolve, 3000);
-      });
-
-      frame.contentWindow?.focus();
-      frame.contentWindow?.print();
-
-      // Le cadre doit survivre à la boîte de dialogue, qui est modale.
-      const doomedFrame = frame;
-      const doomedUrl = blobUrl;
-      setTimeout(() => {
-        doomedFrame.remove();
-        URL.revokeObjectURL(doomedUrl);
-      }, 60000);
-    } catch (e) {
-      frame?.remove();
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
-      // Dernier recours : ouvrir le PDF dans un onglet, l'utilisateur imprime
-      // depuis la visionneuse.
-      window.open(labelSrc, '_blank', 'noopener');
-      toast({
-        title: 'Impression directe impossible',
-        description:
-          e instanceof Error
-            ? `${e.message} — étiquette ouverte dans un onglet.`
-            : "L'étiquette a été ouverte dans un onglet.",
-      });
-    } finally {
-      setPrintingLabel(false);
-    }
-  }
-
-  async function load() {
-    if (!id) return;
-    setLoading(true);
-    const { data, error } = await supabase.from('orders').select('*').eq('id', id).maybeSingle();
-    setLoading(false);
-    if (error || !data) {
-      toast({ title: 'Commande introuvable', variant: 'destructive' });
-      return;
-    }
-    const o = data as unknown as SlipOrder;
-    setOrder({ ...o, items: Array.isArray(o.items) ? o.items : [] });
-    if (o.label_path) {
-      const { data: signed } = await supabase.storage
-        .from('labels')
-        .createSignedUrl(o.label_path, 60 * 60);
-      setLabelSrc(signed?.signedUrl ?? o.label_url ?? null);
-    } else {
-      setLabelSrc(o.label_url ?? null);
-    }
-  }
+        if (data.labelGenerated) {
+          toast({
+            title: 'Étiquette Colissimo générée',
+            description: data.trackingNumber ? `Suivi : ${data.trackingNumber}` : undefined,
+          });
+          await triggerOrderEmail(id, 'shipped');
+        }
+      } catch (e) {
+        toast({
+          title: 'Bon indisponible',
+          description: e instanceof Error ? e.message : String(e),
+          variant: 'destructive',
+        });
+      } finally {
+        setBusy(false);
+      }
+    },
+    [id, setPdfFromBase64, toast],
+  );
 
   useEffect(() => {
-    load();
+    let cancelled = false;
+    (async () => {
+      if (!id) return;
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, order_number, tracking_number, label_path')
+        .eq('id', id)
+        .maybeSingle();
+      if (cancelled) return;
+      setLoading(false);
+      if (error || !data) {
+        toast({ title: 'Commande introuvable', variant: 'destructive' });
+        return;
+      }
+      setOrder(data as SlipOrder);
+      // Aperçu seul : aucune étiquette n'est créée à l'ouverture.
+      void buildSlip(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  async function generateLabel() {
-    if (!id) return;
-    setGenerating(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('create-colissimo-label', {
-        body: { order_id: id },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.details || data.error);
-      toast({ title: 'Étiquette Colissimo générée', description: data?.trackingNumber ? `Suivi : ${data.trackingNumber}` : undefined });
-      // E-mail d'expédition au client (suivi Colissimo) — best-effort
-      await triggerOrderEmail(id, 'shipped');
+  // Libère l'URL blob au démontage.
+  useEffect(
+    () => () => {
+      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    },
+    [],
+  );
 
-      await load();
-    } catch (e) {
-      toast({ title: 'Échec de la génération', description: e instanceof Error ? e.message : String(e), variant: 'destructive' });
-    } finally {
-      setGenerating(false);
-    }
+  /**
+   * Le PDF étant en URL blob, il est de même origine : l'imprimer depuis un
+   * cadre caché fonctionne, ce qui n'était pas le cas de l'URL signée.
+   */
+  function print() {
+    if (!pdfUrl) return;
+    const frame = document.createElement('iframe');
+    frame.setAttribute('aria-hidden', 'true');
+    frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+    frame.src = pdfUrl;
+    const launch = () => {
+      frame.contentWindow?.focus();
+      frame.contentWindow?.print();
+    };
+    frame.onload = launch;
+    document.body.appendChild(frame);
+    // Certains navigateurs ne déclenchent pas `onload` sur un PDF.
+    setTimeout(launch, 2500);
+    // Le cadre doit survivre à la boîte de dialogue, qui est modale.
+    setTimeout(() => frame.remove(), 120000);
   }
 
-  const totalItems = useMemo(
-    () => (order?.items || []).reduce((s, i) => s + (Number(i.quantity) || 0), 0),
-    [order],
-  );
+  function download() {
+    if (!pdfUrl || !order) return;
+    const a = document.createElement('a');
+    a.href = pdfUrl;
+    a.download = `bon-${order.order_number}.pdf`;
+    a.click();
+  }
 
   if (loading) {
     return (
@@ -198,168 +159,51 @@ export default function PrintShippingLabel() {
   }
   if (!order) return <div className="p-10 text-center">Commande introuvable.</div>;
 
-  return (
-    <div className="min-h-screen bg-muted/40 print:bg-white">
-      <style>{`
-        @page { size: A4 landscape; margin: 8mm; }
-        @media print {
-          .no-print { display: none !important; }
-          html, body { background: #fff !important; }
-          .slip-sheet { box-shadow: none !important; margin: 0 !important; width: 100% !important; height: auto !important; page-break-after: avoid; }
-          .slip-sheet, .slip-sheet * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        }
-      `}</style>
+  const hasLabel = Boolean(order.tracking_number || order.label_path);
 
-      <div className="no-print sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b bg-background p-3">
+  return (
+    <div className="min-h-screen bg-muted/40">
+      <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b bg-background p-3">
         <div className="text-sm">
-          Bordereau d'expédition — <strong>{order.order_number}</strong>
+          Bon de préparation — <strong>{order.order_number}</strong>
+          {order.tracking_number && (
+            <span className="ml-2 text-muted-foreground">suivi {order.tracking_number}</span>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={generateLabel} disabled={generating}>
-            {generating ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1 h-4 w-4" />}
-            {labelSrc ? 'Régénérer l\u2019étiquette' : 'Générer l\u2019étiquette Colissimo'}
-          </Button>
-          <Button size="sm" onClick={printLabel} disabled={!labelSrc || printingLabel}>
-            {printingLabel ? (
+          <Button variant="outline" size="sm" onClick={() => buildSlip(true)} disabled={busy}>
+            {busy ? (
               <Loader2 className="mr-1 h-4 w-4 animate-spin" />
             ) : (
-              <Printer className="mr-1 h-4 w-4" />
+              <RefreshCw className="mr-1 h-4 w-4" />
             )}
-            Imprimer l&rsquo;étiquette
+            {hasLabel ? 'Actualiser le bon' : 'Générer l’étiquette et le bon'}
           </Button>
-          <Button variant="outline" size="sm" onClick={printSlip}>
-            <Printer className="mr-1 h-4 w-4" />Imprimer le bon
+          <Button variant="outline" size="sm" onClick={download} disabled={!pdfUrl || busy}>
+            <Download className="mr-1 h-4 w-4" />Télécharger
+          </Button>
+          <Button size="sm" onClick={print} disabled={!pdfUrl || busy}>
+            <Printer className="mr-1 h-4 w-4" />Imprimer
           </Button>
         </div>
       </div>
 
-      <div className="flex justify-center p-4 print:p-0">
-        <div
-          className="slip-sheet bg-white text-black shadow-lg"
-          style={{ width: '281mm', minHeight: '194mm', padding: '6mm' }}
-        >
-          <div className="grid h-full grid-cols-2" style={{ gap: 0 }}>
-            {/* ─── Colonne gauche : étiquette transporteur ─── */}
-            <div className="relative pr-[6mm]">
-              <p className="mb-2 text-center text-[10px] uppercase tracking-widest text-neutral-500">
-                Collez ici le ruban adhésif
-              </p>
-              <div className="relative border-2 border-black p-2" style={{ minHeight: '150mm' }}>
-                <span className="absolute -left-[1px] top-1/2 -translate-y-1/2 -rotate-90 text-[8px] uppercase tracking-widest text-neutral-500">
-                  Collez ici le ruban adhésif
-                </span>
-                <span className="absolute -right-[1px] top-1/2 -translate-y-1/2 rotate-90 text-[8px] uppercase tracking-widest text-neutral-500">
-                  Collez ici le ruban adhésif
-                </span>
-                {labelSrc && slipOnly ? (
-                  <div
-                    className="flex h-full flex-col items-center justify-center gap-1 text-center text-xs text-neutral-500"
-                    style={{ minHeight: '146mm' }}
-                  >
-                    <p className="font-medium text-neutral-700">Étiquette Colissimo générée</p>
-                    <p>Elle s&rsquo;imprime séparément, via « Imprimer l&rsquo;étiquette ».</p>
-                  </div>
-                ) : labelSrc ? (
-                  <object data={labelSrc} type="application/pdf" className="h-full w-full" style={{ minHeight: '146mm' }}>
-                    <iframe src={labelSrc} title="Étiquette Colissimo" className="h-full w-full" style={{ minHeight: '146mm', border: 0 }} />
-                  </object>
-                ) : (
-                  <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-xs text-neutral-500" style={{ minHeight: '146mm' }}>
-                    <p>Aucune étiquette Colissimo générée.</p>
-                    <p className="no-print">Cliquez sur « Générer l'étiquette Colissimo ».</p>
-                  </div>
-                )}
-              </div>
-              <p className="mt-2 text-center text-[10px] uppercase tracking-widest text-neutral-500">
-                Collez ici le ruban adhésif
-              </p>
+      <div className="flex justify-center p-4">
+        <div className="w-full max-w-[210mm] bg-white shadow-lg" style={{ height: '297mm' }}>
+          {busy && !pdfUrl ? (
+            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Préparation du document…
             </div>
-
-            {/* ─── Colonne droite : bon de commande ─── */}
-            <div className="relative border-l-2 border-dashed border-neutral-400 pl-[6mm]">
-              <div className="absolute -left-[13px] top-2 flex flex-col items-center bg-white py-1">
-                <Scissors className="h-4 w-4 text-neutral-500" />
-              </div>
-              <p className="mb-3 text-center text-[9px] uppercase tracking-widest text-neutral-500">
-                Étiquette Colissimo, découpez selon les pointillés
-              </p>
-
-              <p className="text-[11px]">
-                Vous avez reçu la commande suivante de <strong>{order.customer_name}</strong> :
-              </p>
-              <h1 className="my-2 text-[15px] font-bold" style={{ color: '#c0392b' }}>
-                [Order #{order.order_number}] ({new Date(order.created_at).toLocaleDateString('fr-FR')})
-              </h1>
-
-              <table className="w-full border-collapse text-[10px]">
-                <thead>
-                  <tr>
-                    <th className="border-b-2 border-black p-1 text-left">Produit</th>
-                    <th className="border-b-2 border-black p-1 text-center">Quantité</th>
-                    <th className="border-b-2 border-black p-1 text-right">Prix unitaire</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {order.items.map((item, i) => (
-                    <tr key={i}>
-                      <td className="border-b border-neutral-300 p-1 align-top">
-                        <div className="font-medium">{item.name || item.productId}</div>
-                        {(item.size || item.color) && (
-                          <div className="text-[9px] text-neutral-600">
-                            {[item.size && `Taille : ${item.size}`, item.color && `Couleur : ${item.color}`]
-                              .filter(Boolean)
-                              .join(' · ')}
-                          </div>
-                        )}
-                      </td>
-                      <td className="border-b border-neutral-300 p-1 text-center">{item.quantity}</td>
-                      <td className="border-b border-neutral-300 p-1 text-right">{euro(item.price || 0)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <div className="mt-3 border border-neutral-400 bg-neutral-50 p-2 text-[9px] leading-snug">
-                <strong className="uppercase tracking-wide">Conditions de retour</strong>
-                <p className="mt-1">
-                  Vous disposez de 14 jours à compter de la réception pour retourner un article dans son
-                  état d'origine, non porté, avec ses étiquettes et son emballage. Les articles enfants et
-                  les produits en édition limitée ne sont ni repris ni échangés. Le retour doit être
-                  expédié dans les 14 jours suivant la demande, faute de quoi il pourra être refusé.
-                </p>
-              </div>
-
-              <div className="mt-3 ml-auto w-[70%] text-[10px]">
-                <div className="flex justify-between border-b border-neutral-200 py-[3px]">
-                  <span>Sous-total ({totalItems} article{totalItems > 1 ? 's' : ''})</span>
-                  <span>{euro(order.subtotal)}</span>
-                </div>
-                <div className="flex justify-between border-b border-neutral-200 py-[3px]">
-                  <span>Frais de livraison</span>
-                  <span>{euro(order.shipping_cost)}</span>
-                </div>
-                <div className="flex justify-between border-b border-neutral-200 py-[3px]">
-                  <span>Mode de paiement</span>
-                  <span>{order.payment_method || '—'}</span>
-                </div>
-                <div className="flex justify-between py-1 text-[12px] font-bold">
-                  <span>Total TTC</span>
-                  <span>{euro(order.total)}</span>
-                </div>
-              </div>
-
-              <div className="mt-3 text-[9px] text-neutral-600">
-                <div>
-                  {order.customer_address} — {order.customer_zip} {order.customer_city}, {order.customer_country}
-                </div>
-                <div>
-                  {order.customer_email}
-                  {order.customer_phone ? ` · ${order.customer_phone}` : ''}
-                </div>
-                {order.tracking_number && <div>N° de suivi : {order.tracking_number}</div>}
-              </div>
+          ) : pdfUrl ? (
+            <object data={pdfUrl} type="application/pdf" className="h-full w-full">
+              <iframe src={pdfUrl} title="Bon de préparation" className="h-full w-full border-0" />
+            </object>
+          ) : (
+            <div className="flex h-full items-center justify-center p-8 text-center text-sm text-muted-foreground">
+              Le bon n&rsquo;a pas pu être préparé.
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
