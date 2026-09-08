@@ -374,10 +374,17 @@ Deno.serve(async (req) => {
             <productCode>${productCode}</productCode>
             <depositDate>${depositDate}</depositDate>
             <orderNumber>${escapeXml(order.orderNumber || '')}</orderNumber>
-            ${pickupLocationId ? `<pickupLocationId>${escapeXml(pickupLocationId)}</pickupLocationId>` : ''}
           </service>
+          <!-- ⚠️ En SOAP, pickupLocationId appartient à <parcel>, APRÈS <weight>
+               — et non à <service> comme le veut l'API REST. Le placer dans
+               <service> fait échouer la validation du schéma :
+               « Invalid content was found starting with element
+               'pickupLocationId'. One of {commercialName, returnTypeChoice,
+               reseauPostal} is expected ». L'ordre de la séquence XSD est
+               strict, ne pas déplacer cette ligne. -->
           <parcel>
             <weight>1.0</weight>
+            ${pickupLocationId ? `<pickupLocationId>${escapeXml(pickupLocationId)}</pickupLocationId>` : ''}
           </parcel>
           <sender>
             <address>
