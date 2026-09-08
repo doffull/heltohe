@@ -1197,3 +1197,157 @@ d'environnement**. Pas besoin de secret Supabase.
 - Poser `GOOGLE_API_KEY`, `GOOGLE_MAPS_API_KEY`, `LOVABLE_API_KEY`.
 - **Hook d'authentification** à réactiver, **front à déployer**, puis recette.
 - **Arrêter `bumfyr…`** — en dernier, jamais avant.
+
+## 23. Remise en service après la migration — 08/09/2026
+
+Journée de rattrapage : la bascule du §21 avait laissé derrière elle **tous les
+secrets** et quelques réglages qui ne vivaient que dans le tableau de bord de
+l'ancien projet. Chaque fonctionnalité touchée est tombée à son tour, sans lien
+apparent entre elles.
+
+> ⚠️ **La leçon, à retenir avant tout le reste** : ce qui n'est pas dans le
+> dépôt n'existe pas. Secrets, buckets, `verify_jwt` — rien de tout cela ne
+> suit une migration. Le §21 avait prévenu pour les données ; ce §23 le
+> confirme pour la configuration.
+
+### Ce qui a été remis en marche
+
+| Domaine | Ce qui manquait | Où ça se règle |
+|---|---|---|
+| Connexion Google | provider jamais activé | Google Cloud + Auth Supabase |
+| Google Maps | secret `GOOGLE_API_KEY` | secrets Edge Functions |
+| IA (16 fonctionnalités) | `GEMINI_API_KEY` + facturation AI Studio | `/admin/chatbot` |
+| IPN PayPlug | `verify_jwt` resté à `true` | `config.toml` |
+| Étiquettes Colissimo | six défauts cumulés, cf. plus bas | code |
+
+### Connexion Google — le déclencheur de vérification
+
+Le code front était complet depuis l'origine (`Auth.tsx:109`), seul le provider
+n'avait jamais été configuré. Deux pièges rencontrés :
+
+- l'écran de consentement laissé en **Testing** n'autorise que les comptes
+  listés à la main ;
+- ⚠️ **c'est le logo qui déclenche la vérification de marque**, pas les scopes.
+  Avec `openid`, `email`, `profile`, une application se publie sans validation
+  — sauf si on téléverse un logo. Les deux griefs de Google étaient alors
+  fondés : domaine non prouvé dans Search Console, et **les CGV déclarées comme
+  politique de confidentialité** alors que `/confidentialite` existe.
+
+⚠️ **`Site URL` valait `http://localhost:3000`** : Supabase y retombe
+silencieusement quand le `redirectTo` demandé n'est pas autorisé, ce qui
+renvoyait les utilisateurs sur leur machine. Les `Redirect URLs` doivent porter
+un `/**`, `Auth.tsx:28` construisant `window.location.origin + nextPath`.
+
+### IA — deux clés, jamais trois
+
+Les 16 fonctionnalités reposent sur **`LOVABLE_API_KEY`** seule ; `GEMINI_API_KEY`
+est facultative et ne couvre que les dix fonctions passant par `callGemini()`.
+Ordre de résolution : ligne `gemini_api` en base → secret `GEMINI_API_KEY` →
+passerelle Lovable.
+
+Six fonctions — vidéo `veo-3.0`, image `gpt-image-2`, essayage virtuel, retouche
+de pose, gabarit depuis mockup, import PDF produits — **n'ont aucun chemin
+direct** et resteront captives de la passerelle.
+
+*(La panne finale ne venait pas du code : la facturation Google AI Studio
+n'était pas activée.)*
+
+### IPN PayPlug — 401 avant même d'atteindre le code
+
+`payplug` n'ayant aucune entrée dans `config.toml`, `verify_jwt` valait `true` :
+la passerelle Supabase rejetait la notification, qu'aucun webhook ne peut
+signer. Le corps de la réponse le disait — `UNAUTHORIZED_NO_AUTH_HEADER`, message
+de la passerelle, là où une fonction ouverte répond depuis son propre code.
+
+**Conséquence** : `applyPayment()` n'était jamais déclenchée. Un paiement n'était
+confirmé que si le client revenait sur `/checkout`, onglet ouvert. **27
+transactions sur 34 sont restées en `created`**, à recouper avec le portail.
+
+`paypal-webhook` et `carrier-tracking-webhook` étaient dans le même cas. Les
+ouvrir ne coûte rien en sécurité : chacune s'authentifie elle-même — relecture
+du paiement chez PayPlug, signature vérifiée par PayPal, jeton partagé pour le
+transporteur.
+
+### 🔴 Colissimo — la chaîne n'avait jamais fonctionné en point relais
+
+Le constat qui a tout orienté : **0 étiquette sur 16 commandes en point relais,
+contre 4 sur 18 à domicile.** Six défauts empilés, découverts un à un, chacun
+masquant le suivant :
+
+1. **`A2P` forcé** dès que l'adresse contenait « point relais ». A2P désigne les
+   commerces Pickup ; les seize points étaient des bureaux de poste, donc `BPR`.
+2. **`pickupLocationId` absent**, obligatoire pour A2P, BPR, ACP, CDI, CMT, BDP
+   et PCS. La cause racine est en amont : `Checkout.tsx:224` reçoit
+   `identifiant` et `typeDePoint` et n'en garde qu'une phrase d'affichage.
+3. **Adresse de 125 caractères** dans `line2`, pour 35 autorisés.
+4. **Nom commercial manquant** — `[30018]`, exigé hors domicile.
+5. **Le bucket `labels` n'existait pas.** Ses politiques d'accès, elles,
+   existaient depuis le 18/08 : des règles pour un bucket que personne n'avait
+   créé.
+6. **Un refus renvoyé comme une réussite** : Colissimo répond `200` même en cas
+   d'échec, le motif ne vivant que dans `<messages>`. Le code renvoyait
+   `success: true` avec des champs à `null`.
+
+⚠️ **`pickupLocationId` va dans `<parcel>`, jamais dans `<service>`** — vérifié
+dans le WSDL SOAP *et* dans l'exemple officiel de l'API REST. Le placer dans
+`service` fait échouer la validation du schéma, dont la séquence est ordonnée.
+
+Plutôt que d'imposer d'abord une reprise de la base et du tunnel d'achat, le
+point de retrait est **relu chez La Poste au moment de l'étiquette**, d'après le
+nom et le code postal contenus dans l'adresse (`_shared/colissimo.ts`). Les
+seize commandes déjà passées sont redevenues imprimables sans migration.
+
+### Deux voies d'étiquetage, chacune à moitié aveugle
+
+Découvert en fin de journée, et c'est le défaut le plus instructif :
+
+| Voie | Numéro de suivi | Étiquette archivée |
+|---|---|---|
+| `colissimo-proxy` (SOAP, `/admin/colissimo`) | ✅ | ❌ |
+| `create-colissimo-label` (REST, `/admin/bordereau/:id`) | ❌ | ✅ |
+
+La première n'archivait rien ; la seconde lisait `meta.labelResponse`, **un nom
+que Colissimo n'emploie nulle part** (`labelV2Response` en national, la racine à
+l'international), si bien que le numéro n'était jamais lu — et comme il n'est
+écrit que s'il est trouvé, l'échec était silencieux.
+
+D'où deux écrans qui se contredisaient sur la même commande, chacun disant vrai
+depuis sa moitié d'état. Et, plus grave, **aucune garantie que le numéro
+enregistré corresponde à l'étiquette imprimée** : `HMP-MTRH9SZV` a porté deux
+numéros contradictoires, `HMP-MTRI5TN4` a été affranchie **trois fois**.
+
+Les deux voies écrivent désormais le même état complet — numéro, archive, URL
+signée, date, transporteur, passage à `Shipped` sans lequel la commande n'entre
+ni dans l'écran Colissimo ni dans le bordereau. Deux commandes ont été
+rattrapées, numéro relu dans le PDF archivé.
+
+### Le bon de préparation devient un PDF
+
+Trois tentatives d'impression navigateur ont échoué avant d'en trouver la cause,
+double :
+
+- l'étiquette est servie par le stockage, donc **cross-origin** : son contenu
+  n'est pas imprimable depuis la page ;
+- **la seule présence du plugin PDF** fait échouer `window.print()`, sans
+  message ni boîte de dialogue.
+
+`order-slip-pdf` produit désormais le document d'un bloc avec `pdf-lib` : A4
+paysage, bon à droite, étiquette **incrustée** à gauche à sa taille réelle. L'écran
+n'en est plus que la visionneuse — **une seule mise en page**, donc ce qui
+s'affiche est ce qui s'imprime. L'impression fonctionne parce que le PDF arrive
+en base64 et devient une URL blob, de même origine.
+
+⚠️ **Affranchir engage un colis.** La création d'étiquette est conditionnée à
+`allow_label_creation`, faux par défaut : ouvrir la page d'une commande non
+étiquetée n'affranchit jamais.
+
+### Vérification
+
+Tout a été contrôlé **contre l'API et les données réelles**, jamais en
+supposant : les identifiants Colissimo via l'action publique `getRelayPoints`,
+les 9 points de retrait résolus chez La Poste, le PDF généré hors ligne avec
+l'étiquette réelle de `HMP-MTRH9SZV`, les schémas lus dans le WSDL et le YAML
+publiés par Colissimo.
+
+⚠️ **Une clé `service_role` a été utilisée pendant cette session** pour le
+diagnostic. À révoquer.
