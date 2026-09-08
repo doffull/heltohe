@@ -995,9 +995,12 @@ export default function AdminOrders() {
                   ))}
                   <div className="pt-2 space-y-1 text-sm">
                     <div className="flex justify-between"><span>Sous-total</span><span>{recalcTotals(editForm.items).toFixed(2)}€</span></div>
-                    <div className="flex justify-between"><span>TVA</span><span>{selectedOrder.tax.toFixed(2)}€</span></div>
+                    {/* Les prix sont TTC : `orders.tax` est la TVA CONTENUE dans le total,
+                        pas un supplément. L'ajouter au total la comptait deux fois — une
+                        commande à 169 € s'affichait à 197,17 €. D'où le libellé « dont ». */}
+                    <div className="flex justify-between text-muted-foreground"><span>dont TVA</span><span>{selectedOrder.tax.toFixed(2)}€</span></div>
                     <div className="flex justify-between"><span>Livraison</span><span>{selectedOrder.shippingCost.toFixed(2)}€</span></div>
-                    <div className="flex justify-between font-bold text-base pt-2 border-t border-border"><span>Total</span><span>{(recalcTotals(editForm.items) + selectedOrder.tax + selectedOrder.shippingCost).toFixed(2)}€</span></div>
+                    <div className="flex justify-between font-bold text-base pt-2 border-t border-border"><span>Total TTC</span><span>{(recalcTotals(editForm.items) + selectedOrder.shippingCost).toFixed(2)}€</span></div>
                   </div>
                 </div>
               </div>
