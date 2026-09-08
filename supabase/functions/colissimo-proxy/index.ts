@@ -478,7 +478,16 @@ Deno.serve(async (req) => {
           return colissimoRefusal(fullText);
         }
 
-        return new Response(JSON.stringify({ success: true, trackingNumber, pdfBase64 }), {
+        // ── Archivage ────────────────────────────────────────────────────
+        // Cette voie se contentait de renvoyer le PDF au navigateur : le
+        // numéro de suivi finissait en base, mais l'étiquette nulle part.
+        // L'autre voie faisait l'inverse — archive sans numéro. Chacune
+        // laissait donc un état incomplet, et rien ne garantissait que le
+        // numéro enregistré corresponde à l'étiquette réellement imprimée.
+        // On écrit désormais les deux d'un même geste.
+        const archived = await archiveLabel(order.id, order.orderNumber, trackingNumber, pdfBase64);
+
+        return new Response(JSON.stringify({ success: true, trackingNumber, pdfBase64, ...archived }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -681,6 +690,77 @@ Deno.serve(async (req) => {
 });
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
+
+/**
+ * Range l'étiquette dans le stockage et complète la commande.
+ *
+ * Le front met déjà à jour le numéro de suivi de son côté ; on le réécrit ici
+ * pour que l'enregistrement reste cohérent même si l'appel vient d'ailleurs,
+ * et surtout pour que `label_path` désigne toujours l'étiquette portant CE
+ * numéro.
+ *
+ * Échouer ici ne doit pas faire perdre l'étiquette au préparateur : le colis
+ * est déjà affranchi, le PDF est renvoyé au navigateur quoi qu'il arrive. On
+ * signale l'échec dans la réponse plutôt que de la transformer en erreur.
+ */
+async function archiveLabel(
+  orderId: unknown,
+  orderNumber: unknown,
+  trackingNumber: string,
+  pdfBase64: string | null,
+): Promise<Record<string, unknown>> {
+  if (!pdfBase64) return { archived: false, archiveError: 'PDF absent' };
+  const url = Deno.env.get('SUPABASE_URL');
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!url || !serviceKey) return { archived: false, archiveError: 'service role indisponible' };
+
+  try {
+    const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
+
+    // L'écran n'envoie pas toujours l'identifiant : on retombe sur le numéro
+    // de commande, qui est unique.
+    let id = typeof orderId === 'string' && orderId ? orderId : '';
+    let status = '';
+    if (!id && orderNumber) {
+      const { data } = await admin
+        .from('orders')
+        .select('id, status')
+        .eq('order_number', String(orderNumber))
+        .maybeSingle();
+      id = data?.id ?? '';
+      status = String(data?.status ?? '');
+    } else if (id) {
+      const { data } = await admin.from('orders').select('status').eq('id', id).maybeSingle();
+      status = String(data?.status ?? '');
+    }
+    if (!id) return { archived: false, archiveError: 'commande introuvable' };
+
+    const bytes = Uint8Array.from(atob(pdfBase64), (c) => c.charCodeAt(0));
+    const path = `${id}/aller-${Date.now()}.pdf`;
+    const { error: uploadError } = await admin.storage
+      .from('labels')
+      .upload(path, bytes, { contentType: 'application/pdf', upsert: true });
+    if (uploadError) return { archived: false, archiveError: uploadError.message };
+
+    const { data: signed } = await admin.storage.from('labels').createSignedUrl(path, 60 * 60 * 24 * 7);
+
+    const update: Record<string, unknown> = {
+      tracking_number: trackingNumber,
+      label_path: path,
+      label_url: signed?.signedUrl ?? null,
+      label_generated_at: new Date().toISOString(),
+      shipping_carrier: 'Colissimo',
+    };
+    if (['Processing', 'Pending', 'pending', 'processing'].includes(status)) {
+      update.status = 'Shipped';
+    }
+    await admin.from('orders').update(update).eq('id', id);
+
+    return { archived: true, labelPath: path };
+  } catch (e) {
+    return { archived: false, archiveError: e instanceof Error ? e.message : String(e) };
+  }
+}
 
 /**
  * Colissimo accompagne chaque réponse d'un ou plusieurs blocs :

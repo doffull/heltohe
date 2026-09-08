@@ -255,6 +255,7 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
           senderName, senderAddress, senderZip, senderCity,
           isReturn,
           order: {
+            id: order.id,
             orderNumber: order.orderNumber,
             customer: {
               name: order.customer.name,
@@ -319,6 +320,7 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
                 senderName, senderAddress, senderZip, senderCity,
                 isReturn: false,
                 order: {
+                  id: order.id,
                   orderNumber: order.orderNumber,
                   customer: {
                     name: order.customer.name,
@@ -347,6 +349,7 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
                 senderName, senderAddress, senderZip, senderCity,
                 isReturn: false,
                 order: {
+                  id: order.id,
                   orderNumber: order.orderNumber,
                   customer: {
                     name: order.customer.name,

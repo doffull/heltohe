@@ -275,8 +275,22 @@ Deno.serve(async (req) => {
   const pdf = extractPdf(raw);
   if (!pdf) return json({ error: 'Aucun PDF retourné par Colissimo' }, 502);
 
-  const labelResponse = (meta?.labelResponse as Record<string, unknown>) || {};
-  const trackingNumber = String(labelResponse.parcelNumber || '') || null;
+  // Le numéro de colis est cherché à trois endroits, car Colissimo ne le place
+  // pas toujours au même : `labelV2Response` pour un envoi national, la racine
+  // de la réponse à l'international. Ce code n'interrogeait que
+  // `labelResponse`, qui n'existe dans aucun des deux cas — le numéro n'était
+  // donc jamais lu, et comme il n'est enregistré que s'il est trouvé, la
+  // commande gardait `tracking_number` à null alors que son étiquette était
+  // bel et bien archivée. C'est ce qui la rendait invisible dans l'écran
+  // Colissimo, qui se fie au numéro de suivi.
+  const labelBlock = (meta?.labelV2Response ?? meta?.labelResponse ?? {}) as Record<string, unknown>;
+  const trackingNumber =
+    String(labelBlock.parcelNumber || meta?.parcelNumber || '').trim() || null;
+  if (!trackingNumber) {
+    // Sans numéro, l'étiquette est inexploitable : le colis circulerait sans
+    // suivi possible. Mieux vaut le dire que d'archiver un PDF orphelin.
+    console.error('Colissimo: parcelNumber introuvable', JSON.stringify(meta)?.slice(0, 500));
+  }
 
   const path = `${orderId}/${isReturn ? 'retour' : 'aller'}-${Date.now()}.pdf`;
   const { error: uploadError } = await admin.storage.from('labels').upload(path, pdf, {
@@ -295,6 +309,13 @@ Deno.serve(async (req) => {
       shipping_carrier: 'Colissimo',
     };
     if (trackingNumber) update.tracking_number = trackingNumber;
+    // Un colis étiqueté est prêt à partir : sans ce passage au statut expédié,
+    // la commande n'entrait jamais dans l'écran Colissimo ni dans le bordereau
+    // de dépôt, qui ne retiennent que les commandes « Shipped » pourvues d'un
+    // numéro. On ne touche pas aux statuts plus avancés.
+    if (trackingNumber && ['Processing', 'Pending', 'pending', 'processing'].includes(String(order.status))) {
+      update.status = 'Shipped';
+    }
     await admin.from('orders').update(update).eq('id', orderId);
   }
 
