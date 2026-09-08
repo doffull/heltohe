@@ -498,16 +498,91 @@ Deno.serve(async (req) => {
     if (action === 'generateBordereau') {
       const { senderName, senderAddress, senderZip, senderCity, bordereauDate, trackingNumbers = [] } = body;
 
-      // Colissimo doesn't have a standard SOAP bordereau endpoint in the public API.
-      // We return a simple JSON summary; the client generates a text/PDF locally.
+      const numbers = (Array.isArray(trackingNumbers) ? trackingNumbers : [])
+        .map((n: unknown) => String(n || '').trim())
+        .filter(Boolean);
+
+      if (numbers.length === 0) {
+        return new Response(JSON.stringify({ error: 'Aucun numéro de colis à porter au bordereau' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Ce bloc renvoyait `pdfBase64: null` en expliquant que Colissimo n'offre
+      // pas de service de bordereau en SOAP. C'est inexact : le WSDL publié par
+      // ws.colissimo.fr expose `generateBordereauByParcelsNumbers`. Faute de
+      // PDF, l'écran d'administration retombait sur son repli et téléchargeait
+      // un fichier texte à la place du bordereau de dépôt.
+      const soapBody = `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://sls.ws.coliposte.fr">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <ser:generateBordereauByParcelsNumbers>
+      <contractNumber>${escapeXml(COLISSIMO_LOGIN)}</contractNumber>
+      <password>${escapeXml(COLISSIMO_PASSWORD)}</password>
+      <generateBordereauParcelNumberList>
+        ${numbers.map((n) => `<parcelsNumbers>${escapeXml(n)}</parcelsNumbers>`).join('\n        ')}
+      </generateBordereauParcelNumberList>
+    </ser:generateBordereauByParcelsNumbers>
+  </soapenv:Body>
+</soapenv:Envelope>`;
+
+      const response = await fetch(COLISSIMO_LABEL_API, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/xml; charset=UTF-8',
+          'SOAPAction': '',
+          'Accept': 'multipart/related, text/xml',
+        },
+        body: soapBody,
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        const faultMatch = errText.match(/<faultstring>([^<]+)<\/faultstring>/);
+        return new Response(
+          JSON.stringify({ error: 'Colissimo bordereau error', details: faultMatch?.[1] || errText.slice(0, 300) }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      const rawBytes = await response.arrayBuffer();
+      const fullText = new TextDecoder('utf-8', { fatal: false }).decode(rawBytes);
+
+      // Le PDF arrive soit en pièce jointe MTOM — comme pour les étiquettes —
+      // soit encodé dans <bordereauDataHandler>. Les deux cas sont couverts.
+      let pdfBase64: string | null = null;
+      const inlineMatch = fullText.match(/<bordereauDataHandler>([\s\S]*?)<\/bordereauDataHandler>/);
+      if (inlineMatch && !inlineMatch[1].includes('<')) {
+        pdfBase64 = inlineMatch[1].replace(/\s+/g, '');
+      }
+      if (!pdfBase64) {
+        const bytes = new Uint8Array(rawBytes);
+        const start = findPdfStart(bytes);
+        if (start >= 0) {
+          const slice = bytes.slice(start);
+          const eof = findEof(slice);
+          pdfBase64 = uint8ArrayToBase64(eof > 0 ? slice.slice(0, eof) : slice);
+        }
+      }
+
+      if (!pdfBase64) {
+        return colissimoRefusal(fullText);
+      }
+
+      const bordereauNumber = fullText.match(/<bordereauNumber>([^<]+)<\/bordereauNumber>/)?.[1]?.trim() || null;
+      const numberOfParcels = fullText.match(/<numberOfParcels>([^<]+)<\/numberOfParcels>/)?.[1]?.trim() || null;
+
       return new Response(JSON.stringify({
         success: true,
-        pdfBase64: null, // PDF generation would require La Poste bordereau API access
+        pdfBase64,
+        bordereauNumber,
         summary: {
           date: bordereauDate,
           sender: `${senderName}, ${senderAddress}, ${senderZip} ${senderCity}`,
-          packageCount: trackingNumbers.length,
-          trackingNumbers,
+          packageCount: numberOfParcels ? Number(numberOfParcels) : numbers.length,
+          trackingNumbers: numbers,
         },
       }), {
         status: 200,
