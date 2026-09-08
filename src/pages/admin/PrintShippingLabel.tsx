@@ -189,7 +189,10 @@ export default function PrintShippingLabel() {
       </div>
 
       <div className="flex justify-center p-4">
-        <div className="w-full max-w-[210mm] bg-white shadow-lg" style={{ height: '297mm' }}>
+        {/* Proportions A4 paysage (297 x 210 mm) plutôt qu'une hauteur fixe :
+            l'aperçu garde le format du document sur tous les écrans, sans
+            bandes blanches ni PDF écrasé. */}
+        <div className="aspect-[297/210] w-full max-w-[297mm] bg-white shadow-lg">
           {busy && !pdfUrl ? (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
