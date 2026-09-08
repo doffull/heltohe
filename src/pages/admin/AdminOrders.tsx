@@ -47,7 +47,37 @@ const PAYMENT_STATUS_OPTIONS: { value: PaymentStatus; label: string }[] = [
 ];
 
 const CARRIERS = ['Colissimo', 'Chronopost', 'Mondial Relay', 'DHL', 'UPS', 'Autre'];
-const PAYMENT_METHODS = ['Carte bancaire', 'Virement', 'PayPal', 'Espèces', 'Autre'];
+
+/**
+ * Moyens de paiement — les `value` sont EXACTEMENT ce que la base contient.
+ *
+ * ⚠️ Cette liste portait auparavant des libellés (« Carte bancaire », « PayPal »…)
+ * qui ne correspondaient à aucune valeur écrite : la RPC insère `manual`, les edge
+ * functions `paypal` / `payplug`, l'écran de test `test`. Radix ne trouvant aucun
+ * `SelectItem` correspondant, le champ restait vide sur toutes les commandes.
+ *
+ * ⚠️ Ne pas « corriger » ces valeurs en libellés : elles sont réécrites telles
+ * quelles par `handleSave`, et `payment_method` n'est PAS normalisé par le trigger
+ * `normalize_order_statuses` (contrairement à `status` et `payment_status`).
+ */
+const PAYMENT_METHODS: { value: string; label: string }[] = [
+  { value: 'manual', label: 'Virement / manuel' },
+  { value: 'paypal', label: 'PayPal' },
+  { value: 'payplug', label: 'PayPlug (carte bancaire)' },
+  { value: 'test', label: 'Test' },
+];
+
+/**
+ * Options du sélecteur, complétées par la valeur courante si elle est inconnue.
+ *
+ * Les commandes importées de WooCommerce portent le libellé brut de la boutique
+ * d'origine (`payment_method_title`), qui n'a pas de liste fixe. Sans ce repli,
+ * elles retomberaient dans le bug qu'on vient de corriger.
+ */
+function paymentMethodOptions(current?: string) {
+  if (!current || PAYMENT_METHODS.some(m => m.value === current)) return PAYMENT_METHODS;
+  return [...PAYMENT_METHODS, { value: current, label: current }];
+}
 
 const COUNTRY_FLAGS: Record<string, string> = {
   'France': '🇫🇷', 'Belgique': '🇧🇪', 'Suisse': '🇨🇭', 'Canada': '🇨🇦',
@@ -1021,7 +1051,7 @@ export default function AdminOrders() {
                 <div className="space-y-2"><Label className="hud-text text-xs">Mode de paiement</Label>
                   <Select value={editForm.paymentMethod || 'none'} onValueChange={(v) => setEditForm({ ...editForm, paymentMethod: v === 'none' ? '' : v })}>
                     <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
-                    <SelectContent><SelectItem value="none">Non spécifié</SelectItem>{PAYMENT_METHODS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+                    <SelectContent><SelectItem value="none">Non spécifié</SelectItem>{paymentMethodOptions(editForm.paymentMethod).map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2"><Label className="hud-text text-xs">Transporteur</Label>
