@@ -453,6 +453,14 @@ Deno.serve(async (req) => {
           pdfBase64 = uint8ArrayToBase64(pdfBytes);
         }
 
+        // Colissimo répond 200 même lorsqu'il refuse : le motif est dans
+        // <messages>. Sans numéro de colis, il n'y a pas d'étiquette — répondre
+        // `success: true` avec des champs à null, comme le faisait ce code,
+        // faisait passer un refus pour une réussite silencieuse.
+        if (!trackingNumber) {
+          return colissimoRefusal(fullText);
+        }
+
         return new Response(JSON.stringify({ success: true, trackingNumber, pdfBase64 }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -468,7 +476,10 @@ Deno.serve(async (req) => {
         });
       }
       const trackingMatch = xmlText.match(/<parcelNumber>([^<]+)<\/parcelNumber>/);
-      return new Response(JSON.stringify({ success: true, trackingNumber: trackingMatch?.[1]?.trim() || null, pdfBase64: null }), {
+      if (!trackingMatch) {
+        return colissimoRefusal(xmlText);
+      }
+      return new Response(JSON.stringify({ success: true, trackingNumber: trackingMatch[1].trim(), pdfBase64: null }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -724,6 +735,42 @@ function sanitizeAddressLine(value: string, max = 35): string {
     .trim()
     .replace(/[,;]+$/, '')
     .slice(0, max);
+}
+
+/**
+ * Colissimo accompagne chaque réponse d'un ou plusieurs blocs :
+ *   <messages><id>30109</id><type>ERROR</type><messageContent>…</messageContent></messages>
+ * Un refus arrive en HTTP 200, le motif n'étant que là-dedans.
+ */
+function parseColissimoMessages(xml: string): { id: string; type: string; content: string }[] {
+  const out: { id: string; type: string; content: string }[] = [];
+  const blocks = xml.matchAll(/<messages>([\s\S]*?)<\/messages>/g);
+  for (const block of blocks) {
+    const get = (tag: string) => block[1].match(new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`))?.[1]?.trim() || '';
+    const entry = { id: get('id'), type: get('type').toUpperCase(), content: get('messageContent') };
+    if (entry.id || entry.content) out.push(entry);
+  }
+  return out;
+}
+
+/** Réponse d'échec construite à partir des messages renvoyés par Colissimo. */
+function colissimoRefusal(xml: string): Response {
+  const messages = parseColissimoMessages(xml);
+  const errors = messages.filter((m) => m.type === 'ERROR');
+  const shown = (errors.length ? errors : messages)
+    .map((m) => (m.id ? `[${m.id}] ${m.content}` : m.content))
+    .filter(Boolean);
+
+  return new Response(
+    JSON.stringify({
+      error: "Colissimo n'a pas produit d'étiquette",
+      details: shown.length
+        ? shown.join(' · ')
+        : "Aucun numéro de colis dans la réponse, et aucun message d'erreur exploitable.",
+      messages,
+    }),
+    { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+  );
 }
 
 function escapeXml(str: string): string {
