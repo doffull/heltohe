@@ -7,6 +7,21 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+/**
+ * Domaine public du site, pour les liens des e-mails.
+ *
+ * ⚠️ L'URL de l'espace admin était codée en dur sur `lvatk6000art.lovable.app`,
+ * l'ancien hébergement Lovable : le bouton « Voir la commande » du mail admin ne
+ * menait plus nulle part depuis la mise en production.
+ *
+ * Même résolution que `newsletter-subscribe` et `newsletter-campaign` : le secret
+ * `SITE_URL` s'il existe, sinon le domaine de production. Pas de lecture de
+ * l'en-tête `Origin` ici — la fonction est aussi appelée depuis le serveur, sans
+ * origine, et un lien admin ne doit pas dépendre de l'appelant.
+ */
+const SITE_FALLBACK = 'https://helvetica-mp.com';
+const siteUrl = () => (Deno.env.get('SITE_URL') || SITE_FALLBACK).replace(/\/+$/, '');
+
 interface OrderItem {
   name: string;
   price: number;
@@ -307,7 +322,7 @@ function buildPaymentConfirmationHtml(payload: EmailPayload): string {
 function buildAdminEmailHtml(payload: EmailPayload): string {
   const { orderNumber, customerName, customerEmail, items, subtotal, shippingCost, total, deliveryMode } = payload;
   const deliveryLabel = deliveryMode === 'relay' ? 'Colissimo Point Relais (3–5 jours)' : 'Colissimo Domicile (2–3 jours)';
-  const adminUrl = `https://lvatk6000art.lovable.app/admin/commandes`;
+  const adminUrl = `${siteUrl()}/admin/commandes`;
 
   const itemsRows = items.map(item => `
     <tr>
