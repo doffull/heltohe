@@ -4,6 +4,16 @@ import { supabase } from '@/integrations/supabase/client';
 
 const SESSION_KEY = 'lvtk6_session_id';
 
+/**
+ * La ligne `visitor_sessions` de cette session a-t-elle déjà été créée ?
+ *
+ * ⚠️ Ne PAS remplacer par une ref React : `startedRef` en est une, et c'est
+ * précisément le bug qu'on corrige. Une ref repart à zéro à chaque chargement de
+ * page, alors que `session_id` vit dans `sessionStorage` et survit, lui. Chaque
+ * rechargement rejouait donc un INSERT sur une clé déjà prise.
+ */
+const SESSION_ROW_KEY = 'lvtk6_session_row';
+
 function getOrCreateSessionId(): string {
   try {
     let id = sessionStorage.getItem(SESSION_KEY);
@@ -14,6 +24,23 @@ function getOrCreateSessionId(): string {
     return id;
   } catch {
     return crypto.randomUUID();
+  }
+}
+
+/** La session est-elle déjà enregistrée côté serveur ? */
+function sessionRowExists(id: string): boolean {
+  try {
+    return sessionStorage.getItem(SESSION_ROW_KEY) === id;
+  } catch {
+    return false;
+  }
+}
+
+function markSessionRowCreated(id: string): void {
+  try {
+    sessionStorage.setItem(SESSION_ROW_KEY, id);
+  } catch {
+    /* stockage indisponible : on retombe sur le filet ON CONFLICT DO NOTHING */
   }
 }
 
@@ -64,23 +91,43 @@ export function useVisitorTracking({ enabled = true, userId = null }: Options = 
     const start = () => {
       if (cancelled || startedRef.current) return;
       startedRef.current = true;
-      supabase
-        .from('visitor_sessions')
-        .insert({
-          session_id: sessionIdRef.current,
-          user_id: userId || null,
-          user_agent: navigator.userAgent.slice(0, 500),
-          device: detectDevice(),
-          referrer: document.referrer?.slice(0, 500) || null,
-          landing_path: window.location.pathname,
-          last_seen_at: new Date().toISOString(),
-        })
-        .then(({ error }) => {
-          // 23505 dup, 42501 forbidden, network → silent (analytics is best-effort)
-          if (error && !['23505', '42501'].includes((error as any).code)) {
-            // intentionally silent: do not spam console for visitor analytics
-          }
-        }, () => { /* network swallowed */ });
+
+      // Déjà enregistrée dans cet onglet : on n'envoie même pas la requête.
+      // Économise un aller-retour par rechargement de page.
+      if (!sessionRowExists(sessionIdRef.current)) {
+        supabase
+          .from('visitor_sessions')
+          // ⚠️ `upsert` + `ignoreDuplicates`, PAS `insert`.
+          //
+          // PostgREST émet alors `ON CONFLICT DO NOTHING` : le doublon est
+          // ignoré par Postgres au lieu d'être rejeté. Avec `insert`, chaque
+          // rechargement produisait une violation 23505 — invisible côté client
+          // (l'erreur était avalée ci-dessous) mais JOURNALISÉE côté serveur.
+          // Résultat mesuré le 10/09 : 5 523 erreurs Postgres en 24 h, soit 92 %
+          // des lignes de log. Le bruit rendait toute vraie erreur indétectable.
+          //
+          // On garde ce filet même si `sessionRowExists` a déjà filtré : deux
+          // onglets ouverts simultanément partagent le `session_id` via
+          // `sessionStorage` seulement s'ils sont issus d'une duplication
+          // d'onglet — auquel cas la course reste possible.
+          .upsert(
+            {
+              session_id: sessionIdRef.current,
+              user_id: userId || null,
+              user_agent: navigator.userAgent.slice(0, 500),
+              device: detectDevice(),
+              referrer: document.referrer?.slice(0, 500) || null,
+              landing_path: window.location.pathname,
+              last_seen_at: new Date().toISOString(),
+            },
+            { onConflict: 'session_id', ignoreDuplicates: true },
+          )
+          .then(({ error }) => {
+            // 42501 forbidden, réseau → silence : l'analytique est best-effort
+            // et ne doit jamais gêner la navigation.
+            if (!error) markSessionRowCreated(sessionIdRef.current);
+          }, () => { /* network swallowed */ });
+      }
 
       hb = setInterval(() => {
         supabase
