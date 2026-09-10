@@ -47,8 +47,19 @@
 #   ./scripts/fix-media-cache-control.sh --dry-run                  # inventaire
 #   ./scripts/fix-media-cache-control.sh --only products/xxx.gif    # un objet
 #   ./scripts/fix-media-cache-control.sh                            # tout
+#   ./scripts/fix-media-cache-control.sh --force                    # sans filtre
 #
-# Idempotent : les objets déjà à jour sont ignorés.
+# Idempotent : les objets déjà à jour sont ignorés, sauf avec `--force`.
+#
+# ── ⚠️ VÉRIFIER EN GET, JAMAIS EN HEAD ──────────────────────────────────────
+#
+#   curl -s -D - -o /dev/null "<url>?v=$RANDOM" | grep -i cache-control
+#
+# `curl -I` envoie une requête HEAD, à laquelle le CDN de Supabase répond
+# TOUJOURS `no-cache`, quel que soit l'objet et quel que soit son en-tête réel.
+# Le 10/09, ce détail nous a fait conclure à tort que ni l'UPDATE SQL, ni la
+# copie S3, ni même un réenvoi complet ne fonctionnaient. Les trois marchaient.
+# Le `?v=` force un MISS pour lire la réponse d'origine, pas celle du cache.
 #
 set -euo pipefail
 
@@ -60,9 +71,11 @@ CACHE_VALUE="public, max-age=31536000, immutable"
 
 DRY_RUN=0
 ONLY=""
+FORCE=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --dry-run) DRY_RUN=1; shift ;;
+    --force)   FORCE=1; shift ;;
     --only)    ONLY="${2:-}"; shift 2 ;;
     *) echo "Option inconnue : $1" >&2; exit 2 ;;
   esac
@@ -103,7 +116,12 @@ while IFS= read -r key; do
   ccur=$(echo "$meta" | cut -f2)
   [[ "$ctype" == "None" || -z "$ctype" ]] && ctype="application/octet-stream"
 
-  if [[ "$ccur" == "$CACHE_VALUE" ]]; then
+  # ⚠️ `head-object` lit la métadonnée en base, PAS l'en-tête réellement servi.
+  # Un UPDATE SQL sur `storage.objects.metadata` suffit à la rendre « à jour »
+  # alors que le CDN continue de répondre `no-cache` — c'est exactement ce qui
+  # nous a fait croire, le 10/09, que la copie S3 ne marchait pas. `--force`
+  # permet de repasser quoi qu'annonce la base.
+  if [[ $FORCE -eq 0 && "$ccur" == "$CACHE_VALUE" ]]; then
     skipped=$((skipped + 1)); continue
   fi
 
@@ -132,5 +150,8 @@ echo "Traités     : $done_n"
 echo "Déjà à jour : $skipped"
 echo "Échecs      : $failed"
 echo
-echo "Contrôle :"
-echo "  curl -sI https://${PROJECT_REF}.supabase.co/storage/v1/object/public/${BUCKET}/<chemin> | grep -i cache"
+echo "Contrôle — ⚠️ en GET, PAS en HEAD :"
+echo "  curl -s -D - -o /dev/null \"https://${PROJECT_REF}.supabase.co/storage/v1/object/public/${BUCKET}/<chemin>?v=\$RANDOM\" | grep -i cache-control"
+echo
+echo "  \`curl -I\` envoie un HEAD, auquel le CDN de Supabase répond TOUJOURS"
+echo "  no-cache, quel que soit l'objet. Le ?v= force un MISS."
