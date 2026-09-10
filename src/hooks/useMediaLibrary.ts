@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { mediaUploadOptions } from '@/lib/storageUpload';
 
 export interface MediaFile {
   id: string;
@@ -57,11 +58,9 @@ export function useUploadMedia() {
         .replace(/[^a-zA-Z0-9._-]+/g, '_')
         .replace(/^_+|_+$/g, '');
       const fileName = `${Date.now()}-${safeName || 'media'}`;
-      const { error } = await supabase.storage.from(BUCKET).upload(fileName, file, {
-        cacheControl: '31536000',
-        upsert: false,
-        contentType: file.type || undefined,
-      });
+      const { error } = await supabase.storage
+        .from(BUCKET)
+        .upload(fileName, file, mediaUploadOptions({ upsert: false, contentType: file.type || undefined }));
       if (error) throw error;
       const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(fileName);
       return { fileName, url: urlData.publicUrl, type: file.type || 'application/octet-stream', size: file.size };

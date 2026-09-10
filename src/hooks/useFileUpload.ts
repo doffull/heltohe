@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { prepareImageForUpload } from '@/lib/iosImage';
+import { mediaUploadOptions } from '@/lib/storageUpload';
 
 interface UseFileUploadOptions {
   bucket?: string;
@@ -38,7 +39,7 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
 
       const { error } = await supabase.storage
         .from(bucket)
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, file, mediaUploadOptions({ upsert: true }));
 
       if (error) throw error;
 

@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { buildGifBlob, clampWidth, GIF_WIDTH_MAX, GIF_WIDTH_MIN } from '@/lib/gifBuilder';
 import { readGifLastUsed, writeGifLastUsed } from '@/lib/gifPresets';
+import { mediaUploadOptions } from '@/lib/storageUpload';
 import { GifPresetBar } from '@/components/admin/GifPresetBar';
 import { useUpdateProduct } from '@/hooks/useProducts';
 import type { Product } from '@/types';
@@ -69,10 +70,9 @@ export function BulkGifDialog({ open, onOpenChange, products }: Props) {
 
   async function uploadGif(blob: Blob, productId: string): Promise<string> {
     const path = `products/gifs/${productId}-${Date.now()}.gif`;
-    const { error } = await supabase.storage.from('media').upload(path, blob, {
-      upsert: true,
-      contentType: 'image/gif',
-    });
+    const { error } = await supabase.storage
+      .from('media')
+      .upload(path, blob, mediaUploadOptions({ upsert: true, contentType: 'image/gif' }));
     if (error) throw error;
     return supabase.storage.from('media').getPublicUrl(path).data.publicUrl;
   }
