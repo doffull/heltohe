@@ -13,7 +13,7 @@ function envKey(): string | undefined {
 
 /**
  * Résout la clé Maps : priorité à la clé du projet (secret GOOGLE_API_KEY,
- * restreinte au domaine helvetica-mp.net) servie par la fonction maps-config,
+ * restreinte au domaine helvetica-mp.com) servie par la fonction maps-config,
  * avec repli sur la clé du connecteur géré si présente.
  */
 export function getGoogleMapsKey(): Promise<string | undefined> {

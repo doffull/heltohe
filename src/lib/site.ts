@@ -11,7 +11,7 @@
  */
 const FALLBACK_SITE_URL = 'https://helvetica-mp.com';
 
-/** Domaine sans slash final, ex. `https://helvetica-mp.net`. */
+/** Domaine sans slash final, ex. `https://helvetica-mp.com`. */
 export const SITE_URL = (
   import.meta.env.VITE_SITE_URL || FALLBACK_SITE_URL
 ).replace(/\/+$/, '');

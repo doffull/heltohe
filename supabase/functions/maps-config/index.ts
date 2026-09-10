@@ -1,6 +1,6 @@
 // Fournit la clé Google Maps "navigateur" au site.
 // Les clés Maps JavaScript sont publiques par conception : la sécurité est
-// assurée par la restriction HTTP referrer (helvetica-mp.net) configurée
+// assurée par la restriction HTTP referrer (helvetica-mp.com) configurée
 // dans Google Cloud Console, pas par le secret de la clé.
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 
