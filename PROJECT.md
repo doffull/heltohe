@@ -5,8 +5,9 @@
 > et la dette connue.
 >
 > Rédigé le 20/08/2026 par analyse du dépôt (`39e844c`), mis à jour le 28/08/2026 après le
-> changement de dépôt (§16), puis le 30/08/2026 après la première confrontation au projet
-> Supabase réel (§17, §18).
+> changement de dépôt (§16), le 30/08/2026 après la première confrontation au projet
+> Supabase réel (§17, §18), puis le 10/09/2026 après trois jours d'assainissement de
+> l'infrastructure (§24).
 >
 > ⚠️ **Le dépôt a changé le 28/08/2026** : le projet vit désormais dans
 > `doffull/warltkfr`, recréé depuis Lovable. `gafsou20/Helvetica-MP` est une archive.
@@ -16,6 +17,16 @@
 > ⚠️ **Le dépôt n'est pas le déploiement.** Le 30/08/2026, 6 edge functions sur 36
 > n'avaient jamais été mises en ligne et le registre des migrations distant était vide.
 > Avant de conclure qu'une fonctionnalité « existe », vérifier qu'elle est déployée : §18.
+> Le 08/09/2026 encore, la fonction de commande en ligne s'est révélée être une version
+> antérieure à celle du dépôt — constaté sur une vraie commande, pas sur le code (§24.2).
+>
+> ⚠️ **Les migrations ont été remises à plat le 09/09/2026.** Un baseline unique remplace
+> les 188 fichiers, désormais dans `supabase/migrations/_archive/`. `supabase db push`
+> refonctionne. Lire le §24.4 avant d'y toucher.
+>
+> ⚠️ **Les prix sont TTC.** `orders.tax` est la TVA *contenue* dans le total, jamais un
+> supplément : ne jamais l'additionner. Un écran d'admin le faisait (§24.8), un autre le
+> fait encore à l'enregistrement (§24.1).
 
 ---
 
@@ -1351,3 +1362,194 @@ publiés par Colissimo.
 
 ⚠️ **Une clé `service_role` a été utilisée pendant cette session** pour le
 diagnostic. À révoquer.
+
+---
+
+## 24. Assainissement de l'infrastructure — 08 au 10/09/2026
+
+Trois jours consacrés non pas à des fonctionnalités, mais à ce qui les portait :
+la facturation, le registre des migrations, le stockage et les accès. Toutes les
+pannes décrites ici ont une cause commune — **le transfert du 04/09 (§21) a
+recopié les données, pas leur contexte**.
+
+### 24.1 🔴 Ce que le client paie n'est pas toujours ce qui est comptabilisé
+
+Audit du tunnel, du panier à l'écriture en base. Le socle est sain : les prix ne
+viennent jamais du client, la RPC `validate_and_create_order` les relit dans
+`products`. Un panier trafiqué ne change pas le montant.
+
+Six défauts au-dessus de ce socle, dont trois qui touchent l'argent :
+
+| | Défaut |
+|---|---|
+| 🔴 | **Ouvrir puis « Enregistrer » une commande remisée regonfle le total.** `AdminOrders.tsx:572` recalcule `Σ price × qty` — les prix BRUTS — alors que `orders.subtotal` est stocké NET de remise. Une commande à 84,50 € payés repasse à 104,50 € facturés. |
+| 🔴 | **La remise n'est stockée nulle part** : ni le code, ni le montant. Impossible de rapprocher. `useAnalyticsData` la reconstruit par `subtotal + port − total`, ce qui vaut **toujours 0**, et cherche le code promo dans `orders.notes` où rien ne l'écrit jamais. |
+| 🟠 | **Devise PayPal libre** (`AdminPayPal.tsx:260` propose USD/GBP/CHF) et envoyée sans conversion : passer sur CHF facturerait 100 CHF une commande de 100 €. |
+| 🟠 | **Aucun contrôle du montant réellement capturé** — ni PayPal, ni PayPlug, ni le webhook ne comparent la capture à `orders.total`. |
+| 🟠 | **Le remboursement partiel est perdu** : `payment_status = 'partially_refunded'` → `initcap` → `'Partially_Refunded'` → viole le CHECK, l'UPDATE est rejeté et **l'erreur n'est pas testée**. La commande reste `Paid` au montant plein. |
+| 🟡 | **1 centime d'écart sur ~3,8 % des commandes avec promo en %** : la remise n'est jamais arrondie, `orders.total` passe par NUMERIC(10,2) tandis que la passerelle reçoit `toFixed(2)` d'un flottant. Mesuré sur 1,78 M de combinaisons. |
+
+⚠️ **La TVA n'existe nulle part.** Prix TTC, `orders.tax` renseigné mais jamais
+ventilé. Si la société est assujettie, 16,67 % de chaque encaissement ne sont
+comptabilisés nulle part, et la facture ne porte ni base HT, ni taux, ni montant.
+**Décision comptable en suspens.**
+
+### 24.2 La preuve que le dépôt n'est pas le déploiement
+
+Une commande du jour affichait 28,17 € de TVA — soit exactement `169 × 0,2 / 1,2`,
+la formule d'une version de `validate_and_create_order` que le dépôt avait
+pourtant remplacée par `v_tax := 0`.
+
+Le dump de schéma l'a confirmé : **la fonction en ligne est l'ancienne**. Et,
+heureusement, elle **conserve les garde-fous promo** — plafond `max_discount`,
+respect de `usage_limit`, incrément de `usage_count` — que la version du dépôt
+avait perdus. Déployer le dépôt les aurait supprimés.
+
+Le numéro de commande sert d'horodatage : `HMP-${Date.now().toString(36)}`.
+`MTSD91AO` en base 36 donne 1788853607376, soit le 08/09 à 07:46 UTC.
+
+### 24.3 🔴 `storage.objects` n'avait AUCUNE politique
+
+```sql
+select policyname from pg_policies where schemaname = 'storage';
+-- 0 ligne
+```
+
+RLS active, zéro règle : tout refusé pour `authenticated`. Le back-office ne
+pouvait plus envoyer la moindre image.
+
+Invisible pendant des jours parce que **seuls les accès navigateur étaient
+touchés** : l'affichage public passe par `/storage/v1/object/public/`, les edge
+functions par la `service_role`. Deux chemins qui contournent la RLS.
+
+Rétabli par `20260908124500` : 8 politiques, 2 buckets. Même angle mort que le
+bucket `labels`, découvert trois jours plus tôt.
+
+### 24.4 `supabase db push` était inutilisable — réparé par un baseline
+
+**284 versions déclarées appliquées, pour 188 fichiers au dépôt.** Une centaine
+d'entrées ne correspondait à rien, et à l'inverse des objets décrits par les
+fichiers n'existaient pas. `db push` sautait ce qu'il croyait fait.
+
+Remède : un **baseline** de l'état réel (`supabase db dump`), vérifié contre un
+inventaire de la base — 82 tables, 36 fonctions, 62 triggers, 214 policies,
+7 vues, 67 index, 4 types, 4 extensions, 378 grants. Les 188 fichiers passent
+dans `_archive/`, le registre est purgé et réamorcé sur cette seule version.
+
+```
+Local          | Remote         | Time (UTC)
+20260909120000 | 20260909120000 | 2026-09-09 12:00:00
+Remote database is up to date.
+```
+
+⚠️ Le baseline **fige l'existant, pas l'idéal** : la TVA calculée y est donc
+gravée, garde-fous promo compris. C'est volontaire.
+
+⚠️ `_archive/` n'est pas lu par le CLI, mais **ne pas le supprimer** : c'est la
+seule trace de l'intention d'origine, et c'est en le relisant qu'on a su quoi
+reconstruire — deux fois.
+
+### 24.5 92 % des erreurs Postgres venaient du suivi de visite
+
+5 523 erreurs en 24 h, toutes identiques :
+
+```
+23505  duplicate key value violates unique constraint "visitor_sessions_session_id_key"
+```
+
+`session_id` vit dans `sessionStorage` et survit au rechargement ; `startedRef`
+est une ref React, remise à zéro. Chaque rechargement rejouait donc un INSERT sur
+une clé déjà prise. Le client avalait l'erreur — l'analytique est best-effort —
+mais Postgres la journalisait.
+
+Aucun dégât fonctionnel. Le vrai coût : **une vraie erreur serait passée
+inaperçue**. Corrigé par `upsert` + `ignoreDuplicates` et un marqueur en
+`sessionStorage`.
+
+### 24.6 178 % du quota d'egress, pour 694 Mo d'objets
+
+444 Go de « cached egress » sur un quota de 250. Deux causes cumulées :
+
+- le transfert du 04/09 a recopié les objets **sans en-tête `cache-control`**, et
+  l'API Storage retombe alors sur `no-cache` : chaque affichage retélécharge
+  l'image entière. 407 des 420 objets inspectés étaient dans ce cas ;
+- sur les **six** points d'envoi du code, **quatre** ne fixaient aucun
+  `cacheControl`.
+
+Rattrapage ponctuel par `scripts/fix-media-cache-control.sh` (copie S3 sur place,
+rien n'est téléchargé), et unification du code derrière `mediaUploadOptions()`.
+
+⚠️ **`curl -I` ment.** Le CDN de Supabase répond `no-cache` à **toutes** les
+requêtes HEAD, quel que soit l'objet. Ce détail nous a fait conclure à tort, trois
+fois de suite, que ni l'UPDATE SQL, ni la copie S3, ni un réenvoi complet ne
+fonctionnaient. Vérifier en GET :
+
+```sh
+curl -s -D - -o /dev/null "<url>?v=$RANDOM" | grep -i cache-control
+```
+
+⚠️ **`storage.objects.metadata` n'est qu'un miroir** alimenté à l'upload, pour le
+listing. Le corriger en SQL ne change rien à l'en-tête servi — mais suffit à
+tromper `head-object`, donc toute logique d'idempotence qui s'y fierait.
+
+⚠️ Le fond reste entier : **1,7 Mo par image en moyenne**, avec des PNG à 7 et
+20 Mo. Les Image Transformations sont à **0/100**, entièrement disponibles.
+
+### 24.7 Les accès de l'audit de sécurité étaient restés ouverts
+
+Une adresse jetable Proton (`preprod.helvetica-mp.com.overrule608@passmail.net`,
+« Ackuracy Pentest ») recevait **chaque notification de commande**, avec le nom
+des clientes. Elle avait le rôle `admin`, accordé 45 min après sa création, sans
+traçabilité (`role_audit_log.changed_by = null`), comme les trois autres comptes
+Ackuracy.
+
+Le préfixe de l'alias révèle autre chose : le compte a été créé sur
+**`preprod.helvetica-mp.com`**, et se retrouve en production. Les deux
+environnements partagent le même projet Supabase — « préprod » n'est qu'un second
+domaine devant la même base. Le Basic Auth posé depuis protège l'accès, pas
+l'isolation.
+
+Rôle retiré, compte banni sans suppression pour ne pas créer d'orphelins.
+`alexis@` et `sylvain@ackuracy.com` restent admins, **jamais connectés**.
+
+⚠️ Le rôle ne suffit pas à couper les notifications d'un compte banni :
+`send-order-notification` lit `user_roles` + `customers`, jamais le bannissement.
+
+⚠️ `role_audit_log` enregistre **chaque événement en double** — le trigger
+`audit_role_change` est branché deux fois.
+
+### 24.8 Corrections d'écran
+
+- **Le détail d'une commande additionnait une TVA déjà comprise dans le total** :
+  169,00 € s'affichaient 197,17 €. Libellés passés à « dont TVA » / « Total TTC ».
+  ⚠️ `handleSave` porte toujours la même formule — cf. 24.1.
+- **Le mode de paiement n'apparaissait sur aucune commande** : le sélecteur
+  proposait des libellés (« Carte bancaire », « PayPal »…) quand la base contient
+  `manual`, `paypal`, `payplug`, `test`. Radix ne trouvait aucun `SelectItem` et
+  n'affichait rien.
+- **Le mail admin « Nouvelle commande » pointait vers `lvatk6000art.lovable.app`**.
+  Audit des autres gabarits au passage : c'était le seul lien fautif.
+
+### 24.9 État à la clôture
+
+| Réglé | |
+|---|---|
+| `supabase db push` | ✅ réparé, une seule version |
+| Politiques `storage` | ✅ 8 rétablies |
+| Envoi d'images depuis l'admin | ✅ fonctionne |
+| Cache des médias | ✅ un an, immuable, futurs envois inclus |
+| Erreurs Postgres | ✅ −92 % |
+| Compte de pentest | ✅ rôle retiré, compte banni |
+
+| En suspens | |
+|---|---|
+| 🔴 Clé `service_role` utilisée en diagnostic | à révoquer |
+| 🔴 `alexis@` / `sylvain@ackuracy.com` | admins, jamais connectés |
+| 🟠 `AdminOrders.tsx:572` | le total regonflé à l'enregistrement |
+| 🟠 TVA | décision comptable |
+| 🟡 Poids des images | 1,7 Mo de moyenne |
+| 🟡 Préprod et production | même base Supabase |
+| 🟡 Restriction Google Maps | encore sur `.net` côté console Cloud |
+
+⚠️ **Une clé `service_role` a de nouveau été utilisée pendant ces trois jours**
+pour le diagnostic. À révoquer avec la précédente.
