@@ -98,3 +98,11 @@ Desktop.ini
 # (6 305 fiches clients, empreintes bcrypt, cle PayPlug sk_live, PayPal,
 #  WooCommerce). A executer puis detruire — jamais versionner.
 scripts/migration-bumfyr-vers-hzjz/
+
+# ──────────────────────────────────────────────
+# Sauvegardes et dumps de base
+# Contiennent les donnees clients en clair — jamais versionner.
+# ──────────────────────────────────────────────
+backup_*.sql
+baseline_*.sql
+*.dump
