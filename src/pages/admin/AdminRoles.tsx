@@ -16,6 +16,7 @@ import { ROLE_LABELS, ROLE_COLORS, useRoleAuditLog, type AppRole } from '@/hooks
 import { Checkbox } from '@/components/ui/checkbox';
 import { ADMIN_SECTIONS } from '@/config/adminSections';
 import { useRolePermissions, useSaveRolePermissions, DEFAULT_ROLE_ROUTES } from '@/hooks/useRolePermissions';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 const MANAGED_ROLES: Exclude<AppRole, 'admin'>[] = ['stock_manager', 'preparator', 'order_validator', 'auditor'];
 
@@ -157,7 +158,7 @@ function TeamAccessCard() {
           ...payload,
         },
       });
-      if (error) throw new Error((data as any)?.error || error.message);
+      if (error) throw new Error(await edgeErrorMessage(error));
       if ((data as any)?.error) throw new Error((data as any).error);
       qc.invalidateQueries({ queryKey: ['role-members'] });
       qc.invalidateQueries({ queryKey: ['all-user-roles'] });

@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { mediaUploadOptions } from '@/lib/storageUpload';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 const CATEGORIES = ['Homme', 'Femme', 'Enfant', 'Accessoires'];
 const DEFAULT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
@@ -236,7 +237,7 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
           imageUrls: [form.image],
         },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       if ((data as any)?.error) throw new Error((data as any).error);
       if ((data as any)?.value) {
         setForm(prev => ({ ...prev, description: (data as any).value }));

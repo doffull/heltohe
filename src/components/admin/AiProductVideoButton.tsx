@@ -9,6 +9,7 @@ import { useFileUpload } from '@/hooks/useFileUpload';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 interface Props {
   imageUrl?: string;
@@ -140,7 +141,7 @@ export function AiProductVideoButton({
       const { data, error } = await supabase.functions.invoke('generate-product-video', {
         body: { imageUrl, prompt: prompt || undefined, durationSec: duration, aspectRatio: ratio },
       });
-      if (error) throw new Error(error.message || 'Erreur IA vidéo');
+      if (error) throw new Error(await edgeErrorMessage(error, 'Erreur IA vidéo'));
       const url = (data as any)?.url;
       if (!url) throw new Error("Aucune URL vidéo retournée");
       onGenerated(url);

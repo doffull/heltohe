@@ -15,6 +15,7 @@ import {
   MannequinMorphology, MannequinAge, MannequinGender,
 } from '@/hooks/useMannequins';
 import { cn } from '@/lib/utils';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 const EMPTY: Partial<Mannequin> = {
   name: '',
@@ -320,7 +321,7 @@ function MannequinTestDialog({ mannequin, onClose }: { mannequin: Mannequin | nu
           framing: 'full',
         },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       if ((data as any)?.error) throw new Error((data as any).error);
       setResult((data as any).image);
     } catch (e: any) {

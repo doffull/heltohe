@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 export interface GatewaySecretStatus {
   gateway: string;
@@ -15,7 +16,7 @@ export function useGatewaySecrets() {
       const { data, error } = await supabase.functions.invoke('payment-keys', {
         body: { action: 'status' },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       if ((data as any)?.error) throw new Error((data as any).error);
       return ((data as any)?.secrets ?? []) as GatewaySecretStatus[];
     },
@@ -30,7 +31,7 @@ export function useSaveGatewaySecret() {
       const { data, error } = await supabase.functions.invoke('payment-keys', {
         body: { action: 'set', gateway, secretKey },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       if ((data as any)?.error) throw new Error((data as any).error);
       return data;
     },
@@ -45,7 +46,7 @@ export function useDeleteGatewaySecret() {
       const { data, error } = await supabase.functions.invoke('payment-keys', {
         body: { action: 'delete', gateway },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       if ((data as any)?.error) throw new Error((data as any).error);
       return data;
     },

@@ -17,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AdminTableScroll } from '@/components/admin/AdminTableScroll';
 import { toast } from '@/hooks/use-toast';
 import { Globe, Loader2, Upload, Wand2, Trash2, CheckCircle2, AlertTriangle, Download, Search } from 'lucide-react';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 const CUSTOM = '__custom__';
 
@@ -113,7 +114,7 @@ export default function AdminSeoRedirects() {
     setParsing(true);
     try {
       const { data, error } = await supabase.functions.invoke('fetch-sitemap', { body: { url: siteUrl.trim() } });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       const urls: string[] = (data as any)?.urls || [];
       if (!urls.length) {
         toast({ title: 'Aucune URL trouvée', description: 'Collez directement l’URL du sitemap.xml ou importez un CSV.', variant: 'destructive' });

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 export type GameType = 'scratch' | 'wheel' | 'mystery' | 'flash';
 
@@ -86,7 +87,7 @@ export function useSpinRoulette() {
       const { data, error } = await supabase.functions.invoke('spin-roulette', {
         body: { email: email || null },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       const result = data as SpinResult;
       // Persist won code so checkout can auto-apply it
       if (result?.code) {

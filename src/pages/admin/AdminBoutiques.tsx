@@ -11,6 +11,7 @@ import { Plus, Edit, Trash2, MapPin, Loader2, Search, Sparkles, Check, X } from 
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { BoutiqueMapPicker } from '@/components/admin/BoutiqueMapPicker';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 interface AICandidate {
   placeId: string;
@@ -98,7 +99,7 @@ export default function AdminBoutiques() {
       const { data, error } = await supabase.functions.invoke('boutique-lookup', {
         body: { query, type: t === 'any' ? undefined : t },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       const list = (data?.candidates || []) as AICandidate[];
       aiCache.set(cacheKey, list);
       setCandidates(list);

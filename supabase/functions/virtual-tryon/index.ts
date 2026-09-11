@@ -2,6 +2,7 @@
 // Uses Lovable AI Gateway (Gemini image model) to composite product(s) onto a
 // user's photo OR onto an admin-provided mannequin, with multi-garment layering.
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { getGeminiApiKey } from '../_shared/gemini.ts';
 
 interface Garment {
   image: string;       // public URL or data URL (main reference)
@@ -82,53 +83,143 @@ async function urlToBase64(url: string): Promise<{ b64: string; mime: string }> 
 
 const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
+const IMAGE_MODEL = 'google/gemini-2.5-flash-image';
+const LOVABLE_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions';
+const GOOGLE_OAI_URL =
+  'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+// L'edge function est coupée à 150 s : on rend la main avant, sinon le client
+// reste sur un spinner sans jamais recevoir de réponse (symptôme « chargement
+// infini » remonté par le client).
+const AI_TIMEOUT_MS = 45_000;
+
 type Img = { b64: string; mime: string };
 
 /**
- * One image-generation call. `images` are sent in order: the first one is the
- * base (person / mannequin), the following ones are garment references.
+ * Récupère l'image quelle que soit la forme de la réponse : la passerelle
+ * Lovable renvoie `message.images[]`, l'API Google en direct peut renvoyer des
+ * parties `inline_data`. On tolère les deux plutôt que de supposer.
  */
-async function composite(
+function extractImage(data: unknown): string | null {
+  const msg = (data as Record<string, any>)?.choices?.[0]?.message;
+  if (!msg) return null;
+
+  const fromImages = msg.images?.[0]?.image_url?.url ?? msg.images?.[0]?.url;
+  if (typeof fromImages === 'string') return fromImages;
+
+  if (Array.isArray(msg.content)) {
+    for (const part of msg.content) {
+      const inline = part?.inline_data ?? part?.inlineData;
+      if (inline?.data) {
+        const mime = inline.mime_type ?? inline.mimeType ?? 'image/png';
+        return `data:${mime};base64,${inline.data}`;
+      }
+      if (typeof part?.image_url?.url === 'string') return part.image_url.url;
+    }
+  }
+  if (typeof msg.content === 'string' && msg.content.startsWith('data:image')) {
+    return msg.content;
+  }
+  return null;
+}
+
+function buildPayload(images: Img[], prompt: string, model: string) {
+  return {
+    model,
+    modalities: ['image', 'text'],
+    messages: [
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: prompt },
+          ...images.map((im) => ({
+            type: 'image_url' as const,
+            image_url: { url: `data:${im.mime};base64,${im.b64}` },
+          })),
+        ],
+      },
+    ],
+  };
+}
+
+type CallResult = { image?: string; status?: number; detail?: string };
+
+async function callProvider(
+  url: string,
+  apiKey: string,
+  model: string,
   images: Img[],
   prompt: string,
-): Promise<{ image?: string; status?: number; detail?: string }> {
-  const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'google/gemini-2.5-flash-image',
-      modalities: ['image', 'text'],
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: prompt },
-            ...images.map((im) => ({
-              type: 'image_url' as const,
-              image_url: { url: `data:${im.mime};base64,${im.b64}` },
-            })),
-          ],
-        },
-      ],
-    }),
-  });
+  label: string,
+): Promise<CallResult> {
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(buildPayload(images, prompt, model)),
+      signal: AbortSignal.timeout(AI_TIMEOUT_MS),
+    });
+    if (!resp.ok) {
+      const txt = await resp.text();
+      console.error(`${label} error:`, resp.status, txt.slice(0, 500));
+      return { status: resp.status, detail: txt.slice(0, 500) };
+    }
+    const data = await resp.json();
+    const img = extractImage(data);
+    if (!img) {
+      console.error(`${label}: aucune image renvoyée`, JSON.stringify(data).slice(0, 800));
+      return { status: 502, detail: 'no image in response' };
+    }
+    return { image: img };
+  } catch (e) {
+    const name = (e as Error)?.name;
+    const timedOut = name === 'TimeoutError' || name === 'AbortError';
+    console.error(`${label} injoignable:`, name, (e as Error)?.message);
+    return { status: timedOut ? 504 : 503, detail: timedOut ? 'timeout' : 'unreachable' };
+  }
+}
 
-  if (!resp.ok) {
-    const txt = await resp.text();
-    console.error('AI gateway error:', resp.status, txt);
-    return { status: resp.status, detail: txt.slice(0, 500) };
+/**
+ * Un appel de génération d'image. `images` est ordonné : la première est la
+ * base (personne / mannequin), les suivantes sont les références produit.
+ *
+ * Même stratégie que `_shared/gemini.ts` : clé Gemini directe en priorité
+ * (configurable depuis Admin → Chatbot), repli sur la passerelle Lovable.
+ * Le projet ayant quitté Lovable, la clé Gemini est désormais le chemin normal
+ * et la passerelle n'est plus qu'un filet de sécurité.
+ */
+async function composite(images: Img[], prompt: string): Promise<CallResult> {
+  const geminiKey = await getGeminiApiKey();
+
+  if (geminiKey) {
+    const direct = await callProvider(
+      GOOGLE_OAI_URL,
+      geminiKey,
+      IMAGE_MODEL.replace(/^google\//, ''),
+      images,
+      prompt,
+      'Gemini direct',
+    );
+    if (direct.image) return direct;
+    // 401/403 = clé refusée : inutile de réessayer ailleurs, on le dit clairement.
+    if (direct.status === 401 || direct.status === 403) return direct;
+    if (LOVABLE_API_KEY) {
+      console.warn('Repli sur la passerelle Lovable après échec Gemini direct');
+    } else {
+      return direct;
+    }
   }
-  const data = await resp.json();
-  const msg = data?.choices?.[0]?.message;
-  const img = msg?.images?.[0]?.image_url?.url ?? msg?.images?.[0]?.url;
-  if (typeof img !== 'string') {
-    console.error('No image returned', JSON.stringify(data).slice(0, 800));
-    return {};
+
+  if (!LOVABLE_API_KEY) {
+    return { status: 503, detail: 'no-provider' };
   }
-  return { image: img };
+  return await callProvider(
+    LOVABLE_URL,
+    LOVABLE_API_KEY,
+    IMAGE_MODEL,
+    images,
+    prompt,
+    'Passerelle Lovable',
+  );
 }
 
 function framingText(framing?: string) {
@@ -149,7 +240,18 @@ Deno.serve(async (req) => {
     });
 
   try {
-    if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY missing');
+    // Au moins un fournisseur doit être joignable. Avant, l'absence de
+    // LOVABLE_API_KEY levait une exception → 500 « LOVABLE_API_KEY missing »,
+    // message incompréhensible côté boutique.
+    if (!LOVABLE_API_KEY && !(await getGeminiApiKey())) {
+      return json(
+        {
+          error:
+            "L'essai virtuel n'est pas configuré. Renseignez une clé Gemini dans Admin → Chatbot → Modèles IA.",
+        },
+        503,
+      );
+    }
 
     const body = (await req.json()) as Body;
     const mode = body.mode === 'mannequin' ? 'mannequin' : 'photo';
@@ -243,7 +345,19 @@ Rendering:
       const out = await composite([base, ...refs], prompt);
       if (out.status === 429) return json({ error: 'Trop de requêtes, réessayez dans un instant.' }, 429);
       if (out.status === 402)
-        return json({ error: 'Crédits IA épuisés. Rechargez votre workspace Lovable.' }, 402);
+        return json({ error: 'Crédits IA épuisés. Rechargez la clé IA configurée.' }, 402);
+      if (out.status === 401 || out.status === 403)
+        return json(
+          { error: 'Clé IA refusée. Vérifiez-la dans Admin → Chatbot → Modèles IA.' },
+          503,
+        );
+      if (out.status === 504)
+        return json(
+          { error: "Le service IA n'a pas répondu à temps (45 s). Réessayez." },
+          504,
+        );
+      if (out.status === 503)
+        return json({ error: 'Service IA injoignable. Réessayez dans un instant.' }, 503);
       if (out.status) return json({ error: 'Erreur IA', detail: out.detail }, 500);
       if (!out.image) {
         return json(

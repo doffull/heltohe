@@ -16,6 +16,7 @@ import {
 } from '@/hooks/useMannequins';
 import { Product } from '@/types';
 import { cn } from '@/lib/utils';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 interface Props {
   product: Product;
@@ -128,7 +129,7 @@ export default function MannequinTryOn({ product, selectedColor, selectedSize }:
           highFidelity: true,
         },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       if ((data as any)?.error) throw new Error((data as any).error);
       setResultImage((data as any).image);
     } catch (e: any) {

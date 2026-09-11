@@ -3,6 +3,7 @@ import { CreditCard, Loader2, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 export interface PayPlugPayload {
   items: Array<{ productId: string; quantity: number; size?: string | null; color?: string | null }>;
@@ -53,7 +54,7 @@ export function PayPlugCheckout({ buildPayload, amount, disabled }: Props) {
           returnUrl: `${window.location.origin}/checkout`,
         },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const res = data as any;
       if (res?.error) throw new Error(res.error);

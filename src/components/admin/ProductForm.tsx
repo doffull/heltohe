@@ -33,6 +33,7 @@ import {
   SortableContext, useSortable, arrayMove, horizontalListSortingStrategy, sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 interface ProductFormProps {
   product?: Product;
@@ -280,7 +281,7 @@ export function ProductForm({ product, onSubmit, onCancel, isLoading }: ProductF
           ...extra,
         },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       if ((data as any)?.error) throw new Error((data as any).error);
       if (Array.isArray((data as any)?.observations) && (data as any).observations.length) {
         setAiObservations((data as any).observations);

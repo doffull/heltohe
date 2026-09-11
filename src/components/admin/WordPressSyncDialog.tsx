@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft, ArrowRight, Check, Eye, Loader2, RefreshCw, Settings2 } from 'lucide-react';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 export type SyncType = 'products' | 'customers' | 'orders' | 'stock';
 
@@ -93,7 +94,7 @@ export function WordPressSyncDialog({ open, onOpenChange, syncType = 'products' 
       const { data, error } = await supabase.functions.invoke('woocommerce-import', {
         body: { storeUrl, consumerKey, consumerSecret, mode: config.previewMode },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       if (data?.error) throw new Error(data.error);
       const fetched = data.products || data.customers || data.orders || data.stock || [];
       setItems(fetched.map((p: any) => ({ ...p, selected: !p.isDuplicate })));
@@ -133,7 +134,7 @@ export function WordPressSyncDialog({ open, onOpenChange, syncType = 'products' 
       const body: any = { storeUrl, consumerKey, consumerSecret, [config.importKey]: true };
       if (syncType === 'products') body.selectedSkus = selected.map(p => p.sku);
       const { data, error } = await supabase.functions.invoke('woocommerce-import', { body });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       setImportProgress(selected.length);
       setImportDone(true);
       const count = data?.products || data?.customers || data?.orders || data?.stock || 0;

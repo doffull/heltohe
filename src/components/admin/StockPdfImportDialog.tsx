@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Upload, Loader2, FileText, X, Check, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 type ExtractedItem = { sku: string; name: string; stock: number };
 type Row = ExtractedItem & {
@@ -54,7 +55,7 @@ export function StockPdfImportDialog({ open, onOpenChange, locations, inventory,
       const { data, error } = await supabase.functions.invoke('parse-stock-pdf', {
         body: { fileBase64, fileType: ext },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       if (data?.error) {
         toast.error(data.message || data.error);
         return;

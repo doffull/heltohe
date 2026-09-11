@@ -46,6 +46,7 @@ import {
 } from '@/hooks/usePayPalConfig';
 
 import { PayPalMessaging } from '@/components/payments/PayPalMessaging';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 const WEBHOOK_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/paypal-webhook`;
 
@@ -112,7 +113,7 @@ export default function AdminPayPal() {
       const { data, error } = await supabase.functions.invoke('paypal', {
         body: { action: 'test-credentials', environment },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if ((data as any)?.error) throw new Error((data as any).error);
       toast({ title: `Connexion ${environment} réussie` });

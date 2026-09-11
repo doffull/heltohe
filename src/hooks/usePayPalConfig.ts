@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 export interface PayPalButtonStyle {
   layout: 'vertical' | 'horizontal';
@@ -299,7 +300,7 @@ export function usePayPalCredentialStatus() {
       const { data, error } = await supabase.functions.invoke('paypal', {
         body: { action: 'status' },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return data as { environment: string; sandboxConfigured: boolean; liveConfigured: boolean };
     },
@@ -314,7 +315,7 @@ export function useRefundPayPal() {
       const { data, error } = await supabase.functions.invoke('paypal', {
         body: { action: 'refund', transactionId, amount, note },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if ((data as any)?.error) throw new Error((data as any).error);
       return data;

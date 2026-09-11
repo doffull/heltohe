@@ -31,6 +31,7 @@ import {
   type PageTemplate, type BlockType, type TemplateBlock,
 } from '@/config/templatePresets';
 import { BLOCK_VARIANTS, GOOGLE_FONTS } from '@/config/blockVariants';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 export default function AdminPageTemplates() {
   const { data: templates = [], isLoading } = usePageTemplates();
@@ -642,7 +643,7 @@ function MockupImportDialog({ onClose, onTemplateReady }:
       const { data, error } = await supabase.functions.invoke('template-from-mockup', {
         body: { imageBase64, html: html || undefined, name },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       if (data?.error) throw new Error(data.error);
       toast({ title: '✓ Template généré par IA' });
       onTemplateReady(data.template);

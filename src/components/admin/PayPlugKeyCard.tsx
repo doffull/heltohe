@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useSaveGatewaySecret, useDeleteGatewaySecret, type GatewaySecretStatus } from '@/hooks/useGatewaySecrets';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -53,7 +54,7 @@ export function PayPlugKeyCard({ enabled, onToggle, status }: Props) {
     setBusy('verify');
     try {
       const { data, error } = await supabase.functions.invoke('payplug', { body: { action: 'verify' } });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       const res = data as VerifyResult & { error?: string };
       if (res?.error) throw new Error(res.error);
       setResult(res);

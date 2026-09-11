@@ -29,6 +29,7 @@ import {
 import { useNotificationConfig } from '@/hooks/useNotificationConfig';
 import { OrderHistoryPanel } from '@/components/admin/OrderHistoryPanel';
 import { SendEmailDialog, type SendEmailTarget } from '@/components/admin/SendEmailDialog';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 
 const STATUS_OPTIONS: { value: OrderStatus; label: string; icon: typeof Clock; color: string }[] = [
@@ -256,7 +257,7 @@ export default function AdminOrders() {
           customerCountry: order.customer.country,
         },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       setVerificationResult(data);
       setVerificationPopoverOpen(order.id);
 
@@ -634,7 +635,7 @@ export default function AdminOrders() {
           emailType: 'resend_confirmation',
         },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       toast({ title: 'Email de confirmation renvoyé', description: `À ${selectedOrder.customer.email}` });
     } catch (err: any) {
       toast({ title: 'Erreur envoi email', description: err.message, variant: 'destructive' });
@@ -703,7 +704,7 @@ export default function AdminOrders() {
         },
       });
 
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
 
       if (data?.trackingNumber) {
         if (form) setEditForm({ ...form, trackingNumber: data.trackingNumber, shippingCarrier: 'Colissimo', status: 'Shipped' });

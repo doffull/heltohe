@@ -47,6 +47,7 @@ import { PayPalCheckout, type PayPalCheckoutPayload } from '@/components/payment
 import { PayPalMessaging } from '@/components/payments/PayPalMessaging';
 import { PayPlugCheckout } from '@/components/payments/PayPlugCheckout';
 import { useCurrency } from '@/context/CurrencyContext';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 export default function Checkout() {
   const { format, isConverted } = useCurrency();
@@ -95,7 +96,7 @@ export default function Checkout() {
         const { data, error } = await supabase.functions.invoke('payplug', {
           body: { action: 'check-order', orderNumber: num },
         });
-        if (error) throw error;
+        if (error) throw new Error(await edgeErrorMessage(error));
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const res = data as any;
         if (res?.paid) {

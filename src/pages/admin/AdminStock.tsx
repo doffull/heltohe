@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { importProductsFromPdf } from '@/lib/productPdfImport';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 type Location = {
   id: string; name: string; type: string; city: string | null; address: string | null; is_active: boolean;
@@ -900,7 +901,7 @@ function InventoryView({ items, stockLevels, locations, channelFilter, setChanne
         body: { fileBase64: base64, fileType },
       });
 
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       if (data?.products?.length > 0) {
         setExtractedProducts(data.products);
         setSelectedIds(new Set(data.products.map((_: any, i: number) => i)));

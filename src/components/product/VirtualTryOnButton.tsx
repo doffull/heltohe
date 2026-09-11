@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import MannequinTryOn from './MannequinTryOn';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 interface Props {
   product: any;
@@ -163,7 +164,7 @@ export default function VirtualTryOnButton({ product, selectedColor, selectedSiz
           highFidelity,
         },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       if ((data as any)?.error) throw new Error((data as any).error);
       setResultImage((data as any).image);
     } catch (e: any) {

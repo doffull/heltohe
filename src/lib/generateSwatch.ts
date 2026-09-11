@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { ColorOption, Product } from '@/types';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 export interface SwatchResult {
   hex: string;
@@ -36,7 +37,7 @@ export async function generateSwatchFromImages(input: {
     },
   });
 
-  if (error) throw error;
+  if (error) throw new Error(await edgeErrorMessage(error));
   const res = data as any;
   if (res?.error) throw new Error(res.error);
   if (!res?.hex) throw new Error("Couleur non identifiable sur les photos.");

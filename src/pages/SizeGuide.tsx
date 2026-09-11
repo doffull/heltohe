@@ -11,6 +11,7 @@ import { Sparkles, Loader2, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { SIZE_CHARTS, MORPHOLOGIES, SizeCategory } from '@/lib/sizeCharts';
 import { toast } from 'sonner';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 interface Recommendation {
   recommendedSize: string;
@@ -50,7 +51,7 @@ export default function SizeGuide() {
           fitPreference: fit,
         },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       if (data?.error) throw new Error(data.error);
       setResult(data);
     } catch (e: any) {

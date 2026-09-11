@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 export interface CrmContact {
   id: string;
@@ -309,7 +310,7 @@ export function useSendCrmMessage() {
           subject: input.subject,
         },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       return data as { sent: boolean; warning?: string };
     },
     onSuccess: (_d, vars) => {

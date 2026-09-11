@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 export interface WooConfig {
   store_url: string;
@@ -36,7 +37,7 @@ export interface WooSyncResult {
 
 async function callWoo<T>(body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke('woocommerce-import', { body });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(await edgeErrorMessage(error));
   if ((data as any)?.error && !(data as any)?.status) throw new Error((data as any).error);
   return data as T;
 }

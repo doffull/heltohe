@@ -10,6 +10,7 @@ import { useCart } from '@/context/CartContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { excludeMarketplaceProducts } from '@/lib/shopVisibility';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 type SR = any;
 const TEST_MODE_KEY = 'voice_test_mode';
@@ -302,7 +303,7 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
           const { data, error } = await supabase.functions.invoke('voice-command', {
             body: { mode: action.type === 'recommend' ? 'recommend' : 'search', transcript: q, products: lite },
           });
-          if (error) throw error;
+          if (error) throw new Error(await edgeErrorMessage(error));
           const ids: string[] = data?.productIds || [];
           const found = ids.map((id) => products.find((p) => p.id === id)).filter(Boolean);
           setResults(found);
@@ -391,7 +392,7 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
       const { data, error } = await supabase.functions.invoke('voice-command', {
         body: { transcript: clean, products: lite, context: ctx },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
 
       // Backend can return a structured error payload
       if (data?.error && !data?.action) {

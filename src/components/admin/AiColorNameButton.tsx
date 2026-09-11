@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 interface Props {
   hex: string;
@@ -20,7 +21,7 @@ export function AiColorNameButton({ hex, onGenerated, className }: Props) {
       const { data, error } = await supabase.functions.invoke('product-ai-helpers', {
         body: { action: 'color-name', hex },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       if ((data as any)?.error) throw new Error((data as any).error);
       const value = ((data as any)?.value || '').toString().trim();
       if (!value) throw new Error('Aucune réponse');

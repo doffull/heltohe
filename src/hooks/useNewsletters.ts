@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 export interface NewsletterSubscriber {
   id: string;
@@ -91,7 +92,7 @@ export function useSubscribeNewsletter() {
       const { data, error } = await supabase.functions.invoke('newsletter-subscribe', {
         body: { ...input, origin: window.location.origin },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       if ((data as any)?.error) throw new Error((data as any).error);
       return data as { ok: boolean; status: 'pending' | 'already' | 'suppressed' };
     },
@@ -193,7 +194,7 @@ export function useSendNewsletterCampaign() {
       const { data, error } = await supabase.functions.invoke('newsletter-campaign', {
         body: { campaignId, testEmail, origin: window.location.origin },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       if ((data as any)?.error) throw new Error((data as any).error);
       return data as { ok: boolean; sent?: number; failed?: number; total?: number; test?: boolean };
     },

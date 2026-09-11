@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 const POSES = [
   'de face, debout, bras le long du corps',
@@ -55,7 +56,7 @@ export function AiPoseEditorDialog({ open, onOpenChange, imageUrl, onReplace, on
       const { data, error } = await supabase.functions.invoke('image-pose-edit', {
         body: { imageUrl, pose, expression, extraNotes: notes.trim() || undefined },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       const res = data as { image?: string; error?: string };
       if (res?.error) throw new Error(res.error);
       if (!res?.image) throw new Error('Aucune image générée');

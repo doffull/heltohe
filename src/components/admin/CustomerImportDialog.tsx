@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Upload, Download, ShoppingBag } from 'lucide-react';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 type Row = Record<string, string>;
 
@@ -186,7 +187,7 @@ export function CustomerImportDialog({ open, onOpenChange }: { open: boolean; on
       const { data, error } = await supabase.functions.invoke('woocommerce-import', {
         body: { importCustomers: true, skipExistingCustomers: skipExisting },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       const errs: string[] = data?.errors || [];
       qc.invalidateQueries({ queryKey: ['admin-customers'] });
       toast({

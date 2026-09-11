@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 interface AiTextButtonProps {
   field: 'title' | 'subtitle' | 'description' | 'cta' | 'slide_name' | 'badge_line1' | 'badge_line2' | 'cta_primary' | 'cta_secondary';
@@ -21,7 +22,7 @@ export function AiTextButton({ field, context, onGenerated, className }: AiTextB
       const { data, error } = await supabase.functions.invoke('generate-slide-text', {
         body: { field, context },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       if ((data as any)?.error) throw new Error((data as any).error);
       const value = (data as any)?.value as string | undefined;
       if (!value) throw new Error('Aucune réponse');

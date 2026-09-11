@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 interface AiImageButtonProps {
   onGenerated: (url: string) => void;
@@ -27,7 +28,7 @@ export function AiImageButton({ onGenerated, defaultPrompt = '', label = 'Géné
       const { data, error } = await supabase.functions.invoke('generate-slide-image', {
         body: { prompt },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       if ((data as any)?.error) throw new Error((data as any).error);
       const url = (data as any)?.url as string | undefined;
       if (!url) throw new Error('Aucune image renvoyée');

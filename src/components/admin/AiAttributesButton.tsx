@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 interface Props {
   name?: string;
@@ -22,7 +23,7 @@ export function AiAttributesButton({ name, category, imageUrl, imageUrls, onGene
       const { data, error } = await supabase.functions.invoke('product-ai-helpers', {
         body: { action: 'attributes', name, category, imageUrl, imageUrls },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       if ((data as any)?.error) throw new Error((data as any).error);
       const items = ((data as any)?.items || []) as { key: string; value: string }[];
       if (!items.length) throw new Error('Aucun attribut généré');

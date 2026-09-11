@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Printer, Loader2, RefreshCw, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { triggerOrderEmail } from '@/hooks/useOrders';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 interface SlipOrder {
   id: string;
@@ -59,7 +60,7 @@ export default function PrintShippingLabel() {
         const { data, error } = await supabase.functions.invoke('order-slip-pdf', {
           body: { order_id: id, allow_label_creation: allowLabelCreation },
         });
-        if (error) throw error;
+        if (error) throw new Error(await edgeErrorMessage(error));
         if (data?.error) throw new Error(data.details || data.error);
         if (!data?.pdfBase64) throw new Error('Aucun document renvoyé');
 

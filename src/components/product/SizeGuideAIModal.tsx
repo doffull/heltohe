@@ -9,6 +9,7 @@ import { Sparkles, Loader2, Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { MORPHOLOGIES, SizeCategory } from '@/lib/sizeCharts';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 interface SizeGuideAIModalProps {
   open: boolean;
@@ -60,7 +61,7 @@ export function SizeGuideAIModal({
           productName,
         },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeErrorMessage(error));
       if (data?.error) throw new Error(data.error);
       setResult(data);
     } catch (e: any) {

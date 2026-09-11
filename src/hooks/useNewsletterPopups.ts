@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 export interface NewsletterPopup {
   id: string;
@@ -93,7 +94,7 @@ export async function subscribeToNewsletter(email: string, firstName?: string, o
       origin: typeof window !== 'undefined' ? window.location.origin : undefined,
     },
   });
-  if (error) throw error;
+  if (error) throw new Error(await edgeErrorMessage(error));
   if ((data as any)?.error) throw new Error((data as any).error);
   // Mark popup view as converted if applicable
   if (opts.popupId && opts.sessionId) {
