@@ -85,8 +85,6 @@ const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
 const IMAGE_MODEL = 'google/gemini-2.5-flash-image';
 const LOVABLE_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions';
-const GOOGLE_OAI_URL =
-  'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 // L'edge function est coupée à 150 s : on rend la main avant, sinon le client
 // reste sur un spinner sans jamais recevoir de réponse (symptôme « chargement
 // infini » remonté par le client).
@@ -143,6 +141,88 @@ function buildPayload(images: Img[], prompt: string, model: string) {
 
 type CallResult = { image?: string; status?: number; detail?: string };
 
+/**
+ * Génération d'image chez Google : il faut l'API NATIVE `:generateContent`
+ * avec `responseModalities`. La couche compatible-OpenAI accepte bien la
+ * requête mais ne renvoie jamais d'image — elle a produit un « no image in
+ * response » au premier essai réel.
+ *
+ * Les noms de modèles image bougent souvent : on essaie dans l'ordre et on
+ * passe au suivant sur un 404.
+ */
+const GEMINI_IMAGE_MODELS = [
+  'gemini-2.5-flash-image',
+  'gemini-2.5-flash-image-preview',
+  'gemini-2.0-flash-preview-image-generation',
+];
+
+async function callGeminiNative(
+  apiKey: string,
+  model: string,
+  images: Img[],
+  prompt: string,
+): Promise<CallResult> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { text: prompt },
+              ...images.map((im) => ({
+                inline_data: { mime_type: im.mime, data: im.b64 },
+              })),
+            ],
+          },
+        ],
+        generationConfig: { responseModalities: ['IMAGE', 'TEXT'] },
+      }),
+      signal: AbortSignal.timeout(AI_TIMEOUT_MS),
+    });
+
+    if (!resp.ok) {
+      const txt = await resp.text();
+      console.error(`Gemini natif (${model}) erreur:`, resp.status, txt.slice(0, 500));
+      return { status: resp.status, detail: txt.slice(0, 500) };
+    }
+
+    const data = await resp.json();
+    const parts = data?.candidates?.[0]?.content?.parts ?? [];
+    for (const p of parts) {
+      const inline = p?.inlineData ?? p?.inline_data;
+      if (inline?.data) {
+        const mime = inline.mimeType ?? inline.mime_type ?? 'image/png';
+        return { image: `data:${mime};base64,${inline.data}` };
+      }
+    }
+
+    // Pas d'image : le modèle a répondu du texte. C'est très souvent un refus
+    // (photo de personne réelle, contenu jugé sensible). On remonte ce texte
+    // plutôt qu'un « no image » opaque — c'est l'information utile.
+    const text = parts
+      .map((p: Record<string, unknown>) => p?.text)
+      .filter((t: unknown): t is string => typeof t === 'string' && !!t.trim())
+      .join(' ')
+      .slice(0, 300);
+    const reason =
+      data?.promptFeedback?.blockReason ?? data?.candidates?.[0]?.finishReason ?? null;
+    console.error(
+      `Gemini natif (${model}) sans image — finishReason=${reason} texte="${text}"`,
+      JSON.stringify(data).slice(0, 600),
+    );
+    return { status: 502, detail: text || (reason ? `refus (${reason})` : 'no image in response') };
+  } catch (e) {
+    const name = (e as Error)?.name;
+    const timedOut = name === 'TimeoutError' || name === 'AbortError';
+    console.error(`Gemini natif (${model}) injoignable:`, name, (e as Error)?.message);
+    return { status: timedOut ? 504 : 503, detail: timedOut ? 'timeout' : 'unreachable' };
+  }
+}
+
 async function callProvider(
   url: string,
   apiKey: string,
@@ -191,21 +271,22 @@ async function composite(images: Img[], prompt: string): Promise<CallResult> {
   const geminiKey = await getGeminiApiKey();
 
   if (geminiKey) {
-    const direct = await callProvider(
-      GOOGLE_OAI_URL,
-      geminiKey,
-      IMAGE_MODEL.replace(/^google\//, ''),
-      images,
-      prompt,
-      'Gemini direct',
-    );
-    if (direct.image) return direct;
-    // 401/403 = clé refusée : inutile de réessayer ailleurs, on le dit clairement.
-    if (direct.status === 401 || direct.status === 403) return direct;
-    if (LOVABLE_API_KEY) {
-      console.warn('Repli sur la passerelle Lovable après échec Gemini direct');
-    } else {
-      return direct;
+    let direct: CallResult | null = null;
+    for (const model of GEMINI_IMAGE_MODELS) {
+      direct = await callGeminiNative(geminiKey, model, images, prompt);
+      if (direct.image) return direct;
+      // Modèle inconnu de ce projet Google → on essaie le nom suivant.
+      if (direct.status !== 404) break;
+      console.warn(`Modèle ${model} indisponible, essai du suivant`);
+    }
+    if (direct) {
+      // 401/403 = clé refusée : inutile de réessayer ailleurs, on le dit clairement.
+      if (direct.status === 401 || direct.status === 403) return direct;
+      if (LOVABLE_API_KEY) {
+        console.warn('Repli sur la passerelle Lovable après échec Gemini direct');
+      } else {
+        return direct;
+      }
     }
   }
 
@@ -358,6 +439,17 @@ Rendering:
         );
       if (out.status === 503)
         return json({ error: 'Service IA injoignable. Réessayez dans un instant.' }, 503);
+      // 502 = l'IA a répondu, mais sans image. Le `detail` porte alors son
+      // texte de refus, qui est l'information utile : on le montre.
+      if (out.status === 502)
+        return json(
+          {
+            error: out.detail
+              ? `L'IA n'a pas pu générer l'image : ${out.detail}`
+              : "L'IA n'a pas renvoyé d'image. Réessayez avec une autre photo.",
+          },
+          502,
+        );
       if (out.status) return json({ error: 'Erreur IA', detail: out.detail }, 500);
       if (!out.image) {
         return json(
