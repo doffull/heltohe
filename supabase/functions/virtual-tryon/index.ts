@@ -144,16 +144,23 @@ type CallResult = { image?: string; status?: number; detail?: string; refusal?: 
 /**
  * Motifs par lesquels Gemini refuse de produire l'image.
  *
- * Mesuré sur la fonction déployée, deux comportements bien distincts :
- *   silhouette synthétique  0 refus / 5   (0 %)
- *   mannequin               0 refus / 2   (0 %)
- *   photo de personne A     1 refus / 6   (~17 %, intermittent)
- *   photo de personne B     9 refus / 9   (100 %, bloquée)
+ * Mesuré sur la fonction déployée :
+ *   silhouette synthétique  0 refus / 5
+ *   mannequin               0 refus / 2
+ *   photo de personne A     refusée au 1er appel 8 fois sur 10
+ *   photo de personne B     refusée 9 fois sur 9, y compris en réessayant
  *
- * D'où la stratégie : un second essai automatique (il récupère le cas
- * intermittent) puis, s'il échoue aussi, un message qui invite à changer de
- * photo — seule issue pour une image durablement bloquée.
+ * ⚠️ Le taux varie fortement dans le temps : la photo A a été mesurée à ~17 %
+ * de refus puis à 80 % une heure plus tard, sans aucun changement de notre
+ * côté. Toute mesure ponctuelle est donc à relativiser.
+ *
+ * Le refus est en revanche largement ALÉATOIRE : sur les 8 refus au premier
+ * appel, un simple réessai en a rattrapé 5. D'où les tentatives multiples —
+ * elles font passer cette photo de 20 % à 70 % de réussite. Certaines images
+ * restent malgré tout bloquées quoi qu'il arrive : pour celles-là, la seule
+ * issue est d'en changer, et c'est ce que dit le message.
  */
+const MAX_IMAGE_ATTEMPTS = 3;
 const REFUSAL_REASONS = new Set([
   'IMAGE_OTHER',
   'IMAGE_SAFETY',
@@ -165,7 +172,7 @@ const REFUSAL_REASONS = new Set([
 ]);
 
 const REFUSAL_MESSAGE =
-  'Le service de génération a refusé cette photo, même après un second essai. ' +
+  'Le service de génération a refusé cette photo, après plusieurs tentatives. ' +
   'Choisissez-en une autre : de face, bien éclairée, une seule personne, ' +
   'sans visage d’enfant ni document visible.';
 
@@ -310,16 +317,15 @@ async function composite(images: Img[], prompt: string): Promise<CallResult> {
       direct = await callGeminiNative(geminiKey, model, images, prompt);
       if (direct.image) return direct;
 
-      // Les refus sont en partie intermittents : mesuré en production, une
-      // même photo passe 5 fois sur 6 et se fait refuser la sixième, tandis
-      // qu'une autre est refusée 9 fois sur 9. Un second essai absorbe le cas
-      // intermittent sans rien changer au cas bloqué — pour ~9 s de plus,
-      // largement dans le budget de la fonction.
-      if (direct.refusal) {
-        console.warn('Refus Gemini, second essai immédiat');
-        const retry = await callGeminiNative(geminiKey, model, images, prompt);
-        if (retry.image) return retry;
-        direct = retry;
+      // Réessais sur refus — voir REFUSAL_REASONS pour les mesures.
+      // Le refus est largement aléatoire : sur 10 appels identiques, 2 passent
+      // du premier coup et le réessai en rattrape 5 sur les 8 restants. Chaque
+      // tentative coûte ~9 s ; à trois tentatives on reste sous les 30 s, loin
+      // du plafond de 150 s de la fonction.
+      for (let attempt = 2; attempt <= MAX_IMAGE_ATTEMPTS && direct.refusal; attempt++) {
+        console.warn(`Refus Gemini, tentative ${attempt}/${MAX_IMAGE_ATTEMPTS}`);
+        direct = await callGeminiNative(geminiKey, model, images, prompt);
+        if (direct.image) return direct;
       }
 
       // Modèle inconnu de ce projet Google → on essaie le nom suivant.
