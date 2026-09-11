@@ -1547,9 +1547,111 @@ Rôle retiré, compte banni sans suppression pour ne pas créer d'orphelins.
 | 🔴 `alexis@` / `sylvain@ackuracy.com` | admins, jamais connectés |
 | 🟠 `AdminOrders.tsx:572` | le total regonflé à l'enregistrement |
 | 🟠 TVA | décision comptable |
-| 🟡 Poids des images | 1,7 Mo de moyenne |
+| 🔴 Poids des images | analysé le 11/09 → **§25**, en attente de décision client |
 | 🟡 Préprod et production | même base Supabase |
 | 🟡 Restriction Google Maps | encore sur `.net` côté console Cloud |
 
 ⚠️ **Une clé `service_role` a de nouveau été utilisée pendant ces trois jours**
 pour le diagnostic. À révoquer avec la précédente.
+
+---
+
+## 25. Poids des images — analyse du 11/09/2026 ⏸️ en attente de décision client
+
+**Rien n'a été modifié.** Analyse seule, à reprendre après arbitrage avec le client :
+la modification touche l'ensemble du catalogue visuel, elle n'est pas anodine.
+
+### Où en est la facturation
+
+581 GB de cached egress sur 250 inclus (**232 %**), dont **545 GB concentrés sur
+quatre jours** (07→10/09 : 85, 100, 195, 165 GB). Période de grâce jusqu'au
+**11/10/2026** ; au-delà, les projets répondent **402** si l'organisation reste
+au-dessus du quota.
+
+Le correctif `cache-control` de §24.6 **tient** : vérifié en GET sur 85 objets de
+production (40 images produits + 45 galerie), **85/85** en
+`public, max-age=31536000, immutable`. Les 3 vidéos MP4 aussi, et elles sont
+légères (475 Ko – 1,2 Mo).
+
+⚠️ **Ne pas conclure trop vite à partir du 11/09.** Les ~5 GB de cette journée
+correspondent à ~4 h écoulées (cf. Compute Hours), soit **1,25 GB/h** — contre
+6,9 GB/h le 10/09, mais pour un **budget de 0,35 GB/h** si l'on veut tenir les
+250 GB du cycle. On est donc encore à ~3,6× au-dessus, et ces 4 heures sont les
+plus creuses de la journée. Le chiffre décisif est celui du 11/09 en fin de
+journée. À noter : le compteur MAU (95) ne voit que les comptes **authentifiés** —
+le trafic anonyme de la boutique n'apparaît nulle part dans ce rapport.
+
+### Ce que pèsent réellement les images
+
+| Constat | Mesure |
+|---|---|
+| Objets référencés en base | 581 (40 `image` + 541 galerie/hover/vidéo) |
+| Poids moyen | ~0,75 Mo |
+| Les deux plus lourdes | 6,12 et 5,78 Mo, **4096 × 4096 px** (exports IA bruts) |
+| Part GIF + PNG | 76 % du poids échantillonné |
+
+**Le site sert du 4096 px dans des emplacements de 308 px.** Mesuré en production :
+
+| Élément | Affiché | Source | Excès |
+|---|---|---|---|
+| Logo | 73 × 40 | 2148 × 1181 | ×730 |
+| Vignette produit (desktop) | 308 × 410 | 2752 × 1536 | ×33 |
+| Vignette produit (mobile) | 164 × 219 | 2400 × 1340 | ×90 |
+
+🔴 **`srcset` est absent partout** : un mobile télécharge le même fichier qu'un
+écran 4K. C'est le gain le plus important **et le seul sans aucun risque visuel**
+(×4 environ sur la moitié du trafic). À traiter en premier, indépendamment du reste.
+
+### Qualité : le risque n'est pas où on l'attend
+
+Le gain vient des **dimensions**, pas du taux de compression. À 1600 px, passer de
+q90 à q70 double le gain de poids et ne change presque rien à l'image
+(écart moyen 0,75 → 0,89 sur 255) : la réduction d'échelle moyenne les artefacts
+avant qu'ils ne soient visibles. On peut donc rester généreux sur la qualité.
+
+Risques mesurés, par ordre d'importance :
+
+1. **Aplats sombres** — sur les zones de luminance < 60, l'erreur est **40 % plus
+   élevée** que la moyenne. Le tissu noir perd du grain (visible au zoom 3×
+   seulement). C'est notre cas défavorable : le catalogue est très majoritairement
+   noir. → **q85 minimum** sur les produits sombres.
+2. **Double compression** sur les sources déjà JPEG : erreur ~1,5× supérieure à
+   celle obtenue depuis un PNG, pour un gain faible (6–18× contre 100–600× sur les
+   PNG 4096 px). → **q82 minimum**, peu d'intérêt à forcer.
+3. **Chroma subsampling** WebP : bavure des rouges/oranges saturés.
+4. **Zoom produit** : à vérifier avant tout traitement — non vérifié à ce jour.
+
+### L'approche à retenir : générer des dérivés, ne rien détruire
+
+Le stockage est à **0,87 Go sur 100 Go** : il ne coûte rien, c'est l'egress qui
+coûte. Donc **conserver les masters 4096 px** et servir des dérivés à côté.
+Le zoom continue de tirer le master, un réglage qui déplaît se régénère, rien
+n'est irréversible.
+
+| Usage | Dérivé | Qualité |
+|---|---|---|
+| Vignette grille | 800 px | q85 |
+| Page produit / hero | 1600 px | q85 |
+| Zoom | master intact | — |
+| Logo | SVG, ou 200 px | — |
+| GIF animés (9 fichiers, 8 Mo) | MP4 / WebM | ×10–20 |
+
+Sur cette base, le PNG de 6,12 Mo tombe à ~21 Ko en vignette et ~62 Ko en page
+produit, sans perte visible à taille d'affichage.
+
+⚠️ **Les Image Transformations ne sont pas la solution** : le plan Pro n'inclut
+que **100 images d'origine par mois**, or le catalogue en compte 581. Elles
+restent utiles en dépannage ponctuel.
+
+### À faire quand le client aura tranché
+
+1. `srcset` (sans risque, à sortir du lot) ;
+2. vérifier l'existence d'un zoom produit ;
+3. pipeline de dérivés + génération des dérivés existants ;
+4. traitement à l'upload dans `mediaUploadOptions()`, sans quoi le problème
+   revient à chaque nouveau produit ;
+5. identifier qui produit les images — si ce sont des exports IA 4096 px bruts,
+   le vrai correctif est en amont.
+
+⚠️ Décision à prendre **avant le 20/09** (fin de cycle) : conserver le spend cap
+(risque de 402 sur la boutique) ou le désactiver (dépassement facturé).
