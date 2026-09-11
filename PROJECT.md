@@ -1655,3 +1655,153 @@ restent utiles en dépannage ponctuel.
 
 ⚠️ Décision à prendre **avant le 20/09** (fin de cycle) : conserver le spend cap
 (risque de 402 sur la boutique) ou le désactiver (dépassement facturé).
+
+---
+
+## 26. Retour d'anomalies client — 11/09/2026
+
+Tableau de 12 anomalies (`Suivi_anomalies_boutique.xlsx`). Chacune a été
+confrontée au code avant d'être chiffrée : **3 bugs réels** (ANO-001, 007, 012),
+**4 déjà faites ou quasi** (002, 004, 008, 010), **3 vrais manques** (006, 009,
+réception de 008), **2 à requalifier** (003, 005), **1 décision produit** (011).
+
+Deux ont été traitées. Le reste est en §26.4.
+
+### 26.1 ANO-001 — l'essai virtuel, deux défauts en série
+
+**Côté serveur.** `virtual-tryon` appelait en dur `ai.gateway.lovable.dev`,
+abandonnée à la sortie de Lovable (§16, §18). Constaté en production :
+`500 {"error":"LOVABLE_API_KEY missing"}`. C'était l'une des rares fonctions IA
+à ne pas passer par `_shared/gemini.ts`, donc sans repli sur la clé Gemini et
+**sans délai maximum** — l'appel pendait jusqu'à la coupure de la plateforme à
+150 s, d'où le « chargement infini ».
+
+⚠️ **La couche compatible-OpenAI de Google ne génère pas d'image.** Elle accepte
+la requête, répond 200, ne renvoie jamais rien. La génération passe
+obligatoirement par l'API **native** `:generateContent` avec
+`responseModalities: ["IMAGE","TEXT"]`, l'image arrivant dans
+`candidates[].content.parts[].inlineData`. Aucune fonction du projet n'avait
+jamais utilisé ce chemin pour de l'image — seulement pour du texte.
+
+**Côté client — le vrai responsable du message vu par l'utilisateur.**
+`supabase.functions.invoke` ne met PAS le corps de la réponse dans `data` quand
+le statut n'est pas 2xx : il renvoie un `FunctionsHttpError` dont le `.message`
+vaut **toujours** « Edge Function returned a non-2xx status code ». Le JSON utile
+est dans `error.context`. Sans déballage, les messages soignés des fonctions
+n'atteignent jamais l'écran.
+
+Nouveau `src/lib/edgeFunctionError.ts`, appliqué à **41 appels**. Sur les 236
+`if (error) throw error` du projet, la quasi-totalité vise des requêtes base de
+données où ce traitement n'a aucun sens : seuls les 53 qui suivent un
+`functions.invoke` ont été retenus. Six écrans déballaient déjà le contexte,
+chacun avec sa propre implémentation (cinq copies inline + `readFunctionError`
+dans `productPdfImport.ts`) — laissés en l'état, mais ils gagneraient à
+converger.
+
+**Les refus de Gemini.** Mesuré sur la fonction déployée :
+
+| Entrée | Résultat |
+|---|---|
+| silhouette synthétique | 0 refus / 5 |
+| mode mannequin | 0 refus / 2 |
+| photo de personne A | refusée au 1er appel 8 fois sur 10 |
+| photo de personne B | refusée 9 fois sur 9, réessais compris |
+
+⚠️ **Le taux varie fortement dans le temps** : la photo A est passée de ~17 % à
+80 % de refus en une heure, sans aucun changement de notre côté. Toute mesure
+ponctuelle est à relativiser — je m'y suis laissé prendre deux fois.
+
+Le refus est en revanche largement **aléatoire** : sur 12 appels identiques,
+5 réussissent au 1er coup, 2 sont rattrapés au 2e, 2 au 3e. D'où
+`MAX_IMAGE_ATTEMPTS = 3`, qui fait passer une photo difficile de **42 % à 75 %**
+de réussite. Chaque tentative rapporte autant que la précédente : une 4e
+aiderait encore.
+
+⚠️ **Budget global obligatoire.** `composite()` est appelé une fois par vêtement
+(boucle de couches) **plus** une fois pour la passe haute-fidélité : trois
+vêtements en haute fidélité = jusqu'à 12 appels. Sans plafond on dépasse les
+150 s de la plateforme, qui tue la fonction sans réponse — c'est-à-dire qu'on
+réintroduit le « chargement infini » qu'on vient de corriger.
+`REQUEST_BUDGET_MS = 120 s`, vérifié avant chaque tentative. Mesuré sur le cas
+le plus lourd : **58 s**, largement sous le plafond.
+
+**Validation en production** : 4 cas nominaux sur 4, dont le multi-vêtements.
+
+### 26.2 ANO-002 — la roulette
+
+La **création du code promo fonctionnait déjà** : `spin_roulette` insère dans
+`promo_codes` et trace le tirage dans `roulette_spins`. Rien à redévelopper.
+
+Le défaut responsive était réel : `DialogContent` portait `overflow-hidden`
+sans hauteur maximale ni défilement. Mesuré en paysage 740×360, le dialogue
+descendait à 480 px dans une fenêtre de 360 — bouton « Tourner » 120 px hors
+écran, inatteignable. Corrigé par `max-h-[92dvh]` + corps défilant, en-tête
+fixe. La roue, carrée, n'était bornée qu'en largeur : plafond `46dvh` ajouté.
+
+Le mode test existait mais se pilotait en posant `lvtk:demoMode` dans le
+localStorage depuis la console. Exposé en interrupteur dans Admin → Roulette.
+⚠️ Il ne change que le comportement d'ouverture : **un tirage reste réel et crée
+un vrai code promo**.
+
+### 26.3 🔴 La roulette était invisible pour tout le monde sauf les admins
+
+Découvert en cherchant à tester ANO-002 : impossible de trouver le bouton en
+production. Ce n'était pas un réglage.
+
+`roulette_config` et `roulette_segments` portent chacune deux politiques
+RESTRICTIVE issues du durcissement post-audit (§24.7) : refus total pour `anon`,
+lecture réservée aux admins pour les connectés. Les vues assainies
+`roulette_config_public` / `roulette_segments_public` avaient été créées
+précisément pour exposer une version publique — mais en
+**`security_invoker = true`**, elles s'exécutent avec les droits de l'appelant et
+se font bloquer par ces mêmes politiques. Elles ne remplissaient donc pas leur
+rôle, et `RouletteFab` sortait toujours sur
+`if (!config?.enabled || segments.length === 0) return null`.
+
+Réparé par `20260911140000` : les deux vues passent en **SECURITY DEFINER**.
+Aucune politique n'est supprimée ni assouplie ; les tables restent
+inaccessibles en direct.
+
+⚠️ **Ne pas « corriger » en ouvrant les tables à `anon`** : la RLS filtre des
+LIGNES, pas des COLONNES. La table exposerait `probability_weight` — les
+**probabilités de gain** — ainsi que `reward_value`, `min_purchase`,
+`max_discount` et `code_prefix`. C'est exactement ce que les vues excluent.
+
+Le `GRANT ALL ... TO anon` posé par le baseline sur les deux tables a été
+révoqué : il était neutralisé par les politiques RESTRICTIVE, mais rien ne
+justifie une défense à une seule ligne. `authenticated` et `service_role` sont
+inchangés. Vérifié après migration : les vues répondent en anonyme, les tables
+renvoient `42501 insufficient privilege`.
+
+⚠️ L'analyseur Supabase signalera ces vues comme SECURITY DEFINER. C'est
+recherché et sûr : filtrage en colonnes et en lignes, aucune donnée personnelle.
+
+### 26.4 Ce qui reste
+
+| ID | Sujet | État |
+|---|---|---|
+| 🔴 ANO-012 | Taux de conversion **fabriqué** : `sessions = max(count, count×34+40)` (`AdminAnalytics.tsx:130`) converge vers 1/34 quel que soit le réel. Une vraie table `visitor_sessions` existe et n'est pas utilisée. Côté CA, §24.1 : remise toujours nulle, code promo cherché dans `orders.notes` où rien ne l'écrit | à faire, **priorité 1** |
+| 🔴 ANO-007 | Compteur clients bloqué à 1 000. L'import n'est pas en cause (il découpe bien) : `useCustomers()` fait `.select('*')` **sans pagination** et l'écran affiche `customers.length`. PostgREST plafonne à 1 000. ⚠️ **10 autres hooks ont le même défaut** | à faire |
+| 🟠 ANO-004 | Actions en masse : 7 existent déjà dans `AdminOrders`. Ce que le client demande (assigner, marquer prêtes) vit dans **`AdminPreparations`**, qui n'a aucune sélection multiple | brancher `useBulkSelection` |
+| 🟠 ANO-008 | Envoi Resend déjà opérationnel. Seule la **réception** manque : aucun webhook inbound | à faire |
+| ANO-006 / 009 | Relance paniers abandonnés · deux canaux de messagerie | à créer |
+| ANO-010 | `FileDropZone` fait déjà tout (drag & drop, images + MP4/WebM). Reste à le brancher dans `AdminBoutiques:303`, `AdminFooter:324`, `AdminAuthEmails:262` | remplacement mécanique |
+| 🟡 ANO-003 / 005 | Scroll bloqué · écart 14/52 | à requalifier avec le client |
+| ANO-011 | Live : déjà en polling 8–10 s ; le temps réel est **désactivé volontairement** pour ne pas diffuser de données personnelles | décision produit |
+
+### 26.5 Pièges relevés en chemin
+
+1. ⚠️ **8 fonctions dépendent encore de la passerelle Lovable** : `image-pose-edit`,
+   `generate-product-video`, `generate-slide-image`, `boutique-lookup`,
+   `crm-send-message`, `process-email-queue`, `send-order-notification`,
+   `ai-keys`. Elles échoueront comme l'essai virtuel. Les **trois premières font
+   de la génération d'image** : il leur faudra aussi l'API native, pas seulement
+   la clé.
+2. ⚠️ **`game_type` n'a aucun effet.** `MainLayout` monte `UnifiedFab`, qui rend
+   `RouletteFab` **en dur** (`UnifiedFab.tsx:397`) sans passer par `GameRouter`.
+   La config vaut `flash`, ce qui devrait afficher `GameScratchFab` — elle est
+   ignorée. **`FabStack.tsx` n'est référencé nulle part : code mort.**
+3. Le drapeau `refusal` renvoyé par `virtual-tryon` n'est **pas exploité par
+   l'interface** (toast générique au lieu d'un « choisir une autre photo »).
+4. Le **mode mannequin n'a jamais été refusé** par Gemini. C'est la piste si le
+   taux de refus sur photo cliente devient gênant commercialement.
