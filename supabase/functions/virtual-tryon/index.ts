@@ -142,10 +142,17 @@ function buildPayload(images: Img[], prompt: string, model: string) {
 type CallResult = { image?: string; status?: number; detail?: string; refusal?: boolean };
 
 /**
- * Motifs par lesquels Gemini refuse de produire l'image. Constaté en test :
- * le refus est DÉTERMINISTE pour une photo donnée — trois appels identiques
- * refusés, quand une autre photo de personne réelle passe à chaque fois.
- * Réessayer est donc inutile : il faut changer de photo.
+ * Motifs par lesquels Gemini refuse de produire l'image.
+ *
+ * Mesuré sur la fonction déployée, deux comportements bien distincts :
+ *   silhouette synthétique  0 refus / 5   (0 %)
+ *   mannequin               0 refus / 2   (0 %)
+ *   photo de personne A     1 refus / 6   (~17 %, intermittent)
+ *   photo de personne B     9 refus / 9   (100 %, bloquée)
+ *
+ * D'où la stratégie : un second essai automatique (il récupère le cas
+ * intermittent) puis, s'il échoue aussi, un message qui invite à changer de
+ * photo — seule issue pour une image durablement bloquée.
  */
 const REFUSAL_REASONS = new Set([
   'IMAGE_OTHER',
@@ -158,8 +165,9 @@ const REFUSAL_REASONS = new Set([
 ]);
 
 const REFUSAL_MESSAGE =
-  'Cette photo a été refusée par le service de génération. Essayez-en une autre : ' +
-  'de face, bien éclairée, une seule personne, sans visage d’enfant ni document visible.';
+  'Le service de génération a refusé cette photo, même après un second essai. ' +
+  'Choisissez-en une autre : de face, bien éclairée, une seule personne, ' +
+  'sans visage d’enfant ni document visible.';
 
 /**
  * Génération d'image chez Google : il faut l'API NATIVE `:generateContent`
@@ -301,6 +309,19 @@ async function composite(images: Img[], prompt: string): Promise<CallResult> {
     for (const model of GEMINI_IMAGE_MODELS) {
       direct = await callGeminiNative(geminiKey, model, images, prompt);
       if (direct.image) return direct;
+
+      // Les refus sont en partie intermittents : mesuré en production, une
+      // même photo passe 5 fois sur 6 et se fait refuser la sixième, tandis
+      // qu'une autre est refusée 9 fois sur 9. Un second essai absorbe le cas
+      // intermittent sans rien changer au cas bloqué — pour ~9 s de plus,
+      // largement dans le budget de la fonction.
+      if (direct.refusal) {
+        console.warn('Refus Gemini, second essai immédiat');
+        const retry = await callGeminiNative(geminiKey, model, images, prompt);
+        if (retry.image) return retry;
+        direct = retry;
+      }
+
       // Modèle inconnu de ce projet Google → on essaie le nom suivant.
       if (direct.status !== 404) break;
       console.warn(`Modèle ${model} indisponible, essai du suivant`);
