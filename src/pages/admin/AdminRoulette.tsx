@@ -31,6 +31,10 @@ export default function AdminRoulette() {
   const upsert = useUpsertSegment();
   const del = useDeleteSegment();
   const [draft, setDraft] = useState<any>(null);
+  // Drapeau local au navigateur, lu par RouletteFab (`lvtk:demoMode`).
+  const [demoMode, setDemoMode] = useState(() => {
+    try { return localStorage.getItem('lvtk:demoMode') === '1'; } catch { return false; }
+  });
   const { designSettings, updateDesignSettings } = useApp();
   const qc = useQueryClient();
 
@@ -157,6 +161,36 @@ export default function AdminRoulette() {
                     onCheckedChange={(v) => setDraft({ ...cfg, enabled: v })}
                   />
                 </div>
+
+                {/*
+                  Le mode test pilotait déjà le comportement d'ouverture
+                  (`localStorage['lvtk:demoMode']`, lu par RouletteFab), mais il
+                  fallait le poser à la main dans la console du navigateur.
+                */}
+                <div className="flex items-center justify-between rounded-md border border-dashed border-primary/40 bg-muted/40 p-3">
+                  <div className="pr-4">
+                    <Label className="text-base font-bold">Mode test</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Rouvre la roulette à chaque visite sans attendre le délai entre deux
+                      affichages. Réglage local à ce navigateur, invisible pour les clients.
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-amber-600 dark:text-amber-500">
+                      Attention : un tirage reste réel et crée un vrai code promo.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={demoMode}
+                    onCheckedChange={(v) => {
+                      try {
+                        if (v) localStorage.setItem('lvtk:demoMode', '1');
+                        else localStorage.removeItem('lvtk:demoMode');
+                      } catch { /* stockage indisponible (navigation privée) */ }
+                      setDemoMode(v);
+                      toast.success(v ? 'Mode test activé sur ce navigateur' : 'Mode test désactivé');
+                    }}
+                  />
+                </div>
+
                 <div>
                   <Label>Titre</Label>
                   <Input value={cfg.title} onChange={(e) => setDraft({ ...cfg, title: e.target.value })} />

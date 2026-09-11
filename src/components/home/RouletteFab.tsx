@@ -279,11 +279,17 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent hideClose className="w-[min(94vw,440px)] max-w-none p-0 bg-background border-2 border-primary/20 gap-0 overflow-hidden">
+        {/*
+          Hauteur bornée + colonne défilante. Sans ça, sur un écran court
+          (iPhone SE, ou n'importe quel mobile en paysage) le contenu dépassait
+          la hauteur du dialogue et `overflow-hidden` le coupait net : le bouton
+          « Tourner » devenait inatteignable, sans aucun moyen de faire défiler.
+        */}
+        <DialogContent hideClose className="w-[min(94vw,440px)] max-w-none max-h-[92dvh] flex flex-col p-0 bg-background border-2 border-primary/20 gap-0 overflow-hidden">
           <DialogTitle className="sr-only">{config.title}</DialogTitle>
 
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-foreground/10">
+          {/* Header — reste visible pendant le défilement */}
+          <div className="shrink-0 flex items-center justify-between px-4 pt-3 pb-2 border-b border-foreground/10">
             <button
               onClick={sounds.toggle}
               aria-label={sounds.enabled ? 'Couper le son' : 'Activer le son'}
@@ -303,7 +309,7 @@ export function RouletteFab({ open: openProp, onOpenChange, hideTrigger }: Roule
             </button>
           </div>
 
-          <div className="px-4 pt-3 pb-4 text-center">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-3 pb-4 text-center">
             <p className="text-[11px] text-muted-foreground mb-3 line-clamp-2">{config.subtitle}</p>
 
             {/* Wheel */}

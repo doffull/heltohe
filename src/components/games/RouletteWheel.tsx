@@ -50,10 +50,13 @@ export function RouletteWheel({
   });
 
   return (
+    // La roue est carrée : la borner uniquement en largeur la laissait occuper
+    // toute la hauteur d'un petit écran et pousser le bouton « Tourner » hors
+    // du cadre. Le plafond en `dvh` la fait rétrécir sur les écrans courts.
     <div
       ref={containerRef}
       className="relative w-full aspect-square mx-auto"
-      style={{ maxWidth: 380 }}
+      style={{ maxWidth: 'min(380px, 46dvh)' }}
     >
       <div className="absolute inset-0 flex items-center justify-center">
         <WheelSvg
