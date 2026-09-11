@@ -139,7 +139,27 @@ function buildPayload(images: Img[], prompt: string, model: string) {
   };
 }
 
-type CallResult = { image?: string; status?: number; detail?: string };
+type CallResult = { image?: string; status?: number; detail?: string; refusal?: boolean };
+
+/**
+ * Motifs par lesquels Gemini refuse de produire l'image. Constaté en test :
+ * le refus est DÉTERMINISTE pour une photo donnée — trois appels identiques
+ * refusés, quand une autre photo de personne réelle passe à chaque fois.
+ * Réessayer est donc inutile : il faut changer de photo.
+ */
+const REFUSAL_REASONS = new Set([
+  'IMAGE_OTHER',
+  'IMAGE_SAFETY',
+  'IMAGE_PROHIBITED_CONTENT',
+  'SAFETY',
+  'PROHIBITED_CONTENT',
+  'BLOCKLIST',
+  'SPII',
+]);
+
+const REFUSAL_MESSAGE =
+  'Cette photo a été refusée par le service de génération. Essayez-en une autre : ' +
+  'de face, bien éclairée, une seule personne, sans visage d’enfant ni document visible.';
 
 /**
  * Génération d'image chez Google : il faut l'API NATIVE `:generateContent`
@@ -214,6 +234,12 @@ async function callGeminiNative(
       `Gemini natif (${model}) sans image — finishReason=${reason} texte="${text}"`,
       JSON.stringify(data).slice(0, 600),
     );
+    // Un refus est déterministe pour une image donnée : réessayer ne sert à
+    // rien, il faut changer de photo. On le dit en clair plutôt que de
+    // renvoyer le code interne du modèle, incompréhensible pour un client.
+    if (reason && REFUSAL_REASONS.has(String(reason))) {
+      return { status: 502, detail: REFUSAL_MESSAGE, refusal: true };
+    }
     return { status: 502, detail: text || (reason ? `refus (${reason})` : 'no image in response') };
   } catch (e) {
     const name = (e as Error)?.name;
@@ -444,9 +470,14 @@ Rendering:
       if (out.status === 502)
         return json(
           {
-            error: out.detail
+            // Refus identifié → message directement actionnable, sans préfixe
+            // technique. Sinon on expose ce que le modèle a répondu.
+            error: out.refusal
+              ? out.detail
+              : out.detail
               ? `L'IA n'a pas pu générer l'image : ${out.detail}`
               : "L'IA n'a pas renvoyé d'image. Réessayez avec une autre photo.",
+            refusal: out.refusal ?? false,
           },
           502,
         );
