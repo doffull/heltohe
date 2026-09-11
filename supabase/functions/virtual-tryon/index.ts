@@ -161,6 +161,18 @@ type CallResult = { image?: string; status?: number; detail?: string; refusal?: 
  * issue est d'en changer, et c'est ce que dit le message.
  */
 const MAX_IMAGE_ATTEMPTS = 3;
+
+/**
+ * Budget global de la requête. `composite()` est appelé une fois par vêtement
+ * (boucle de couches) PLUS une fois pour la passe haute-fidélité, et chaque
+ * appel peut consommer jusqu'à MAX_IMAGE_ATTEMPTS tentatives. Trois vêtements
+ * en haute fidélité = jusqu'à 12 appels : sans plafond, on dépasse les 150 s
+ * de la plateforme, qui tue la fonction sans réponse — soit précisément le
+ * « chargement infini » qu'on vient de corriger.
+ */
+const REQUEST_BUDGET_MS = 120_000;
+/** En-dessous, il ne reste pas de quoi tenter un appel de plus. */
+const MIN_SLICE_MS = 15_000;
 const REFUSAL_REASONS = new Set([
   'IMAGE_OTHER',
   'IMAGE_SAFETY',
@@ -308,7 +320,17 @@ async function callProvider(
  * Le projet ayant quitté Lovable, la clé Gemini est désormais le chemin normal
  * et la passerelle n'est plus qu'un filet de sécurité.
  */
-async function composite(images: Img[], prompt: string): Promise<CallResult> {
+async function composite(
+  images: Img[],
+  prompt: string,
+  deadline: number,
+): Promise<CallResult> {
+  const left = () => deadline - Date.now();
+  if (left() < MIN_SLICE_MS) {
+    console.warn('Budget de requête épuisé avant appel IA');
+    return { status: 504, detail: 'budget' };
+  }
+
   const geminiKey = await getGeminiApiKey();
 
   if (geminiKey) {
@@ -323,6 +345,10 @@ async function composite(images: Img[], prompt: string): Promise<CallResult> {
       // tentative coûte ~9 s ; à trois tentatives on reste sous les 30 s, loin
       // du plafond de 150 s de la fonction.
       for (let attempt = 2; attempt <= MAX_IMAGE_ATTEMPTS && direct.refusal; attempt++) {
+        if (left() < MIN_SLICE_MS) {
+          console.warn(`Budget épuisé, arrêt après ${attempt - 1} tentative(s)`);
+          break;
+        }
         console.warn(`Refus Gemini, tentative ${attempt}/${MAX_IMAGE_ATTEMPTS}`);
         direct = await callGeminiNative(geminiKey, model, images, prompt);
         if (direct.image) return direct;
@@ -386,6 +412,9 @@ Deno.serve(async (req) => {
         503,
       );
     }
+
+    // Échéance globale, partagée par tous les appels IA de cette requête.
+    const deadline = Date.now() + REQUEST_BUDGET_MS;
 
     const body = (await req.json()) as Body;
     const mode = body.mode === 'mannequin' ? 'mannequin' : 'photo';
@@ -476,7 +505,7 @@ Rendering:
 - ${framingText(body.framing)}
 - Single clean photograph: no text, no watermark, no collage, no duplicated limbs, no mirror.`;
 
-      const out = await composite([base, ...refs], prompt);
+      const out = await composite([base, ...refs], prompt, deadline);
       if (out.status === 429) return json({ error: 'Trop de requêtes, réessayez dans un instant.' }, 429);
       if (out.status === 402)
         return json({ error: 'Crédits IA épuisés. Rechargez la clé IA configurée.' }, 402);
@@ -487,7 +516,12 @@ Rendering:
         );
       if (out.status === 504)
         return json(
-          { error: "Le service IA n'a pas répondu à temps (45 s). Réessayez." },
+          {
+            error:
+              out.detail === 'budget'
+                ? 'La génération a pris trop de temps. Essayez avec moins de vêtements à la fois.'
+                : "Le service IA n'a pas répondu à temps. Réessayez.",
+          },
           504,
         );
       if (out.status === 503)
@@ -532,7 +566,7 @@ Return an improved version of IMAGE 1 where:
 - the garment matches IMAGE 3 exactly in cut, length, colour, texture, seams, quilting and logos;
 - fit, folds, shadows and lighting look physically plausible.
 Keep the same framing and composition as IMAGE 1. Output one photograph only, no text or watermark.`;
-        const refined = await composite([base, originalBase, mainRef], refinePrompt);
+        const refined = await composite([base, originalBase, mainRef], refinePrompt, deadline);
         if (refined.image) lastImage = refined.image;
       } catch (e) {
         console.warn('refine pass skipped:', e);
