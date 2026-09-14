@@ -6,8 +6,9 @@
 >
 > Rédigé le 20/08/2026 par analyse du dépôt (`39e844c`), mis à jour le 28/08/2026 après le
 > changement de dépôt (§16), le 30/08/2026 après la première confrontation au projet
-> Supabase réel (§17, §18), puis le 10/09/2026 après trois jours d'assainissement de
-> l'infrastructure (§24).
+> Supabase réel (§17, §18), le 10/09/2026 après trois jours d'assainissement de
+> l'infrastructure (§24), puis le 14/09/2026 après l'ouverture des expéditions hors
+> France (§27).
 >
 > ⚠️ **Le dépôt a changé le 28/08/2026** : le projet vit désormais dans
 > `doffull/warltkfr`, recréé depuis Lovable. `gafsou20/Helvetica-MP` est une archive.
@@ -23,6 +24,12 @@
 > ⚠️ **Les migrations ont été remises à plat le 09/09/2026.** Un baseline unique remplace
 > les 188 fichiers, désormais dans `supabase/migrations/_archive/`. `supabase db push`
 > refonctionne. Lire le §24.4 avant d'y toucher.
+>
+> ⚠️ **Une seule fonction fabrique les étiquettes Colissimo :
+> `create-colissimo-label`.** Elle ne prend qu'un `order_id` et relit la commande
+> en base. L'action `generateLabel` de `colissimo-proxy` est **dépréciée** — elle
+> recevait l'adresse recopiée par l'appelant, et aucun des cinq appelants ne
+> transmettait le pays. Ne jamais y revenir : §27.5.
 >
 > ⚠️ **Les prix sont TTC.** `orders.tax` est la TVA *contenue* dans le total, jamais un
 > supplément : ne jamais l'additionner. Un écran d'admin le faisait (§24.8), un autre le
@@ -1783,7 +1790,7 @@ recherché et sûr : filtrage en colonnes et en lignes, aucune donnée personnel
 | 🔴 ANO-012 | Taux de conversion **fabriqué** : `sessions = max(count, count×34+40)` (`AdminAnalytics.tsx:130`) converge vers 1/34 quel que soit le réel. Une vraie table `visitor_sessions` existe et n'est pas utilisée. Côté CA, §24.1 : remise toujours nulle, code promo cherché dans `orders.notes` où rien ne l'écrit | à faire, **priorité 1** |
 | 🔴 ANO-007 | Compteur clients bloqué à 1 000. L'import n'est pas en cause (il découpe bien) : `useCustomers()` fait `.select('*')` **sans pagination** et l'écran affiche `customers.length`. PostgREST plafonne à 1 000. ⚠️ **10 autres hooks ont le même défaut** | à faire |
 | 🟠 ANO-004 | Actions en masse : 7 existent déjà dans `AdminOrders`. Ce que le client demande (assigner, marquer prêtes) vit dans **`AdminPreparations`**, qui n'a aucune sélection multiple | brancher `useBulkSelection` |
-| 🔴 **Hors tableau** | **Aucune expédition hors France n'est possible.** Le pays n'est jamais demandé au checkout (`Checkout.tsx:157` en dur) et l'étiquette déclare toujours `FR` à Colissimo (`create-colissimo-label:238`). 15 commandes concernées, dont 4 payées et une pour Montréal. → **`COLISSIMO_INTERNATIONAL.md`** | analysé, en attente client |
+| ✅ **Hors tableau** | **Expéditions hors France.** Le pays n'était jamais demandé au checkout et l'étiquette déclarait toujours `FR`. 15 commandes concernées, dont 4 payées et une pour Montréal. → **`COLISSIMO_INTERNATIONAL.md`** (analyse), **`COLISSIMO_ARBITRAGE.md`** (décisions) | **corrigé le 14/09/2026, §27** |
 | 🟠 ANO-008 | Envoi Resend déjà opérationnel. Seule la **réception** manque : aucun webhook inbound | à faire |
 | ANO-006 / 009 | Relance paniers abandonnés · deux canaux de messagerie | à créer |
 | ANO-010 | `FileDropZone` fait déjà tout (drag & drop, images + MP4/WebM). Reste à le brancher dans `AdminBoutiques:303`, `AdminFooter:324`, `AdminAuthEmails:262` | remplacement mécanique |
@@ -1806,3 +1813,163 @@ recherché et sûr : filtrage en colonnes et en lignes, aucune donnée personnel
    l'interface** (toast générique au lieu d'un « choisir une autre photo »).
 4. Le **mode mannequin n'a jamais été refusé** par Gemini. C'est la piste si le
    taux de refus sur photo cliente devient gênant commercialement.
+
+---
+
+## 27. Expéditions hors France — 14/09/2026 ✅
+
+Le blocage annoncé au §26.4 est levé. Première étiquette suisse réelle :
+`HMP-MTVEO78Y` → suivi `CA724839632FR`.
+
+Deux documents accompagnent cette section : **`COLISSIMO_INTERNATIONAL.md`**
+(l'analyse du 11/09, conservée pour le raisonnement) et
+**`COLISSIMO_ARBITRAGE.md`** (les décisions client, une par problème, avec ce qui
+a été implémenté). Les lire avant de toucher à quoi que ce soit ici.
+
+### 27.1 Ce qui était cassé, en une phrase
+
+Le pays n'était jamais demandé à la cliente — `country: 'France'` figé dans
+`Checkout.tsx` — et l'étiquette déclarait toujours `FR` à Colissimo. Un code
+postal suisse à quatre chiffres annoncé en France est un format invalide :
+Colissimo refusait. **Le transporteur n'y était pour rien.**
+
+### 27.2 La table Colissimo est la source unique
+
+`src/data/colissimo-capabilities.json` est le fichier officiel du plugin
+WooCommerce Colissimo (`assets/misc/capabilitiesByCountryFR.json`) : **10 zones,
+251 pays**, avec pour chacun le code produit à domicile avec et sans signature,
+l'existence du réseau point relais et l'obligation de déclaration douanière.
+
+```
+src/data/colissimo-capabilities.json          ← source, fichier officiel
+scripts/generate-colissimo-capabilities.mjs   ← dérive les deux modules ci-dessous
+src/lib/colissimo-capabilities.ts             ← @generated, NE PAS ÉDITER
+supabase/functions/_shared/colissimo-capabilities.ts   ← @generated, NE PAS ÉDITER
+```
+
+⚠️ **Le même module est généré à deux endroits** parce que le front (Vite) et les
+edge functions (Deno) ne partagent aucun chemin d'import. Pour mettre la table à
+jour : remplacer le JSON, relancer `node scripts/generate-colissimo-capabilities.mjs`,
+committer les trois fichiers.
+
+📌 **Trancher sur cette table, jamais de mémoire.** J'avais d'abord affirmé que le
+code produit `DOM` était réservé à la France et qu'il fallait un code
+international : **c'était faux**, et c'est le plugin officiel qui a tranché. `DOM`
+vaut pour FR, CH et BE ; **DE, ES, IT, GB, US et CA n'acceptent que `DOS`** (avec
+signature) ; les DOM-TOM ont leurs propres codes (`COM`/`CDS`).
+
+### 27.3 Tarif hors France — forfait unique
+
+| | |
+|---|---|
+| Déclencheur | `country !== 'FR'`, sans distinction de zone |
+| Montant | **40 € TTC**, réglable dans Admin → Checkout |
+| Port | **remplacé**, jamais additionné |
+| Franco à 99 € | **ne s'applique pas** hors France |
+| TVA | **inchangée** — arbitrage client du 14/09 |
+| Libellé client | **« Supplément d'expédition internationale »** |
+
+⚠️ **Ne jamais écrire « frais de douane » côté boutique.** Sans déclaration DDP,
+le transporteur réclame malgré tout les droits réels à la réception : la cliente
+aurait le sentiment de payer deux fois, et se retournerait vers la boutique.
+
+⚠️ **La règle vit à deux endroits et doit rester identique** :
+`computeShippingCost` (`src/hooks/useCheckoutConfig.ts`) et la RPC
+`validate_and_create_order`. Toute modification de l'un doit être reportée dans
+l'autre, sinon le prix affiché et le prix encaissé divergent.
+
+📌 Un code promo **« livraison offerte » n'annule pas** le forfait international :
+il couvre un envoi France, pas le surcoût d'un envoi hors frontière. Sans cette
+réserve, la règle se contournait avec un code promo.
+
+### 27.4 Déclaration douanière (CN23)
+
+Générée automatiquement dès que la table l'exige (`cn23: true` — CH, GB, US, CA,
+DOM-TOM). **Sans elle, aucune étiquette ne sort pour ces destinations**, quelles
+que soient les autres corrections.
+
+Deux réglages dans **Admin → Colissimo → Déclaration douanière** :
+
+| Réglage | Valeur | Colonne |
+|---|---|---|
+| Code SH par défaut | **`620240`** | `admin_config.colissimo_customs_hs_code` |
+| Pays de fabrication | **`CN`** | `admin_config.colissimo_customs_origin_country` |
+
+⚠️ **`620240` doit rester renseigné.** La décision initiale était de laisser le
+champ vide ; le premier envoi réel a montré que **Colissimo refuse sans code SH**.
+`620240` = doudoune à enveloppe synthétique, positions « femmes » — note 9 du
+chapitre 62 : un vêtement non identifiable homme/femme s'y classe. À affiner par
+produit si le catalogue se diversifie (`6109` T-shirts, `6110` sweats, `6505`
+cagoules — le chapitre dépend du **procédé**, 61 tricot / 62 tissé, pas du
+vêtement).
+
+⚠️ **Deux contraintes de l'API**, relevées dans le plugin officiel :
+l'API **refuse les accents** dans la description d'article (« Doudoune matelassée »
+casse l'appel), et tronque à **64 caractères** la description, **44** le `artref`.
+
+### 27.5 Un seul chemin d'étiquetage — la leçon de la journée
+
+C'est le point à retenir de toute cette section.
+
+Deux implémentations d'étiquetage coexistaient. La première,
+**`create-colissimo-label`**, ne reçoit qu'un `order_id` et **relit la commande en
+base**. La seconde, l'action `generateLabel` de **`colissimo-proxy`**, recevait
+l'adresse **recopiée champ par champ par l'appelant**.
+
+**Aucun des cinq appelants de la seconde ne transmettait `customer_country`.** La
+normalisation retombait sur `FR`, et le bug corrigé le matin même réapparaissait
+intact sur ce chemin. Corriger le lecteur ne suffisait pas : il fallait que les
+appelants fournissent la donnée, ce qu'aucun ne faisait — et rien ne le signalait,
+puisque le repli sur `FR` est silencieux par construction.
+
+Le plus grave n'était pas le bouton de l'écran Commandes mais
+**`auto-colissimo-label`**, qui étiquette les commandes dès leur paiement : il
+lisait `customer_country` puis l'omettait. Toute commande étrangère payée échouait
+**sans témoin**.
+
+Tout passe désormais par `create-colissimo-label` : l'étiquetage automatique, le
+bouton de l'écran Commandes, la génération et les retours de l'écran Colissimo,
+les régénérations du bordereau, et `order-slip-pdf`.
+
+⚠️ **`create-colissimo-label` accepte l'appel en clé de service**, reconnu par
+comparaison avec `SUPABASE_SERVICE_ROLE_KEY`. Sans cette porte, l'étiquetage
+automatique se heurtait à un 401 : les clés `sb_secret_…` ne sont pas des JWT,
+`auth.getClaims` échoue dessus.
+
+⚠️ **L'écran Commandes enregistre la fiche avant de demander l'étiquette.**
+L'étiquette se construisant depuis la base, une correction de pays non
+sauvegardée serait sinon ignorée en silence.
+
+📌 Effet de bord favorable : `colissimo-proxy` déclarait **`<weight>1.0</weight>`
+en dur** — tout colis annoncé à un kilo. Le poids réel des articles
+(`products.weight_grams`) est désormais transmis.
+
+### 27.6 Pièges à connaître
+
+1. ⚠️ **`orders.customer_country` contient deux écritures.** Les commandes
+   antérieures au 14/09 portent le libellé complet (« France », « Suisse » saisi à
+   la main en admin) ; les nouvelles portent un code ISO. `normalizeCountryCode`
+   reconnaît les deux — il existe en **deux exemplaires**
+   (`src/lib/colissimo-countries.ts` et `supabase/functions/_shared/colissimo-countries.ts`),
+   à faire évoluer ensemble.
+2. ⚠️ **Le point relais n'existe pas partout** (`pr: false` pour CH, GB, US, CA).
+   Trois verrous : masqué au checkout, refusé par la recherche de points, refusé à
+   l'étiquetage. Une commande relais en Suisse n'est récupérable à aucun de ces
+   trois stades — d'où la redondance, qui est volontaire.
+3. ⚠️ **Le code postal n'est validé strictement qu'en France.** Ailleurs les
+   formats sont trop variés (CA `H2G 2Y6`, GB `SW1A 1AA`, IE sans code postal) pour
+   qu'une règle maison apporte autre chose que des faux refus.
+4. `supabase db push` reste sûr tant que `supabase migration list` montre local et
+   distant alignés — vérifié le 14/09. Le §18 rappelle pourquoi on ne le suppose
+   jamais.
+5. 🟡 **Reste ouvert** : la commande de Montréal (`HMP-MTWC73RZ`) sera le premier
+   envoi en `DOS`. Ce code n'a encore **jamais été émis** en production.
+
+### 27.7 Ce qui reste à faire
+
+| Sujet | État |
+|---|---|
+| 3 commandes payées à expédier (`HMP-MTVTXC5P`, `HMP-MTVW5TB1`, `HMP-MTVWZVYS`, 512 €) | ⚠️ leur `customer_country` vaut encore « France » : **le corriger avant** de générer l'étiquette |
+| Codes SH par produit | 🟡 `620240` couvre les doudounes ; le genre est déjà en base (`products.category`), le mapping serait automatique |
+| Information douanière à la cliente | ❌ écartée par le client — hors UE, elle paiera **en plus** à la réception, ce n'est écrit nulle part |
+| Tarif réel par zone | ❌ écarté : le forfait de 40 € remplace la grille |
