@@ -3,8 +3,11 @@
 > Extrait de `COLISSIMO_INTERNATIONAL.md` (analyse du 11/09/2026), reformaté pour
 > **décider**. Un problème par ligne, la solution proposée en face, une case à cocher.
 >
-> **Tout a été arbitré et codé le 14/09/2026.** Le code n'est en revanche **pas
-> déployé** : lire « Reste à faire » avant de considérer le sujet clos.
+> **Arbitré, codé, déployé et vérifié le 14/09/2026.** La première étiquette suisse est
+> sortie (`HMP-MTVEO78Y` → `CA724839632FR`). Le code SH, initialement laissé vide, a dû
+> être renseigné à `620240` : voir P5.
+>
+> Reste **P0** : les 3 autres commandes payées.
 >
 > Vérifications de code refaites le 14/09/2026 — les références de fichiers ci-dessous
 > ont été recontrôlées une par une, sauf mention contraire.
@@ -153,13 +156,29 @@ et **retombe sur une valeur par défaut globale** si l'attribut est vide
 | Champ | Valeur | Origine de la décision |
 |---|---|---|
 | `originCountry` | **`CN`** | Jessy, 14/09 — fabrication Chine |
-| `hsCode` | **vide** | Jessy, 14/09 — voir la réserve ci-dessous |
+| `hsCode` | ~~vide~~ → **`620240`** | Décision « vide » du 14/09, **corrigée le jour même** : Colissimo refuse sans code |
 | `description` | nom du produit, **désaccentué**, tronqué 64 car. | contrainte API |
 | `artref` | SKU tronqué 44 car. | contrainte API |
 
-### ⚠️ Réserve consignée sur le code SH vide
+### ✅ Réserve levée par l'expérience — 14/09/2026, 07:40
 
-Décision assumée par le client. Ce qui a été exposé avant l'arbitrage :
+**Le code SH vide ne passe pas.** Premier envoi réel (`HMP-MTVEO78Y`, Areuse / CH) :
+Colissimo a refusé tant que le champ est resté vide, et a délivré l'étiquette dès que
+**`620240`** a été saisi en administration. Numéro de suivi `CA724839632FR`, commande
+passée en `Shipped`.
+
+C'est la réponse empirique à la seule question qui restait ouverte. Le réglage vaut
+désormais `620240` en production, et **il doit y rester**.
+
+> 📌 **Ce que cet épisode valide.** Le code SH avait été codé comme réglage admin
+> justement parce que l'issue était incertaine : la correction a pris dix secondes,
+> sans redéploiement, sans intervention technique. Un `hsCode` en dur aurait imposé un
+> cycle complet de livraison pour une chaîne de six caractères.
+
+### Réserve initialement consignée sur le code SH vide
+
+Décision assumée par le client, **finalement démentie par le premier envoi réel**
+(ci-dessus). Ce qui avait été exposé avant l'arbitrage :
 
 - **Techniquement, ce n'est pas bloquant** — le plugin envoie `hsCode` sans aucune
   validation, même vide (`LabelGenerationPayload.php:914`). L'étiquette devrait sortir.
@@ -172,8 +191,8 @@ Décision assumée par le client. Ce qui a été exposé avant l'arbitrage :
   « femmes » — note 9 du ch. 62 : un vêtement non identifiable homme/femme s'y classe).
 
 **Mitigation implémentée** : `hsCode` est codé comme **réglage admin surchargeable par
-produit**, valeur par défaut vide — et non en dur. Si un envoi réel est rejeté, la valeur
-se saisit dans l'admin sans redéploiement.
+produit**, et non en dur. C'est ce qui a permis de corriger en quelques secondes quand
+l'envoi réel a effectivement été rejeté.
 
 ### ⚠️ Deux pièges API relevés dans le plugin
 
@@ -333,9 +352,12 @@ pas encore en ligne** : voir « Reste à faire » en fin de section.
 2. **Déployer les trois edge functions** : `create-colissimo-label`,
    `colissimo-proxy`, et `_shared` qu'elles embarquent. Le §18 du PROJECT.md
    rappelle que le dépôt n'est pas le déploiement.
-3. **Tester sur une vraie commande suisse** avant de rouvrir la vente à
-   l'international — c'est le seul moyen de savoir si le code SH vide passe.
-4. **P0** : expédier les 4 commandes payées depuis l'espace professionnel La Poste.
+3. ~~Tester sur une vraie commande suisse.~~ ✅ Fait le 14/09 : `HMP-MTVEO78Y`,
+   suivi `CA724839632FR`. Le code SH vide était refusé, `620240` passe.
+4. **P0** : les **3 commandes payées restantes** (`HMP-MTVTXC5P`, `HMP-MTVW5TB1`,
+   `HMP-MTVWZVYS`) s'étiquettent désormais depuis l'admin — l'espace professionnel La
+   Poste n'est plus nécessaire. ⚠️ Leur `customer_country` vaut encore « France » : le
+   corriger dans la fiche commande **avant** de générer l'étiquette.
 
 ---
 
