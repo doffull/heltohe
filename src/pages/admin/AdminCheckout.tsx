@@ -42,6 +42,7 @@ export default function AdminCheckout() {
     checkoutMessage: '',
     relayMapSettings: DEFAULT_RELAY_MAP_SETTINGS,
     autoColissimoLabel: true,
+    internationalShippingPrice: 40,
   });
 
   const [visibleKeys, setVisibleKeys] = useState<Record<string, boolean>>({});
@@ -196,6 +197,25 @@ export default function AdminCheckout() {
               <Label className="font-medium">Seuil de livraison gratuite (€)</Label>
               <Input type="number" step="1" min="0" value={form.freeShippingThreshold} onChange={e => patch({ freeShippingThreshold: parseFloat(e.target.value) || 0 })} />
               <p className="text-xs text-muted-foreground">Au-dessus de ce montant, la livraison est offerte. Mettez 0 pour toujours offrir la livraison.</p>
+            </div>
+            <div className="space-y-2 max-w-sm">
+              <Label className="font-medium">Supplément d'expédition internationale (€)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.internationalShippingPrice}
+                onChange={e => patch({ internationalShippingPrice: parseFloat(e.target.value) || 0 })}
+              />
+              <p className="text-xs text-muted-foreground">
+                Appliqué dès que la destination n'est pas la France. Il <strong>remplace</strong> les frais
+                de port (il ne s'y ajoute pas), s'applique quel que soit le mode de livraison et ignore le
+                seuil de livraison gratuite.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Ne le renommez pas « frais de douane » côté boutique : les droits réels restent réclamés à
+                la cliente à la réception, elle aurait l'impression de payer deux fois.
+              </p>
             </div>
             <div className="flex items-start justify-between gap-4 p-4 border border-border rounded-lg max-w-2xl">
               <div>

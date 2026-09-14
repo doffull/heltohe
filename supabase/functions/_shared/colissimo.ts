@@ -27,11 +27,19 @@ const RELAY_NS = 'http://v2.pointretrait.geopost.com/';
 export const PICKUP_PRODUCT_CODES = new Set(['A2P', 'BPR', 'ACP', 'CDI', 'CMT', 'BDP', 'PCS']);
 
 /** Interroge le service points de retrait. Renvoie [] en cas d'échec. */
+/**
+ * Recherche de points de retrait.
+ *
+ * `countryCode` était figé à `FR` : la recherche ne pouvait donc porter que sur
+ * la France, même appelée pour une adresse belge ou luxembourgeoise. Les pays
+ * sans réseau relais (CH, GB, US, CA…) sont écartés en amont par l'appelant.
+ */
 export async function findRelayPoints(
   zipCode: string,
   city: string,
   login: string,
   password: string,
+  countryCode = 'FR',
 ): Promise<Record<string, string>[]> {
   const now = new Date();
   // Le service refuse le dimanche : on décale au lendemain le cas échéant.
@@ -48,7 +56,7 @@ export async function findRelayPoints(
       <address></address>
       <zipCode>${escapeXml(zipCode)}</zipCode>
       <city>${escapeXml(city || '-')}</city>
-      <countryCode>FR</countryCode>
+      <countryCode>${escapeXml(countryCode || 'FR')}</countryCode>
       <weight>1</weight>
       <shippingDate>${shippingDate}</shippingDate>
       <filterRelay>0</filterRelay>

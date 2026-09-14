@@ -30,6 +30,8 @@ import { useNotificationConfig } from '@/hooks/useNotificationConfig';
 import { OrderHistoryPanel } from '@/components/admin/OrderHistoryPanel';
 import { SendEmailDialog, type SendEmailTarget } from '@/components/admin/SendEmailDialog';
 import { edgeErrorMessage } from '@/lib/edgeFunctionError';
+import { countryFlag, normalizeCountryCode } from '@/lib/colissimo-countries';
+import { CountryCombobox } from '@/components/checkout/CountryCombobox';
 
 
 const STATUS_OPTIONS: { value: OrderStatus; label: string; icon: typeof Clock; color: string }[] = [
@@ -86,7 +88,14 @@ const COUNTRY_FLAGS: Record<string, string> = {
   'Royaume-Uni': '🇬🇧', 'États-Unis': '🇺🇸', 'Pays-Bas': '🇳🇱', 'Luxembourg': '🇱🇺',
 };
 
-function getCountryFlag(country: string) { return COUNTRY_FLAGS[country] || '🌍'; }
+/**
+ * Drapeau du pays, accepté sous ses deux écritures : le code ISO enregistré
+ * depuis le 14/09/2026, et les libellés en toutes lettres de l'historique.
+ */
+function getCountryFlag(country: string) {
+  if (COUNTRY_FLAGS[country]) return COUNTRY_FLAGS[country];
+  return countryFlag(normalizeCountryCode(country));
+}
 
 function getPaymentIcon(method?: string) {
   if (!method) return <CreditCard className="h-3.5 w-3.5 text-muted-foreground" />;
@@ -1005,7 +1014,18 @@ export default function AdminOrders() {
                   <div className="space-y-1"><Label className="text-xs">Nom</Label><Input value={editForm.customerName} onChange={e => setEditForm({ ...editForm, customerName: e.target.value })} /></div>
                   <div className="space-y-1"><Label className="text-xs">Email</Label><Input value={editForm.customerEmail} onChange={e => setEditForm({ ...editForm, customerEmail: e.target.value })} /></div>
                   <div className="space-y-1"><Label className="text-xs">Téléphone</Label><Input value={editForm.customerPhone} onChange={e => setEditForm({ ...editForm, customerPhone: e.target.value })} /></div>
-                  <div className="space-y-1"><Label className="text-xs">Pays</Label><Input value={editForm.customerCountry} onChange={e => setEditForm({ ...editForm, customerCountry: e.target.value })} /></div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Pays</Label>
+                    {/* Un champ libre laissait entrer « Suisse », « CH » ou
+                        « Bussy. Suisse » : l'étiquetage n'en tirait rien de
+                        fiable. La liste impose un code ISO reconnu par
+                        Colissimo. */}
+                    <CountryCombobox
+                      compact
+                      value={editForm.customerCountry}
+                      onChange={code => setEditForm({ ...editForm, customerCountry: code })}
+                    />
+                  </div>
                   <div className="space-y-1 col-span-2"><Label className="text-xs">Adresse</Label><Input value={editForm.customerAddress} onChange={e => setEditForm({ ...editForm, customerAddress: e.target.value })} /></div>
                   <div className="space-y-1"><Label className="text-xs">Code postal</Label><Input value={editForm.customerZip} onChange={e => setEditForm({ ...editForm, customerZip: e.target.value })} /></div>
                   <div className="space-y-1"><Label className="text-xs">Ville</Label><Input value={editForm.customerCity} onChange={e => setEditForm({ ...editForm, customerCity: e.target.value })} /></div>

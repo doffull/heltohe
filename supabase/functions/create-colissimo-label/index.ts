@@ -5,6 +5,13 @@ import {
   resolvePickupPoint,
   sanitizeAddressLine,
 } from '../_shared/colissimo.ts';
+import {
+  getCapability,
+  normalizeCountryCode,
+  requiresCn23,
+  resolveHomeProductCode,
+  SENDER_COUNTRY,
+} from '../_shared/colissimo-countries.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -111,22 +118,32 @@ Deno.serve(async (req) => {
   // Poids total : somme des poids réels des produits (défaut 1500 g par article), minimum 0,2 kg.
   const items = Array.isArray(order.items) ? (order.items as Array<Record<string, unknown>>) : [];
   const DEFAULT_WEIGHT_G = 1500;
+
+  // Poids et SKU sont lus une seule fois, hors du calcul de poids : la
+  // déclaration douanière en a besoin article par article, même quand le poids
+  // total est imposé par l'appelant.
+  const productIds = Array.from(
+    new Set(
+      items
+        .map((it) => String(it.productId ?? it.product_id ?? ''))
+        .filter((id) => /^[0-9a-f-]{36}$/i.test(id)),
+    ),
+  );
+  const weights: Record<string, number> = {};
+  const skus: Record<string, string> = {};
+  if (productIds.length) {
+    const { data: prods } = await admin
+      .from('products')
+      .select('id, weight_grams, sku')
+      .in('id', productIds);
+    for (const p of prods || []) {
+      weights[String(p.id)] = Number(p.weight_grams) > 0 ? Number(p.weight_grams) : DEFAULT_WEIGHT_G;
+      if (p.sku) skus[String(p.id)] = String(p.sku);
+    }
+  }
+
   let weight = Number(body.weight) || 0;
   if (!weight) {
-    const ids = Array.from(
-      new Set(
-        items
-          .map((it) => String(it.productId ?? it.product_id ?? ''))
-          .filter((id) => /^[0-9a-f-]{36}$/i.test(id)),
-      ),
-    );
-    const weights: Record<string, number> = {};
-    if (ids.length) {
-      const { data: prods } = await admin.from('products').select('id, weight_grams').in('id', ids);
-      for (const p of prods || []) {
-        weights[String(p.id)] = Number(p.weight_grams) > 0 ? Number(p.weight_grams) : DEFAULT_WEIGHT_G;
-      }
-    }
     const totalGrams = items.reduce((sum, it) => {
       const qty = Number(it.quantity) || 1;
       const pid = String(it.productId ?? it.product_id ?? '');
@@ -172,13 +189,49 @@ Deno.serve(async (req) => {
     }
   }
 
+  // Destination réelle de la commande. Jusqu'au 14/09/2026 ce code était figé à
+  // 'FR' : une commande suisse partait donc avec un code postal à 4 chiffres
+  // déclaré en France, format invalide, et Colissimo rejetait l'étiquette.
+  const destinationCountry = normalizeCountryCode(order.customer_country);
+  const capability = getCapability(destinationCountry);
+
+  if (!capability) {
+    return json(
+      {
+        error: 'Destination non desservie',
+        details:
+          `Colissimo ne dessert pas « ${order.customer_country ?? '—'} » depuis la France. ` +
+          "Corrigez le pays de la commande, ou expédiez-la depuis l'espace professionnel La Poste.",
+      },
+      422,
+    );
+  }
+
+  if (isRelay && !isReturn && !capability.relay) {
+    return json(
+      {
+        error: 'Point relais indisponible dans ce pays',
+        details:
+          `Le réseau point relais n'existe pas en ${destinationCountry}. ` +
+          'Cette commande doit être livrée à domicile : modifiez son adresse avant de générer une étiquette.',
+      },
+      422,
+    );
+  }
+
   // A2P vise les commerces du réseau Pickup ; un bureau de poste est un BPR.
   // Forcer A2P — ce que faisait ce code — fait refuser l'étiquette.
+  //
+  // À domicile, le code dépend de la destination : beaucoup de pays (DE, ES, IT,
+  // GB, US, CA…) n'acceptent que la version avec signature, et les DOM-TOM ont
+  // leurs propres codes (COM/CDS). `DOM` en dur ne valait que pour la France, la
+  // Suisse et la Belgique.
+  const homeProductCode = resolveHomeProductCode(destinationCountry) ?? 'DOM';
   const productCode = isReturn
     ? 'REPA'
     : isRelay
       ? (PICKUP_PRODUCT_CODES.has(pickupType) ? pickupType : 'A2P')
-      : 'DOM';
+      : homeProductCode;
 
   // L'expéditeur imprimé vient de l'administration ; les valeurs en dur ne
   // servent plus que de dernier recours. Sans cette lecture, l'étiquette
@@ -186,7 +239,10 @@ Deno.serve(async (req) => {
   // réel est configuré dans Admin → Paramètres.
   const { data: senderCfg } = await admin
     .from('admin_config')
-    .select('colissimo_sender_name, colissimo_sender_address, colissimo_sender_zip, colissimo_sender_city')
+    .select(
+      'colissimo_sender_name, colissimo_sender_address, colissimo_sender_zip, colissimo_sender_city, ' +
+        'colissimo_customs_hs_code, colissimo_customs_origin_country',
+    )
     .eq('config_key', 'main')
     .maybeSingle();
 
@@ -200,6 +256,62 @@ Deno.serve(async (req) => {
   // Nom sous lequel le destinataire voit l'expédition. Obligatoire hors
   // domicile : « [30018] Le nom commercial n'a pas été transmis ».
   const commercialName = sanitizeAddressLine((body.commercial_name as string) || senderName);
+
+  // --- Déclaration douanière (CN23) ------------------------------------------
+  // Obligatoire dès que la table Colissimo l'indique (CH, GB, US, CA, DOM-TOM…).
+  // Sans elle, aucune étiquette ne sort pour ces destinations.
+  const needsCustoms = !isReturn && requiresCn23(destinationCountry);
+  let customsDeclarations: Record<string, unknown> | undefined;
+
+  if (needsCustoms) {
+    // Code SH laissé vide par défaut (décision du 14/09/2026) ; il se renseigne
+    // en administration sans redéploiement si la douane le réclame.
+    const defaultHsCode = String(senderCfg?.colissimo_customs_hs_code || '').trim();
+    const defaultOrigin =
+      String(senderCfg?.colissimo_customs_origin_country || 'CN').trim().toUpperCase() || 'CN';
+
+    // L'API rejette les accents dans la description et tronque au-delà de 64
+    // caractères ; le SKU est limité à 44.
+    const deaccent = (s: string) =>
+      s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7E]/g, ' ').trim();
+
+    const totalItems = items.reduce((n, it) => n + (Number(it.quantity) || 1), 0) || 1;
+
+    const articles = items.map((it) => {
+      const qty = Number(it.quantity) || 1;
+      const unitPrice = Number(it.price) || 0;
+      const pid = String(it.productId ?? it.product_id ?? '');
+      const unitWeightKg = (weights[pid] || DEFAULT_WEIGHT_G) / 1000;
+
+      const article: Record<string, unknown> = {
+        description: deaccent(String(it.name || 'Vetement')).slice(0, 64) || 'Vetement',
+        quantity: String(qty),
+        weight: String(Math.max(0.01, Math.round(unitWeightKg * 1000) / 1000)),
+        value: String(Math.round(unitPrice * 100) / 100),
+        currency: 'EUR',
+        originCountry: defaultOrigin,
+        artref: String(it.sku ?? skus[pid] ?? pid ?? '').slice(0, 44),
+      };
+      // Champ omis plutôt qu'envoyé vide : une chaîne vide est un code SH
+      // invalide, une absence est une donnée manquante.
+      if (defaultHsCode) article.hsCode = defaultHsCode;
+      return article;
+    });
+
+    customsDeclarations = {
+      includeCustomsDeclarations: true,
+      // « Envoi commercial » : c'est une vente, pas un cadeau ni un échantillon.
+      contents: { article: articles, category: { value: 3 } },
+      // Le poids du colis est déjà déclaré ; on ne le redéclare pas ici.
+      importersReference: String(order.order_number || ''),
+      importersEmail: String(order.customer_email || ''),
+      importersPhone: String(order.customer_phone || ''),
+    };
+
+    if (!articles.length) {
+      console.error('CN23 demandée mais la commande ne contient aucun article', orderId, totalItems);
+    }
+  }
 
   const payload = {
     contractNumber: login,
@@ -225,7 +337,10 @@ Deno.serve(async (req) => {
         address: {
           companyName: sanitizeAddressLine(senderName),
           line2: sanitizeAddressLine(senderAddress),
-          countryCode: 'FR',
+          // L'expéditeur, lui, est bien toujours en France : tous les produits
+          // Colissimo partent du territoire français, quelle que soit la
+          // destination. Ce 'FR'-ci n'est pas un défaut.
+          countryCode: SENDER_COUNTRY,
           city: senderCity,
           zipCode: senderZip,
         },
@@ -235,7 +350,7 @@ Deno.serve(async (req) => {
           lastName,
           firstName,
           line2: sanitizeAddressLine(addresseeLine),
-          countryCode: 'FR',
+          countryCode: destinationCountry,
           city: String(order.customer_city || ''),
           zipCode: String(order.customer_zip || ''),
           phoneNumber: String(order.customer_phone || ''),
@@ -243,6 +358,7 @@ Deno.serve(async (req) => {
           email: String(order.customer_email || ''),
         },
       },
+      ...(customsDeclarations ? { customsDeclarations } : {}),
     },
   };
 

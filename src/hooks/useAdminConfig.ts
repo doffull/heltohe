@@ -8,6 +8,14 @@ export interface AdminConfig {
   colissimoSenderAddress?: string;
   colissimoSenderZip?: string;
   colissimoSenderCity?: string;
+  /**
+   * Code SH (nomenclature douanière) par défaut pour la déclaration CN23.
+   * Vide par décision du 14/09/2026 : à renseigner sans redéploiement si un
+   * envoi hors UE est refusé ou retenu (doudounes ≈ 620240).
+   */
+  colissimoCustomsHsCode?: string;
+  /** Pays de FABRICATION des articles (et non d'expédition), code ISO 2 lettres. */
+  colissimoCustomsOriginCountry?: string;
 }
 
 function dbToAdminConfig(db: Record<string, unknown>): AdminConfig {
@@ -18,6 +26,8 @@ function dbToAdminConfig(db: Record<string, unknown>): AdminConfig {
     colissimoSenderAddress: (db.colissimo_sender_address as string) ?? '',
     colissimoSenderZip: (db.colissimo_sender_zip as string) ?? '',
     colissimoSenderCity: (db.colissimo_sender_city as string) ?? '',
+    colissimoCustomsHsCode: (db.colissimo_customs_hs_code as string) ?? '',
+    colissimoCustomsOriginCountry: (db.colissimo_customs_origin_country as string) ?? 'CN',
   };
 }
 
@@ -49,6 +59,8 @@ export function useSaveAdminConfig() {
         colissimo_sender_address: config.colissimoSenderAddress ?? '',
         colissimo_sender_zip: config.colissimoSenderZip ?? '',
         colissimo_sender_city: config.colissimoSenderCity ?? '',
+        colissimo_customs_hs_code: config.colissimoCustomsHsCode ?? '',
+        colissimo_customs_origin_country: config.colissimoCustomsOriginCountry || 'CN',
       };
       const { error } = await supabase
         .from('admin_config')

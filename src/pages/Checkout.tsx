@@ -4,7 +4,19 @@ import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
 import { useAdminConfig } from '@/hooks/useAdminConfig';
-import { useCheckoutConfig, computeShippingCost } from '@/hooks/useCheckoutConfig';
+import {
+  useCheckoutConfig,
+  computeShippingCost,
+  INTERNATIONAL_SHIPPING_LABEL,
+} from '@/hooks/useCheckoutConfig';
+import {
+  DEFAULT_COUNTRY,
+  getCountryName,
+  isDomestic,
+  isRelayAvailable,
+  validateZip,
+} from '@/lib/colissimo-countries';
+import { CountryCombobox } from '@/components/checkout/CountryCombobox';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -154,20 +166,35 @@ export default function Checkout() {
     address2: '',
     city: va.city || '',
     zip: va.zip || '',
-    country: 'France',
+    // Code ISO, et non plus le libellé « France » figé : c'est cette valeur qui
+    // devient le `countryCode` transmis à Colissimo au moment de l'étiquetage.
+    country: DEFAULT_COUNTRY,
     relayInfo: '',
   });
+
+  const shipsAbroad = !isDomestic(form.country);
+  const relayAvailable = isRelayAvailable(form.country);
 
   // Le serveur (validate_and_create_order) évalue le seuil de franco sur le
   // sous-total APRÈS remise : on applique la même règle ici pour éviter tout
   // écart entre le montant affiché et la commande enregistrée.
   const shippingBase = Math.max(0, subtotal - promoDiscount);
-  const relayCost = computeShippingCost(checkoutConfig, shippingBase, 'relay');
-  const homeCost = computeShippingCost(checkoutConfig, shippingBase, 'home');
+  const relayCost = computeShippingCost(checkoutConfig, shippingBase, 'relay', form.country);
+  const homeCost = computeShippingCost(checkoutConfig, shippingBase, 'home', form.country);
   const freeThreshold = checkoutConfig?.freeShippingThreshold ?? 99;
   const shippingCost = deliveryMode === 'relay' ? relayCost : homeCost;
 
   const orderTotal = subtotal - promoDiscount + shippingCost;
+
+  // Le point relais n'existe pas partout (CH, GB, US, CA…). Laisser le choix
+  // actif reviendrait à encaisser une commande dont l'étiquette sera refusée.
+  useEffect(() => {
+    if (!relayAvailable && deliveryMode === 'relay') {
+      setDeliveryMode('home');
+      setSelectedRelay(null);
+      setRelayPoints([]);
+    }
+  }, [relayAvailable, deliveryMode]);
 
   const updateForm = (field: string, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -175,15 +202,17 @@ export default function Checkout() {
 
   const validateAddress = () => {
     const required = ['firstName', 'lastName', 'email', 'address', 'city', 'zip'];
-    return required.every(f => form[f as keyof typeof form].trim());
+    if (!required.every(f => form[f as keyof typeof form].trim())) return false;
+    return validateZip(form.zip, form.country) === null;
   };
 
   const searchRelayPoints = async (rawZip: string) => {
     const zip = (rawZip || '').replace(/\s+/g, '');
-    const dept = parseInt(zip.slice(0, 2), 10);
-    const isValidZip = /^\d{5}$/.test(zip) && ((dept >= 1 && dept <= 95) || zip.startsWith('980'));
-    if (!isValidZip) {
-      toast({ title: 'Code postal invalide', description: 'Saisissez un code postal français valide (01000 à 95999)', variant: 'destructive' });
+    // La validation suit désormais le pays choisi : un code postal suisse à
+    // quatre chiffres n'est pas un code postal français invalide.
+    const zipError = validateZip(zip, form.country);
+    if (zipError) {
+      toast({ title: 'Code postal invalide', description: zipError, variant: 'destructive' });
       return;
     }
     setIsSearchingRelays(true);
@@ -191,7 +220,7 @@ export default function Checkout() {
     setSelectedRelay(null);
     try {
       const { data, error } = await supabase.functions.invoke('colissimo-proxy', {
-        body: { action: 'getRelayPoints', zipCode: zip, city: form.city || '', countryCode: 'FR' },
+        body: { action: 'getRelayPoints', zipCode: zip, city: form.city || '', countryCode: form.country },
       });
       if (error && !data) throw error;
       if (data?.error) {
@@ -558,6 +587,17 @@ export default function Checkout() {
                   <Input value={form.address2} onChange={e => updateForm('address2', e.target.value)} placeholder="Appartement, étage, etc." className="bg-secondary/50 text-base" maxLength={200} />
                 </div>
 
+                {/* Le pays est saisi AVANT le code postal : c'est lui qui décide du
+                    format attendu, des modes de livraison proposés et du tarif. */}
+                <div className="space-y-2">
+                  <Label className="hud-text text-xs" htmlFor="checkout-country">PAYS *</Label>
+                  <CountryCombobox
+                    id="checkout-country"
+                    value={form.country}
+                    onChange={code => updateForm('country', code)}
+                  />
+                </div>
+
                 <div className="grid grid-cols-3 gap-3 sm:gap-4">
                   <div className="space-y-2">
                     <Label className="hud-text text-xs">CP *</Label>
@@ -569,10 +609,29 @@ export default function Checkout() {
                   </div>
                 </div>
 
+                {shipsAbroad && (
+                  <div className="chamfer-hud-sm border border-border/60 bg-secondary/30 p-3 text-xs space-y-1">
+                    <p className="font-medium">
+                      Livraison vers {getCountryName(form.country)} — {INTERNATIONAL_SHIPPING_LABEL.toLowerCase()} de{' '}
+                      {(checkoutConfig?.internationalShippingPrice ?? 40).toFixed(2)}€
+                    </p>
+                    <p className="text-muted-foreground">
+                      Ce supplément remplace les frais de port habituels et s'applique quel que
+                      soit le montant de la commande.
+                      {!relayAvailable && ' La livraison en point relais n\'est pas disponible dans ce pays.'}
+                    </p>
+                  </div>
+                )}
+
                 <Button
                   className="w-full chamfer-hud-sm h-12 text-white hover:opacity-90"
                   style={{ backgroundColor: `hsl(var(--step-address))` }}
                   onClick={() => {
+                    const zipError = validateZip(form.zip, form.country);
+                    if (zipError) {
+                      toast({ title: 'Code postal invalide', description: zipError, variant: 'destructive' });
+                      return;
+                    }
                     if (!validateAddress()) {
                       toast({ title: 'Champs obligatoires manquants', variant: 'destructive' });
                       return;
@@ -597,8 +656,19 @@ export default function Checkout() {
 
                 <p className="text-xs text-muted-foreground">Livraison assurée par Colissimo (La Poste)</p>
 
+                {shipsAbroad && (
+                  <p className="text-xs text-muted-foreground">
+                    Destination : {getCountryName(form.country)} — {INTERNATIONAL_SHIPPING_LABEL.toLowerCase()}{' '}
+                    de {(checkoutConfig?.internationalShippingPrice ?? 40).toFixed(2)}€
+                    {!relayAvailable && ', point relais indisponible dans ce pays'}.
+                  </p>
+                )}
+
                 <div className="space-y-3">
-                  {/* Relay */}
+                  {/* Relay — masqué là où le réseau n'existe pas (CH, GB, US, CA…) :
+                      une commande passée en point relais y serait refusée à
+                      l'étiquetage, après encaissement. */}
+                  {relayAvailable && (
                   <div
                     className={cn(
                       'border transition-all chamfer-hud-sm',
@@ -718,6 +788,7 @@ export default function Checkout() {
                       </div>
                     )}
                   </div>
+                  )}
 
                   {/* Home */}
                   <button

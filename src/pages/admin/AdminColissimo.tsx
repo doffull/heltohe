@@ -1527,6 +1527,8 @@ function ConfigurationTab() {
     senderAddress: '',
     senderZip: '',
     senderCity: '',
+    customsHsCode: '',
+    customsOriginCountry: 'CN',
   });
 
   useEffect(() => {
@@ -1536,6 +1538,8 @@ function ConfigurationTab() {
         senderAddress: adminConfig.colissimoSenderAddress || '',
         senderZip: adminConfig.colissimoSenderZip || '',
         senderCity: adminConfig.colissimoSenderCity || '',
+        customsHsCode: adminConfig.colissimoCustomsHsCode || '',
+        customsOriginCountry: adminConfig.colissimoCustomsOriginCountry || 'CN',
       });
     }
   }, [adminConfig]);
@@ -1550,6 +1554,8 @@ function ConfigurationTab() {
       colissimoSenderAddress: form.senderAddress,
       colissimoSenderZip: form.senderZip,
       colissimoSenderCity: form.senderCity,
+      colissimoCustomsHsCode: form.customsHsCode.trim(),
+      colissimoCustomsOriginCountry: form.customsOriginCountry.trim().toUpperCase(),
     });
     toast({ title: 'Configuration sauvegardée' });
   }
@@ -1646,16 +1652,72 @@ function ConfigurationTab() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Settings2 className="h-4 w-4" />
+            Déclaration douanière (envois hors UE)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Une déclaration CN23 est jointe automatiquement aux destinations qui l'exigent
+            (Suisse, Royaume-Uni, États-Unis, Canada, DOM-TOM…). Ces deux valeurs servent de
+            repli quand l'article n'en porte pas.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Code SH par défaut</Label>
+              <Input
+                className="mt-1"
+                placeholder="laissé vide"
+                value={form.customsHsCode}
+                onChange={handleChange('customsHsCode')}
+                maxLength={10}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Volontairement vide. Si un colis est retenu ou refusé en douane, saisissez-le
+                ici — pour des doudounes à enveloppe synthétique : <code>620240</code>.
+                À vérifier sur RITA (douane.gouv.fr).
+              </p>
+            </div>
+            <div>
+              <Label>Pays de fabrication</Label>
+              <Input
+                className="mt-1"
+                placeholder="CN"
+                value={form.customsOriginCountry}
+                onChange={handleChange('customsOriginCountry')}
+                maxLength={2}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Code ISO à 2 lettres du pays où l'article est <strong>fabriqué</strong>, et non
+                celui d'où part le colis.
+              </p>
+            </div>
+          </div>
+          <Button onClick={handleSave} disabled={saveAdminConfig.isPending} className="gap-2">
+            {saveAdminConfig.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Sauvegarder
+          </Button>
+        </CardContent>
+      </Card>
+
       <Card className="border-yellow-500/20 bg-yellow-500/5">
         <CardContent className="p-4 flex gap-3">
           <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0 mt-0.5" />
           <div className="text-sm text-muted-foreground space-y-1">
             <p className="font-medium text-foreground">Modes supportés</p>
             <ul className="list-disc list-inside space-y-0.5 text-xs">
-              <li><strong>DOM</strong> — Livraison à domicile Colissimo</li>
-              <li><strong>A2P</strong> — Point relais (auto-détecté si l'adresse contient "point relais")</li>
+              <li><strong>DOM</strong> — Domicile sans signature (France, Suisse, Belgique…)</li>
+              <li><strong>DOS</strong> — Domicile avec signature, seul mode accepté par l'Allemagne,
+                  l'Espagne, l'Italie, le Royaume-Uni, les États-Unis et le Canada</li>
+              <li><strong>COM / CDS</strong> — Équivalents DOM-TOM</li>
+              <li><strong>A2P</strong> — Point relais (auto-détecté si l'adresse contient "point relais"),
+                  indisponible hors UE</li>
               <li><strong>REPA</strong> — Retour expéditeur</li>
             </ul>
+            <p className="text-xs mt-2">Le code est choisi automatiquement selon le pays du destinataire, d'après la table officielle Colissimo.</p>
             <p className="text-xs mt-2">Étiquettes au format <strong>PDF 10×15 300dpi</strong>, prêtes pour imprimante thermique.</p>
           </div>
         </CardContent>

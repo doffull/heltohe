@@ -7,6 +7,11 @@ import {
   resolvePickupPoint,
   sanitizeAddressLine,
 } from '../_shared/colissimo.ts';
+import {
+  isRelayAvailable,
+  normalizeCountryCode,
+  resolveHomeProductCode,
+} from '../_shared/colissimo-countries.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -209,11 +214,28 @@ Deno.serve(async (req) => {
         ((parseInt(zipCode.slice(0, 2), 10) >= 1 && parseInt(zipCode.slice(0, 2), 10) <= 95) ||
           zipCode.startsWith('980'));
 
-      if (countryCode === 'FR' && !isValidFrZip) {
+      const destination = normalizeCountryCode(countryCode);
+
+      if (destination === 'FR' && !isValidFrZip) {
         return new Response(
           JSON.stringify({
             error: 'Code postal invalide',
             details: 'Saisissez un code postal français valide (01000 à 95999, ou 980XX pour Monaco).',
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Le réseau point relais n'existe pas partout : interroger La Poste pour
+      // la Suisse ou le Canada ne renvoie rien d'exploitable. On répond
+      // explicitement plutôt que de laisser croire à une panne.
+      if (!isRelayAvailable(destination)) {
+        return new Response(
+          JSON.stringify({
+            error: 'Point relais indisponible',
+            details:
+              'Colissimo ne propose pas de point relais dans ce pays. ' +
+              'Choisissez la livraison à domicile.',
           }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -355,7 +377,14 @@ Deno.serve(async (req) => {
       // retrait hors domicile (BPR = bureau de poste, A2P = commerçant…),
       // DOM à domicile. Forcer A2P sur un bureau de poste — ce que faisait ce
       // code — fait refuser l'étiquette par Colissimo.
-      let productCode = 'DOM';
+      // Le pays du destinataire commande à la fois le code produit et le
+      // `countryCode` déclaré plus bas : beaucoup de destinations n'acceptent
+      // que la livraison avec signature (DOS), et les DOM-TOM ont leurs propres
+      // codes. `DOM` en dur ne valait que pour la France, la Suisse et la
+      // Belgique.
+      const addresseeCountry = normalizeCountryCode(order.customer?.country);
+
+      let productCode = resolveHomeProductCode(addresseeCountry) ?? 'DOM';
       if (isReturn) productCode = 'REPA';
       else if (isRelay) productCode = PICKUP_PRODUCT_CODES.has(pickupType) ? pickupType : 'A2P';
 
@@ -417,7 +446,7 @@ Deno.serve(async (req) => {
               <lastName>${escapeXml(lastName)}</lastName>
               <firstName>${escapeXml(firstName)}</firstName>
               <line2>${escapeXml(sanitizeAddressLine(addresseeLine))}</line2>
-              <countryCode>FR</countryCode>
+              <countryCode>${escapeXml(addresseeCountry)}</countryCode>
               <city>${escapeXml(order.customer?.city || '')}</city>
               <zipCode>${escapeXml(order.customer?.zip || '')}</zipCode>
               <phoneNumber>${escapeXml(order.customer?.phone || '')}</phoneNumber>

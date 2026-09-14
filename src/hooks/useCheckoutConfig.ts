@@ -48,7 +48,21 @@ export interface CheckoutConfig {
   relayMapSettings: RelayMapSettings;
   /** Génère l'étiquette Colissimo automatiquement dès que la commande est payée. */
   autoColissimoLabel: boolean;
+  /**
+   * Forfait unique appliqué dès que la destination n'est pas la France.
+   * Remplace les frais de port — il ne s'y ajoute pas — et ignore le franco.
+   */
+  internationalShippingPrice: number;
 }
+
+/** Libellé affiché à la cliente pour le forfait international.
+ *
+ * ⚠️ Ne pas écrire « frais de douane » : sans déclaration DDP, le transporteur
+ * réclamera malgré tout les droits réels à la réception. Le mot « douane »
+ * laisserait croire qu'ils sont déjà réglés, et la cliente aurait le sentiment
+ * de payer deux fois. Arbitrage du 14/09/2026 (COLISSIMO_ARBITRAGE.md, P6).
+ */
+export const INTERNATIONAL_SHIPPING_LABEL = "Supplément d'expédition internationale";
 
 const DEFAULT_CONFIG: CheckoutConfig = {
   shippingHomePrice: 15,
@@ -61,18 +75,34 @@ const DEFAULT_CONFIG: CheckoutConfig = {
   checkoutMessage: '',
   relayMapSettings: DEFAULT_RELAY_MAP_SETTINGS,
   autoColissimoLabel: true,
+  internationalShippingPrice: 40,
 };
 
 /**
  * Frais de port appliqués partout (panier, checkout) — miroir de la RPC
  * `validate_and_create_order` côté serveur.
+ *
+ * ⚠️ Les deux implémentations doivent donner le même résultat, sinon le montant
+ * affiché et le montant enregistré divergent. Toute modification ici doit être
+ * reportée dans la RPC, et réciproquement.
+ *
+ * Règle hors France (arbitrage du 14/09/2026) : forfait unique, identique pour
+ * tous les pays, qui **remplace** les frais de port et **ignore le franco** —
+ * un envoi en Suisse coûte bien plus que les 15 € du tarif France, et l'offrir
+ * au-delà de 99 € revenait à vendre à perte.
  */
 export function computeShippingCost(
   config: CheckoutConfig | undefined,
   subtotal: number,
   mode: 'home' | 'relay',
+  country: string = 'FR',
 ): number {
   const cfg = config ?? DEFAULT_CONFIG;
+
+  if (String(country || 'FR').toUpperCase() !== 'FR') {
+    return cfg.internationalShippingPrice;
+  }
+
   const base = mode === 'relay' ? cfg.shippingRelayPrice : cfg.shippingHomePrice;
   const eligible = subtotal >= cfg.freeShippingThreshold;
   if (!eligible) return base;
@@ -104,6 +134,9 @@ function dbToConfig(db: Record<string, unknown>): CheckoutConfig {
     checkoutMessage: (db.checkout_message as string) || '',
     relayMapSettings: (db.relay_map_settings as RelayMapSettings) || DEFAULT_RELAY_MAP_SETTINGS,
     autoColissimoLabel: db.auto_colissimo_label as boolean ?? true,
+    // `|| 40` et non `?? 40` : une colonne absente (vue pas encore migrée) comme
+    // une valeur nulle doivent retomber sur le forfait par défaut.
+    internationalShippingPrice: Number(db.international_shipping_price) || 40,
   };
 }
 
@@ -164,6 +197,7 @@ export function useSaveCheckoutConfig() {
         checkout_message: config.checkoutMessage,
         relay_map_settings: config.relayMapSettings as unknown,
         auto_colissimo_label: config.autoColissimoLabel,
+        international_shipping_price: config.internationalShippingPrice,
       };
       const { error } = await supabase
         .from('checkout_config')
