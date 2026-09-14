@@ -696,21 +696,18 @@ export default function AdminOrders() {
     setLabelOrderId(order.id);
     setIsGeneratingLabel(true);
     try {
-      const { data, error } = await supabase.functions.invoke('colissimo-proxy', {
-        body: {
-          action: 'generateLabel',
-          order: {
-            orderNumber: order.orderNumber,
-            customer: {
-              name: form?.customerName || order.customer.name,
-              email: form?.customerEmail || order.customer.email,
-              phone: form?.customerPhone || order.customer.phone,
-              address: form?.customerAddress || order.customer.address,
-              city: form?.customerCity || order.customer.city,
-              zip: form?.customerZip || order.customer.zip,
-            },
-          },
-        },
+      // L'étiquette est demandée à partir du seul identifiant : la fonction
+      // relit la commande en base et y trouve le pays, les poids réels et de
+      // quoi composer la déclaration douanière.
+      //
+      // ⚠️ Cet appel recopiait auparavant l'adresse champ par champ vers
+      // `colissimo-proxy` — sans `country`. Le pays corrigé en administration
+      // n'arrivait donc jamais jusqu'à Colissimo, et l'étiquette d'une commande
+      // suisse repartait en France (COLISSIMO_ARBITRAGE.md, P2). Passer par
+      // l'identifiant supprime la classe entière de ces oublis : il n'y a plus
+      // qu'une seule source, la base.
+      const { data, error } = await supabase.functions.invoke('create-colissimo-label', {
+        body: { order_id: order.id },
       });
 
       if (error) throw new Error(await edgeErrorMessage(error));
@@ -756,7 +753,36 @@ export default function AdminOrders() {
   };
 
   const handleGenerateColissimoLabel = async () => {
-    if (!selectedOrder) return;
+    if (!selectedOrder || !editForm) return;
+
+    // L'étiquette se construit désormais à partir de la commande ENREGISTRÉE.
+    // Les modifications en cours de saisie — typiquement le pays que l'on vient
+    // de corriger — doivent donc être écrites avant, sans quoi l'étiquette
+    // partirait avec les anciennes valeurs sans que rien ne le signale.
+    try {
+      const subtotal = recalcTotals(editForm.items);
+      await updateOrder.mutateAsync({
+        id: selectedOrder.id,
+        customerName: editForm.customerName,
+        customerEmail: editForm.customerEmail,
+        customerPhone: editForm.customerPhone || undefined,
+        customerAddress: editForm.customerAddress,
+        customerCity: editForm.customerCity,
+        customerZip: editForm.customerZip,
+        customerCountry: editForm.customerCountry,
+        items: editForm.items,
+        subtotal,
+        total: subtotal + selectedOrder.tax + selectedOrder.shippingCost,
+      });
+    } catch {
+      toast({
+        title: 'Enregistrement impossible',
+        description: "L'étiquette n'a pas été demandée : les modifications de la commande n'ont pas pu être enregistrées.",
+        variant: 'destructive',
+      });
+      return;
+    }
+
     await generateLabelForOrder(selectedOrder, editForm);
   };
 

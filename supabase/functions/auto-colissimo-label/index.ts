@@ -52,36 +52,39 @@ Deno.serve(async (req) => {
       return json({ ok: true, skipped: "not_paid" });
     }
 
-    const { data: sender } = await db
-      .from("admin_config")
-      .select("colissimo_sender_name, colissimo_sender_address, colissimo_sender_zip, colissimo_sender_city")
-      .eq("config_key", "main")
-      .maybeSingle();
-
-    const { data: label, error: lErr } = await db.functions.invoke("colissimo-proxy", {
-      body: {
-        action: "generateLabel",
-        senderName: sender?.colissimo_sender_name || undefined,
-        senderAddress: sender?.colissimo_sender_address || undefined,
-        senderZip: sender?.colissimo_sender_zip || undefined,
-        senderCity: sender?.colissimo_sender_city || undefined,
-        order: {
-          orderNumber: order.order_number,
-          customer: {
-            name: order.customer_name,
-            email: order.customer_email,
-            phone: order.customer_phone,
-            address: order.customer_address,
-            city: order.customer_city,
-            zip: order.customer_zip,
-          },
-        },
-      },
+    // Étiquetage délégué à `create-colissimo-label`, à qui l'on ne passe que
+    // l'identifiant : la fonction relit la commande en base et y trouve tout —
+    // pays de destination, poids réels des articles, déclaration douanière.
+    //
+    // ⚠️ Cette fonction recopiait auparavant l'adresse champ par champ vers
+    // `colissimo-proxy`, en omettant `customer_country` : toute commande
+    // étrangère payée échouait donc en silence, alors même que le pays était
+    // lu juste au-dessus. C'est la même omission qui rendait inopérant le
+    // bouton d'étiquetage de l'écran Commandes (COLISSIMO_ARBITRAGE.md, P2).
+    // L'expéditeur n'est plus transmis non plus : `create-colissimo-label` lit
+    // `admin_config` lui-même, une source de moins à tenir synchronisée.
+    const { data: label, error: lErr } = await db.functions.invoke("create-colissimo-label", {
+      body: { order_id: order.id },
     });
 
     const trackingNumber = (label as { trackingNumber?: string } | null)?.trackingNumber;
     if (lErr || !trackingNumber) {
-      const reason = lErr?.message || (label as any)?.error || "Colissimo n'a pas renvoyé de numéro de suivi.";
+      // `invoke` réduit une réponse non-2xx à « non-2xx status code » et jette le
+      // corps : on le relit, sinon le journal ne dit jamais POURQUOI Colissimo a
+      // refusé — code SH manquant, pays non desservi, point relais impossible.
+      let detail = "";
+      try {
+        const ctx = (lErr as { context?: Response } | null)?.context;
+        if (ctx && typeof ctx.json === "function") {
+          const payload = await ctx.json();
+          detail = [payload?.error, payload?.details].filter(Boolean).join(" — ");
+        }
+      } catch {
+        // corps illisible : on se rabat sur le message générique ci-dessous.
+      }
+
+      const reason = detail || lErr?.message || (label as any)?.error ||
+        "Colissimo n'a pas renvoyé de numéro de suivi.";
       console.error("[auto-colissimo-label]", order.order_number, reason);
       // La commande reste en préparation : aucun e-mail d'expédition erroné n'est envoyé.
       await db.from("client_error_logs").insert({

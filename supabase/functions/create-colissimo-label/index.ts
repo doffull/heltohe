@@ -73,20 +73,29 @@ Deno.serve(async (req) => {
   if (!authHeader?.startsWith('Bearer ')) return json({ error: 'Unauthorized' }, 401);
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const userClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
-    global: { headers: { Authorization: authHeader } },
-  });
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const bearer = authHeader.replace('Bearer ', '').trim();
 
-  const { data: claimsData, error: authError } = await userClient.auth.getClaims(
-    authHeader.replace('Bearer ', ''),
-  );
-  if (authError || !claimsData?.claims) return json({ error: 'Unauthorized' }, 401);
+  // `auto-colissimo-label` appelle cette fonction de serveur à serveur, avec la
+  // clé de service : il n'y a alors aucun utilisateur à qui demander un rôle.
+  // Sans cette porte, l'étiquetage automatique des commandes payées se heurtait
+  // à un 401 — les clés `sb_secret_…` n'étant pas des JWT, `getClaims` échoue.
+  const isServiceRole = bearer === serviceRoleKey;
 
-  const { data: isAdmin } = await userClient.rpc('has_role', {
-    _user_id: claimsData.claims.sub,
-    _role: 'admin',
-  });
-  if (!isAdmin) return json({ error: 'Forbidden: admin role required' }, 403);
+  if (!isServiceRole) {
+    const userClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: claimsData, error: authError } = await userClient.auth.getClaims(bearer);
+    if (authError || !claimsData?.claims) return json({ error: 'Unauthorized' }, 401);
+
+    const { data: isAdmin } = await userClient.rpc('has_role', {
+      _user_id: claimsData.claims.sub,
+      _role: 'admin',
+    });
+    if (!isAdmin) return json({ error: 'Forbidden: admin role required' }, 403);
+  }
 
   const login = Deno.env.get('COLISSIMO_LOGIN');
   const password = Deno.env.get('COLISSIMO_PASSWORD');
@@ -103,7 +112,7 @@ Deno.serve(async (req) => {
   if (!orderId) return json({ error: 'order_id is required' }, 400);
   const isReturn = body.is_return === true;
 
-  const admin = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
+  const admin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false },
   });
 

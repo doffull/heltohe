@@ -323,6 +323,18 @@ Deno.serve(async (req) => {
 
 
     // ─── ACTION: GENERATE LABEL ───────────────────────────────────────────────
+    //
+    // ⚠️ DÉPRÉCIÉE depuis le 14/09/2026 — utiliser `create-colissimo-label`.
+    //
+    // Cette action reçoit l'adresse recopiée par l'appelant plutôt que de lire
+    // la commande en base. Aucun de ses cinq appelants ne transmettait le pays :
+    // toute destination hors France repartait déclarée en France, et l'étiquette
+    // était refusée. Elle ne produit pas non plus de déclaration douanière, sans
+    // laquelle la Suisse et le reste du hors-UE sont de toute façon impossibles.
+    //
+    // Plus aucun code du dépôt ne l'appelle. Elle reste en place le temps qu'une
+    // éventuelle intégration externe migre, mais refuse désormais ce qu'elle ne
+    // sait pas faire correctement, au lieu de produire une étiquette fausse.
     if (action === 'generateLabel') {
       const { order, senderName, senderAddress, senderZip, senderCity, isReturn = false } = body;
 
@@ -331,6 +343,27 @@ Deno.serve(async (req) => {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
+      }
+
+      console.warn(
+        '[colissimo-proxy] action generateLabel dépréciée — utiliser create-colissimo-label',
+        String(order?.orderNumber || order?.id || ''),
+      );
+
+      // Un appelant qui ne transmet pas le pays ne peut pas obtenir d'étiquette
+      // internationale : mieux vaut un refus lisible qu'un colis annoncé en
+      // France avec un code postal étranger.
+      const declaredCountry = normalizeCountryCode(order.customer?.country);
+      if (declaredCountry !== 'FR') {
+        return new Response(
+          JSON.stringify({
+            error: 'Étiquetage international indisponible par cette voie',
+            details:
+              `Destination ${declaredCountry} : la déclaration douanière ne peut pas être produite ici. ` +
+              'Utilisez la fonction create-colissimo-label (bouton Étiquette de l\'écran Commandes).',
+          }),
+          { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
       }
 
       const depositDate = new Date().toISOString().split('T')[0];

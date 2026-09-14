@@ -249,24 +249,16 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
   async function generateLabel(order: Order, isReturn = false) {
     setLoadingMap(l => ({ ...l, [order.id + (isReturn ? '_ret' : '')]: true }));
     try {
-      const res = await supabase.functions.invoke('colissimo-proxy', {
-        body: {
-          action: 'generateLabel',
-          senderName, senderAddress, senderZip, senderCity,
-          isReturn,
-          order: {
-            id: order.id,
-            orderNumber: order.orderNumber,
-            customer: {
-              name: order.customer.name,
-              email: order.customer.email,
-              phone: order.customer.phone,
-              address: order.customer.address,
-              city: order.customer.city,
-              zip: order.customer.zip,
-            },
-          },
-        },
+      // Seul l'identifiant est transmis : la fonction relit la commande en base
+      // et y trouve le pays, les poids réels et la déclaration douanière. Les
+      // coordonnées de l'expéditeur viennent de `admin_config`, qu'elle lit
+      // elle-même.
+      //
+      // ⚠️ L'ancien appel recopiait l'adresse champ par champ vers
+      // `colissimo-proxy`, en omettant `country` : une commande hors France
+      // repartait déclarée en France (COLISSIMO_ARBITRAGE.md, P2).
+      const res = await supabase.functions.invoke('create-colissimo-label', {
+        body: { order_id: order.id, is_return: isReturn },
       });
       if (res.error || !res.data?.success) throw new Error(res.data?.error || 'Erreur génération étiquette');
 
@@ -314,24 +306,8 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
         } else if (order.trackingNumber) {
           // No cached PDF — regenerate (retrigger via API)
           try {
-            const res = await supabase.functions.invoke('colissimo-proxy', {
-              body: {
-                action: 'generateLabel',
-                senderName, senderAddress, senderZip, senderCity,
-                isReturn: false,
-                order: {
-                  id: order.id,
-                  orderNumber: order.orderNumber,
-                  customer: {
-                    name: order.customer.name,
-                    email: order.customer.email,
-                    phone: order.customer.phone,
-                    address: order.customer.address,
-                    city: order.customer.city,
-                    zip: order.customer.zip,
-                  },
-                },
-              },
+            const res = await supabase.functions.invoke('create-colissimo-label', {
+              body: { order_id: order.id },
             });
             if (res.data?.pdfBase64) {
               setPdfCache(c => ({ ...c, [cacheKey]: res.data.pdfBase64 }));
@@ -343,24 +319,8 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
         } else {
           // No tracking yet — generate fresh label
           try {
-            const res = await supabase.functions.invoke('colissimo-proxy', {
-              body: {
-                action: 'generateLabel',
-                senderName, senderAddress, senderZip, senderCity,
-                isReturn: false,
-                order: {
-                  id: order.id,
-                  orderNumber: order.orderNumber,
-                  customer: {
-                    name: order.customer.name,
-                    email: order.customer.email,
-                    phone: order.customer.phone,
-                    address: order.customer.address,
-                    city: order.customer.city,
-                    zip: order.customer.zip,
-                  },
-                },
-              },
+            const res = await supabase.functions.invoke('create-colissimo-label', {
+              body: { order_id: order.id },
             });
             if (res.data?.success && res.data.pdfBase64) {
               const { trackingNumber, pdfBase64 } = res.data;
