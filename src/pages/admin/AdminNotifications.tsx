@@ -21,10 +21,27 @@ const DEFAULT_SMS_TEMPLATES = {
   all_validated: "HELVETICA-MP: Commande {{order_number}} validée ! Expédition prochaine.",
 };
 
+/** Notifications dont le message est éditable ici. Pilote aussi les formulaires. */
 const TEMPLATE_LABELS: Record<string, string> = {
   identity_verified: "Identité vérifiée",
   payment_verified: "Paiement confirmé",
   all_validated: "Commande validée",
+};
+
+/**
+ * Libellés du journal.
+ *
+ * Toutes les notifications ne sont pas éditables : celles-ci ont un contenu
+ * fixe, défini côté fonction. Elles n'apparaissent donc PAS dans les
+ * formulaires ci-dessus — sans quoi l'administration modifierait un texte qui
+ * ne serait jamais utilisé — mais elles doivent rester lisibles dans l'historique.
+ */
+const LOG_LABELS: Record<string, string> = {
+  ...TEMPLATE_LABELS,
+  payment_confirmation: "Confirmation de paiement (client + admin)",
+  stock_reservation_created: "Commande à préparer (responsable stock)",
+  preparation_assigned: "Préparation assignée (préparateur)",
+  role_assigned: "Rôle attribué",
 };
 
 export default function AdminNotifications() {
@@ -257,7 +274,7 @@ export default function AdminNotifications() {
                             <span className="flex items-center gap-1 text-xs text-green-500"><MessageSquare className="h-3 w-3" />SMS</span>
                           )}
                         </td>
-                        <td className="p-3 text-xs">{TEMPLATE_LABELS[log.notification_type] || log.notification_type}</td>
+                        <td className="p-3 text-xs">{LOG_LABELS[log.notification_type] || log.notification_type}</td>
                         <td className="p-3 text-xs text-muted-foreground truncate max-w-[200px]">{log.recipient}</td>
                         <td className="p-3">
                           {log.status === 'sent' ? (

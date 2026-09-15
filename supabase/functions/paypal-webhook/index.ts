@@ -1,6 +1,8 @@
 // PayPal webhook receiver — verifies the signature with PayPal, then logs and applies the event.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+import { sendPaymentConfirmationOnce } from "../_shared/payment-confirmation.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "*",
@@ -126,6 +128,9 @@ Deno.serve(async (req) => {
               .from("orders")
               .update({ payment_status: "paid", status: "processing" })
               .eq("id", tx.order_id);
+            // Même confirmation que par le retour du navigateur : c'est le
+            // filet quand la cliente ne revient jamais sur le site.
+            await sendPaymentConfirmationOnce(supabase, tx.order_id);
             await triggerAutoLabel(supabase, tx.order_id);
           } else if (eventType === "PAYMENT.CAPTURE.REFUNDED") {
             await supabase.from("orders").update({ payment_status: "refunded" }).eq("id", tx.order_id);

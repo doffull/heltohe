@@ -3,6 +3,8 @@
 // sont toujours recalculés par la RPC validate_and_create_order.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+import { sendPaymentConfirmationOnce } from "../_shared/payment-confirmation.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -91,6 +93,11 @@ async function applyPayment(payment: Record<string, unknown>) {
         .from("orders")
         .update({ payment_status: "paid", payment_method: "payplug", status: "processing" })
         .eq("id", tx.order_id);
+      // La confirmation part d'ici, et non du navigateur : ce chemin est
+      // emprunté aussi bien par le webhook que par le retour de la cliente, et
+      // reste donc le seul point où le paiement est certain. Protégée contre le
+      // doublon si les deux arrivent ensemble.
+      await sendPaymentConfirmationOnce(db, tx.order_id);
       await triggerAutoLabel(db, tx.order_id);
     }
   }

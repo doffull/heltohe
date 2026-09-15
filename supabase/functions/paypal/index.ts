@@ -2,6 +2,8 @@
 // Secrets never leave the server. Amounts are always recomputed server-side.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+import { sendPaymentConfirmationOnce } from "../_shared/payment-confirmation.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -290,6 +292,10 @@ Deno.serve(async (req) => {
           .from("orders")
           .update({ payment_status: "paid", payment_method: "paypal", status: "processing" })
           .eq("id", tx.order_id);
+        // Confirmation à la cliente + alerte à l'administration. Jusqu'au
+        // 15/09/2026, un paiement PayPal ne déclenchait aucun e-mail : la
+        // cliente n'avait rien entre son règlement et l'avis d'expédition.
+        await sendPaymentConfirmationOnce(db, tx.order_id);
         await triggerAutoLabel(db, tx.order_id);
       }
 
