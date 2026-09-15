@@ -320,15 +320,20 @@ export default function AdminOrders() {
         try {
           const { data: rData } = await supabase.rpc('reserve_order_stock', { p_order_id: order.id });
           if (rData && !(rData as any).error) {
-            await supabase.functions.invoke('send-order-notification', {
-              body: {
-                orderId: order.id, orderNumber: order.orderNumber,
-                customerName: order.customer.name, customerEmail: order.customer.email,
-                customerPhone: order.customer.phone,
-                notificationType: 'stock_reservation_created',
-              },
-            });
-            toast({ title: '📦 Stock réservé', description: 'Responsable stock notifié' });
+            // ── Notification « 📦 Nouvelle commande à préparer » — DÉSACTIVÉE
+            //    le 15/09/2026. Décision client : seule « 🛍️ Nouvelle commande »
+            //    (au paiement) subsiste. La réservation de stock, elle, continue
+            //    de s'appliquer — c'est uniquement l'e-mail qui est suspendu.
+            //
+            // await supabase.functions.invoke('send-order-notification', {
+            //   body: {
+            //     orderId: order.id, orderNumber: order.orderNumber,
+            //     customerName: order.customer.name, customerEmail: order.customer.email,
+            //     customerPhone: order.customer.phone,
+            //     notificationType: 'stock_reservation_created',
+            //   },
+            // });
+            toast({ title: '📦 Stock réservé' });
           }
         } catch (e) { console.error('Stock reservation failed:', e); }
       }
@@ -431,14 +436,17 @@ export default function AdminOrders() {
           try {
             const { data: rData } = await supabase.rpc('reserve_order_stock', { p_order_id: order.id });
             if (rData && !(rData as any).error) {
-              await supabase.functions.invoke('send-order-notification', {
-                body: {
-                  orderId: order.id, orderNumber: order.orderNumber,
-                  customerName: order.customer.name, customerEmail: order.customer.email,
-                  customerPhone: order.customer.phone,
-                  notificationType: 'stock_reservation_created',
-                },
-              });
+              // Notification « 📦 Nouvelle commande à préparer » — DÉSACTIVÉE le
+              // 15/09/2026, même décision que ci-dessus.
+              //
+              // await supabase.functions.invoke('send-order-notification', {
+              //   body: {
+              //     orderId: order.id, orderNumber: order.orderNumber,
+              //     customerName: order.customer.name, customerEmail: order.customer.email,
+              //     customerPhone: order.customer.phone,
+              //     notificationType: 'stock_reservation_created',
+              //   },
+              // });
             }
           } catch (e) { console.error(e); }
           if (newFlags.identity && newFlags.shipping) {

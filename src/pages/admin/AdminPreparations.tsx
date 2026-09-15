@@ -97,24 +97,31 @@ export default function AdminPreparations() {
         .eq('id', id);
       if (error) throw error;
       // Notify preparator
-      const prep = preparations.find(p => p.id === id);
-      const order = prep ? ordersById.get(prep.order_id) : null;
-      const target = (preparators as any[]).find(p => p.user_id === userId);
-      if (order && target?.email) {
-        await supabase.functions.invoke('send-order-notification', {
-          body: {
-            orderId: order.id,
-            orderNumber: order.order_number,
-            customerName: order.customer_name,
-            customerEmail: target.email,
-            notificationType: 'preparation_assigned',
-          },
-        });
-      }
+      // ── Notification « 🛠️ Préparation assignée » — DÉSACTIVÉE le 15/09/2026 ──
+      //
+      // Décision client : l'administration ne reçoit plus qu'une seule
+      // notification, « 🛍️ Nouvelle commande » au paiement. L'assignation
+      // continue de s'enregistrer normalement ; seul l'e-mail au préparateur est
+      // suspendu. Rétablir le bloc ci-dessous suffit à le réactiver.
+      //
+      // const prep = preparations.find(p => p.id === id);
+      // const order = prep ? ordersById.get(prep.order_id) : null;
+      // const target = (preparators as any[]).find(p => p.user_id === userId);
+      // if (order && target?.email) {
+      //   await supabase.functions.invoke('send-order-notification', {
+      //     body: {
+      //       orderId: order.id,
+      //       orderNumber: order.order_number,
+      //       customerName: order.customer_name,
+      //       customerEmail: target.email,
+      //       notificationType: 'preparation_assigned',
+      //     },
+      //   });
+      // }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['order-preparations'] });
-      toast({ title: '✅ Préparation assignée', description: 'Le préparateur a été notifié' });
+      toast({ title: '✅ Préparation assignée' });
     },
     onError: (e: any) => toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
   });

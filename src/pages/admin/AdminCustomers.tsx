@@ -69,11 +69,20 @@ function RoleManager({ userId, customerEmail, customerName }: { userId: string; 
     if (checked) {
       const { error } = await supabase.from('user_roles').insert({ user_id: userId, role });
       if (error) { toast({ title: 'Erreur', description: error.message, variant: 'destructive' }); return; }
-      // Notification email (best-effort)
-      supabase.functions.invoke('send-order-notification', {
-        body: { notificationType: 'role_assigned', userId, role, customerEmail, customerName },
-      }).catch(() => {});
-      toast({ title: 'Rôle attribué', description: 'Notification envoyée par email.' });
+      // ── Notification « 👤 Nouveau rôle attribué » — DÉSACTIVÉE le 15/09/2026 ──
+      //
+      // Décision client : l'administration ne reçoit plus qu'une seule
+      // notification, « 🛍️ Nouvelle commande » au paiement. Tout le reste est
+      // suspendu.
+      //
+      // Le code serveur reste en place (`send-order-notification`, branche
+      // `role_assigned`) : il suffit de rétablir l'appel ci-dessous pour
+      // réactiver l'envoi, sans autre modification.
+      //
+      // supabase.functions.invoke('send-order-notification', {
+      //   body: { notificationType: 'role_assigned', userId, role, customerEmail, customerName },
+      // }).catch(() => {});
+      toast({ title: 'Rôle attribué' });
     } else {
       const { error } = await supabase.from('user_roles').delete().eq('user_id', userId).eq('role', role);
       if (error) { toast({ title: 'Erreur', description: error.message, variant: 'destructive' }); return; }

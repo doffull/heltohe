@@ -535,14 +535,30 @@ serve(async (req) => {
       );
     }
 
-    // Alerte administrateur : nouvelle commande / paiement validé à préparer
+    // ── Alerte administrateur ────────────────────────────────────────────────
+    //
+    // Décision client du 15/09/2026 : l'administration ne reçoit plus qu'UNE
+    // seule notification, « 🛍️ Nouvelle commande », et seulement une fois le
+    // paiement encaissé.
+    //
+    // Conséquence : la création de commande (`order_confirmation`) n'alerte
+    // plus personne. Une commande non payée ne dérange plus — c'était le cas le
+    // plus fréquent, la majorité des commandes créées n'étant jamais réglées.
+    //
+    // ⚠️ La cliente, elle, continue de recevoir ses e-mails normalement : seule
+    // l'alerte interne est restreinte.
     const adminRecipient = adminEmail || adminEmailAddress();
-    if (adminRecipient && emailType !== 'resend_confirmation') {
+    if (adminRecipient && emailType === 'payment_confirmation') {
       const adminMail = await sendMail({
         to: adminRecipient,
-        subject: emailType === 'payment_confirmation'
-          ? `💳 Commande payée ${orderNumber} — à préparer (${customerName})`
-          : `🛍️ Nouvelle commande ${orderNumber} — ${customerName}`,
+        // Le libellé retenu est « Nouvelle commande » et non « Commande payée » :
+        // puisque l'alerte ne part plus qu'au paiement, c'est bien une commande
+        // à traiter qui arrive.
+        //
+        // Ancien sujet, à remettre si l'alerte de paiement est un jour
+        // redistinguée de l'alerte de création :
+        //   `💳 Commande payée ${orderNumber} — à préparer (${customerName})`
+        subject: `🛍️ Nouvelle commande ${orderNumber} — ${customerName}`,
         html: buildAdminEmailHtml(payload),
       });
       if (!adminMail.ok) {
