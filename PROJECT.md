@@ -7,8 +7,9 @@
 > Rédigé le 20/08/2026 par analyse du dépôt (`39e844c`), mis à jour le 28/08/2026 après le
 > changement de dépôt (§16), le 30/08/2026 après la première confrontation au projet
 > Supabase réel (§17, §18), le 10/09/2026 après trois jours d'assainissement de
-> l'infrastructure (§24), puis le 14/09/2026 après l'ouverture des expéditions hors
-> France (§27).
+> l'infrastructure (§24), le 14/09/2026 après l'ouverture des expéditions hors
+> France (§27), puis le 15/09/2026 après la remise en service des webhooks de
+> paiement (§28).
 >
 > ⚠️ **Le dépôt a changé le 28/08/2026** : le projet vit désormais dans
 > `doffull/warltkfr`, recréé depuis Lovable. `gafsou20/Helvetica-MP` est une archive.
@@ -24,6 +25,12 @@
 > ⚠️ **Les migrations ont été remises à plat le 09/09/2026.** Un baseline unique remplace
 > les 188 fichiers, désormais dans `supabase/migrations/_archive/`. `supabase db push`
 > refonctionne. Lire le §24.4 avant d'y toucher.
+>
+> ⚠️ **Un réglage correct dans `config.toml` ne dit rien de la production.**
+> Les trois webhooks appelés par des tiers (`payplug`, `paypal-webhook`,
+> `carrier-tracking-webhook`) déclaraient `verify_jwt = false` depuis toujours
+> et étaient pourtant rejetés en 401 côté Supabase — donc inopérants. Le test
+> qui le révèle est au §28.1, à relancer après chaque redéploiement.
 >
 > ⚠️ **Une seule fonction fabrique les étiquettes Colissimo :
 > `create-colissimo-label`.** Elle ne prend qu'un `order_id` et relit la commande
@@ -1973,3 +1980,163 @@ en dur** — tout colis annoncé à un kilo. Le poids réel des articles
 | Codes SH par produit | 🟡 `620240` couvre les doudounes ; le genre est déjà en base (`products.category`), le mapping serait automatique |
 | Information douanière à la cliente | ❌ écartée par le client — hors UE, elle paiera **en plus** à la réception, ce n'est écrit nulle part |
 | Tarif réel par zone | ❌ écarté : le forfait de 40 € remplace la grille |
+
+---
+
+## 28. Paiements en ligne et notifications — 15/09/2026
+
+Trois défauts distincts, découverts en remontant un seul signalement : « PayPlug
+renvoie une erreur 401 sur notre webhook ».
+
+### 28.1 Les webhooks de paiement n'avaient jamais fonctionné
+
+`config.toml` déclarait bien `verify_jwt = false` pour `payplug`,
+`paypal-webhook` et `carrier-tracking-webhook`. **La production disait
+l'inverse.** La passerelle Supabase rejetait donc tout appel avant d'atteindre
+le code :
+
+```
+{"code":"UNAUTHORIZED_NO_AUTH_HEADER","message":"Missing authorization header"}
+```
+
+Un prestataire de paiement n'envoie évidemment aucun JWT Supabase. **Les trois
+fonctions appelées par des tiers étaient inaccessibles depuis toujours** — les
+autres (`maps-config`, `newsletter-subscribe`, `contact-chat`) fonctionnaient,
+ce qui rendait le défaut invisible.
+
+C'est le **§18 dans sa forme la plus coûteuse** : le réglage était correct dans
+le dépôt, faux en production, et rien dans l'interface ne le montrait.
+
+⚠️ **Le test qui révèle le problème** — aucun en-tête, comme un vrai webhook :
+
+```bash
+for f in payplug paypal-webhook carrier-tracking-webhook; do
+  printf "%-26s → " "$f"
+  curl -s -X POST -H "Content-Type: application/json" -d '{}' \
+    "https://hzjzqdlyehclnpeqkier.supabase.co/functions/v1/$f" | head -c 100
+  echo
+done
+```
+
+| Réponse | Lecture |
+|---|---|
+| `UNAUTHORIZED_NO_AUTH_HEADER` | ❌ la passerelle bloque — le webhook est mort |
+| `{"error":"Action inconnue"}` (payplug) | ✅ le code est atteint |
+| `{"received":true}` (paypal) | ✅ le code est atteint |
+| `{"error":"Unauthorized"}` (carrier) | ✅ le code est atteint — c'est **la fonction** qui refuse, faute de jeton partagé |
+
+**À relancer après tout redéploiement de ces trois fonctions.**
+
+### 28.2 Ce qui masquait le problème — et ce qu'il a coûté
+
+Les commandes étaient malgré tout encaissées, parce que **le navigateur de la
+cliente faisait le travail du webhook** : au retour sur `/checkout?payplug=…`,
+le front appelle `payplug` avec `action: 'check-order'`, et cet appel-là porte
+la clé anon — donc pas de 401.
+
+**Le paiement n'était donc confirmé que si la cliente revenait sur le site.**
+Onglet fermé, réseau coupé, paiement validé sur mobile puis abandon : argent
+encaissé, commande jamais passée en `Paid`, aucune étiquette, aucun e-mail.
+
+⚠️ **Piège de mesure.** Un premier comptage sur les transactions `paid` a conclu
+« aucune perte ». C'était faux : **une transaction ratée reste bloquée à
+`created`**, elle ne figure jamais parmi les `paid`. Le bon filtre est l'inverse.
+
+`HMP-MU0365ZX` est le cas d'école : transaction restée `created` avec
+`updated_at` identique à `created_at` — jamais mise à jour — et commande passée
+`Paid` à la main **26 h plus tard**.
+
+🟡 **43 transactions `created` avec commande non payée restent à vérifier chez
+PayPlug.** La plupart sont sûrement des abandons ordinaires (70 `created` pour
+53 `paid`, taux plausible), mais la pile contient au moins un vrai règlement.
+
+### 28.3 Carte et PayPal n'envoyaient aucun e-mail
+
+Le checkout a **trois chemins**, et les e-mails n'étaient branchés que sur un :
+
+```
+Bouton « Commander »   → handlePlaceOrder → send-order-confirmation   ✅
+Bouton PayPlug         → create-payment → applyPayment                ❌
+Bouton PayPal          → create-order → capture-order                 ❌
+```
+
+Une cliente réglant 169 € par carte ne recevait **rien** entre son paiement et
+l'avis d'expédition, qui arrivait plus tard via `auto-colissimo-label`.
+
+C'est la **même structure que les deux implémentations d'étiquetage Colissimo**
+(§27.5) : plusieurs chemins pour une même intention, un seul correctement câblé.
+
+La confirmation part désormais de **là où le paiement devient certain, côté
+serveur** — `applyPayment` (PayPlug), `capture-order` et le webhook (PayPal) —
+via `_shared/payment-confirmation.ts`. Elle couvre donc le retour du navigateur,
+la notification du prestataire et une régularisation ultérieure.
+
+### 28.4 Le verrou anti-doublon vit dans la base
+
+Depuis la correction, un même paiement peut être confirmé par trois voies
+concurrentes : webhook, retour navigateur, régularisation manuelle. Les deux
+premières arrivent souvent **dans la même seconde**.
+
+⚠️ **Une vérification applicative ne suffit pas** : deux exécutions simultanées
+liraient toutes deux « pas encore envoyé ». C'est l'`INSERT` dans
+`notification_log` qui réserve la place, et l'index unique partiel
+`notification_log_payment_confirmation_once` qui fait échouer le perdant
+(`23505`).
+
+📌 L'index est **restreint à `payment_confirmation`** : les notifications
+internes ont légitimement plusieurs destinataires, donc plusieurs lignes par
+commande. Un index global les aurait cassées.
+
+⚠️ **`notification_log.recipient` est `NOT NULL`.** La réservation doit donc lire
+la commande *avant* de réserver. Une première version omettait ce champ :
+l'insertion aurait échoué et **aucun e-mail ne serait jamais parti**, sans la
+moindre erreur visible.
+
+### 28.5 Une seule notification interne, au paiement
+
+Décision client du 15/09/2026. L'administration ne reçoit plus que
+**« 🛍️ Nouvelle commande »**, et seulement une fois le règlement encaissé.
+
+| Notification | État |
+|---|---|
+| 🛍️ Nouvelle commande | ✅ conservée — **au paiement**, plus à la création |
+| 💳 Commande payée | ⛔ c'était le **même envoi**, seul le sujet changeait. Le libellé « Nouvelle commande » est désormais unique |
+| 📦 Nouvelle commande à préparer | ⛔ appel commenté — `AdminOrders`, deux endroits |
+| 🛠️ Préparation assignée | ⛔ appel commenté — `AdminPreparations` |
+| 👤 Nouveau rôle attribué | ⛔ appel commenté — `AdminCustomers` |
+
+📌 **Rien n'est supprimé**, à la demande du client : les branches serveur de
+`send-order-notification` restent intactes. Réactiver = décommenter un appel.
+
+⚠️ **Conséquences à connaître** :
+1. Une commande créée mais non payée n'alerte plus personne — c'est l'effet
+   recherché, la majorité des commandes créées n'étant jamais réglées.
+2. **Plus personne n'est prévenu qu'une commande attend d'être préparée.**
+   L'équipe doit consulter le tableau de bord.
+3. Les e-mails aux clientes sont **inchangés**. Les traitements métier aussi :
+   le stock est réservé, la préparation assignée, le rôle attribué — seules les
+   mentions « notifié » à l'écran ont été retirées, elles seraient devenues
+   fausses.
+
+### 28.6 Dettes relevées en chemin
+
+1. ⚠️ **`paypal-webhook:103`** — `if (verification === "SUCCESS" || !config?.webhook_id)`.
+   Si `paypal_config.webhook_id` est un jour vidé, la fonction **applique tout
+   événement sans vérifier la signature**, et n'importe qui peut marquer une
+   commande payée. Aujourd'hui sans effet (le champ est renseigné, env `live`),
+   mais un repli qui s'ouvre quand la configuration manque devrait refuser.
+2. ⚠️ **`paypal-webhook:110`** — `paypalOrderId`, issu du corps de la requête,
+   est interpolé sans échappement dans un filtre `.or(...)` PostgREST.
+   Inatteignable tant que la signature est vérifiée, mais c'est une valeur non
+   maîtrisée sur un chemin public.
+3. 🟡 **`send-order-confirmation` est ouverte et sans contrôle d'appelant**
+   (`verify_jwt = false`, aucune vérification dans le corps) : utilisable comme
+   relais d'envoi d'e-mails.
+
+### 28.7 Ce qui reste à faire
+
+| Sujet | État |
+|---|---|
+| Vérifier les **43 transactions `created`** chez PayPlug | 🟡 **priorité** — au moins un vrai paiement s'y trouve |
+| Test PayPlug de bout en bout (code de notification à `200`) | ⏳ en cours |
+| Les trois dettes du §28.6 | 🟡 à traiter |
