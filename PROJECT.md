@@ -39,6 +39,12 @@
 > recevait l'adresse recopiée par l'appelant, et aucun des cinq appelants ne
 > transmettait le pays. Ne jamais y revenir : §27.5.
 >
+> ⚠️ **Les étiquettes sortent en A4** (`PDF_A4_300dpi`) depuis le 16/09/2026, pour
+> TOUTES les destinations : la planche avec l'étiquette à gauche et la notice de
+> découpage à droite. C'est un format **bureautique** — il ne s'imprime pas sur la
+> thermique 10×15. France et UE : 1 page. Hors UE et DOM-TOM : 5 pages (+ CN23).
+> Voir §27.8.
+>
 > ⚠️ **Sur une CN23, `totalAmount` est le PORT, pas le total de la commande.**
 > Colissimo l'imprime sous « Frais de port » et la douane calcule ses droits sur
 > marchandise + port. Y mettre le total faisait payer le destinataire sur près du
@@ -1901,6 +1907,10 @@ Générée automatiquement dès que la table l'exige (`cn23: true` — CH, GB, U
 DOM-TOM). **Sans elle, aucune étiquette ne sort pour ces destinations**, quelles
 que soient les autres corrections.
 
+📌 Colissimo renvoie alors **deux documents** : l'étiquette puis la CN23 (A4,
+4 exemplaires). Ils sont fusionnés en un seul PDF à l'enregistrement — voir
+**§27.8**, où le bug qui les perdait est décrit.
+
 Deux réglages dans **Admin → Colissimo → Déclaration douanière** :
 
 | Réglage | Valeur | Colonne |
@@ -1957,11 +1967,75 @@ sauvegardée serait sinon ignorée en silence.
 en dur** — tout colis annoncé à un kilo. Le poids réel des articles
 (`products.weight_grams`) est désormais transmis.
 
-### 27.8 Deux défauts découverts en ouvrant une vraie CN23 — 16/09/2026
+### 27.6 Pièges à connaître
+
+1. ⚠️ **`orders.customer_country` contient deux écritures.** Les commandes
+   antérieures au 14/09 portent le libellé complet (« France », « Suisse » saisi à
+   la main en admin) ; les nouvelles portent un code ISO. `normalizeCountryCode`
+   reconnaît les deux — il existe en **deux exemplaires**
+   (`src/lib/colissimo-countries.ts` et `supabase/functions/_shared/colissimo-countries.ts`),
+   à faire évoluer ensemble.
+2. ⚠️ **Le point relais n'existe pas partout** (`pr: false` pour CH, GB, US, CA).
+   Trois verrous : masqué au checkout, refusé par la recherche de points, refusé à
+   l'étiquetage. Une commande relais en Suisse n'est récupérable à aucun de ces
+   trois stades — d'où la redondance, qui est volontaire.
+3. ⚠️ **Le code postal n'est validé strictement qu'en France.** Ailleurs les
+   formats sont trop variés (CA `H2G 2Y6`, GB `SW1A 1AA`, IE sans code postal) pour
+   qu'une règle maison apporte autre chose que des faux refus.
+4. `supabase db push` reste sûr tant que `supabase migration list` montre local et
+   distant alignés — vérifié le 14/09. Le §18 rappelle pourquoi on ne le suppose
+   jamais.
+5. 🟡 **Reste ouvert** : la commande de Montréal (`HMP-MTWC73RZ`) sera le premier
+   envoi en `DOS`. Ce code n'a encore **jamais été émis** en production.
+
+### 27.7 Ce qui reste à faire
+
+| Sujet | État |
+|---|---|
+| 3 commandes payées à expédier (`HMP-MTVTXC5P`, `HMP-MTVW5TB1`, `HMP-MTVWZVYS`) | ✅ fait — `customer_country` corrigé en `CH`, expédiées avec leur numéro de suivi |
+| **7 étiquettes suisses au fichier corrompu** (`MTVEO78Y`, `MTVTXC5P`, `MTVW5TB1`, `MTVWZVYS`, `MTXGANCT`, `MU1NP5O2`, `MU3404QV`) | ⚠️ générées avant le correctif du 16/09 : leur PDF est la concaténation étiquette + CN23, donc un des deux documents est invisible. À régénérer si le colis n'est pas encore parti — voir §27.8. ⚠️ **régénérer crée un NOUVEAU numéro de colis** et écrase `tracking_number` |
+| Codes SH par produit | 🟡 `620240` couvre les doudounes ; le genre est déjà en base (`products.category`), le mapping serait automatique |
+| Information douanière à la cliente | ❌ écartée par le client — hors UE, elle paiera **en plus** à la réception, ce n'est écrit nulle part |
+| Tarif réel par zone | ❌ écarté : le forfait de 40 € remplace la grille |
+
+### 27.8 Étiquettes A4 et déclaration douanière — 16/09/2026 ✅
 
 Le client signalait une « notice de découpage » manquante sur les envois hors
-France. Ouvrir une étiquette suisse réelle a réglé la question et en a soulevé
-une autre, plus chère.
+France. Ouvrir une étiquette suisse réelle a réglé la question — et en a
+soulevé **deux autres**, dont une qui coûtait de l'argent au destinataire.
+
+📌 **La leçon de la journée** : deux hypothèses successives, toutes deux
+plausibles, toutes deux fausses. Ce qui a tranché, c'est d'**ouvrir le fichier
+réellement produit** — pas de relire le code, pas de comparer au plugin
+officiel. Le §18 le dit déjà autrement : le dépôt n'est pas le déploiement.
+Ici : le code n'est pas le document.
+
+#### Combien de pages, et qui décide
+
+| Destination | Pages | Contenu |
+|---|---|---|
+| **France** | **1** | la planche A4 : étiquette + notice |
+| **Union européenne** (BE, DE, ES, IT, LU, NL…) | **1** | idem — l'UE n'exige pas de CN23 |
+| **Hors UE** (CH, GB, US, CA…) **et DOM-TOM** (GP, MQ, RE, NC, PF…) | **5** | 1 planche + **4 exemplaires de CN23** |
+
+La distinction n'est PAS France / hors France : la Belgique sort en 1 page. Le
+critère est `cn23` dans `src/data/colissimo-capabilities.json` — **223 pays sur
+251** l'exigent.
+
+**Le système décide seul**, sans réglage ni case à cocher :
+`orders.customer_country` → `normalizeCountryCode` → `requiresCn23()` → bloc
+`customsDeclarations` ajouté ou non → Colissimo renvoie un ou deux documents →
+fusion en 1 ou 5 pages.
+
+⚠️ **Tout repose sur le pays enregistré sur la commande.** C'est le seul point
+où une erreur humaine se propage jusqu'à la douane, et c'est exactement ce qui
+a coûté la journée du 14/09 (§27.1). Un libellé inattendu fait retomber
+`normalizeCountryCode` sur `FR` : la CN23 n'est alors pas demandée, et le colis
+part sans déclaration. Voir aussi §27.6 point 1 (deux écritures coexistent).
+
+📌 Les **4 exemplaires** sont le défaut de Colissimo — nous n'envoyons ni
+`OUTPUT_PRINT_TYPE_CN23` ni `numberOfCopies`. Si ce défaut changeait, le nombre
+de pages changerait sans qu'une ligne de notre code bouge.
 
 #### La CN23 était produite, mais perdue à l'enregistrement
 
@@ -1988,7 +2062,8 @@ la fusion échoue, l'étiquette seule est conservée : une CN23 à réimprimer v
 mieux qu'une expédition bloquée.
 
 Vérifié en production sur `HMP-MU3UG33Z` (Gingins, CH) : **5 pages**, page 1
-l'étiquette 10×15, pages 2 à 5 la CN23.
+l'étiquette, pages 2 à 5 la CN23 — d'abord en 10×15, puis en A4 après le
+passage de format décrit plus bas.
 
 #### ⚠️ `totalAmount` est le PORT, pas le total de la commande
 
@@ -2049,35 +2124,6 @@ gabarit, aucune dimension codée côté front.
 Le détail complet de l'enquête, y compris l'hypothèse d'abord retenue puis
 réfutée, est conservé dans **`COLISSIMO_CN23_FORMAT.md`**.
 
-### 27.6 Pièges à connaître
-
-1. ⚠️ **`orders.customer_country` contient deux écritures.** Les commandes
-   antérieures au 14/09 portent le libellé complet (« France », « Suisse » saisi à
-   la main en admin) ; les nouvelles portent un code ISO. `normalizeCountryCode`
-   reconnaît les deux — il existe en **deux exemplaires**
-   (`src/lib/colissimo-countries.ts` et `supabase/functions/_shared/colissimo-countries.ts`),
-   à faire évoluer ensemble.
-2. ⚠️ **Le point relais n'existe pas partout** (`pr: false` pour CH, GB, US, CA).
-   Trois verrous : masqué au checkout, refusé par la recherche de points, refusé à
-   l'étiquetage. Une commande relais en Suisse n'est récupérable à aucun de ces
-   trois stades — d'où la redondance, qui est volontaire.
-3. ⚠️ **Le code postal n'est validé strictement qu'en France.** Ailleurs les
-   formats sont trop variés (CA `H2G 2Y6`, GB `SW1A 1AA`, IE sans code postal) pour
-   qu'une règle maison apporte autre chose que des faux refus.
-4. `supabase db push` reste sûr tant que `supabase migration list` montre local et
-   distant alignés — vérifié le 14/09. Le §18 rappelle pourquoi on ne le suppose
-   jamais.
-5. 🟡 **Reste ouvert** : la commande de Montréal (`HMP-MTWC73RZ`) sera le premier
-   envoi en `DOS`. Ce code n'a encore **jamais été émis** en production.
-
-### 27.7 Ce qui reste à faire
-
-| Sujet | État |
-|---|---|
-| 3 commandes payées à expédier (`HMP-MTVTXC5P`, `HMP-MTVW5TB1`, `HMP-MTVWZVYS`, 512 €) | ⚠️ leur `customer_country` vaut encore « France » : **le corriger avant** de générer l'étiquette |
-| Codes SH par produit | 🟡 `620240` couvre les doudounes ; le genre est déjà en base (`products.category`), le mapping serait automatique |
-| Information douanière à la cliente | ❌ écartée par le client — hors UE, elle paiera **en plus** à la réception, ce n'est écrit nulle part |
-| Tarif réel par zone | ❌ écarté : le forfait de 40 € remplace la grille |
 
 ---
 
