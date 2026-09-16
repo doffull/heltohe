@@ -1,4 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+// Fusion des PDF renvoyés par Colissimo (étiquette + CN23) — voir `extractPdf`.
+// Même version et même passerelle que `order-slip-pdf`, qui s'en sert déjà.
+import { PDFDocument } from 'https://esm.sh/pdf-lib@1.17.1?target=deno';
 // Briques d'étiquetage communes avec colissimo-proxy.
 import {
   PICKUP_PRODUCT_CODES,
@@ -27,26 +30,151 @@ function json(body: unknown, status = 200) {
   });
 }
 
-/** Extract the raw PDF bytes out of a multipart/related Colissimo response. */
-function extractPdf(bytes: Uint8Array): Uint8Array | null {
+/**
+ * Extraction des PDF d'une réponse `multipart/related` Colissimo.
+ *
+ * ── Ce que faisait le code précédent, et pourquoi c'était faux ─────────────
+ *
+ * Il prenait tout, du PREMIER `%PDF` au DERNIER `%%EOF`. Tant que Colissimo
+ * ne renvoyait qu'un document, ça marchait. Dès qu'une déclaration douanière
+ * est demandée, il en renvoie DEUX — l'étiquette, puis la CN23 — dans deux
+ * parties distinctes. Le découpage collait alors les deux bout à bout et le
+ * tout était stocké comme un seul fichier.
+ *
+ * Un PDF ainsi concaténé est invalide, et le pire est qu'aucune erreur n'est
+ * levée : le fichier s'ouvre, mais ce qu'on y voit dépend du lecteur. Certains
+ * lisent le premier en-tête et n'affichent que l'étiquette ; d'autres suivent
+ * le dernier `startxref` et n'affichent que la CN23 — sans l'étiquette. Un des
+ * deux documents disparaît toujours, silencieusement.
+ *
+ * Constaté sur les 7 commandes suisses émises depuis l'ouverture de
+ * l'international : toutes portaient deux `%PDF`. Les commandes françaises et
+ * belges n'en ont qu'un — l'UE n'exige pas de CN23 — d'où un défaut resté
+ * invisible tant qu'on n'expédiait qu'en zone euro.
+ */
+
+/**
+ * Découpe une réponse multipart en ses parties, sur la `boundary` annoncée.
+ *
+ * On lit la frontière déclarée plutôt que de deviner : c'est la seule
+ * information qui dise où s'arrête réellement une partie. Le repli par
+ * recherche de `%PDF` reste possible (voir `splitPdfDocuments`) pour le cas
+ * où l'en-tête manquerait.
+ */
+function splitMultipartParts(bytes: Uint8Array, contentType: string | null): Uint8Array[] {
+  const match = /boundary="?([^";]+)"?/i.exec(contentType ?? '');
+  if (!match) return [];
+
+  const delimiter = new TextEncoder().encode(`--${match[1]}`);
+  const positions: number[] = [];
+  outer: for (let i = 0; i <= bytes.length - delimiter.length; i++) {
+    for (let j = 0; j < delimiter.length; j++) {
+      if (bytes[i + j] !== delimiter[j]) continue outer;
+    }
+    positions.push(i);
+  }
+  if (positions.length < 2) return [];
+
+  const parts: Uint8Array[] = [];
+  for (let i = 0; i < positions.length - 1; i++) {
+    // Le corps commence après les en-têtes de la partie, séparés par une
+    // ligne vide. `\r\n\r\n` est la forme normalisée ; `\n\n` est toléré, des
+    // passerelles réécrivant les fins de ligne.
+    const slice = bytes.slice(positions[i] + delimiter.length, positions[i + 1]);
+    const head = new TextDecoder('utf-8', { fatal: false }).decode(
+      slice.slice(0, Math.min(slice.length, 2048)),
+    );
+    const crlf = head.indexOf('\r\n\r\n');
+    const lf = head.indexOf('\n\n');
+    const offset = crlf >= 0 ? crlf + 4 : lf >= 0 ? lf + 2 : -1;
+    if (offset < 0) continue;
+    parts.push(slice.slice(offset));
+  }
+  return parts;
+}
+
+/** Position de chaque en-tête `%PDF` dans un bloc d'octets. */
+function findPdfHeaders(bytes: Uint8Array): number[] {
   const marker = new TextEncoder().encode('%PDF');
-  let start = -1;
-  for (let i = 0; i < bytes.length - 4; i++) {
-    if (bytes[i] === marker[0] && bytes[i + 1] === marker[1] && bytes[i + 2] === marker[2] && bytes[i + 3] === marker[3]) {
-      start = i;
+  const out: number[] = [];
+  outer: for (let i = 0; i <= bytes.length - marker.length; i++) {
+    for (let j = 0; j < marker.length; j++) {
+      if (bytes[i + j] !== marker[j]) continue outer;
+    }
+    out.push(i);
+  }
+  return out;
+}
+
+/**
+ * Repli : isole les documents PDF d'un bloc d'octets quelconque.
+ *
+ * Contrairement à la version précédente, la découpe se fait à CHAQUE `%PDF`
+ * et non du premier au dernier. Deux documents restent donc deux documents.
+ */
+function splitPdfDocuments(bytes: Uint8Array): Uint8Array[] {
+  const starts = findPdfHeaders(bytes);
+  if (starts.length === 0) return [];
+
+  const eof = new TextEncoder().encode('%%EOF');
+  return starts.map((start, n) => {
+    const limit = n + 1 < starts.length ? starts[n + 1] : bytes.length;
+    // Dernier `%%EOF` AVANT le document suivant : on ne déborde jamais sur lui.
+    let end = limit;
+    outer: for (let i = limit - eof.length; i > start; i--) {
+      for (let j = 0; j < eof.length; j++) {
+        if (bytes[i + j] !== eof[j]) continue outer;
+      }
+      end = i + eof.length;
       break;
     }
+    return bytes.slice(start, end);
+  });
+}
+
+/**
+ * Renvoie UN PDF valide contenant tout ce que Colissimo a produit.
+ *
+ * Un seul document → il est renvoyé **tel quel**, octet pour octet. C'est
+ * délibéré : les envois France représentent l'écrasante majorité du volume et
+ * fonctionnent aujourd'hui ; les faire repasser par une réécriture les
+ * exposerait à un risque pour un gain nul.
+ *
+ * Plusieurs documents → fusion en un seul fichier : page 1 l'étiquette, puis
+ * les pages de la CN23. C'est ce que l'exploitant imprime, dans l'ordre où il
+ * s'en sert.
+ */
+async function extractPdf(
+  bytes: Uint8Array,
+  contentType: string | null,
+): Promise<Uint8Array | null> {
+  const fromParts = splitMultipartParts(bytes, contentType)
+    .map((part) => splitPdfDocuments(part))
+    .flat();
+  const documents = fromParts.length > 0 ? fromParts : splitPdfDocuments(bytes);
+
+  if (documents.length === 0) return null;
+  if (documents.length === 1) return documents[0];
+
+  try {
+    const merged = await PDFDocument.create();
+    for (const doc of documents) {
+      const source = await PDFDocument.load(doc, { ignoreEncryption: true });
+      const pages = await merged.copyPages(source, source.getPageIndices());
+      for (const page of pages) merged.addPage(page);
+    }
+    return await merged.save();
+  } catch (e) {
+    // Une fusion ratée ne doit pas empêcher le colis de partir : on garde
+    // l'étiquette seule, qui est un PDF valide, et on le signale. Mieux vaut
+    // une CN23 à réimprimer à la main qu'une expédition bloquée — et surtout
+    // qu'un fichier corrompu de plus.
+    console.error(
+      'Fusion des PDF Colissimo impossible, seule l\'étiquette est conservée',
+      String(e),
+    );
+    return documents[0];
   }
-  if (start < 0) return null;
-  // Find last %%EOF
-  const eof = new TextEncoder().encode('%%EOF');
-  let end = bytes.length;
-  for (let i = bytes.length - eof.length; i > start; i--) {
-    let ok = true;
-    for (let j = 0; j < eof.length; j++) if (bytes[i + j] !== eof[j]) { ok = false; break; }
-    if (ok) { end = i + eof.length; break; }
-  }
-  return bytes.slice(start, end);
 }
 
 function extractJsonPart(bytes: Uint8Array): Record<string, unknown> | null {
@@ -382,6 +510,9 @@ Deno.serve(async (req) => {
     return json({ error: 'Colissimo unreachable', details: String(e) }, 502);
   }
 
+  // Lu AVANT de consommer le corps : c'est lui qui porte la `boundary`,
+  // seule information fiable pour découper une réponse multipart.
+  const responseContentType = response.headers.get('content-type');
   const raw = new Uint8Array(await response.arrayBuffer());
   const meta = extractJsonPart(raw);
   const messages = (meta?.messages as Array<Record<string, unknown>>) || [];
@@ -397,7 +528,7 @@ Deno.serve(async (req) => {
     );
   }
 
-  const pdf = extractPdf(raw);
+  const pdf = await extractPdf(raw, responseContentType);
   if (!pdf) return json({ error: 'Aucun PDF retourné par Colissimo' }, 502);
 
   // Le numéro de colis est cherché à trois endroits, car Colissimo ne le place
