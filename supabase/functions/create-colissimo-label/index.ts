@@ -450,6 +450,32 @@ Deno.serve(async (req) => {
     }
   }
 
+  /**
+   * Format d'impression de l'étiquette.
+   *
+   * ── Ce que change le A4 ────────────────────────────────────────────────────
+   *
+   * `PDF_10x15_300dpi` renvoie la vignette nue. `PDF_A4_300dpi` renvoie la
+   * planche A4 paysage : l'étiquette à gauche, entourée de pointillés et des
+   * mentions « Collez ici le ruban adhésif », un trait de coupe au milieu
+   * (« Étiquette Colissimo, découpez selon les pointillés »), et à droite le
+   * panneau « Comment utiliser votre étiquette Colissimo ? ».
+   *
+   * C'est ce panneau — et non la CN23 — que le client appelait la « notice de
+   * découpage ». C'est aussi le format par défaut du plugin officiel
+   * (`LabelGenerationPayload.php:74`).
+   *
+   * ⚠️ **Limité à l'international pour l'instant, à titre d'essai.** Le A4 est
+   * un format bureautique : il ne s'imprime pas sur la thermique 10×15 utilisée
+   * en atelier. Basculer la France — qui est l'essentiel du volume — casserait
+   * ce flux d'impression tant que le choix n'est pas tranché. À rendre
+   * réglable en administration (`admin_config`) quand il le sera, sur le modèle
+   * du code SH.
+   */
+  const labelPrintingType = destinationCountry !== SENDER_COUNTRY
+    ? 'PDF_A4_300dpi'
+    : 'PDF_10x15_300dpi';
+
   // Frais de port de la commande, en centimes — déclarés à la douane.
   const transportationAmount = Math.round(Number(order.shipping_cost || 0) * 100);
 
@@ -472,7 +498,7 @@ Deno.serve(async (req) => {
     outputFormat: {
       x: 0,
       y: 0,
-      outputPrintingType: 'PDF_10x15_300dpi',
+      outputPrintingType: labelPrintingType,
     },
     letter: {
       service: {
