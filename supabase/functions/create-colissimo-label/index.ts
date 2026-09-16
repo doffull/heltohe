@@ -465,16 +465,23 @@ Deno.serve(async (req) => {
    * découpage ». C'est aussi le format par défaut du plugin officiel
    * (`LabelGenerationPayload.php:74`).
    *
-   * ⚠️ **Limité à l'international pour l'instant, à titre d'essai.** Le A4 est
-   * un format bureautique : il ne s'imprime pas sur la thermique 10×15 utilisée
-   * en atelier. Basculer la France — qui est l'essentiel du volume — casserait
-   * ce flux d'impression tant que le choix n'est pas tranché. À rendre
-   * réglable en administration (`admin_config`) quand il le sera, sur le modèle
-   * du code SH.
+   * ── Appliqué à TOUTES les destinations depuis le 16/09/2026 ───────────────
+   *
+   * L'essai limité à l'international a été validé par le client, qui a demandé
+   * le même format partout. La France repasse donc de la vignette à la planche
+   * A4 : c'est l'essentiel du volume, et c'est un changement visible en
+   * atelier.
+   *
+   * ⚠️ Le A4 est un format **bureautique**. Il ne s'imprime pas sur la
+   * thermique 10×15 dont le kit Colissimo nous avait été fourni : le jour où
+   * cette imprimante reprend du service, il faut revenir au 10×15 — ou rendre
+   * ce choix réglable en administration, sur le modèle du code SH. La
+   * constante est isolée ici pour que ce retour arrière tienne en une ligne.
+   *
+   * Rien d'autre dans le code ne dépend du format : aucune feuille de style
+   * d'impression, aucun gabarit, aucune dimension codée côté front.
    */
-  const labelPrintingType = destinationCountry !== SENDER_COUNTRY
-    ? 'PDF_A4_300dpi'
-    : 'PDF_10x15_300dpi';
+  const labelPrintingType = 'PDF_A4_300dpi';
 
   // Frais de port de la commande, en centimes — déclarés à la douane.
   const transportationAmount = Math.round(Number(order.shipping_cost || 0) * 100);

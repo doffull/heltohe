@@ -10,7 +10,7 @@
 > l'infrastructure (§24), le 14/09/2026 après l'ouverture des expéditions hors
 > France (§27), puis le 15/09/2026 après la remise en service des webhooks de
 > paiement (§28), et le 16/09/2026 après la correction de la CN23 hors France
-> (§27.8).
+> et le passage des étiquettes au format A4 (§27.8).
 >
 > ⚠️ **Le dépôt a changé le 28/08/2026** : le projet vit désormais dans
 > `doffull/warltkfr`, recréé depuis Lovable. `gafsou20/Helvetica-MP` est une archive.
@@ -2008,10 +2008,40 @@ inventé pour contourner : un chiffre faux sur un document douanier est pire
 qu'un refus, lequel remonte en 422 avec le motif et se corrige en renseignant
 le port sur la commande. Un `console.error` le signale d'avance.
 
+#### La « notice de découpage » n'était ni la CN23 ni son format
+
+Le client réclamait en réalité le **panneau d'instructions** qui accompagne la
+planche A4 : « Comment utiliser votre étiquette Colissimo ? », avec les
+pointillés et la mention « **découpez selon les pointillés** ». Il n'existe pas
+dans la vignette 10×15.
+
+| | `PDF_10x15_300dpi` | `PDF_A4_300dpi` |
+|---|---|---|
+| Rendu | vignette nue | **A4 paysage** : étiquette à gauche, trait de coupe, notice à droite |
+| Usage | imprimante thermique | imprimante bureautique |
+| Plugin officiel | — | **valeur par défaut** |
+
+📌 Le document de référence fourni par le client sortait de **Coliship**
+(l'outil web de La Poste), pas de l'API — visible en pied de page. L'essai a
+confirmé que l'API rend la même planche.
+
+**Depuis le 16/09/2026, `PDF_A4_300dpi` s'applique à TOUTES les destinations**,
+France comprise, à la demande du client après essai sur l'international.
+
+⚠️ **Le A4 est un format bureautique.** Il ne s'imprime pas sur la thermique
+10×15 dont le kit nous avait été fourni. Le jour où cette imprimante reprend du
+service, revenir au 10×15 — la constante `labelPrintingType` est isolée pour
+que ce retour tienne en une ligne, et le vrai correctif serait de rendre le
+choix réglable en administration, sur le modèle du code SH.
+
+Rien d'autre ne dépend du format : aucune feuille de style d'impression, aucun
+gabarit, aucune dimension codée côté front.
+
 #### Ce qui reste ouvert
 
 | Sujet | État |
 |---|---|
+| Format d'étiquette réglable en admin (`admin_config`) | 🟡 aujourd'hui en dur — à faire si la thermique reprend du service |
 | **EORI absent** (`fields.field[]` jamais envoyé) | ❌ écarté par le client le 16/09. Le plugin officiel *refuse* les envois US sans EORI et ajoute la TVA pour le UK — un envoi US ou UK partirait incomplet |
 | Dimensions du colis (`LENGTH`/`WIDTH`/`HEIGHT`) | 🟡 jamais envoyées |
 | `invoiceNumber` vs `importersReference` | 🟡 le plugin envoie le premier, nous le second |
