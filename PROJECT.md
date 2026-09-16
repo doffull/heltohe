@@ -9,7 +9,8 @@
 > Supabase réel (§17, §18), le 10/09/2026 après trois jours d'assainissement de
 > l'infrastructure (§24), le 14/09/2026 après l'ouverture des expéditions hors
 > France (§27), puis le 15/09/2026 après la remise en service des webhooks de
-> paiement (§28).
+> paiement (§28), et le 16/09/2026 après la correction de la CN23 hors France
+> (§27.8).
 >
 > ⚠️ **Le dépôt a changé le 28/08/2026** : le projet vit désormais dans
 > `doffull/warltkfr`, recréé depuis Lovable. `gafsou20/Helvetica-MP` est une archive.
@@ -37,6 +38,11 @@
 > en base. L'action `generateLabel` de `colissimo-proxy` est **dépréciée** — elle
 > recevait l'adresse recopiée par l'appelant, et aucun des cinq appelants ne
 > transmettait le pays. Ne jamais y revenir : §27.5.
+>
+> ⚠️ **Sur une CN23, `totalAmount` est le PORT, pas le total de la commande.**
+> Colissimo l'imprime sous « Frais de port » et la douane calcule ses droits sur
+> marchandise + port. Y mettre le total faisait payer le destinataire sur près du
+> double de la valeur réelle : §27.8.
 >
 > ⚠️ **Les prix sont TTC.** `orders.tax` est la TVA *contenue* dans le total, jamais un
 > supplément : ne jamais l'additionner. Un écran d'admin le faisait (§24.8), un autre le
@@ -1950,6 +1956,68 @@ sauvegardée serait sinon ignorée en silence.
 📌 Effet de bord favorable : `colissimo-proxy` déclarait **`<weight>1.0</weight>`
 en dur** — tout colis annoncé à un kilo. Le poids réel des articles
 (`products.weight_grams`) est désormais transmis.
+
+### 27.8 Deux défauts découverts en ouvrant une vraie CN23 — 16/09/2026
+
+Le client signalait une « notice de découpage » manquante sur les envois hors
+France. Ouvrir une étiquette suisse réelle a réglé la question et en a soulevé
+une autre, plus chère.
+
+#### La CN23 était produite, mais perdue à l'enregistrement
+
+Colissimo renvoie **deux documents** quand une déclaration douanière est
+demandée : l'étiquette (10×15) puis la CN23 (**A4, 4 exemplaires**). Ses
+défauts sont exactement ceux qu'il faut — `OUTPUT_PRINT_TYPE_CN23` et
+`numberOfCopies` n'ont jamais eu besoin d'être envoyés.
+
+`extractPdf` prenait du **premier `%PDF` au dernier `%%EOF`** : elle collait
+les deux documents bout à bout dans un fichier invalide. Et rien ne le
+signalait — le fichier s'ouvre, mais ce qu'on y voit dépend du lecteur. `file`
+lit le premier en-tête et montre l'étiquette seule ; `pdfinfo` suit le dernier
+`startxref` et montre la CN23 seule, **sans l'étiquette**.
+
+⚠️ Sondage des 60 dernières commandes étiquetées : **7 fichiers concaténés,
+toutes les commandes suisses**, aucune des 51 françaises ni des 2 belges —
+l'UE n'exige pas de CN23. Le défaut touchait donc exactement les destinations à
+déclaration douanière, depuis l'ouverture de l'international.
+
+Corrigé : découpage sur la `boundary` annoncée, repli par découpage à **chaque**
+`%PDF`, fusion `pdf-lib` en un PDF valide. Un document unique reste renvoyé
+**octet pour octet** — les envois France ne repassent par aucune réécriture. Si
+la fusion échoue, l'étiquette seule est conservée : une CN23 à réimprimer vaut
+mieux qu'une expédition bloquée.
+
+Vérifié en production sur `HMP-MU3UG33Z` (Gingins, CH) : **5 pages**, page 1
+l'étiquette 10×15, pages 2 à 5 la CN23.
+
+#### ⚠️ `totalAmount` est le PORT, pas le total de la commande
+
+Colissimo imprime ce champ sur la CN23 sous « **Frais de port** ». Le plugin
+officiel y met `get_shipping_total()` — le port seul — et renseigne à
+l'identique `totalAmount` et `transportationAmount`
+(`LabelGenerationPayload.php:1004`).
+
+Ce code envoyait `order.total`. Sur `HMP-MU3UG33Z` la CN23 déclarait donc
+**243,83 € de port** pour 169 € de marchandise, alors que le port réel est de
+**40 €**. La douane calcule ses droits sur marchandise + port : le destinataire
+payait sur **412,83 € au lieu de 209 €**, près du double. Le défaut était
+invisible tant que la CN23 elle-même se perdait à l'enregistrement.
+
+📌 **Colissimo refuse une CN23 dont le port vaut zéro.** Aucun montant n'est
+inventé pour contourner : un chiffre faux sur un document douanier est pire
+qu'un refus, lequel remonte en 422 avec le motif et se corrige en renseignant
+le port sur la commande. Un `console.error` le signale d'avance.
+
+#### Ce qui reste ouvert
+
+| Sujet | État |
+|---|---|
+| **EORI absent** (`fields.field[]` jamais envoyé) | ❌ écarté par le client le 16/09. Le plugin officiel *refuse* les envois US sans EORI et ajoute la TVA pour le UK — un envoi US ou UK partirait incomplet |
+| Dimensions du colis (`LENGTH`/`WIDTH`/`HEIGHT`) | 🟡 jamais envoyées |
+| `invoiceNumber` vs `importersReference` | 🟡 le plugin envoie le premier, nous le second |
+
+Le détail complet de l'enquête, y compris l'hypothèse d'abord retenue puis
+réfutée, est conservé dans **`COLISSIMO_CN23_FORMAT.md`**.
 
 ### 27.6 Pièges à connaître
 

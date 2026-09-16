@@ -450,6 +450,22 @@ Deno.serve(async (req) => {
     }
   }
 
+  // Frais de port de la commande, en centimes — déclarés à la douane.
+  const transportationAmount = Math.round(Number(order.shipping_cost || 0) * 100);
+
+  // Colissimo REFUSE une déclaration douanière dont le port vaut zéro (le
+  // plugin officiel bloque d'ailleurs l'étiquette dans ce cas). On n'invente
+  // pas de montant pour contourner : un chiffre inventé sur un document
+  // douanier est pire qu'un refus. Le refus, lui, remonte en 422 avec le motif
+  // de Colissimo, et se corrige en renseignant le port sur la commande.
+  if (needsCustoms && transportationAmount <= 0) {
+    console.error(
+      'CN23 demandée avec des frais de port à zéro — Colissimo va refuser',
+      orderId,
+      String(order.order_number || ''),
+    );
+  }
+
   const payload = {
     contractNumber: login,
     password,
@@ -463,7 +479,21 @@ Deno.serve(async (req) => {
         productCode,
         depositDate: new Date().toISOString().split('T')[0],
         orderNumber: String(order.order_number || ''),
-        totalAmount: Math.round(Number(order.total || 0) * 100),
+        // `totalAmount` est le PORT, pas le total de la commande.
+        //
+        // Colissimo imprime ce champ sur la CN23 sous « Frais de port », et le
+        // plugin officiel y met `get_shipping_total()` — le port seul
+        // (LabelGenerationPayload.php:1004), renseigné à l'identique dans
+        // `totalAmount` et `transportationAmount`.
+        //
+        // Ce code envoyait `order.total`. Sur la commande suisse du 16/09, la
+        // CN23 déclarait donc 243,83 € de port pour 169 € de marchandise, alors
+        // que le port réel est de 40 €. La douane calcule ses droits sur
+        // marchandise + port : le destinataire payait sur 412,83 € au lieu de
+        // 209 €, soit près du double. Le défaut ne se voyait pas tant que la
+        // CN23 elle-même était perdue à l'enregistrement.
+        totalAmount: transportationAmount,
+        transportationAmount,
         commercialName,
       },
       // `pickupLocationId` se place dans `parcel`, jamais dans `service` —
