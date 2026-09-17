@@ -9,8 +9,10 @@
 > Supabase réel (§17, §18), le 10/09/2026 après trois jours d'assainissement de
 > l'infrastructure (§24), le 14/09/2026 après l'ouverture des expéditions hors
 > France (§27), puis le 15/09/2026 après la remise en service des webhooks de
-> paiement (§28), et le 16/09/2026 après la correction de la CN23 hors France
-> et le passage des étiquettes au format A4 (§27.8).
+> paiement (§28), le 16/09/2026 après la correction de la CN23 hors France
+> et le passage des étiquettes au format A4 (§27.8), et le **17/09/2026** après
+> l'allègement du catalogue visuel, le redimensionnement à l'envoi et le
+> téléphone rendu obligatoire (§29).
 >
 > ⚠️ **Le dépôt a changé le 28/08/2026** : le projet vit désormais dans
 > `doffull/warltkfr`, recréé depuis Lovable. `gafsou20/Helvetica-MP` est une archive.
@@ -53,6 +55,24 @@
 > ⚠️ **Les prix sont TTC.** `orders.tax` est la TVA *contenue* dans le total, jamais un
 > supplément : ne jamais l'additionner. Un écran d'admin le faisait (§24.8), un autre le
 > fait encore à l'enregistrement (§24.1).
+>
+> ⚠️ **Le catalogue visuel a été allégé le 17/09 : 2,4 Go → 1,2 Go.** Les images
+> sont plafonnées à **2048 px**, et le zoom produit ramené à **×2,5** — les deux
+> valeurs sont LIÉES et se changent ensemble, sinon le zoom devient flou. Les
+> masters 4096 px n'existent plus que dans le **backup local** de qui a lancé
+> `scripts/resize-media.mjs`. Voir §29.
+>
+> ⚠️ **Aucune des 8 edge functions qui écrivent dans un bucket ne fixe
+> `cacheControl`** — elles retombent sur une heure au lieu d'un an, soit la cause
+> même des 444 Go de septembre. `MEDIA_CACHE_CONTROL` n'existe que côté
+> navigateur. Le §24.6 n'avait inventorié que le front : §29.7.
+>
+> ⚠️ **Un upload d'administrateur ne passe par AUCUNE fonction edge.** Le SDK
+> écrit directement dans le Storage depuis le navigateur. Les fonctions edge qui
+> déposent des images les *fabriquent* (IA, extraction PDF) : §29.4.
+>
+> ⚠️ **`form.address2` — le complément d'adresse — est saisi puis JETÉ.** Le champ
+> existe à l'écran, la valeur n'atteint jamais la commande : §29.1.
 
 ---
 
@@ -1582,10 +1602,23 @@ pour le diagnostic. À révoquer avec la précédente.
 
 ---
 
-## 25. Poids des images — analyse du 11/09/2026 ⏸️ en attente de décision client
+## 25. Poids des images — analyse du 11/09/2026 ✅ exécutée le 17/09 (voir §29)
 
-**Rien n'a été modifié.** Analyse seule, à reprendre après arbitrage avec le client :
-la modification touche l'ensemble du catalogue visuel, elle n'est pas anodine.
+> ⚠️ **Section historique.** L'analyse ci-dessous a été faite le 11/09 sans rien
+> modifier. **Elle a été exécutée le 17/09 — lire le §29**, qui donne les chiffres
+> réels et corrige plusieurs estimations d'ici :
+>
+> - le parc était **bien plus lourd** qu'annoncé : 1 917 objets pour 2,4 Go, et
+>   non 581 objets à 0,75 Mo de moyenne ;
+> - « les 3 vidéos sont légères (475 Ko – 1,2 Mo) » est **faux** : 66 MP4 pour
+>   364 Mo, dont deux hero à 28 Mo ;
+> - le gain a dépassé les prévisions, parce que les PNG d'origine sont mal
+>   encodés — le seul ré-encodage fait ×2,9 **à dimensions égales** ;
+> - le zoom produit existe (×3,5), là où cette section le listait « non vérifié ».
+>
+> Ce qui reste juste : le diagnostic de fond (le gain vient des **dimensions**,
+> pas du taux de compression), le rejet des Image Transformations, et la
+> stratégie « générer des dérivés, ne rien détruire ».
 
 ### Où en est la facturation
 
@@ -2284,3 +2317,312 @@ Décision client du 15/09/2026. L'administration ne reçoit plus que
 | Vérifier les **43 transactions `created`** chez PayPlug | 🟡 **priorité** — au moins un vrai paiement s'y trouve |
 | Test PayPlug de bout en bout (code de notification à `200`) | ⏳ en cours |
 | Les trois dettes du §28.6 | 🟡 à traiter |
+
+---
+
+## 29. Poids des images, upload, et téléphone obligatoire — 17/09/2026 ✅
+
+> Journée en production. Le bucket passe de **2,4 Go à 1,2 Go (−50 %)**, le
+> redimensionnement devient permanent à l'envoi, et trois défauts sans rapport
+> ont été corrigés en chemin.
+
+### 29.1 Le téléphone devient obligatoire au checkout
+
+Le client signalait des commandes sans numéro (`HMP-MU446URM`). Le champ existait
+depuis toujours — **sans astérisque et sans aucun contrôle** :
+
+| Emplacement | État |
+|---|---|
+| `validateAddress()` (garde d'étape) | `phone` absent de la liste |
+| `buildPaypalPayload()` (garde avant paiement) | `phone` absent |
+| RPC `validate_and_create_order` | aucune validation |
+| `orders.customer_phone` | `text` **nullable**, sans contrainte |
+
+**Pourquoi ça coûtait cher** : `create-colissimo-label` recopie `customer_phone`
+dans `phoneNumber` **et** `mobileNumber` de l'étiquette. C'est ce mobile qui
+déclenche le SMS « votre colis est arrivé au point relais » — donc une commande
+sans téléphone, **en livraison relais qui est le mode par DÉFAUT**, partait sans
+que la destinataire soit prévenue. Le même champ alimente `importersPhone` sur la
+CN23 hors France.
+
+Corrigé dans les deux gardes + astérisque au libellé. **Aucun format n'est
+imposé**, seulement la présence : un contrôle de forme rejetterait des numéros
+étrangers valides — la boutique expédie hors France depuis le 14/09 — et
+bloquerait une commande pour un gain nul.
+
+⚠️ **Il existe un seul formulaire de commande côté client** : `Checkout.tsx`
+étape 1. Les trois modes de paiement lisent le même état `form`. `AccountAddresses`
+est un stub de 15 lignes (pas de carnet d'adresses), et les outils MCP sont en
+lecture seule sur les commandes.
+
+#### ⚠️ Deux trous NON corrigés, découverts au passage
+
+1. **L'indicateur d'étapes est cliquable et ne valide rien** (`Checkout.tsx:514`) :
+   ```ts
+   onClick={() => { if (s === 'delivery') setStep('delivery'); }}   // aucune garde
+   ```
+   Or le bouton **CONFIRMER** (`handlePlaceOrder`) ne vérifie **aucun champ**,
+   seulement le point relais. Les deux combinés permettent de créer une commande
+   à l'adresse entièrement vide. C'est probablement ainsi que les commandes
+   incomplètes sont réellement passées. Correctif : faire appeler
+   `validateAddress()` par `handlePlaceOrder`, trois lignes.
+
+2. 🔴 **`form.address2` est saisi puis JETÉ.** Le champ « Complément d'adresse »
+   n'apparaît que deux fois dans tout le projet : sa déclaration (`:166`) et son
+   `<Input>` (`:587`). Il n'est lu **nulle part** — ni dans `buildPaypalPayload`,
+   ni dans `handlePlaceOrder` :
+   ```ts
+   const customerAddress = deliveryMode === 'relay' && form.relayInfo
+     ? `Point Relais: ${form.relayInfo} — ${form.address}`
+     : form.address;          // address2 n'y figure pas
+   ```
+   La cliente saisit « Bâtiment B, 4ᵉ étage », l'interface l'accepte, et la donnée
+   disparaît à la validation. Ni en base, ni sur l'étiquette, ni sur le bon de
+   livraison. Cause classique d'échec de livraison à domicile.
+
+### 29.2 Ce que pesait vraiment le bucket
+
+`cache-control` n'était plus en cause — vérifié en GET, `public, max-age=31536000,
+immutable` partout. Le problème était le **poids des fichiers**.
+
+| | 11/09 (§25) | **Mesuré le 17/09** |
+|---|---|---|
+| Objets | 581 | **1 917** |
+| Poids | ~435 Mo | **2 435 Mo** |
+| Moyenne | 0,75 Mo | **1,3 Mo** |
+
+```
+image/jpeg  1116 obj  1047 Mo
+image/png    356 obj   796 Mo     ← des 4096 × 4096 à 26 Mo
+video/mp4     66 obj   364 Mo     ← §25 en annonçait 3, « légères »
+image/gif    355 obj   198 Mo
+image/webp    22 obj    26 Mo
+```
+
+**Ce que servait la page d'accueil** : un PNG de **19,06 Mo**, un autre de 6,44 Mo,
+une vidéo de 3,65 Mo — ≈ **30 Mo par visiteur non caché**. 160 Go/jour ÷ 30 Mo
+≈ **5 300 visites/jour**. Le compte tombe juste : pas d'anomalie à chercher, juste
+des fichiers absurdement lourds.
+
+### 29.3 `scripts/resize-media.mjs`
+
+Redimensionne **en place**, chemins inchangés — donc **aucune URL ne bouge, aucune
+ligne de base ni de code à modifier**.
+
+```
+cible     : PNG et JPEG > 1 Mo (liste BLANCHE)
+largeurs  : products/* 2048 · hero/background 1920 · hero/mobile 1080 · reste 1600
+PNG       : reste PNG, sans perte (compressionLevel 9, effort 10)
+JPEG      : reste JPEG, q85 mozjpeg
+backup    : LOCAL, dans backup-media/<horodatage>/ (gitignoré)
+modes     : --dry-run (défaut) · --apply · --rollback <dossier> · --only <chemin>
+```
+
+#### Le résultat, en deux passes
+
+| Étape | Poids |
+|---|---|
+| Départ | 2 435 Mo |
+| Run 1 (> 3 Mo, 187 objets) | 1 508 Mo |
+| **Run 2 (> 1 Mo, 229 objets)** | **1 216 Mo** |
+
+**−1 220 Mo, soit −50 %.** Exemples : `promo-parallax` 11,94 → 0,11 Mo (×104),
+`home/images` 19,06 → 0,40 Mo (×47,6), `products/colors` 26,25 → 2,29 Mo (×11,5).
+
+#### ⚠️ Pourquoi on ne convertit RIEN
+
+PNG reste PNG, JPEG reste JPEG, alpha préservé. Deux raisons : `virtual-tryon`
+envoie les images produit à Gemini, et plusieurs galeries sont en PNG + alpha
+qu'un passage en JPEG aplatirait sur du noir.
+
+Le gain n'en souffre presque pas : **les PNG d'origine sont mal encodés**, et le
+seul ré-encodage par libvips fait déjà **×2,9 à dimensions identiques**.
+
+#### ⚠️ Pièges rencontrés, à connaître avant de relancer
+
+- **Le backup est LOCAL et constitue la seule trace des masters 4096 px.** D'où un
+  ordre non négociable : télécharger → écrire le backup → **le RELIRE et vérifier
+  son SHA-256** → et seulement alors écraser. Un backup non conforme fait sauter
+  le fichier.
+- **`cache-control` est réémis explicitement à chaque upload.** L'API Storage
+  retombe sur `no-cache` quand l'en-tête manque — la cause même des 444 Go de
+  septembre. Réécrire sans lui aurait empiré la situation.
+- **Le téléchargement passe par l'endpoint AUTHENTIFIÉ**, pas l'URL publique : le
+  CDN pourrait servir une copie déjà réécrite, et on sauvegarderait un « original »
+  qui n'en est pas un.
+- 🔴 **`sharp.cache(false)` + `sharp.concurrency(1)` sont indispensables.** Sans
+  eux, libvips accumule cache et tampons jusqu'à l'**OOM killer** — constaté,
+  code 137, sans le moindre message. Le script est borné par le réseau, pas par
+  le CPU.
+- **Écrire à chemin FIXE sort de l'hypothèse de `storageUpload.ts:38`** (cache
+  d'un an valable parce que les chemins sont horodatés). Assumé : un visiteur qui
+  détient déjà l'image gardera la lourde jusqu'à un an — sans effet, il ne
+  retéléchargeait rien. L'egress vient des caches froids, et le CDN Supabase est
+  purgé à l'upsert (vérifié).
+
+#### Vérifié de bout en bout
+
+Sur un objet réel : réécriture ×19, CDN purgé immédiatement, `cache-control`
+conservé à l'identique, puis `--rollback` restituant le fichier **bit à bit**
+(SHA-256 identique).
+
+### 29.4 Redimensionnement à l'envoi — `prepareMediaForUpload()`
+
+Le script rattrape l'existant ; sans traitement en amont, la prochaine image
+repart à 4096 px et tout est à refaire. Les visuels arrivent d'**exports IA
+bruts**, jamais retaillés.
+
+Posé dans `storageUpload.ts`, au même endroit et pour la même raison que
+`mediaUploadOptions()` : six façons d'envoyer un fichier, c'est ce qui avait permis
+l'oubli du `cache-control` en septembre.
+
+| | |
+|---|---|
+| Formats | **PNG et JPEG uniquement**, liste blanche, format toujours conservé |
+| Plafond | **2048 px partout**, sans exception |
+| Qualité JPEG | 0,85 (aligné sur le q85 du script) |
+| Retour admin | **aucun** — opération silencieuse, choix explicite |
+
+**Pourquoi 2048 partout**, là où le script affine par chemin : au moment de
+l'envoi **on ne sait pas encore à quoi l'image servira**, et deux des six points
+écrivent à des chemins génériques (`useMediaLibrary` à la racine, `useFileUpload`
+avec un dossier variable). 2048 satisfait le cas le plus exigeant (fiche produit,
+zoom ×2,5). Le script affinera ensuite, en connaissant le chemin.
+
+#### ⚠️ Les gardes, et pourquoi chacune existe
+
+- **`createImageBitmap` avec `resizeWidth`/`resizeHeight`** : l'image est décodée
+  DIRECTEMENT à la taille voulue, le plein format n'est jamais matérialisé. Une
+  première version décodait avant de mesurer, et un garde-fou mémoire à 40 M
+  pixels écartait alors le panoramique **13110 × 3072** — soit précisément le
+  fichier au meilleur gain (11,94 → 0,19 Mo, ×62). Les dimensions se lisent
+  désormais via une balise `<img>`, sans allouer 161 Mo pour apprendre une taille.
+- **`imageOrientation: 'from-image'`** : sans lui, une photo redressée par son seul
+  en-tête EXIF ressortirait **couchée** — le canvas ne recopie aucune métadonnée.
+- **Rien ne peut faire échouer un envoi** : toute erreur renvoie le fichier
+  d'origine. Une image lourde vaut infiniment mieux qu'une image perdue.
+- **Le canvas reste transparent** : ne jamais y peindre un fond, les découpes
+  produit se retrouveraient sur du blanc ou du noir.
+- **Si le résultat est plus lourd, l'original gagne** : l'encodeur PNG du
+  navigateur est moins bon que celui du script.
+
+⚠️ **`BulkGifDialog` est le seul point d'envoi qui n'appelle PAS cette fonction**,
+délibérément et commenté sur place : un GIF animé passé par canvas ne garderait
+que sa **première image**, l'animation détruite sans erreur ni trace.
+
+#### ⚠️ Le gain en navigateur est bien plus faible qu'avec le script
+
+×1,4 à ×3,4 sur les PNG, contre ×4 à ×11,5 avec `sharp`. L'encodeur PNG du
+navigateur est nettement moins bon. C'est le **gain dimensionnel** qui est acquis
+en amont, pas celui d'encodage — d'où l'intérêt de repasser le script
+périodiquement.
+
+#### ⚠️ L'upload d'un administrateur NE passe par aucune fonction edge
+
+Vérifié en remontant la chaîne : `ProductForm` → `MediaLibraryDialog` →
+`useUploadMedia` → `supabase.storage.upload()`. Le SDK parle **directement** à
+l'API Storage depuis le navigateur, autorisé par les RLS sur `storage.objects`.
+
+Les trois fonctions edge qui écrivent des images dans `media` ne téléversent
+rien — elles **fabriquent** l'image côté serveur, et le fichier ne passe jamais
+par le navigateur :
+
+| Fonction | Déclenchée depuis | Chemin | Objets au 17/09 |
+|---|---|---|---|
+| `image-pose-edit` | `AiPoseEditorDialog` | `products/ai-pose/` | 0 |
+| `generate-slide-image` | `AiImageButton` | `slides/ai/` | 0 |
+| `parse-products-pdf` | `AdminStock` | `pdf-import/` | 1 · 0,14 Mo |
+
+Le front couvre donc **la totalité de ce qui alimente réellement le bucket**.
+
+### 29.5 Le zoom produit passe de ×3,5 à ×2,5
+
+Lié à la cible de 2048 px, et les deux valeurs se changent **ensemble**.
+
+L'image produit s'affiche au maximum à **~812 px** de large (conteneur
+`max-w-[1500px]`, colonne `1.15fr`, gouttière 56 px). Un rendu 1:1 au zoom maximal
+demande donc `812 × zoom` :
+
+| Zoom | Source nécessaire |
+|---|---|
+| ×3,5 | 2 842 px |
+| **×2,5** | **2 030 px → 2048** |
+| ×2 | 1 624 px |
+
+À ×3,5 il aurait fallu conserver des masters deux fois plus lourds pour un
+grossissement que personne n'avait demandé. Passer à 1600 px n'aurait rapporté que
+~40 % de plus, au prix d'un zoom visiblement mou.
+
+⚠️ **Remonter ce facteur sans régénérer des masters plus larges rendra les images
+floues au zoom maximal.** La constante `ZOOM_SCALE` de `ProductImageGallery.tsx`
+porte l'avertissement.
+
+### 29.6 Les pastilles `filterOnly` effaçaient les miniatures
+
+Bug **préexistant**, révélé par hasard, sans rapport avec le reste de la journée.
+
+La bande sous le visuel est un **OU EXCLUSIF** :
+
+```tsx
+{colorOptions.length > 0 ? colorOptions.map(...)   // pastilles
+                         : imageList.map(...)}     // miniatures
+```
+
+Or une pastille `filterOnly` n'existe **que** pour les filtres de la boutique :
+elle ne doit apparaître nulle part sur la fiche. `ProductCard.tsx:64` et
+`ProductOptions.tsx:109` l'écartaient déjà — `ProductImageGallery` était **le seul
+des trois à ne pas le faire**.
+
+Une seule pastille invisible suffisait donc à faire disparaître **toutes** les
+miniatures. **9 produits sur 114**, avec 4 à 8 images de galerie chacun, devenues
+inatteignables autrement qu'en faisant défiler le slider.
+
+Le symptôme s'étendait au fil des semaines, à mesure que les pastilles de filtre
+étaient ajoutées depuis l'administration — mises à jour échelonnées du 7 au 17/09.
+**Personne ne pouvait faire le lien** entre « je classe ce produit en noir » et
+« les miniatures ont disparu ».
+
+Corrigé par `colorOptions.filter(co => !co.filterOnly)`. Effet vérifié sur les 114
+produits : **9 réparés, 12 gardent leurs pastilles** (déclinaisons réelles),
+**93 inchangés**.
+
+⚠️ **Reste ouvert** : même sans `filterOnly`, l'exclusivité prive les 12 produits à
+déclinaisons réelles de l'accès à leur galerie. Peut-être voulu — non tranché.
+
+### 29.7 Ce qu'il reste à faire
+
+| Sujet | État |
+|---|---|
+| **Observer l'egress 2–3 jours** | ⏳ **la mesure qu'on cherchait**. Pas de baisse ⇒ ce ne sont pas les médias, mais du trafic de robots ignorant le cache |
+| 🔴 **Aucune des 8 fonctions edge ne fixe `cacheControl`** | voir ci-dessous |
+| `handlePlaceOrder` sans validation + étapes cliquables (§29.1) | 🟡 3 lignes |
+| `form.address2` jeté silencieusement (§29.1) | 🔴 |
+| Vidéos : 66 MP4 / 364 Mo, `preload="auto"` + `autoPlay` | 🟡 premier poste désormais |
+| GIF : 355 fichiers / 198 Mo → conversion MP4/WebM (×10–20) | 🟡 |
+| `srcset` (absent partout) | 🟡 ×3 sur mobile, sans risque |
+| Rotation de la clé `sb_secret_` utilisée le 17/09 | 🟡 |
+
+#### 🔴 `cacheControl` absent de TOUTES les fonctions edge
+
+```
+colissimo-proxy · create-colissimo-label · auto-colissimo-label
+generate-slide-image · image-pose-edit · order-slip-pdf
+generate-product-video · parse-products-pdf
+```
+
+**Aucune des huit** ne le fixe. Elles reçoivent donc le défaut Supabase —
+**une heure au lieu d'un an, 8 760 fois moins**. C'est exactement la cause des
+444 Go de septembre.
+
+Le §24.6 affirmait avoir traité « quatre points d'envoi sur six » : l'inventaire
+n'avait regardé **que le front**. `MEDIA_CACHE_CONTROL` n'existe que côté
+navigateur, et rien ne la partage avec Deno.
+
+Sans effet aujourd'hui (ces chemins ont produit 1 fichier, rattrapé par
+`fix-media-cache-control.sh`), mais **le prochain import PDF volumineux repartira
+en cache d'une heure**. Correctif : un `_shared/storage-upload.ts` côté edge, puis
+redéploiement des huit fonctions.
+
+⚠️ Incohérence relevée au passage : `auto-colissimo-label` et
+`generate-product-video` écrivent des PDF et des MP4 dans **`media`** (public),
+alors que les autres étiquettes vont dans `labels` (privé).
