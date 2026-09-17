@@ -200,8 +200,24 @@ export default function Checkout() {
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
+  /**
+   * `phone` est obligatoire depuis le 17/09/2026.
+   *
+   * Il ne l'était pas, et ça se payait à l'expédition : `create-colissimo-label`
+   * recopie `customer_phone` dans `phoneNumber` ET `mobileNumber` de
+   * l'étiquette. C'est ce mobile qui déclenche le SMS « votre colis est arrivé
+   * au point relais » — donc une commande sans téléphone, en livraison relais
+   * (le mode par DÉFAUT), part sans que la destinataire soit prévenue. Le même
+   * champ alimente `importersPhone` sur la CN23 hors France.
+   *
+   * Aucun format n'est imposé : seule la présence est exigée. Un contrôle de
+   * forme rejetterait des numéros étrangers parfaitement valides — la boutique
+   * expédie hors France depuis le 14/09 — et empêcherait de commander pour un
+   * gain nul, le numéro n'étant utilisé que par un humain ou par le SMS de
+   * Colissimo.
+   */
   const validateAddress = () => {
-    const required = ['firstName', 'lastName', 'email', 'address', 'city', 'zip'];
+    const required = ['firstName', 'lastName', 'email', 'phone', 'address', 'city', 'zip'];
     if (!required.every(f => form[f as keyof typeof form].trim())) return false;
     return validateZip(form.zip, form.country) === null;
   };
@@ -272,7 +288,10 @@ export default function Checkout() {
       toast({ title: 'Point relais requis', description: 'Veuillez sélectionner un point relais', variant: 'destructive' });
       return null;
     }
-    if (!form.email || !form.firstName || !form.lastName || !form.address || !form.city || !form.zip) {
+    // `phone` ajouté le 17/09/2026 — voir `validateAddress`. Cette garde est
+    // la DERNIÈRE avant le paiement : la manquer ici laisserait passer une
+    // commande payée sans téléphone, donc une expédition muette.
+    if (!form.email || !form.firstName || !form.lastName || !form.phone || !form.address || !form.city || !form.zip) {
       toast({ title: 'Adresse incomplète', description: 'Complétez vos coordonnées de livraison', variant: 'destructive' });
       return null;
     }
@@ -572,8 +591,11 @@ export default function Checkout() {
                     <Input type="email" value={form.email} onChange={e => updateForm('email', e.target.value)} className="bg-secondary/50 text-base" maxLength={255} />
                   </div>
                   <div className="space-y-2">
-                    <Label className="hud-text text-xs">TÉLÉPHONE</Label>
-                    <Input type="tel" value={form.phone} onChange={e => updateForm('phone', e.target.value)} className="bg-secondary/50 text-base" maxLength={20} />
+                    {/* L'astérisque marque les champs requis dans tout ce
+                        formulaire : l'oublier ici ferait buter la cliente sur
+                        un refus qu'aucun libellé n'annonçait. */}
+                    <Label className="hud-text text-xs">TÉLÉPHONE *</Label>
+                    <Input type="tel" value={form.phone} onChange={e => updateForm('phone', e.target.value)} className="bg-secondary/50 text-base" maxLength={20} placeholder="Pour être prévenue de la livraison" />
                   </div>
                 </div>
 
