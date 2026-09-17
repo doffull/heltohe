@@ -40,7 +40,7 @@ import {
   useSortable, verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { mediaUploadOptions } from '@/lib/storageUpload';
+import { mediaUploadOptions, prepareMediaForUpload } from '@/lib/storageUpload';
 
 function generateId() {
   return `id-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
@@ -1651,9 +1651,10 @@ function SortableCategoryCard({
               const { supabase } = await import('@/integrations/supabase/client');
               const ext = file.name.split('.').pop();
               const path = `categories/${Date.now()}.${ext}`;
+              const payload = await prepareMediaForUpload(file);
               const { data, error } = await supabase.storage
                 .from('media')
-                .upload(path, file, mediaUploadOptions({ upsert: true }));
+                .upload(path, payload, mediaUploadOptions({ upsert: true }));
               if (error) { toast.error('Erreur upload'); return; }
               const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(data.path);
               updateCategory.mutate({ ...cat, image: publicUrl }, {
