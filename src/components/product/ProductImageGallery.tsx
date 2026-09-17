@@ -27,6 +27,22 @@ interface ProductImageGalleryProps {
 }
 
 
+/**
+ * Facteur de grossissement au survol — ramené de 3,5 à 2,5 le 17/09/2026.
+ *
+ * ⚠️ Cette valeur est LIÉE à la largeur des masters produit sur Supabase
+ * (2048 px, cf. `scripts/resize-media.mjs`). L'image s'affiche au maximum à
+ * ~812 px de large — conteneur `max-w-[1500px]`, colonne `1.15fr`, gouttière
+ * 56 px — donc un rendu 1:1 au zoom maximal demande 812 × 2,5 ≈ 2 030 px.
+ *
+ * À 3,5 il aurait fallu conserver des masters de 2 842 px, soit des fichiers
+ * deux fois plus lourds pour un grossissement que personne n'avait demandé.
+ *
+ * Remonter ce facteur SANS régénérer des masters plus larges rendra les
+ * images floues au zoom maximal. Les deux valeurs se changent ensemble.
+ */
+const ZOOM_SCALE = 2.5;
+
 function isEmbedVideo(url: string) {
   return /youtube|youtu\.be|vimeo/i.test(url);
 }
@@ -174,7 +190,7 @@ export default function ProductImageGallery({
               fade={false}
               className="w-full h-full object-cover"
               initial={{ opacity: 0, scale: 1.03 }}
-              animate={{ opacity: 1, scale: isZoomed ? 3.5 : 1 }}
+              animate={{ opacity: 1, scale: isZoomed ? ZOOM_SCALE : 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
               style={isZoomed ? {

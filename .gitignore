@@ -106,3 +106,7 @@ scripts/migration-bumfyr-vers-hzjz/
 backup_*.sql
 baseline_*.sql
 *.dump
+
+# Backups locaux du redimensionnement des médias — SEULE copie des masters,
+# jamais dans le dépôt (voir scripts/resize-media.mjs).
+backup-media/
