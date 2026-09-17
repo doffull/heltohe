@@ -68,21 +68,6 @@ export function BulkGifDialog({ open, onOpenChange, products }: Props) {
     return Array.from(new Set(all)).slice(0, Math.max(2, maxFrames));
   }
 
-  /**
-   * ⚠️ Seul point d'envoi qui NE passe PAS par `prepareMediaForUpload()`, et
-   * c'est délibéré : ce qui sort d'ici est un GIF ANIMÉ.
-   *
-   * Le redimensionnement de `storageUpload.ts` repose sur un `canvas`, qui ne
-   * connaît qu'une seule image. Un GIF animé qui y passerait ressortirait
-   * réduit à sa PREMIÈRE image — animation détruite, sans erreur ni trace.
-   *
-   * La garde existe déjà là-bas (liste blanche PNG/JPEG, et le type vaut ici
-   * `image/gif`), donc l'appel serait sans effet. On ne l'écrit pas pour
-   * autant : le lecteur de ce fichier ne doit pas avoir à aller le vérifier.
-   *
-   * L'allègement des GIF passe par une conversion en MP4/WebM (×10–20), un
-   * autre chantier.
-   */
   async function uploadGif(blob: Blob, productId: string): Promise<string> {
     const path = `products/gifs/${productId}-${Date.now()}.gif`;
     const { error } = await supabase.storage

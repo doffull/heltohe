@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
-import { mediaUploadOptions, prepareMediaForUpload } from '@/lib/storageUpload';
+import { mediaUploadOptions } from '@/lib/storageUpload';
 import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 const CATEGORIES = ['Homme', 'Femme', 'Enfant', 'Accessoires'];
@@ -190,10 +190,9 @@ export function InventoryProductDialog({ open, onOpenChange, onSaved, locations,
     try {
       const ext = file.name.split('.').pop();
       const fileName = `products/${Date.now()}-${Math.random().toString(36).substring(2, 6)}.${ext}`;
-      const payload = await prepareMediaForUpload(file);
       const { error } = await supabase.storage
         .from('media')
-        .upload(fileName, payload, mediaUploadOptions({ upsert: true }));
+        .upload(fileName, file, mediaUploadOptions({ upsert: true }));
       if (error) throw error;
       const { data: urlData } = supabase.storage.from('media').getPublicUrl(fileName);
       setForm(p => ({ ...p, image: urlData.publicUrl }));

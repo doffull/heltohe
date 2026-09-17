@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { prepareImageForUpload } from '@/lib/iosImage';
-import { mediaUploadOptions, prepareMediaForUpload } from '@/lib/storageUpload';
+import { mediaUploadOptions } from '@/lib/storageUpload';
 
 interface UseFileUploadOptions {
   bucket?: string;
@@ -37,13 +37,9 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
 
       setProgress(30);
 
-      // Réduit à 2048 px si l'image dépasse. PNG/JPEG seulement, format
-      // conservé, et l'original est renvoyé tel quel au moindre échec.
-      const payload = await prepareMediaForUpload(file);
-
       const { error } = await supabase.storage
         .from(bucket)
-        .upload(filePath, payload, mediaUploadOptions({ upsert: true }));
+        .upload(filePath, file, mediaUploadOptions({ upsert: true }));
 
       if (error) throw error;
 

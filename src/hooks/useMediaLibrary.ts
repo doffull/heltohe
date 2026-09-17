@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { mediaUploadOptions, prepareMediaForUpload } from '@/lib/storageUpload';
+import { mediaUploadOptions } from '@/lib/storageUpload';
 
 export interface MediaFile {
   id: string;
@@ -58,13 +58,9 @@ export function useUploadMedia() {
         .replace(/[^a-zA-Z0-9._-]+/g, '_')
         .replace(/^_+|_+$/g, '');
       const fileName = `${Date.now()}-${safeName || 'media'}`;
-      // Chemin générique (racine du bucket) : on ne connaît pas l'usage
-      // final, d'où le plafond unique de 2048 px.
-      const payload = await prepareMediaForUpload(file);
-
       const { error } = await supabase.storage
         .from(BUCKET)
-        .upload(fileName, payload, mediaUploadOptions({ upsert: false, contentType: file.type || undefined }));
+        .upload(fileName, file, mediaUploadOptions({ upsert: false, contentType: file.type || undefined }));
       if (error) throw error;
       const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(fileName);
       return { fileName, url: urlData.publicUrl, type: file.type || 'application/octet-stream', size: file.size };

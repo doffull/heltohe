@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useUpdateProduct } from '@/hooks/useProducts';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, Check, X, ImageIcon, Loader2 } from 'lucide-react';
-import { mediaUploadOptions, prepareMediaForUpload } from '@/lib/storageUpload';
+import { mediaUploadOptions } from '@/lib/storageUpload';
 
 interface Props {
   open: boolean;
@@ -52,12 +52,9 @@ function getFolderName(file: File): string | null {
 async function uploadToStorage(file: File): Promise<string | null> {
   const safe = file.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9._-]+/g, '_');
   const fileName = `products/bulk/${Date.now()}-${safe}`;
-  // Import en masse : c'est le chemin par lequel arrivent les exports bruts
-  // 4096 px. Réduits à 2048, format conservé.
-  const payload = await prepareMediaForUpload(file);
   const { error } = await supabase.storage
     .from('media')
-    .upload(fileName, payload, mediaUploadOptions({ upsert: false, contentType: file.type || undefined }));
+    .upload(fileName, file, mediaUploadOptions({ upsert: false, contentType: file.type || undefined }));
   if (error) return null;
   const { data } = supabase.storage.from('media').getPublicUrl(fileName);
   return data.publicUrl;
