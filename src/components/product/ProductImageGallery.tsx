@@ -68,6 +68,26 @@ export default function ProductImageGallery({
   product,
 
 }: ProductImageGalleryProps) {
+  /**
+   * Pastilles réellement affichables.
+   *
+   * ⚠️ Une pastille `filterOnly` n'existe QUE pour les filtres de la boutique
+   * — elle ne doit apparaître nulle part sur la fiche. `ProductCard` et
+   * `ProductOptions` l'écartaient déjà ; ce composant, lui, ne le faisait pas.
+   *
+   * Le défaut était coûteux, parce que la bande sous le visuel est un OU
+   * EXCLUSIF : pastilles OU miniatures. Une seule pastille invisible suffisait
+   * donc à faire disparaître TOUTES les miniatures d'un produit — 9 produits
+   * sur 114 au 17/09/2026, avec 4 à 8 images de galerie chacun, devenues
+   * inatteignables autrement qu'en faisant défiler le slider.
+   *
+   * Le symptôme s'étendait au fil des semaines, à mesure que les pastilles de
+   * filtre étaient ajoutées depuis l'administration : personne ne pouvait
+   * faire le lien entre « je classe ce produit en noir » et « les miniatures
+   * ont disparu ».
+   */
+  const visibleColorOptions = colorOptions.filter((co) => !co.filterOnly);
+
   const isMobile = useIsMobile();
   const [activeMedia, setActiveMedia] = useState<'image' | 'video'>('image');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -418,9 +438,11 @@ export default function ProductImageGallery({
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, duration: 0.5 }}
       >
-        {/* Color swatches as thumbnails (when colorOptions exist) */}
-        {colorOptions.length > 0 ? (
-          colorOptions.map((co, i) => (
+        {/* Pastilles de couleur OU miniatures — jamais les deux. D'où
+            l'importance d'écarter les `filterOnly` : invisibles par nature,
+            elles feraient disparaître les miniatures sans rien afficher. */}
+        {visibleColorOptions.length > 0 ? (
+          visibleColorOptions.map((co, i) => (
             <motion.button
               key={co.color}
               onClick={() => {
