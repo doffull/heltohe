@@ -81,8 +81,21 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 const BUCKET = 'media';
 
-/** Seuil d'entrée dans le lot. En dessous, on ne touche à rien. */
-const MIN_SIZE_MB = 3;
+/**
+ * Seuil d'entrée dans le lot. En dessous, on ne touche à rien.
+ *
+ * Abaissé de 3 à 1 Mo le 17/09/2026, une fois le premier lot passé sans
+ * incident. Mesuré sur le parc réel :
+ *
+ *     > 3 Mo  → 187 objets · 1 064 Mo · 57 % du poids des images
+ *     > 1 Mo  → 423 objets · 1 466 Mo · 78 %
+ *     > 0,5 Mo → 648 objets · 1 625 Mo · 87 %
+ *
+ * On s'arrête à 1 Mo : descendre à 0,5 n'ajouterait que 159 Mo pour 225
+ * fichiers de plus, et chaque objet réécrit est un master perdu si le backup
+ * local disparaît.
+ */
+const MIN_SIZE_MB = 1;
 
 /**
  * Largeur cible par préfixe — la PREMIÈRE correspondance gagne, donc l'ordre
@@ -128,11 +141,25 @@ const JPEG_QUALITY = 85;
 const MIN_GAIN_RATIO = 0.9;
 
 /**
- * Les GIF sont EXCLUS, décision du 17/09 : ils se traitent par conversion en
- * MP4/WebM (×10–20), pas par redimensionnement, et c'est la phase 2. Les
- * redimensionner ici les ré-encoderait image par image pour un gain médiocre.
+ * Formats traités — liste BLANCHE, et strictement ces deux-là.
+ *
+ * Décision explicite du 17/09/2026 : tout ce qui n'est pas PNG ou JPEG passe
+ * intact. Une liste blanche plutôt qu'une liste noire, parce qu'un format
+ * inconnu ou introduit plus tard doit être ignoré par défaut, jamais traité
+ * par accident.
+ *
+ * Ce qui est donc écarté, et pourquoi :
+ *
+ *  - **GIF** : souvent animés. Les redimensionner image par image demande un
+ *    traitement dédié, et le vrai correctif est la conversion en MP4/WebM
+ *    (×10–20) — c'est la phase 2.
+ *  - **WebP** : déjà un format compressé moderne, gain marginal, et le parc
+ *    n'en compte que 22.
+ *  - **SVG** : vectoriel. Le « redimensionner » n'a aucun sens et le
+ *    rastériser détruirait sa raison d'être.
+ *  - **Vidéos** et tout le reste : hors sujet ici.
  */
-const SKIPPED_MIME = new Set(['image/gif']);
+const ALLOWED_MIME = new Set(['image/png', 'image/jpeg']);
 
 // ── Arguments ──────────────────────────────────────────────────────────────
 
@@ -262,7 +289,8 @@ async function resize(sharp, buffer, width, mime) {
     // meilleur que celui d'origine — mesuré ×2,9 à dimensions inchangées.
     return pipeline.png({ compressionLevel: 9, effort: 10 }).toBuffer();
   }
-  if (mime === 'image/webp') return pipeline.webp({ quality: JPEG_QUALITY }).toBuffer();
+  // Le seul autre format admis est le JPEG (cf. `ALLOWED_MIME`). Pas de
+  // branche par défaut : un format inattendu n'arrive jamais jusqu'ici.
   return pipeline.jpeg({ quality: JPEG_QUALITY, mozjpeg: true }).toBuffer();
 }
 
@@ -318,14 +346,29 @@ async function main() {
     process.exit(1);
   }
 
+  /**
+   * ⚠️ Sans ces deux lignes, le processus se fait tuer avant la fin du lot.
+   *
+   * libvips garde en mémoire un cache d'opérations et alloue un jeu de
+   * tampons par fil d'exécution. Sur quelques images c'est invisible ; sur
+   * 423, dont des PNG 4096 × 4096 qui pèsent 67 Mo une fois décodés, la
+   * consommation grimpe jusqu'à l'OOM killer — constaté sur ce lot, code 137,
+   * sans le moindre message.
+   *
+   * On traite un fichier à la fois et on ne conserve rien entre deux. Le
+   * script est bordé par le réseau, pas par le CPU : il n'y a rien à gagner
+   * à paralléliser, et tout à perdre à accumuler.
+   */
+  sharp.cache(false);
+  sharp.concurrency(1);
+
   console.log(`Projet   : ${SUPABASE_URL}`);
   console.log(`Mode     : ${APPLY ? '⚠️  APPLY (écriture réelle)' : 'dry-run (aucune écriture)'}`);
   console.log(`Seuil    : ${mb(MIN_SIZE)} Mo\n`);
 
   const all = await listAll();
   let targets = all
-    .filter((o) => (o.mime || '').startsWith('image/'))
-    .filter((o) => !SKIPPED_MIME.has(o.mime))
+    .filter((o) => ALLOWED_MIME.has(o.mime))
     .filter((o) => o.size > MIN_SIZE)
     .sort((a, b) => b.size - a.size);
 
