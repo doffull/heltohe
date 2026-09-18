@@ -13,7 +13,12 @@
 > et le passage des étiquettes au format A4 (§27.8), le 17/09/2026 après
 > l'allègement du catalogue visuel, le redimensionnement à l'envoi et le
 > téléphone rendu obligatoire (§29), puis le **18/09/2026** après le passage de
-> la taille en obligatoire à l'ajout au panier (§30).
+> la taille en obligatoire à l'ajout au panier (§30) et la découverte de la
+> disparition des masters de sauvegarde (§30.7).
+>
+> 🔴 **`backup-media/` n'existe plus.** Les originaux 4096 px des ~416 images
+> réécrites les 11 et 17/09 sont perdus, et `resize-media.mjs --rollback` est
+> inutilisable. Lire le §30.7 avant de relancer quoi que ce soit sur le bucket.
 >
 > ⚠️ **Le dépôt a changé le 28/08/2026** : le projet vit désormais dans
 > `doffull/warltkfr`, recréé depuis Lovable. `gafsou20/Helvetica-MP` est une archive.
@@ -93,7 +98,7 @@ composants, 1,6 Mo de pages) sert le back-office, pas la boutique.
 | Volume | **88 200 lignes** TS/TSX · 412 fichiers · 205 composants · 52 hooks |
 | Back | Supabase : **66 tables**, 7 vues, 21 RPC, **171 migrations**, **36 edge functions** (dont 5 non déployées, §18) |
 | Front | 23 routes déclarées, dont `/admin/*` (46 pages) et `/compte/*` |
-| Branches | `main` uniquement · 2 commits |
+| Branches | `prod` (branche de travail, **celle sur laquelle on commite**) et `main`, qui reçoit des merges de `prod`. Le « 2 commits » d'origine est révolu |
 
 ⚠️ **Le projet s'appelait `LVTK6`.** Le renommage en Helvetica MP n'est pas terminé : les clés
 `localStorage` et les événements DOM sont tous préfixés **`lvtk:`** (`lvtk:demoMode`,
@@ -475,8 +480,11 @@ sont **en base** (`payment_gateway_secrets`), pas en variables d'environnement (
 | 🔴 | **Webhook PayPal *fail-open*** | `webhook_id` non renseigné ⇒ vérification de signature sautée ⇒ endpoint « marquer comme payé » non authentifié (§6) |
 | 🔴 | **Webhooks probablement jamais reçus** | `paypal-webhook` et la branche notification de `payplug` ne sont pas en `verify_jwt = false` → 401 (§6) |
 | 🔴 | **Aucun garde-fou sur les fonctions IA publiques** | 21 fonctions en `verify_jwt = false`, dont la génération d'images et de vidéos. Pas de rate limiting visible → risque de facture (§9) |
+| 🔴 | **`backup-media/` a disparu** | seule trace des masters 4096 px des ~416 objets réécrits les 11 et 17/09. Introuvable sur tout le disque le 18/09 ⇒ originaux perdus et `--rollback` inutilisable (§30.7) |
 | 🟠 | **Survente possible** | le stock n'est réservé ni à la commande ni au paiement, seulement depuis `/admin/orders` (§6, §7) |
-| 🟠 | **Tests quasi inexistants** | **4 fichiers de test** pour 88 200 lignes (`TechwearHero`, `ProductInfo`, `example`, `home-hero`). Aucune couverture du tunnel de commande, du stock ni des RPC |
+| 🟠 | **`size` non validée côté serveur** | `validate_and_create_order` accepte un article sans taille. Le front ne peut plus en créer depuis le 18/09, mais ni les paniers déjà en base ni un appel direct ne sont bloqués (§30.5) |
+| 🟠 | **Stock pas toujours ventilé par taille** | 4 produits sur 114 n'ont qu'une ligne `stock_levels` avec `size = NULL`, et 35 présentent un écart `products.sizes` ↔ `stock_levels.size` (§30.3) |
+| 🟠 | **Tests quasi inexistants, et 6 déjà rouges** | **6 fichiers** pour 88 200 lignes. Les 6 tests de `TechwearHero` et `home-hero` échouent depuis avant le 18/09 (`useAuth` hors provider). La suite exige `NODE_ENV=test` (§30.6). Aucune couverture du tunnel de commande ni des RPC |
 | 🟠 | **Trois lockfiles** | `bun.lock` + `bun.lockb` + `package-lock.json` (878 Ko). Deux gestionnaires de paquets = builds divergents selon la machine. **À trancher : bun** |
 | 🟠 | **Historique git inexploitable** | 2 commits « maj ». Aucun moyen de savoir pourquoi une décision a été prise — d'où ce document |
 | 🟡 | **README = template Lovable** | `REPLACE_WITH_PROJECT_ID` encore en place, ne décrit pas le projet |
@@ -504,7 +512,9 @@ d'ouverture de la roulette à 8 000 ms, et policy RLS `UPDATE` anon sur `visitor
 
 ## 15. Repo
 
-`github.com/doffull/warltkfr` — branche `main`, projet synchronisé avec Lovable
+`github.com/doffull/warltkfr` — on travaille sur **`prod`**, `main` reçoit des merges
+(`177904dd` = « Merge branch 'prod' into main »). Un second remote `helvetica` pointe vers
+une copie locale `/root/Helvetica-MP`. Projet synchronisé avec Lovable
 (`lovable.dev/projects/cfa7542a-a172-447c-89f5-aa0d494cb267`).
 
 `github.com/gafsou20/Helvetica-MP` est l'ANCIEN dépôt, conservé en archive : il porte
@@ -1605,6 +1615,10 @@ pour le diagnostic. À révoquer avec la précédente.
 
 ## 25. Poids des images — analyse du 11/09/2026 ✅ exécutée le 17/09 (voir §29)
 
+> ⚠️ **Mesures refaites le 18/09 : il ne reste presque rien à gagner sur les
+> PNG/JPEG, et les masters de sauvegarde ont disparu. Lire le §30.7 et le §30.8
+> AVANT de relancer `resize-media.mjs`.**
+
 > ⚠️ **Section historique.** L'analyse ci-dessous a été faite le 11/09 sans rien
 > modifier. **Elle a été exécutée le 17/09 — lire le §29**, qui donne les chiffres
 > réels et corrige plusieurs estimations d'ici :
@@ -2630,12 +2644,15 @@ alors que les autres étiquettes vont dans `labels` (privé).
 
 ---
 
-## 30. Taille obligatoire à l'ajout au panier — 18/09/2026 ✅
+## 30. Taille obligatoire au panier, et état du bucket — 18/09/2026 ✅
 
 > Six points d'entrée ajoutaient au panier **sans taille**. Un article sans
 > `size` n'est décrémentable dans aucune ligne de `stock_levels` (dont la clé
 > est `inventory_id + size`) et n'est pas préparable sans rappeler la cliente.
 > Seule la fiche produit exigeait une taille.
+>
+> La même journée a servi à mesurer ce qu'il reste à alléger sur le bucket
+> (§30.8) — et à constater que les masters de sauvegarde ont disparu (§30.7).
 
 ### 30.1 Ce qui ajoutait sans taille
 
@@ -2738,3 +2755,70 @@ NODE_ENV=test npx vitest run
 Indépendamment de ça, **6 tests échouaient déjà avant cette session**
 (`TechwearHero.test.tsx`, `home-hero.test.tsx`) : `useAuth` appelé hors de son
 provider. Vérifié par `git stash` — sans rapport avec ce chantier.
+
+### 30.7 🔴 `backup-media/` a disparu — les masters sont perdus
+
+Constaté le 18/09 en cherchant quoi redimensionner encore :
+
+```
+/root/warltkfr/backup-media          → absent
+find / -iname "*backup-media*"       → rien
+find / -name manifest.json -path "*backup*"  → rien
+```
+
+Le §29.3 l'écrivait noir sur blanc : *« le backup est LOCAL et constitue la
+SEULE trace des masters 4096 px »*. Il était aussi dans `.gitignore:112`, donc
+jamais commité. Conséquences, définitives :
+
+- les originaux des **~416 objets** réécrits les 11 et 17/09 n'existent plus ;
+- **`--rollback` est inutilisable** — il lit `manifest.json`, qui a disparu avec
+  le reste ;
+- il n'existe plus de référence pour juger la qualité de ce qui est en ligne.
+
+⚠️ **Pour toute passe future : le dossier de backup ne doit pas vivre dans un
+répertoire gitignoré du projet.** C'est précisément ce qui l'a rendu invisible
+et jetable. Hors du dépôt, ou versionné ailleurs — sinon on rejouera la perte.
+
+### 30.8 État du bucket au 18/09 — ce qui reste vraiment à gagner
+
+```
+TOTAL 1 918 objets · 1 216 Mo
+video/mp4      66   364 Mo   ← plus gros poste, jamais traité
+image/jpeg  1 117   354 Mo
+image/png     356   282 Mo
+image/gif     355   198 Mo   ← la « phase 2 » du §29.3, jamais faite
+image/webp     22    12 Mo
+video/webm      2     4 Mo
+```
+
+⚠️ **Relancer `resize-media.mjs` au seuil de 1 Mo ne rendrait rien.** Il reste
+74 objets PNG/JPEG au-dessus du seuil (121 Mo), mais leur `updated_at` est
+**17/09 pour les 74** : ils sont déjà passés dans le script et ne dépassent 1 Mo
+que parce qu'un PNG sans perte à 2048 px pèse encore 1 à 2,9 Mo. 71 sont des
+PNG : une seconde passe ressortirait à gain ≈ 0 % et serait écartée par
+`MIN_GAIN_RATIO`.
+
+⚠️ **Ré-appliquer le script sur un objet déjà traité n'est pas neutre pour les
+JPEG.** Rien ne marque un objet comme « déjà fait » : le seul garde-fou est le
+gain minimal de 10 %. Les dimensions ne bougent pas
+(`withoutEnlargement: true`) et un PNG est sans perte, mais un JPEG déjà en q85
+est **ré-encodé** ; s'il gagne malgré tout plus de 10 %, il est réécrit et
+cumule une génération de perte. Et depuis le §30.7, plus aucun backup ne
+permet de revenir en arrière.
+
+Le vrai gain restant est ailleurs :
+
+| Cible | Poids | Gain réaliste |
+|---|---|---|
+| GIF (355 obj) → MP4/WebM | 198 Mo | ~180 Mo |
+| MP4 (66 obj) ré-encodés | 364 Mo | ~200 Mo |
+| PNG photo → JPEG | 282 Mo | ~200 Mo, **si** l'alpha le permet |
+| Re-resize PNG/JPEG existants | — | ~0 |
+
+Le dernier point mérite un arbitrage : les 71 PNG restants sont des **photos
+stockées en PNG** (`products/colors/…png` à 2,3 Mo ferait ~200 Ko en JPEG q85,
+soit ×10). Le §29.3 refuse toute conversion par principe — `virtual-tryon`
+consomme ces images, et des galeries utilisent l'alpha. Cette règle a été posée
+pour tout le parc **sans mesurer combien de ces PNG ont réellement un canal
+alpha utile**. À mesurer avant de trancher ; en l'état, on s'interdit ~200 Mo
+sur la foi d'une hypothèse jamais vérifiée.
