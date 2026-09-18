@@ -13,8 +13,9 @@
 > et le passage des étiquettes au format A4 (§27.8), le 17/09/2026 après
 > l'allègement du catalogue visuel, le redimensionnement à l'envoi et le
 > téléphone rendu obligatoire (§29), puis le **18/09/2026** après le passage de
-> la taille en obligatoire à l'ajout au panier (§30) et la découverte de la
-> disparition des masters de sauvegarde (§30.7).
+> la taille en obligatoire à l'ajout au panier (§30), la découverte de la
+> disparition des masters de sauvegarde (§30.7) et l'arrêt du
+> réaffranchissement en boucle des étiquettes Colissimo (§31).
 >
 > 🔴 **`backup-media/` n'existe plus.** Les originaux 4096 px des ~416 images
 > réécrites les 11 et 17/09 sont perdus, et `resize-media.mjs --rollback` est
@@ -480,6 +481,7 @@ sont **en base** (`payment_gateway_secrets`), pas en variables d'environnement (
 | 🔴 | **Webhook PayPal *fail-open*** | `webhook_id` non renseigné ⇒ vérification de signature sautée ⇒ endpoint « marquer comme payé » non authentifié (§6) |
 | 🔴 | **Webhooks probablement jamais reçus** | `paypal-webhook` et la branche notification de `payplug` ne sont pas en `verify_jwt = false` → 401 (§6) |
 | 🔴 | **Aucun garde-fou sur les fonctions IA publiques** | 21 fonctions en `verify_jwt = false`, dont la génération d'images et de vidéos. Pas de rate limiting visible → risque de facture (§9) |
+| 🔴 | **Étiquettes : garde non déployée** | `create-colissimo-label`, `auto-colissimo-label` et `colissimo-proxy` sont corrigées dans le dépôt mais tournent encore sans la garde en production. Tant que ce n'est pas déployé, un clic de trop = un colis et un e-mail de plus (§31.7) |
 | 🔴 | **`backup-media/` a disparu** | seule trace des masters 4096 px des ~416 objets réécrits les 11 et 17/09. Introuvable sur tout le disque le 18/09 ⇒ originaux perdus et `--rollback` inutilisable (§30.7) |
 | 🟠 | **Survente possible** | le stock n'est réservé ni à la commande ni au paiement, seulement depuis `/admin/orders` (§6, §7) |
 | 🟠 | **`size` non validée côté serveur** | `validate_and_create_order` accepte un article sans taille. Le front ne peut plus en créer depuis le 18/09, mais ni les paniers déjà en base ni un appel direct ne sont bloqués (§30.5) |
@@ -736,6 +738,11 @@ dans le chemin d'une commande, et réputation d'IP à construire.
 ---
 
 ## 18. Ce qui tourne vraiment — l'écart dépôt / déploiement
+
+> ⚠️ **Rejoué le 18/09/2026.** Trois edge functions d'étiquetage ont été
+> corrigées et poussées sans être déployées : la garde qui empêche de
+> réaffranchir une commande n'existe donc que dans le dépôt. Voir §31.7 pour la
+> commande de déploiement et la recette à jouer derrière.
 
 > État constaté le 30/08/2026, premier alignement du projet Supabase avec le dépôt.
 >
@@ -2822,3 +2829,128 @@ consomme ces images, et des galeries utilisent l'alpha. Cette règle a été pos
 pour tout le parc **sans mesurer combien de ces PNG ont réellement un canal
 alpha utile**. À mesurer avant de trancher ; en l'état, on s'interdit ~200 Mo
 sur la foi d'une hypothèse jamais vérifiée.
+
+---
+
+## 31. Réaffranchissement en boucle — 18/09/2026 ✅
+
+> Cliquer « Étiquette Colissimo » sur une commande **déjà expédiée** émettait
+> une nouvelle étiquette, un nouveau numéro de suivi, et renvoyait un e-mail
+> « votre commande est en route ». Rien ne l'empêchait, à aucun niveau.
+
+### 31.1 Ce qui s'est réellement passé
+
+Constaté en base sur **HMP-MU6KUKDP** (commande du 18/09 à 06:28) :
+
+```
+labels/1d9c87ef-…/aller-1789721275185.pdf   08:47:55
+labels/1d9c87ef-…/aller-1789722765213.pdf   09:12:45
+labels/1d9c87ef-…/aller-1789722775946.pdf   09:12:56   ← 11 s après
+labels/1d9c87ef-…/aller-1789722862754.pdf   09:14:22
+
+customer_email_log · type=shipped · status=sent   ×4
+```
+
+**Quatre étiquettes, quatre colis déclarés chez Colissimo, quatre e-mails** à
+`a.cavalli26@gmail.com` — chacun avec un numéro différent. Un seul colis
+existait. Seul le dernier numéro (`6A07781142585`) est en base : les trois
+premiers e-mails envoyaient la cliente suivre des colis fantômes.
+
+### 31.2 Les trois maillons
+
+| Maillon | État avant |
+|---|---|
+| `create-colissimo-label` | **aucune garde** — rappelait Colissimo à chaque invocation |
+| bouton `AdminOrders.tsx:1162` | aucune confirmation, aucun état désactivé |
+| `useOrders.ts:203` | `if (fields.status === 'Shipped' && …)` — valeur ENVOYÉE, jamais une transition |
+
+⚠️ **Le troisième maillon dépassait le double-clic** : toute sauvegarde
+incluant `status: 'Shipped'` renvoyait l'e-mail. Corriger une faute dans
+l'adresse d'une commande déjà partie suffisait.
+
+### 31.3 🔴 Pire que le bouton : l'impression groupée
+
+`AdminColissimo.handleBulkPrint` **réaffranchissait délibérément** toute
+commande déjà étiquetée dont le PDF n'était plus dans le cache mémoire de
+l'onglet — le commentaire l'assumait : `// No cached PDF — regenerate
+(retrigger via API)`. Et il **n'enregistrait pas** le numéro obtenu.
+
+Imprimer un lot de 20 commandes déjà expédiées, c'était donc 20 colis déclarés
+en trop, et 20 étiquettes portant un numéro **inconnu de la base comme de la
+cliente** — celui de l'e-mail qu'elle avait reçu ne correspondait plus à
+l'étiquette collée sur son colis.
+
+### 31.4 La garde est au centre, pas chez les appelants
+
+Ils sont **cinq** : bouton de l'écran Commandes, écran Colissimo (étiquette
+unitaire et impression groupée), bordereau A4, étiquetage automatique après
+paiement. Les border un par un, c'est en oublier un au prochain écran ajouté.
+
+`create-colissimo-label` rend désormais l'étiquette archivée avec
+**`reused: true`**, sans aucun appel à Colissimo.
+
+| Cas | Reconnaissance |
+|---|---|
+| Aller | `tracking_number` **et** `label_path` |
+| Retour | le fichier `labels/<id>/retour-*.pdf` seul |
+| Suivi sans fichier | **409**, pas de réaffranchissement |
+
+⚠️ **Le retour ne laisse aucune trace en base** : `orders` n'a pas de colonne
+pour lui et la fonction n'écrit rien quand `is_return` est vrai. Le stockage
+fait donc foi — c'est la seule façon de le reconnaître.
+
+⚠️ **Un suivi sans fichier ne relance pas un affranchissement.** Le colis est
+déjà déclaré chez Colissimo ; en refaire un en donnerait deux pour un envoi. On
+répond un 409 qui dit quoi faire. C'est la position que `order-slip-pdf`
+tenait déjà pour son compte (« on s'abstient de réaffranchir — ce serait un
+second colis pour La Poste ») ; elle est maintenant générale.
+
+**Porte de sortie** : supprimer le numéro de suivi depuis l'écran Colissimo.
+Ce geste efface aussi `label_path`, `label_url` et `label_generated_at` —
+il ne le faisait pas, et la commande restait « déjà étiquetée » pour le
+bordereau A4 comme pour la nouvelle garde. Il existe aussi `force: true` côté
+API, non exposé dans l'interface.
+
+### 31.5 L'e-mail ne part que pour une étiquette neuve
+
+Deux niveaux, conformément à la règle demandée :
+
+1. **Les appelants** n'écrivent rien quand `reused` est vrai — donc aucune
+   mutation, donc aucun e-mail.
+2. **`useUpdateOrder`** relit l'état AVANT écriture et ne notifie que sur une
+   **transition** : la commande part (`status` devient `Shipped` alors qu'il ne
+   l'était pas), ou son numéro de suivi **change**.
+
+⚠️ **Le changement de numéro reste notifié, volontairement.** Si l'étiquette
+est réellement refaite (adresse corrigée, colis reperdu), la cliente doit
+recevoir le nouveau numéro — sans quoi elle suit un colis qui n'existe plus.
+La règle effective est donc : **un e-mail par numéro de suivi distinct.**
+
+Même correction sur l'e-mail `paid`, qui repartait à chaque enregistrement
+d'une commande déjà payée.
+
+### 31.6 Portée
+
+| Fonction | Traitement |
+|---|---|
+| `create-colissimo-label` | garde centrale + `reused` |
+| `auto-colissimo-label` | déjà idempotent (`tracking_number`) + ceinture sur `reused` |
+| `colissimo-proxy` (déprécié) | 409 si la commande porte déjà un suivi |
+| `order-slip-pdf` | **déjà conforme** — a servi de modèle |
+
+### 31.7 ⚠️ Non déployé au moment où ces lignes sont écrites
+
+Les trois edge functions modifiées tournent encore dans leur version
+précédente sur Supabase : **la garde n'existe que dans le dépôt**. C'est
+exactement le piège du §18. Tant que ceci n'est pas passé, un clic produit
+toujours une étiquette et un e-mail de plus :
+
+```bash
+npx supabase functions deploy create-colissimo-label auto-colissimo-label colissimo-proxy \
+  --project-ref hzjzqdlyehclnpeqkier
+```
+
+La CLI de cette machine n'est pas authentifiée (`SUPABASE_ACCESS_TOKEN` absent).
+**Recette à jouer après déploiement** : rappeler l'étiquette de HMP-MU6KUKDP et
+vérifier `reused: true`, le suivi inchangé à `6A07781142585`, aucun 5ᵉ fichier
+dans `labels/`, aucune 5ᵉ ligne `shipped` dans `customer_email_log`.
