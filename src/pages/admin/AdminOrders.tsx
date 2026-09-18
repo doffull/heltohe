@@ -720,10 +720,21 @@ export default function AdminOrders() {
 
       if (error) throw new Error(await edgeErrorMessage(error));
 
-      if (data?.trackingNumber) {
+      // `reused: true` ⇒ l'étiquette existait déjà et a été rendue telle quelle.
+      // Rien n'a changé pour la cliente : ni écriture, ni e-mail. Sans ce test,
+      // chaque clic réaffranchissait et renvoyait un « votre commande est en
+      // route » avec un numéro neuf (§31).
+      if (data?.reused) {
+        toast({
+          title: 'Étiquette déjà générée',
+          description: data.trackingNumber
+            ? `Suivi ${data.trackingNumber} — étiquette existante rouverte, aucun e-mail envoyé`
+            : 'Étiquette existante rouverte, aucun e-mail envoyé',
+        });
+      } else if (data?.trackingNumber) {
         if (form) setEditForm({ ...form, trackingNumber: data.trackingNumber, shippingCarrier: 'Colissimo', status: 'Shipped' });
-        // L'e-mail d'expédition est envoyé par useUpdateOrder dès que
-        // statut = Shipped et qu'un n° de suivi est présent.
+        // L'e-mail d'expédition est envoyé par useUpdateOrder, qui ne le fait
+        // désormais que sur une vraie transition (départ, ou suivi modifié).
         await updateOrder.mutateAsync({
           id: order.id,
           trackingNumber: data.trackingNumber,

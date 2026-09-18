@@ -189,6 +189,20 @@ export function useUpdateOrder() {
       if (fields.subtotal !== undefined) updateData.subtotal = fields.subtotal;
       if (fields.total !== undefined) updateData.total = fields.total;
 
+      // ⚠️ L'état AVANT écriture est relu pour décider des e-mails.
+      //
+      // Les deux conditions plus bas ne regardaient que les valeurs ENVOYÉES :
+      // réenregistrer une commande déjà expédiée avec `status: 'Shipped'`
+      // satisfaisait le test et renvoyait un « votre commande est en route ».
+      // Le 18/09/2026, la cliente de HMP-MU6KUKDP en a reçu quatre, chacun
+      // avec un numéro de suivi différent. Corriger une faute dans l'adresse
+      // d'une commande déjà partie suffisait à en déclencher un.
+      const { data: before } = await supabase
+        .from('orders')
+        .select('status, payment_status, tracking_number')
+        .eq('id', id)
+        .maybeSingle();
+
       const { data, error } = await supabase
         .from('orders')
         .update(updateData)
@@ -198,9 +212,22 @@ export function useUpdateOrder() {
       
       if (error) throw error;
       const updated = dbToAppOrder(data as Record<string, unknown>);
-      // E-mails automatiques (best-effort)
-      if (fields.paymentStatus === 'Paid') await triggerOrderEmail(id, 'paid');
-      if (fields.status === 'Shipped' && updated.trackingNumber) await triggerOrderEmail(id, 'shipped');
+
+      // ─── E-mails automatiques (best-effort), sur TRANSITION seulement ─────
+      const wasPaid = String(before?.payment_status || '') === 'Paid';
+      const wasShipped = String(before?.status || '') === 'Shipped';
+      const previousTracking = String(before?.tracking_number || '').trim();
+
+      if (fields.paymentStatus === 'Paid' && !wasPaid) await triggerOrderEmail(id, 'paid');
+
+      // Expédition : on notifie quand la commande PART, et quand son numéro de
+      // suivi CHANGE réellement — dans ce cas la cliente suivrait sinon un
+      // colis fantôme. Un même numéro réenregistré ne déclenche rien.
+      const trackingChanged = !!updated.trackingNumber && updated.trackingNumber !== previousTracking;
+      if (fields.status === 'Shipped' && updated.trackingNumber && (!wasShipped || trackingChanged)) {
+        await triggerOrderEmail(id, 'shipped');
+      }
+
       return updated;
 
     },

@@ -3,8 +3,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.58.0";
 /**
  * Génère automatiquement l'étiquette Colissimo d'une commande payée,
  * enregistre le numéro de suivi, passe la commande en « Expédiée »
- * et déclenche l'e-mail d'expédition. Idempotent : ne fait rien si un
- * numéro de suivi existe déjà.
+ * et déclenche l'e-mail d'expédition.
+ *
+ * Idempotent à deux niveaux : un `tracking_number` déjà présent arrête tout
+ * ici, et une réponse `reused: true` de `create-colissimo-label` arrête
+ * l'écriture et l'e-mail. Aucun colis en double, aucune notification en double.
  */
 
 const corsHeaders = {
@@ -68,6 +71,16 @@ Deno.serve(async (req) => {
     });
 
     const trackingNumber = (label as { trackingNumber?: string } | null)?.trackingNumber;
+    const reused = (label as { reused?: boolean } | null)?.reused === true;
+
+    // Ceinture en plus de la bretelle : la garde `already_labelled` plus haut
+    // repose sur `tracking_number`, celle-ci sur la réponse de
+    // `create-colissimo-label`. Une commande dont l'étiquette existe déjà ne
+    // doit ni être réécrite, ni redéclencher un e-mail d'expédition (§31).
+    if (reused) {
+      return json({ ok: true, skipped: "already_labelled", trackingNumber: trackingNumber ?? null });
+    }
+
     if (lErr || !trackingNumber) {
       // `invoke` réduit une réponse non-2xx à « non-2xx status code » et jette le
       // corps : on le relit, sinon le journal ne dit jamais POURQUOI Colissimo a

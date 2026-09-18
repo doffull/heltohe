@@ -262,9 +262,12 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
       });
       if (res.error || !res.data?.success) throw new Error(res.data?.error || 'Erreur génération étiquette');
 
-      const { trackingNumber, pdfBase64 } = res.data;
+      const { trackingNumber, pdfBase64, reused } = res.data;
 
-      if (!isReturn) {
+      // `reused` ⇒ l'étiquette existait : on la rouvre, on n'écrit rien et on
+      // ne notifie personne. Réaffranchir donnerait un second colis à La Poste
+      // et un second « votre commande est en route » à la cliente (§31).
+      if (!isReturn && !reused) {
         await supabase.from('orders').update({
           tracking_number: trackingNumber,
           shipping_carrier: 'Colissimo',
@@ -277,7 +280,14 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
         downloadPdf(pdfBase64, `etiquette_${isReturn ? 'retour_' : ''}${order.orderNumber}.pdf`);
       }
 
-      toast({ title: isReturn ? 'Étiquette retour générée' : 'Étiquette générée', description: trackingNumber ? `N° suivi: ${trackingNumber}` : undefined });
+      toast({
+        title: reused
+          ? (isReturn ? 'Étiquette retour existante' : 'Étiquette déjà générée')
+          : (isReturn ? 'Étiquette retour générée' : 'Étiquette générée'),
+        description: trackingNumber
+          ? `N° suivi: ${trackingNumber}${reused ? ' — rouverte, aucun e-mail envoyé' : ''}`
+          : (reused ? 'Étiquette existante rouverte' : undefined),
+      });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
     } catch (e: any) {
       toast({ title: 'Erreur', description: e.message, variant: 'destructive' });
@@ -287,7 +297,18 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
   }
 
   async function deleteTrackingNumber(order: Order) {
-    await supabase.from('orders').update({ tracking_number: null, shipping_carrier: null }).eq('id', order.id);
+    // ⚠️ `label_path` est effacé avec le numéro, sinon la commande reste
+    // « déjà étiquetée » pour tout ce qui se fie au fichier : le bordereau A4
+    // ressortirait l'ancienne étiquette, et la garde de
+    // `create-colissimo-label` refuserait d'en émettre une neuve. Supprimer le
+    // suivi est précisément le geste par lequel un admin repart de zéro.
+    await supabase.from('orders').update({
+      tracking_number: null,
+      shipping_carrier: null,
+      label_path: null,
+      label_url: null,
+      label_generated_at: null,
+    }).eq('id', order.id);
     setPdfCache(c => { const n = { ...c }; delete n[order.id]; return n; });
     toast({ title: 'Numéro de suivi supprimé' });
     queryClient.invalidateQueries({ queryKey: ['orders'] });
@@ -304,7 +325,16 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
         if (pdfCache[cacheKey]) {
           pdfs.push(pdfCache[cacheKey]);
         } else if (order.trackingNumber) {
-          // No cached PDF — regenerate (retrigger via API)
+          // Le PDF n'est plus dans le cache mémoire — mais la commande est déjà
+          // affranchie. On redemande l'étiquette : depuis le 18/09/2026,
+          // `create-colissimo-label` rend l'ARCHIVE au lieu d'en émettre une
+          // nouvelle (§31).
+          //
+          // ⚠️ Cette branche réaffranchissait auparavant — « No cached PDF,
+          // regenerate » — sans même enregistrer le numéro obtenu. Imprimer un
+          // lot de 20 commandes déjà étiquetées, c'était 20 colis déclarés en
+          // trop et 20 étiquettes portant un numéro inconnu de la base et de la
+          // cliente.
           try {
             const res = await supabase.functions.invoke('create-colissimo-label', {
               body: { order_id: order.id },
@@ -323,8 +353,8 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
               body: { order_id: order.id },
             });
             if (res.data?.success && res.data.pdfBase64) {
-              const { trackingNumber, pdfBase64 } = res.data;
-              if (trackingNumber) {
+              const { trackingNumber, pdfBase64, reused } = res.data;
+              if (trackingNumber && !reused) {
                 await supabase.from('orders').update({
                   tracking_number: trackingNumber,
                   shipping_carrier: 'Colissimo',

@@ -194,6 +194,98 @@ function extractJsonPart(bytes: Uint8Array): Record<string, unknown> | null {
   return null;
 }
 
+/** PDF → base64, par tranches : `String.fromCharCode(...bytes)` déborde la pile
+ *  au-delà de ~100 ko, et une étiquette en pèse 91. */
+function toBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 8192) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+  }
+  return btoa(binary);
+}
+
+/**
+ * Cherche l'étiquette déjà émise pour cette commande, et la renvoie telle
+ * quelle. `null` ⇒ il n'y en a pas, l'affranchissement peut avoir lieu.
+ *
+ * ⚠️ L'ALLER et le RETOUR ne se reconnaissent pas de la même façon.
+ *
+ * L'aller laisse une trace en base (`tracking_number`, `label_path`). Le retour
+ * n'en laisse aucune : `orders` n'a pas de colonne pour lui, et la fonction ne
+ * met rien à jour quand `is_return` est vrai. Sa seule trace est le fichier
+ * `labels/<orderId>/retour-*.pdf` — c'est donc le stockage qui fait foi.
+ *
+ * ⚠️ Un suivi SANS fichier ne relance pas un affranchissement. Le colis est
+ * déjà déclaré chez Colissimo ; en refaire un donnerait deux colis pour un
+ * envoi. On répond une erreur explicite, qui dit quoi faire. Même position que
+ * `order-slip-pdf` : « on s'abstient de réaffranchir — ce serait un second
+ * colis pour La Poste ».
+ */
+async function findExistingLabel(
+  admin: ReturnType<typeof createClient>,
+  orderId: string,
+  isReturn: boolean,
+  order: Record<string, unknown>,
+): Promise<Record<string, unknown> | null> {
+  let path: string | null = null;
+
+  if (isReturn) {
+    // Le plus récent des `retour-*.pdf` : les chemins sont horodatés, l'ordre
+    // alphabétique suffit donc à les classer.
+    const { data: files } = await admin.storage.from('labels').list(orderId, {
+      limit: 100,
+      sortBy: { column: 'name', order: 'desc' },
+    });
+    const found = (files || []).find((f) => f.name.startsWith('retour-'));
+    if (!found) return null;
+    path = `${orderId}/${found.name}`;
+  } else {
+    const tracking = String(order.tracking_number || '').trim();
+    if (!tracking) return null;
+
+    path = typeof order.label_path === 'string' ? order.label_path : null;
+    if (!path) {
+      return {
+        error: 'Étiquette déjà affranchie, fichier introuvable',
+        details:
+          `La commande porte le suivi ${tracking} mais aucune étiquette n'est archivée. ` +
+          `Réaffranchir créerait un second colis. Supprimez le numéro de suivi depuis ` +
+          `l'écran Colissimo pour repartir de zéro, ou rappelez la fonction avec force: true.`,
+        trackingNumber: tracking,
+        reused: false,
+      };
+    }
+  }
+
+  const { data: file } = await admin.storage.from('labels').download(path);
+  if (!file) {
+    // Chemin enregistré mais objet absent : même raisonnement, on n'affranchit pas.
+    if (isReturn) return null;
+    return {
+      error: 'Étiquette déjà affranchie, fichier introuvable',
+      details:
+        `Le fichier ${path} a disparu du stockage. Réaffranchir créerait un second ` +
+        `colis : supprimez le numéro de suivi pour repartir de zéro, ou forcez avec force: true.`,
+      trackingNumber: String(order.tracking_number || '') || null,
+      reused: false,
+    };
+  }
+
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const { data: signed } = await admin.storage.from('labels').createSignedUrl(path, 60 * 60 * 24 * 7);
+
+  return {
+    success: true,
+    // `reused: true` est le signal que les appelants attendent pour NE PAS
+    // renvoyer l'e-mail d'expédition : rien n'a changé pour la cliente.
+    reused: true,
+    trackingNumber: isReturn ? null : String(order.tracking_number || '') || null,
+    path,
+    signedUrl: signed?.signedUrl ?? null,
+    pdfBase64: toBase64(bytes),
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
@@ -251,6 +343,35 @@ Deno.serve(async (req) => {
     .maybeSingle();
   if (orderError) return json({ error: orderError.message }, 500);
   if (!order) return json({ error: 'Order not found' }, 404);
+
+  // ─── Une étiquette déjà affranchie n'est JAMAIS refaite ───────────────────
+  //
+  // Chaque appel à Colissimo déclare un nouveau colis : nouveau numéro de
+  // suivi, nouvelle facturation, et l'ancien numéro devient orphelin. Le
+  // 18/09/2026 sur HMP-MU6KUKDP, quatre étiquettes ont été émises en 27
+  // minutes — dont deux à 11 secondes d'intervalle — et la cliente a reçu
+  // quatre e-mails « votre commande est en route », chacun avec un numéro
+  // différent. Un seul de ces colis existait vraiment.
+  //
+  // Cette garde est ici, et pas chez les appelants, parce qu'ils sont cinq :
+  // le bouton de l'écran Commandes, l'écran Colissimo (étiquette et impression
+  // groupée), le bordereau A4 et l'étiquetage automatique après paiement. Les
+  // border un par un, c'est en oublier un au prochain écran ajouté.
+  //
+  // `order-slip-pdf` appliquait déjà cette règle pour son propre compte
+  // (« on réutilise, on ne réaffranchit pas ») : on la généralise.
+  //
+  // Porte de sortie : `force: true`, réservé à un geste d'administration
+  // délibéré. L'écran Colissimo en offre une autre, plus lisible — supprimer le
+  // numéro de suivi, ce qui rend la commande à nouveau affranchissable.
+  const force = body.force === true;
+
+  if (!force) {
+    const existing = await findExistingLabel(admin, orderId, isReturn, order);
+    // 409 quand l'étiquette existe mais reste introuvable : c'est un conflit à
+    // arbitrer par un humain, pas un succès. 200 quand on rend l'existante.
+    if (existing) return json(existing, existing.error ? 409 : 200);
+  }
 
   // Poids total : somme des poids réels des produits (défaut 1500 g par article), minimum 0,2 kg.
   const items = Array.isArray(order.items) ? (order.items as Array<Record<string, unknown>>) : [];
@@ -638,19 +759,15 @@ Deno.serve(async (req) => {
     await admin.from('orders').update(update).eq('id', orderId);
   }
 
-  // Base64 (chunked pour éviter le débordement de pile)
-  let binary = '';
-  for (let i = 0; i < pdf.length; i += 8192) {
-    binary += String.fromCharCode(...pdf.subarray(i, i + 8192));
-  }
-
   return json({
     success: true,
+    // Étiquette NEUVE : c'est ce qui autorise l'appelant à notifier la cliente.
+    reused: false,
     trackingNumber,
     productCode,
     weight,
     path,
     signedUrl: signed?.signedUrl ?? null,
-    pdfBase64: btoa(binary),
+    pdfBase64: toBase64(pdf),
   });
 });

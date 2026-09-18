@@ -353,6 +353,43 @@ Deno.serve(async (req) => {
       // Un appelant qui ne transmet pas le pays ne peut pas obtenir d'étiquette
       // internationale : mieux vaut un refus lisible qu'un colis annoncé en
       // France avec un code postal étranger.
+      // ─── Une commande déjà affranchie n'est pas réaffranchie ─────────────
+      //
+      // Cette voie reçoit la commande recopiée par l'appelant, pas son
+      // identifiant : elle ne peut donc pas lire `tracking_number` elle-même.
+      // On le relit en base dès qu'un `id` est fourni. Sans cette garde, la
+      // règle posée dans `create-colissimo-label` le 18/09/2026 aurait une
+      // porte de service ouverte — et c'est exactement le genre d'oubli qui
+      // fait revenir un bug corrigé (§31).
+      const declaredOrderId = typeof order?.id === 'string' ? order.id : '';
+      if (declaredOrderId && !isReturn) {
+        const admin = createClient(
+          Deno.env.get('SUPABASE_URL')!,
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+          { auth: { persistSession: false } },
+        );
+        const { data: existing } = await admin
+          .from('orders')
+          .select('tracking_number')
+          .eq('id', declaredOrderId)
+          .maybeSingle();
+        const tracking = String(existing?.tracking_number || '').trim();
+        if (tracking) {
+          return new Response(
+            JSON.stringify({
+              error: 'Commande déjà affranchie',
+              details:
+                `La commande porte déjà le suivi ${tracking}. Réaffranchir créerait un second ` +
+                `colis et un second e-mail d'expédition. Passez par create-colissimo-label, ` +
+                `qui renvoie l'étiquette archivée.`,
+              trackingNumber: tracking,
+              reused: false,
+            }),
+            { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+          );
+        }
+      }
+
       const declaredCountry = normalizeCountryCode(order.customer?.country);
       if (declaredCountry !== 'FR') {
         return new Response(
