@@ -7,9 +7,11 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { useApp } from '@/context/AppContext';
 import { useCart } from '@/context/CartContext';
+import { useQuickAdd } from '@/hooks/useQuickAdd';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { excludeMarketplaceProducts } from '@/lib/shopVisibility';
+import type { Product } from '@/types';
 import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 
 type SR = any;
@@ -78,6 +80,7 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
   const products = excludeMarketplaceProducts(allProducts);
   const cart = useCart() as any;
   const { addItem, items, subtotal, total } = cart;
+  const { requestAdd, quickAddDialog } = useQuickAdd();
   const navigate = useNavigate();
   const [openInternal, setOpenInternal] = useState(false);
   const open = openProp !== undefined ? openProp : openInternal;
@@ -263,14 +266,53 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
   const addressComplete = (a: VoiceAddress) =>
     !!(a.name && a.address && a.zip && a.city && a.phone);
 
+  /**
+   * Ajout au panier depuis une commande vocale.
+   *
+   * ⚠️ Les trois appels d'origine faisaient `addItem({ ...p, quantity })`.
+   * `p` est un `Product` : il porte `id`, pas `productId`. `CartItem.productId`
+   * arrivait donc **undefined** — panier invité sans référence produit, et
+   * `cart_items.product_id` à NULL pour les comptes connectés. Le mapping est
+   * désormais explicite.
+   *
+   * La taille dictée n'est retenue que si elle existe vraiment sur le produit :
+   * une taille mal transcrite vaut moins que la demander.
+   */
+  const addSpokenProduct = (
+    p: Product,
+    action: { size?: string; color?: string; quantity?: number },
+  ) => {
+    const spoken = String(action?.size || '').trim().toUpperCase();
+    const known = (p.sizes || []).find((s) => String(s).toUpperCase() === spoken);
+
+    if (!known) {
+      // Pas de taille exploitable → on ouvre le sélecteur, stock à l'appui.
+      speak(`Quelle taille pour ${p.name} ?`);
+      void requestAdd(p);
+      return;
+    }
+
+    void addItem({
+      productId: p.id,
+      name: p.name,
+      price: p.price,
+      salePrice: p.salePrice,
+      image: p.image,
+      size: known,
+      color: action?.color || undefined,
+      quantity: action?.quantity || 1,
+    });
+    speak(`${p.name} taille ${known} ajouté au panier`);
+    toast.success(`${p.name} (${known}) ajouté au panier`);
+  };
+
   const executeAction = async (action: any) => {
     switch (action?.type) {
       case 'add_to_cart': {
         const p = products.find((x) => x.id === action.productId)
           || products.find((x) => x.name.toLowerCase().includes((action.productQuery || '').toLowerCase()));
         if (p) {
-          addItem({ ...p, quantity: action.quantity || 1, size: action.size, color: action.color });
-          toast.success(`${p.name} ajouté au panier`);
+          addSpokenProduct(p, action);
         } else {
           toast.error('Produit introuvable');
         }
@@ -322,9 +364,7 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
           speak('Je n\'ai pas trouvé ce résultat. Reformulez votre choix.');
           break;
         }
-        addItem({ ...p, quantity: action.quantity || 1, size: action.size, color: action.color });
-        speak(`${p.name} ajouté au panier`);
-        toast.success(`${p.name} ajouté au panier`);
+        addSpokenProduct(p, action);
         break;
       }
       case 'set_address': {
@@ -544,7 +584,7 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
                     size="sm"
                     variant="outline"
                     className="text-[10px] uppercase tracking-wider h-7"
-                    onClick={() => { addItem({ ...p, quantity: 1 }); toast.success(`${p.name} ajouté`); speak(`${p.name} ajouté au panier`); }}
+                    onClick={() => { void requestAdd(p); }}
                   >
                     + Panier
                   </Button>
@@ -579,6 +619,9 @@ export function VoiceCommandFab({ open: openProp, onOpenChange, hideTrigger }: V
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Sélecteur de taille — ouvert quand la commande vocale n'en donne pas */}
+      {quickAddDialog}
     </>
   );
 }

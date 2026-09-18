@@ -10,12 +10,11 @@ import { productInAnyCategory, categoryScopeFor, productCategoriesText } from '@
 import { useOrderedProducts } from '@/hooks/useCategoryOrder';
 import { useCategories } from '@/hooks/useCategories';
 import { useDesignSettings } from '@/hooks/useDesignSettings';
-import { useCart } from '@/context/CartContext';
+import { useQuickAdd } from '@/hooks/useQuickAdd';
 import { useSidebarOptional } from '@/context/SidebarContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
 import { Product } from '@/types';
 import {
   Search,
@@ -65,7 +64,6 @@ const SORT_OPTIONS = [
 export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlug?: string; hideHeader?: boolean }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { toast } = useToast();
   // Espace marketplace (ex: /collab) → catalogue totalement séparé de la boutique
   const isMarketplacePage = isMarketplaceCategory(categoryFromSlug);
   const shopQuery = useShopProducts();
@@ -84,7 +82,7 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
         effect: collabConf?.shopHover.effect ?? 'fade',
         duration: collabConf?.shopHover.duration ?? 500,
       };
-  const { addItem } = useCart();
+  const { requestAdd, quickAddDialog } = useQuickAdd();
   const sidebarContext = useSidebarOptional();
   const { data: dbCategories = [] } = useCategories();
   const { data: designSettings } = useDesignSettings();
@@ -243,19 +241,11 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
     return nums;
   }, [totalPages, page]);
 
-  const handleAddToCart = async (product: typeof products[0]) => {
-    await addItem({
-      productId: product.id,
-      name: product.name,
-      price: product.price,
-      salePrice: product.salePrice,
-      image: product.image,
-      quantity: 1,
-    });
-    toast({
-      title: 'Ajouté au panier',
-      description: `${product.name} a été ajouté`,
-    });
+  // Depuis une liste, on ne connaît pas la taille voulue : elle est demandée
+  // avant l'ajout (cf. `useQuickAdd`). Un article sans `size` est
+  // indécrémentable dans `stock_levels` et impossible à préparer.
+  const handleAddToCart = (product: typeof products[0]) => {
+    void requestAdd(product);
   };
 
   return (
@@ -565,6 +555,8 @@ export default function Shop({ categoryFromSlug, hideHeader }: { categoryFromSlu
         </div>
 
       </div>
+
+      {quickAddDialog}
     </div>
   );
 }

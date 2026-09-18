@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useProducts } from "@/hooks/useProducts";
 import { excludeMarketplaceProducts } from "@/lib/shopVisibility";
 import { useCategories } from "@/hooks/useCategories";
-import { useCart } from "@/context/CartContext";
+import { useQuickAdd } from "@/hooks/useQuickAdd";
 import { useApp } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -120,7 +120,7 @@ export default function Home() {
   const { toast } = useToast();
   const { data: allProducts = [] } = useProducts();
   const products = excludeMarketplaceProducts(allProducts);
-  const { addItem } = useCart();
+  const { requestAdd, quickAddDialog } = useQuickAdd();
   const { designSettings } = useApp();
   const { data: dbCategories = [] } = useCategories();
   const isMobile = useIsMobile();
@@ -204,19 +204,10 @@ export default function Home() {
   const newArrivals = resolveSection(["new"], products.slice(4, 10));
 
 
-  const handleAddToCart = async (product: (typeof products)[0]) => {
-    await addItem({
-      productId: product.id,
-      name: product.name,
-      price: product.price,
-      salePrice: product.salePrice,
-      image: product.image,
-      quantity: 1,
-    });
-    toast({
-      title: "Ajouté au panier",
-      description: `${product.name} a été ajouté à votre panier`,
-    });
+  // La taille est demandée avant l'ajout (cf. `useQuickAdd`) : sans elle,
+  // l'article est indécrémentable dans `stock_levels`.
+  const handleAddToCart = (product: (typeof products)[0]) => {
+    void requestAdd(product);
   };
 
   const slide = heroSlides[currentSlide];
@@ -604,6 +595,7 @@ export default function Home() {
         });
       })()}
       <PopupBanner />
+      {quickAddDialog}
     </div>
   );
 }

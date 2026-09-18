@@ -26,6 +26,7 @@ import ProductReviews from '@/components/product/ProductReviews';
 import ColorVariantsStrip from '@/components/product/ColorVariantsStrip';
 import ProductStrip from '@/components/product/ProductStrip';
 import { useTrackProductView, useRecommendedProducts } from '@/hooks/useRecentlyViewed';
+import { useQuickAdd } from '@/hooks/useQuickAdd';
 import { ProductSeo } from '@/components/seo/SeoHead';
 
 export default function ProductDetail() {
@@ -284,7 +285,7 @@ export default function ProductDetail() {
         <ProductStrip eyebrow="RECOMMANDÉ POUR VOUS" title="Sélection basée sur vos visites" products={recommended} />
 
         {/* Complete the look */}
-        <CompleteLook productId={product.id} onAddToCart={addItem} />
+        <CompleteLook productId={product.id} />
       </div>
 
       {/* Floating Color Variant Popup — visible when product has colors */}
@@ -311,11 +312,13 @@ export default function ProductDetail() {
 /* ------------------------------------------------------------------ */
 /* Complete The Look Section                                            */
 /* ------------------------------------------------------------------ */
-function CompleteLook({ productId, onAddToCart }: { productId: string; onAddToCart: (item: any) => Promise<void> }) {
+function CompleteLook({ productId }: { productId: string }) {
   const { data: looks = [] } = useProductLooks();
   const { format } = useCurrency();
   const { data: allProducts = [] } = useProducts();
-  const { toast } = useToast();
+  // C'est une liste, pas la fiche : la taille du produit suggéré n'a aucune
+  // raison d'être celle du produit consulté → on la demande (cf. `useQuickAdd`).
+  const { requestAdd, quickAddDialog } = useQuickAdd();
 
   // Find looks that include this product
   const myLooks = looks.filter(l => l.isActive && l.productIds.includes(productId));
@@ -327,16 +330,8 @@ function CompleteLook({ productId, onAddToCart }: { productId: string; onAddToCa
 
   if (lookProducts.length === 0) return null;
 
-  const handleAdd = async (p: typeof lookProducts[0]) => {
-    await onAddToCart({
-      productId: p.id,
-      name: p.name,
-      price: p.price,
-      salePrice: p.salePrice,
-      image: p.image,
-      quantity: 1,
-    });
-    toast({ title: `${p.name} ajouté au panier` });
+  const handleAdd = (p: typeof lookProducts[0]) => {
+    void requestAdd(p);
   };
 
   return (
@@ -398,6 +393,8 @@ function CompleteLook({ productId, onAddToCart }: { productId: string; onAddToCa
           </motion.div>
         ))}
       </div>
+
+      {quickAddDialog}
     </motion.section>
   );
 }

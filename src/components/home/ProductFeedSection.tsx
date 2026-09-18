@@ -4,8 +4,7 @@ import { productCategories } from '@/lib/productCategories';
 import { useProducts } from '@/hooks/useProducts';
 import { excludeMarketplaceProducts } from '@/lib/shopVisibility';
 import { useApp } from '@/context/AppContext';
-import { useCart } from '@/context/CartContext';
-import { useToast } from '@/hooks/use-toast';
+import { useQuickAdd } from '@/hooks/useQuickAdd';
 import { Button } from '@/components/ui/button';
 import { ProductCard } from '@/components/products/ProductCard';
 import { EditableText } from '@/components/visual-editor/EditableText';
@@ -63,8 +62,7 @@ export function resolveFeedProducts(
 
 export function ProductFeedSection({ section }: { section: FeedSectionConfig }) {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { addItem } = useCart();
+  const { requestAdd, quickAddDialog } = useQuickAdd();
   const { designSettings } = useApp();
   const { data: allProducts = [] } = useProducts();
   const products = excludeMarketplaceProducts(allProducts);
@@ -77,16 +75,9 @@ export function ProductFeedSection({ section }: { section: FeedSectionConfig }) 
   const sectionPy =
     siteSpacing === 'spacious' ? 'py-8 lg:py-20' : siteSpacing === 'normal' ? 'py-4 lg:py-10' : 'py-2 lg:py-6';
 
-  const handleAddToCart = async (product: Product) => {
-    await addItem({
-      productId: product.id,
-      name: product.name,
-      price: product.price,
-      salePrice: product.salePrice,
-      image: product.image,
-      quantity: 1,
-    });
-    toast({ title: 'Ajouté au panier', description: `${product.name} a été ajouté à votre panier` });
+  // La taille est demandée avant l'ajout (cf. `useQuickAdd`).
+  const handleAddToCart = (product: Product) => {
+    void requestAdd(product);
   };
 
   const goTo = (id: string, color: string | null) =>
@@ -152,6 +143,8 @@ export function ProductFeedSection({ section }: { section: FeedSectionConfig }) 
           </div>
         )}
       </div>
+
+      {quickAddDialog}
     </section>
   );
 }

@@ -1,8 +1,7 @@
 import { productInCategory } from '@/lib/productCategories';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '@/context/AppContext';
-import { useCart } from '@/context/CartContext';
-import { useToast } from '@/hooks/use-toast';
+import { useQuickAdd } from '@/hooks/useQuickAdd';
 import { ProductGrid } from '@/components/products/ProductCard';
 import { InlineEditable } from '@/components/visual-editor/InlineEditable';
 import { useVisualEditor } from '@/components/visual-editor/VisualEditorProvider';
@@ -11,8 +10,7 @@ import { excludeMarketplaceProducts } from '@/lib/shopVisibility';
 export function ProductSections() {
   const { designSettings, updateDesignSettings, products, navigateToCategory, language } = useApp();
   const navigate = useNavigate();
-  const { addItem } = useCart();
-  const { toast } = useToast();
+  const { requestAdd, quickAddDialog } = useQuickAdd();
   const { setIsDirty } = useVisualEditor();
   const { homeSections } = designSettings;
 
@@ -49,19 +47,9 @@ export function ProductSections() {
 
   const visibleSections = homeSections.filter(s => s.isVisible);
 
-  const handleAddToCart = async (product: typeof products[0]) => {
-    await addItem({
-      productId: product.id,
-      name: product.name,
-      price: product.price,
-      salePrice: product.salePrice,
-      image: product.image,
-      quantity: 1,
-    });
-    toast({
-      title: 'Ajouté au panier',
-      description: `${product.name} a été ajouté`,
-    });
+  // La taille est demandée avant l'ajout (cf. `useQuickAdd`).
+  const handleAddToCart = (product: typeof products[0]) => {
+    void requestAdd(product);
   };
 
   return (
@@ -118,6 +106,8 @@ export function ProductSections() {
           </section>
         );
       })}
+
+      {quickAddDialog}
     </div>
   );
 }

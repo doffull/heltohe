@@ -10,9 +10,10 @@
 > l'infrastructure (§24), le 14/09/2026 après l'ouverture des expéditions hors
 > France (§27), puis le 15/09/2026 après la remise en service des webhooks de
 > paiement (§28), le 16/09/2026 après la correction de la CN23 hors France
-> et le passage des étiquettes au format A4 (§27.8), et le **17/09/2026** après
+> et le passage des étiquettes au format A4 (§27.8), le 17/09/2026 après
 > l'allègement du catalogue visuel, le redimensionnement à l'envoi et le
-> téléphone rendu obligatoire (§29).
+> téléphone rendu obligatoire (§29), puis le **18/09/2026** après le passage de
+> la taille en obligatoire à l'ajout au panier (§30).
 >
 > ⚠️ **Le dépôt a changé le 28/08/2026** : le projet vit désormais dans
 > `doffull/warltkfr`, recréé depuis Lovable. `gafsou20/Helvetica-MP` est une archive.
@@ -2626,3 +2627,114 @@ redéploiement des huit fonctions.
 ⚠️ Incohérence relevée au passage : `auto-colissimo-label` et
 `generate-product-video` écrivent des PDF et des MP4 dans **`media`** (public),
 alors que les autres étiquettes vont dans `labels` (privé).
+
+---
+
+## 30. Taille obligatoire à l'ajout au panier — 18/09/2026 ✅
+
+> Six points d'entrée ajoutaient au panier **sans taille**. Un article sans
+> `size` n'est décrémentable dans aucune ligne de `stock_levels` (dont la clé
+> est `inventory_id + size`) et n'est pas préparable sans rappeler la cliente.
+> Seule la fiche produit exigeait une taille.
+
+### 30.1 Ce qui ajoutait sans taille
+
+| Emplacement | Contexte |
+|---|---|
+| `Shop.tsx:246` | grille et liste de la boutique |
+| `Home.tsx:207` | sections produits de l'accueil |
+| `ProductFeedSection.tsx:80` | sections éditoriales configurables |
+| `ProductSections.tsx:52` | sections legacy de l'accueil |
+| `ProductDetail.tsx` → `CompleteLook` | « compléter le look » |
+| `VoiceCommandFab.tsx` (×3) | commande vocale |
+
+Tous appelaient `addItem()` avec `quantity: 1` et **ni `size` ni `color`**.
+
+⚠️ **La fiche produit, elle, n'a jamais été en cause** : `handleAddToCart`
+refuse depuis toujours un ajout sans `selectedSize` (`ProductDetail.tsx:78`).
+Le trou était dans les **listes**, là où aucun sélecteur n'existe.
+
+### 30.2 🔴 Le bug du FAB vocal, trouvé en chemin
+
+Les trois ajouts vocaux faisaient :
+
+```ts
+addItem({ ...p, quantity: 1 });        // p est un Product
+```
+
+`Product` porte `id`, pas `productId`. **`CartItem.productId` arrivait donc
+`undefined`** : panier invité sans référence produit, et `cart_items.product_id`
+à NULL pour un compte connecté. Le mapping est désormais explicite
+(`addSpokenProduct`).
+
+### 30.3 ⚠️ Le repli sans lequel 4 produits deviennent inachetables
+
+`stock_levels` **n'est pas garanti ventilé par taille**. Mesuré en production
+le 18/09 sur 114 produits :
+
+```
+ 97 produits → toutes les tailles déclarées ont du stock
+  7 produits → partiellement dispo        ← le cas qui justifie la demande
+  6 produits → toutes tailles en rupture  (products.stock = 0, cohérent)
+  4 produits → AUCUNE granularité : une seule ligne avec size = NULL
+ 35 produits → écart entre products.sizes et stock_levels.size
+```
+
+Les quatre sans granularité sont **Stellar, summit, Steve 2, Middle block** :
+ils déclarent des tailles et ont 50 unités, mais `useProductStock` range leur
+stock sous la clé `'_'`. Traiter « absent de `bySize` » comme « rupture » les
+aurait rendus **inachetables**, toutes tailles grisées.
+
+D'où la règle, dans `QuickAddSizeDialog` :
+
+> On ne bride les tailles **que si** le stock est réellement ventilé (au moins
+> une clé autre que `'_'`). Sinon on laisse choisir et on se rabat sur
+> `products.stock`.
+
+⚠️ **Les tailles affichées viennent de `products.sizes`, jamais du stock.** Les
+35 écarts vont dans les deux sens : des XXXL stockés mais non déclarés (à ne
+PAS proposer), des XS déclarés mais jamais stockés (à afficher en rupture).
+`products.sizes` dit ce qui est vendu, le stock dit ce qui est disponible.
+
+### 30.4 Ce qui a été posé
+
+`src/components/product/QuickAddSizeDialog.tsx` — sélecteur de taille avec
+disponibilités, couleur (seulement si ≥ 2 variantes achetables), quantité
+plafonnée au stock de la taille choisie, et un lien vers la fiche pour le guide
+des tailles.
+
+`src/hooks/useQuickAdd.tsx` — `{ requestAdd, quickAddDialog }`. Toute carte
+produit d'une liste passe par `requestAdd()`. Un produit **sans tailles
+déclarées** (accessoire) garde l'ajout direct d'avant.
+
+⚠️ **`{quickAddDialog}` doit être rendu** dans le composant qui appelle le
+hook, sinon le clic n'ouvre rien.
+
+La requête de stock n'est lancée qu'à **l'ouverture** du dialogue : une liste
+affiche jusqu'à 24 cartes, on ne veut pas 24 requêtes pour un seul clic.
+
+### 30.5 Ce qui reste ouvert
+
+- La RPC `validate_and_create_order` **ne valide toujours pas** la présence de
+  `size`. Le front ne peut plus créer d'article sans taille, mais rien ne
+  l'interdit côté serveur — ni les paniers déjà en base, ni un appel direct.
+- Les **35 écarts** `products.sizes` / `stock_levels.size` restent à arbitrer
+  côté admin (une taille stockée non déclarée est du stock mort).
+- `useProductStock` fait un `.maybeSingle()` sur `inventory` : un second
+  `inventory` pour un même produit ferait échouer la requête. Vrai aujourd'hui
+  (114 produits ↔ 114 lignes), sans garantie en base.
+
+### 30.6 ⚠️ Les tests ne tournent qu'avec `NODE_ENV=test`
+
+Avec `NODE_ENV=production` dans l'environnement, **toute** la suite échoue sur
+`TypeError: jsxDEV is not a function` — y compris un simple `render(<div/>)` :
+`react/jsx-dev-runtime` enveloppe tout son code dans un
+`if (process.env.NODE_ENV !== "production")` et exporte donc un module vide.
+
+```
+NODE_ENV=test npx vitest run
+```
+
+Indépendamment de ça, **6 tests échouaient déjà avant cette session**
+(`TechwearHero.test.tsx`, `home-hero.test.tsx`) : `useAuth` appelé hors de son
+provider. Vérifié par `git stash` — sans rapport avec ce chantier.
