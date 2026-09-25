@@ -116,7 +116,6 @@ export default function AdminPaymentTest() {
 
       // 4. Commande
       setStep('order', 'running');
-      const orderNumber = `TEST-${Date.now().toString().slice(-8)}`;
       const { data: orderRes, error: orderErr } = await supabase.rpc('validate_and_create_order', {
         p_items: lines.map(l => ({
           productId: l.productId,
@@ -127,7 +126,9 @@ export default function AdminPaymentTest() {
         p_promo_code: promo.trim() || null,
         p_delivery_mode: deliveryMode,
         p_order_data: {
-          order_number: orderNumber,
+          // Commande de test : préfixe TEST- attribué par la base, hors série
+          // HMP- et sans numéro de facture (§32). Reconnu seulement pour un admin.
+          is_test: true,
           user_id: user?.id || '',
           customer_email: user?.email || 'test@helvetica-mp.com',
           customer_name: 'Commande de test',

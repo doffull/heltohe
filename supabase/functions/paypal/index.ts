@@ -178,8 +178,6 @@ Deno.serve(async (req) => {
       if (items.length === 0) return json({ error: "Panier vide" }, 400);
       const orderData = (body.orderData ?? {}) as Record<string, unknown>;
       const deliveryMode = body.deliveryMode === "home" ? "home" : "relay";
-      const orderNumber = `HMP-${Date.now().toString(36).toUpperCase()}`;
-
       const db = admin();
       const { data: rpcResult, error: rpcError } = await db.rpc("validate_and_create_order", {
         p_items: items.map((it: Record<string, unknown>) => ({
@@ -190,11 +188,13 @@ Deno.serve(async (req) => {
         })),
         p_promo_code: String(body.promoCode || ""),
         p_delivery_mode: deliveryMode,
-        p_order_data: { ...orderData, order_number: orderNumber },
+        // Le numéro est attribué par la base ; `is_test` n'a rien à faire ici.
+        p_order_data: { ...orderData, order_number: undefined, is_test: undefined },
       });
       if (rpcError) return json({ error: rpcError.message }, 400);
       const result = rpcResult as Record<string, unknown>;
       if (result?.error) return json({ error: String(result.error) }, 400);
+      const orderNumber = String(result.orderNumber ?? "");
 
       const currency = String(config.currency || "EUR");
       const total = Number(result.total || 0).toFixed(2);

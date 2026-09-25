@@ -97,6 +97,7 @@ export default function Checkout() {
     const flag = params.get('payplug');
     if (!flag) return;
     const num = params.get('order') || '';
+    const ref = params.get('ref') || '';
     window.history.replaceState({}, '', '/checkout');
     if (flag === 'cancel' || !num) {
       toast({ title: 'Paiement annulé', description: 'Vous pouvez réessayer quand vous le souhaitez.' });
@@ -106,7 +107,7 @@ export default function Checkout() {
       setIsProcessing(true);
       try {
         const { data, error } = await supabase.functions.invoke('payplug', {
-          body: { action: 'check-order', orderNumber: num },
+          body: { action: 'check-order', orderNumber: num, orderRef: ref },
         });
         if (error) throw new Error(await edgeErrorMessage(error));
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -308,8 +309,8 @@ export default function Checkout() {
       })),
       promoCode: promoCode || '',
       deliveryMode,
+      // Pas de numéro de commande : il est attribué par la base (§32).
       orderData: {
-        order_number: `HMP-${Date.now().toString(36).toUpperCase()}`,
         user_id: user?.id || '',
         customer_email: form.email,
         customer_name: `${form.firstName} ${form.lastName}`,
@@ -330,8 +331,6 @@ export default function Checkout() {
     }
     setIsProcessing(true);
     try {
-      const num = `HMP-${Date.now().toString(36).toUpperCase()}`;
-
       // Build minimal item list — server will re-fetch prices from DB
       const orderItemsPayload = items.map(item => ({
         productId: item.productId,
@@ -350,7 +349,6 @@ export default function Checkout() {
         p_promo_code: promoCode || '',
         p_delivery_mode: deliveryMode,
         p_order_data: {
-          order_number: num,
           user_id: user?.id || '',
           customer_email: form.email,
           customer_name: `${form.firstName} ${form.lastName}`,
@@ -369,6 +367,8 @@ export default function Checkout() {
       if (result?.error) {
         throw new Error(result.error);
       }
+      // Numéro attribué par la base (série HMP-10000…) : c'est lui qui fait foi.
+      const num = String(result.orderNumber);
 
       // Send confirmation email (fire and forget) using server-verified values
       supabase.functions.invoke('send-order-confirmation', {

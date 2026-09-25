@@ -153,7 +153,11 @@ function generateInvoiceHTML(order: Order, brandRaw?: unknown): string {
     brand.siret ? `<p style="margin:2px 0;font-size:11px;color:#888">SIRET : ${brand.siret}</p>` : '',
     brand.vatNumber ? `<p style="margin:2px 0;font-size:11px;color:#888">TVA : ${brand.vatNumber}</p>` : '',
   ].join('');
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Facture ${order.orderNumber}</title><style>body{font-family:Arial,sans-serif;padding:40px;color:#333}h1{font-size:24px}table{width:100%;border-collapse:collapse;margin:20px 0}.header{display:flex;justify-content:space-between;margin-bottom:40px}.total-section{text-align:right;margin-top:20px}@media print{body{padding:20px}}</style></head><body><div class="header"><div><h1>FACTURE</h1><p><strong>${order.orderNumber}</strong></p><p>Date: ${new Date(order.date).toLocaleDateString('fr-FR')}</p></div><div style="text-align:right">${seller}</div></div><div style="margin-bottom:30px"><h3>Client</h3><p>${order.customer.name}<br>${order.customer.email}<br>${order.customer.address}<br>${order.customer.zip} ${order.customer.city}<br>${order.customer.country}</p>${order.customer.phone ? `<p>Tél: ${order.customer.phone}</p>` : ''}</div><table><thead><tr><th style="padding:8px;border-bottom:2px solid #333;text-align:left">Photo</th><th style="padding:8px;border-bottom:2px solid #333;text-align:left">Article</th><th style="padding:8px;border-bottom:2px solid #333;text-align:center">Qté</th><th style="padding:8px;border-bottom:2px solid #333;text-align:right">Prix unit.</th><th style="padding:8px;border-bottom:2px solid #333;text-align:right">Total</th></tr></thead><tbody>${itemsRows}</tbody></table><div class="total-section"><p>Sous-total: ${order.subtotal.toFixed(2)}€</p>${brand.showVat ? `<p>TVA: ${order.tax.toFixed(2)}€</p>` : ''}<p>Livraison: ${order.shippingCost.toFixed(2)}€</p><p style="font-size:18px;font-weight:bold;margin-top:10px">Total: ${order.total.toFixed(2)}€</p></div><div style="margin-top:40px;padding-top:20px;border-top:1px solid #eee;font-size:12px;color:#999;text-align:center">${brand.footerNote}</div></body></html>`;
+  // Numéro FA- attribué au paiement (§32). Les commandes payées avant le
+  // 25/09/2026 n'en ont pas : leur facture garde le numéro de commande.
+  const invoiceRef = order.invoiceNumber || order.orderNumber;
+  const invoiceDate = order.invoicedAt || order.date;
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Facture ${invoiceRef}</title><style>body{font-family:Arial,sans-serif;padding:40px;color:#333}h1{font-size:24px}table{width:100%;border-collapse:collapse;margin:20px 0}.header{display:flex;justify-content:space-between;margin-bottom:40px}.total-section{text-align:right;margin-top:20px}@media print{body{padding:20px}}</style></head><body><div class="header"><div><h1>FACTURE</h1><p><strong>${invoiceRef}</strong></p>${order.invoiceNumber ? `<p>Commande : ${order.orderNumber}</p>` : ''}<p>Date: ${new Date(invoiceDate).toLocaleDateString('fr-FR')}</p></div><div style="text-align:right">${seller}</div></div><div style="margin-bottom:30px"><h3>Client</h3><p>${order.customer.name}<br>${order.customer.email}<br>${order.customer.address}<br>${order.customer.zip} ${order.customer.city}<br>${order.customer.country}</p>${order.customer.phone ? `<p>Tél: ${order.customer.phone}</p>` : ''}</div><table><thead><tr><th style="padding:8px;border-bottom:2px solid #333;text-align:left">Photo</th><th style="padding:8px;border-bottom:2px solid #333;text-align:left">Article</th><th style="padding:8px;border-bottom:2px solid #333;text-align:center">Qté</th><th style="padding:8px;border-bottom:2px solid #333;text-align:right">Prix unit.</th><th style="padding:8px;border-bottom:2px solid #333;text-align:right">Total</th></tr></thead><tbody>${itemsRows}</tbody></table><div class="total-section"><p>Sous-total: ${order.subtotal.toFixed(2)}€</p>${brand.showVat ? `<p>TVA: ${order.tax.toFixed(2)}€</p>` : ''}<p>Livraison: ${order.shippingCost.toFixed(2)}€</p><p style="font-size:18px;font-weight:bold;margin-top:10px">Total: ${order.total.toFixed(2)}€</p></div><div style="margin-top:40px;padding-top:20px;border-top:1px solid #eee;font-size:12px;color:#999;text-align:center">${brand.footerNote}</div></body></html>`;
 }
 
 
@@ -191,6 +195,16 @@ export default function AdminOrders() {
   const [scope, setScope] = useState<'paid' | 'abandoned'>('paid');
   const { data: orders = [], isLoading } = useOrders(scope);
   const { data: designSettings } = useDesignSettings();
+
+  // Pas de facture sans paiement : le numéro FA- n'existe qu'une fois payée (§32).
+  const printInvoice = (order: Order) => {
+    if (order.paymentStatus !== 'Paid') {
+      toast({ title: 'Facture indisponible', description: 'La facture est émise au paiement de la commande.', variant: 'destructive' });
+      return;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    openPrintWindow(generateInvoiceHTML(order, (designSettings as any)?.invoiceBrand));
+  };
   const updateOrder = useUpdateOrder();
   const bulkDelete = useBulkDeleteOrders();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -357,7 +371,7 @@ export default function AdminOrders() {
   let filteredOrders = orders.filter(o => {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      if (!o.orderNumber.toLowerCase().includes(q) && !o.customer.name.toLowerCase().includes(q) && !o.customer.email.toLowerCase().includes(q)) return false;
+      if (!o.orderNumber.toLowerCase().includes(q) && !(o.invoiceNumber || '').toLowerCase().includes(q) && !o.customer.name.toLowerCase().includes(q) && !o.customer.email.toLowerCase().includes(q)) return false;
     }
     if (statusFilter !== 'all' && o.status !== statusFilter) return false;
     if (paymentFilter !== 'all' && o.paymentStatus !== paymentFilter) return false;
@@ -939,6 +953,7 @@ export default function AdminOrders() {
                       <td className="p-3"><Checkbox checked={selectedIds.has(order.id)} onCheckedChange={() => toggle(order.id)} /></td>
                       <td className="p-3">
                         <code className="text-xs font-bold">{order.orderNumber}</code>
+                        {order.invoiceNumber && <p className="text-[10px] font-mono text-muted-foreground">{order.invoiceNumber}</p>}
                         <p className="text-[10px] text-muted-foreground">{timeAgo(order.date)}</p>
                       </td>
                       <td className="p-3">
@@ -1011,7 +1026,7 @@ export default function AdminOrders() {
                       <td className="p-3 text-right">
                         <div className="flex gap-0.5 justify-end">
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openDetail(order)} title="Voir"><Eye className="h-3.5 w-3.5" /></Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openPrintWindow(generateInvoiceHTML(order, (designSettings as any)?.invoiceBrand))} title="Facture"><FileText className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => printInvoice(order)} title="Facture"><FileText className="h-3.5 w-3.5" /></Button>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -1145,7 +1160,7 @@ export default function AdminOrders() {
                 <Button variant="outline" size="sm" onClick={() => selectedOrder && openPrintWindow(generateDeliverySlipHTML(selectedOrder))}><FileDown className="h-4 w-4 mr-1" />Bon de livraison</Button>
                 <Button variant="outline" size="sm" onClick={() => selectedOrder && openPrintWindow(generateShippingLabelHTML(selectedOrder))}><Tag className="h-4 w-4 mr-1" />Étiquette aller</Button>
                 <Button variant="outline" size="sm" onClick={() => selectedOrder && openPrintWindow(generateShippingLabelHTML(selectedOrder, true))}><Tag className="h-4 w-4 mr-1" />Étiquette retour</Button>
-                <Button variant="outline" size="sm" onClick={() => selectedOrder && openPrintWindow(generateInvoiceHTML(selectedOrder, (designSettings as any)?.invoiceBrand))}><Printer className="h-4 w-4 mr-1" />Facture</Button>
+                <Button variant="outline" size="sm" onClick={() => selectedOrder && printInvoice(selectedOrder)}><Printer className="h-4 w-4 mr-1" />Facture</Button>
                 {/* Resend confirmation */}
                 <Button
                   variant="outline"

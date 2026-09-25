@@ -208,7 +208,6 @@ Deno.serve(async (req) => {
 
       const orderData = (body.orderData ?? {}) as Record<string, unknown>;
       const deliveryMode = body.deliveryMode === "home" ? "home" : "relay";
-      const orderNumber = `HMP-${Date.now().toString(36).toUpperCase()}`;
       const returnBase = String(body.returnUrl || "").split("?")[0];
       if (!returnBase.startsWith("http")) return json({ error: "URL de retour invalide" }, 400);
 
@@ -222,11 +221,14 @@ Deno.serve(async (req) => {
         })),
         p_promo_code: String(body.promoCode || ""),
         p_delivery_mode: deliveryMode,
-        p_order_data: { ...orderData, order_number: orderNumber },
+        // Le numéro est attribué par la base ; `is_test` n'a rien à faire ici.
+        p_order_data: { ...orderData, order_number: undefined, is_test: undefined },
       });
       if (rpcError) return json({ error: rpcError.message }, 400);
       const result = rpcResult as Record<string, unknown>;
       if (result?.error) return json({ error: String(result.error) }, 400);
+      const orderNumber = String(result.orderNumber ?? "");
+      const orderId = String(result.orderId ?? "");
 
       const total = Number(result.total || 0);
       const amountCents = Math.round(total * 100);
@@ -264,7 +266,10 @@ Deno.serve(async (req) => {
 
           },
           hosted_payment: {
-            return_url: `${returnBase}?payplug=return&order=${orderNumber}`,
+            // L'identifiant (UUID) accompagne le numéro : depuis le 25/09/2026
+            // les numéros se suivent, et `check-order` exige les deux pour ne
+            // pas laisser énumérer les commandes (§32).
+            return_url: `${returnBase}?payplug=return&order=${orderNumber}&ref=${orderId}`,
             cancel_url: `${returnBase}?payplug=cancel`,
           },
           notification_url: `${SUPABASE_URL}/functions/v1/payplug`,
@@ -295,7 +300,8 @@ Deno.serve(async (req) => {
     // ---------- PUBLIC : vérifier l'état d'un paiement au retour ----------
     if (action === "check-order") {
       const orderNumber = String(body.orderNumber || "");
-      if (!orderNumber) return json({ error: "Référence manquante" }, 400);
+      const orderRef = String(body.orderRef || "");
+      if (!orderNumber || !orderRef) return json({ error: "Référence manquante" }, 400);
 
       const db = admin();
       const { data: order } = await db
@@ -303,7 +309,7 @@ Deno.serve(async (req) => {
         .select("id, payment_status, total")
         .eq("order_number", orderNumber)
         .maybeSingle();
-      if (!order) return json({ error: "Commande introuvable" }, 404);
+      if (!order || order.id !== orderRef) return json({ error: "Commande introuvable" }, 404);
 
       if (order.payment_status !== "paid") {
         // Le webhook peut ne pas être encore arrivé : on interroge PayPlug.

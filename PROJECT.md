@@ -2954,3 +2954,73 @@ La CLI de cette machine n'est pas authentifiée (`SUPABASE_ACCESS_TOKEN` absent)
 **Recette à jouer après déploiement** : rappeler l'étiquette de HMP-MU6KUKDP et
 vérifier `reused: true`, le suivi inchangé à `6A07781142585`, aucun 5ᵉ fichier
 dans `labels/`, aucune 5ᵉ ligne `shipped` dans `customer_email_log`.
+
+---
+
+## 32. Numérotation des commandes et des factures — 25/09/2026
+
+Demande du client : deux séries **distinctes**, **consécutives**, générées **côté serveur**.
+
+| Série | Format | Départ | Mécanisme | Trous possibles |
+|---|---|---|---|---|
+| Commandes | `HMP-10000` | 10000 | séquence `order_number_seq` | oui (commande refusée après `nextval`) |
+| Factures | `FA-1000` | 1000 | ligne verrouillée `invoice_counter` | **non** (même transaction que la commande) |
+
+Migration : `20260925090000_numerotation_commandes_factures.sql`.
+
+### 32.1 Règles
+
+- Le numéro de commande est attribué **uniquement** par `validate_and_create_order`.
+  Tout `order_number` envoyé par l'appelant est ignoré. Avant : `HMP-${Date.now().toString(36)}`
+  fabriqué dans le navigateur, `payplug` et `paypal`.
+- La facture (`orders.invoice_number` + `invoiced_at`) est posée par le trigger
+  `assign_invoice_number_trg` au **passage** de `payment_status` à `Paid`, quel que soit
+  le chemin (webhooks, retour navigateur, admin). Une fois posée, elle est **immuable**
+  (le trigger restaure l'ancienne valeur) ; elle ne peut pas être écrite à la main.
+- **Jamais de facture** pour : `is_test`, `WC-…` (imports WooCommerce), `TEST-…`.
+- **Pas de rétroactivité** : les commandes payées avant le 25/09/2026 n'ont pas de `FA-`.
+  Leur facture imprimée garde le numéro de commande. Une ancienne commande en attente
+  payée après la migration reçoit bien un `FA-`.
+- Commandes de test : `p_order_data.is_test = true`, reconnu **seulement si l'appelant est
+  admin** → numéro `TEST-AAMMJJHHMMSSmmm`, hors série `HMP-`.
+- **Avoirs non gérés** (décision client). Une commande remboursée garde sa facture.
+- Le numéro de facture n'est **pas** dans l'e-mail de confirmation (décision client).
+
+### 32.2 Conséquence sécurité : `payplug check-order`
+
+Avec des numéros qui se suivent, l'action publique `check-order` (qui renvoie statut et
+montant) permettait d'énumérer les commandes. Elle exige désormais `orderRef` = l'UUID de
+la commande, transmis dans l'URL de retour PayPlug (`?payplug=return&order=…&ref=…`).
+Un paiement lancé **avant** le déploiement revient sans `ref` : la vérification échoue
+côté navigateur, mais le webhook confirme quand même le paiement.
+
+### 32.3 Front
+
+- `Checkout.tsx` : n'envoie plus de numéro, lit `result.orderNumber`.
+- `AdminPaymentTest.tsx` : envoie `is_test: true` au lieu du préfixe `TEST-`.
+- `AdminOrders.tsx` : facture imprimable **seulement si payée**, affiche `FA-…` + la commande
+  + `invoiced_at` ; `FA-…` visible sous le numéro dans la liste et cherchable.
+
+### 32.4 Testé
+
+Sur un Postgres 16 jetable (harnais minimal, pas le schéma complet) : séquence 10000+,
+numéro client ignoré, `is_test` refusé à un non-admin, compteur rendu après `ROLLBACK`,
+tentatives d'écraser `invoice_number` bloquées, `WC-` et `TEST-` exclus, aucune facture
+rétroactive sur une commande déjà payée modifiée. `tsc` et `vite build` OK.
+
+### 32.5 ⚠️ Non déployé au moment où ces lignes sont écrites
+
+CLI non authentifiée sur cette machine (`SUPABASE_ACCESS_TOKEN` absent). **Ordre impératif** :
+la migration **avant** les fonctions (sinon `payplug`/`paypal` n'envoient plus de numéro à
+une fonction SQL qui l'attend encore → insertion `order_number` NULL → échec des commandes).
+
+```bash
+npx supabase db push --project-ref hzjzqdlyehclnpeqkier
+npx supabase functions deploy payplug paypal --project-ref hzjzqdlyehclnpeqkier
+```
+
+Puis publier le front (Lovable). Tant que le front n'est pas publié, l'ancien checkout
+envoie encore son numéro : il est ignoré, sans dommage.
+
+**Recette** : une commande PayPlug, une PayPal, une par virement → `HMP-1000x` consécutifs ;
+`FA-100x` sur celles payées ; une commande via Admin → Test paiement → `TEST-…`, sans facture.

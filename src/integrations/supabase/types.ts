@@ -2278,6 +2278,8 @@ export type Database = {
           customer_zip: string
           id: string
           is_draft: boolean
+          invoice_number: string | null
+          invoiced_at: string | null
           is_test: boolean
           items: Json
           label_generated_at: string | null
@@ -2316,6 +2318,8 @@ export type Database = {
           customer_zip: string
           id?: string
           is_draft?: boolean
+          invoice_number?: string | null
+          invoiced_at?: string | null
           is_test?: boolean
           items?: Json
           label_generated_at?: string | null
@@ -2354,6 +2358,8 @@ export type Database = {
           customer_zip?: string
           id?: string
           is_draft?: boolean
+          invoice_number?: string | null
+          invoiced_at?: string | null
           is_test?: boolean
           items?: Json
           label_generated_at?: string | null

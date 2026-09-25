@@ -41,6 +41,8 @@ function dbToAppOrder(db: Record<string, unknown>): Order {
     notes: (db.notes as string) || undefined,
     trackingNumber: (db.tracking_number as string) || undefined,
     shippingCarrier: (db.shipping_carrier as string) || undefined,
+    invoiceNumber: (db.invoice_number as string) || undefined,
+    invoicedAt: (db.invoiced_at as string) || undefined,
   };
 }
 

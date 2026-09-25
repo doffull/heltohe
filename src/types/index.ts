@@ -140,6 +140,10 @@ export interface Order {
   notes?: string;
   trackingNumber?: string;
   shippingCarrier?: string;
+  /** FA-1000… attribué par la base au passage à « payé » (§32). Absent sur
+   *  les commandes non payées, de test, importées ou payées avant le 25/09/2026. */
+  invoiceNumber?: string;
+  invoicedAt?: string;
 }
 
 export type AnimationType = 'glitch' | 'pulse' | 'fade' | 'none';
