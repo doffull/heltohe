@@ -15,7 +15,15 @@
 > téléphone rendu obligatoire (§29), puis le **18/09/2026** après le passage de
 > la taille en obligatoire à l'ajout au panier (§30), la découverte de la
 > disparition des masters de sauvegarde (§30.7) et l'arrêt du
-> réaffranchissement en boucle des étiquettes Colissimo (§31).
+> réaffranchissement en boucle des étiquettes Colissimo (§31), puis le
+> **25/09/2026** après la numérotation serveur des commandes et factures (§32),
+> les bons de commande groupés et la réf. client sur l'étiquette (§33).
+>
+> 🟠 **§32 et §33 sont dans le dépôt (`prod`) mais PAS DÉPLOYÉS** (au 25/09/2026).
+> **Ne pas cliquer « Publish » dans Lovable** avant d'avoir appliqué la migration
+> du §32 : le checkout n'envoie plus de numéro de commande, l'ancienne fonction SQL
+> en attend un → **plus aucune commande possible**. Procédure complète et ordonnée
+> au §34.
 >
 > 🔴 **`backup-media/` n'existe plus.** Les originaux 4096 px des ~416 images
 > réécrites les 11 et 17/09 sont perdus, et `resize-media.mjs --rollback` est
@@ -3008,7 +3016,7 @@ numéro client ignoré, `is_test` refusé à un non-admin, compteur rendu après
 tentatives d'écraser `invoice_number` bloquées, `WC-` et `TEST-` exclus, aucune facture
 rétroactive sur une commande déjà payée modifiée. `tsc` et `vite build` OK.
 
-### 32.5 ⚠️ Non déployé au moment où ces lignes sont écrites
+### 32.5 ⚠️ Non déployé — voir la procédure du §34
 
 CLI non authentifiée sur cette machine (`SUPABASE_ACCESS_TOKEN` absent). **Ordre impératif** :
 la migration **avant** les fonctions (sinon `payplug`/`paypal` n'envoient plus de numéro à
@@ -3084,7 +3092,7 @@ A4 (HMP-MUFEJJ5S) : moitié gauche à l'échelle 1, bon lisible, débordement d'
 **Non testé** : l'appel réel à Colissimo avec `senderParcelRef` (à vérifier sur la
 première étiquette générée après déploiement).
 
-### 33.5 ⚠️ Non déployé
+### 33.5 ⚠️ Non déployé — voir la procédure du §34
 
 ```bash
 npx supabase functions deploy order-slip-pdf create-colissimo-label --project-ref hzjzqdlyehclnpeqkier
@@ -3093,3 +3101,88 @@ npx supabase functions deploy order-slip-pdf create-colissimo-label --project-re
 Indépendant du §32 (numérotation) : peut partir avant ou après. Le front (bouton) doit
 être publié **après** `order-slip-pdf`, sinon `archive: false` est ignoré (sans danger :
 des fichiers en plus) et `labelMissing` n'est pas remonté.
+
+---
+
+## 34. Déploiement des §32 et §33 — ⏳ EN ATTENTE
+
+**État au 25/09/2026 : rien n'est déployé.** Le code est poussé sur `prod`
+(`47cd1ed7` numérotation, `af8d9656` bons de commande), la production tourne
+toujours sur la version du 18/09. Report volontaire : déploiement pas fait un
+vendredi (indisponibilité en cas d'incident).
+
+| Élément | Dépôt | Production |
+|---|---|---|
+| Migration `20260925090000_numerotation_commandes_factures.sql` | ✅ | ❌ |
+| Edge functions `payplug`, `paypal` (numéro lu depuis la base, `check-order` + `orderRef`) | ✅ | ❌ |
+| Edge functions `order-slip-pdf`, `create-colissimo-label` (bon de commande, réf. client) | ✅ | ❌ |
+| Front (checkout, facture FA-, bouton « Bons de commande (PDF) ») | ✅ | ❌ |
+
+> Mettre ce tableau à jour — et renommer la section en ✅ — une fois le déploiement fait.
+
+### 34.1 Procédure — l'ordre est impératif
+
+**0. Préparer** — à une heure creuse (un paiement PayPlug en cours pendant la bascule
+revient sans `ref` : seul le webhook le confirmera).
+
+```bash
+cd warltkfr && git pull
+npx supabase login
+npx supabase link --project-ref hzjzqdlyehclnpeqkier
+```
+
+**1. Migration — AVANT tout le reste**
+
+```bash
+npx supabase db push --dry-run   # doit lister UNE seule migration : 20260925090000_…
+npx supabase db push
+```
+
+Contrôle (SQL Editor) :
+
+```sql
+select last_value, is_called from order_number_seq;  -- 10000, false
+select * from invoice_counter;                        -- last_value = 999
+```
+
+**2. Edge functions**
+
+```bash
+npx supabase functions deploy payplug paypal order-slip-pdf create-colissimo-label \
+  --project-ref hzjzqdlyehclnpeqkier
+```
+
+`payplug` est un webhook : relancer le test du §28.1.
+
+```bash
+curl -s -X POST -H "Content-Type: application/json" -d '{}' \
+  https://hzjzqdlyehclnpeqkier.supabase.co/functions/v1/payplug
+```
+
+✅ `{"error":"Action inconnue"}` · ❌ `UNAUTHORIZED_NO_AUTH_HEADER` → redéployer avec
+`npx supabase functions deploy payplug --no-verify-jwt`.
+
+**3. Front** — Lovable → Share → **Publish**, seulement après 1 et 2.
+
+### 34.2 Recette
+
+1. Commande par virement → `HMP-10000`, la suivante `HMP-10001`.
+2. Commande PayPlug payée → retour confirmé, `FA-1000` visible dans `/admin/orders`.
+3. Commande PayPal → `HMP-` suivant + `FA-1001`.
+4. Admin → Test paiement → `TEST-…`, **sans** facture.
+5. Facture imprimée d'une commande payée → `FA-…` ; non payée → refusée.
+6. `/admin/colissimo` : 2 commandes déjà étiquetées → « Bons de commande (PDF) » →
+   confirmation « 0 nouvelle étiquette », PDF étiquette à gauche + bon à droite.
+7. Première nouvelle étiquette → case « Réf client » = `HMP-…`.
+
+Supprimer ensuite les commandes de test.
+
+### 34.3 Retour arrière
+
+- **Fonctions** : `git checkout 59af7cc1 -- supabase/functions` puis redéployer les quatre.
+- **Front** : revenir à la version précédente dans Lovable.
+- **Migration** : pas de rollback automatique. Si le checkout échoue, recréer
+  `validate_and_create_order` depuis `20260914100000_expedition_internationale.sql`
+  **uniquement si le front et les fonctions sont aussi revenus en arrière** (l'ancienne
+  version attend le numéro envoyé par l'appelant). Colonnes, séquence, compteur et
+  trigger peuvent rester en place sans danger.
