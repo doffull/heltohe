@@ -655,6 +655,11 @@ Deno.serve(async (req) => {
       // SOAP dit la même chose.
       parcel: pickupLocationId ? { weight, pickupLocationId } : { weight },
       sender: {
+        // « Réf client » imprimée sur l'étiquette — vide jusqu'au 25/09/2026.
+        // Même valeur que le module WooCommerce officiel (`senderParcelRef` =
+        // numéro de commande) : c'est ce qui permet de rapprocher un colis
+        // d'une commande à l'œil, sur le quai comme au retour.
+        senderParcelRef: String(order.order_number || ''),
         address: {
           companyName: sanitizeAddressLine(senderName),
           line2: sanitizeAddressLine(senderAddress),

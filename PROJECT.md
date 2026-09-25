@@ -3024,3 +3024,72 @@ envoie encore son numéro : il est ignoré, sans dommage.
 
 **Recette** : une commande PayPlug, une PayPal, une par virement → `HMP-1000x` consécutifs ;
 `FA-100x` sur celles payées ; une commande via Admin → Test paiement → `TEST-…`, sans facture.
+
+---
+
+## 33. Bons de commande groupés + réf. client sur l'étiquette — 25/09/2026
+
+### 33.1 La demande
+
+Sur `/admin/colissimo`, un bouton **« Bons de commande (PDF) »** qui produit, pour les
+commandes cochées, **une page A4 paysage par commande** :
+
+- **à gauche** : l'étiquette Colissimo — **uniquement la demi-page gauche** du PDF
+  Colissimo (la partie à coller), à l'échelle 1. La notice et la preuve de dépôt (demi-page
+  droite) sont écartées ;
+- **à droite** : le **bon de commande**, repris de l'e-mail admin « Nouvelle commande »
+  (n°, date, client, e-mail, téléphone, livraison, adresse, articles avec taille/couleur/prix
+  unitaire/quantité/total, sous-total, livraison « GRATUIT », TOTAL), en clair — **sans
+  bandeau noir et sans photos** ;
+- **à la suite** : les pages CN23 si l'envoi est hors UE / DOM-TOM.
+
+Étiquette existante → reprise ; sinon → générée (et la commande passe en « Expédiée »,
+comme toujours avec `create-colissimo-label`). **Aucun filtre** sur les commandes cochées
+(décision client). Une boîte de confirmation annonce avant de lancer combien d'étiquettes
+seront **affranchies**.
+
+### 33.2 Architecture
+
+- `order-slip-pdf/layout.ts` — **seule** mise en page du bon (`renderOrderSlip`), isolée
+  pour être testable hors Supabase. Gère les deux formats d'étiquette : A4 paysage (depuis
+  le 16/09, §27.8) → recadrage sur la moitié gauche ; 10×15 portrait (anciennes) → page
+  entière.
+- `order-slip-pdf/index.ts` — inchangé sur le fond (auth admin, reprise de l'étiquette,
+  génération seulement si `allow_label_creation` et aucun suivi). Nouveau : `archive: false`
+  (pas de fichier `bon-*.pdf` dans le stockage) et `labelMissing` dans la réponse.
+- `AdminColissimo.tsx` — le navigateur appelle `order-slip-pdf` **commande par commande**
+  (un appel pour tout le lot dépasserait les limites d'une edge function), fusionne avec
+  `pdf-lib` (chargé à la demande), télécharge `bons-commande-AAAA-MM-JJ.pdf`. Progression
+  x/N sur le bouton ; une commande en échec n'arrête pas le lot et est listée à la fin.
+
+⚠️ **Ancien défaut corrigé** : jusqu'ici `order-slip-pdf` réduisait la page Colissimo A4
+**entière** dans une colonne de 330 pt — étiquette à ~40 %, codes-barres douteux au scan.
+L'écran `/admin/bordereau/:id` (seul autre appelant) bénéficie de la même correction.
+
+### 33.3 Réf. client sur l'étiquette
+
+La case « Réf client » de l'étiquette était vide. `create-colissimo-label` envoie désormais
+`letter.sender.senderParcelRef` = numéro de commande — exactement ce que fait le module
+WooCommerce officiel (`LabelGenerationPayload::withOrderNumber`). Concerne **tous** les
+canaux (checkout, `/admin/orders`, `/admin/colissimo`, `auto-colissimo-label`,
+`colissimo-proxy`), **pour les nouvelles étiquettes seulement** : les étiquettes déjà émises
+ne sont pas refaites (ce serait réaffranchir).
+
+### 33.4 Testé
+
+Rendu de `layout.ts` sous Node (`npx tsx`, import `pdf-lib` local) avec une vraie étiquette
+A4 (HMP-MUFEJJ5S) : moitié gauche à l'échelle 1, bon lisible, débordement d'articles
+(« … et N article(s) ») sans chevauchement des totaux, étiquette absente → cadre vide.
+Étiquette de 5 pages → 1 page bon + 4 CN23 à la suite. `tsc` + `vite build` OK.
+**Non testé** : l'appel réel à Colissimo avec `senderParcelRef` (à vérifier sur la
+première étiquette générée après déploiement).
+
+### 33.5 ⚠️ Non déployé
+
+```bash
+npx supabase functions deploy order-slip-pdf create-colissimo-label --project-ref hzjzqdlyehclnpeqkier
+```
+
+Indépendant du §32 (numérotation) : peut partir avant ou après. Le front (bouton) doit
+être publié **après** `order-slip-pdf`, sinon `archive: false` est ignoré (sans danger :
+des fichiers en plus) et `labelMissing` n'est pas remonté.

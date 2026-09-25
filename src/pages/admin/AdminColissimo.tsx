@@ -18,6 +18,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { edgeErrorMessage } from '@/lib/edgeFunctionError';
 import {
   Package, Truck, MapPin, Settings2, ExternalLink, Download, Save,
   CheckCircle2, XCircle, Loader2, Search, RefreshCw, Tag,
@@ -190,6 +191,8 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
   const [importLoading, setImportLoading] = useState(false);
   const [refreshLoading, setRefreshLoading] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [slipConfirmOpen, setSlipConfirmOpen] = useState(false);
+  const [slipProgress, setSlipProgress] = useState<{ done: number; total: number } | null>(null);
 
   const countries = Array.from(new Set(orders.map((o: Order) => o.customer?.country).filter(Boolean)));
   const shippingMethods = Array.from(new Set(orders.map((o: Order) => o.shippingCarrier || o.paymentMethod).filter(Boolean)));
@@ -409,6 +412,82 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
     }
   }
 
+  // ─── Bons de commande groupés (§33) ───────────────────────────────────────
+  // Une page A4 par commande cochée : étiquette Colissimo à gauche (reprise si
+  // elle existe, générée sinon), bon de commande à droite, CN23 à la suite.
+  // Le serveur rend chaque commande séparément (`order-slip-pdf`) : un seul
+  // appel pour tout le lot dépasserait les limites d'une edge function dès
+  // une dizaine de commandes. La fusion se fait ici, dans le navigateur.
+  const slipTargets = paginated.filter((o: Order) => selected.has(o.id));
+  const slipNewLabels = slipTargets.filter((o: Order) => !o.trackingNumber).length;
+
+  async function handleBulkSlips() {
+    setSlipConfirmOpen(false);
+    const targets = slipTargets;
+    if (!targets.length) return;
+    setSlipProgress({ done: 0, total: targets.length });
+    // Chargé à la demande : inutile d'alourdir l'écran pour un seul bouton.
+    const { PDFDocument } = await import('pdf-lib');
+    const merged = await PDFDocument.create();
+    merged.setTitle('Bons de commande');
+    const failed: string[] = [];
+    const noLabel: string[] = [];
+    let generated = 0;
+    try {
+      for (let i = 0; i < targets.length; i++) {
+        const order = targets[i];
+        try {
+          const { data, error } = await supabase.functions.invoke('order-slip-pdf', {
+            // ⚠️ `allow_label_creation` : une commande sans étiquette est
+            // affranchie ici — c'est la demande, et elle a été confirmée.
+            // `create-colissimo-label` refuse de réaffranchir une commande qui
+            // a déjà un suivi (§31) ; `archive: false` évite un fichier de
+            // plus dans le stockage à chaque impression.
+            body: { order_id: order.id, allow_label_creation: true, archive: false },
+          });
+          if (error) throw new Error(await edgeErrorMessage(error));
+          if (data?.error) throw new Error(data.details || data.error);
+          if (!data?.pdfBase64) throw new Error('Aucun document renvoyé');
+          const bytes = Uint8Array.from(atob(data.pdfBase64), (c) => c.charCodeAt(0));
+          const src = await PDFDocument.load(bytes);
+          for (const p of await merged.copyPages(src, src.getPageIndices())) merged.addPage(p);
+          if (data.labelGenerated) generated++;
+          if (data.labelMissing) noLabel.push(order.orderNumber);
+        } catch (e) {
+          failed.push(`${order.orderNumber} (${e instanceof Error ? e.message : String(e)})`);
+        }
+        setSlipProgress({ done: i + 1, total: targets.length });
+      }
+
+      if (merged.getPageCount() > 0) {
+        const out = await merged.save();
+        const blob = new Blob([out], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `bons-commande-${new Date().toISOString().slice(0, 10)}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      }
+
+      const ok = targets.length - failed.length;
+      toast({
+        title: `${ok} bon(s) de commande sur ${targets.length}`,
+        description: [
+          generated ? `${generated} nouvelle(s) étiquette(s) générée(s).` : '',
+          noLabel.length ? `Sans étiquette : ${noLabel.join(', ')}.` : '',
+          failed.length ? `Échecs : ${failed.join(' · ')}` : '',
+        ].filter(Boolean).join(' ') || undefined,
+        variant: failed.length ? 'destructive' : undefined,
+      });
+      if (generated) queryClient.invalidateQueries({ queryKey: ['orders'] });
+    } finally {
+      setSlipProgress(null);
+    }
+  }
+
   async function handleBulkDelete() {
     const ids = Array.from(selected);
     try {
@@ -546,6 +625,17 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
           <Button size="sm" variant="secondary" className="h-8 text-xs" onClick={applyBulkAction} disabled={!bulkAction || !selected.size || bulkLoading || bulkPrintLoading}>
             {(bulkLoading || bulkPrintLoading) ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
             OK
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs gap-1"
+            onClick={() => setSlipConfirmOpen(true)}
+            disabled={!selected.size || !!slipProgress || bulkLoading || bulkPrintLoading}
+            title="Une page A4 par commande : étiquette Colissimo + bon de commande"
+          >
+            {slipProgress ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
+            {slipProgress ? `${slipProgress.done}/${slipProgress.total}` : 'Bons de commande (PDF)'}
           </Button>
           <button
             className="flex items-center gap-1 text-xs text-primary hover:underline"
@@ -855,6 +945,37 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
             <Button onClick={handleImport} disabled={importLoading || !importText.trim()} className="gap-2">
               {importLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
               Importer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bons de commande groupés — confirmation (affranchir coûte de l'argent) */}
+      <Dialog open={slipConfirmOpen} onOpenChange={setSlipConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Bons de commande — {slipTargets.length} commande{slipTargets.length > 1 ? 's' : ''}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2 text-sm text-muted-foreground space-y-2">
+            <p>Une page A4 par commande : l'étiquette Colissimo à gauche, le bon de commande à droite. Les documents douaniers (CN23) suivent la page de la commande concernée.</p>
+            <p>
+              <strong className="text-foreground">{slipTargets.length - slipNewLabels}</strong> étiquette(s) existante(s) reprise(s).
+            </p>
+            {slipNewLabels > 0 && (
+              <p className="flex items-start gap-2 text-amber-600">
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <span><strong>{slipNewLabels}</strong> nouvelle(s) étiquette(s) à affranchir auprès de Colissimo — les commandes concernées passeront en « Expédiée ».</span>
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSlipConfirmOpen(false)}>Annuler</Button>
+            <Button onClick={handleBulkSlips} className="gap-2">
+              <Download className="h-4 w-4" />
+              Générer le PDF
             </Button>
           </DialogFooter>
         </DialogContent>
