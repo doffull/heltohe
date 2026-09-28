@@ -3314,3 +3314,23 @@ antérieures qui parlent de « publier dans Lovable » décrivent l'ancien fonct
 - **Plus de modification « par l'éditeur »** : toute évolution passe par ce dépôt —
   la règle « le dépôt n'est pas le déploiement » (§18) reste valable, mais le seul
   chemin d'écart possible est désormais un oubli de déploiement de notre part.
+
+---
+
+## 37. Lien « n° de commande » de /admin/colissimo — 28/09/2026
+
+Cliquer sur un n° de commande dans `/admin/colissimo` renvoyait au **tableau de bord** :
+le lien visait `/admin?tab=orders&search=…`, or l'admin route **par chemin**
+(`/admin/commandes`, `/admin/colissimo`…) — le paramètre `tab` n'existe nulle part.
+
+Désormais : lien interne (`<Link>`, sans rechargement) vers
+**`/admin/commandes?order=<id de la commande>`**. `AdminOrders.tsx` lit `?order=` au
+montage et **ouvre la fiche** de la commande dès que la liste est chargée. Si elle n'est
+pas dans la vue « payées » (vue par défaut), l'écran bascule une fois sur les paniers
+abandonnés ; introuvable → toast « Commande introuvable ». Fermer la fiche retire
+`?order=` de l'URL (un rechargement ne la rouvre pas).
+
+Réutilisable depuis n'importe quel écran : `/admin/commandes?order=<uuid>`.
+
+⚠️ Front uniquement — **à déployer par Jessy** (§36.2). Non testé en navigateur ici
+(pas d'accès admin à la production) : `tsc` + `vite build` OK.

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -772,15 +773,17 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
                     {order.id.slice(0, 8)}
                   </TableCell>
 
-                  {/* Order number — clickable link to admin orders */}
+                  {/* N° de commande → écran des commandes, fiche ouverte (?order=<id>).
+                      L'ancien lien `/admin?tab=orders&search=…` ne correspondait à aucune
+                      route (l'admin route par chemin) et retombait sur le tableau de bord. */}
                   <TableCell>
-                    <a
-                      href={`/admin?tab=orders&search=${encodeURIComponent(order.orderNumber)}`}
+                    <Link
+                      to={`/admin/commandes?order=${encodeURIComponent(order.id)}`}
                       className="font-semibold text-sm text-primary hover:underline"
                       title="Voir la commande"
                     >
                       #{order.orderNumber}
-                    </a>
+                    </Link>
                   </TableCell>
 
                   {/* Date */}

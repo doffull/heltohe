@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useOrders, useUpdateOrder, useBulkDeleteOrders } from '@/hooks/useOrders';
 import { useDesignSettings } from '@/hooks/useDesignSettings';
 import { Order, OrderStatus, PaymentStatus, OrderItem } from '@/types';
@@ -601,6 +601,30 @@ export default function AdminOrders() {
 
 
 
+  // Ouverture directe d'une fiche depuis un lien (`/admin/commandes?order=<id>`,
+  // ex. depuis /admin/colissimo). Une commande non payée n'est pas dans la vue
+  // « payées » par défaut : on bascule alors une fois sur les paniers abandonnés.
+  const deepLinkId = useRef<string | null>(new URLSearchParams(window.location.search).get('order'));
+  const deepLinkTriedAbandoned = useRef(false);
+  useEffect(() => {
+    const id = deepLinkId.current;
+    if (!id || isLoading) return;
+    const target = orders.find((o: Order) => o.id === id);
+    if (target) {
+      deepLinkId.current = null;
+      openDetail(target);
+      return;
+    }
+    if (scope === 'paid' && !deepLinkTriedAbandoned.current) {
+      deepLinkTriedAbandoned.current = true;
+      setScope('abandoned');
+      return;
+    }
+    deepLinkId.current = null;
+    toast({ title: 'Commande introuvable', description: 'Elle a peut-être été supprimée.', variant: 'destructive' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders, isLoading, scope]);
+
   const openDetail = (order: Order) => {
     setSelectedOrder(order);
     setEditForm({
@@ -1066,7 +1090,16 @@ export default function AdminOrders() {
       </div>
 
       {/* Order Detail Dialog */}
-      <Dialog open={!!selectedOrder} onOpenChange={(open) => { if (!open) setSelectedOrder(null); }}>
+      <Dialog open={!!selectedOrder} onOpenChange={(open) => {
+        if (open) return;
+        setSelectedOrder(null);
+        // Fermer la fiche retire `?order=` de l'URL : un rechargement ne la rouvre pas.
+        const url = new URL(window.location.href);
+        if (url.searchParams.has('order')) {
+          url.searchParams.delete('order');
+          window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
+        }
+      }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="hud-text flex items-center gap-3">
