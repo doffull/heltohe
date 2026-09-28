@@ -3303,9 +3303,12 @@ antérieures qui parlent de « publier dans Lovable » décrivent l'ancien fonct
 
 ### 36.2 Conséquences pratiques
 
-- **Déployer le front** = `npm run build` puis mise en ligne de `dist/` sur notre
-  hébergement. Les variables `VITE_*` sont lues **au build** : elles doivent être
-  présentes dans l'environnement de build (plus de panneau Lovable pour les poser).
+- **Déployer le front** : le front est hébergé sur un **serveur cloud personnel de
+  Jessy**, et **c'est Jessy qui le déploie lui-même** (pas d'accès depuis ici). Notre
+  rôle : pousser sur `prod` un code qui compile (`npx tsc -p tsconfig.app.json
+  --noEmit` + `npx vite build`), puis **signaler explicitement** qu'un déploiement du
+  front est nécessaire. Les variables `VITE_*` sont lues **au build**, dans
+  l'environnement de Jessy (plus de panneau Lovable pour les poser).
 - **Secrets des edge functions** : gérés uniquement par `supabase secrets set` / le
   dashboard Supabase.
 - **Plus de modification « par l'éditeur »** : toute évolution passe par ce dépôt —
