@@ -27,9 +27,9 @@
 >
 > ✅ **§32 et §33 déployés par Jessy le 28/09/2026** (procédure du §34).
 >
-> 🔴 **Total TTC gonflé par l'édition admin** (corrigé le 28/09/2026, §35) : enregistrer
-> une commande depuis sa fiche ajoutait la TVA une 2ᵉ fois au total. Requête de repérage
-> et de réparation au §35.2.
+> ✅ **Total TTC gonflé par l'édition admin** — corrigé et **en production le 28/09/2026**
+> (§35). Vérifier que la requête de réparation du §35.2 a bien été passée sur les
+> commandes déjà touchées.
 >
 > 🔴 **`backup-media/` n'existe plus.** Les originaux 4096 px des ~416 images
 > réécrites les 11 et 17/09 sont perdus, et `resize-media.mjs --rollback` est
@@ -3268,12 +3268,9 @@ where tax > 0
 - Une facture **FA-** déjà imprimée ou envoyée avec le mauvais total reste fausse chez le
   client : la réimprimer après réparation (le numéro FA- ne change pas).
 
-### 35.3 ⚠️ Non déployé au moment où ces lignes sont écrites
+### 35.3 ✅ En production le 28/09/2026
 
-Correctif front uniquement (pas de migration, pas d'edge function) : build + mise en ligne
-du front par nous (plus de Lovable — §36).
-Avant publication, **ne pas modifier de commande depuis sa fiche admin** (Enregistrer /
-Générer l'étiquette) — ça re-gonfle le total.
+Front déployé par Jessy (§36.2).
 
 ---
 
@@ -3332,5 +3329,4 @@ abandonnés ; introuvable → toast « Commande introuvable ». Fermer la fiche 
 
 Réutilisable depuis n'importe quel écran : `/admin/commandes?order=<uuid>`.
 
-⚠️ Front uniquement — **à déployer par Jessy** (§36.2). Non testé en navigateur ici
-(pas d'accès admin à la production) : `tsc` + `vite build` OK.
+✅ **En production le 28/09/2026** (front déployé par Jessy, §36.2).
