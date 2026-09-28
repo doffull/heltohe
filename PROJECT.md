@@ -19,6 +19,12 @@
 > **25/09/2026** après la numérotation serveur des commandes et factures (§32),
 > les bons de commande groupés et la réf. client sur l'étiquette (§33).
 >
+> 🟥 **LOVABLE N'EST PLUS UTILISÉ (28/09/2026).** Nous avons pris en charge le projet
+> complet : le code, les déploiements (base, edge functions **et front**) et l'évolution
+> se font ici, depuis ce dépôt. Il n'y a plus de bouton « Publish » ni d'éditeur Lovable :
+> toute mention « publier dans Lovable » plus bas est **historique**. Ce qui dépend encore
+> de Lovable dans le code (dépendances npm, passerelle IA, `.lovable/`) : §36.
+>
 > ✅ **§32 et §33 déployés par Jessy le 28/09/2026** (procédure du §34).
 >
 > 🔴 **Total TTC gonflé par l'édition admin** (corrigé le 28/09/2026, §35) : enregistrer
@@ -103,7 +109,7 @@ composants, 1,6 Mo de pages) sert le back-office, pas la boutique.
 
 | | |
 |---|---|
-| Origine | projet **Lovable**, synchronisé avec ce dépôt. Projet Supabase : `hzjzqdlyehclnpeqkier` — **confirmé le 30/08/2026** (§16) |
+| Origine | projet né sur **Lovable** — **abandonné le 28/09/2026** : repris entièrement par nous (§36). Projet Supabase : `hzjzqdlyehclnpeqkier` — **confirmé le 30/08/2026** (§16) |
 | Volume | **88 200 lignes** TS/TSX · 412 fichiers · 205 composants · 52 hooks |
 | Back | Supabase : **66 tables**, 7 vues, 21 RPC, **171 migrations**, **36 edge functions** (dont 5 non déployées, §18) |
 | Front | 23 routes déclarées, dont `/admin/*` (46 pages) et `/compte/*` |
@@ -454,7 +460,9 @@ bun run lint
    `*.lovable.dev`. **Si la liste est vide, le verrou est inactif** — un build « protégé » sans
    `VITE_LICENSE_DOMAINS` ne protège rien.
 
-Déploiement : via Lovable (Share → Publish) ou n'importe quel hébergeur statique + Supabase.
+Déploiement : ~~via Lovable (Share → Publish)~~ — **Lovable n'est plus utilisé (§36)**. Le front
+est un build statique (`npm run build` → `dist/`) servi par notre hébergement, et Supabase
+pour le back.
 
 ---
 
@@ -3165,7 +3173,8 @@ curl -s -X POST -H "Content-Type: application/json" -d '{}' \
 ✅ `{"error":"Action inconnue"}` · ❌ `UNAUTHORIZED_NO_AUTH_HEADER` → redéployer avec
 `npx supabase functions deploy payplug --no-verify-jwt`.
 
-**3. Front** — Lovable → Share → **Publish**, seulement après 1 et 2.
+**3. Front** — build et mise en ligne par nous (§36), seulement après 1 et 2.
+~~Lovable → Share → Publish~~ (historique : c'est ainsi que le 28/09/2026 a été fait).
 
 ### 34.2 Recette
 
@@ -3183,7 +3192,7 @@ Supprimer ensuite les commandes de test.
 ### 34.3 Retour arrière
 
 - **Fonctions** : `git checkout 59af7cc1 -- supabase/functions` puis redéployer les quatre.
-- **Front** : revenir à la version précédente dans Lovable.
+- **Front** : redéployer le build du commit précédent (plus de Lovable — §36).
 - **Migration** : pas de rollback automatique. Si le checkout échoue, recréer
   `validate_and_create_order` depuis `20260914100000_expedition_internationale.sql`
   **uniquement si le front et les fonctions sont aussi revenus en arrière** (l'ancienne
@@ -3261,6 +3270,44 @@ where tax > 0
 
 ### 35.3 ⚠️ Non déployé au moment où ces lignes sont écrites
 
-Correctif front uniquement (pas de migration, pas d'edge function) : publier dans Lovable.
+Correctif front uniquement (pas de migration, pas d'edge function) : build + mise en ligne
+du front par nous (plus de Lovable — §36).
 Avant publication, **ne pas modifier de commande depuis sa fiche admin** (Enregistrer /
 Générer l'étiquette) — ça re-gonfle le total.
+
+---
+
+## 36. Sortie de Lovable — 28/09/2026
+
+**Lovable n'est plus utilisé.** Nous avons pris en charge le projet complet : code,
+base (migrations `supabase db push`), edge functions (`supabase functions deploy`) et
+front. Plus de bouton « Publish », plus d'éditeur Lovable, plus de synchronisation
+Lovable ↔ GitHub : **ce dépôt (`prod`) est la seule source de vérité.** Les sections
+antérieures qui parlent de « publier dans Lovable » décrivent l'ancien fonctionnement.
+
+### 36.1 Ce qui dépend encore de Lovable dans le code — dette à solder
+
+| Élément | Où | Risque |
+|---|---|---|
+| **Passerelle IA Lovable** (`ai.gateway.lovable.dev`, `LOVABLE_API_KEY`) | edge functions `image-pose-edit`, `parse-products-pdf`, `boutique-lookup`, `generate-product-video`, `template-from-mockup`, `ai-keys`, `virtual-tryon`, `generate-slide-image`, `_shared/gemini.ts` (cf. §18, §29) | 🔴 ces fonctions tombent dès que la clé Lovable n'est plus valable — à basculer sur Gemini/OpenAI en direct |
+| **Passerelle connecteurs** (`connector-gateway.lovable.dev`) | `crm-send-message` (Brevo), SMS Twilio (§17) | 🟠 même risque |
+| `process-email-queue` | envoie via l'API Lovable | 🟠 à passer sur Resend comme le reste (§19) |
+| Mentions résiduelles | `send-order-notification`, `send-order-confirmation`, `password-reset-request`, `mcp` | 🟡 à relire |
+| `@lovable.dev/mcp-js` | `src/lib/mcp/tools/*`, `vite.config.ts` (`mcpPlugin`), `supabase/functions/mcp` | 🟡 fonctionne tant que le paquet npm existe ; à remplacer par le SDK MCP officiel si on garde la fonction |
+| `@lovable.dev/cloud-auth-js` | `package.json` (aucun import trouvé dans `src/`) | ⚪ à retirer |
+| `lovable-tagger` | `vite.config.ts` (`componentTagger`, dev seulement) | ⚪ à retirer |
+| Dossier `.lovable/` (`mcp/`, `plan/`) | racine | ⚪ artefacts de l'éditeur, à retirer |
+| Verrou de licence | `VITE_LICENSE_DOMAINS` : `*.lovable.app`, `*.lovableproject.com`, `*.lovable.dev` **toujours autorisés** (§8) | 🟠 n'importe quelle copie hébergée chez Lovable passe le verrou — retirer ces domaines |
+| `index.html` | `<meta name="twitter:site" content="@Lovable">` | ⚪ à remplacer par le compte de la marque |
+| `README.md` | encore rédigé comme un projet Lovable | ⚪ à réécrire (renvoyer vers ce document) |
+
+### 36.2 Conséquences pratiques
+
+- **Déployer le front** = `npm run build` puis mise en ligne de `dist/` sur notre
+  hébergement. Les variables `VITE_*` sont lues **au build** : elles doivent être
+  présentes dans l'environnement de build (plus de panneau Lovable pour les poser).
+- **Secrets des edge functions** : gérés uniquement par `supabase secrets set` / le
+  dashboard Supabase.
+- **Plus de modification « par l'éditeur »** : toute évolution passe par ce dépôt —
+  la règle « le dépôt n'est pas le déploiement » (§18) reste valable, mais le seul
+  chemin d'écart possible est désormais un oubli de déploiement de notre part.
