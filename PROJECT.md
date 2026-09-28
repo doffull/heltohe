@@ -19,11 +19,11 @@
 > **25/09/2026** après la numérotation serveur des commandes et factures (§32),
 > les bons de commande groupés et la réf. client sur l'étiquette (§33).
 >
-> 🟠 **§32 et §33 sont dans le dépôt (`prod`) mais PAS DÉPLOYÉS** (au 25/09/2026).
-> **Ne pas cliquer « Publish » dans Lovable** avant d'avoir appliqué la migration
-> du §32 : le checkout n'envoie plus de numéro de commande, l'ancienne fonction SQL
-> en attend un → **plus aucune commande possible**. Procédure complète et ordonnée
-> au §34.
+> ✅ **§32 et §33 déployés par Jessy le 28/09/2026** (procédure du §34).
+>
+> 🔴 **Total TTC gonflé par l'édition admin** (corrigé le 28/09/2026, §35) : enregistrer
+> une commande depuis sa fiche ajoutait la TVA une 2ᵉ fois au total. Requête de repérage
+> et de réparation au §35.2.
 >
 > 🔴 **`backup-media/` n'existe plus.** Les originaux 4096 px des ~416 images
 > réécrites les 11 et 17/09 sont perdus, et `resize-media.mjs --rollback` est
@@ -3104,9 +3104,12 @@ des fichiers en plus) et `labelMissing` n'est pas remonté.
 
 ---
 
-## 34. Déploiement des §32 et §33 — ⏳ EN ATTENTE
+## 34. Déploiement des §32 et §33 — ✅ fait le 28/09/2026
 
-**État au 25/09/2026 : rien n'est déployé.** Le code est poussé sur `prod`
+**✅ Déployé par Jessy le 28/09/2026** — numérotation HMP-/FA- et bons de commande
+groupés confirmés en production (bon HMP-10000 : étiquette recadrée + « Réf client :
+HMP-10000 » présents). Le tableau ci-dessous est l'état **avant** déploiement, conservé
+pour mémoire. ~~**État au 25/09/2026 : rien n'est déployé.**~~ Le code est poussé sur `prod`
 (`47cd1ed7` numérotation, `af8d9656` bons de commande), la production tourne
 toujours sur la version du 18/09. Report volontaire : déploiement pas fait un
 vendredi (indisponibilité en cas d'incident).
@@ -3186,3 +3189,78 @@ Supprimer ensuite les commandes de test.
   **uniquement si le front et les fonctions sont aussi revenus en arrière** (l'ancienne
   version attend le numéro envoyé par l'appelant). Colonnes, séquence, compteur et
   trigger peuvent rester en place sans danger.
+
+---
+
+## 35. Total TTC gonflé par l'édition d'une commande en admin — 28/09/2026
+
+### 35.1 Le défaut
+
+Constaté sur le premier bon de commande de production (HMP-10000) : sous-total
+109,00 €, livraison gratuite, **TOTAL 127,17 €**. 127,17 = 109 + 18,17, et 18,17 € est
+exactement la TVA **incluse** dans 109 € (109 × 0,2 / 1,2).
+
+Le bon de commande n'y était pour rien : il affiche `orders.total`. C'est la valeur
+**en base** qui était fausse, écrite par la fiche commande de `/admin/orders`
+(`AdminOrders.tsx`), à deux endroits — le bouton **Enregistrer** et la génération
+d'étiquette depuis la fiche :
+
+```ts
+total = subtotal + selectedOrder.tax + selectedOrder.shippingCost   // ❌
+```
+
+Les prix sont **TTC** : `orders.tax` est la TVA **contenue** dans le total
+(`validate_and_create_order` : `v_tax := v_order_total * 0.2 / 1.2`), pas un supplément.
+Chaque enregistrement depuis la fiche ajoutait donc la TVA une seconde fois. Le même
+calcul repartait de la somme brute des articles et **effaçait une remise de code promo**.
+
+Piège : l'**affichage** de la fiche avait déjà été corrigé (« dont TVA », total =
+articles + port) — l'écran montrait le bon total pendant que la base recevait le faux.
+
+### Correction
+
+`computeTotals(order, items)` dans `AdminOrders.tsx` :
+- remise d'origine = somme des articles d'origine − `subtotal` enregistré (≥ 0), conservée ;
+- `subtotal` = articles − remise ; `total` = `subtotal` + port ;
+- `tax` recalculée = `total × 0,2 / 1,2` (même règle que la création) et **enregistrée**
+  (`useUpdateOrder` accepte désormais `tax`).
+
+L'affichage de la fiche utilise le même calcul. La facture imprimée écrit « dont TVA ».
+Ré-enregistrer une commande déjà gonflée la **répare** (le calcul part de `subtotal`,
+resté juste).
+
+### 35.2 Commandes déjà touchées — à lancer dans le SQL Editor
+
+Repérage (total = sous-total + port + TVA, à 1 centime près) :
+
+```sql
+select order_number, invoice_number, payment_status, subtotal, shipping_cost, tax, total,
+       subtotal + shipping_cost as total_juste, updated_at
+from orders
+where tax > 0
+  and abs(total - (subtotal + shipping_cost + tax)) < 0.011
+order by updated_at desc;
+```
+
+Réparation (après relecture de la liste ci-dessus) :
+
+```sql
+update orders
+set total = subtotal + shipping_cost,
+    tax   = round((subtotal + shipping_cost) * 0.2 / 1.2, 2)
+where tax > 0
+  and abs(total - (subtotal + shipping_cost + tax)) < 0.011;
+```
+
+⚠️ Limites :
+- Une commande éditée qui **avait un code promo** a aussi perdu sa remise dans
+  `subtotal` : la réparation ci-dessus ne la restaure pas. Comparer au montant réellement
+  encaissé (`payplug_transactions.amount` / PayPal) pour ces cas.
+- Une facture **FA-** déjà imprimée ou envoyée avec le mauvais total reste fausse chez le
+  client : la réimprimer après réparation (le numéro FA- ne change pas).
+
+### 35.3 ⚠️ Non déployé au moment où ces lignes sont écrites
+
+Correctif front uniquement (pas de migration, pas d'edge function) : publier dans Lovable.
+Avant publication, **ne pas modifier de commande depuis sa fiche admin** (Enregistrer /
+Générer l'étiquette) — ça re-gonfle le total.

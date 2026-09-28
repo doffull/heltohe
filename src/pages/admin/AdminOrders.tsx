@@ -157,7 +157,7 @@ function generateInvoiceHTML(order: Order, brandRaw?: unknown): string {
   // 25/09/2026 n'en ont pas : leur facture garde le numéro de commande.
   const invoiceRef = order.invoiceNumber || order.orderNumber;
   const invoiceDate = order.invoicedAt || order.date;
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Facture ${invoiceRef}</title><style>body{font-family:Arial,sans-serif;padding:40px;color:#333}h1{font-size:24px}table{width:100%;border-collapse:collapse;margin:20px 0}.header{display:flex;justify-content:space-between;margin-bottom:40px}.total-section{text-align:right;margin-top:20px}@media print{body{padding:20px}}</style></head><body><div class="header"><div><h1>FACTURE</h1><p><strong>${invoiceRef}</strong></p>${order.invoiceNumber ? `<p>Commande : ${order.orderNumber}</p>` : ''}<p>Date: ${new Date(invoiceDate).toLocaleDateString('fr-FR')}</p></div><div style="text-align:right">${seller}</div></div><div style="margin-bottom:30px"><h3>Client</h3><p>${order.customer.name}<br>${order.customer.email}<br>${order.customer.address}<br>${order.customer.zip} ${order.customer.city}<br>${order.customer.country}</p>${order.customer.phone ? `<p>Tél: ${order.customer.phone}</p>` : ''}</div><table><thead><tr><th style="padding:8px;border-bottom:2px solid #333;text-align:left">Photo</th><th style="padding:8px;border-bottom:2px solid #333;text-align:left">Article</th><th style="padding:8px;border-bottom:2px solid #333;text-align:center">Qté</th><th style="padding:8px;border-bottom:2px solid #333;text-align:right">Prix unit.</th><th style="padding:8px;border-bottom:2px solid #333;text-align:right">Total</th></tr></thead><tbody>${itemsRows}</tbody></table><div class="total-section"><p>Sous-total: ${order.subtotal.toFixed(2)}€</p>${brand.showVat ? `<p>TVA: ${order.tax.toFixed(2)}€</p>` : ''}<p>Livraison: ${order.shippingCost.toFixed(2)}€</p><p style="font-size:18px;font-weight:bold;margin-top:10px">Total: ${order.total.toFixed(2)}€</p></div><div style="margin-top:40px;padding-top:20px;border-top:1px solid #eee;font-size:12px;color:#999;text-align:center">${brand.footerNote}</div></body></html>`;
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Facture ${invoiceRef}</title><style>body{font-family:Arial,sans-serif;padding:40px;color:#333}h1{font-size:24px}table{width:100%;border-collapse:collapse;margin:20px 0}.header{display:flex;justify-content:space-between;margin-bottom:40px}.total-section{text-align:right;margin-top:20px}@media print{body{padding:20px}}</style></head><body><div class="header"><div><h1>FACTURE</h1><p><strong>${invoiceRef}</strong></p>${order.invoiceNumber ? `<p>Commande : ${order.orderNumber}</p>` : ''}<p>Date: ${new Date(invoiceDate).toLocaleDateString('fr-FR')}</p></div><div style="text-align:right">${seller}</div></div><div style="margin-bottom:30px"><h3>Client</h3><p>${order.customer.name}<br>${order.customer.email}<br>${order.customer.address}<br>${order.customer.zip} ${order.customer.city}<br>${order.customer.country}</p>${order.customer.phone ? `<p>Tél: ${order.customer.phone}</p>` : ''}</div><table><thead><tr><th style="padding:8px;border-bottom:2px solid #333;text-align:left">Photo</th><th style="padding:8px;border-bottom:2px solid #333;text-align:left">Article</th><th style="padding:8px;border-bottom:2px solid #333;text-align:center">Qté</th><th style="padding:8px;border-bottom:2px solid #333;text-align:right">Prix unit.</th><th style="padding:8px;border-bottom:2px solid #333;text-align:right">Total</th></tr></thead><tbody>${itemsRows}</tbody></table><div class="total-section"><p>Sous-total: ${order.subtotal.toFixed(2)}€</p>${brand.showVat ? `<p>dont TVA: ${order.tax.toFixed(2)}€</p>` : ''}<p>Livraison: ${order.shippingCost.toFixed(2)}€</p><p style="font-size:18px;font-weight:bold;margin-top:10px">Total: ${order.total.toFixed(2)}€</p></div><div style="margin-top:40px;padding-top:20px;border-top:1px solid #eee;font-size:12px;color:#999;text-align:center">${brand.footerNote}</div></body></html>`;
 }
 
 
@@ -616,6 +616,21 @@ export default function AdminOrders() {
 
   const recalcTotals = (items: OrderItem[]) => items.reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0);
 
+  // ⚠️ Les prix sont TTC : `tax` est la TVA INCLUSE (total × 0,2 / 1,2), calculée
+  // comme dans `validate_and_create_order`. Jusqu'au 28/09/2026 on écrivait
+  // `total = subtotal + tax + port` : chaque enregistrement depuis cette fiche
+  // ajoutait la TVA une seconde fois (109 € → 127,17 €) et effaçait au passage
+  // la remise d'un code promo. On garde désormais la remise d'origine
+  // (somme des articles d'origine − sous-total enregistré) et on recalcule la
+  // TVA incluse à partir du nouveau total.
+  const computeTotals = (order: Order, items: OrderItem[]) => {
+    const discount = Math.max(0, recalcTotals(order.items) - order.subtotal);
+    const subtotal = Math.max(0, recalcTotals(items) - discount);
+    const total = subtotal + (order.shippingCost || 0);
+    const tax = Math.round((total * 0.2 / 1.2) * 100) / 100;
+    return { subtotal, total, tax };
+  };
+
   const updateItem = (index: number, updates: Partial<OrderItem>) => {
     if (!editForm) return;
     const newItems = [...editForm.items];
@@ -630,8 +645,7 @@ export default function AdminOrders() {
 
   const handleSave = async () => {
     if (!selectedOrder || !editForm) return;
-    const subtotal = recalcTotals(editForm.items);
-    const total = subtotal + selectedOrder.tax + selectedOrder.shippingCost;
+    const { subtotal, total, tax } = computeTotals(selectedOrder, editForm.items);
     try {
       await updateOrder.mutateAsync({
         id: selectedOrder.id, status: editForm.status, paymentStatus: editForm.paymentStatus,
@@ -640,7 +654,7 @@ export default function AdminOrders() {
         customerName: editForm.customerName, customerEmail: editForm.customerEmail,
         customerPhone: editForm.customerPhone || undefined, customerAddress: editForm.customerAddress,
         customerCity: editForm.customerCity, customerZip: editForm.customerZip,
-        customerCountry: editForm.customerCountry, items: editForm.items, subtotal, total,
+        customerCountry: editForm.customerCountry, items: editForm.items, subtotal, total, tax,
       });
       toast({ title: 'Commande mise à jour' });
       setSelectedOrder(null);
@@ -793,7 +807,7 @@ export default function AdminOrders() {
     // de corriger — doivent donc être écrites avant, sans quoi l'étiquette
     // partirait avec les anciennes valeurs sans que rien ne le signale.
     try {
-      const subtotal = recalcTotals(editForm.items);
+      const { subtotal, total, tax } = computeTotals(selectedOrder, editForm.items);
       await updateOrder.mutateAsync({
         id: selectedOrder.id,
         customerName: editForm.customerName,
@@ -805,7 +819,8 @@ export default function AdminOrders() {
         customerCountry: editForm.customerCountry,
         items: editForm.items,
         subtotal,
-        total: subtotal + selectedOrder.tax + selectedOrder.shippingCost,
+        total,
+        tax,
       });
     } catch {
       toast({
@@ -1105,13 +1120,13 @@ export default function AdminOrders() {
                     </div>
                   ))}
                   <div className="pt-2 space-y-1 text-sm">
-                    <div className="flex justify-between"><span>Sous-total</span><span>{recalcTotals(editForm.items).toFixed(2)}€</span></div>
+                    <div className="flex justify-between"><span>Sous-total{computeTotals(selectedOrder, editForm.items).subtotal < recalcTotals(editForm.items) ? ' (remise déduite)' : ''}</span><span>{computeTotals(selectedOrder, editForm.items).subtotal.toFixed(2)}€</span></div>
                     {/* Les prix sont TTC : `orders.tax` est la TVA CONTENUE dans le total,
                         pas un supplément. L'ajouter au total la comptait deux fois — une
                         commande à 169 € s'affichait à 197,17 €. D'où le libellé « dont ». */}
-                    <div className="flex justify-between text-muted-foreground"><span>dont TVA</span><span>{selectedOrder.tax.toFixed(2)}€</span></div>
+                    <div className="flex justify-between text-muted-foreground"><span>dont TVA</span><span>{computeTotals(selectedOrder, editForm.items).tax.toFixed(2)}€</span></div>
                     <div className="flex justify-between"><span>Livraison</span><span>{selectedOrder.shippingCost.toFixed(2)}€</span></div>
-                    <div className="flex justify-between font-bold text-base pt-2 border-t border-border"><span>Total TTC</span><span>{(recalcTotals(editForm.items) + selectedOrder.shippingCost).toFixed(2)}€</span></div>
+                    <div className="flex justify-between font-bold text-base pt-2 border-t border-border"><span>Total TTC</span><span>{computeTotals(selectedOrder, editForm.items).total.toFixed(2)}€</span></div>
                   </div>
                 </div>
               </div>

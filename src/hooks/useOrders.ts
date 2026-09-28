@@ -172,6 +172,7 @@ export function useUpdateOrder() {
       items?: OrderItem[];
       subtotal?: number;
       total?: number;
+      tax?: number;
     }) => {
       const updateData: Record<string, unknown> = {};
       if (fields.status !== undefined) updateData.status = fields.status;
@@ -190,6 +191,7 @@ export function useUpdateOrder() {
       if (fields.items !== undefined) updateData.items = fields.items;
       if (fields.subtotal !== undefined) updateData.subtotal = fields.subtotal;
       if (fields.total !== undefined) updateData.total = fields.total;
+      if (fields.tax !== undefined) updateData.tax = fields.tax;
 
       // ⚠️ L'état AVANT écriture est relu pour décider des e-mails.
       //
