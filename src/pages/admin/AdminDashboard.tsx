@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useProducts, useUpdateProduct } from '@/hooks/useProducts';
 import { useOrders } from '@/hooks/useOrders';
 import { useApp } from '@/context/AppContext';
@@ -417,7 +419,38 @@ function HomepageManagement({ products }: { products: Product[] }) {
 
 export default function AdminDashboard() {
   const { data: products = [] } = useProducts();
-  const { data: orders = [] } = useOrders();
+  const { data: orders = [], isLoading: ordersLoading, isError: ordersError, dataUpdatedAt } = useOrders();
+  const queryClient = useQueryClient();
+  const [period, setPeriod] = useState<'today' | '7d' | '30d'>('today');
+  useEffect(() => {
+    const channel = supabase.channel('admin-dashboard-live-orders')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['orders'] });
+      }).subscribe();
+    const poll = window.setInterval(() => queryClient.invalidateQueries({ queryKey: ['orders'] }), 15000);
+    return () => { window.clearInterval(poll); void supabase.removeChannel(channel); };
+  }, [queryClient]);
+  const filteredOrders = useMemo(() => {
+    const days = period === 'today' ? 0 : period === '7d' ? 6 : 29;
+    const start = new Date(); start.setHours(0, 0, 0, 0); start.setDate(start.getDate() - days);
+    return orders.filter(o => o.date && new Date(o.date) >= start);
+  }, [orders, period]);
+  const paidOrders = filteredOrders.filter(o => ['paid', 'completed', 'succeeded'].includes(String(o.paymentStatus).toLowerCase()));
+  const periodRevenue = paidOrders.reduce((sum, o) => sum + o.total, 0);
+  const itemsSold = paidOrders.reduce((sum, o) => sum + o.items.reduce((qty, item) => qty + (Number(item.quantity) || 0), 0), 0);
+  const recentOrders = useMemo(() => [...orders].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5), [orders]);
+  const topProducts = useMemo(() => {
+    const totals = new Map<string, { name: string; quantity: number; revenue: number }>();
+    for (const order of paidOrders) for (const item of order.items) {
+      const key = String(item.productId || item.name);
+      const row = totals.get(key) || { name: item.name, quantity: 0, revenue: 0 };
+      row.quantity += Number(item.quantity) || 0;
+      row.revenue += (Number(item.price) || 0) * (Number(item.quantity) || 0);
+      totals.set(key, row);
+    }
+    return [...totals.values()].sort((a, b) => b.quantity - a.quantity).slice(0, 5);
+  }, [paidOrders]);
+  const euro = (amount: number) => amount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
 
   // Aggregate sales by month (last 12 months)
   const salesData = useMemo(() => {
@@ -499,6 +532,32 @@ export default function AdminDashboard() {
         <p className="text-muted-foreground text-xs lg:text-sm mt-1">Vue d'ensemble de votre activité</p>
       </div>
 
+      <div className="rounded-2xl bg-zinc-950 text-white px-6 py-7 lg:px-9 lg:py-9 flex flex-wrap items-center justify-between gap-5 shadow-lg">
+        <div><p className="text-xs tracking-[0.2em] uppercase text-zinc-300 mb-2">HELVETICA-MP / Administration</p>
+          <h2 className="text-2xl lg:text-4xl font-extrabold tracking-tight">Bonjour ! 👋</h2>
+          <p className="text-sm text-zinc-300 mt-2">Votre activité commerciale avec les vraies commandes.</p></div>
+        <a href="/" target="_blank" rel="noopener noreferrer" className="rounded-xl bg-white text-black px-5 py-3 text-sm font-semibold hover:bg-zinc-100">Voir la boutique ↗</a>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div><h2 className="text-xl font-bold">Ventes en temps réel</h2>
+          <p className="text-xs text-muted-foreground mt-1">{ordersError ? 'Connexion indisponible' : ordersLoading ? 'Chargement…' : 'Synchronisation toutes les 15 secondes'} · Actualisé : {dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString('fr-FR') : '—'}</p></div>
+        <div className="flex items-center gap-2"><span className="text-xs text-emerald-600 font-semibold">● Live</span>
+          <select aria-label="Période des ventes" value={period} onChange={e => setPeriod(e.target.value as 'today' | '7d' | '30d')} className="rounded-lg border border-border bg-background px-3 py-2 text-sm">
+            <option value="today">Aujourd'hui</option><option value="7d">7 jours</option><option value="30d">30 jours</option>
+          </select>
+          <button type="button" onClick={() => queryClient.invalidateQueries({ queryKey: ['orders'] })} className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted">Actualiser</button></div>
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: "CA encaissé", value: euro(periodRevenue) },
+          { label: 'Commandes', value: String(filteredOrders.length) },
+          { label: 'Articles vendus', value: String(itemsSold) },
+          { label: 'Stock faible', value: String(products.filter(p => p.stock <= 5).length) },
+        ].map(k => <div key={k.label} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <p className="text-2xl lg:text-3xl font-bold">{ordersError && k.label !== 'Stock faible' ? '—' : k.value}</p>
+          <p className="text-sm text-muted-foreground mt-2">{k.label}</p>
+        </div>)}
+      </div>
       {/* Stats Grid */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat) => (
@@ -562,6 +621,25 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+        <section className="rounded-2xl border border-border bg-card p-5 lg:p-6 shadow-sm">
+          <div className="flex justify-between items-center mb-5"><h3 className="font-bold text-lg">Commandes récentes</h3><span className="text-xs text-muted-foreground">Données réelles</span></div>
+          {ordersError ? <p className="text-sm text-destructive">Impossible de charger les commandes.</p> : recentOrders.length === 0 ? <p className="text-sm text-muted-foreground">Aucune commande pour le moment.</p> :
+            <div className="divide-y divide-border">{recentOrders.map(order => <div key={order.id} className="flex items-center justify-between gap-3 py-3">
+              <div className="min-w-0"><p className="font-semibold text-sm truncate">#{order.orderNumber}</p><p className="text-xs text-muted-foreground">{new Date(order.date).toLocaleString('fr-FR')}</p></div>
+              <span className="rounded-full bg-muted px-2 py-1 text-xs">{String(order.paymentStatus)}</span>
+              <span className="text-sm font-semibold whitespace-nowrap">{euro(order.total)}</span>
+            </div>)}</div>}
+        </section>
+        <section className="rounded-2xl border border-border bg-card p-5 lg:p-6 shadow-sm">
+          <h3 className="font-bold text-lg mb-5">Produits les plus vendus <span className="text-xs font-normal text-muted-foreground">· période sélectionnée</span></h3>
+          {topProducts.length === 0 ? <p className="text-sm text-muted-foreground">Aucune vente payée sur cette période.</p> :
+            <div className="space-y-4">{topProducts.map((p, i) => <div key={p.name} className="flex items-center gap-3">
+              <span className="text-xs text-muted-foreground w-5">{i + 1}</span><span className="text-sm font-medium flex-1 truncate">{p.name}</span>
+              <span className="text-xs text-muted-foreground">{p.quantity} ventes</span><span className="text-sm font-bold">{euro(p.revenue)}</span>
+            </div>)}</div>}
+        </section>
+      </div>
       {/* Homepage Management (full width) + Recent Orders */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <HomepageManagement products={products} />
