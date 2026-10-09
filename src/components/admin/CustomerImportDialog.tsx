@@ -82,6 +82,10 @@ function mapRows(rows: Row[]): { valid: ParsedCustomer[]; rejected: { line: numb
 
 export function CustomerImportDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const qc = useQueryClient();
+  // La préproduction peut partager la base de données de production.
+  // L'analyse des fichiers est autorisée, mais aucune écriture client depuis le preview.
+  const isProductionHost = typeof window !== 'undefined' && window.location.hostname === 'helvetica-mp.com';
+  const previewOnly = !isProductionHost;
   const [rows, setRows] = useState<ParsedCustomer[]>([]);
   const [rejected, setRejected] = useState<{ line: number; reason: string; raw: string }[]>([]);
   const [fileName, setFileName] = useState('');
@@ -123,6 +127,7 @@ export function CustomerImportDialog({ open, onOpenChange }: { open: boolean; on
   };
 
   const runImport = async () => {
+    if (previewOnly) { toast({ title: 'Mode test', description: 'Fichier vérifié : aucune donnée client enregistrée.', }); return; }
     if (rows.length === 0) return;
     setImporting(true);
     try {
@@ -182,6 +187,7 @@ export function CustomerImportDialog({ open, onOpenChange }: { open: boolean; on
   };
 
   const importFromWoo = async () => {
+    if (previewOnly) { toast({ title: 'Mode test', description: 'Import WooCommerce désactivé hors production.' }); return; }
     setWooBusy(true);
     try {
       const { data, error } = await supabase.functions.invoke('woocommerce-import', {
@@ -212,6 +218,9 @@ export function CustomerImportDialog({ open, onOpenChange }: { open: boolean; on
           </DialogDescription>
         </DialogHeader>
 
+        {previewOnly && <p role="status" className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+          Mode test : vous pouvez charger et prévisualiser les fichiers CSV/Excel, mais aucun client ne sera ajouté ou modifié.
+        </p>}
         <label className="flex items-center gap-2 text-sm cursor-pointer">
           <Checkbox checked={skipExisting} onCheckedChange={(v) => setSkipExisting(!!v)} />
           Ne pas écraser les fiches existantes
@@ -266,7 +275,7 @@ export function CustomerImportDialog({ open, onOpenChange }: { open: boolean; on
                 <div className="flex flex-wrap gap-2">
                   <Button onClick={runImport} disabled={importing} className="gap-2">
                     {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                    Importer {rows.length} client(s)
+                    {previewOnly ? `Prévisualisation : ${rows.length} client(s)` : `Importer ${rows.length} client(s)`}
                   </Button>
                   {rejected.length > 0 && (
                     <Button variant="outline" onClick={downloadReport} className="gap-2">
@@ -282,7 +291,7 @@ export function CustomerImportDialog({ open, onOpenChange }: { open: boolean; on
             <p className="text-sm text-muted-foreground">
               Récupère les clients de la boutique WooCommerce connectée dans Admin → WooCommerce.
             </p>
-            <Button onClick={importFromWoo} disabled={wooBusy} className="gap-2">
+            <Button onClick={importFromWoo} disabled={wooBusy || previewOnly} className="gap-2">
               {wooBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingBag className="h-4 w-4" />}
               Importer depuis WooCommerce
             </Button>
