@@ -435,7 +435,7 @@ export default function AdminDashboard() {
     const start = new Date(); start.setHours(0, 0, 0, 0); start.setDate(start.getDate() - days);
     return orders.filter(o => o.date && new Date(o.date) >= start);
   }, [orders, period]);
-  const lowStockProducts = products.filter(p => p.stock <= 5);
+  const lowStockProducts = products.filter(p => p.stock <= 5).sort((a, b) => a.stock - b.stock);
   const paidOrders = filteredOrders.filter(o => ['paid', 'completed', 'succeeded'].includes(String(o.paymentStatus).toLowerCase()));
   const periodRevenue = paidOrders.reduce((sum, o) => sum + o.total, 0);
   const itemsSold = paidOrders.reduce((sum, o) => sum + o.items.reduce((qty, item) => qty + (Number(item.quantity) || 0), 0), 0);
@@ -453,31 +453,22 @@ export default function AdminDashboard() {
   }, [paidOrders]);
   const euro = (amount: number) => amount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
 
-  // Aggregate sales by month (last 12 months)
+  // Ventes payées, même période que les indicateurs.
   const salesData = useMemo(() => {
-    const now = new Date();
-    const months: { key: string; name: string }[] = [];
-    for (let i = 11; i >= 0; i--) {
-      const d = subMonths(now, i);
-      months.push({
-        key: format(d, 'yyyy-MM'),
-        name: MONTH_LABELS[d.getMonth()],
-      });
+    const days = period === 'today' ? 1 : period === '7d' ? 7 : 30;
+    const start = new Date(); start.setHours(0, 0, 0, 0); start.setDate(start.getDate() - days + 1);
+    const buckets = Array.from({ length: days }, (_, i) => {
+      const date = new Date(start); date.setDate(start.getDate() + i);
+      return { key: format(date, 'yyyy-MM-dd'), name: format(date, 'dd/MM'), sales: 0, orders: 0 };
+    });
+    const byDate = new Map(buckets.map(bucket => [bucket.key, bucket]));
+    for (const order of paidOrders) {
+      if (!order.date) continue;
+      const bucket = byDate.get(format(new Date(order.date), 'yyyy-MM-dd'));
+      if (bucket) { bucket.sales += order.total; bucket.orders += 1; }
     }
-
-    const grouped: Record<string, { sales: number; orders: number }> = {};
-    for (const m of months) grouped[m.key] = { sales: 0, orders: 0 };
-
-    for (const order of orders) {
-      const key = order.date ? format(parseISO(order.date), 'yyyy-MM') : null;
-      if (key && grouped[key]) {
-        grouped[key].sales += order.total;
-        grouped[key].orders += 1;
-      }
-    }
-
-    return months.map(m => ({ name: m.name, sales: Math.round(grouped[m.key].sales), orders: grouped[m.key].orders }));
-  }, [orders]);
+    return buckets.map(bucket => ({ ...bucket, sales: Math.round(bucket.sales * 100) / 100 }));
+  }, [paidOrders, period]);
 
   // Products per category
   const categoryData = useMemo(() => {
@@ -523,8 +514,8 @@ export default function AdminDashboard() {
       </div>
       {/* Charts: ventes payées uniquement, même période que les KPI */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="chamfer-hud bg-card/50 p-4 lg:p-6">
-          <h3 className="text-lg font-bold hud-text mb-4 lg:mb-6">ÉVOLUTION DES VENTES</h3>
+        <div className="rounded-2xl border border-border bg-card p-4 lg:p-6 shadow-sm">
+          <h3 className="text-lg font-bold hud-text mb-4 lg:mb-6">ÉVOLUTION DES VENTES <span className="text-xs font-normal text-muted-foreground">· période sélectionnée</span></h3>
           <div className="h-[220px] lg:h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={salesData}>
@@ -544,7 +535,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="chamfer-hud bg-card/50 p-4 lg:p-6">
+        <div className="rounded-2xl border border-border bg-card p-4 lg:p-6 shadow-sm">
           <h3 className="text-lg font-bold hud-text mb-4 lg:mb-6">PRODUITS PAR CATÉGORIE</h3>
           <div className="h-[220px] lg:h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -588,6 +579,7 @@ export default function AdminDashboard() {
         {/* Low stock */}
         <div className="chamfer-hud bg-card/50 p-6">
           <h3 className="text-lg font-bold hud-text mb-6">ALERTES STOCK</h3>
+          <p className="text-xs text-muted-foreground mb-4">5 unités ou moins · stock le plus faible en premier</p>
           {lowStockProducts.length === 0 ? (
             <div className="text-center py-8">
               <div className="text-green-500 mb-2">✓</div>
