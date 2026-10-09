@@ -308,13 +308,16 @@ export default function AdminProducts() {
   };
 
   const handleSaveInlineStock = async (productId: string) => {
+    if (!Number.isSafeInteger(editingStockValue) || editingStockValue < 0) {
+      toast({ title: 'Stock invalide', description: 'Saisissez un nombre entier positif ou zéro.', variant: 'destructive' });
+      return;
+    }
     try {
       await updateProduct.mutateAsync({ id: productId, stock: editingStockValue });
       toast({ title: 'Stock mis à jour' });
-    } catch {
-      toast({ title: 'Erreur', variant: 'destructive' });
-    } finally {
       setEditingStockId(null);
+    } catch (error: any) {
+      toast({ title: 'Erreur de mise à jour du stock', description: error?.message, variant: 'destructive' });
     }
   };
 
