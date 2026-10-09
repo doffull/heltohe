@@ -435,6 +435,7 @@ export default function AdminDashboard() {
     const start = new Date(); start.setHours(0, 0, 0, 0); start.setDate(start.getDate() - days);
     return orders.filter(o => o.date && new Date(o.date) >= start);
   }, [orders, period]);
+  const lowStockProducts = products.filter(p => p.stock <= 5);
   const paidOrders = filteredOrders.filter(o => ['paid', 'completed', 'succeeded'].includes(String(o.paymentStatus).toLowerCase()));
   const periodRevenue = paidOrders.reduce((sum, o) => sum + o.total, 0);
   const itemsSold = paidOrders.reduce((sum, o) => sum + o.items.reduce((qty, item) => qty + (Number(item.quantity) || 0), 0), 0);
