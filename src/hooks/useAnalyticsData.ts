@@ -232,11 +232,11 @@ export function useAnalyticsData() {
 
   const realOrders = ordersQ.data || [];
   const paidReal = useMemo(() => realOrders.filter((o) => o.paymentStatus === 'Paid'), [realOrders]);
-  const demoMode = !ordersQ.isLoading && paidReal.length < 10;
+  const demoMode = false; // Les données de démonstration ne doivent jamais remplacer les ventes réelles.
 
   const [mockHistory] = useState(() => buildMockHistory());
   const [liveMocks, setLiveMocks] = useState<AnalyticsOrder[]>([]);
-  const [simulate, setSimulate] = useState(true);
+  const [simulate, setSimulate] = useState(false);
 
   // Ventes en direct simulées (mode démo)
   useEffect(() => {
