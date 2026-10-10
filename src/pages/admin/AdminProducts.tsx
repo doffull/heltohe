@@ -574,7 +574,7 @@ export default function AdminProducts() {
   };
 
   return (
-    <div className="min-w-0 space-y-4 rounded-2xl bg-[#080f20] p-3 text-white lg:p-6 [&_.bg-card]:!bg-[#111c32] [&_.bg-muted]:!bg-[#243653] [&_.text-card-foreground]:!text-white [&_.text-foreground]:!text-white [&_.text-muted-foreground]:!text-slate-400 [&_.border-border]:!border-white/10 [&_input]:!text-white [&_button]:!rounded-xl [&_button]:!transition-all [&_button:hover]:!shadow-md [&_[data-state=active]]:!bg-blue-600 [&_[data-state=active]]:!text-white">
+    <div className="min-w-0 space-y-4 rounded-2xl bg-[#080f20] p-3 text-white lg:p-6 [&_.bg-card]:!bg-[#111c32] [&_.bg-muted]:!bg-[#243653] [&_.text-card-foreground]:!text-white [&_.text-foreground]:!text-white [&_.text-muted-foreground]:!text-slate-400 [&_.border-border]:!border-white/10 [&_input]:!text-white [&_button]:!rounded-xl [&_button]:!transition-all [&_button:hover]:!shadow-md [&_[data-state=active]]:!bg-blue-600 [&_[data-state=active]]:!text-white [&_.bg-background]:!bg-[#17243d] [&_.bg-popover]:!bg-[#17243d] [&_.bg-secondary]:!bg-[#243653] [&_.text-black]:!text-white [&_.text-slate-900]:!text-white [&_.text-gray-900]:!text-white [&_.bg-white]:!bg-[#1c2d4a] [&_input]:!bg-[#17243d] [&_input]:!text-white [&_textarea]:!bg-[#17243d] [&_textarea]:!text-white [&_select]:!bg-[#17243d] [&_select]:!text-white [&_th]:!text-blue-100 [&_td]:!text-slate-100 [&_button.bg-primary]:!bg-blue-600 [&_button.bg-primary]:!text-white [&_button.bg-background]:!bg-[#263b5e] [&_button.bg-background]:!text-white">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 min-w-0">
         <div>
           <h1 className="text-xl sm:text-3xl font-black tracking-tight text-blue-100">CATALOGUE · PRODUITS</h1>
