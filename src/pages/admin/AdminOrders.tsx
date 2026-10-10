@@ -37,7 +37,7 @@ import { CountryCombobox } from '@/components/checkout/CountryCombobox';
 const STATUS_OPTIONS: { value: OrderStatus; label: string; icon: typeof Clock; color: string }[] = [
   { value: 'Pending', label: 'En attente', icon: Clock, color: 'text-yellow-500' },
   { value: 'Processing', label: 'En cours', icon: Package, color: 'text-blue-500' },
-  { value: 'Shipped', label: 'Expédiée', icon: Truck, color: 'text-purple-500' },
+  { value: 'Shipped', label: 'Expédiée', icon: Truck, color: 'text-emerald-600' },
   { value: 'Delivered', label: 'Livrée', icon: CheckCircle, color: 'text-green-500' },
   { value: 'Cancelled', label: 'Annulée', icon: XCircle, color: 'text-destructive' },
 ];
@@ -230,7 +230,7 @@ export default function AdminOrders() {
 
   const [isResending, setIsResending] = useState(false);
   const [isMarkingPaid, setIsMarkingPaid] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('active');
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('date-desc');
   const [trackingInput, setTrackingInput] = useState<string>('');
@@ -380,7 +380,9 @@ export default function AdminOrders() {
       const q = searchQuery.toLowerCase();
       if (!o.orderNumber.toLowerCase().includes(q) && !(o.invoiceNumber || '').toLowerCase().includes(q) && !o.customer.name.toLowerCase().includes(q) && !o.customer.email.toLowerCase().includes(q)) return false;
     }
-    if (statusFilter !== 'all' && o.status !== statusFilter) return false;
+    if (statusFilter === 'active' && !['Pending', 'Processing'].includes(o.status)) return false;
+    if (statusFilter === 'completed' && !['Shipped', 'Delivered'].includes(o.status)) return false;
+    if (!['all', 'active', 'completed'].includes(statusFilter) && o.status !== statusFilter) return false;
     if (paymentFilter !== 'all' && o.paymentStatus !== paymentFilter) return false;
     return true;
   });
@@ -891,6 +893,23 @@ export default function AdminOrders() {
 
       </div>
 
+      {/* Fast workflow filters: completed orders stay accessible but are hidden by default. */}
+      <div className="flex flex-wrap gap-2 rounded-2xl border border-blue-100 bg-blue-50/60 p-2 sm:p-3">
+        {([
+          { value: 'active', label: 'À traiter', tone: 'bg-blue-600 text-white border-blue-600' },
+          { value: 'Processing', label: 'En cours', tone: 'bg-blue-600 text-white border-blue-600' },
+          { value: 'Pending', label: 'En attente', tone: 'bg-amber-500 text-white border-amber-500' },
+          { value: 'completed', label: 'Expédiées / livrées', tone: 'bg-emerald-600 text-white border-emerald-600' },
+          { value: 'all', label: 'Toutes', tone: 'bg-slate-800 text-white border-slate-800' },
+        ]).map(tab => (
+          <button key={tab.value} type="button" aria-pressed={statusFilter === tab.value}
+            onClick={() => { setStatusFilter(tab.value); clear(); }}
+            className={`rounded-xl border px-3 py-2 text-xs sm:text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 ${statusFilter === tab.value ? tab.tone : 'border-slate-200 bg-white text-slate-800 hover:bg-blue-100'}`}>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* Filters */}
       <div className="chamfer-hud bg-card/50 p-3 lg:p-4 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 lg:gap-3">
         <div className="relative flex-1 min-w-0">
@@ -909,6 +928,8 @@ export default function AdminOrders() {
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-full sm:w-[140px]"><Filter className="h-3 w-3 mr-1" /><SelectValue /></SelectTrigger>
             <SelectContent>
+              <SelectItem value="active">À traiter (défaut)</SelectItem>
+              <SelectItem value="completed">Expédiées / livrées</SelectItem>
               <SelectItem value="all">Tous statuts</SelectItem>
               {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
             </SelectContent>
