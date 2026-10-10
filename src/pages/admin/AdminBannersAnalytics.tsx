@@ -11,8 +11,9 @@ interface Row {
 }
 
 export default function AdminBannersAnalytics() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch, dataUpdatedAt } = useQuery({
     queryKey: ['banner-analytics-30d'],
+    refetchInterval: 30000,
     queryFn: async () => {
       const since = new Date(Date.now() - 30 * 86400_000).toISOString();
       const { data, error } = await supabase
@@ -39,23 +40,29 @@ export default function AdminBannersAnalytics() {
   );
 
   const rows = Object.entries(agg).sort((a, b) => b[1].views - a[1].views);
+  const total = rows.reduce((acc, [, v]) => ({ views: acc.views + v.views, clicks: acc.clicks + v.clicks, dismisses: acc.dismisses + v.dismisses, conversions: acc.conversions + v.conversions }), { views: 0, clicks: 0, dismisses: 0, conversions: 0 });
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="min-w-0 space-y-4 rounded-2xl bg-[#080f20] p-4 text-white md:p-6">
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2"><BarChart3 className="h-6 w-6" /> Analytique bannières</h1>
+        <h1 className="text-2xl font-black flex items-center gap-2"><BarChart3 className="h-6 w-6" /> Analytique bannières</h1>
         <p className="text-sm text-muted-foreground">Performance des bannières et pop-ups (30 derniers jours).</p>
       </div>
 
-      <Card>
+      <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-slate-400">30 derniers jours · actualisation toutes les 30 s · {dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString('fr-FR') : 'En attente'}</p><button type="button" onClick={() => void refetch()} className="rounded-lg border border-white/15 bg-[#17243d] px-3 py-2 text-xs hover:bg-[#243657]">↻ Actualiser</button></div>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[{label:'Affichages',value:total.views,color:'from-violet-600/40 to-violet-950/20'},{label:'Clics',value:total.clicks,color:'from-blue-600/40 to-blue-950/20'},{label:'Taux de clics',value:total.views ? (total.clicks / total.views * 100).toFixed(1) + '%' : '—',color:'from-pink-600/40 to-pink-950/20'},{label:'Conversions suivies',value:total.conversions,color:'from-orange-600/40 to-orange-950/20'}].map(k=><div key={k.label} className={`rounded-2xl border border-white/10 bg-gradient-to-br ${k.color} p-4`}><p className="text-xs text-slate-300">{k.label}</p><p className="mt-2 text-2xl font-black">{isError ? '—' : k.value}</p></div>)}
+      </div>
+      {isError && <p role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">Impossible de charger les événements : {error instanceof Error ? error.message : 'erreur inconnue'}</p>}
+      <Card className="border-white/10 bg-[#111c32] text-white">
         <CardHeader><CardTitle>Performances par bannière</CardTitle></CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="py-10 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
           ) : rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-10 text-center">Aucun événement enregistré pour le moment.</p>
+            <p className="text-sm text-slate-400 py-10 text-center">Aucun événement enregistré sur les 30 derniers jours. Vérifier que les bannières et pop-ups émettent bien des événements de vue et de clic.</p>
           ) : (
-            <Table>
+            <div className="max-w-full overflow-x-auto"><Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Bannière</TableHead>
@@ -83,10 +90,11 @@ export default function AdminBannersAnalytics() {
                   );
                 })}
               </TableBody>
-            </Table>
+            </Table></div>
           )}
         </CardContent>
       </Card>
+      <p className="text-xs text-slate-400">Les conversions représentent uniquement les événements « convert » enregistrés, pas des ventes attribuées ou des inscriptions newsletter vérifiées. Données limitées aux 10 000 premiers événements de la requête.</p>
     </div>
   );
 }
