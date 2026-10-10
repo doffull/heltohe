@@ -1161,6 +1161,21 @@ export default function AdminOrders() {
                         pas un supplément. L'ajouter au total la comptait deux fois — une
                         commande à 169 € s'affichait à 197,17 €. D'où le libellé « dont ». */}
                     <div className="flex justify-between text-muted-foreground"><span>dont TVA</span><span>{computeTotals(selectedOrder, editForm.items).tax.toFixed(2)}€</span></div>
+                    <div className="flex justify-between gap-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-950">
+                      <span>Code promotionnel</span>
+                      <strong>{selectedOrder.promoCode || 'Aucun code renseigné'}</strong>
+                    </div>
+                    {Number(selectedOrder.discountAmount || 0) > 0 && (
+                      <div className="flex justify-between gap-3 px-3 text-sm text-emerald-800">
+                        <span>Remise appliquée</span><strong>−{Number(selectedOrder.discountAmount).toFixed(2)} €</strong>
+                      </div>
+                    )}
+                    {/point\\s*relais|relay|pickup/i.test(selectedOrder.customer.address || '') && (
+                      <div role="alert" className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-950">
+                        <strong>Adresse à vérifier avant Colissimo</strong>
+                        <p>Le champ adresse contient « point relais ». Vérifiez le relais officiel, son identifiant et son adresse complète. Ne générez pas de bordereau avec cette mention à la place de la rue.</p>
+                      </div>
+                    )}
                     <div className="flex justify-between"><span>Livraison</span><span>{selectedOrder.shippingCost.toFixed(2)}€</span></div>
                     <div className="flex justify-between font-bold text-base pt-2 border-t border-border"><span>Total TTC</span><span>{computeTotals(selectedOrder, editForm.items).total.toFixed(2)}€</span></div>
                   </div>
