@@ -574,14 +574,14 @@ export default function AdminProducts() {
   };
 
   return (
-    <div className="min-w-0 space-y-4 rounded-2xl bg-[#080f20] p-3 text-white lg:p-6 [&_.bg-card]:!bg-[#111c32] [&_.bg-muted]:!bg-[#243653] [&_.text-card-foreground]:!text-white [&_.text-foreground]:!text-white [&_.text-muted-foreground]:!text-slate-400 [&_.border-border]:!border-white/10 [&_input]:!text-white [&_button]:!rounded-xl [&_button]:!transition-all [&_button:hover]:!shadow-md [&_[data-state=active]]:!bg-blue-600 [&_[data-state=active]]:!text-white [&_.bg-background]:!bg-[#17243d] [&_.bg-popover]:!bg-[#17243d] [&_.bg-secondary]:!bg-[#243653] [&_.text-black]:!text-white [&_.text-slate-900]:!text-white [&_.text-gray-900]:!text-white [&_.text-gray-800]:!text-slate-100 [&_.text-slate-800]:!text-slate-100 [&_.text-gray-700]:!text-slate-200 [&_.bg-gray-50]:!bg-[#1c2d4a] [&_.bg-slate-50]:!bg-[#1c2d4a] [&_.bg-gray-100]:!bg-[#263653] [&_.bg-slate-100]:!bg-[#263653] [&_button.bg-white]:!bg-[#263b5e] [&_button.bg-white]:!text-white [&_button.bg-transparent]:!text-slate-100 [&_button.border-input]:!bg-[#1c2d4a] [&_button.border-input]:!text-white [&_[role=tab]]:!text-slate-200 [&_[role=tab][data-state=active]]:!bg-blue-600 [&_[role=tab][data-state=active]]:!text-white [&_input::placeholder]:!text-slate-400 [&_textarea::placeholder]:!text-slate-400 [&_.bg-white]:!bg-[#1c2d4a] [&_input]:!bg-[#17243d] [&_input]:!text-white [&_textarea]:!bg-[#17243d] [&_textarea]:!text-white [&_select]:!bg-[#17243d] [&_select]:!text-white [&_th]:!text-blue-100 [&_td]:!text-slate-100 [&_button.bg-primary]:!bg-blue-600 [&_button.bg-primary]:!text-white [&_button.bg-background]:!bg-[#263b5e] [&_button.bg-background]:!text-white">
+    <div className="min-w-0 max-w-full overflow-x-hidden space-y-4 rounded-2xl bg-[#080f20] p-3 text-white lg:p-6 [&_.bg-card]:!bg-[#111c32] [&_.bg-muted]:!bg-[#243653] [&_.text-card-foreground]:!text-white [&_.text-foreground]:!text-white [&_.text-muted-foreground]:!text-slate-400 [&_.border-border]:!border-white/10 [&_input]:!text-white [&_button]:!rounded-xl [&_button]:!transition-all [&_button:hover]:!shadow-md [&_[data-state=active]]:!bg-blue-600 [&_[data-state=active]]:!text-white [&_.bg-background]:!bg-[#17243d] [&_.bg-popover]:!bg-[#17243d] [&_.bg-secondary]:!bg-[#243653] [&_.text-black]:!text-white [&_.text-slate-900]:!text-white [&_.text-gray-900]:!text-white [&_.text-gray-800]:!text-slate-100 [&_.text-slate-800]:!text-slate-100 [&_.text-gray-700]:!text-slate-200 [&_.bg-gray-50]:!bg-[#1c2d4a] [&_.bg-slate-50]:!bg-[#1c2d4a] [&_.bg-gray-100]:!bg-[#263653] [&_.bg-slate-100]:!bg-[#263653] [&_.bg-accent]:!bg-[#29436a] [&_.text-accent-foreground]:!text-white [&_.bg-primary\/5]:!bg-blue-500/15 [&_button]:active:scale-[0.97] [&_button]:hover:-translate-y-px [&_button]:duration-200 [&_button.bg-white]:!bg-[#263b5e] [&_button.bg-white]:!text-white [&_button.bg-transparent]:!text-slate-100 [&_button.border-input]:!bg-[#1c2d4a] [&_button.border-input]:!text-white [&_[role=tab]]:!text-slate-200 [&_[role=tab][data-state=active]]:!bg-blue-600 [&_[role=tab][data-state=active]]:!text-white [&_input::placeholder]:!text-slate-400 [&_textarea::placeholder]:!text-slate-400 [&_.bg-white]:!bg-[#1c2d4a] [&_input]:!bg-[#17243d] [&_input]:!text-white [&_textarea]:!bg-[#17243d] [&_textarea]:!text-white [&_select]:!bg-[#17243d] [&_select]:!text-white [&_th]:!text-blue-100 [&_td]:!text-slate-100 [&_button.bg-primary]:!bg-blue-600 [&_button.bg-primary]:!text-white [&_button.bg-background]:!bg-[#263b5e] [&_button.bg-background]:!text-white">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 min-w-0">
         <div>
-          <h1 className="text-xl sm:text-3xl font-black tracking-tight text-blue-100">CATALOGUE · PRODUITS</h1>
+          <h1 className="text-lg sm:text-3xl font-black tracking-tight text-blue-100">CATALOGUE · PRODUITS</h1>
           <p className="text-muted-foreground text-xs sm:text-sm mt-1">{products.length} produits au catalogue</p>
         </div>
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="admin-scroll-x flex flex-nowrap lg:flex-wrap gap-2 min-w-0 pb-1 [&>*]:shrink-0">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 min-w-0">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center min-w-0 [&>*]:min-w-0 [&>*]:whitespace-normal [&>*]:text-center">
             <Button variant="outline" size="sm" onClick={() => setIsSyncDialogOpen(true)} className="chamfer-hud-sm border-primary/50 text-primary hover:bg-primary/10 text-xs">
               <RefreshCw className="h-3.5 w-3.5 mr-1.5" />Sync WP
             </Button>
@@ -604,7 +604,7 @@ export default function AdminProducts() {
               <Download className="h-3.5 w-3.5 mr-1.5" />Exporter
             </Button>
           </div>
-          <Button size="sm" onClick={() => { setEditingProduct(null); setIsFormOpen(true); }} className="chamfer-hud-sm text-xs shrink-0">
+          <Button size="sm" onClick={() => { setEditingProduct(null); setIsFormOpen(true); }} className="rounded-xl bg-blue-600 text-white hover:bg-blue-500 text-xs shrink-0">
             <Plus className="h-3.5 w-3.5 mr-1.5" />Ajouter
           </Button>
         </div>
@@ -624,7 +624,7 @@ export default function AdminProducts() {
         <a href="/admin/stock" className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-blue-500">Stock central ↗</a>
       </div>
       <Tabs defaultValue="products" className="min-w-0">
-        <TabsList className="admin-tabs-scroll w-full h-auto rounded-xl border border-blue-400/20 bg-[#172b4a] p-1">
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl border border-blue-400/20 bg-[#172b4a] p-1 sm:grid-cols-3 lg:grid-cols-6 [&_button]:!text-[11px] [&_button]:!min-w-0 [&_button]:!px-1">
 
           <TabsTrigger value="products" className="gap-2"><Package className="h-4 w-4" />Produits</TabsTrigger>
           <TabsTrigger value="looks" className="gap-2"><Layers2 className="h-4 w-4" />Looks</TabsTrigger>
@@ -745,16 +745,16 @@ export default function AdminProducts() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Rechercher..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-full sm:w-[140px]"><Filter className="h-3 w-3 mr-1" /><SelectValue placeholder="Catégorie" /></SelectTrigger>
+            <SelectTrigger className="w-full min-w-0 sm:w-[140px]"><Filter className="h-3 w-3 mr-1" /><SelectValue placeholder="Catégorie" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Toutes</SelectItem>
               {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={stockFilter} onValueChange={setStockFilter}>
-            <SelectTrigger className="w-full sm:w-[130px]"><SelectValue placeholder="Stock" /></SelectTrigger>
+            <SelectTrigger className="w-full min-w-0 sm:w-[130px]"><SelectValue placeholder="Stock" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tout stock</SelectItem>
               <SelectItem value="in">En stock</SelectItem>
@@ -894,7 +894,7 @@ export default function AdminProducts() {
               </thead>
               <tbody>
                 {filteredProducts.map((product) => (
-                  <tr key={product.id} className={`border-b border-border last:border-0 hover:bg-muted/30 ${selectedIds.has(product.id) ? 'bg-primary/5' : ''}`}>
+                  <tr key={product.id} className={`border-b border-border last:border-0 transition-all duration-200 hover:bg-blue-500/10 hover:shadow-[inset_3px_0_0_#60a5fa] ${selectedIds.has(product.id) ? 'bg-blue-500/15 shadow-[inset_3px_0_0_#3b82f6]' : ''}`}>
                     <td className="p-4"><Checkbox checked={selectedIds.has(product.id)} onCheckedChange={() => toggle(product.id)} /></td>
                     <td className="p-4">
                       <div className="flex items-center gap-3">
