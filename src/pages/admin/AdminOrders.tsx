@@ -51,6 +51,10 @@ const PAYMENT_STATUS_OPTIONS: { value: PaymentStatus; label: string }[] = [
 
 const CARRIERS = ['Colissimo', 'Chronopost', 'Mondial Relay', 'DHL', 'UPS', 'Autre'];
 
+/** Default only for French addresses without an explicitly selected carrier. */
+const suggestedCarrier = (country: string | null | undefined, carrier: string | null | undefined) =>
+  carrier?.trim() || (normalizeCountryCode(country || '') === 'FR' ? 'Colissimo' : '');
+
 /**
  * Moyens de paiement — les `value` sont EXACTEMENT ce que la base contient.
  *
@@ -632,7 +636,7 @@ export default function AdminOrders() {
     setSelectedOrder(order);
     setEditForm({
       status: order.status, paymentStatus: order.paymentStatus,
-      paymentMethod: order.paymentMethod || '', shippingCarrier: order.shippingCarrier || '',
+      paymentMethod: order.paymentMethod || '', shippingCarrier: suggestedCarrier(order.customer.country, order.shippingCarrier),
       trackingNumber: order.trackingNumber || '', notes: order.notes || '',
       customerName: order.customer.name, customerEmail: order.customer.email,
       customerPhone: order.customer.phone || '', customerAddress: order.customer.address,
@@ -676,7 +680,7 @@ export default function AdminOrders() {
     try {
       await updateOrder.mutateAsync({
         id: selectedOrder.id, status: editForm.status, paymentStatus: editForm.paymentStatus,
-        paymentMethod: editForm.paymentMethod || undefined, shippingCarrier: editForm.shippingCarrier || undefined,
+        paymentMethod: editForm.paymentMethod || undefined, shippingCarrier: suggestedCarrier(editForm.customerCountry, editForm.shippingCarrier) || undefined,
         trackingNumber: editForm.trackingNumber || undefined, notes: editForm.notes || undefined,
         customerName: editForm.customerName, customerEmail: editForm.customerEmail,
         customerPhone: editForm.customerPhone || undefined, customerAddress: editForm.customerAddress,
@@ -1002,7 +1006,18 @@ export default function AdminOrders() {
                         <p className="font-medium text-xs">{order.customer.name}</p>
                         <p className="text-[10px] text-muted-foreground truncate max-w-[120px]">{order.customer.email}</p>
                       </td>
-                      <td className="p-3 text-right"><span className="text-sm font-bold">{order.total.toFixed(2)}€</span></td>
+                      <td className="p-3 text-right">
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className="text-sm font-bold">{order.total.toFixed(2)}€</span>
+                          {Number(order.discountAmount || 0) > 0 && (
+                            <span className="inline-flex max-w-[160px] items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-900" title={order.promoCode ? `Code : ${order.promoCode}` : 'Remise appliquée'}>
+                              <Tag className="h-3 w-3 shrink-0" />
+                              −{Number(order.discountAmount).toFixed(2)}€
+                              {order.promoCode && <span className="max-w-[90px] truncate">· {order.promoCode}</span>}
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="p-3">
                         <div className="flex items-center gap-1">
                           <StatusIcon className={`h-3 w-3 ${statusInfo.color}`} />
@@ -1134,7 +1149,7 @@ export default function AdminOrders() {
                     <CountryCombobox
                       compact
                       value={editForm.customerCountry}
-                      onChange={code => setEditForm({ ...editForm, customerCountry: code })}
+                      onChange={code => setEditForm({ ...editForm, customerCountry: code, shippingCarrier: suggestedCarrier(code, editForm.shippingCarrier) })}
                     />
                   </div>
                   <div className="space-y-1 col-span-2"><Label className="text-xs">Adresse</Label><Input value={editForm.customerAddress} onChange={e => setEditForm({ ...editForm, customerAddress: e.target.value })} /></div>
@@ -1177,7 +1192,13 @@ export default function AdminOrders() {
                       </div>
                     )}
                     <div className="flex justify-between"><span>Livraison</span><span>{selectedOrder.shippingCost.toFixed(2)}€</span></div>
-                    <div className="flex justify-between font-bold text-base pt-2 border-t border-border"><span>Total TTC</span><span>{computeTotals(selectedOrder, editForm.items).total.toFixed(2)}€</span></div>
+                    <div className="flex flex-wrap items-center justify-between gap-2 font-bold text-base pt-2 border-t border-border">
+                      <span>Total TTC</span>
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        {Number(selectedOrder.discountAmount || 0) > 0 && <span className="rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-900">Remise −{Number(selectedOrder.discountAmount).toFixed(2)}€</span>}
+                        <span>{computeTotals(selectedOrder, editForm.items).total.toFixed(2)}€</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
