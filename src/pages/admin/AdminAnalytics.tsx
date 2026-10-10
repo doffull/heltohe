@@ -267,7 +267,7 @@ export default function AdminAnalytics() {
   /* --------------------------------- render -------------------------------- */
 
   return (
-    <div className="min-w-0 space-y-4 rounded-2xl bg-[#080f20] p-4 text-white lg:p-6 [&_.bg-card]:!bg-[#111c32] [&_.bg-background]:!bg-[#17243d] [&_.text-card-foreground]:!text-white [&_.text-foreground]:!text-white [&_.text-muted-foreground]:!text-slate-400 [&_.border-border]:!border-white/10 [&_input]:!text-white">
+    <div className="min-w-0 space-y-4 rounded-2xl bg-[#080f20] p-4 text-white lg:p-6 [&_.bg-card]:!bg-[#111c32] [&_.rounded-lg.bg-card]:!bg-[#111c32] [&_[data-state=active]]:!bg-[#37476a] [&_[data-state=active]]:!text-white [&_.bg-muted]:!bg-[#263653] [&_.bg-secondary]:!bg-[#263653] [&_.text-black]:!text-white [&_.text-slate-900]:!text-white [&_.text-gray-900]:!text-white [&_.text-primary]:!text-cyan-300 [&_.bg-popover]:!bg-[#18243b] [&_.bg-background]:!bg-[#17243d] [&_.text-card-foreground]:!text-white [&_.text-foreground]:!text-white [&_.text-muted-foreground]:!text-slate-400 [&_.border-border]:!border-white/10 [&_input]:!text-white [&_button]:!text-white [&_select]:!text-white [&_th]:!text-slate-300 [&_td]:!text-white">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-black">
@@ -299,7 +299,7 @@ export default function AdminAnalytics() {
         {[{label:'CA du jour',value:eur(todayCa),color:'from-violet-600/40 to-violet-950/20'},{label:'Commandes du jour',value:String(todayOrders.length),color:'from-blue-600/40 to-blue-950/20'},{label:'Évolution commerciale',value:'Voir courbes ↓',color:'from-pink-600/40 to-pink-950/20'},{label:'Coupons & produits',value:'Voir analyses ↓',color:'from-orange-600/40 to-orange-950/20'}].map(k=><div key={k.label} className={`rounded-2xl border border-white/10 bg-gradient-to-br ${k.color} p-4`}><p className="text-xs text-slate-300">{k.label}</p><p className="mt-2 text-xl font-black">{k.value}</p></div>)}
       </div>
       {/* Live ticker */}
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden border-white/10 bg-[#111c32] text-white">
         <CardContent className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center">
           <div className="flex shrink-0 items-center gap-3">
             <span className="relative flex h-2.5 w-2.5">
@@ -381,7 +381,7 @@ export default function AdminAnalytics() {
 
         {/* ------------------------------ Overview ------------------------------ */}
         <TabsContent value="overview" className="mt-4 space-y-4">
-          <Card>
+          <Card className="border-white/10 bg-[#111c32] text-white">
             <CardHeader className="flex-row items-center justify-between space-y-0">
               <CardTitle className="text-base">Chiffre d'affaires &amp; commandes</CardTitle>
               <Button variant="ghost" size="sm" onClick={() => downloadCsv('analytics-ca', daily)}>
