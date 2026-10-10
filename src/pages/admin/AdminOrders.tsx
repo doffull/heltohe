@@ -987,7 +987,7 @@ export default function AdminOrders() {
         </div>
       )}
 
-      <div className="chamfer-hud bg-card/50 overflow-hidden">
+      <div className="chamfer-hud bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
         {isLoading ? (
           <div className="p-12 text-center"><div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto" /></div>
         ) : filteredOrders.length === 0 ? (
@@ -1015,7 +1015,7 @@ export default function AdminOrders() {
               @media(prefers-reduced-motion:reduce) { .admin-orders-mobile button { transition:none !important; transform:none !important; } }
             `}</style>
             <table className="w-full min-w-[700px]">
-              <thead className="bg-muted/50 border-b border-border">
+              <thead className="bg-slate-100 border-b border-slate-200 text-slate-800">
                 <tr>
                   <th className="p-3 w-8"><Checkbox checked={allSelected} onCheckedChange={toggleAll} /></th>
                   <th className="text-left p-3 text-xs font-bold hud-text">COMMANDE</th>
@@ -1033,7 +1033,7 @@ export default function AdminOrders() {
                   const flags = getValidationFlags(order);
                   const allValid = flags.identity && flags.payment && flags.shipping;
                   return (
-                    <tr key={order.id} className={`border-b border-border last:border-0 hover:bg-muted/30 ${selectedIds.has(order.id) ? 'bg-primary/5' : ''}`}>
+                    <tr key={order.id} className={`border-b border-slate-200 last:border-0 transition-colors duration-150 ${order.status === 'Processing' ? 'bg-blue-50/70 hover:bg-blue-100' : order.status === 'Pending' ? 'bg-amber-50/70 hover:bg-amber-100' : order.status === 'Shipped' ? 'bg-emerald-50/70 hover:bg-emerald-100' : order.status === 'Delivered' ? 'bg-slate-50 hover:bg-slate-100' : 'bg-white hover:bg-slate-50'} ${selectedIds.has(order.id) ? 'ring-1 ring-inset ring-blue-500' : ''}`}>
                       <td className="p-3"><Checkbox checked={selectedIds.has(order.id)} onCheckedChange={() => toggle(order.id)} /></td>
                       <td className="p-3">
                         <code className="text-xs font-bold">{order.orderNumber}</code>
@@ -1057,10 +1057,9 @@ export default function AdminOrders() {
                         </div>
                       </td>
                       <td className="p-3">
-                        <div className="flex items-center gap-1">
-                          <StatusIcon className={`h-3 w-3 ${statusInfo.color}`} />
-                          <span className={`text-[10px] font-bold ${statusInfo.color}`}>{statusInfo.label}</span>
-                        </div>
+                        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold ${order.status === 'Processing' ? 'border-blue-200 bg-blue-100 text-blue-900' : order.status === 'Pending' ? 'border-amber-200 bg-amber-100 text-amber-900' : order.status === 'Shipped' ? 'border-emerald-200 bg-emerald-100 text-emerald-900' : order.status === 'Delivered' ? 'border-slate-200 bg-slate-100 text-slate-800' : 'border-rose-200 bg-rose-100 text-rose-900'}`}>
+                          <StatusIcon className="h-3.5 w-3.5" />{statusInfo.label}
+                        </span>
                       </td>
                       <td className="p-3">
                         <div className="flex items-center gap-1 justify-center">
@@ -1119,13 +1118,13 @@ export default function AdminOrders() {
                         </div>
                       </td>
                       <td className="p-3 text-right">
-                        <div className="flex gap-0.5 justify-end">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openDetail(order)} title="Voir"><Eye className="h-3.5 w-3.5" /></Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => printInvoice(order)} title="Facture"><FileText className="h-3.5 w-3.5" /></Button>
+                        <div className="flex flex-wrap gap-1.5 justify-end">
+                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg border border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100 hover:-translate-y-0.5 active:scale-95 transition-transform" onClick={() => openDetail(order)} title="Voir la commande" aria-label="Voir la commande"><Eye className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg border border-slate-200 bg-slate-50 text-slate-800 hover:bg-slate-100 hover:-translate-y-0.5 active:scale-95 transition-transform" onClick={() => printInvoice(order)} title="Facture" aria-label="Facture"><FileText className="h-3.5 w-3.5" /></Button>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 text-purple-500"
+                            className="h-9 w-9 rounded-lg border border-violet-200 bg-violet-50 text-violet-800 hover:bg-violet-100 hover:-translate-y-0.5 active:scale-95 transition-transform"
                             disabled={isGeneratingLabel}
                             onClick={() => generateLabelForOrder(order)}
                             title="Générer l'étiquette Colissimo et envoyer l'e-mail d'expédition"
@@ -1133,7 +1132,7 @@ export default function AdminOrders() {
                             {labelOrderId === order.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Truck className="h-3.5 w-3.5" />}
                           </Button>
 
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setMailTargets([{ email: order.customer.email, firstName: order.customer.name?.split(' ')[0], orderNumber: order.orderNumber, total: order.total.toFixed(2), trackingNumber: order.trackingNumber, orderId: order.id }])} title="Écrire au client"><Mail className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg border border-teal-200 bg-teal-50 text-teal-800 hover:bg-teal-100 hover:-translate-y-0.5 active:scale-95 transition-transform" onClick={() => setMailTargets([{ email: order.customer.email, firstName: order.customer.name?.split(' ')[0], orderNumber: order.orderNumber, total: order.total.toFixed(2), trackingNumber: order.trackingNumber, orderId: order.id }])} title="Écrire au client"><Mail className="h-3.5 w-3.5" /></Button>
                         </div>
                       </td>
                     </tr>
