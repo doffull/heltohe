@@ -216,8 +216,20 @@ function getActiveHref(pathname: string): string {
   return match?.href || '/admin';
 }
 
+const ADMIN_GROUPS = [
+  { label: 'Vue générale', color: '#06B6D4', icon: LayoutDashboard, paths: ['/admin', '/admin/live', '/admin/analytics', '/admin/bannieres-analytics'] },
+  { label: 'Catalogue & inventaire', color: '#3B82F6', icon: Package, paths: ['/admin/produits', '/admin/stock', '/admin/product-badges', '/admin/import-pdf'] },
+  { label: 'Ventes & logistique', color: '#F59E0B', icon: ShoppingCart, paths: ['/admin/commandes', '/admin/suivi-commandes', '/admin/preparations', '/admin/colissimo', '/admin/checkout', '/admin/paypal', '/admin/test-paiement'] },
+  { label: 'Clients & CRM', color: '#A855F7', icon: Users, paths: ['/admin/clients', '/admin/messagerie', '/admin/avis', '/admin/notifications'] },
+  { label: 'Marketing & campagnes', color: '#EC4899', icon: Megaphone, paths: ['/admin/marketing', '/admin/newsletters', '/admin/popups', '/admin/roulette', '/admin/reseaux-sociaux', '/admin/top-banner'] },
+  { label: 'Boutique & création', color: '#10B981', icon: Palette, paths: ['/admin/pages', '/admin/media', '/admin/design', '/admin/footer', '/admin/feed-sections', '/admin/home-icons', '/admin/transitions', '/admin/page-templates', '/admin/boutiques', '/admin/mannequins', '/admin/collab'] },
+  { label: 'Configuration & sécurité', color: '#EAB308', icon: Settings, paths: ['/admin/seo', '/admin/redirections', '/admin/devises-langues', '/admin/emails-auth', '/admin/emails-factures', '/admin/chatbot', '/admin/agent-integrations', '/admin/woocommerce', '/admin/audit', '/admin/media-audit', '/admin/errors', '/admin/security', '/admin/roles', '/admin/parametres'] },
+] as const;
+
 function SidebarContent({ user, signOut, location, sectionColors, allowedHrefs, onNavigate }: { user: any; signOut: () => void; location: any; sectionColors: Record<string, string>; allowedHrefs: Set<string>; onNavigate?: () => void }) {
   const activeHref = getActiveHref(location.pathname);
+  const [expanded, setExpanded] = useState<string[]>(() => ADMIN_GROUPS.filter(g => g.paths.some(p => p === activeHref)).map(g => g.label));
+  useEffect(() => { const g = ADMIN_GROUPS.find(g => g.paths.some(p => p === activeHref)); if (g) setExpanded(prev => prev.includes(g.label) ? prev : [...prev, g.label]); }, [activeHref]);
 
   return (
     <>
@@ -231,36 +243,33 @@ function SidebarContent({ user, signOut, location, sectionColors, allowedHrefs, 
         </Link>
       </div>
 
-      <nav className="flex-1 p-3 lg:p-4 space-y-0.5 overflow-y-auto">
-        {SIDEBAR_ITEMS.filter(i => allowedHrefs.has(i.href)).map((item) => {
-          const isActive = activeHref === item.href;
-          const color = sectionColors[item.href] || DEFAULT_SECTION_COLORS[item.href] || '#6B7280';
-          
-          return (
-            <Link
-              key={item.href}
-              to={item.href}
-              onClick={onNavigate}
-              className={cn(
-                "flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-all group text-sm",
-                isActive 
-                  ? "text-white font-semibold" 
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-              style={isActive ? { backgroundColor: color } : undefined}
-            >
-              <div
-                className="w-1.5 h-1.5 rounded-full shrink-0"
-                style={{ backgroundColor: isActive ? '#fff' : color }}
-              />
-              <item.icon className="h-4 w-4 shrink-0" />
-              <span className="truncate">{item.label}</span>
-              <ChevronRight className={cn(
-                "h-3.5 w-3.5 ml-auto shrink-0 transition-transform",
-                isActive ? "rotate-90" : "group-hover:translate-x-1"
-              )} />
-            </Link>
-          );
+      <nav aria-label="Navigation administration" className="flex-1 min-h-0 p-3 lg:p-4 space-y-2 overflow-y-auto overscroll-contain">
+        {ADMIN_GROUPS.map(group => {
+          const items = SIDEBAR_ITEMS.filter(item => group.paths.some(p => p === item.href) && allowedHrefs.has(item.href));
+          if (!items.length) return null;
+          const open = expanded.includes(group.label);
+          const active = items.some(item => item.href === activeHref);
+          return <div key={group.label} className="rounded-xl border border-border/60 overflow-hidden">
+            <button type="button" aria-expanded={open} onClick={() => setExpanded(prev => open ? prev.filter(x => x !== group.label) : [...prev, group.label])}
+              className="w-full flex items-center gap-2.5 px-3 py-3 text-left font-semibold text-sm transition-colors hover:bg-muted/60"
+              style={{ backgroundColor: active ? group.color + '24' : undefined, borderLeft: '4px solid ' + group.color }}>
+              <group.icon className="h-4 w-4 shrink-0" style={{ color: group.color }} />
+              <span className="flex-1">{group.label}</span>
+              <span className="text-[10px] text-muted-foreground">{items.length}</span>
+              <ChevronRight className={cn('h-4 w-4 transition-transform', open && 'rotate-90')} />
+            </button>
+            {open && <div className="p-1.5 space-y-0.5" style={{ backgroundColor: group.color + '09' }}>
+              {items.map(item => {
+                const selected = activeHref === item.href;
+                return <Link key={item.href} to={item.href} onClick={onNavigate} aria-current={selected ? 'page' : undefined}
+                  className={cn('flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs transition-colors', selected ? 'text-white font-semibold' : 'text-muted-foreground hover:bg-muted hover:text-foreground')}
+                  style={selected ? { backgroundColor: group.color } : undefined}>
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span className="flex-1">{item.label}</span>
+                </Link>;
+              })}
+            </div>}
+          </div>;
         })}
       </nav>
 
@@ -350,7 +359,7 @@ export default function Admin() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background flex items-start">
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex fixed left-0 top-0 h-full w-60 bg-card border-r border-border flex-col z-50">
         <SidebarContent user={user} signOut={signOut} location={location} sectionColors={sectionColors} allowedHrefs={allowedHrefs} />
@@ -373,7 +382,7 @@ export default function Admin() {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 min-w-0 max-w-full overflow-x-hidden lg:ml-60 pt-14 lg:pt-0">
+      <main className="flex-1 min-w-0 max-w-full overflow-x-auto lg:ml-60 pt-14 lg:pt-0 min-h-screen">
         {/* Colored top border */}
         <div className="h-1 w-full" style={{ backgroundColor: activeColor }} />
         <div className="p-3 sm:p-4 lg:p-8 min-w-0 max-w-full">
