@@ -613,14 +613,14 @@ export default function AdminProducts() {
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
-          { label: 'Produits au catalogue', value: products.length, tone: 'from-blue-600/45 to-blue-950/25' },
-          { label: 'Produits disponibles', value: products.filter(p => p.stock > 0).length, tone: 'from-cyan-600/40 to-blue-950/25' },
-          { label: 'Stock faible (≤ 5)', value: products.filter(p => p.stock > 0 && p.stock <= 5).length, tone: 'from-indigo-600/45 to-blue-950/25' },
-          { label: 'Ruptures', value: products.filter(p => p.stock <= 0).length, tone: 'from-sky-600/40 to-blue-950/25' },
+          { label: 'Produits au catalogue', value: products.length, tone: 'from-blue-600 to-blue-800' },
+          { label: 'Produits disponibles', value: products.filter(p => p.stock > 0).length, tone: 'from-blue-600 to-blue-800' },
+          { label: 'Stock faible (≤ 5)', value: products.filter(p => p.stock > 0 && p.stock <= 5).length, tone: 'from-blue-600 to-blue-800' },
+          { label: 'Ruptures', value: products.filter(p => p.stock <= 0).length, tone: 'from-blue-600 to-blue-800' },
         ].map(k => <div key={k.label} className={`rounded-2xl border border-blue-300/15 bg-gradient-to-br ${k.tone} p-4 shadow-lg`}><p className="text-xs text-blue-100/75">{k.label}</p><p className="mt-2 text-2xl font-black text-white">{k.value}</p></div>)}
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-blue-400/15 bg-[#111c32] px-4 py-3">
-        <p className="text-xs text-blue-100/80">Gestion rapide : recherche, édition en ligne, filtres, sélection multiple et rangement par catégorie.</p>
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3">
+        <p className="text-xs text-slate-700">Gestion rapide : recherche, édition en ligne, filtres, sélection multiple et rangement par catégorie.</p>
         <a href="/admin/stock" className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-blue-500">Stock central ↗</a>
       </div>
       <Tabs defaultValue="products" className="min-w-0">
