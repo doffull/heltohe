@@ -574,7 +574,24 @@ export default function AdminProducts() {
   };
 
   return (
-    <div className="min-w-0 max-w-full overflow-x-hidden space-y-4 rounded-2xl bg-[#080f20] p-3 text-white lg:p-6 [&_.bg-card]:!bg-[#111c32] [&_.bg-muted]:!bg-[#243653] [&_.text-card-foreground]:!text-white [&_.text-foreground]:!text-white [&_.text-muted-foreground]:!text-slate-400 [&_.border-border]:!border-white/10 [&_input]:!text-white [&_button]:!rounded-xl [&_button]:!transition-all [&_button:hover]:!shadow-md [&_[data-state=active]]:!bg-blue-600 [&_[data-state=active]]:!text-white [&_.bg-background]:!bg-[#17243d] [&_.bg-popover]:!bg-[#17243d] [&_.bg-secondary]:!bg-[#243653] [&_.text-black]:!text-white [&_.text-slate-900]:!text-white [&_.text-gray-900]:!text-white [&_.text-gray-800]:!text-slate-100 [&_.text-slate-800]:!text-slate-100 [&_.text-gray-700]:!text-slate-200 [&_.bg-gray-50]:!bg-[#1c2d4a] [&_.bg-slate-50]:!bg-[#1c2d4a] [&_.bg-gray-100]:!bg-[#263653] [&_.bg-slate-100]:!bg-[#263653] [&_.bg-accent]:!bg-[#29436a] [&_.text-accent-foreground]:!text-white [&_.bg-primary\/5]:!bg-blue-500/15 [&_button]:active:scale-[0.97] [&_button]:hover:-translate-y-px [&_button]:duration-200 [&_button.bg-white]:!bg-[#263b5e] [&_button.bg-white]:!text-white [&_button.bg-transparent]:!text-slate-100 [&_button.border-input]:!bg-[#1c2d4a] [&_button.border-input]:!text-white [&_[role=tab]]:!text-slate-200 [&_[role=tab][data-state=active]]:!bg-blue-600 [&_[role=tab][data-state=active]]:!text-white [&_input::placeholder]:!text-slate-400 [&_textarea::placeholder]:!text-slate-400 [&_.bg-white]:!bg-[#1c2d4a] [&_input]:!bg-[#17243d] [&_input]:!text-white [&_textarea]:!bg-[#17243d] [&_textarea]:!text-white [&_select]:!bg-[#17243d] [&_select]:!text-white [&_th]:!text-blue-100 [&_td]:!text-slate-100 [&_button.bg-primary]:!bg-blue-600 [&_button.bg-primary]:!text-white [&_button.bg-background]:!bg-[#263b5e] [&_button.bg-background]:!text-white">
+    <div className="admin-catalogue-light min-w-0 max-w-full overflow-x-hidden space-y-5 rounded-2xl bg-white p-3 text-slate-950 lg:p-6">
+      <style>{`
+        .admin-catalogue-light { background:#fff !important; color:#111827 !important; color-scheme:light; }
+        .admin-catalogue-light .admin-catalogue-table { background:#fff !important; color:#111827 !important; border-collapse:collapse; }
+        .admin-catalogue-light .admin-catalogue-table thead, .admin-catalogue-light .admin-catalogue-table th { background:#f1f5f9 !important; color:#0f172a !important; }
+        .admin-catalogue-light .admin-catalogue-table tbody tr { background:#fff !important; color:#111827 !important; }
+        .admin-catalogue-light .admin-catalogue-table tbody tr:nth-child(even) { background:#f8fafc !important; }
+        .admin-catalogue-light .admin-catalogue-table tbody tr:hover { background:#fff1f2 !important; }
+        .admin-catalogue-light .admin-catalogue-table td { color:#111827 !important; border-bottom:1px solid #e2e8f0; }
+        .admin-catalogue-light .admin-catalogue-table .text-muted-foreground { color:#475569 !important; }
+        .admin-catalogue-light input:not([type=checkbox]), .admin-catalogue-light textarea { background:#fff !important; color:#111827 !important; border:1px solid #cbd5e1 !important; }
+        .admin-catalogue-light input::placeholder { color:#64748b !important; }
+        .admin-catalogue-light [role=tablist] { background:#f1f5f9 !important; }
+        .admin-catalogue-light [role=tab] { color:#111827 !important; background:transparent !important; }
+        .admin-catalogue-light [role=tab][data-state=active] { background:#111827 !important; color:#fff !important; }
+        .admin-catalogue-light button:not(:disabled):hover { border-color:#dc2626 !important; }
+        .admin-catalogue-light button:focus-visible, .admin-catalogue-light a:focus-visible { outline:2px solid #dc2626; outline-offset:2px; }
+      `}</style>
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 min-w-0">
         <div>
           <h1 className="text-lg sm:text-3xl font-black tracking-tight text-blue-100">CATALOGUE · PRODUITS</h1>
@@ -876,9 +893,9 @@ export default function AdminProducts() {
           </div>
         ) : (
           <AdminTableScroll stickyFirstCol>
-            <table className="w-full min-w-[820px]">
+            <table className="admin-catalogue-table w-full min-w-[820px]">
 
-              <thead className="bg-muted/50 border-b border-border">
+              <thead className="bg-slate-100 border-b border-slate-200">
                 <tr>
                   <th className="p-4 w-10"><Checkbox checked={allSelected} onCheckedChange={toggleAll} /></th>
                   <th className="text-left p-4 text-xs font-bold hud-text">PRODUIT</th>
@@ -894,7 +911,7 @@ export default function AdminProducts() {
               </thead>
               <tbody>
                 {filteredProducts.map((product) => (
-                  <tr key={product.id} className={`border-b border-border last:border-0 transition-all duration-200 hover:bg-blue-500/10 hover:shadow-[inset_3px_0_0_#60a5fa] ${selectedIds.has(product.id) ? 'bg-blue-500/15 shadow-[inset_3px_0_0_#3b82f6]' : ''}`}>
+                  <tr key={product.id} className={`border-b border-slate-200 last:border-0 transition-colors hover:bg-red-50 ${selectedIds.has(product.id) ? 'bg-red-50' : 'bg-white'}`}>
                     <td className="p-4"><Checkbox checked={selectedIds.has(product.id)} onCheckedChange={() => toggle(product.id)} /></td>
                     <td className="p-4">
                       <div className="flex items-center gap-3">
