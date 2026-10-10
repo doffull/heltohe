@@ -559,7 +559,7 @@ export default function AdminProducts() {
           name: p.name, subtitle: p.subtitle, price: p.price, salePrice: p.salePrice || undefined,
           image: main || '/placeholder.svg',
           galleryImages: gallery,
-          category: p.category || 'Autre', stock: p.stock || 50,
+          category: p.category || 'Autre', stock: Math.max(0, Number(p.stock) || 0),
           sku: p.sku, description: p.description, material: p.material,
           sizes: p.sizes || [], colors: p.colors || [], colorOptions: [], attributes: {},
         });
@@ -574,10 +574,10 @@ export default function AdminProducts() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-4 rounded-2xl bg-[#080f20] p-3 text-white lg:p-6 [&_.bg-card]:!bg-[#111c32] [&_.bg-muted]:!bg-[#243653] [&_.text-card-foreground]:!text-white [&_.text-foreground]:!text-white [&_.text-muted-foreground]:!text-slate-400 [&_.border-border]:!border-white/10 [&_input]:!text-white [&_button]:!rounded-xl [&_button]:!transition-all [&_button:hover]:!shadow-md [&_[data-state=active]]:!bg-blue-600 [&_[data-state=active]]:!text-white">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 min-w-0">
         <div>
-          <h1 className="text-xl sm:text-3xl font-bold hud-text">PRODUITS</h1>
+          <h1 className="text-xl sm:text-3xl font-black tracking-tight text-blue-100">CATALOGUE · PRODUITS</h1>
           <p className="text-muted-foreground text-xs sm:text-sm mt-1">{products.length} produits au catalogue</p>
         </div>
         <div className="flex items-center gap-2 min-w-0">
@@ -611,8 +611,20 @@ export default function AdminProducts() {
 
       </div>
 
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[
+          { label: 'Produits au catalogue', value: products.length, tone: 'from-blue-600/45 to-blue-950/25' },
+          { label: 'Produits disponibles', value: products.filter(p => p.stock > 0).length, tone: 'from-cyan-600/40 to-blue-950/25' },
+          { label: 'Stock faible (≤ 5)', value: products.filter(p => p.stock > 0 && p.stock <= 5).length, tone: 'from-indigo-600/45 to-blue-950/25' },
+          { label: 'Ruptures', value: products.filter(p => p.stock <= 0).length, tone: 'from-sky-600/40 to-blue-950/25' },
+        ].map(k => <div key={k.label} className={`rounded-2xl border border-blue-300/15 bg-gradient-to-br ${k.tone} p-4 shadow-lg`}><p className="text-xs text-blue-100/75">{k.label}</p><p className="mt-2 text-2xl font-black text-white">{k.value}</p></div>)}
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-blue-400/15 bg-[#111c32] px-4 py-3">
+        <p className="text-xs text-blue-100/80">Gestion rapide : recherche, édition en ligne, filtres, sélection multiple et rangement par catégorie.</p>
+        <a href="/admin/stock" className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-blue-500">Stock central ↗</a>
+      </div>
       <Tabs defaultValue="products" className="min-w-0">
-        <TabsList className="bg-muted/50 admin-tabs-scroll w-full h-auto">
+        <TabsList className="admin-tabs-scroll w-full h-auto rounded-xl border border-blue-400/20 bg-[#172b4a] p-1">
 
           <TabsTrigger value="products" className="gap-2"><Package className="h-4 w-4" />Produits</TabsTrigger>
           <TabsTrigger value="looks" className="gap-2"><Layers2 className="h-4 w-4" />Looks</TabsTrigger>
