@@ -28,7 +28,7 @@ const eur2 = (n: number) =>
   `${(Number(n) || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
 const pct = (n: number) => `${(Number(n) || 0).toFixed(1)} %`;
 
-const CHART_COLORS = ['#0f172a', '#2563eb', '#0ea5e9', '#f59e0b', '#10b981', '#ec4899', '#8b5cf6'];
+const CHART_COLORS = ['#a855f7', '#3b82f6', '#06b6d4', '#f59e0b', '#10b981', '#ec4899', '#8b5cf6'];
 
 function inRange(o: AnalyticsOrder, r: DateRange) {
   const t = new Date(o.createdAt).getTime();
@@ -267,10 +267,10 @@ export default function AdminAnalytics() {
   /* --------------------------------- render -------------------------------- */
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-4 rounded-2xl bg-[#080f20] p-4 text-white lg:p-6 [&_.bg-card]:!bg-[#111c32] [&_.bg-background]:!bg-[#17243d] [&_.text-card-foreground]:!text-white [&_.text-foreground]:!text-white [&_.text-muted-foreground]:!text-slate-400 [&_.border-border]:!border-white/10 [&_input]:!text-white">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold">
+          <h1 className="flex items-center gap-2 text-2xl font-black">
             <BarChart3 className="h-6 w-6" /> Analytics &amp; Stats
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -295,6 +295,9 @@ export default function AdminAnalytics() {
         </div>
       </header>
 
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[{label:'CA du jour',value:eur(todayCa),color:'from-violet-600/40 to-violet-950/20'},{label:'Commandes du jour',value:String(todayOrders.length),color:'from-blue-600/40 to-blue-950/20'},{label:'Évolution commerciale',value:'Voir courbes ↓',color:'from-pink-600/40 to-pink-950/20'},{label:'Coupons & produits',value:'Voir analyses ↓',color:'from-orange-600/40 to-orange-950/20'}].map(k=><div key={k.label} className={`rounded-2xl border border-white/10 bg-gradient-to-br ${k.color} p-4`}><p className="text-xs text-slate-300">{k.label}</p><p className="mt-2 text-xl font-black">{k.value}</p></div>)}
+      </div>
       {/* Live ticker */}
       <Card className="overflow-hidden">
         <CardContent className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center">
