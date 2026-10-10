@@ -64,6 +64,51 @@ export default function AdminLive() {
     };
   }, []);
 
+  // Historique agrégé depuis le 1er septembre 2026. Lecture seule et pagination explicite.
+  const [history, setHistory] = useState<{ visits: number; signedIn: number; pageViews: number; pages: { path: string; count: number }[]; complete: boolean } | null>(null);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    const since = '2026-09-01T00:00:00.000Z';
+    const readPages = async (table: 'visitor_sessions' | 'page_views', columns: string, timeColumn: string) => {
+      const all: Record<string, unknown>[] = [];
+      let complete = false;
+      for (let offset = 0; offset < 20000; offset += 1000) {
+        const { data, error } = await supabase.from(table).select(columns).gte(timeColumn, since).order(timeColumn, { ascending: true }).range(offset, offset + 999);
+        if (error) throw error;
+        const batch = (data || []) as Record<string, unknown>[];
+        all.push(...batch);
+        if (batch.length < 1000) { complete = true; break; }
+      }
+      return { all, complete };
+    };
+    const loadHistory = async () => {
+      try {
+        const [s, v] = await Promise.all([
+          readPages('visitor_sessions', 'session_id,user_id,started_at', 'started_at'),
+          readPages('page_views', 'path,viewed_at', 'viewed_at'),
+        ]);
+        const pages = new Map<string, number>();
+        v.all.forEach(row => { const p = String(row.path || '/'); pages.set(p, (pages.get(p) || 0) + 1); });
+        if (alive) {
+          setHistory({
+            visits: new Set(s.all.map(row => String(row.session_id))).size,
+            signedIn: new Set(s.all.filter(row => row.user_id).map(row => String(row.user_id))).size,
+            pageViews: v.all.length,
+            pages: [...pages.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([path, count]) => ({ path, count })),
+            complete: s.complete && v.complete,
+          });
+          setHistoryError(null);
+        }
+      } catch (e) { if (alive) setHistoryError(e instanceof Error ? e.message : 'Historique indisponible'); }
+      finally { if (alive) setHistoryLoading(false); }
+    };
+    void loadHistory();
+    const timer = window.setInterval(() => void loadHistory(), 60000);
+    return () => { alive = false; window.clearInterval(timer); };
+  }, []);
+
   // Selected session details + polling
   useEffect(() => {
     if (!selected) {
@@ -145,6 +190,15 @@ export default function AdminLive() {
         </Badge>
       </div>
 
+      <section className="rounded-2xl border border-cyan-400/20 bg-[#111c32] p-4">
+        <h2 className="mb-3 text-base font-bold text-cyan-300">Historique depuis septembre 2026</h2>
+        {historyError && <p role="alert" className="text-xs text-rose-300">Historique indisponible : {historyError}</p>}
+        {historyLoading && <p className="text-xs text-slate-400">Chargement de l'historique…</p>}
+        {history && <><div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {[{label:'Visites enregistrées',value:history.visits,color:'text-violet-300'},{label:'Utilisateurs identifiés',value:history.signedIn,color:'text-cyan-300'},{label:'Pages consultées',value:history.pageViews,color:'text-pink-300'},{label:'Pages différentes',value:history.pages.length,color:'text-orange-300'}].map(k=><div key={k.label} className="rounded-xl border border-white/10 bg-white/5 p-3"><p className="text-xs text-slate-300">{k.label}</p><p className={`mt-1 text-2xl font-black ${k.color}`}>{k.value.toLocaleString('fr-FR')}{!history.complete ? '+' : ''}</p></div>)}
+        </div><h3 className="mb-2 mt-4 text-sm font-bold">Pages les plus consultées</h3><div className="grid gap-2 md:grid-cols-2">{history.pages.map((p,i)=><div key={p.path} className="flex min-w-0 items-center justify-between gap-2 rounded-lg bg-white/5 px-3 py-2 text-xs"><span className="min-w-0 truncate">{i+1}. {p.path}</span><b className="text-cyan-300">{p.count}</b></div>)}</div>
+        <p className="mt-3 text-[11px] text-slate-400">{history.complete ? 'Historique des événements disponibles depuis le 1er septembre 2026.' : 'Résultats partiels : plafond de 20 000 événements par source atteint.'} Les visites sont des sessions enregistrées, pas nécessairement des personnes uniques. Les visiteurs anonymes ne sont pas identifiables. Les événements non collectés avant l’activation du suivi ne peuvent pas être reconstruits.</p></>}
+      </section>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card className="bg-[#111c32] text-white border-white/10">
           <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-wider flex items-center gap-2"><Users className="h-3.5 w-3.5" />En ligne</CardTitle></CardHeader>
