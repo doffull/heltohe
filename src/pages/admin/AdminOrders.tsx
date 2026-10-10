@@ -975,7 +975,24 @@ export default function AdminOrders() {
             <p className="text-muted-foreground">Aucune commande</p>
           </div>
         ) : (
-          <div className="admin-scroll-x admin-scroll-shadow min-w-0">
+          <div className="admin-scroll-x admin-scroll-shadow min-w-0 admin-orders-mobile">
+            <style>{`
+              @media (max-width: 639px) {
+                .admin-orders-mobile { overflow-x:hidden !important; }
+                .admin-orders-mobile > table { min-width:0 !important; width:100% !important; display:block; }
+                .admin-orders-mobile thead { display:none; }
+                .admin-orders-mobile tbody { display:grid; gap:10px; padding:8px; }
+                .admin-orders-mobile tbody tr { display:flex; flex-wrap:wrap; align-items:center; gap:6px; min-width:0; padding:9px; border:1px solid #cbd5e1; border-radius:12px; background:#fff; color:#0f172a; }
+                .admin-orders-mobile tbody td { display:flex; align-items:center; min-width:0; max-width:100%; padding:4px !important; border:0; overflow-wrap:anywhere; }
+                .admin-orders-mobile tbody td:nth-child(3) { flex:1 1 58%; }
+                .admin-orders-mobile tbody td:nth-child(4) { margin-left:auto; }
+                .admin-orders-mobile tbody td:nth-child(7) { flex:1 1 100%; justify-content:flex-end; }
+                .admin-orders-mobile tbody td .text-muted-foreground { color:#475569; }
+                .admin-orders-mobile tbody td button { transition:transform .16s ease,background-color .16s ease; }
+                .admin-orders-mobile tbody td button:active { transform:scale(.95); }
+              }
+              @media(prefers-reduced-motion:reduce) { .admin-orders-mobile button { transition:none !important; transform:none !important; } }
+            `}</style>
             <table className="w-full min-w-[700px]">
               <thead className="bg-muted/50 border-b border-border">
                 <tr>
