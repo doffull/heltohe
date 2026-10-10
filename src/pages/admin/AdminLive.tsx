@@ -133,7 +133,7 @@ export default function AdminLive() {
     d === 'mobile' ? <Smartphone className="h-3.5 w-3.5" /> : d === 'tablet' ? <Tablet className="h-3.5 w-3.5" /> : <Monitor className="h-3.5 w-3.5" />;
 
   return (
-    <div className="min-w-0 space-y-4 rounded-2xl bg-[#080f20] p-4 text-white lg:p-6 [&_.bg-card]:!bg-[#111c32] [&_.border]:!border-white/10 [&_.text-muted-foreground]:!text-slate-400">
+    <div className="min-w-0 space-y-4 rounded-2xl bg-[#080f20] p-4 text-white lg:p-6 [&_.bg-card]:!bg-[#111c32] [&_.border]:!border-white/10 [&_.text-muted-foreground]:!text-slate-400 [&_.text-card-foreground]:!text-white [&_.text-foreground]:!text-white [&_.text-primary]:!text-cyan-300 [&_.bg-muted]:!bg-[#24334e] [&_.bg-secondary]:!bg-[#24334e] [&_.border-border]:!border-white/10">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-black tracking-tight">Live</h1>
@@ -146,7 +146,7 @@ export default function AdminLive() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card>
+        <Card className="bg-[#111c32] text-white border-white/10">
           <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-wider flex items-center gap-2"><Users className="h-3.5 w-3.5" />En ligne</CardTitle></CardHeader>
           <CardContent><div className="text-3xl font-bold">{onlineSessions.length}</div></CardContent>
         </Card>
@@ -160,14 +160,14 @@ export default function AdminLive() {
         </Card>
       </div>
 
-      <Card className="border-white/10 bg-gradient-to-r from-violet-700/20 via-cyan-700/15 to-pink-700/20"><CardContent className="grid grid-cols-2 gap-3 p-4 md:grid-cols-4">
+      <Card className="border-white/10 bg-gradient-to-r from-violet-700/20 via-cyan-700/15 to-pink-700/20 text-white"><CardContent className="grid grid-cols-2 gap-3 p-4 md:grid-cols-4">
         <div><p className="text-xs text-slate-400">Sessions chargées</p><p className="text-xl font-bold text-violet-300">{totalLoaded}</p></div>
         {deviceCounts.map(d => <div key={d.device}><p className="text-xs capitalize text-slate-400">{d.device}</p><p className="text-xl font-bold text-cyan-300">{d.count}</p></div>)}
       </CardContent></Card>
       {loadError && <p role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">Données live indisponibles : {loadError}</p>}
       <p className="text-[11px] text-slate-400">Actualisation toutes les 10 secondes · en ligne = activité dans la dernière minute · liste limitée aux 100 sessions récentes, pas au total historique depuis le lancement.</p>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="lg:col-span-1">
+        <Card className="lg:col-span-1 bg-[#111c32] text-white border-white/10">
           <CardHeader><CardTitle className="text-sm uppercase tracking-wider">Visiteurs</CardTitle></CardHeader>
           <CardContent className="p-0">
             <ScrollArea className="h-[500px]">
@@ -178,7 +178,7 @@ export default function AdminLive() {
                     <li key={s.session_id}>
                       <button
                         onClick={() => setSelected(s.session_id)}
-                        className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors ${selected === s.session_id ? 'bg-muted' : ''}`}
+                        className={`w-full text-left px-4 py-3 text-white hover:bg-white/10 transition-colors ${selected === s.session_id ? 'bg-white/15' : ''}`}
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
@@ -202,7 +202,7 @@ export default function AdminLive() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 bg-[#111c32] text-white border-white/10">
           <CardHeader>
             <CardTitle className="text-sm uppercase tracking-wider flex items-center justify-between">
               <span>Parcours</span>
