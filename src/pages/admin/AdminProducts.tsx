@@ -581,7 +581,7 @@ export default function AdminProducts() {
         .admin-catalogue-light .admin-catalogue-table thead, .admin-catalogue-light .admin-catalogue-table th { background:#f1f5f9 !important; color:#0f172a !important; }
         .admin-catalogue-light .admin-catalogue-table tbody tr { background:#fff !important; color:#111827 !important; }
         .admin-catalogue-light .admin-catalogue-table tbody tr:nth-child(even) { background:#f8fafc !important; }
-        .admin-catalogue-light .admin-catalogue-table tbody tr:hover { background:#fff1f2 !important; }
+        .admin-catalogue-light .admin-catalogue-table tbody tr:hover { background:#eff6ff !important; }
         .admin-catalogue-light .admin-catalogue-table td { color:#111827 !important; border-bottom:1px solid #e2e8f0; }
         .admin-catalogue-light .admin-catalogue-table .text-muted-foreground { color:#475569 !important; }
         .admin-catalogue-light input:not([type=checkbox]), .admin-catalogue-light textarea { background:#fff !important; color:#111827 !important; border:1px solid #cbd5e1 !important; }
@@ -589,10 +589,10 @@ export default function AdminProducts() {
         .admin-catalogue-light [role=tablist] { background:#f1f5f9 !important; }
         .admin-catalogue-light [role=tab] { color:#111827 !important; background:transparent !important; }
         .admin-catalogue-light [role=tab][data-state=active] { background:#111827 !important; color:#fff !important; }
-        .admin-catalogue-light button:not(:disabled):hover { border-color:#dc2626 !important; }
+        .admin-catalogue-light button:not(:disabled):hover { border-color:#2563eb !important; }
         .admin-catalogue-light button:focus-visible, .admin-catalogue-light a:focus-visible { outline:2px solid #2563eb; outline-offset:2px; }
         /* Keep foreground and surface contrast explicit regardless of inherited admin theme. */
-        .admin-catalogue-light .text-white:not([data-state=active]) { color:#1e3a8a !important; }
+        .admin-catalogue-light .text-white:not([data-state=active]):not(.bg-blue-600):not(.bg-primary):not(.bg-destructive) { color:#1e3a8a !important; }
         .admin-catalogue-light .bg-primary, .admin-catalogue-light button[data-state=active] { background:#1d4ed8 !important; color:#fff !important; }
         .admin-catalogue-light .bg-primary .text-white, .admin-catalogue-light button[data-state=active] .text-white { color:#fff !important; }
         .admin-catalogue-light .text-gray-400, .admin-catalogue-light .text-slate-400 { color:#475569 !important; }
