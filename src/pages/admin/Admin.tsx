@@ -68,7 +68,6 @@ import AdminMarketing from './AdminMarketing';
 import AdminSettings from './AdminSettings';
 import AdminDesign from './AdminDesign';
 import AdminMedia from './AdminMedia';
-import AdminPdfExtract from './AdminPdfExtract';
 import AdminPages from './AdminPages';
 import AdminStock from './AdminStock';
 import AdminWooCommerce from './AdminWooCommerce';
@@ -169,7 +168,6 @@ const SIDEBAR_ITEMS = [
   { icon: Mail, label: 'Messagerie & CRM', href: '/admin/messagerie' },
   { icon: FileText, label: 'Pages & Catégories', href: '/admin/pages' },
   { icon: FolderOpen, label: 'Média', href: '/admin/media' },
-  { icon: FileUp, label: 'Import PDF / Médias', href: '/admin/import-pdf' },
   { icon: Megaphone, label: 'Marketing', href: '/admin/marketing' },
   { icon: Megaphone, label: 'Studio Pop-ups', href: '/admin/popups' },
   { icon: Gift, label: 'Roulette', href: '/admin/roulette' },
@@ -219,7 +217,7 @@ function getActiveHref(pathname: string): string {
 
 const ADMIN_GROUPS = [
   { label: 'Vue générale', color: '#06B6D4', icon: LayoutDashboard, paths: ['/admin', '/admin/live', '/admin/analytics', '/admin/bannieres-analytics'] },
-  { label: 'Catalogue & inventaire', color: '#3B82F6', icon: Package, paths: ['/admin/produits', '/admin/stock', '/admin/product-badges', '/admin/import-pdf'] },
+  { label: 'Catalogue & inventaire', color: '#3B82F6', icon: Package, paths: ['/admin/produits', '/admin/stock', '/admin/product-badges'] },
   { label: 'Ventes & logistique', color: '#F59E0B', icon: ShoppingCart, paths: ['/admin/commandes', '/admin/suivi-commandes', '/admin/preparations', '/admin/colissimo', '/admin/checkout', '/admin/paypal', '/admin/test-paiement'] },
   { label: 'Clients & CRM', color: '#A855F7', icon: Users, paths: ['/admin/clients', '/admin/messagerie', '/admin/avis', '/admin/notifications'] },
   { label: 'Marketing & campagnes', color: '#EC4899', icon: Megaphone, paths: ['/admin/marketing', '/admin/newsletters', '/admin/popups', '/admin/roulette', '/admin/reseaux-sociaux', '/admin/top-banner'] },
@@ -419,7 +417,6 @@ export default function Admin() {
             <Route path="messagerie/*" element={<AdminMessagerie />} />
             <Route path="pages/*" element={<AdminPages />} />
             <Route path="media/*" element={<AdminMedia />} />
-            <Route path="import-pdf/*" element={<AdminPdfExtract />} />
             <Route path="marketing/*" element={<AdminMarketing />} />
             <Route path="popups/*" element={<AdminPopups />} />
             <Route path="roulette/*" element={<AdminRoulette />} />
