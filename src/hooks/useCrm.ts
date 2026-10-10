@@ -116,12 +116,16 @@ export function useCrmContacts() {
   return useQuery({
     queryKey: ['crm_contacts'],
     queryFn: async (): Promise<CrmContact[]> => {
-      const { data, error } = await db
-        .from('crm_contacts')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return (data || []) as CrmContact[];
+      const all: CrmContact[] = [];
+      for (let offset = 0; ; offset += 1000) {
+        const { data, error } = await db.from('crm_contacts').select('*')
+          .order('created_at', { ascending: false }).order('id', { ascending: false })
+          .range(offset, offset + 999);
+        if (error) throw error;
+        all.push(...((data || []) as CrmContact[]));
+        if (!data || data.length < 1000) break;
+      }
+      return all;
     },
   });
 }
@@ -184,15 +188,23 @@ export function useCrmCustomers() {
   return useQuery({
     queryKey: ['crm_importable_customers'],
     queryFn: async (): Promise<CrmImportableCustomer[]> => {
-      const [{ data: customers, error }, { data: contacts, error: cErr }] = await Promise.all([
-        db
-          .from('customers')
-          .select('email, first_name, last_name, phone, source, orders_count, total_spent, created_at')
-          .order('created_at', { ascending: false }),
-        db.from('crm_contacts').select('email'),
+      const fetchAll = async (table: 'customers' | 'crm_contacts', columns: string, sort: boolean) => {
+        const all: any[] = [];
+        for (let offset = 0; ; offset += 1000) {
+          let query = db.from(table).select(columns);
+          if (sort) query = query.order('created_at', { ascending: false }).order('id', { ascending: false });
+          else query = query.order('id', { ascending: false });
+          const { data, error } = await query.range(offset, offset + 999);
+          if (error) throw error;
+          all.push(...(data || []));
+          if (!data || data.length < 1000) break;
+        }
+        return all;
+      };
+      const [customers, contacts] = await Promise.all([
+        fetchAll('customers', 'email, first_name, last_name, phone, source, orders_count, total_spent, created_at', true),
+        fetchAll('crm_contacts', 'id, email', false),
       ]);
-      if (error) throw error;
-      if (cErr) throw cErr;
       const existing = new Set(
         ((contacts || []) as { email: string }[]).map((c) => (c.email || '').toLowerCase()),
       );
