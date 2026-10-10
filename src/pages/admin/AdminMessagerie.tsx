@@ -352,7 +352,7 @@ export default function AdminMessagerie() {
         <p className="text-sm text-muted-foreground">Centralisez vos échanges clients et votre carnet de contacts.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[220px_320px_1fr] gap-4 min-h-[70vh]">
+      <div className="grid grid-cols-1 lg:grid-cols-[220px_320px_minmax(0,1fr)] gap-4 min-h-[70vh] min-w-0">
         {/* Column 1 — navigation */}
         <Card className="p-3 h-fit space-y-3">
           <Button className="w-full" size="sm" onClick={() => setContactDialog({ open: true, contact: null })}>
@@ -581,7 +581,7 @@ export default function AdminMessagerie() {
 
         {/* Column 2 — conversations */}
         {(view === 'inbox' || view === 'sent') && (
-          <Card className="p-0 overflow-hidden flex flex-col">
+          <Card className="p-0 min-w-0 flex flex-col">
             <div className="p-3 border-b border-border">
               <div className="relative">
                 <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -620,7 +620,7 @@ export default function AdminMessagerie() {
 
         {/* Column 3 — reading & composing */}
         {(view === 'inbox' || view === 'sent') && (
-          <Card className="p-0 flex flex-col overflow-hidden">
+          <Card className="p-0 min-w-0 flex flex-col">
             {!selected ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-muted-foreground">
                 <MessageSquare className="h-10 w-10 mb-3 opacity-40" />
@@ -648,7 +648,7 @@ export default function AdminMessagerie() {
                   </Select>
                 </div>
 
-                <div className="grid xl:grid-cols-[1fr_260px] flex-1 min-h-0">
+                <div className="grid xl:grid-cols-[minmax(0,1fr)_260px] flex-1 min-h-0 min-w-0">
                   <div className="flex flex-col min-h-0 border-r border-border">
                     <ScrollArea className="flex-1 max-h-[45vh] p-4">
                       <div className="space-y-3">
