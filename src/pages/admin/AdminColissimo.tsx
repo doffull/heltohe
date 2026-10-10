@@ -261,6 +261,9 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
     if (![customer.name, customer.address, customer.city, customer.zip, customer.country].every(v => typeof v === 'string' && v.trim().length > 0)) {
       return 'Adresse de livraison incomplète : nom, voie, code postal, ville et pays sont obligatoires.';
     }
+    if (/point\\s*relais|relay|pickup/i.test(customer.address)) {
+      return 'Adresse « point relais » détectée à la place de la rue. Ouvrez la commande, identifiez le relais Colissimo exact (identifiant, rue, code postal, ville) puis corrigez les données avant de réessayer.';
+    }
     return null;
   }
 
@@ -313,7 +316,11 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
       });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
     } catch (e: any) {
-      toast({ title: 'Erreur', description: e.message, variant: 'destructive' });
+      toast({
+        title: 'Étiquette Colissimo impossible',
+        description: `${e.message}. Vérifiez le numéro international, le pays, le code postal et l'adresse du relais dans la commande ; réessayez ensuite. Si l'erreur persiste, vérifiez la configuration Colissimo.`,
+        variant: 'destructive',
+      });
     } finally {
       setLoadingMap(l => ({ ...l, [order.id + (isReturn ? '_ret' : '')]: false }));
     }
