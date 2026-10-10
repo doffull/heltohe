@@ -360,14 +360,24 @@ export default function Admin() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-start">
+    <div className="admin-light min-h-screen bg-white text-slate-950 flex items-start">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex fixed left-0 top-0 h-full w-60 bg-card border-r border-border flex-col z-50">
+      <style>{`
+        .admin-light { --background: 0 0% 100%; --foreground: 222 47% 11%; --card: 0 0% 100%; --card-foreground: 222 47% 11%; --popover: 0 0% 100%; --popover-foreground: 222 47% 11%; --muted: 210 20% 96%; --muted-foreground: 215 20% 35%; --primary: 0 72% 45%; --primary-foreground: 0 0% 100%; --border: 214 22% 86%; --input: 214 22% 86%; --ring: 0 72% 45%; color-scheme: light; }
+        .admin-light main :is(input,textarea,select) { background-color: white; color: #111827; border-color: #cbd5e1; }
+        .admin-light main :is(input,textarea)::placeholder { color: #64748b; }
+        .admin-light main button:not([disabled]):hover { border-color: #dc2626; }
+        .admin-light main button:not([disabled]):focus-visible, .admin-light a:focus-visible { outline: 2px solid #dc2626; outline-offset: 2px; }
+        .admin-light main :is(.bg-white,.bg-card,.bg-background) { color: #111827; }
+        .admin-light main :is(.bg-white,.bg-card,.bg-background) :is(.text-white) { color: #111827; }
+        .admin-light main :is(.bg-primary,.bg-destructive,.bg-blue-600,.bg-red-600) :is(.text-white) { color: white; }
+      `}</style>
+      <aside className="hidden lg:flex fixed left-0 top-0 h-full w-60 bg-white text-slate-950 border-r border-slate-200 flex-col z-50">
         <SidebarContent user={user} signOut={signOut} location={location} sectionColors={sectionColors} allowedHrefs={allowedHrefs} />
       </aside>
 
       {/* Mobile Header */}
-      <div className="fixed top-0 left-0 right-0 h-14 bg-card border-b border-border z-50 lg:hidden flex items-center px-3 gap-2">
+      <div className="fixed top-0 left-0 right-0 h-14 bg-white text-slate-950 border-b border-slate-200 z-50 lg:hidden flex items-center px-3 gap-2">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="h-9 w-9">
@@ -383,7 +393,7 @@ export default function Admin() {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 min-w-0 max-w-full overflow-x-hidden lg:ml-60 pt-14 lg:pt-0 min-h-screen">
+      <main className="flex-1 min-w-0 max-w-full overflow-x-hidden bg-white text-slate-950 lg:ml-60 pt-14 lg:pt-0 min-h-screen">
         {/* Colored top border */}
         <div className="h-1 w-full" style={{ backgroundColor: activeColor }} />
         <div className="p-3 sm:p-4 lg:p-8 min-w-0 max-w-full">
