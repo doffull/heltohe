@@ -219,7 +219,7 @@ export default function AdminStock() {
   if (loading) return <StockSkeleton />;
 
   return (
-    <div className="flex min-w-0 flex-col gap-4 rounded-2xl bg-[#080f20] p-3 text-white md:flex-row md:gap-6 lg:p-5 [&_.bg-card]:!bg-[#111c32] [&_.text-card-foreground]:!text-white [&_.text-foreground]:!text-white [&_.text-muted-foreground]:!text-slate-400 [&_.border-border]:!border-white/10 [&_.bg-background]:!bg-[#17243d] [&_.bg-popover]:!bg-[#17243d] [&_.bg-muted]:!bg-[#243653] [&_.bg-secondary]:!bg-[#243653] [&_.text-black]:!text-white [&_.text-slate-900]:!text-white [&_.text-gray-900]:!text-white [&_.text-gray-800]:!text-slate-100 [&_.text-slate-800]:!text-slate-100 [&_.text-gray-700]:!text-slate-200 [&_.bg-gray-50]:!bg-[#1c2d4a] [&_.bg-slate-50]:!bg-[#1c2d4a] [&_.bg-gray-100]:!bg-[#263653] [&_.bg-slate-100]:!bg-[#263653] [&_button.bg-white]:!bg-[#263b5e] [&_button.bg-white]:!text-white [&_button.bg-transparent]:!text-slate-100 [&_button.border-input]:!bg-[#1c2d4a] [&_button.border-input]:!text-white [&_[role=tab]]:!text-slate-200 [&_[role=tab][data-state=active]]:!bg-blue-600 [&_[role=tab][data-state=active]]:!text-white [&_input::placeholder]:!text-slate-400 [&_textarea::placeholder]:!text-slate-400 [&_.bg-white]:!bg-[#1c2d4a] [&_input]:!bg-[#17243d] [&_input]:!text-white [&_textarea]:!bg-[#17243d] [&_textarea]:!text-white [&_th]:!text-blue-100 [&_td]:!text-slate-100 [&_button.bg-primary]:!bg-blue-600 [&_button.bg-primary]:!text-white">
+    <div className="flex min-w-0 flex-col gap-4 rounded-2xl bg-white p-3 text-slate-950 md:flex-row md:gap-6 lg:p-5">
       {/* Sidebar nav — blue inventory workspace */}
       <div className="hidden md:flex flex-col gap-1 w-52 shrink-0">
         {VIEWS.map(v => (
