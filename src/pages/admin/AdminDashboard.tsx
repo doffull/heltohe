@@ -479,133 +479,46 @@ export default function AdminDashboard() {
     return Object.entries(map).map(([name, count]) => ({ name, count }));
   }, [products]);
 
+  const card = 'rounded-2xl border border-white/10 bg-[#111c32] p-4 shadow-lg';
   return (
-    <div className="space-y-6 lg:space-y-8">
-      <div>
-        <h1 className="text-xl lg:text-3xl font-bold hud-text">DASHBOARD</h1>
-        <p className="text-muted-foreground text-xs lg:text-sm mt-1">Vue d'ensemble de votre activité</p>
-      </div>
-
-      <div className="rounded-2xl bg-zinc-950 text-white px-6 py-7 lg:px-9 lg:py-9 flex flex-wrap items-center justify-between gap-5 shadow-lg">
-        <div><p className="text-xs tracking-[0.2em] uppercase text-zinc-300 mb-2">HELVETICA-MP / Administration</p>
-          <h2 className="text-2xl lg:text-4xl font-extrabold tracking-tight">Bonjour ! 👋</h2>
-          <p className="text-sm text-zinc-300 mt-2">Votre activité commerciale avec les vraies commandes.</p></div>
-        <a href="/" target="_blank" rel="noopener noreferrer" className="rounded-xl bg-white text-black px-5 py-3 text-sm font-semibold hover:bg-zinc-100">Voir la boutique ↗</a>
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div><h2 className="text-xl font-bold">Ventes en temps réel</h2>
-          <p className="text-xs text-muted-foreground mt-1">{ordersError ? 'Connexion indisponible' : ordersLoading ? 'Chargement…' : 'Synchronisation toutes les 15 secondes'} · Actualisé : {dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString('fr-FR') : '—'}</p></div>
-        <div className="flex items-center gap-2"><span className="text-xs text-emerald-600 font-semibold">● Live</span>
-          <select aria-label="Période des ventes" value={period} onChange={e => setPeriod(e.target.value as 'today' | '7d' | '30d')} className="rounded-lg border border-border bg-background px-3 py-2 text-sm">
-            <option value="today">Aujourd'hui</option><option value="7d">7 jours</option><option value="30d">30 jours</option>
-          </select>
-          <button type="button" onClick={() => queryClient.invalidateQueries({ queryKey: ['orders'] })} className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted">Actualiser</button></div>
-      </div>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="min-w-0 space-y-3 rounded-2xl bg-[#080f20] p-3 text-white lg:p-5">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div><h1 className="text-2xl font-black tracking-tight">Dashboard</h1><p className="text-xs text-slate-400">HELVETICA · Activité commerciale actualisée</p></div>
+        <div className="flex items-center gap-2">
+          <span className="rounded-lg bg-emerald-500/10 px-2 py-2 text-xs text-emerald-400">● Données synchronisées</span>
+          <select aria-label="Période des ventes" value={period} onChange={e => setPeriod(e.target.value as 'today' | '7d' | '30d')} className="rounded-lg border border-white/15 bg-[#17243d] px-3 py-2 text-xs text-white"><option value="today">Aujourd'hui</option><option value="7d">7 derniers jours</option><option value="30d">30 derniers jours</option></select>
+          <button type="button" onClick={() => queryClient.invalidateQueries({ queryKey: ['orders'] })} className="rounded-lg border border-white/15 bg-[#17243d] px-3 py-2 text-xs hover:bg-[#243657]">↻ Actualiser</button>
+        </div>
+      </header>
+      <p className="text-[11px] text-slate-400">{ordersError ? 'Commandes indisponibles' : ordersLoading ? 'Chargement des commandes…' : 'Commandes rafraîchies toutes les 15 s'} · Dernière mise à jour : {dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString('fr-FR') : '—'}</p>
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         {[
-          { label: "CA encaissé", value: euro(periodRevenue) },
-          { label: 'Commandes', value: String(filteredOrders.length) },
-          { label: 'Articles vendus', value: String(itemsSold) },
-          { label: 'Stock faible', value: String(products.filter(p => p.stock <= 5).length) },
-        ].map(k => <div key={k.label} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <p className="text-2xl lg:text-3xl font-bold">{ordersError && k.label !== 'Stock faible' ? '—' : k.value}</p>
-          <p className="text-sm text-muted-foreground mt-2">{k.label}</p>
-        </div>)}
+          {label:'Chiffre d’affaires encaissé',value:ordersError?'—':euro(periodRevenue),tone:'from-violet-600/40 to-violet-950/30',symbol:'€'},
+          {label:'Commandes payées',value:ordersError?'—':String(paidOrders.length),tone:'from-blue-600/40 to-blue-950/30',symbol:'▣'},
+          {label:'Visiteurs en ligne',value:'Non suivi',tone:'from-pink-600/40 to-pink-950/30',symbol:'◉'},
+          {label:'Taux de conversion',value:'Non suivi',tone:'from-orange-600/40 to-orange-950/30',symbol:'↗'},
+        ].map(k=><div key={k.label} className={`rounded-2xl border border-white/10 bg-gradient-to-br ${k.tone} p-4`}><span className="mb-3 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-xl">{k.symbol}</span><p className="text-xs text-slate-300">{k.label}</p><p className="mt-1 text-xl font-extrabold lg:text-2xl">{k.value}</p></div>)}
       </div>
-      {/* Charts: ventes payées uniquement, même période que les KPI */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="rounded-2xl border border-border bg-card p-4 lg:p-6 shadow-sm">
-          <h3 className="text-lg font-bold hud-text mb-4 lg:mb-6">ÉVOLUTION DES VENTES <span className="text-xs font-normal text-muted-foreground">· période sélectionnée</span></h3>
-          <div className="h-[220px] lg:h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={salesData}>
-                <defs>
-                  <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '0' }} />
-                <Area type="monotone" dataKey="sales" stroke="hsl(var(--primary))" fill="url(#salesGradient)" strokeWidth={2} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-border bg-card p-4 lg:p-6 shadow-sm">
-          <h3 className="text-lg font-bold hud-text mb-4 lg:mb-6">PRODUITS PAR CATÉGORIE</h3>
-          <div className="h-[220px] lg:h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={categoryData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '0' }} />
-                <Bar dataKey="count" fill="hsl(var(--primary))" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        <section className="rounded-2xl border border-border bg-card p-5 lg:p-6 shadow-sm">
-          <div className="flex justify-between items-center mb-5"><h3 className="font-bold text-lg">Commandes récentes</h3><span className="text-xs text-muted-foreground">Données réelles</span></div>
-          {ordersError ? <p className="text-sm text-destructive">Impossible de charger les commandes.</p> : recentOrders.length === 0 ? <p className="text-sm text-muted-foreground">Aucune commande pour le moment.</p> :
-            <div className="divide-y divide-border">{recentOrders.map(order => <div key={order.id} className="flex items-center justify-between gap-3 py-3">
-              <div className="min-w-0"><p className="font-semibold text-sm truncate">#{order.orderNumber}</p><p className="text-xs text-muted-foreground">{new Date(order.date).toLocaleString('fr-FR')}</p></div>
-              <span className="rounded-full bg-muted px-2 py-1 text-xs">{String(order.paymentStatus)}</span>
-              <span className="text-sm font-semibold whitespace-nowrap">{euro(order.total)}</span>
-            </div>)}</div>}
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-12">
+        <section className={`${card} xl:col-span-7`}>
+          <div className="mb-3 flex items-center justify-between"><h2 className="font-bold">📈 Évolution des ventes</h2><span className="text-xs text-violet-300">CA encaissé · commandes payées</span></div>
+          <div className="h-[220px]"><ResponsiveContainer width="100%" height="100%"><AreaChart data={salesData}><defs><linearGradient id="salesGradientPremium" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#a855f7" stopOpacity={0.4}/><stop offset="95%" stopColor="#a855f7" stopOpacity={0}/></linearGradient></defs><CartesianGrid stroke="#28364f" strokeDasharray="3 3"/><XAxis dataKey="name" stroke="#94a3b8" fontSize={10}/><YAxis stroke="#94a3b8" fontSize={10} width={44}/><Tooltip contentStyle={{backgroundColor:'#17243d',border:'1px solid #34445f',borderRadius:12,color:'#fff'}}/><Area type="monotone" dataKey="sales" stroke="#b86cff" strokeWidth={3} fill="url(#salesGradientPremium)" name="Ventes (€)"/></AreaChart></ResponsiveContainer></div>
+          {ordersError && <p className="text-xs text-rose-400">Impossible de récupérer les commandes.</p>}
         </section>
-        <section className="rounded-2xl border border-border bg-card p-5 lg:p-6 shadow-sm">
-          <h3 className="font-bold text-lg mb-5">Produits les plus vendus <span className="text-xs font-normal text-muted-foreground">· période sélectionnée</span></h3>
-          {topProducts.length === 0 ? <p className="text-sm text-muted-foreground">Aucune vente payée sur cette période.</p> :
-            <div className="space-y-4">{topProducts.map((p, i) => <div key={p.name} className="flex items-center gap-3">
-              <span className="text-xs text-muted-foreground w-5">{i + 1}</span><span className="text-sm font-medium flex-1 truncate">{p.name}</span>
-              <span className="text-xs text-muted-foreground">{p.quantity} ventes</span><span className="text-sm font-bold">{euro(p.revenue)}</span>
-            </div>)}</div>}
-        </section>
+        <section className={`${card} xl:col-span-3`}><h2 className="mb-3 font-bold">🟢 Ventes récentes</h2><div className="max-h-[230px] divide-y divide-white/10 overflow-y-auto">{recentOrders.length===0?<p className="text-xs text-slate-400">Aucune commande récente.</p>:recentOrders.map(o=><div key={o.id} className="flex items-center justify-between gap-2 py-2"><div className="min-w-0"><p className="truncate text-xs font-semibold">#{o.orderNumber}</p><p className="text-[10px] text-slate-400">{new Date(o.date).toLocaleString('fr-FR')} · {o.paymentStatus}</p></div><span className="shrink-0 text-xs font-bold">{euro(o.total)}</span></div>)}</div></section>
+        <section className={`${card} xl:col-span-2`}><h2 className="mb-3 font-bold">Répartition</h2><p className="text-2xl font-extrabold text-violet-300">{euro(periodRevenue)}</p><p className="mt-1 text-xs text-slate-400">Ventes encaissées</p><div className="mt-5 space-y-3 text-xs"><div className="flex justify-between"><span>Articles vendus</span><b>{itemsSold}</b></div><div className="flex justify-between"><span>Commandes payées</span><b>{paidOrders.length}</b></div><div className="flex justify-between"><span>Canaux de vente</span><span className="text-amber-300">Non attribués</span></div></div></section>
       </div>
-      {/* Homepage Management (full width) + Recent Orders */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <HomepageManagement products={products} />
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <section className={card}><h2 className="mb-3 font-bold">🏆 Top produits</h2><div className="space-y-2">{topProducts.length===0?<p className="text-xs text-slate-400">Aucune vente sur la période.</p>:topProducts.slice(0,4).map((p,i)=><div key={i} className="flex items-center gap-2 text-xs"><span className="text-violet-300">{i+1}.</span><span className="min-w-0 flex-1 truncate">{p.name}</span><b>{p.quantity} ventes</b></div>)}</div></section>
+        <section className={card}><h2 className="mb-3 font-bold">📊 Canaux de vente</h2><p className="text-sm text-amber-300">Attribution non disponible</p><p className="mt-2 text-xs text-slate-400">Nécessite un suivi UTM et une association aux commandes.</p><a href="/admin/analytics" className="mt-3 inline-block text-xs text-blue-300 hover:underline">Voir l'analytique →</a></section>
+        <section className={card}><h2 className="mb-3 font-bold">👥 Clients & fidélité</h2><p className="text-sm text-slate-300">Statistiques clients détaillées</p><p className="mt-2 text-xs text-slate-400">À consulter dans le CRM, sans estimation fictive.</p><a href="/admin/clients" className="mt-3 inline-block text-xs text-pink-300 hover:underline">Voir les clients →</a></section>
+        <section className={card}><div className="mb-3 flex items-center justify-between"><h2 className="font-bold">🚨 Alertes stock</h2><a href="/admin/stock" className="text-xs text-orange-300 hover:underline">Voir tout</a></div><p className="mb-2 text-xs text-slate-400">{lowStockProducts.length} produit(s) à 5 unités ou moins</p><div className="max-h-32 space-y-2 overflow-y-auto">{lowStockProducts.length===0?<p className="text-xs text-emerald-400">Tous les stocks sont OK.</p>:lowStockProducts.slice(0,6).map(p=><div key={p.id} className="flex justify-between gap-2 text-xs"><span className="truncate">{p.name}</span><b className={p.stock===0?'text-rose-400':'text-orange-300'}>{p.stock}</b></div>)}</div></section>
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Low stock */}
-        <div className="chamfer-hud bg-card/50 p-6">
-          <h3 className="text-lg font-bold hud-text mb-6">ALERTES STOCK</h3>
-          <p className="text-xs text-muted-foreground mb-4">5 unités ou moins · stock le plus faible en premier</p>
-          {lowStockProducts.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="text-green-500 mb-2">✓</div>
-              <p className="text-muted-foreground">Tous les stocks sont OK</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {lowStockProducts.map((product) => (
-                <div key={product.id} className="flex items-center gap-4 py-3 border-b border-border last:border-0">
-                  <div className="w-12 h-12 bg-muted rounded overflow-hidden flex-shrink-0">
-                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{product.name}</p>
-                    <p className="text-xs text-muted-foreground">{product.sku}</p>
-                  </div>
-                  <div className="text-right">
-                    <span className={`text-lg font-bold ${product.stock === 0 ? 'text-destructive' : 'text-yellow-500'}`}>{product.stock}</span>
-                    <p className="text-xs text-muted-foreground">en stock</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-4">
+        <section className={`${card} xl:col-span-3`}><h2 className="mb-3 font-bold">✨ Performance marketing</h2><div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{[{name:'Codes promo',href:'/admin/marketing',color:'text-pink-300'},{name:'Jeux & roulette',href:'/admin/roulette',color:'text-violet-300'},{name:'Pop-ups',href:'/admin/popups',color:'text-blue-300'},{name:'Newsletter',href:'/admin/newsletters',color:'text-orange-300'}].map(m=><a key={m.name} href={m.href} className="rounded-xl border border-white/10 bg-white/5 p-3 hover:bg-white/10"><p className={`text-xs font-bold ${m.color}`}>{m.name}</p><p className="mt-2 text-[11px] text-slate-400">Consulter les données →</p></a>)}</div></section>
+        <section className={card}><h2 className="mb-3 font-bold">🛒 Paniers abandonnés</h2><p className="text-lg font-bold text-amber-300">Suivi à vérifier</p><p className="mt-2 text-xs text-slate-400">Ne pas confondre paiements en attente et paniers abandonnés.</p><a href="/admin/commandes" className="mt-3 inline-block text-xs text-blue-300 hover:underline">Voir les commandes →</a></section>
       </div>
+      <details className="rounded-2xl border border-white/10 bg-[#111c32] p-4"><summary className="cursor-pointer text-sm font-bold">⚙️ Gestion de la page d'accueil · sections, produits et mises en avant</summary><div className="mt-4 text-slate-900 dark:text-white"><HomepageManagement products={products}/></div></details>
     </div>
   );
 }
