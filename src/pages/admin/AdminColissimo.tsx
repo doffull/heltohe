@@ -250,7 +250,26 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
     else setSelected(new Set(paginated.map((o: Order) => o.id)));
   };
 
+  // Vérification côté interface uniquement : la fonction serveur doit également
+  // contrôler les champs et le relais officiel avant tout achat d'affranchissement.
+  function validateShippingContact(order: Order): string | null {
+    const customer = order.customer;
+    const phone = (customer.phone || '').replace(/[\\s().-]/g, '');
+    if (!/^\\+[1-9]\\d{6,14}$/.test(phone)) {
+      return 'Téléphone obligatoire au format international (+33…, +32…, +44…). Corrigez la commande avant de créer le bordereau.';
+    }
+    if (![customer.name, customer.address, customer.city, customer.zip, customer.country].every(v => typeof v === 'string' && v.trim().length > 0)) {
+      return 'Adresse de livraison incomplète : nom, voie, code postal, ville et pays sont obligatoires.';
+    }
+    return null;
+  }
+
   async function generateLabel(order: Order, isReturn = false) {
+    const validationError = validateShippingContact(order);
+    if (validationError) {
+      toast({ title: 'Bordereau bloqué : informations incomplètes', description: validationError, variant: 'destructive' });
+      return;
+    }
     setLoadingMap(l => ({ ...l, [order.id + (isReturn ? '_ret' : '')]: true }));
     try {
       // Seul l'identifiant est transmis : la fonction relit la commande en base
