@@ -219,14 +219,14 @@ export default function AdminStock() {
   if (loading) return <StockSkeleton />;
 
   return (
-    <div className="flex flex-col md:flex-row gap-4 md:gap-6">
-      {/* Sidebar nav */}
+    <div className="flex min-w-0 flex-col gap-4 rounded-2xl bg-[#080f20] p-3 text-white md:flex-row md:gap-6 lg:p-5 [&_.bg-card]:!bg-[#111c32] [&_.text-card-foreground]:!text-white [&_.text-foreground]:!text-white [&_.text-muted-foreground]:!text-slate-400 [&_.border-border]:!border-white/10">
+      {/* Sidebar nav — blue inventory workspace */}
       <div className="hidden md:flex flex-col gap-1 w-52 shrink-0">
         {VIEWS.map(v => (
           <Button
             key={v.key}
             variant={view === v.key ? 'default' : 'ghost'}
-            className="justify-start gap-3"
+            className="justify-start gap-3 rounded-xl data-[state=active]:bg-blue-600"
             onClick={() => setView(v.key)}
           >
             <v.icon className="h-4 w-4" />
