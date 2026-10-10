@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { AdminSalesAlerts } from '@/components/admin/AdminSalesAlerts';
 import { useAuth } from '@/context/AuthContext';
 import { useDesignSettings } from '@/hooks/useDesignSettings';
 import { useRolePermissions, DEFAULT_ROLE_ROUTES } from '@/hooks/useRolePermissions';
@@ -382,13 +383,14 @@ export default function Admin() {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 min-w-0 max-w-full overflow-x-auto lg:ml-60 pt-14 lg:pt-0 min-h-screen">
+      <main className="flex-1 min-w-0 max-w-full overflow-x-hidden lg:ml-60 pt-14 lg:pt-0 min-h-screen">
         {/* Colored top border */}
         <div className="h-1 w-full" style={{ backgroundColor: activeColor }} />
         <div className="p-3 sm:p-4 lg:p-8 min-w-0 max-w-full">
 
-          <div className="mb-4">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <AdminSaveBar />
+            {isAdmin && <AdminSalesAlerts />}
           </div>
           <Routes>
             <Route index element={<AdminDashboard />} />
