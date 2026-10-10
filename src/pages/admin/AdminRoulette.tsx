@@ -38,11 +38,20 @@ export default function AdminRoulette() {
   const { designSettings, updateDesignSettings } = useApp();
   const qc = useQueryClient();
 
+  const previewOnly = typeof window !== 'undefined' && window.location.hostname !== 'helvetica-mp.com';
+  const requireProduction = () => {
+    if (!previewOnly) return false;
+    toast.error('Préproduction : modification des jeux bloquée pour protéger les données réelles.');
+    return true;
+  };
+  const totalSpins = spins.length;
+  const rewardedSpins = spins.filter((spin: any) => !!spin.promo_code).length;
+
   const cfg = draft || config;
 
   const applyPreset = async (presetId: string) => {
     const preset = ROULETTE_PRESETS.find((p) => p.id === presetId);
-    if (!preset) return;
+    if (!preset || requireProduction()) return;
     try {
       // 1) Update roulette_config
       await updateConfig.mutateAsync(preset.config as any);
@@ -74,6 +83,16 @@ export default function AdminRoulette() {
         <p className="text-sm text-muted-foreground">Système de jeu quotidien à lots</p>
       </div>
 
+      {previewOnly && <div role="status" className="rounded-2xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-700 dark:text-amber-200">
+        Mode préproduction : consultation uniquement. Les réglages, lots et tirages réels sont protégés car la base est partagée avec la boutique.
+      </div>}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="rounded-2xl bg-gradient-to-br from-violet-600 to-fuchsia-600 p-4 text-white shadow-lg"><p className="text-xs opacity-80">Tirages consultés</p><p className="text-3xl font-black">{totalSpins}</p></div>
+        <div className="rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 p-4 text-white shadow-lg"><p className="text-xs opacity-80">Codes gagnés</p><p className="text-3xl font-black">{rewardedSpins}</p></div>
+        <div className="rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 p-4 text-white shadow-lg"><p className="text-xs opacity-80">Taux de gain</p><p className="text-3xl font-black">{totalSpins ? Math.round(rewardedSpins / totalSpins * 100) : 0}%</p></div>
+        <div className="rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 p-4 text-white shadow-lg"><p className="text-xs opacity-80">Segments configurés</p><p className="text-3xl font-black">{segments.length}</p></div>
+      </div>
+      <p className="text-xs text-muted-foreground">Statistiques issues des {totalSpins} derniers tirages chargés, pas du chiffre d'affaires. L'attribution aux commandes reste à connecter.</p>
       {/* PRESETS */}
       <Card className="p-4 border-2 border-primary/40">
         <div className="flex items-center justify-between mb-3">
