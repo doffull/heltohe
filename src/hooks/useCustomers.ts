@@ -41,12 +41,21 @@ export function useCustomers() {
   return useQuery({
     queryKey: ['admin-customers'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return (data || []).map((d) => dbToCustomer(d as Record<string, unknown>));
+      // Supabase REST caps responses (often at 1,000 rows): fetch every page.
+      const pageSize = 1000;
+      const all: Record<string, unknown>[] = [];
+      for (let offset = 0; ; offset += pageSize) {
+        const { data, error } = await supabase
+          .from('customers')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: false })
+          .range(offset, offset + pageSize - 1);
+        if (error) throw error;
+        all.push(...((data || []) as Record<string, unknown>[]));
+        if (!data || data.length < pageSize) break;
+      }
+      return all.map(dbToCustomer);
     },
   });
 }
