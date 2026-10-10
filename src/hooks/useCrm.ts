@@ -240,8 +240,11 @@ export function useImportCustomersToCrm() {
           source: c.source === 'woocommerce' ? 'woocommerce' : 'customer',
         }));
       if (!rows.length) return 0;
-      const { error } = await db.from('crm_contacts').upsert(rows, { onConflict: 'email' });
-      if (error) throw error;
+      // Batch to avoid oversized payloads; fail visibly on the first rejected batch.
+      for (let offset = 0; offset < rows.length; offset += 200) {
+        const { error } = await db.from('crm_contacts').upsert(rows.slice(offset, offset + 200), { onConflict: 'email' });
+        if (error) throw new Error(`Import CRM interrompu au contact ${offset + 1} : ${error.message}`);
+      }
       return rows.length;
     },
     onSuccess: () => {
@@ -323,6 +326,7 @@ export function useSendCrmMessage() {
         },
       });
       if (error) throw new Error(await edgeErrorMessage(error));
+      if (!data?.sent) throw new Error(data?.warning || data?.error || "L'envoi du message n'a pas été confirmé. Vérifiez le fournisseur e-mail et les journaux d'envoi.");
       return data as { sent: boolean; warning?: string };
     },
     onSuccess: (_d, vars) => {
