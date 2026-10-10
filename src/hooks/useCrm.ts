@@ -240,12 +240,27 @@ export function useImportCustomersToCrm() {
           source: c.source === 'woocommerce' ? 'woocommerce' : 'customer',
         }));
       if (!rows.length) return 0;
-      // Batch to avoid oversized payloads; fail visibly on the first rejected batch.
-      for (let offset = 0; offset < rows.length; offset += 200) {
-        const { error } = await db.from('crm_contacts').upsert(rows.slice(offset, offset + 200), { onConflict: 'email' });
-        if (error) throw new Error(`Import CRM interrompu au contact ${offset + 1} : ${error.message}`);
+      // crm_contacts.email is not guaranteed to have a UNIQUE constraint.
+      // Never use ON CONFLICT(email): it fails with PostgreSQL 42P10.
+      // Read existing contacts, update by primary key, insert only missing emails.
+      // Sequential writes prevent duplicate inserts within this import batch.
+      const uniqueRows = Array.from(new Map(rows.map(row => [row.email.trim().toLowerCase(), row])).values());
+      let processed = 0;
+      for (const row of uniqueRows) {
+        const { data: matches, error: lookupError } = await db
+          .from('crm_contacts')
+          .select('id')
+          .ilike('email', row.email)
+          .limit(1);
+        if (lookupError) throw new Error(`Import CRM interrompu au contact ${processed + 1} : ${lookupError.message}`);
+        const existingId = matches?.[0]?.id;
+        const { error } = existingId
+          ? await db.from('crm_contacts').update(row).eq('id', existingId)
+          : await db.from('crm_contacts').insert(row);
+        if (error) throw new Error(`Import CRM interrompu au contact ${processed + 1} : ${error.message}`);
+        processed++;
       }
-      return rows.length;
+      return processed;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['crm_contacts'] });
