@@ -590,7 +590,28 @@ export default function AdminProducts() {
         .admin-catalogue-light [role=tab] { color:#111827 !important; background:transparent !important; }
         .admin-catalogue-light [role=tab][data-state=active] { background:#111827 !important; color:#fff !important; }
         .admin-catalogue-light button:not(:disabled):hover { border-color:#dc2626 !important; }
-        .admin-catalogue-light button:focus-visible, .admin-catalogue-light a:focus-visible { outline:2px solid #dc2626; outline-offset:2px; }
+        .admin-catalogue-light button:focus-visible, .admin-catalogue-light a:focus-visible { outline:2px solid #2563eb; outline-offset:2px; }
+        /* Keep foreground and surface contrast explicit regardless of inherited admin theme. */
+        .admin-catalogue-light .text-white:not([data-state=active]) { color:#1e3a8a !important; }
+        .admin-catalogue-light .bg-primary, .admin-catalogue-light button[data-state=active] { background:#1d4ed8 !important; color:#fff !important; }
+        .admin-catalogue-light .bg-primary .text-white, .admin-catalogue-light button[data-state=active] .text-white { color:#fff !important; }
+        .admin-catalogue-light .text-gray-400, .admin-catalogue-light .text-slate-400 { color:#475569 !important; }
+        .admin-catalogue-light button, .admin-catalogue-light [role=tab], .admin-catalogue-light a { transition:background-color .18s ease,box-shadow .18s ease,transform .18s ease,border-color .18s ease; }
+        .admin-catalogue-light button:not(:disabled):hover, .admin-catalogue-light [role=tab]:hover { transform:translateY(-1px); box-shadow:0 3px 12px rgba(37,99,235,.14); border-color:#2563eb !important; }
+        .admin-catalogue-light button:not(:disabled):active, .admin-catalogue-light [role=tab]:active { transform:scale(.97); }
+        .admin-catalogue-light [role=tab][data-state=active] { background:#1d4ed8 !important; color:#fff !important; box-shadow:0 3px 12px rgba(29,78,216,.2); }
+        @media(max-width:639px) {
+          .admin-catalogue-light { padding:10px !important; }
+          .admin-catalogue-light .admin-catalogue-table { min-width:0 !important; width:100% !important; display:block; }
+          .admin-catalogue-light .admin-catalogue-table thead { display:none; }
+          .admin-catalogue-light .admin-catalogue-table tbody { display:grid; gap:10px; width:100%; }
+          .admin-catalogue-light .admin-catalogue-table tbody tr { display:flex; flex-wrap:wrap; align-items:center; gap:7px; border:1px solid #bfdbfe; border-radius:14px; padding:10px; min-width:0; box-shadow:0 2px 8px rgba(15,23,42,.05); }
+          .admin-catalogue-light .admin-catalogue-table td { display:flex; align-items:center; min-width:0; max-width:100%; padding:3px 5px !important; border:0 !important; overflow-wrap:anywhere; font-size:12px; }
+          .admin-catalogue-light .admin-catalogue-table td * { max-width:100%; }
+          .admin-catalogue-light .admin-catalogue-table td input { min-width:0; max-width:110px; }
+          .admin-catalogue-light h1 { font-size:1.3rem !important; line-height:1.35; }
+        }
+        @media(prefers-reduced-motion:reduce) { .admin-catalogue-light button, .admin-catalogue-light [role=tab], .admin-catalogue-light a { transition:none !important; transform:none !important; } }
       `}</style>
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 min-w-0">
         <div>
