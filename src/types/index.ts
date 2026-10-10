@@ -134,6 +134,10 @@ export interface Order {
   tax: number;
   shippingCost: number;
   total: number;
+  /** Données promotionnelles conservées lors de la commande, lorsqu'elles existent. */
+  promoCode?: string;
+  discountAmount?: number;
+  promotionSource?: string;
   status: OrderStatus;
   paymentStatus: PaymentStatus;
   paymentMethod?: string;
