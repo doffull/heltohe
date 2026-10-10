@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, PackageSearch, RefreshCw, Truck } from 'lucide-react';
 
 interface OrderRow {
@@ -100,7 +99,7 @@ export default function AdminOrderTracking() {
           'id, order_number, customer_name, customer_email, total, status, payment_status, payment_method, tracking_number, shipping_carrier, created_at',
         )
         .order('created_at', { ascending: false })
-        .limit(400);
+        .limit(1000);
       if (error) throw error;
       return (data || []) as OrderRow[];
     },
@@ -227,7 +226,7 @@ export default function AdminOrderTracking() {
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <ScrollArea className="max-h-[70vh]">
+            <div className="max-h-[calc(100vh-220px)] min-h-[350px] overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
               <ul className="divide-y divide-border">
                 {filtered.map((o) => {
                   const pp = paypalByOrder.get(o.id);
@@ -316,7 +315,7 @@ export default function AdminOrderTracking() {
                   <li className="p-10 text-center text-xs text-muted-foreground">Aucune commande trouvée</li>
                 )}
               </ul>
-            </ScrollArea>
+            </div>
           )}
         </CardContent>
       </Card>
