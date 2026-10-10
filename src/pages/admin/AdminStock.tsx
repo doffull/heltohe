@@ -57,7 +57,7 @@ type Transfer = {
 };
 type ProductRow = {
   id: string; name: string; sku: string; sizes: string[] | null; colors: string[] | null;
-  image: string; description: string | null; color_options: any;
+  stock: number; image: string; description: string | null; color_options: any;
 };
 
 // ── Color map for swatches ──
@@ -152,7 +152,7 @@ export default function AdminStock() {
       supabase.from('inventory').select('*').order('name'),
       supabase.from('stock_levels').select('*'),
       supabase.from('stock_transfers').select('*').order('created_at', { ascending: false }).limit(50),
-      supabase.from('products').select('id, name, sku, sizes, colors, image, description, color_options'),
+      supabase.from('products').select('id, name, sku, sizes, colors, image, description, color_options, stock'),
     ]);
     if (locRes.data) setLocations(locRes.data as Location[]);
     if (invRes.data) setInventory(invRes.data as InventoryItem[]);
@@ -211,6 +211,31 @@ export default function AdminStock() {
     return items;
   }, [inventory, channelFilter, searchTerm]);
 
+  // Read-only cross-check: never mutates shared production stock.
+  const stockAudit = useMemo(() => {
+    const inventoryByProduct = new Map(inventory.map(item => [item.product_id, item]));
+    const webId = locations.find(loc => loc.type === 'web')?.id;
+    let missing = 0;
+    let mismatched = 0;
+    const examples: string[] = [];
+    for (const product of products) {
+      const item = inventoryByProduct.get(product.id);
+      if (!item) {
+        missing++;
+        if (examples.length < 5) examples.push(`${product.name} : absent du stock central`);
+        continue;
+      }
+      if (!webId) continue;
+      const webQty = stockLevels.filter(level => level.inventory_id === item.id && level.location_id === webId)
+        .reduce((total, level) => total + level.quantity, 0);
+      if (Number(product.stock) !== webQty) {
+        mismatched++;
+        if (examples.length < 5) examples.push(`${product.name} : catalogue ${product.stock}, Web ${webQty}`);
+      }
+    }
+    return { missing, mismatched, examples, checked: products.length };
+  }, [inventory, locations, products, stockLevels]);
+
   const getStockForItem = (invId: string, locId?: string) => {
     const levels = stockLevels.filter(sl => sl.inventory_id === invId && (locId ? sl.location_id === locId : true));
     return levels.reduce((s, sl) => s + sl.quantity, 0);
@@ -220,7 +245,7 @@ export default function AdminStock() {
 
   return (
     <div className="flex min-w-0 flex-col gap-4 rounded-2xl bg-white p-3 text-slate-950 md:flex-row md:gap-6 lg:p-5">
-      {/* Sidebar nav — blue inventory workspace */}
+      {/* Sidebar nav — channel colors: Web blue, boutiques emerald, B2B violet */}
       <div className="hidden md:flex flex-col gap-1 w-52 shrink-0">
         {VIEWS.map(v => (
           <Button
@@ -263,7 +288,19 @@ export default function AdminStock() {
       </div>
 
       {/* Content */}
+      <div className="hidden" aria-hidden="true" />
       <div className="flex-1 min-w-0">
+        <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-blue-950"><p className="text-xs font-semibold">Site Web</p><p className="text-2xl font-black">{totalStockByType.web}</p></div>
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-950"><p className="text-xs font-semibold">Boutiques</p><p className="text-2xl font-black">{totalStockByType.boutique}</p></div>
+          <div className="rounded-xl border border-violet-200 bg-violet-50 p-3 text-violet-950"><p className="text-xs font-semibold">B2B</p><p className="text-2xl font-black">{totalStockByType.b2b}</p></div>
+        </div>
+        <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-slate-900">
+          <p className="text-sm font-bold">Contrôle des liaisons catalogue / stock central</p>
+          <p className="mt-1 text-xs text-slate-700">{stockAudit.checked} produits examinés · {stockAudit.missing} sans inventaire · {stockAudit.mismatched} écarts de stock Web</p>
+          {stockAudit.examples.length > 0 && <div className="mt-2 space-y-1">{stockAudit.examples.map((item, index) => <p key={index} className="text-xs text-red-800">{item}</p>)}</div>}
+          <p className="mt-2 text-xs text-slate-600">Diagnostic en lecture seule. Aucun stock n'est corrigé automatiquement.</p>
+        </div>
         <AnimatePresence mode="wait">
           {view === 'dashboard' && <DashboardView key="dash" totalStock={totalStockByType} lowStockItems={lowStockItems} stockPerBoutique={stockPerBoutique} inventory={inventory} stockLevels={stockLevels} />}
           {view === 'inventory' && <InventoryView key="inv" items={filteredInventory} stockLevels={stockLevels} locations={locations} channelFilter={channelFilter} setChannelFilter={setChannelFilter} searchTerm={searchTerm} setSearchTerm={setSearchTerm} getStockForItem={getStockForItem} inventory={inventory} onRefresh={fetchAll} products={products} />}
