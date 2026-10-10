@@ -333,7 +333,7 @@ export default function AdminCustomers() {
       )}
 
       {/* Table */}
-      <div className="chamfer-hud bg-card/50 overflow-hidden">
+      <div className="chamfer-hud bg-card/50 min-w-0">
         {isLoading ? (
           <div className="p-12 text-center"><div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto" /></div>
         ) : filtered.length === 0 ? (
@@ -342,7 +342,7 @@ export default function AdminCustomers() {
             <p className="text-muted-foreground">Aucun client trouvé</p>
           </div>
         ) : (
-          <div className="admin-scroll-x admin-scroll-shadow min-w-0">
+          <div className="admin-scroll-x admin-scroll-shadow min-w-0 overflow-x-auto overscroll-x-contain">
             <table className="w-full min-w-[760px]">
               <thead className="bg-muted/50 border-b border-border">
                 <tr>
