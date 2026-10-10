@@ -79,10 +79,17 @@ export function useRouletteSegments(includeInactive = false) {
   });
 }
 
+function assertRouletteWriteAllowed() {
+  if (typeof window !== 'undefined' && window.location.hostname !== 'helvetica-mp.com') {
+    throw new Error('Mode test : les tirages et modifications de roulette sont désactivés pour protéger la boutique.');
+  }
+}
+
 export function useSpinRoulette() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (email?: string) => {
+      assertRouletteWriteAllowed();
       // Call edge function so the server can hash the client IP for anti-abuse
       const { data, error } = await supabase.functions.invoke('spin-roulette', {
         body: { email: email || null },
@@ -110,6 +117,7 @@ export function useUpdateRouletteConfig() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (patch: Partial<RouletteConfig>) => {
+      assertRouletteWriteAllowed();
       const { error } = await supabase
         .from('roulette_config' as any)
         .update(patch as any)
@@ -124,6 +132,7 @@ export function useUpsertSegment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (segment: Partial<RouletteSegment> & { id?: string }) => {
+      assertRouletteWriteAllowed();
       if (segment.id) {
         const { id, ...rest } = segment;
         const { error } = await supabase
@@ -144,6 +153,7 @@ export function useDeleteSegment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      assertRouletteWriteAllowed();
       const { error } = await supabase.from('roulette_segments' as any).delete().eq('id', id);
       if (error) throw error;
     },
