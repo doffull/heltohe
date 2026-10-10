@@ -41,17 +41,18 @@ export default function AdminLive() {
   const [views, setViews] = useState<PageView[]>([]);
   const [clicks, setClicks] = useState<ClickEvent[]>([]);
   const [now, setNow] = useState(Date.now());
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Load sessions + polling (realtime disabled for PII protection)
   useEffect(() => {
     let alive = true;
     const load = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('visitor_sessions')
         .select('session_id, user_id, started_at, last_seen_at, device, landing_path, referrer')
         .order('last_seen_at', { ascending: false })
         .limit(100);
-      if (alive && data) setSessions(data as Session[]);
+      if (alive) { if (error) setLoadError(error.message); else { setLoadError(null); setSessions((data || []) as Session[]); } }
     };
     load();
     const poll = setInterval(load, 10_000);
@@ -103,6 +104,9 @@ export default function AdminLive() {
     [sessions, now]
   );
 
+  const last24h = sessions.filter(s => now - new Date(s.started_at).getTime() < 86400_000).length;
+  const totalLoaded = sessions.length;
+  const deviceCounts = ['mobile', 'desktop', 'tablet'].map(device => ({ device, count: sessions.filter(s => s.device === device).length }));
   const topPaths = useMemo(() => {
     const map = new Map<string, number>();
     sessions.slice(0, 50).forEach((s) => {
@@ -129,10 +133,10 @@ export default function AdminLive() {
     d === 'mobile' ? <Smartphone className="h-3.5 w-3.5" /> : d === 'tablet' ? <Tablet className="h-3.5 w-3.5" /> : <Monitor className="h-3.5 w-3.5" />;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-w-0 space-y-4 rounded-2xl bg-[#080f20] p-4 text-white lg:p-6 [&_.bg-card]:!bg-[#111c32] [&_.border]:!border-white/10 [&_.text-muted-foreground]:!text-slate-400">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight uppercase">Live</h1>
+          <h1 className="text-2xl font-black tracking-tight">Live</h1>
           <p className="text-sm text-muted-foreground">Visiteurs et parcours en temps réel</p>
         </div>
         <Badge variant="outline" className="gap-2 text-xs">
@@ -141,21 +145,27 @@ export default function AdminLive() {
         </Badge>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-wider flex items-center gap-2"><Users className="h-3.5 w-3.5" />En ligne</CardTitle></CardHeader>
           <CardContent><div className="text-3xl font-bold">{onlineSessions.length}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-wider flex items-center gap-2"><Eye className="h-3.5 w-3.5" />Sessions 24h</CardTitle></CardHeader>
-          <CardContent><div className="text-3xl font-bold">{sessions.length}</div></CardContent>
+          <CardContent><div className="text-3xl font-bold">{last24h}</div><p className="text-[10px] text-slate-400">Parmi les 100 dernières sessions chargées</p></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-wider flex items-center gap-2"><Activity className="h-3.5 w-3.5" />Auth</CardTitle></CardHeader>
-          <CardContent><div className="text-3xl font-bold">{sessions.filter(s => s.user_id).length}</div></CardContent>
+          <CardContent><div className="text-3xl font-bold">{sessions.filter(s => s.user_id).length}</div><p className="text-[10px] text-slate-400">Parmi les sessions chargées</p></CardContent>
         </Card>
       </div>
 
+      <Card className="border-white/10 bg-gradient-to-r from-violet-700/20 via-cyan-700/15 to-pink-700/20"><CardContent className="grid grid-cols-2 gap-3 p-4 md:grid-cols-4">
+        <div><p className="text-xs text-slate-400">Sessions chargées</p><p className="text-xl font-bold text-violet-300">{totalLoaded}</p></div>
+        {deviceCounts.map(d => <div key={d.device}><p className="text-xs capitalize text-slate-400">{d.device}</p><p className="text-xl font-bold text-cyan-300">{d.count}</p></div>)}
+      </CardContent></Card>
+      {loadError && <p role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">Données live indisponibles : {loadError}</p>}
+      <p className="text-[11px] text-slate-400">Actualisation toutes les 10 secondes · en ligne = activité dans la dernière minute · liste limitée aux 100 sessions récentes, pas au total historique depuis le lancement.</p>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-1">
           <CardHeader><CardTitle className="text-sm uppercase tracking-wider">Visiteurs</CardTitle></CardHeader>
