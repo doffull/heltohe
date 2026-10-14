@@ -196,13 +196,24 @@ export function useAnalyticsData() {
   const ordersQ = useQuery({
     queryKey: ['analytics', 'orders'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('id,order_number,created_at,customer_name,subtotal,shipping_cost,total,status,payment_status,notes,items')
-        .order('created_at', { ascending: false })
-        .limit(5000);
-      if (error) throw error;
-      return (data || []).map((d) => parseOrder(d as Record<string, unknown>));
+      // PostgREST can cap responses (often at 1,000 rows) even when .limit(5000)
+      // is requested. Page through the full history before calculating KPIs.
+      const pageSize = 1000;
+      const allOrders: AnalyticsOrder[] = [];
+      for (let page = 0; page < 200; page++) {
+        const from = page * pageSize;
+        const { data, error } = await supabase
+          .from('orders')
+          .select('id,order_number,created_at,customer_name,subtotal,shipping_cost,total,status,payment_status,notes,items')
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: false })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const batch = data || [];
+        allOrders.push(...batch.map((d) => parseOrder(d as Record<string, unknown>)));
+        if (batch.length < pageSize) return allOrders;
+      }
+      throw new Error('Historique des commandes trop volumineux : pagination incomplète.');
     },
     refetchInterval: 15000,
   });
