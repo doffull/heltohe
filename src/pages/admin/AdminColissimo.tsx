@@ -254,14 +254,14 @@ function CommandesTab({ senderName, senderAddress, senderZip, senderCity }: {
   // contrôler les champs et le relais officiel avant tout achat d'affranchissement.
   function validateShippingContact(order: Order): string | null {
     const customer = order.customer;
-    const phone = (customer.phone || '').replace(/[\\s().-]/g, '');
-    if (!/^\\+[1-9]\\d{6,14}$/.test(phone)) {
+    const phone = (customer.phone || '').replace(/[\s().-]/g, '');
+    if (!/^\+[1-9]\d{6,14}$/.test(phone)) {
       return 'Téléphone obligatoire au format international (+33…, +32…, +44…). Corrigez la commande avant de créer le bordereau.';
     }
     if (![customer.name, customer.address, customer.city, customer.zip, customer.country].every(v => typeof v === 'string' && v.trim().length > 0)) {
       return 'Adresse de livraison incomplète : nom, voie, code postal, ville et pays sont obligatoires.';
     }
-    if (/point\\s*relais|relay|pickup/i.test(customer.address)) {
+    if (/point\s*relais|relay|pickup/i.test(customer.address)) {
       return 'Adresse « point relais » détectée à la place de la rue. Ouvrez la commande, identifiez le relais Colissimo exact (identifiant, rue, code postal, ville) puis corrigez les données avant de réessayer.';
     }
     return null;
