@@ -58,9 +58,8 @@ const LEGACY_NAMES: Record<string, string> = {
 
 /**
  * Ramène n'importe quelle écriture du pays à un code ISO 2 lettres connu de
- * Colissimo. Retombe sur `FR` plutôt que d'échouer : une étiquette France reste
- * préférable à une absence d'étiquette, et c'était le comportement implicite
- * jusqu'ici.
+ * Colissimo. Un libellé inconnu doit être refusé : ne jamais expédier
+ * une commande étrangère avec un pays FR implicite.
  */
 export function normalizeCountryCode(input: unknown): string {
   const raw = String(input ?? '').trim();
@@ -75,7 +74,9 @@ export function normalizeCountryCode(input: unknown): string {
     .replace(/\s+/g, ' ')
     .trim();
 
-  return LEGACY_NAMES[stripped] ?? DEFAULT_COUNTRY;
+  // Ne jamais transformer silencieusement une destination étrangère inconnue en France.
+  // Une chaîne vide déclenche le rejet 422 de create-colissimo-label (getCapability).
+  return LEGACY_NAMES[stripped] ?? '';
 }
 
 /** La destination est-elle la France métropolitaine ? */
